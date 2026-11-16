@@ -217,7 +217,12 @@ internal sealed class ChecklistTemplateHandler : CatalogEntryHandlerBase<Checkli
         foreach (var question in template.Questions)
         {
             question.Id ??= CrestApps.Core.UniqueId.GenerateId();
-            question.Choices = [.. question.Choices.Where(choice => !string.IsNullOrWhiteSpace(choice)).Select(choice => choice.Trim())];
+
+            // A question saved the older way (an import of an older recipe, a template saved before the shared rules)
+            // keeps its condition as a rule from now on.
+            question.Rule = question.GetRule();
+            question.ShowWhen = null;
+            question.Choices =[.. question.Choices.Where(choice => !string.IsNullOrWhiteSpace(choice)).Select(choice => choice.Trim())];
 
             if (question.Kind is ChecklistQuestionKind.Choice or ChecklistQuestionKind.MultiChoice && question.Choices.Count < 2)
             {

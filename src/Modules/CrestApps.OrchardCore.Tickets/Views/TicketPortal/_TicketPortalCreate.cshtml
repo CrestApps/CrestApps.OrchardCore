@@ -43,6 +43,15 @@ else
             <input type="hidden" asp-for="DeskId" />
         }
 
+        @if (Model.Categories.Count > 0)
+        {
+            <div class="mb-3">
+                <label for="CategoryId" class="form-label">@T["What is it about?"]</label>
+                @await DisplayAsync(await New.TaxonomyCascadingPicker(InputName: "CategoryId", InputId: "CategoryId", Items: Model.Categories, SelectedId: Model.CategoryId, Required: Model.CategoryRequired, EmptyText: T["Choose one"].Value))
+                <span asp-validation-for="CategoryId" class="text-danger"></span>
+            </div>
+        }
+
         @* The ticket type's own form: its title (the subject) and its fields. *@
         @if (Model.Editor is not null)
         {

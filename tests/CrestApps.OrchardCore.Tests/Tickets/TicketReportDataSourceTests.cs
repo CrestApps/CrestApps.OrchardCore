@@ -21,6 +21,7 @@ using CrestApps.OrchardCore.Timeline.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DataSources;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
@@ -314,6 +315,10 @@ public sealed class TicketReportDataSourceTests
                 services.AddSingleton(Catalog(new TicketStatus { ItemId = "open", Name = "Open", Category = TicketStatusCategory.Open }));
                 services.AddSingleton(Catalog(new TicketPriority { ItemId = "normal", Name = "Normal" }));
                 services.AddSingleton<IDistributedLock, TestLock>();
+
+                // The category names of the data set read the ticket types' taxonomies; these sites have none.
+                services.AddSingleton(Mock.Of<IContentManager>());
+                services.AddSingleton(new Mock<IContentDefinitionManager>().Object);
                 new TicketsDataSourcesStartup().ConfigureServices(services);
                 new ServiceLevelsDataSourcesStartup().ConfigureServices(services);
                 configure?.Invoke(services);

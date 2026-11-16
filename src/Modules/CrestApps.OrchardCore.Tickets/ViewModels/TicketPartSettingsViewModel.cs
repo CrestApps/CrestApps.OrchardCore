@@ -22,6 +22,18 @@ public class TicketPartSettingsViewModel
 
     public string PortalDescription { get; set; }
 
+    public string CategoryTaxonomyId { get; set; }
+
+    public bool CategoryRequired { get; set; }
+
+    public bool CategoryLeavesOnly { get; set; }
+
+    /// <summary>
+    /// Gets or sets the taxonomies a type can take its categories from.
+    /// </summary>
+    [BindNever]
+    public List<SelectListItem> Taxonomies { get; set; } = [];
+
     [BindNever]
     public List<SelectListItem> Desks { get; set; } = [];
 

@@ -33,7 +33,7 @@ internal sealed class WorkOrdersMigrations : DataMigration
     {
         await WorkOrdersIndexSchema.CreateAsync(SchemaBuilder);
 
-        return 5;
+        return 6;
     }
 
     /// <summary>
@@ -97,5 +97,20 @@ internal sealed class WorkOrdersMigrations : DataMigration
             scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<WorkOrdersMigrations>()));
 
         return 5;
+    }
+
+    /// <summary>
+    /// Keeps the conditions of checklist questions as shared rules (<see cref="Models.ChecklistQuestion.Rule"/>). The
+    /// checklists already copied onto work orders keep the older form, which is read the same way.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public static int UpdateFrom5()
+    {
+        // The templates are documents; they are written once this step's own transaction has committed.
+        ShellScope.AddDeferredTask(scope => ChecklistRuleUpgrade.ConvertAsync(
+            scope.ServiceProvider.GetRequiredService<CrestApps.Core.Services.ICatalog<Models.ChecklistTemplate>>(),
+            scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<WorkOrdersMigrations>()));
+
+        return 6;
     }
 }

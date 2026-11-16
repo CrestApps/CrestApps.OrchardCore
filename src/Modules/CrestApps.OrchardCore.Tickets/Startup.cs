@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.ContentFields.Conditions;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
@@ -8,6 +9,7 @@ using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.Tickets.BackgroundTasks;
+using CrestApps.OrchardCore.Tickets.Categories;
 using CrestApps.OrchardCore.Tickets.Core;
 using CrestApps.OrchardCore.Tickets.Core.Handlers;
 using CrestApps.OrchardCore.Tickets.Core.Indexes;
@@ -18,6 +20,7 @@ using CrestApps.OrchardCore.Tickets.Drivers;
 using CrestApps.OrchardCore.Tickets.Migrations;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Navigation;
+using CrestApps.OrchardCore.Tickets.Portal;
 using CrestApps.OrchardCore.Tickets.Recipes;
 using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.Tickets.ViewModels;
@@ -72,6 +75,12 @@ public sealed class Startup : StartupBase
         services.AddPersonalDataContributor<TicketPersonalDataContributor>();
         services.AddContentPart<TicketPart>()
             .UseDisplayDriver<TicketPartDisplayDriver>();
+        services.AddContentPart<TicketCategoryPart>()
+            .UseDisplayDriver<TicketCategoryPartDisplayDriver>();
+
+        // The category as a source of the type's field rules, and the fields customers don't fill in as hidden fields.
+        services.AddScoped<IContentConditionSource, TicketCategoryConditionSource>();
+        services.AddScoped<IContentFieldVisibilityProvider, TicketCustomerFieldsVisibility>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, TicketPartSettingsDisplayDriver>();
         services.AddScoped<TicketUploads>();
         services.AddScoped<TicketPresence>();

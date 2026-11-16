@@ -6,10 +6,15 @@ using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.ContentManagement.Records;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tickets.Drivers;
 
@@ -23,17 +28,23 @@ internal sealed class TicketPartSettingsDisplayDriver : ContentTypePartDefinitio
     private readonly ICatalog<TicketPriority> _priorities;
     private readonly IServiceLevelPolicyManager _policies;
     private readonly IServiceProvider _services;
+    private readonly global::YesSql.ISession _session;
+    private readonly IContentDefinitionManager _contentDefinitionManager;
 
     public TicketPartSettingsDisplayDriver(
         ICatalog<TicketDesk> desks,
         ICatalog<TicketPriority> priorities,
         IServiceLevelPolicyManager policies,
-        IServiceProvider services)
+        IServiceProvider services,
+        global::YesSql.ISession session,
+        IContentDefinitionManager contentDefinitionManager)
     {
         _desks = desks;
         _priorities = priorities;
         _policies = policies;
         _services = services;
+        _session = session;
+        _contentDefinitionManager = contentDefinitionManager;
     }
 
     public override IDisplayResult Edit(ContentTypePartDefinition contentTypePartDefinition, BuildEditorContext context)
@@ -48,6 +59,10 @@ internal sealed class TicketPartSettingsDisplayDriver : ContentTypePartDefinitio
             model.RequiredSkillIds = [.. settings.RequiredSkills.Select(skill => skill.SkillId)];
             model.CustomerSubmittable = settings.CustomerSubmittable;
             model.PortalDescription = settings.PortalDescription;
+            model.CategoryTaxonomyId = settings.CategoryTaxonomyId;
+            model.CategoryRequired = settings.CategoryRequired;
+            model.CategoryLeavesOnly = settings.CategoryLeavesOnly;
+            model.Taxonomies = await TaxonomyOptionsAsync(settings.CategoryTaxonomyId);
             model.Desks = [.. (await _desks.GetAllAsync()).OrderBy(desk => desk.Name, StringComparer.CurrentCultureIgnoreCase).Select(desk => new SelectListItem(desk.Name, desk.ItemId, desk.ItemId == settings.DefaultDeskId))];
             model.Priorities = [.. (await _priorities.GetAllAsync()).OrderBy(priority => priority.Rank).Select(priority => new SelectListItem(priority.Name, priority.ItemId, priority.ItemId == settings.DefaultPriorityId))];
             model.Policies = [.. (await _policies.ListByScopeAsync(TicketsConstants.ServiceLevelScope)).Select(policy => new SelectListItem(policy.Name, policy.ItemId, policy.ItemId == settings.ServiceLevelPolicyId))];
@@ -81,9 +96,30 @@ internal sealed class TicketPartSettingsDisplayDriver : ContentTypePartDefinitio
             RequiredSkills = [.. skillIds.Select(id => new SkillRequirement { SkillId = id, MinProficiency = proficiency.GetValueOrDefault(id, 1) })],
             CustomerSubmittable = model.CustomerSubmittable,
             PortalDescription = Blank(model.PortalDescription),
+            CategoryTaxonomyId = Blank(model.CategoryTaxonomyId),
+            CategoryRequired = model.CategoryRequired && !string.IsNullOrWhiteSpace(model.CategoryTaxonomyId),
+            CategoryLeavesOnly = model.CategoryLeavesOnly,
         });
 
         return Edit(contentTypePartDefinition, context);
+    }
+
+    // The published items of every content type with the taxonomy part.
+    private async Task<List<SelectListItem>> TaxonomyOptionsAsync(string selectedId)
+    {
+        var types = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
+            .Where(type => type.Parts.Any(part => part.PartDefinition.Name == "TaxonomyPart"))
+            .Select(type => type.Name)
+            .ToArray();
+
+        if (types.Length == 0)
+        {
+            return [];
+        }
+
+        return [.. (await _session.Query<ContentItem, ContentItemIndex>(index => index.ContentType.IsIn(types) && index.Published).ListAsync())
+            .OrderBy(item => item.DisplayText, StringComparer.CurrentCultureIgnoreCase)
+            .Select(item => new SelectListItem(item.DisplayText, item.ContentItemId, item.ContentItemId == selectedId))];
     }
 
     private static string Blank(string value)

@@ -133,6 +133,47 @@ var venues = await session
 
 With CrestApps Recipes on, `AddressField` has a content-definition schema (its settings) and a content schema (the `Address` object), like `PhoneField`.
 
+## Conditional Fields
+
+| | |
+| --- | --- |
+| **Feature Name** | Conditional Fields |
+| **Feature ID** | `CrestApps.OrchardCore.ContentFields.ConditionalFields` (`ContentFieldsConstants.Features.ConditionalFields`) |
+| **Depends on** | `OrchardCore.Contents`, `OrchardCore.ContentTypes` |
+
+Adds **Show this field when** to the settings of every content field, of any content type: a field shows only when its rule is met, such as "Laptop model" only when the category is Hardware > Laptop, or "Who else is affected?" only when "Is this an outage?" is checked. The rule is a shared `ConditionRule` (`CrestApps.OrchardCore.Conditions`, in the platform Abstractions): all or any of a list of conditions, each reading a source with an operator (`Is`, `IsNot`, `IsOneOf`, `IsNoneOf`, `IsOrUnder`, `IsEmpty`, `IsNotEmpty`, `Contains`, `GreaterThan`, `LessThan`). It is kept in the field's settings as `ConditionalFieldSettings.ShowWhen`.
+
+A condition's source is another field of the item, written `{TypePartName}.{FieldName}` (`Ticket.Outage`), or a value a module provides by its name (no dot), such as Tickets' `TicketCategory`. A field under a hidden field is hidden too, so a chain of questions closes when an early answer changes. The settings editor refuses rules that depend on each other in a cycle; a rule on a field that was removed is shown as such and ignored, so the field shows.
+
+### On the server
+
+The browser only makes the form pleasant; the server decides when the editor is posted, in every editor of the type (Orchard Core's content editor included):
+
+1. Before any field editor reads the post, `ConditionalFieldsDisplayDriver` (an item-level `ContentDisplayDriver`, which Orchard Core runs first) keeps a copy of what the item holds: a new item's values on a create, the stored values on an edit.
+2. After the field editors (`ConditionalFieldsDisplayHandler`, an `IContentDisplayHandler` registered after Orchard Core's display coordinator), the fields that are hidden for the values just read get back what the copy held, and their validation errors are removed. A value posted for a hidden field is never kept, and a required field that is hidden doesn't block the form.
+3. When the item is displayed, `ConditionalFieldsPlacementProvider` leaves out the fields its rules hide, so an answer kept from before a later edit isn't shown as if it applied.
+
+On an edit, a field hidden by a new answer keeps its stored value: nothing is lost if the answer goes back.
+
+### In the browser
+
+An editor whose type has rules carries them as JSON (`ConditionalFields_Edit` shape, in `Content:after`) and the `crestapps-conditional-fields` script, which shows and hides each field's `.field-wrapper` as people answer and disables the controls of a hidden field, so they don't post and their browser validation can't block the form. It reads Orchard Core's field editors (text, predefined lists, booleans, numbers, dates, taxonomies, pickers, multi-text) and falls back to the value the server read when the form has no control for a source. Without script, every field shows and the server keeps only what applies.
+
+### Extending
+
+| To | Use |
+| --- | --- |
+| Let rules read a value of the item that isn't a field (a ticket's category) | `IContentConditionSource`: `DescribeAsync` returns `ContentConditionSourceDescriptor`s for a type (name, display name, kind, the input the browser reads, options for the settings editor, ancestors for a tree); `ReadAsync` returns a `ConditionValue` |
+| Let rules read your own field type | `IContentFieldValueReader` (`FieldType`, `ReadAsync` over the field's stored JSON, `DescribeAsync` for options) |
+| Hide fields for a reason of your own (fields customers don't fill in) | `IContentFieldVisibilityProvider`: its fields are treated as hidden, with the same restore and error removal |
+| Walk a taxonomy without the Taxonomies module | `TaxonomyTermTree.From(taxonomy)` (`CrestApps.OrchardCore.ContentFields.Taxonomies`): terms in tree order with parent, level, ancestors and `GetPathText` |
+
+Readers ship for `TextField` (with a predefined list's options), `BooleanField`, `NumericField`, `DateField`, `DateTimeField`, `TimeField`, `MultiTextField`, `ContentPickerField`, `UserPickerField`, `LocalizationSetContentPickerField`, `LinkField`, `HtmlField`, `MarkdownField`, `TaxonomyField` (with the terms above a chosen term, for `IsOrUnder`), `PhoneField` and `AddressField` (its country code).
+
+### Recipes
+
+The rules are field settings, so they travel with the `ContentDefinition` step. With CrestApps Recipes on, `ConditionalFieldSettings` is described in the settings schema of each field type above.
+
 ## Notes
 
 - The shared `intl-tel-input` script and stylesheet are registered by `CrestApps.OrchardCore.Resources`.

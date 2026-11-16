@@ -36,6 +36,13 @@ public sealed class TicketApiModel
 
     public string AccountId { get; init; }
 
+    public string CategoryId { get; init; }
+
+    /// <summary>
+    /// Gets the category and those above it as ids, top first (<c>/top/child/category/</c>).
+    /// </summary>
+    public string CategoryPath { get; init; }
+
     public string Channel { get; init; }
 
     public string MergedIntoId { get; init; }
@@ -90,6 +97,8 @@ public sealed class TicketApiModel
             RequesterName = part.RequesterContact?.Name,
             RequesterEmail = part.RequesterContact?.Email,
             AccountId = part.AccountId,
+            CategoryId = part.CategoryId,
+            CategoryPath = part.CategoryPath,
             Channel = part.Channel,
             MergedIntoId = part.MergedIntoId,
             FollowUpOfId = part.FollowUpOfId,

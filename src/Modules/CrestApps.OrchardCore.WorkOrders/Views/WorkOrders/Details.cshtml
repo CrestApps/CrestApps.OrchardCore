@@ -324,7 +324,8 @@
                     var field = WorkOrdersController.AnswerField(question);
                     var answer = checklist.Answers.FirstOrDefault(item => item.QuestionId == question.Id)?.Value;
                     var editable = Model.CanManage && open;
-                    var conditional = question.ShowWhen is { QuestionId.Length: > 0 } ? checklist.Questions.FirstOrDefault(item => item.Id == question.ShowWhen.QuestionId) : null;
+                    var showWhen = question.GetRule()?.Conditions.FirstOrDefault();
+                    var conditional = showWhen is { Source.Length: > 0 } ? checklist.Questions.FirstOrDefault(item => item.Id == showWhen.Source) : null;
                     <div class="row g-2 mb-2 align-items-center">
                         <label class="col-12 col-md-6 col-form-label col-form-label-sm" for="@field">
                             @question.Text@(question.Required ? " *" : null)
@@ -334,7 +335,7 @@
                             }
                             @if (conditional is not null)
                             {
-                                <span class="hint d-block">@T["Only when \"{0}\" is {1}.", conditional.Text, question.ShowWhen.EqualsValue]</span>
+                                <span class="hint d-block">@T["Only when \"{0}\" is {1}.", conditional.Text, showWhen.Values.FirstOrDefault()]</span>
                             }
                         </label>
                         <div class="col-12 col-md-6">

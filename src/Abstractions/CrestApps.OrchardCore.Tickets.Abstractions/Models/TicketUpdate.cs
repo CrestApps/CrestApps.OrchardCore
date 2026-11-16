@@ -22,6 +22,12 @@ public sealed class TicketUpdate
     public string DeskId { get; set; }
 
     /// <summary>
+    /// Gets or sets the new category: a term of the ticket type's category taxonomy, an empty string to clear it, or
+    /// <see langword="null"/> to leave it. Only the category changes; the desk, team, priority and targets stay.
+    /// </summary>
+    public string CategoryId { get; set; }
+
+    /// <summary>
     /// Gets or sets the new team; empty clears it.
     /// </summary>
     public string TeamId { get; set; }

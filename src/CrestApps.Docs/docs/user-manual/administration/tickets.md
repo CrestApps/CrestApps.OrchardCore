@@ -115,6 +115,26 @@ The permissions to view and work tickets exist for each desk, so HR tickets can 
 
 An account's page has a **Tickets** tab: its latest tickets you may see, how many are open, **New ticket** for the account, and **View all in the ticket list**, which opens the ticket list showing only that account's tickets, in every state. Remove the **Account** filter there to see every ticket again.
 
+## Sort tickets into categories
+
+Categories say what a ticket is about, such as Hardware > Laptop or Software > Access request. People choose one when they open a ticket, one level at a time, and the category can send the ticket to the right desk and team with the right priority and service level. Categories come from a taxonomy, so you edit them like any other list of terms.
+
+1. Turn on **Taxonomies**, open **Content > Content Items**, choose **New** and **Taxonomy**, and create one, such as *IT categories*, with **Ticket category** as its term type. Add its categories, and sub-categories under them.
+2. Edit a category to set what its new tickets start with: **Desk**, **Team**, **Priority** and **Service-level policy**. Leave a value empty to take it from the category above. Tick **Only agents can choose it** for categories customers shouldn't see, and write a **Description for customers** to tell them what to have ready.
+3. Open **Content Definition > Content Types**, edit the ticket type and, on its **Ticket** part, choose the taxonomy under **Categories**. Tick **A category is required** to make people choose one, and **Only the most specific category** so they pick Hardware > Laptop rather than Hardware.
+
+What a ticket starts with comes first from what the agent chose on the form, then from its category, then from the ticket type. A customer's request moves to the category's desk only when that desk serves customers too.
+
+When an agent changes a ticket's category later, only the category changes. If the new category sends tickets elsewhere, the ticket's panel shows **Apply the category's routing**, with what it would change; click it to move the ticket.
+
+## Ask the questions that apply
+
+A ticket type's fields can show only when they apply: "Laptop model" only for laptop problems, "Who else is affected?" only when someone ticks "Is this an outage?". Edit the field in the ticket type and fill in **Show this field when**, with a condition on the category (**is or is under** covers its sub-categories) or on another field. See [Show a field only when it applies](./content-fields#show-a-field-only-when-it-applies).
+
+The questions appear as people choose the category and answer, on the agents' **New ticket** page, in the portal and on the web form. When the ticket is sent, the site checks the conditions again and keeps nothing a hidden question received.
+
+The **Help desk starter** recipe sets up an example: an **IT categories** taxonomy and an **IT request** type that asks for the laptop model for laptop problems, which system for access requests, and who else is affected for an outage.
+
 ## Let customers open requests on the site
 
 Turn on **Tickets Portal** under **Configuration > Features**. Then:
@@ -164,4 +184,4 @@ Each report counts only the tickets you may see. To build your own, use the **Ti
 
 ## Start from the help desk recipe
 
-Run the **Help desk starter** recipe (**Configuration > Recipes**) to set up weekday business hours, a standard service level, the Support desk and an IT desk, and two example workflows that start turned off: one escalates a ticket that misses a target, the other adds a note when a requester reopens a solved ticket.
+Run the **Help desk starter** recipe (**Configuration > Recipes**) to set up weekday business hours, a standard service level, the Support desk and an IT desk, an **IT request** type with **IT categories** and questions that follow them, and two example workflows that start turned off: one escalates a ticket that misses a target, the other adds a note when a requester reopens a solved ticket.

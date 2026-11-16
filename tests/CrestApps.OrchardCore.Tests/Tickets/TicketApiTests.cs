@@ -50,8 +50,8 @@ public sealed class TicketApiTests
             .ReturnsAsync(([Ticket("t1")], 7));
 
         // Act
-        var stranger = await TicketApiEndpoints.ListAsync(null, null, null, null, null, null, null, null, Context(User("stranger")), access.Object, tickets.Object);
-        var ana = await TicketApiEndpoints.ListAsync(" printer ", "support", "open, Pending", null, null, null, 5, 500, Context(User("ana")), access.Object, tickets.Object);
+        var stranger = await TicketApiEndpoints.ListAsync(null, null, null, null, null, null, null, null, null, Context(User("stranger")), access.Object, tickets.Object);
+        var ana = await TicketApiEndpoints.ListAsync(" printer ", "support", "open, Pending", null, null, null, null, 5, 500, Context(User("ana")), access.Object, tickets.Object);
 
         // Assert
         Assert.Equal(403, Assert.IsType<ProblemHttpResult>(stranger.Result).StatusCode);
@@ -74,7 +74,7 @@ public sealed class TicketApiTests
             .ReturnsAsync((ClaimsPrincipal _, TicketQuery query, CancellationToken _) => new TicketScopedQuery { Query = query, AllDeskIds = ["support"] });
 
         // Act
-        var result = await TicketApiEndpoints.ListAsync(null, null, "Solvd", null, null, null, null, null, Context(User("ana")), access.Object, new Mock<ITicketService>(MockBehavior.Strict).Object);
+        var result = await TicketApiEndpoints.ListAsync(null, null, "Solvd", null, null, null, null, null, null, Context(User("ana")), access.Object, new Mock<ITicketService>(MockBehavior.Strict).Object);
 
         // Assert
         Assert.IsType<ValidationProblem>(result.Result);

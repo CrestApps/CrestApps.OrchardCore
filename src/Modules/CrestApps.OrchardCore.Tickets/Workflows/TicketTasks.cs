@@ -283,11 +283,13 @@ public sealed class UpdateTicketTask : TicketTaskActivity
         new("TeamId", S["Team"], S["Liquid giving a team id; empty keeps the team."], TicketTaskFieldKind.Liquid),
         new("AssigneeId", S["Assignee"], S["Liquid giving a user id; empty keeps the assignee."], TicketTaskFieldKind.Liquid),
         new("Subject", S["Subject"], S["Liquid; empty keeps the subject."], TicketTaskFieldKind.Liquid),
+        new("CategoryId", S["Category"], S["Liquid giving a category's term id (one of the ticket type's categories); empty keeps the category. Only the category changes."], TicketTaskFieldKind.Liquid),
     ];
 
     protected override async Task<ActivityExecutionResult> RunAsync(WorkflowExecutionContext workflowContext, ITicketService tickets, string ticketId)
         => OutcomeOf(workflowContext, await tickets.UpdateAsync(ticketId, new TicketUpdate
         {
+            CategoryId = await FieldAsync("CategoryId", workflowContext) is { Length: > 0 } categoryId ? categoryId.Trim() : null,
             StatusId = await FieldAsync("StatusId", workflowContext),
             PriorityId = await FieldAsync("PriorityId", workflowContext),
             DeskId = await FieldAsync("DeskId", workflowContext),

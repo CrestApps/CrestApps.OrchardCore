@@ -1,0 +1,41 @@
+@using CrestApps.OrchardCore.ContentFields.Taxonomies
+@{
+    // A choice made one level at a time: Category, then Sub-category... Without script it is one list, indented.
+    var items = ((IEnumerable<CascadingPickerItem>)Model.Items ?? []).ToList();
+    var inputName = (string)Model.InputName;
+    var inputId = (string)Model.InputId ?? inputName?.Replace('.', '_');
+    var selectedId = (string)Model.SelectedId;
+    var required = Model.Required is true;
+    var emptyText = (string)Model.EmptyText ?? T["Choose…"].Value;
+    var levelLabels = ((IEnumerable<string>)Model.LevelLabels ?? []).ToArray();
+    var byId = items.ToDictionary(item => item.Id, StringComparer.Ordinal);
+
+    int Depth(CascadingPickerItem item)
+    {
+        var depth = 0;
+
+        while (item?.ParentId is { } parentId && byId.TryGetValue(parentId, out item))
+        {
+            depth++;
+        }
+
+        return depth;
+    }
+}
+
+<div class="cascading-picker" data-cascading-picker-container>
+    <select name="@inputName" id="@inputId" class="form-select" data-cascading-picker data-level-labels="@string.Join("|", levelLabels)" required="@required">
+        <option value="">@emptyText</option>
+        @foreach (var item in items)
+        {
+            <option value="@item.Id"
+                    selected="@(item.Id == selectedId)"
+                    disabled="@(!item.Selectable)"
+                    data-parent="@item.ParentId"
+                    data-selectable="@(item.Selectable ? "true" : "false")"
+                    data-description="@item.Description">@(new string(' ', Depth(item) * 3))@item.Text</option>
+        }
+    </select>
+    <div class="form-text" data-cascading-picker-description></div>
+</div>
+<script asp-name="@CrestApps.OrchardCore.ContentFields.ContentFieldsConstants.CascadingPickerScript" at="Foot"></script>

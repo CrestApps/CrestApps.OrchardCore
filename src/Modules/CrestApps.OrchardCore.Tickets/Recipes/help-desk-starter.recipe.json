@@ -1,7 +1,7 @@
 {
   "name": "HelpDeskStarter",
   "displayName": "Help desk starter",
-  "description": "Sets up a help desk: tickets with their statuses and priorities, the Support desk and an IT desk on weekday business hours, a standard service level for first response and resolution, and two example workflows (escalate a ticket whose target is breached, and add a note when a requester reopens a solved ticket). The workflows start turned off; turn them on under Workflows.",
+  "description": "Sets up a help desk: tickets with their statuses and priorities, the Support desk and an IT desk on weekday business hours, a standard service level for first response and resolution, an IT request type whose questions follow its category (IT categories: Hardware > Laptop or Printer, Software > Access request, Network) and an outage answer, and two example workflows (escalate a ticket whose target is breached, and add a note when a requester reopens a solved ticket). The workflows start turned off; turn them on under Workflows.",
   "author": "CrestApps",
   "website": "https://crestapps.com",
   "version": "1.0.0",
@@ -22,6 +22,7 @@
         "CrestApps.OrchardCore.BusinessHours",
         "CrestApps.OrchardCore.ServiceLevels",
         "CrestApps.OrchardCore.Tickets",
+        "OrchardCore.Taxonomies",
         "OrchardCore.Workflows"
       ]
     },
@@ -95,6 +96,192 @@
           "AssignmentStrategy": "RoundRobin",
           "NotifyRequester": true,
           "NotifyAssignee": true
+        }
+      ]
+    },
+    {
+      "name": "ContentDefinition",
+      "ContentTypes": [
+        {
+          "Name": "ITRequest",
+          "DisplayName": "IT request",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Stereotype": "Ticket",
+              "Listable": false,
+              "Creatable": false
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            {
+              "PartName": "TitlePart",
+              "Name": "TitlePart",
+              "Settings": {
+                "ContentTypePartSettings": { "DisplayName": "Subject", "Position": "1" },
+                "TitlePartSettings": { "Options": "EditableRequired" }
+              }
+            },
+            {
+              "PartName": "TicketPart",
+              "Name": "TicketPart",
+              "Settings": {
+                "ContentTypePartSettings": { "Position": "2" },
+                "TicketPartSettings": {
+                  "DefaultDeskId": "49vyvps9npqdzz9mz7xfwqgdzx",
+                  "CustomerSubmittable": true,
+                  "PortalDescription": "A problem with your laptop, printer, network or software, or access to a system.",
+                  "CategoryTaxonomyId": "4375vnkj86k0k9jxjgrkd2hfbz",
+                  "CategoryRequired": true,
+                  "CategoryLeavesOnly": false
+                }
+              }
+            },
+            {
+              "PartName": "ITRequest",
+              "Name": "ITRequest",
+              "Settings": {
+                "ContentTypePartSettings": { "Position": "3" }
+              }
+            }
+          ]
+        }
+      ],
+      "ContentParts": [
+        {
+          "Name": "ITRequest",
+          "Settings": {},
+          "ContentPartFieldDefinitionRecords": [
+            {
+              "FieldName": "BooleanField",
+              "Name": "Outage",
+              "Settings": {
+                "ContentPartFieldSettings": { "DisplayName": "Is this an outage?", "Position": "0" },
+                "BooleanFieldSettings": { "Label": "Other people can't work either", "Hint": "Tick it when the problem stops more than you." },
+                "TicketFieldCustomerSettings": { "CustomerEditable": true }
+              }
+            },
+            {
+              "FieldName": "TextField",
+              "Name": "Affected",
+              "Settings": {
+                "ContentPartFieldSettings": { "DisplayName": "Who else is affected?", "Position": "1" },
+                "TextFieldSettings": { "Required": true, "Hint": "A team, a floor or a number of people." },
+                "TicketFieldCustomerSettings": { "CustomerEditable": true },
+                "ConditionalFieldSettings": {
+                  "ShowWhen": {
+                    "Match": "All",
+                    "Conditions": [
+                      { "Source": "ITRequest.Outage", "Operator": "Is", "Values": [ "true" ] }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "FieldName": "TextField",
+              "Name": "LaptopModel",
+              "Settings": {
+                "ContentPartFieldSettings": { "DisplayName": "Laptop model", "Position": "2" },
+                "TextFieldSettings": { "Required": true, "Hint": "It's on the label under the laptop." },
+                "TicketFieldCustomerSettings": { "CustomerEditable": true },
+                "ConditionalFieldSettings": {
+                  "ShowWhen": {
+                    "Match": "All",
+                    "Conditions": [
+                      { "Source": "TicketCategory", "Operator": "IsOrUnder", "Values": [ "4hcz2tdnjksr3ptafr4cvrvmas" ] }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "FieldName": "TextField",
+              "Name": "System",
+              "Settings": {
+                "ContentPartFieldSettings": { "DisplayName": "Which system?", "Position": "3" },
+                "TextFieldSettings": { "Required": true },
+                "TicketFieldCustomerSettings": { "CustomerEditable": true },
+                "ConditionalFieldSettings": {
+                  "ShowWhen": {
+                    "Match": "All",
+                    "Conditions": [
+                      { "Source": "TicketCategory", "Operator": "IsOrUnder", "Values": [ "4pvgf6j1zwegq7dm0tkbzaaktk" ] }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "FieldName": "TextField",
+              "Name": "RootCause",
+              "Settings": {
+                "ContentPartFieldSettings": { "DisplayName": "Root cause", "Position": "4" },
+                "TextFieldSettings": { "Hint": "For agents: what caused it, once known." }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "content",
+      "data": [
+        {
+          "ContentItemId": "4375vnkj86k0k9jxjgrkd2hfbz",
+          "ContentItemVersionId": "4ffwq3cd20zhndj79c8ey4ek6h",
+          "ContentType": "Taxonomy",
+          "DisplayText": "IT categories",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": { "Title": "IT categories" },
+          "TaxonomyPart": {
+            "TermContentType": "TicketCategory",
+            "Terms": [
+              {
+                "ContentItemId": "478zt8thf3100vq7z7av10bkg1",
+                "ContentType": "TicketCategory",
+                "DisplayText": "Hardware",
+                "TitlePart": { "Title": "Hardware" },
+                "TicketCategoryPart": { "DeskId": "49vyvps9npqdzz9mz7xfwqgdzx" },
+                "Terms": [
+                  {
+                    "ContentItemId": "4hcz2tdnjksr3ptafr4cvrvmas",
+                    "ContentType": "TicketCategory",
+                    "DisplayText": "Laptop",
+                    "TitlePart": { "Title": "Laptop" },
+                    "TicketCategoryPart": { "CustomerDescription": "Have the laptop's model and what you were doing when it happened." }
+                  },
+                  {
+                    "ContentItemId": "47z3164z74es1pe14eq1az34fh",
+                    "ContentType": "TicketCategory",
+                    "DisplayText": "Printer",
+                    "TitlePart": { "Title": "Printer" }
+                  }
+                ]
+              },
+              {
+                "ContentItemId": "48atztazc5dhn8mr4af8p97an2",
+                "ContentType": "TicketCategory",
+                "DisplayText": "Software",
+                "TitlePart": { "Title": "Software" },
+                "Terms": [
+                  {
+                    "ContentItemId": "4pvgf6j1zwegq7dm0tkbzaaktk",
+                    "ContentType": "TicketCategory",
+                    "DisplayText": "Access request",
+                    "TitlePart": { "Title": "Access request" },
+                    "TicketCategoryPart": { "CustomerDescription": "Say which system and what you need to do in it." }
+                  }
+                ]
+              },
+              {
+                "ContentItemId": "461v8a6z9rvj7jgkg18j1hvwgn",
+                "ContentType": "TicketCategory",
+                "DisplayText": "Network",
+                "TitlePart": { "Title": "Network" }
+              }
+            ]
+          }
         }
       ]
     },

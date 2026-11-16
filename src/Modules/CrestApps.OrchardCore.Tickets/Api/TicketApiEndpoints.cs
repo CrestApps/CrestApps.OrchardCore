@@ -99,6 +99,7 @@ internal static class TicketApiEndpoints
         string assignee,
         string requester,
         string accountId,
+        string categoryId,
         int? skip,
         int? take,
         HttpContext httpContext,
@@ -127,6 +128,7 @@ internal static class TicketApiEndpoints
             Assignee = string.IsNullOrEmpty(assignee) ? null : assignee,
             Requester = string.IsNullOrEmpty(requester) ? null : requester,
             AccountId = string.IsNullOrEmpty(accountId) ? null : accountId,
+            CategoryId = string.IsNullOrEmpty(categoryId) ? null : categoryId,
             Skip = pageSkip,
             Take = pageTake,
         };
@@ -259,6 +261,7 @@ internal static class TicketApiEndpoints
             AttachmentIds = attached,
             DeskId = desk.ItemId,
             PriorityId = request.PriorityId,
+            CategoryId = string.IsNullOrWhiteSpace(request.CategoryId) ? null : request.CategoryId,
             Requester = requester,
             RequesterContact = requester.IsEmpty && (!string.IsNullOrWhiteSpace(request.RequesterName) || !string.IsNullOrWhiteSpace(request.RequesterEmail))
                 ? new ContactInfo { Name = request.RequesterName?.Trim(), Email = request.RequesterEmail?.Trim() }
@@ -299,7 +302,7 @@ internal static class TicketApiEndpoints
             return ApiProblems.NotFound();
         }
 
-        var editing = request.Subject is not null || request.StatusId is not null || request.PriorityId is not null || request.DeskId is not null || request.EscalationLevel is not null;
+        var editing = request.Subject is not null || request.StatusId is not null || request.PriorityId is not null || request.DeskId is not null || request.EscalationLevel is not null || request.CategoryId is not null;
         var assigning = request.TeamId is not null || request.AssigneeId is not null;
 
         if ((editing && !await access.CanAsync(httpContext.User, ticket, TicketOperation.Edit, cancellationToken))
@@ -323,6 +326,7 @@ internal static class TicketApiEndpoints
             TeamId = request.TeamId,
             AssigneeId = request.AssigneeId,
             EscalationLevel = request.EscalationLevel,
+            CategoryId = request.CategoryId,
         }, ActorOf(httpContext.User), cancellationToken);
 
         if (!result.Succeeded)

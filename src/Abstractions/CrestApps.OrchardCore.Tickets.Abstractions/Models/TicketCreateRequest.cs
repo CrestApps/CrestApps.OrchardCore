@@ -48,6 +48,18 @@ public sealed class TicketCreateRequest
     public string DeskId { get; set; }
 
     /// <summary>
+    /// Gets or sets whether <see cref="DeskId"/> is only where the form was opened (a portal catalog entry, a web form),
+    /// so the category's desk is used instead when it serves the same audience and takes the ticket type.
+    /// </summary>
+    public bool DeskIsSuggestion { get; set; }
+
+    /// <summary>
+    /// Gets or sets the category, a term of the ticket type's category taxonomy; its routing fills in what the request
+    /// leaves empty, before the ticket type's.
+    /// </summary>
+    public string CategoryId { get; set; }
+
+    /// <summary>
     /// Gets or sets the priority.
     /// </summary>
     public string PriorityId { get; set; }

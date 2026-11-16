@@ -77,6 +77,11 @@ public sealed class TicketApiCreateRequest
 
     public string AccountId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the category, a term of the ticket type's category taxonomy.
+    /// </summary>
+    public string CategoryId { get; set; }
+
     public List<TicketApiFile> Attachments { get; set; } = [];
 }
 
@@ -98,6 +103,11 @@ public sealed class TicketApiUpdateRequest
     public string AssigneeId { get; set; }
 
     public int? EscalationLevel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the new category; an empty string clears it. Only the category changes, not the desk or priority.
+    /// </summary>
+    public string CategoryId { get; set; }
 }
 
 /// <summary>
