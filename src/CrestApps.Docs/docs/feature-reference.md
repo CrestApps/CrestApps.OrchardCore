@@ -257,6 +257,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Learning.SelfEnrollment` | Self Enrollment | [Learning](./modules/learning#learner-pages) |
 | `CrestApps.OrchardCore.Learning.Assessments` | Learning Assessments | [Learning Assessments](./modules/learning-assessments) |
 | `CrestApps.OrchardCore.Learning.Assessments.Gradebook` | Learning Gradebook | [Learning Assessments](./modules/learning-assessments) |
+| `CrestApps.OrchardCore.Learning.Assessments.QtiImport` | Learning QTI Import | [Learning Assessments](./modules/learning-assessments#qti-import) |
 | `CrestApps.OrchardCore.Learning.Certifications` | Learning Certifications | [Learning Certifications](./modules/learning-certifications) |
 | `CrestApps.OrchardCore.Learning.Classes` | Learning Classes | [Learning Classes](./modules/learning-classes) |
 | `CrestApps.OrchardCore.Learning.Commerce` | Learning Commerce | [Learning Commerce](./modules/learning-commerce) |

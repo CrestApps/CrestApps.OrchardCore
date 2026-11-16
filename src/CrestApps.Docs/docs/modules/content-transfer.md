@@ -55,6 +55,7 @@ The base module always supports CSV files (`.csv`).
 
 Enable **Content Transfer (OpenXml)** feature to add Excel workbook support (`.xlsx`).
 
+- other modules may add formats of their own, such as the QTI packages of Learning QTI Import, which import only and only some content types
 - `.csv` keeps the base import and export experience lightweight and does not require OpenXml packages
 - `.xlsx` becomes available automatically in the import and export UI when the optional OpenXml feature is enabled
 - large imports and exports can stream in batches regardless of the enabled transfer format
@@ -479,6 +480,8 @@ Register the handler in your module `Startup`:
 services.AddScoped<IContentImportHandler, ProductContentImportHandler>();
 ```
 
+A handler that cannot import a row calls `context.Fail(reason, category)` on the `ContentImportContext`: the row is recorded as failed with the reason (counted under the category) and its content item is not saved. Throwing does not do this, because a handler's exception is logged and the row goes on.
+
 ## Content part handlers
 
 Implement `IContentPartImportHandler` when your custom Orchard `ContentPart` needs import and export support.
@@ -835,6 +838,22 @@ services.AddSingleton<IContentTransferFileFormatProvider, JsonLinesContentTransf
 ```
 
 If you want the format to be optional, place it in its own Orchard feature or module, following the same pattern as `CrestApps.OrchardCore.ContentTransfer.OpenXml`.
+
+A format can also be **import only** or **for some content types only**:
+
+- `CanExport` (default `true`): a format that only reads, such as another system's package, returns `false`. It is left out of exports, templates and the export format list; the failed rows of its imports download as CSV.
+- `CanImport(contentType)` (default `true`): the import page, the upload check and the background import offer and read the format only for the content types it accepts, so two formats may share an extension when they import different content types. The background import picks the first format, by extension, that handles the file name and imports the content type.
+- `DescribeImport(contentType)` (default `null`): a line the import page shows under the file requirements.
+
+The Learning QTI Import feature's `.zip` and `.xml` formats are import only and accept question types only.
+
+## Rows of several content types
+
+An import may create content items of several related content types, such as a package of questions of different kinds. Implement `IContentImportRowTypeProvider` to name the types the rows of an import of a content type may be; each row then gives its type in the `ContentType` column (`ContentTransferColumns.ContentType`), and a row with no type is the content type of the import. At upload, the import keeps the types the person may also import (`ImportContentFromFile` and **Allow bulk import** for each) in `ImportContentOptionsPart.RowContentTypes`; a row naming any other type fails, and a row whose `ContentItemId` names an item of another type than its own fails instead of being written by the wrong handlers. A file of a content type no provider groups reads the column as any other column.
+
+```csharp
+services.AddSingleton<IContentImportRowTypeProvider, QuestionRowTypeProvider>();
+```
 
 ## Reading another system's layout
 

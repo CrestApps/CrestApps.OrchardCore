@@ -22,7 +22,18 @@ A quiz is a course item with questions. Questions live in question banks, so the
 2. In the bank, add questions. Choose the type: single choice, multiple choice, true or false, short text, numeric, matching, ordering, fill in the blanks or essay.
 3. Enter the **Prompt**, the **Points**, a **Difficulty** and **Tags** (random draws can pick by tag), the answer, and any feedback shown on review. An essay has word limits and **Grader guidance**, which learners never see.
 
-To write many questions at once, use **Content transfer** with a spreadsheet: each row is a question, with a column for each field. For a choice question, list the options in one cell separated by `|` and start each right option with `*`, such as `Foam|*CO2|Water`.
+To write many questions at once, use **Content transfer** with a spreadsheet: each row is a question, with a column for each field. For a choice question, list the options in one cell separated by `|` and start each right option with `*`, such as `Foam|*CO2|Water`. Write the pairs of a matching question as `France=Paris|Italy=Rome`, the items of an ordering question in their right order as `Plan|Do|Check|Act`, and the blanks of a fill in the blanks question in the text as `Water boils at [[100]] degrees`. To put a `|` in a value, write `\|`. Add a **ContentType** column, such as `MatchingQuestion`, to import questions of several kinds from one sheet, and choose the **Question bank** they go into on the import page.
+
+## Import QTI questions
+
+Questions written in another system can be imported when that system exports QTI 3.0 or QTI 2.1: a content package (`.zip`) or a single item (`.xml`). The **Learning QTI Import** feature must be on.
+
+1. Go to **Bulk Import**, choose any question type, such as *Single choice question*, and upload the package. Each item becomes the kind of question that fits it.
+2. Choose the **Question bank** the questions go into, then **Upload**.
+3. When the import finishes, look at it in the import list. Items that could not be imported are counted as **Not imported from QTI**; download the failed rows from **Actions** to read why, such as an interaction no question type can hold (a hotspot or a slider) or an image the package lacks.
+4. Open the bank and check the questions. The editor shows the item and file each question came from.
+
+Importing the same package into the same bank again updates the questions it made before instead of adding them twice. Images are copied to the media library, in a folder of the import under **qti-imports**; if your site uses Secure Media, ask your admin to let learners view that folder. Choices and answers are plain text, so an item whose choices are pictures is not imported.
 
 ## Add a quiz to a course
 

@@ -12,6 +12,7 @@ description: "Question banks, quizzes in courses, attempts kept on the server, g
 | --- | --- | --- |
 | Learning Assessments | `CrestApps.OrchardCore.Learning.Assessments` | Question banks, the nine question types, the Quiz course item, attempts, the player, grading, overrides and access codes. |
 | Learning Gradebook | `CrestApps.OrchardCore.Learning.Assessments.Gradebook` | Grade scales and the gradebook of each course. |
+| Learning QTI Import | `CrestApps.OrchardCore.Learning.Assessments.QtiImport` | Imports QTI 3.0 and QTI 2.1 assessment items as questions through Content Transfer (see [QTI import](#qti-import)). |
 
 ## Content types
 
@@ -116,8 +117,59 @@ The coded report **Quiz results and item analysis** shows pass rates and mean sc
 - **Audit Trail**: manual grading, every score change and every quiz override.
 - **Webhooks**: `learning.attempt.submitted` and `learning.attempt.graded`, with scores and never answers.
 - **Personal data**: attempts with every answer (essays included) and overrides are exported; anonymizing deletes attempts that a completed enrollment does not rest on, and every override.
-- **ContentTransfer**: questions can be written in a spreadsheet: prompt, points, difficulty, tags and feedback for every question, `Options` for choice questions (separated by `|`, the right ones starting with `*`), and the answer columns of true/false, short text, numeric and essay questions.
+- **ContentTransfer**: questions can be written in a spreadsheet: prompt, points, difficulty, tags, feedback and source identifier for every question, `Options` and `OptionFeedback` for choice questions (separated by `|`, the right ones starting with `*`), `Pairs` (`prompt=answer|...`) for matching, `Items` in their right order for ordering, `Text` with `[[answer|other]]` blanks for fill in the blanks, and the answer columns of true/false, short text, numeric and essay questions. A backslash keeps `|`, `*`, `=` or `\` as text. The question types are one group of row types, so a `ContentType` column (such as `MatchingQuestion`) lets one sheet hold questions of every kind. The import page of a question type has a **Question bank** option; a prompt and feedback are sanitized on import. QTI files import through the same pipeline (see [QTI import](#qti-import)).
 - **Telemetry**: attempts started, submitted, graded and score changes on the Learning meter (see [Observability](../observability)).
+
+## QTI import
+
+The **Learning QTI Import** feature (`CrestApps.OrchardCore.Learning.Assessments.QtiImport`, depends on Learning Assessments, Content Transfer and Media) imports QTI 3.0 and QTI 2.1 assessment items as questions. It is a [Content Transfer](./content-transfer) file format, so a QTI file goes through the same **Bulk Import** page, background import, progress, failed rows and permissions as a spreadsheet:
+
+- **A content package** (`.zip` with `imsmanifest.xml` at its root): every resource of type `imsqti_item_xmlv3p0` or `imsqti_item_xmlv2p*` is read in the order of the manifest, its `href` under the `xml:base` of the manifest, the resources and the resource.
+- **A single item** (`.xml`). It has no package around it, so an item with images imports from a package only.
+
+Open the import page of any question type: each item becomes the question type that fits it (one import holds questions of every kind, through Content Transfer's row content types), and the **Question bank** option puts them in a bank you may edit.
+
+### Safety
+
+The package passes the safe extraction rules of learning packages (`PackageArchiveReader` in `Learning.Core`): every entry is checked before anything is read (no absolute path, drive letter or UNC share, no `..`, colon, control character, device name or trailing dot, no symbolic link, no duplicate ignoring case, at most 10,000 entries) and the bytes read are counted against 200 MB as they are read. Every XML file is read with DTDs refused, no resolver (so no external entity) and at most 10 million characters. Prompts and feedback are written as HTML from an allow-list of elements and attributes, then sanitized by the question import as the editor sanitizes them.
+
+### What is mapped
+
+| QTI | Question |
+| --- | --- |
+| `choiceInteraction` with one right choice and `maxChoices` 1 | Single choice; `shuffle` kept. |
+| `choiceInteraction` with `cardinality="multiple"`, `maxChoices` other than 1, or several right choices | Multiple choice; partial credit when the item uses `map_response`. |
+| A single-choice item with exactly two choices *True* and *False* | True or false. |
+| One `textEntryInteraction` alone in its block, string base type | Short text: the correct response and the mapped answers worth points; case-insensitive when the map entries say `caseSensitive="false"`. |
+| One `textEntryInteraction` with base type `float` or `integer` | Numeric: the correct response, and the tolerance of an `equal` rule (`absolute`, or `relative` as a share of the answer; the narrower bound when the two differ). |
+| `textEntryInteraction`s inline in a text, or several | Fill in the blanks: the blocks that hold them become the text with `[[answer\|other answer]]` blanks, the other blocks the prompt. |
+| `extendedTextInteraction` | Essay; a rubric block for scorers becomes the grader guidance. |
+| `matchInteraction` (two sets, each source matched to one target) and `associateInteraction` (each choice in one pair) | Matching. |
+| `orderInteraction` (the correct order of every choice) | Ordering. |
+
+Points come from the `MAXSCORE` outcome's default value, else the `normalMaximum` of `SCORE`, else the mapping (the sum of the positive mapped values of the right answers within `upperBound`, or the best single answer for a text entry), else 1. Response processing must be the `match_correct` or `map_response` template, or inline rules made of the elements those templates use (`responseCondition`, `match`, `mapResponse`, `equal`, `sum` and the like). An item with a correct response and no response processing is read as `match_correct`. Feedback tied to a choice (`feedbackInline` in the choice, or `modalFeedback` whose identifier is a choice's) becomes that option's feedback; a single other `modalFeedback` becomes the general feedback. A candidate rubric block stays in the prompt.
+
+Images in the prompt or the feedback (PNG, JPEG, GIF or WebP files of the package, at most 10 MB each and of a kind the media library accepts) are stored in the media library under `qti-imports/{import id}/` with each path segment kept to letters, digits, dots, dashes and underscores, and the HTML points at them. Each import has its own folder, so importing a package again writes its images to a new folder and the questions point there; the folder of the earlier import stays until someone deletes it. With **Secure Media** on, give the roles that take quizzes **View media content in folder 'qti-imports'**, or learners see the question without its picture.
+
+Each question keeps its QTI identifier (`QuestionPart.SourceIdentifier`) and its source file (`SourceFile`, such as `bank.zip/items/choice.xml`). Importing a row with the same source identifier into the same bank again updates that question (`QuestionSourceRowFilter` and the `QuestionSourceIndex`), so a corrected package can be imported over the first one.
+
+### What is not imported
+
+An item that cannot be imported is a failed row of the import, with the reason, and nothing is saved for it:
+
+- Interactions no question type can hold: hotspot, select point, graphic order, graphic associate, graphic gap match, position object, slider, drawing, upload, media, hottext, gap match, inline choice, end attempt, custom and portable custom interactions (PCI).
+- Adaptive items and templates (template declarations, processing and blocks).
+- Items with interactions of several kinds or more than one block interaction.
+- Response processing other than the two templates and their rules (`map_response_point`, custom operators and the like).
+- Choices, answers or blanks that hold markup the question type keeps as plain text (an image, math, a table); a blank answer with `|`, `[` or `]`.
+- Matching distractors (a target that matches no source), a source matched to several targets, and an order of only some choices.
+- Math, audio, video, objects and other content outside the HTML allow-list; images outside the package, SVG images, or images the package lacks.
+
+Not kept: per-choice weights of `map_response` (a partly right answer earns its share as the question type scores it), `fixed` choices in a shuffled list, `minChoices`, expected lengths and pattern masks, conditional feedback beyond the per-choice and single general feedback, stimuli and shared passages, assessment tests and sections, and item metadata. There is no QTI export.
+
+### Conformance
+
+The import reads the QTI 3.0 and QTI 2.1 assessment item information models as described above. Conformance suite / certification: not run (needs an external account). 1EdTech's QTI certification of an importing platform is run by a 1EdTech member with access to its conformance program: the member registers the product, imports 1EdTech's certification packages and submits the results for review. The tests in this repository use packages written for them from the specifications' text and examples.
 
 ## Recipe and deployment steps
 
