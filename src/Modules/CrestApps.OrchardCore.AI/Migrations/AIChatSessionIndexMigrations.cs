@@ -2,9 +2,13 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.BackgroundJobs;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
+using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
@@ -36,7 +40,7 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
 
         await CreateReportIndexAsync();
 
-        return 5;
+        return 6;
     }
 
     /// <summary>
@@ -95,6 +99,56 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
         await CreateReportIndexAsync();
 
         return 5;
+    }
+
+    /// <summary>
+    /// Adds the <c>ClientId</c> column CrestApps.Core preview.375 writes for every chat session, so a site created
+    /// before it can save sessions again, then fills it for the anonymous sessions already stored.
+    /// </summary>
+    /// <remarks>
+    /// The column is added in the migration's own transaction. The backfill re-saves documents and commits, which
+    /// must not happen inside the migration (a commit there detaches the migration record and half-commits the
+    /// feature's other steps), so it runs after the request in its own scope. If it cannot run, only the visitor
+    /// lookup of sessions stored before the upgrade is affected; saving works either way.
+    /// </remarks>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await SchemaBuilder.AddAIChatSessionIndexClientIdColumnAsync(_option);
+
+        if (ShellScope.Current is not null)
+        {
+            await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("ai-chat-session-client-id-backfill", static scope =>
+                BackfillClientIdsAsync(
+                    scope.ServiceProvider.GetRequiredService<ISession>(),
+                    scope.ServiceProvider.GetRequiredService<IOptions<YesSqlStoreOptions>>().Value,
+                    scope.ServiceProvider.GetRequiredService<ILogger<AIChatSessionIndexMigrations>>()));
+        }
+
+        return 6;
+    }
+
+    /// <summary>
+    /// Writes the client id of every stored anonymous chat session into its index row.
+    /// </summary>
+    /// <param name="session">The session the documents are re-saved through.</param>
+    /// <param name="options">The store options that name the AI collection.</param>
+    /// <param name="logger">The logger.</param>
+    internal static async Task BackfillClientIdsAsync(ISession session, YesSqlStoreOptions options, ILogger logger)
+    {
+        try
+        {
+            var count = await session.BackfillAIChatSessionIndexClientIdAsync(options);
+
+            if (count > 0 && logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Filled the client id of {Count} stored anonymous AI chat sessions.", count);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to fill the client id of the stored anonymous AI chat sessions.");
+        }
     }
 
     private Task<bool> CreateReportIndexAsync()
