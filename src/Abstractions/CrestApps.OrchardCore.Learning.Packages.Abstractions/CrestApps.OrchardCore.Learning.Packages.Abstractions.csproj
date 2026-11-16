@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.Packages</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Packages Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts of Learning packages: the learning package course item that holds an imported SCORM 1.2
+      package, the learner's runtime state per enrollment and package, and the permission to import packages.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS SCORM Packages Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Abstractions\CrestApps.OrchardCore.Learning.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

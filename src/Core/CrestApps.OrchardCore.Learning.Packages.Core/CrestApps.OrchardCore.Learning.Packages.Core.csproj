@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.Packages.Core</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Packages Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services of Learning packages: safe extraction of an uploaded package, the SCORM 1.2 manifest reader, the
+      package files in the protected store, the SCORM 1.2 run-time data model checked on the server, the learner's
+      runtime state per enrollment and package, signed launch tokens, and the result reported to Learning progress,
+      marked self-reported.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS SCORM Packages Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Learning.Packages" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.FileStorage.Abstractions\CrestApps.OrchardCore.FileStorage.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Packages.Abstractions\CrestApps.OrchardCore.Learning.Packages.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.FileStorage.Core\CrestApps.OrchardCore.FileStorage.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Core\CrestApps.OrchardCore.Learning.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>
