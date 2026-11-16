@@ -101,6 +101,27 @@ When many people report the same outage, open one ticket for the cause and link 
 
 A desk's service-level policy sets how soon a ticket must first be answered and how soon it must be solved, at each priority, counted in the desk's business hours. The ticket shows each target with **Due soon**, **Late**, **Met** or **Missed**. A status that waits for the requester can pause the clock. See [Service Levels](service-levels.md).
 
+## Notifications you can get
+
+With Notifications on, what happens on your tickets reaches you in the notification center (the bell at the top of the admin) and by the other ways you chose, such as e-mail. Each notice names the ticket, with its desk, and opens it. You aren't told about your own changes, and a notice about a ticket you may no longer see disappears from your list.
+
+| Notification | When you get it |
+| --- | --- |
+| **Tickets assigned to you** | Someone else, or the desk, gives you a ticket |
+| **Tickets given to your team** | A ticket goes to a team you are on (the agent who gets it hears of it as theirs instead) |
+| **Replies from requesters** | The requester replies on your ticket, or on your team's ticket that nobody has yet |
+| **Internal notes on your tickets** | Someone else adds a note to your ticket (a note that mentions you comes as a mention instead) |
+| **Mentions** | Someone writes @ and your user name in a note or reply, on a ticket or any other record you may read |
+| **Status changes on your tickets** | Someone else, or a workflow, moves your ticket to another status (not when the requester's reply reopens it: that comes as the reply) |
+| **Ticket approvals** | A request waits for your approval |
+| **Service-level targets** | A target of your ticket, or of your team's ticket that nobody has yet, is due soon or missed; once for each, until you read it |
+| **Tickets merged into yours** | Another ticket is merged into your ticket |
+| **Ticket workflow notices** | A workflow your administrator set up tells you about a ticket |
+| **Replies to your requests** | For requesters who sign in to the site: an agent replies on your request (the e-mail comes as before) |
+| **Agreement hours**, **Agreements ending** | For an account's manager: an agreement used 80% or all of its hours, or is about to end |
+
+To choose how you get each one, open **Profile** from the user menu at the top right (if you may edit your own profile; otherwise ask your administrator) and use **Notification Types**: clear a type's box under a method, such as **Email Notifications**, to stop getting it that way. The notification center still lists every notice, so nothing is lost. A desk can stop assignment and team notices for all its tickets with **Tell the assignee** in its settings.
+
 ## Set up desks, statuses, priorities and views
 
 Under the **Service Desk** menu:

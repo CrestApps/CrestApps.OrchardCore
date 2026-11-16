@@ -1,7 +1,7 @@
 @using OrchardCore.DisplayManagement.Views
 @model ShapeViewModel<CrestApps.OrchardCore.Tickets.Notifications.TicketNotificationMetaViewModel>
 
-<span class="small text-body-secondary text-nowrap"><i class="fa-solid fa-ticket me-1" aria-hidden="true"></i>@Model.Value.Number@if (!string.IsNullOrEmpty(Model.Value.DeskName))
+<span class="small text-nowrap opacity-75"><i class="fa-solid fa-ticket me-1" aria-hidden="true"></i>@Model.Value.Number@if (!string.IsNullOrEmpty(Model.Value.DeskName))
 {
     <text> &middot; @Model.Value.DeskName</text>
 }</span>

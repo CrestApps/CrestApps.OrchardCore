@@ -151,6 +151,7 @@ public sealed class NotificationsStartup : StartupBase
     {
         services.TryAddScoped<TicketNotificationSender>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketAssignmentNotifier>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketNotificationObserver>());
         services.AddDisplayDriver<Notification, TicketNotificationDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationVisibilityHandler, TicketNotificationVisibilityHandler>());
 
@@ -158,6 +159,34 @@ public sealed class NotificationsStartup : StartupBase
             TicketsConstants.NotificationTypes.Assigned,
             LocalizationSource.Create<Startup>("Tickets assigned to you"),
             type => type.Description = LocalizationSource.Create<Startup>("When a ticket is given to you by someone else or by the desk's assignment."));
+        services.AddNotificationType(
+            TicketsConstants.NotificationTypes.TeamAssigned,
+            LocalizationSource.Create<Startup>("Tickets given to your team"),
+            type => type.Description = LocalizationSource.Create<Startup>("When a ticket is given to a team you are on (the agent it is assigned to hears of it as theirs)."));
+        services.AddNotificationType(
+            TicketsConstants.NotificationTypes.RequesterReplied,
+            LocalizationSource.Create<Startup>("Replies from requesters"),
+            type => type.Description = LocalizationSource.Create<Startup>("When the requester replies on your ticket, or on your team's unassigned ticket."));
+        services.AddNotificationType(
+            TicketsConstants.NotificationTypes.NoteAdded,
+            LocalizationSource.Create<Startup>("Internal notes on your tickets"),
+            type => type.Description = LocalizationSource.Create<Startup>("When someone else adds an internal note to your ticket."));
+        services.AddNotificationType(
+            TicketsConstants.NotificationTypes.StatusChanged,
+            LocalizationSource.Create<Startup>("Status changes on your tickets"),
+            type => type.Description = LocalizationSource.Create<Startup>("When someone else, or a workflow, moves your ticket to another status."));
+        services.AddNotificationType(
+            TicketsConstants.NotificationTypes.ServiceLevel,
+            LocalizationSource.Create<Startup>("Service-level targets"),
+            type => type.Description = LocalizationSource.Create<Startup>("When a target of your ticket (or your team's unassigned ticket) is due soon or missed."));
+        services.AddNotificationType(
+            TicketsConstants.NotificationTypes.Merged,
+            LocalizationSource.Create<Startup>("Tickets merged into yours"),
+            type => type.Description = LocalizationSource.Create<Startup>("When another ticket is merged into your ticket."));
+        services.AddNotificationType(
+            TicketsConstants.NotificationTypes.Replied,
+            LocalizationSource.Create<Startup>("Replies to your requests"),
+            type => type.Description = LocalizationSource.Create<Startup>("When an agent replies on a request you sent (you also get the reply by e-mail)."));
         services.AddNotificationType(
             TicketsConstants.NotificationTypes.Workflow,
             LocalizationSource.Create<Startup>("Ticket workflow notices"),
