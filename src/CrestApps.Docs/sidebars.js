@@ -455,6 +455,7 @@ const sidebars = {
             items: [
                 'modules/calendars',
                 'modules/business-hours',
+                'modules/agreements',
                 'modules/service-levels',
                 'modules/timeline',
                 'modules/tickets',
