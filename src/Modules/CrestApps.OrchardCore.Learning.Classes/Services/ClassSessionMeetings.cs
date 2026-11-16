@@ -30,20 +30,24 @@ internal static class ClassSessionMeetings
                 continue;
             }
 
-            if (row.Start is not { } start || row.End is not { } end || end <= start || start < TimeSpan.Zero || end > TimeSpan.FromDays(1))
+            // The times are wall-clock times in the user's or the site's time zone. A meeting ends on its own day unless
+            // the row says another, such as an evening meeting that goes past midnight.
+            var day = DateTime.SpecifyKind(date.Date, DateTimeKind.Unspecified);
+            var endDay = DateTime.SpecifyKind((row.EndDate ?? date).Date, DateTimeKind.Unspecified);
+
+            if (row.Start is not { } start || row.End is not { } end ||
+                start < TimeSpan.Zero || start >= TimeSpan.FromDays(1) || end < TimeSpan.Zero || end > TimeSpan.FromDays(1) ||
+                endDay + end <= day + start)
             {
                 invalid.Add(position);
 
                 continue;
             }
 
-            // The times are wall-clock times in the user's or the site's time zone.
-            var day = DateTime.SpecifyKind(date.Date, DateTimeKind.Unspecified);
-
             meetings.Add(new SchedulingSessionMeeting
             {
                 StartUtc = DateTime.SpecifyKind(await localClock.ToUtcLenientAsync(day + start), DateTimeKind.Utc),
-                EndUtc = DateTime.SpecifyKind(await localClock.ToUtcLenientAsync(day + end), DateTimeKind.Utc),
+                EndUtc = DateTime.SpecifyKind(await localClock.ToUtcLenientAsync(endDay + end), DateTimeKind.Utc),
             });
         }
 
@@ -68,7 +72,8 @@ internal static class ClassSessionMeetings
             {
                 Date = start.Date,
                 Start = start.TimeOfDay,
-                End = end.Date == start.Date ? end.TimeOfDay : TimeSpan.FromDays(1).Subtract(TimeSpan.FromMinutes(1)),
+                End = end.TimeOfDay,
+                EndDate = end.Date == start.Date ? null : end.Date,
             });
         }
 

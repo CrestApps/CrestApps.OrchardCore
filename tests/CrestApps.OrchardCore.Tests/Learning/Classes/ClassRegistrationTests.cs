@@ -334,6 +334,70 @@ public sealed class ClassRegistrationTests
         Assert.Equal("class1", benEnrollment.Review.ItemId);
     }
 
+    [Fact]
+    public async Task AfterTheFirstMeetingStarts_APlaceIsNotGivenUp_ByTheLearnerOrByAnEnrollmentThatEnds()
+    {
+        // Arrange
+        var clock = new TestClock { UtcNow = CalendarTestHarness.Now };
+        var (h, session) = await CreateAsync(clock: clock);
+        await using var _ = h;
+        var ana = await EnrollAsync(h, "ana");
+        var ben = await EnrollAsync(h, "ben");
+        await RegisterAsync(h, ana, session);
+        await RegisterAsync(h, ben, session);
+        clock.UtcNow = session.StartUtc.AddMinutes(30);
+
+        // Act
+        var gaveUp = await h.RunAsync(services => Registrations(services).CancelAsync(ana.ItemId, "class1", "Bored"));
+        var withdrawn = await h.RunAsync(services => services.GetRequiredService<IEnrollmentService>().ChangeStatusAsync(ben.ItemId, EnrollmentStatus.Withdrawn, "admin", "Left"));
+        await h.RunAsync(async services =>
+        {
+            foreach (var observer in services.GetServices<IEnrollmentObserver>())
+            {
+                await observer.StatusChangedAsync(withdrawn.Enrollment, EnrollmentStatus.Active);
+            }
+
+            return true;
+        });
+        var anaAfter = await h.RunAsync(services => Registrations(services).FindAsync(ana.ItemId, "class1"));
+        var benAfter = await h.RunAsync(services => Registrations(services).FindAsync(ben.ItemId, "class1"));
+
+        // Assert
+        Assert.Equal(ClassRegistrationErrors.SessionStarted, gaveUp.Error);
+        Assert.Equal(AppointmentStatus.Confirmed, anaAfter?.Appointment?.Status);
+        Assert.Equal(AppointmentStatus.Confirmed, benAfter?.Appointment?.Status);
+    }
+
+    [Fact]
+    public async Task ARegistration_IsRefused_AfterTheLearnersAccessEnded_OrBeforeTheClassIsReleased()
+    {
+        // Arrange: class3 opens once the lesson is completed; Ben's access ended yesterday.
+        var (h, session) = await CreateAsync();
+        await using var _ = h;
+        var locked = await SaveSessionAsync(h, session.AppointmentTypeId, session.ResourceIds, "class3", capacity: 5);
+        var ana = await EnrollAsync(h, "ana");
+        var ben = await EnrollAsync(h, "ben");
+
+        await h.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<EnrollmentStore>();
+            var enrollment = await store.FindByIdAsync(ben.ItemId);
+
+            enrollment.AccessEndsUtc = CalendarTestHarness.Now.AddDays(-1);
+            await store.SaveAsync(enrollment);
+
+            return true;
+        });
+
+        // Act
+        var notReleased = await h.RunAsync(services => Registrations(services).RegisterAsync(ana.ItemId, "class3", locked.ItemId));
+        var accessEnded = await RegisterAsync(h, ben, session);
+
+        // Assert
+        Assert.Equal(ClassRegistrationErrors.NotAvailableYet, notReleased.Error);
+        Assert.Equal(ClassRegistrationErrors.NoAccess, accessEnded.Error);
+    }
+
     private static IClassRegistrationService Registrations(IServiceProvider services)
         => services.GetRequiredService<IClassRegistrationService>();
 
@@ -395,6 +459,10 @@ public sealed class ClassRegistrationTests
         courses.AddItem("c1", "lesson");
         courses.AddItem("c1", "class1", kind: ClassesConstants.ClassKind, completionMode: CompletionModes.Attended).Apply(new ClassPart { MinimumMinutes = minimumMinutes });
         courses.AddItem("c1", "class2", kind: ClassesConstants.ClassKind, completionMode: CompletionModes.Attended).Apply(new ClassPart());
+        courses.AddItem("c1", "class3", kind: ClassesConstants.ClassKind, completionMode: CompletionModes.Attended, configure: part => part.ReleaseRules =
+        [
+            new LearningRuleSettings { Name = LearningRuleNames.ItemCompleted, Values = { ["ItemId"] = "lesson" } },
+        ]).Apply(new ClassPart());
 
         var resource = await SchedulingTestSupport.AddResourceAsync(harness, "Trainer");
         var type = await SchedulingTestSupport.AddTypeAsync(harness, [resource.ItemId]);

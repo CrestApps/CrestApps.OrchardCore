@@ -114,4 +114,10 @@ public static class ClassRegistrationErrors
     public const string NoOffer = "NoOffer";
 
     public const string Busy = "Busy";
+
+    public const string NoAccess = "NoAccess";
+
+    public const string NotAvailableYet = "NotAvailableYet";
+
+    public const string SessionStarted = "SessionStarted";
 }

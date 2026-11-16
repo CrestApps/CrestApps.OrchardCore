@@ -144,6 +144,9 @@ public sealed class ClassRegistrationController : Controller
             ClassRegistrationErrors.NotRegistered => H["You have no place in this class."],
             ClassRegistrationErrors.NoOffer => H["You have no offered place to accept. The offer may have run out."],
             ClassRegistrationErrors.Busy => H["Your place in this class is being changed. Try again in a moment."],
+            ClassRegistrationErrors.NoAccess => H["Your access to this course has ended, so you cannot register for a session."],
+            ClassRegistrationErrors.NotAvailableYet => H["This class is not open to you yet. Complete the items it waits for first."],
+            ClassRegistrationErrors.SessionStarted => H["The session has started, so your place can no longer be given up."],
             _ => H["{0}", error ?? string.Empty],
         };
 

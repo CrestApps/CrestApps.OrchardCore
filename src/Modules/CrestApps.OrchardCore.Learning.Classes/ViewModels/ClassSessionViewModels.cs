@@ -18,6 +18,9 @@ public class ClassMeetingRow
     public TimeSpan? Start { get; set; }
 
     public TimeSpan? End { get; set; }
+
+    // The day the meeting ends when it is not the day it starts, such as an evening meeting past midnight.
+    public DateTime? EndDate { get; set; }
 }
 
 /// <summary>
@@ -73,6 +76,9 @@ public class ClassPanelViewModel
     public bool EnrollmentActive { get; set; }
 
     public ClassRegistration Registration { get; set; }
+
+    // Whether the learner may still give up their place or wait: a place only until the first meeting starts.
+    public bool CanGiveUp { get; set; }
 
     public IList<ClassPanelSession> Sessions { get; set; } = [];
 }

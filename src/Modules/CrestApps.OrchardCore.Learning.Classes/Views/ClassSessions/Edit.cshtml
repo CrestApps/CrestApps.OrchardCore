@@ -36,6 +36,7 @@
                                     <th scope="col">@T["Date"]</th>
                                     <th scope="col">@T["Starts"]</th>
                                     <th scope="col">@T["Ends"]</th>
+                                    <th scope="col">@T["Ends on"]</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -50,6 +51,7 @@
                                             <input type="time" name="Meetings[@i].End" value="@(meeting.End?.ToString(@"hh\:mm"))" class="form-control form-control-sm" aria-label="@T["End of meeting {0}", i + 1]" />
                                             <span asp-validation-for="Meetings[i].End"></span>
                                         </td>
+                                        <td><input type="date" name="Meetings[@i].EndDate" value="@(meeting.EndDate?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" aria-label="@T["End date of meeting {0}", i + 1]" /></td>
                                     </tr>
                                 }
                             </tbody>
@@ -57,7 +59,7 @@
                     </div>
                     <span asp-validation-for="Meetings"></span>
                     <button type="submit" name="addMeeting" value="true" formnovalidate class="btn btn-sm btn-secondary"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add a meeting"]</button>
-                    <span class="hint d-block">@T["One registration covers every meeting. Times are in your time zone. Clear a meeting's date to remove it."]</span>
+                    <span class="hint d-block">@T["One registration covers every meeting. Times are in your time zone. Leave Ends on empty for a meeting that ends the day it starts. Clear a meeting's date to remove it."]</span>
                 </div>
             </div>
 

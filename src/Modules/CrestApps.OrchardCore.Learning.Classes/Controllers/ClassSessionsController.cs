@@ -144,6 +144,7 @@ public sealed class ClassSessionsController : Controller
     /// <param name="addMeeting">Whether the Add a meeting button was used.</param>
     /// <returns>The sessions, or the editor with its errors.</returns>
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [ActionName(nameof(Create))]
     [Admin("learning/classes/{classItemId}/sessions/new", "LearningClassSessionsCreate")]
     public async Task<IActionResult> CreatePost(string classItemId, ClassSessionEditViewModel model, bool addMeeting)
@@ -211,6 +212,7 @@ public sealed class ClassSessionsController : Controller
     /// <param name="addMeeting">Whether the Add a meeting button was used.</param>
     /// <returns>The sessions, or the editor with its errors.</returns>
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [ActionName(nameof(Edit))]
     [Admin("learning/class-sessions/{id}/edit", "LearningClassSessionsEdit")]
     public async Task<IActionResult> EditPost(string id, ClassSessionEditViewModel model, bool addMeeting)
@@ -273,6 +275,7 @@ public sealed class ClassSessionsController : Controller
     /// <param name="model">The reason.</param>
     /// <returns>The sessions.</returns>
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [ActionName(nameof(Cancel))]
     [Admin("learning/class-sessions/{id}/cancel", "LearningClassSessionsCancel")]
     public async Task<IActionResult> CancelPost(string id, ClassSessionCancelViewModel model)
@@ -372,6 +375,7 @@ public sealed class ClassSessionsController : Controller
     /// <param name="minutes">The minutes of each partial attendance, by registration id.</param>
     /// <returns>The roster.</returns>
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [ActionName(nameof(Roster))]
     [Admin("learning/class-sessions/{id}/roster", "LearningClassSessionsRoster")]
     public async Task<IActionResult> RosterPost(string id, Dictionary<string, AppointmentAttendance> attendance, Dictionary<string, int?> minutes)

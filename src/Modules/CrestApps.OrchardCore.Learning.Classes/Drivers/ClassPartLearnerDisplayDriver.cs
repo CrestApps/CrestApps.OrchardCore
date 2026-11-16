@@ -56,6 +56,10 @@ internal sealed class ClassPartLearnerDisplayDriver : ContentPartDisplayDriver<C
             if (learner?.Enrollment is not null)
             {
                 model.Registration = await _registrations.FindAsync(learner.Enrollment.ItemId, model.ClassItemId);
+                model.CanGiveUp = model.Registration is { } registration &&
+                    (registration.IsWaiting ||
+                        (registration.Appointment?.Status is AppointmentStatus.Held or AppointmentStatus.Requested or AppointmentStatus.Confirmed &&
+                            DateTime.SpecifyKind(registration.Session.StartUtc, DateTimeKind.Utc) > now));
             }
 
             foreach (var session in await _registrations.ListSessionsAsync(model.ClassItemId))

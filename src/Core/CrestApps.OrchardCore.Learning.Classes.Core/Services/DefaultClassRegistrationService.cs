@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Scheduling.Services;
 using Microsoft.AspNetCore.Identity;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
+using OrchardCore.Modules;
 using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Learning.Classes.Core.Services;
@@ -28,14 +29,28 @@ internal sealed class DefaultClassRegistrationService : IClassRegistrationServic
     private readonly ICourseStructureService _courses;
     private readonly UserManager<IUser> _users;
     private readonly IDistributedLock _distributedLock;
+    private readonly CourseReleaseEvaluator _release;
+    private readonly ILearnerProgressService _progress;
+    private readonly IClock _clock;
 
-    public DefaultClassRegistrationService(ISchedulingSessionService sessions, IEnrollmentStore enrollments, ICourseStructureService courses, UserManager<IUser> users, IDistributedLock distributedLock)
+    public DefaultClassRegistrationService(
+        ISchedulingSessionService sessions,
+        IEnrollmentStore enrollments,
+        ICourseStructureService courses,
+        UserManager<IUser> users,
+        IDistributedLock distributedLock,
+        CourseReleaseEvaluator release,
+        ILearnerProgressService progress,
+        IClock clock)
     {
         _sessions = sessions;
         _enrollments = enrollments;
         _courses = courses;
         _users = users;
         _distributedLock = distributedLock;
+        _release = release;
+        _progress = progress;
+        _clock = clock;
     }
 
     public async Task<IReadOnlyList<SchedulingSession>> ListSessionsAsync(string classItemId, CancellationToken cancellationToken = default)
@@ -67,9 +82,22 @@ internal sealed class DefaultClassRegistrationService : IClassRegistrationServic
             return ClassRegistrationResult.Fail(ClassRegistrationErrors.EnrollmentNotActive);
         }
 
-        if (!await IsClassOfCourseAsync(enrollment.CourseId, classItemId))
+        var entry = await FindClassEntryAsync(enrollment.CourseId, classItemId);
+
+        if (entry is null)
         {
             return ClassRegistrationResult.Fail(ClassRegistrationErrors.NotAClassOfTheCourse);
+        }
+
+        // As for any other item of the course: within the learner's access dates, once the release rules open it.
+        if (!EnrollmentAccess.HasAccess(enrollment, _clock.UtcNow))
+        {
+            return ClassRegistrationResult.Fail(ClassRegistrationErrors.NoAccess);
+        }
+
+        if (!(await _release.EvaluateAsync(entry, enrollment, await _progress.GetAsync(enrollment.ItemId, cancellationToken))).IsReleased)
+        {
+            return ClassRegistrationResult.Fail(ClassRegistrationErrors.NotAvailableYet);
         }
 
         var session = string.IsNullOrEmpty(sessionId) ? null : await _sessions.FindByIdAsync(sessionId, cancellationToken);
@@ -155,8 +183,17 @@ internal sealed class DefaultClassRegistrationService : IClassRegistrationServic
             return ClassRegistrationResult.Fail(ClassRegistrationErrors.NotRegistered);
         }
 
+        // Once the first meeting started the place stays on the roster, so its attendance can be marked.
+        if (HasStarted(existing))
+        {
+            return ClassRegistrationResult.Fail(ClassRegistrationErrors.SessionStarted);
+        }
+
         return await CancelAsync(existing, reason, actor, cancellationToken);
     }
+
+    private bool HasStarted(ClassRegistration registration)
+        => registration.Appointment is not null && registration.Session.StartUtc <= _clock.UtcNow;
 
     public async Task<int> CancelAllAsync(string enrollmentId, string reason, string actor = null, CancellationToken cancellationToken = default)
     {
@@ -195,7 +232,8 @@ internal sealed class DefaultClassRegistrationService : IClassRegistrationServic
         {
             var existing = await FindAsync(enrollment, classItemId, cancellationToken);
 
-            if (existing is null || (existing.Appointment is not null && !_upcoming.Contains(existing.Appointment.Status)))
+            // A place in a session that already started stays on its roster; waits and upcoming places are given up.
+            if (existing is null || (existing.Appointment is not null && !_upcoming.Contains(existing.Appointment.Status)) || HasStarted(existing))
             {
                 continue;
             }
@@ -275,10 +313,11 @@ internal sealed class DefaultClassRegistrationService : IClassRegistrationServic
         return item is not null && item.TryGet<ClassPart>(out var part) ? part : null;
     }
 
-    private async Task<bool> IsClassOfCourseAsync(string courseId, string classItemId)
+    private async Task<CourseOutlineEntry> FindClassEntryAsync(string courseId, string classItemId)
     {
         var course = string.IsNullOrEmpty(classItemId) ? null : await _courses.GetCourseAsync(courseId);
+        var entry = course is null ? null : (await _courses.GetOutlineAsync(course)).Find(classItemId);
 
-        return course is not null && (await _courses.GetOutlineAsync(course)).Find(classItemId)?.Part?.Kind == ClassesConstants.ClassKind;
+        return entry?.Part?.Kind == ClassesConstants.ClassKind ? entry : null;
     }
 }

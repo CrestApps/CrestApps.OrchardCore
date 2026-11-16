@@ -75,4 +75,30 @@ public sealed class LearningClassesPagesTests
         Assert.Equal(HttpStatusCode.OK, roster.StatusCode);
         Assert.NotEqual(HttpStatusCode.OK, refused.StatusCode);
     }
+
+    [Fact]
+    public async Task TheSessionActions_RefuseAPostWithoutTheAntiforgeryToken()
+    {
+        // Arrange: review round 8, 6.9. An administrator may run each action, so only the token stops them.
+        using var admin = await _fixture.CreateClientAsync("admin");
+        using var empty = new FormUrlEncodedContent(new Dictionary<string, string>());
+
+        // Act
+        var create = await admin.PostAsync("Admin/learning/classes/some-class/sessions/new", empty, TestContext.Current.CancellationToken);
+        var edit = await admin.PostAsync("Admin/learning/class-sessions/some-session/edit", empty, TestContext.Current.CancellationToken);
+        var cancel = await admin.PostAsync("Admin/learning/class-sessions/some-session/cancel", empty, TestContext.Current.CancellationToken);
+        var roster = await admin.PostAsync("Admin/learning/class-sessions/some-session/roster", empty, TestContext.Current.CancellationToken);
+
+        // The same post with the token reaches the action, which does not find the session.
+        var page = await admin.GetStringAsync("Admin/learning/enrollments/new", TestContext.Current.CancellationToken);
+        using var withToken = new FormUrlEncodedContent(new Dictionary<string, string> { ["__RequestVerificationToken"] = LearningSiteFixture.Token(page) });
+        var reached = await admin.PostAsync("Admin/learning/class-sessions/some-session/roster", withToken, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, create.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, edit.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, cancel.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, roster.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, reached.StatusCode);
+    }
 }

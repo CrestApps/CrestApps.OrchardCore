@@ -110,6 +110,32 @@ public sealed class ClassSessionEditorTests
     }
 
     [Fact]
+    public async Task AMeetingThatEndsAfterLocalMidnight_KeepsItsEnd_WhenSavedAgain()
+    {
+        // Arrange: 22:00 to 01:00 in New York on 1 December.
+        var meetings = new[]
+        {
+            new SchedulingSessionMeeting
+            {
+                StartUtc = new DateTime(2026, 12, 2, 3, 0, 0, DateTimeKind.Utc),
+                EndUtc = new DateTime(2026, 12, 2, 6, 0, 0, DateTimeKind.Utc),
+            },
+        };
+
+        // Act
+        var rows = await ClassSessionMeetings.ToRowsAsync(LocalClock(), meetings);
+        var saved = await ClassSessionMeetings.ToUtcAsync(LocalClock(), rows);
+
+        // Assert
+        var row = Assert.Single(rows);
+        Assert.Equal((new DateTime(2026, 12, 1), new TimeSpan(22, 0, 0)), (row.Date, row.Start));
+        Assert.Equal((new DateTime(2026, 12, 2), new TimeSpan(1, 0, 0)), (row.EndDate, row.End));
+        Assert.Empty(saved.InvalidRows);
+        var meeting = Assert.Single(saved.Meetings);
+        Assert.Equal((meetings[0].StartUtc, meetings[0].EndUtc), (meeting.StartUtc, meeting.EndUtc));
+    }
+
+    [Fact]
     public async Task Scope_ManageLearningClasses_ManagesEveryClass()
     {
         // Arrange

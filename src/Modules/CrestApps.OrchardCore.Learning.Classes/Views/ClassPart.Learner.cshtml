@@ -4,7 +4,7 @@
     var registration = Model.Registration;
     var appointment = registration?.Appointment;
     var registered = appointment is not null && !registration.IsOffered && appointment.Status is AppointmentStatus.Confirmed or AppointmentStatus.Requested or AppointmentStatus.Completed or AppointmentStatus.NoShow;
-    var canGiveUp = registration is not null && (registration.IsWaiting || appointment?.Status is AppointmentStatus.Held or AppointmentStatus.Requested or AppointmentStatus.Confirmed);
+    var canGiveUp = Model.CanGiveUp;
 }
 
 <div class="card mb-3 learning-class" data-learning-class>
@@ -113,7 +113,7 @@
                                     {
                                         <li class="list-inline-item"><i class="fa-solid fa-location-dot me-1" aria-hidden="true"></i>@session.Location</li>
                                     }
-                                    @if (mine && registered && !string.IsNullOrWhiteSpace(session.MeetingUrl))
+                                    @if (mine && appointment?.Status == AppointmentStatus.Confirmed && !string.IsNullOrWhiteSpace(session.MeetingUrl))
                                     {
                                         <li class="list-inline-item"><i class="fa-solid fa-video me-1" aria-hidden="true"></i><a href="@session.MeetingUrl" target="_blank" rel="noopener noreferrer">@T["Join the meeting"]</a></li>
                                     }
