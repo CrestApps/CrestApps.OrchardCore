@@ -46,8 +46,11 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
     private readonly string _databasePath = Path.Combine(AppContext.BaseDirectory, $"email-sign-in-{Guid.NewGuid():N}.db");
     private readonly LocalLock _lock = new(NullLogger<LocalLock>.Instance);
 
-    private EmailSignInHarness()
+    private readonly Action<IServiceCollection> _configureServices;
+
+    private EmailSignInHarness(Action<IServiceCollection> configureServices)
     {
+        _configureServices = configureServices;
     }
 
     public IStore Store { get; private set; }
@@ -67,9 +70,13 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
 
     private string ConnectionString => $"Data Source={_databasePath};Pooling=False";
 
-    public static async Task<EmailSignInHarness> CreateAsync()
+    /// <summary>
+    /// Creates the harness. <paramref name="configureServices"/> adds the services a feature registers, as its startup
+    /// does; the user event handlers it registers are raised by the user store.
+    /// </summary>
+    public static async Task<EmailSignInHarness> CreateAsync(Action<IServiceCollection> configureServices = null)
     {
-        var harness = new EmailSignInHarness();
+        var harness = new EmailSignInHarness(configureServices);
         await harness.InitializeAsync();
 
         return harness;
@@ -114,6 +121,12 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
 
         return result;
     }
+
+    /// <summary>
+    /// The user event handlers of a request: those registered, then <see cref="UserEventHandlers"/>.
+    /// </summary>
+    public IUserEventHandler[] GetUserEventHandlers(IServiceProvider requestServices)
+        => [.. requestServices.GetServices<IUserEventHandler>(), .. UserEventHandlers];
 
     public EmailSignInCodes CreateCodes()
     {
@@ -210,15 +223,23 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
         services.AddLogging();
         services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
         services.AddIdentityCore<IUser>();
+        services.AddSingleton(CreateClock());
         services.AddScoped(_ => Store.CreateSession());
+
+        // Orchard Core's Users feature registers its e-mail confirmation token this way.
+        services.AddOptions<EmailConfirmationTokenProviderOptions>();
+        services.AddTransient<EmailConfirmationTokenProvider>();
+        services.AddTransient<IConfigureOptions<IdentityOptions>, EmailConfirmationIdentityOptionsConfigurations>();
         services.AddScoped<IUserStore<IUser>>(provider => new UserStore(
             provider.GetRequiredService<ISession>(),
             provider.GetRequiredService<ILookupNormalizer>(),
             Mock.Of<IUserIdGenerator>(),
             NullLogger<UserStore>.Instance,
-            UserEventHandlers,
+            GetUserEventHandlers(provider),
             Mock.Of<IRoleService>(),
             provider.GetRequiredService<IDataProtectionProvider>()));
+
+        _configureServices?.Invoke(services);
 
         Services = services.BuildServiceProvider();
     }

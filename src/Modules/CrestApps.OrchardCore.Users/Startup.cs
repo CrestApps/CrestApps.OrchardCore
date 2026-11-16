@@ -224,6 +224,9 @@ public sealed class EmailCodeSignInStartup : StartupBase
         services.AddScoped<EmailSignInCodes>();
         services.AddScoped<IEmailSignInCodeSender, EmailSignInCodeSender>();
         services.AddScoped<EmailOwnershipProof>();
+
+        // A confirmation link proves the address as a code does, with or without the Customers feature.
+        services.AddEmailOwnershipConfirmation();
         services.AddDisplayDriver<LoginForm, EmailCodeLoginFormDisplayDriver>();
         services.Configure<EmailSignInOptions>(_shellConfiguration.GetSection(EmailSignInOptions.SectionName));
 

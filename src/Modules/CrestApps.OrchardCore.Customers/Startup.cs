@@ -19,6 +19,7 @@ using CrestApps.OrchardCore.Customers.Migrations;
 using CrestApps.OrchardCore.Customers.Navigation;
 using CrestApps.OrchardCore.Customers.Recipes;
 using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Orders.Core.Models;
@@ -27,11 +28,9 @@ using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Customers.Api;
 using CrestApps.OrchardCore.PersonalData.Core;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -64,15 +63,13 @@ public sealed class Startup : StartupBase
         // Customers are parties: pickers and lists in any module find and name them by their customer record id.
         services.AddPartySource<CustomerPartySource>();
 
-        // A guest's history joins their account once the account's email is verified.
+        // A guest's history joins their account once the account's email is verified. Following a confirmation link is
+        // one proof of the address, recorded by the Users building block's handler, which is registered first so the
+        // merge on ConfirmedAsync sees it; and a link only confirms the address it was sent to.
+        services.AddEmailOwnershipConfirmation();
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
         services.AddScoped<ILoginFormEvent, CustomerMergeLoginFormEvent>();
         services.AddScoped<IUserEventHandler, CustomerMergeUserEventHandler>();
-
-        // Following a confirmation link is what proves the address above, so a link only confirms the address it was sent
-        // to: an old link must not confirm an address the user changed to afterwards.
-        services.AddTransient<EmailBoundConfirmationTokenProvider>();
-        services.AddTransient<IConfigureOptions<IdentityOptions>, EmailBoundConfirmationIdentityOptions>();
 
         services.AddScoped<CustomerAddressBook>();
 
