@@ -538,7 +538,7 @@ All paths start with `api/commerce/v1/`. **Guest** means anybody can call it, wi
 | --- | --- | --- | --- |
 | `GET` | `products` | Guest | Lists the products the caller may see. Takes `q` (search), `type` (a product content type), `sort` (`newest`, `price-asc`, `price-desc`, `name` or `featured`; the listing's recommended order when not given), `skip` and `take`. |
 | `GET` | `products/{id}` | Guest | Gets a product, priced for the caller, with its images, prices, options, variants, add-ons, specifications, quantity rules and availability. |
-| `GET` | `products/{id}/availability` | Guest | Whether the product, or the variant given in `variantId`, is in stock at each location. For a product sold in variants and no `variantId`, each location answers for all its variants together. Needs the **Inventory API**. |
+| `GET` | `products/{id}/availability` | Guest | Whether the product, or the variant given in `variantId`, is in stock at each location the store shows to shoppers (**Show to shoppers** on the location; every location for a caller with **View inventory**). For a product sold in variants and no `variantId`, each location answers for all its variants together. Needs the **Inventory API**. |
 
 Prices are what the caller pays, with sales and their role's discount included, in the caller's [market](#markets) when it names one. `prices` lists each of the product's prices as the product lists it, in its own currency; `price` is the one the caller pays. Availability gives a count only when few are left, the way the product page says *Only 3 left*.
 

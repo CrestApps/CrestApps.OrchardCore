@@ -51,6 +51,8 @@ public class InventoryLocationViewModel
 
     public string Address { get; set; }
 
+    public bool ShowToShoppers { get; set; }
+
     public bool Remove { get; set; }
 
     [BindNever]

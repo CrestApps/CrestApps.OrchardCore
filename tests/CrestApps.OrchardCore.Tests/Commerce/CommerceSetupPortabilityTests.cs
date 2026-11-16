@@ -175,6 +175,32 @@ public sealed class CommerceSetupPortabilityTests
         Assert.Equal("1 Dock Rd", location.Address);
     }
 
+    /// <summary>
+    /// SEC-C17m: whether shoppers see a location travels with it, so a shop shown on the source site is shown on the
+    /// target, and a warehouse stays hidden.
+    /// </summary>
+    [Fact]
+    public async Task StockLocations_CarryWhetherShoppersSeeThem()
+    {
+        // Arrange
+        var source = new InMemoryCatalog<StockLocation>();
+
+        source.Entries.Add(new StockLocation { ItemId = "default", Name = "Main warehouse", Position = 1 });
+        source.Entries.Add(new StockLocation { ItemId = "4sl00000000000000000000002", Name = "Downtown store", Position = 2, ShowToShoppers = true });
+
+        var target = new InMemoryCatalog<StockLocation>();
+        var step = new StockLocationsStep(target, RecipeRoundTrip.Localizer<StockLocationsStep>());
+
+        // Act
+        var exported = await RecipeRoundTrip.ExportAsync(new StockLocationsDeploymentSource(source), new StockLocationsDeploymentStep());
+        var errors = await RecipeRoundTrip.RunAsync(step, exported);
+
+        // Assert
+        Assert.Empty(errors);
+        Assert.False(target.Entries.Single(entry => entry.ItemId == "default").ShowToShoppers);
+        Assert.True(target.Entries.Single(entry => entry.ItemId == "4sl00000000000000000000002").ShowToShoppers);
+    }
+
     [Fact]
     public async Task Vendors_TravelWithTheirUsersByName_AndNeverWithTheirPayoutAccount()
     {

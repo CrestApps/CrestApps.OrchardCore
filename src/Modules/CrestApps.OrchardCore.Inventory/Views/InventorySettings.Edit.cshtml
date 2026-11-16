@@ -62,7 +62,16 @@
             <label asp-for="Locations[i].Address" class="ocat-label">@T["Address"]</label>
             <div class="ocat-end">
                 <input asp-for="Locations[i].Address" class="form-control" autocomplete="off" />
-                <span class="hint">@T["Optional, for your staff."]</span>
+                <span class="hint">@T["Optional. Shoppers see it only when the location is shown to them."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Locations[i].ShowToShoppers" type="checkbox" class="form-check-input" />
+                    <label asp-for="Locations[i].ShowToShoppers" class="form-check-label">@T["Show to shoppers"]</label>
+                    <span class="hint dashed">@T["Shoppers and storefront apps see whether products are in stock here, with the location's name and address. Tick it for a shop buyers can visit or pick up from; leave it off for a warehouse."]</span>
+                </div>
             </div>
         </div>
         @if (location.IsDefault)

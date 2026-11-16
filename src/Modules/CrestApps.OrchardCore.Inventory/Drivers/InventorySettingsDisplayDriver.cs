@@ -77,6 +77,7 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
                     LocationId = location.LocationId,
                     Name = location.Name,
                     Address = location.Address,
+                    ShowToShoppers = location.ShowToShoppers,
                     IsDefault = location.LocationId == InventoryConstants.DefaultLocationId,
                 })
                 .ToList();
@@ -170,6 +171,7 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
                 LocationId = string.IsNullOrWhiteSpace(row.LocationId) ? UniqueId.GenerateId() : row.LocationId.Trim(),
                 Name = row.Name?.Trim(),
                 Address = string.IsNullOrWhiteSpace(row.Address) ? null : row.Address.Trim(),
+                ShowToShoppers = row.ShowToShoppers,
             });
         }
 
@@ -191,6 +193,7 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
             {
                 existing.Name = location.Name;
                 existing.Address = location.Address;
+                existing.ShowToShoppers = location.ShowToShoppers;
                 existing.Position = i + 1;
                 await _locationStore.UpdateAsync(existing);
             }
@@ -201,6 +204,7 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
                     ItemId = location.LocationId,
                     Name = location.Name,
                     Address = location.Address,
+                    ShowToShoppers = location.ShowToShoppers,
                     Position = i + 1,
                     CreatedUtc = _clock.UtcNow,
                 });

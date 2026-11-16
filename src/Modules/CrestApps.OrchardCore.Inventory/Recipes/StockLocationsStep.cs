@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.Inventory.Recipes;
 /// </summary>
 /// <remarks>
 /// <code>
-/// { "name": "StockLocations", "Locations": [ { "ItemId": "default", "Name": "Main warehouse", "Address": "1 Dock Rd", "Position": 1 } ] }
+/// { "name": "StockLocations", "Locations": [ { "ItemId": "default", "Name": "Main warehouse", "Address": "1 Dock Rd", "Position": 1 }, { "Name": "Downtown store", "ShowToShoppers": true, "Position": 2 } ] }
 /// </code>
 /// Locations another module owns, such as a technician's van, are kept by that module and are not part of the step.
 /// </remarks>

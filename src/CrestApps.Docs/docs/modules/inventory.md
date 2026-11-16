@@ -33,7 +33,7 @@ All of these live in the `Inventory` YesSql collection.
   - `Kind` is one of `Received`, `Adjusted`, `Counted`, `Sold`, `Returned`, `Transferred` or `Consumed`. Sold and returned movements come with checkout reservations; a transfer is a movement out of one location and one into the other; consumed units were used up, such as parts fitted on a work order.
 - **`InventoryPart`** (attachable): `TrackInventory` (default true), `AllowBackorder`, `LowStockThreshold` (null for the site default), `ReleaseDateUtc` (the **Ships from** date, kept as noon UTC on the day so it reads as the same day in any time zone).
 - **`StockReservation`**: `StockItemId`, `OrderId`, `LocationId`, `Quantity`, `ReturnedQuantity` (units of the sale returned so far), `Status` (`Held`, `Committed`, `Released`), `ExpiresUtc`, `ReleaseReason`. `StockReservationIndex` maps the stock item, order, status and expiry. A committed reservation is also what keeps an order's sale from being recorded twice.
-- **`StockLocation`**: a place stock is kept. Its `ItemId` is the location id; `Name`, `Address` for staff, `Position` (the order orders take units from the site's locations), and `OwnerKind` and `OwnerId` for a location another record owns, such as a van (`Asset`). `StockLocationStore.FindByOwnerAsync` finds an owner's location.
+- **`StockLocation`**: a place stock is kept. Its `ItemId` is the location id; `Name`, `Address`, `ShowToShoppers` (whether guests see the location and its stock through the availability API; `false` by default, so a location, an existing one included, is staff information until the store ticks **Show to shoppers**), `Position` (the order orders take units from the site's locations), and `OwnerKind` and `OwnerId` for a location another record owns, such as a van (`Asset`). `StockLocationStore.FindByOwnerAsync` finds an owner's location.
 - **`InventorySettings`** (Settings › Commerce › Inventory): `DefaultLowStockThreshold` (5) and `HoldMinutes` (60). Its `Locations` list is from before locations had a store: a migration step moves them into the store with their ids and order, and the settings page edits the site's own locations (up to 50) in the store.
 
 ## Services
@@ -96,14 +96,14 @@ With Product Listing on, `InventorySearchDocumentContributor` writes the built-i
   ```
 
 - **Deployment step `Stock`** (`StockDeploymentStep`, *Commerce*) exports every item that isn't archived with its ids, SKU and `OnHand`.
-- **Recipe step `StockLocations`** (`StockLocationsStep`): the store's own `Locations`, each with `Name`, an optional `Address` and its `Position`. A location keeps the `ItemId` it is given, such as `default`, so stock, registers and movements keep pointing at it; one without an id is matched by its name. A location without a name is a recipe error. Run it before `Stock`. The **Stock locations** deployment step (`StockLocationsDeploymentStep`, *Commerce*) writes them in order. Locations another module owns (`OwnerKind`), such as a technician's van, are left out: that module keeps them.
+- **Recipe step `StockLocations`** (`StockLocationsStep`): the store's own `Locations`, each with `Name`, an optional `Address`, `ShowToShoppers` (`false` when left out) and its `Position`. A location keeps the `ItemId` it is given, such as `default`, so stock, registers and movements keep pointing at it; one without an id is matched by its name. A location without a name is a recipe error. Run it before `Stock`. The **Stock locations** deployment step (`StockLocationsDeploymentStep`, *Commerce*) writes them in order. Locations another module owns (`OwnerKind`), such as a technician's van, are left out: that module keeps them.
 
   ```json
   {
     "name": "StockLocations",
     "Locations": [
       { "ItemId": "default", "Name": "Main warehouse", "Address": "1 Dock Rd", "Position": 1 },
-      { "ItemId": "4sl00000000000000000000001", "Name": "Downtown store", "Position": 2 }
+      { "ItemId": "4sl00000000000000000000001", "Name": "Downtown store", "ShowToShoppers": true, "Position": 2 }
     ]
   }
   ```
@@ -277,7 +277,7 @@ With **Product Bundles** on, `BundleAvailabilityProvider` answers for bundles be
 
 The **Inventory API** feature (`CrestApps.OrchardCore.Inventory.Api`) maps into the commerce JSON API at `api/commerce/v1`:
 
-- `GET products/{id}/availability`, for guests: the product's or a variant's stock status at each location, with the count only when it's low.
+- `GET products/{id}/availability`, for guests: the product's or a variant's stock status at each location, with the count only when it's low. A caller without **View inventory** gets only the store's own locations marked **Show to shoppers** (`ShowToShoppers`), so warehouses and vans aren't listed; staff with **View inventory** get every location. Pickup points are Shipping's (**Settings > Commerce > Shipping**, `ShippingSettings.PickupLocations`); a pickup point's stock location is listed to shoppers only when it is shown to them.
 - `inventory` and `inventory/{stockItemId}` with **View inventory**, and `receive`, `adjust`, `count` and `transfer` under it with **Manage inventory**, through `IInventoryService`. Each change is committed in the request; a collision with a checkout changing the same stock answers `409` with the code `concurrency`.
 
 See [Commerce API](commerce-api.md) for the endpoints, the conventions they share, and how apps sign in, and [Headless commerce API](../user-manual/commerce/headless-api.md) in the User Manual for setting it up in the admin.

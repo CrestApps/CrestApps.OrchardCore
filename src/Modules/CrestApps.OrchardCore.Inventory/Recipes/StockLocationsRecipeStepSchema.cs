@@ -24,6 +24,7 @@ internal sealed class StockLocationsRecipeStepSchema : RecordsRecipeStepSchemaBa
         [
             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The location's name, such as Main warehouse.")),
             ("Address", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The location's address, as one line of text.")),
+            ("ShowToShoppers", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether shoppers see whether products are in stock at the location, with its name and address, such as a shop. Leave it false for a warehouse. Defaults to false.")),
             ("Position", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("The location's place in the list: orders take units from the first locations first.")),
             ("OwnerKind", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Leave empty. A location owned by another record, such as an asset's, belongs to that record and is skipped.")),
         ];
