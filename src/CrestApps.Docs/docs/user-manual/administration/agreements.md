@@ -2,6 +2,8 @@
 sidebar_label: Agreements
 title: Agreements with accounts
 description: "Keep the support and maintenance agreements you have with accounts: their period, the hours they cover, the tickets and visits they cover, and how many hours are used and left."
+technical_manual:
+  - modules/agreements
 ---
 
 An agreement is what you agreed with an account: a support contract with ten hours a month, a block of forty prepaid hours, a maintenance contract with a visit every six months, or all of these at once.
@@ -11,6 +13,8 @@ An agreement is what you agreed with an account: a support contract with ten hou
 | **Feature** | Agreements (it turns on Accounts); Tickets for support agreements, Work Orders' Service Agreements for visits, Time Tracker for counting ticket time, Notifications for the warnings |
 | **Permission** | **Manage agreements with accounts** to add and change them; **View agreements with accounts and their hours** to see them |
 | **Menu** | **Agreements** |
+
+<AskYourAdmin />
 
 ## Add an agreement
 
