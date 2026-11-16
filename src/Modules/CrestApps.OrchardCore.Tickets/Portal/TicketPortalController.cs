@@ -738,7 +738,10 @@ public sealed class TicketPortalController : Controller
 
     private async Task<bool> PrepareCreateAsync(TicketPortalCreateViewModel model, TicketPortalViewer viewer)
     {
-        model.Types = await SubmittableTypesAsync();
+        var desks = await CustomerDesksAsync(viewer);
+
+        // Only the types a desk this requester may use takes: another type's card would lead to a form with no desk.
+        model.Types = [.. (await SubmittableTypesAsync()).Where(type => desks.Any(desk => Takes(desk, type.Name)))];
 
         if (model.Types.Count == 0)
         {
@@ -755,9 +758,8 @@ public sealed class TicketPortalController : Controller
             return false;
         }
 
-        var desks = await CustomerDesksAsync(viewer);
         model.Desks = [.. desks
-            .Where(desk => string.IsNullOrEmpty(model.ContentType) || desk.TicketTypes.Count == 0 || desk.TicketTypes.Contains(model.ContentType, StringComparer.OrdinalIgnoreCase))
+            .Where(desk => string.IsNullOrEmpty(model.ContentType) || Takes(desk, model.ContentType))
             .OrderBy(desk => desk.Name, StringComparer.CurrentCultureIgnoreCase)
             .Select(desk => new SelectListItem(desk.Name, desk.ItemId, desk.ItemId == model.DeskId))];
 
@@ -780,6 +782,10 @@ public sealed class TicketPortalController : Controller
 
         return model.Desks.Count > 0;
     }
+
+    // Whether a desk takes tickets of a type: a desk that names no types takes them all.
+    private static bool Takes(TicketDesk desk, string contentType)
+        => desk.TicketTypes.Count == 0 || desk.TicketTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase);
 
     // The ticket types a type's settings let customers submit.
     private async Task<List<TicketPortalType>> SubmittableTypesAsync()

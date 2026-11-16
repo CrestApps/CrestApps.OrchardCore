@@ -66,6 +66,23 @@ public sealed class TicketPortalControllerTests
     }
 
     [Fact]
+    public async Task TheNewRequestPage_OffersOnlyTheTypesADeskTakesFromThisRequester()
+    {
+        // Arrange: Ana is not staff, so the internal desk isn't hers; the customer desk takes only Questions. Request is
+        // a type customers may submit, but no desk she may use takes it.
+        var kit = new Kit("u-ana", TicketDeskAudience.Customers, deskTypes: ["Question"]);
+
+        // Act
+        var page = await kit.Controller.Create();
+        var request = await kit.Controller.Create("Request");
+
+        // Assert: the card for Request would lead nowhere, so it isn't offered.
+        var model = Assert.IsType<TicketPortalCreateViewModel>(Assert.IsType<ViewResult>(page).Model);
+        Assert.Equal(["Question"], model.Types.Select(type => type.Name));
+        Assert.IsType<NotFoundResult>(request);
+    }
+
+    [Fact]
     public async Task ACustomer_SetsOnlyTheFieldsCustomersFillIn()
     {
         // Arrange
@@ -205,7 +222,7 @@ public sealed class TicketPortalControllerTests
 
     private sealed class Kit
     {
-        public Kit(string userId, TicketDeskAudience audience, string guestEmail = null)
+        public Kit(string userId, TicketDeskAudience audience, string guestEmail = null, string[] deskTypes = null)
         {
             Ticket = new ContentItem { ContentItemId = "t1", ContentType = "Request", DisplayText = "Laptop" };
             Ticket.Apply(new TicketPart
@@ -219,7 +236,7 @@ public sealed class TicketPortalControllerTests
             Tickets.Setup(service => service.FindByNumberAsync("T-1")).ReturnsAsync(() => Ticket);
             Tickets.Setup(service => service.GetAsync("t1")).ReturnsAsync(() => Ticket);
 
-            var desk = new TicketDesk { ItemId = "desk", Name = "Help", Audience = audience };
+            var desk = new TicketDesk { ItemId = "desk", Name = "Help", Audience = audience, TicketTypes = [.. deskTypes ?? []] };
             var desks = new Mock<ICatalog<TicketDesk>>();
             desks.Setup(value => value.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([desk]);
             desks.Setup(value => value.FindByIdAsync("desk", It.IsAny<CancellationToken>())).ReturnsAsync(desk);
@@ -267,10 +284,21 @@ public sealed class TicketPortalControllerTests
                 new ContentTypePartDefinition("TitlePart", new ContentPartDefinition("TitlePart", [], []), []),
             ], []);
             var definitions = new Mock<IContentDefinitionManager>();
-            definitions.Setup(value => value.ListTypeDefinitionsAsync()).ReturnsAsync([requestType]);
+            // A second type customers may submit, which only a test that names the desk's types offers.
+            var questionType = new ContentTypeDefinition("Question", "Question",
+            [
+                new ContentTypePartDefinition(TicketsConstants.PartName, new ContentPartDefinition(TicketsConstants.PartName, [], []), new System.Text.Json.Nodes.JsonObject
+                {
+                    [nameof(TicketPartSettings)] = System.Text.Json.JsonSerializer.SerializeToNode(new TicketPartSettings { CustomerSubmittable = true }),
+                }),
+                new ContentTypePartDefinition("TitlePart", new ContentPartDefinition("TitlePart", [], []), []),
+            ], []);
+            definitions.Setup(value => value.ListTypeDefinitionsAsync()).ReturnsAsync(deskTypes is null ? [requestType] : [requestType, questionType]);
+            definitions.Setup(value => value.GetTypeDefinitionAsync("Question")).ReturnsAsync(questionType);
             definitions.Setup(value => value.GetTypeDefinitionAsync("Request")).ReturnsAsync(requestType);
             var contentManager = new Mock<IContentManager>();
             contentManager.Setup(value => value.NewAsync("Request")).ReturnsAsync(() => new ContentItem { ContentType = "Request" });
+            contentManager.Setup(value => value.NewAsync("Question")).ReturnsAsync(() => new ContentItem { ContentType = "Question" });
             var display = new Mock<IContentItemDisplayManager>();
             // The customer's form as the drivers would read it, with a value posted for the internal field too.
             display.Setup(value => value.UpdateEditorAsync(It.IsAny<ContentItem>(), It.IsAny<IUpdateModel>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()))
