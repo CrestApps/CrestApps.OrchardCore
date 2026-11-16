@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Certifications.Models;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
 using CrestApps.OrchardCore.Learning.Core.Services;
+using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 
@@ -52,7 +53,7 @@ public sealed class AssessmentPassedRequirement : ICertificationRequirement
             .Where(attempt => !string.IsNullOrEmpty(attempt.EnrollmentId))
             .OrderByDescending(CompletedUtc))
         {
-            if (CourseCompletedRequirement.CountsAsEvidence(await _enrollments.FindByIdAsync(attempt.EnrollmentId, cancellationToken)))
+            if (CompletionEvidence.CountsAsEvidence(await _enrollments.FindByIdAsync(attempt.EnrollmentId, cancellationToken)))
             {
                 best = attempt;
 

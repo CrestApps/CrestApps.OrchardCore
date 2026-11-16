@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Learning.Certifications.Models;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
+using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 
@@ -39,8 +40,8 @@ public sealed class CourseCompletedRequirement : ICertificationRequirement
         var enrollments = await _enrollments.ListByCourseForUserAsync(context.UserId, context.Requirement.TargetId, cancellationToken);
         var best = enrollments
             .Where(enrollment => enrollment.Status == EnrollmentStatus.Completed && enrollment.CompletedUtc is not null)
-            .Where(CountsAsEvidence)
-            .Where(enrollment => !RestsOnABrowserResult(enrollment))
+            .Where(CompletionEvidence.CountsAsEvidence)
+            .Where(enrollment => !CompletionEvidence.RestsOnABrowserResult(enrollment))
             .Where(enrollment => context.SinceUtc is null || enrollment.CompletedUtc >= context.SinceUtc)
             .Where(enrollment => context.Requirement.MinimumGrade is null || (enrollment.Grade ?? enrollment.Completion?.Grade) >= context.Requirement.MinimumGrade)
             .OrderByDescending(enrollment => enrollment.CompletedUtc)
@@ -61,27 +62,6 @@ public sealed class CourseCompletedRequirement : ICertificationRequirement
             Grade = best.Grade ?? best.Completion?.Grade,
         };
     }
-
-    /// <summary>
-    /// Tells whether an enrollment may support a certificate: a failed one never does, and one under review does not
-    /// while staff are deciding.
-    /// </summary>
-    /// <param name="enrollment">The enrollment.</param>
-    /// <returns><see langword="true"/> when it counts.</returns>
-    public static bool CountsAsEvidence(Enrollment enrollment)
-        => enrollment is not null && enrollment.Passed != false && !enrollment.NeedsReview;
-
-    /// <summary>
-    /// Tells whether a completion rests on a result the browser reported, such as a learning package's own status or
-    /// score: the result of a required item of the completion snapshot was reported by the browser and its item did not
-    /// let such a result count toward a certification. The browser can be changed by the learner, so by default such a
-    /// completion supports no certificate. A share of a page or video viewed is not a result and does not count here.
-    /// </summary>
-    /// <param name="enrollment">The completed enrollment.</param>
-    /// <returns><see langword="true"/> when the completion cannot support a certificate.</returns>
-    public static bool RestsOnABrowserResult(Enrollment enrollment)
-        => enrollment?.Completion?.Items is { } items
-        && items.Any(item => item.Required && item.ResultSelfReported && !item.AllowSelfReported);
 
     /// <inheritdoc/>
     public async Task<IReadOnlyCollection<string>> ListUsersSinceAsync(CertificationRequirement requirement, DateTime sinceUtc, CancellationToken cancellationToken = default)
