@@ -140,6 +140,7 @@ namespace CrestApps.OrchardCore.Orders.Core.Models
         public System.DateTime? AnonymizedUtc { get; set; }
         public CrestApps.OrchardCore.Orders.Core.Models.OrderApproval Approval { get; set; }
         public CrestApps.OrchardCore.Addresses.Models.Address BillingAddress { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderBudgetHold BudgetHold { get; set; }
         public string CancelNote { get; set; }
         public CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason? CancelReason { get; set; }
         public System.DateTime? CanceledUtc { get; set; }
@@ -215,6 +216,13 @@ namespace CrestApps.OrchardCore.Orders.Core.Models
         Pending = 0,
         Approved = 1,
         Rejected = 2,
+    }
+    public sealed class OrderBudgetHold
+    {
+        public OrderBudgetHold() { }
+        public decimal Amount { get; set; }
+        public string Currency { get; set; }
+        public System.DateTime HeldUtc { get; set; }
     }
     public enum OrderCancelReason
     {

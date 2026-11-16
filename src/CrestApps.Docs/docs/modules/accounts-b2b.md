@@ -93,12 +93,14 @@ public sealed record BuyerPriceContext(ContentItem ContentItem, string VariantId
 
 - an account admin never needs it;
 - a buyer's order over their `OrderLimit`;
-- an order that takes the account's paid orders this calendar month past `MonthlyBudget` (orders in other currencies converted with `IShopperCurrency`).
+- an order that takes what the account spent or committed this calendar month past `MonthlyBudget` (orders in other currencies converted with `IShopperCurrency`).
+
+`GetSpentThisMonthAsync` counts the account's orders created this calendar month that are `Paid` (their total), waiting for approval or approved but not paid (`Approval.Amount`), or being paid (`Order.BudgetHold`, Orders.Core `OrderBudgetHold`: `Amount`, `Currency`, `HeldUtc`). The order being checked is left out. A `Draft` or `AwaitingPayment` order with none of these is an open checkout that committed nothing, and `AbandonedOrderSweeper` cancels it.
 
 `Order.Approval` (Orders.Core `OrderApproval`) records it: `Status` (`Pending`, `Approved`, `Rejected`), `Reason`, `Amount` and `Currency` (the total asked about), `RequestedUtc`, `RequestedBy`, `DecidedUtc`, `DecidedBy`, `Note`. `Covers(total, currency)` is true for an approval of at least that total, so an order that grows needs approval again.
 
 - **Asking.** The Business account step reports the reason on `approval` and doesn't save. With `requestApproval`, `RequestAsync` sets the approval pending, gives the order an `OrderInvoice` (so it outlives its checkout, which puts it back to `Draft` when it ends, and is paid from the buyer's orders), and emails the account's admins.
-- **Blocking.** `B2BApprovalPaymentGate` (`ICheckoutPaymentGate`) refuses payment for an order that needs approval it doesn't have, whatever path the buyer took. `QuoteService.CanPay` is false for a pending or rejected approval, so no pay link is offered.
+- **Blocking.** `B2BApprovalPaymentGate` (`ICheckoutPaymentGate`) refuses payment for an order that needs approval it doesn't have, whatever path the buyer took. For an account with a budget it checks under the account's lock (`IDistributedLock`, key `B2BApprovalService.GetBudgetLockKey(accountId)`, `B2B_BUDGET_{accountId}`), and an order that passes gets its `BudgetHold` committed before the lock is let go, so two buyers paying at once can't both spend the rest of the budget; when the lock is busy the payment is refused with a try-again message. `QuoteService.CanPay` is false for a pending or rejected approval, so no pay link is offered.
 - **Deciding.** `DecideAsync(order, approve, adminName, note)` records it and emails the buyer; a rejected order is canceled with `OrderCancelReason.Rejected`.
 
 ## Punchout (OCI)

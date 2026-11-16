@@ -102,6 +102,11 @@ public sealed class Order : CatalogItem
     public OrderApproval Approval { get; set; }
 
     /// <summary>
+    /// Gets or sets what the order holds of its business account's monthly budget since its payment began, or none.
+    /// </summary>
+    public OrderBudgetHold BudgetHold { get; set; }
+
+    /// <summary>
     /// Gets or sets when the buyer was asked to review what they bought, or none when they haven't been yet.
     /// </summary>
     public DateTime? ReviewRequestSentUtc { get; set; }

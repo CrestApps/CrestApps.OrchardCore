@@ -19,6 +19,11 @@ namespace CrestApps.OrchardCore.Accounts.B2B.Services;
 /// Approvals of account buyers' orders: an order over the buyer's limit, or one that takes the account past its monthly
 /// budget, waits for an account admin to approve it before it's paid. An admin's own orders don't.
 /// </summary>
+/// <remarks>
+/// The budget counts what the account's orders this month spent or committed: paid orders, orders waiting for approval
+/// or approved and not paid yet, and orders being paid, which <see cref="B2BApprovalPaymentGate"/> marks with a
+/// <see cref="Order.BudgetHold"/> under the account's lock (<see cref="GetBudgetLockKey"/>) as their payment begins.
+/// </remarks>
 public sealed class B2BApprovalService
 {
     /// <summary>
@@ -30,6 +35,10 @@ public sealed class B2BApprovalService
     /// The kind of the email that tells the buyer an admin approved or rejected their order.
     /// </summary>
     public const string ApprovalDecidedEmailKind = "b2b-approval-decided";
+
+    private const string BudgetLockPrefix = "B2B_BUDGET_";
+
+    private static readonly OrderStatus[] _committedStatuses = [OrderStatus.Paid, OrderStatus.AwaitingPayment, OrderStatus.Draft];
 
     private readonly IOrderStore _orders;
     private readonly IOrderService _orderService;
@@ -97,7 +106,19 @@ public sealed class B2BApprovalService
     }
 
     /// <summary>
-    /// Returns what the account's paid orders came to this calendar month, in the store's currency.
+    /// Returns the key of the lock an account's budget is checked and held under, so its buyers' payments take turns.
+    /// </summary>
+    public static string GetBudgetLockKey(string accountId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(accountId);
+
+        return BudgetLockPrefix + accountId;
+    }
+
+    /// <summary>
+    /// Returns what the account's orders this calendar month spent or committed, in the store's currency: paid orders,
+    /// orders waiting for approval or approved but not paid, and orders whose payment began (their budget hold). An open
+    /// checkout that committed nothing doesn't count; the abandoned order sweep cancels it.
     /// </summary>
     public async Task<decimal> GetSpentThisMonthAsync(B2BAccount account, string storeCurrency, string excludeOrderId = null, CancellationToken cancellationToken = default)
     {
@@ -107,7 +128,7 @@ public sealed class B2BApprovalService
         var (_, orders) = await _orders.PageAsync(new OrderQuery
         {
             AccountId = account.AccountId,
-            Statuses = [OrderStatus.Paid],
+            Statuses = _committedStatuses,
             CreatedOnOrAfter = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
         }, 0, 1000, cancellationToken);
 
@@ -115,10 +136,56 @@ public sealed class B2BApprovalService
 
         foreach (var order in orders.Where(order => order.ItemId != excludeOrderId))
         {
-            spent += await ToStoreCurrencyAsync(order.Total ?? order.Subtotal, order.Currency, storeCurrency, cancellationToken);
+            if (GetCommitted(order) is { } committed)
+            {
+                spent += await ToStoreCurrencyAsync(committed.Amount, committed.Currency, storeCurrency, cancellationToken);
+            }
         }
 
         return spent;
+    }
+
+    /// <summary>
+    /// Holds the order's total against its account's budget as its payment begins, until it's paid or canceled. The
+    /// caller holds the account's budget lock and commits before letting it go.
+    /// </summary>
+    public async Task HoldBudgetAsync(Order order, decimal total, string currency, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        order.BudgetHold = new OrderBudgetHold
+        {
+            Amount = total,
+            Currency = currency,
+            HeldUtc = _clock.UtcNow,
+        };
+
+        await _orders.UpdateAsync(order, cancellationToken);
+    }
+
+    // What an order of the month takes from the budget: a paid order its total, an unpaid one what an admin is asked to
+    // approve (or approved) or what its payment holds, and an open checkout nothing.
+    private static (decimal Amount, string Currency)? GetCommitted(Order order)
+    {
+        if (order.Status == OrderStatus.Paid)
+        {
+            return (order.Total ?? order.Subtotal, order.Currency);
+        }
+
+        if (order.Status is not (OrderStatus.AwaitingPayment or OrderStatus.Draft))
+        {
+            return null;
+        }
+
+        // What an admin is asked to approve, or approved, covers what its payment can hold.
+        if (order.Approval is { Status: OrderApprovalStatus.Pending or OrderApprovalStatus.Approved } approval)
+        {
+            return (approval.Amount, approval.Currency ?? order.Currency);
+        }
+
+        return order.BudgetHold is { } hold
+            ? (hold.Amount, hold.Currency ?? order.Currency)
+            : null;
     }
 
     /// <summary>
