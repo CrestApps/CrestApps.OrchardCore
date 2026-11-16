@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Core.Emails;
 using CrestApps.OrchardCore.Emails;
 using CrestApps.OrchardCore.Tickets.Models;
+using CrestApps.OrchardCore.Tickets.Navigation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -14,12 +15,13 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Tickets.Drivers;
 
 /// <summary>
-/// <b>Settings &gt; Tickets &gt; E-mails</b>: the site's own templates of the e-mails requesters get, through the shared
-/// templated e-mail editor.
+/// The Notification templates card of <b>Settings &gt; Service Desk</b>: the site's own templates of the messages
+/// requesters get, through the shared templated e-mail editor.
 /// </summary>
 internal sealed class TicketEmailSettingsDisplayDriver : SiteDisplayDriver<TicketEmailSettings>
 {
-    public const string GroupId = "ticket-emails";
+    // The shared editor has no card of its own; this wrapper puts it in one (TicketNotificationTemplatesCard.Wrapper).
+    private const string CardWrapper = "TicketNotificationTemplatesCard_Wrapper";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
@@ -43,14 +45,15 @@ internal sealed class TicketEmailSettingsDisplayDriver : SiteDisplayDriver<Ticke
     }
 
     protected override string SettingsGroupId
-        => GroupId;
+        => TicketSettingsAdminMenu.GroupId;
 
     public override IDisplayResult Edit(ISite site, TicketEmailSettings settings, BuildEditorContext context)
         => Initialize<TemplatedEmailTemplatesEditorViewModel>(TemplatedEmailTemplatesEditor.ShapeType, model =>
         {
             TemplatedEmailTemplatesEditor.Build(model, _emailOptions.GetKinds(TicketsConstants.EmailGroup), settings.Templates, settings.Layout, _localizerFactory);
             model.Introduction = S["Write the messages requesters get. A requester who has a site account gets them through the site's notifications (in their notification center, and by e-mail or text message as they choose); anyone else gets them by e-mail. In each, {{ Content }} is the message as Tickets would send it and {{ Subject }} its subject; {{ Ticket.Number }}, {{ Ticket.Subject }}, {{ Ticket.Status }}, {{ Ticket.RequesterName }} and {{ Ticket.Category }} describe the ticket. Dates show in the site's time zone. A message whose template can't render is sent as built."];
-        }).Location("Content:1")
+        }).Location("Content:5")
+        .Displaying(context => context.Shape.Metadata.Wrappers.Add(CardWrapper))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TicketsPermissions.ManageTicketSettings))
         .OnGroup(SettingsGroupId);
 

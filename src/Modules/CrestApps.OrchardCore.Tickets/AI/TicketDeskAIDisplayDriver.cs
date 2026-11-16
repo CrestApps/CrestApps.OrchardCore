@@ -46,7 +46,7 @@ internal sealed class TicketDeskAIDisplayDriver : DisplayDriver<TicketDesk>
             model.Profiles = [.. profiles
                 .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.CurrentCultureIgnoreCase)
                 .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId, profile.ItemId == settings.ProfileId && !settings.Disabled))];
-        }).Location("Content:6");
+        }).Location("Content:7");
 
     public override async Task<IDisplayResult> UpdateAsync(TicketDesk desk, UpdateEditorContext context)
     {

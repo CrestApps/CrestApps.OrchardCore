@@ -1,20 +1,25 @@
 @model TicketPriorityViewModel
 
-<div class="mb-3">
-    <label asp-for="Name" class="form-label ocat-label-required">@T["Name"]</label>
-    <input asp-for="Name" class="form-control" />
-    <span asp-validation-for="Name" class="text-danger"></span>
-    <span class="hint">@T["Service-level targets are set per priority name."]</span>
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["Service-level targets are set per priority name."]</span>
+    </div>
 </div>
 
-<div class="row">
-    <div class="mb-3 col-md-6">
-        <label asp-for="Rank" class="form-label">@T["Rank"]</label>
+<div class="ocat-wrapper">
+    <label asp-for="Rank" class="ocat-label">@T["Rank"]</label>
+    <div class="ocat-end">
         <input asp-for="Rank" class="form-control" type="number" />
         <span class="hint">@T["Higher is more urgent; lists sorted by priority put the highest first."]</span>
     </div>
-    <div class="mb-3 col-md-6">
-        <label asp-for="Color" class="form-label">@T["Color"]</label>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Color" class="ocat-label">@T["Color"]</label>
+    <div class="ocat-end">
         <input asp-for="Color" class="form-control form-control-color" type="color" />
     </div>
 </div>

@@ -7,16 +7,11 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Tickets.Navigation;
 
 /// <summary>
-/// Adds the Tickets menu and its settings pages under Configuration.
+/// Adds the Service Desk menu: the tickets and boards, and the service desk's own setup (its site settings are under
+/// Settings &gt; Service Desk, <see cref="TicketSettingsAdminMenu"/>).
 /// </summary>
 internal sealed class TicketsAdminMenu : AdminNavigationProvider
 {
-    private static readonly RouteValueDictionary _emailRouteValues = new()
-    {
-        { "area", "OrchardCore.Settings" },
-        { "groupId", Drivers.TicketEmailSettingsDisplayDriver.GroupId },
-    };
-
     private readonly ITicketAccessService _access;
     private readonly ITicketBoardPins _pins;
     private readonly ITicketBoardService _boards;
@@ -108,14 +103,8 @@ internal sealed class TicketsAdminMenu : AdminNavigationProvider
                     .Id("ticketViews")
                     .Action("Index", "TicketViews", TicketsConstants.Features.Tickets)
                     .Permission(TicketsPermissions.ManageTicketSettings)
-                    .LocalNav())
-                .Add(S["Notification templates"], S["Notification templates"].PrefixPosition("6"), emails => emails
-                    .Id("ticketEmails")
-                    .Action("Index", "Admin", _emailRouteValues)
-                    .Permission(TicketsPermissions.ManageTicketSettings)
                     .LocalNav());
         });
-
     }
 
     // The boards the user pinned and may still see; a board they may no longer see, or one removed, is left out.

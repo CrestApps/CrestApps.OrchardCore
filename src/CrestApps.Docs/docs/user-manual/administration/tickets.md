@@ -10,7 +10,7 @@ A **ticket** is a request someone made: a customer who can't sign in, an employe
 
 | | |
 | --- | --- |
-| **Menu** | **Service Desk**: Tickets and Boards, and for those who manage the service desk, Desks, Statuses, Priorities, Views and Notification templates |
+| **Menu** | **Service Desk**: Tickets and Boards, and for those who manage the service desk, Desks, Statuses, Priorities and Views; under **Settings**, **Service Desk** has the notification templates |
 | **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support**; **Manage ticket settings** for the settings; **Manage shared ticket boards** or **Manage my own ticket boards** to make boards; **View ticket reports** for the reports |
 | **Feature** | Tickets |
 
@@ -62,7 +62,7 @@ To change a board later, open it and select **Edit board**. A board you share ca
 
 Open a ticket from the list. Its thread is on the left, newest first; its values, the requester, the service levels and the links are beside it.
 
-- Write in the composer and choose **Reply to the requester** (they are e-mailed when the desk e-mails requesters) or **Internal note** for the agents only. Mention a colleague with `@username` to tell them.
+- Write in the composer and choose **Reply to the requester** (they are told when the desk tells requesters) or **Internal note** for the agents only. Mention a colleague with `@username` to tell them.
 - Choose **Then set the status to** to send and move the ticket in one step, such as **Waiting for the requester**.
 
 The **Conversation** shows what people wrote: replies and internal notes. Every change to the ticket, such as its status, assignee or priority, is listed under **History** below it.
@@ -135,12 +135,13 @@ Under the **Service Desk** menu:
 
 | Page | What you set |
 | --- | --- |
-| **Desks** | Each desk's name, audience (customers or internal), business hours, service-level policy, default team, ticket types, reopen window, how many days after solving a ticket closes, how new tickets are assigned (nobody, the member with the fewest open tickets, or each member in turn) and who is e-mailed or told |
+| **Desks** | Each desk's name, audience (customers or internal), ticket types, routing (default team, how new tickets are assigned: nobody, the member with the fewest open tickets, or each member in turn), business hours and service-level policy, reopen window, how many days after solving a ticket closes, and who is told, each group in its own card |
 | **Statuses** | The statuses, each in a category (New, Open, Pending, On hold, Solved, Closed), with the label requesters see, a color and whether it pauses the service-level clock |
 | **Priorities** | The priorities and their order |
 | **Priority matrix** (on a desk) | The priority a ticket gets for each impact and urgency |
 | **Views** | Shared saved views of the list |
-| **Notification templates** | The messages requesters get when a ticket is received, answered and solved, and when they are asked to rate it. A requester who signs in to the site gets them as notifications (in their notification center, and by e-mail or text message as they choose); anyone else gets them by e-mail |
+
+Under **Settings > Service Desk**, **Notification templates** has the messages requesters get when a ticket is received, answered and solved, and when they are asked to rate it. A requester who signs in to the site gets them as notifications (in their notification center, and by e-mail or text message as they choose); anyone else gets them by e-mail. With AI on, the same page has the **AI profile for replies**.
 
 The permissions to view and work tickets exist for each desk, so HR tickets can stay with HR. Give a role **View all tickets**, **View the tickets of my teams** or **View the tickets assigned to me** on a desk to decide what its users see there.
 

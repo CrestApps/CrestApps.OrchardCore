@@ -42,10 +42,8 @@ public sealed class AIToolsStartup : StartupBase
         services.AddScoped<TicketAssistant>();
         services.AddDisplayDriver<Models.TicketDesk, TicketDeskAIDisplayDriver>();
 
-        // Settings > Service Desk: the profile every desk that names none uses.
+        // Settings > Service Desk (its menu and permission come with Tickets): the profile every desk that names none uses.
         services.AddSiteDisplayDriver<TicketAISettingsDisplayDriver>();
-        services.AddSiteSettingsPermission(TicketAISettingsDisplayDriver.GroupId, TicketsPermissions.ManageTicketSettings);
-        services.AddNavigationProvider<TicketAISettingsAdminMenu>();
         services.AddContentPart<Models.TicketPart>()
             .UseDisplayDriver<TicketAssistantDisplayDriver>();
         services.AddCoreAITool<UpdateTicketTool>(UpdateTicketTool.TheName).WithTitle(S["Update ticket"]).WithDescription(S["Changes a ticket's status, priority, team or assignee."]).WithCategory(S["Tickets"]).Selectable();

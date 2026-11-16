@@ -40,9 +40,9 @@
 		function setUp(list) {
 			const prefixName = list.dataset.columnsName;
 			const prefixId = list.dataset.columnsId;
-			const fieldset = list.closest("fieldset");
-			const template = fieldset.querySelector("template[data-board-column-template]");
-			const addButton = fieldset.querySelector("[data-board-add-column]");
+			const section = list.closest("[data-board-columns-section]");
+			const template = section.querySelector("template[data-board-column-template]");
+			const addButton = section.querySelector("[data-board-add-column]");
 			const form = list.closest("form");
 			const rows = () => Array.from(list.querySelectorAll(":scope > [data-board-column]"));
 			const refresh = () => {

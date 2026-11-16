@@ -38,7 +38,7 @@ internal sealed class TicketDeskPriorityMatrixDisplayDriver : DisplayDriver<Tick
             model.Priorities = [.. (await _priorities.GetAllAsync())
                 .OrderByDescending(priority => priority.Rank)
                 .Select(priority => new SelectListItem(priority.Name, priority.ItemId))];
-        }).Location("Content:6");
+        }).Location("Content:2");
 
     public override async Task<IDisplayResult> UpdateAsync(TicketDesk desk, UpdateEditorContext context)
     {

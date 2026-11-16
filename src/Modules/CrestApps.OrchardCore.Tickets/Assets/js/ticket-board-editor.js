@@ -66,9 +66,10 @@
     function setUp(list) {
         const prefixName = list.dataset.columnsName;
         const prefixId = list.dataset.columnsId;
-        const fieldset = list.closest('fieldset');
-        const template = /** @type {HTMLTemplateElement} */ (fieldset.querySelector('template[data-board-column-template]'));
-        const addButton = fieldset.querySelector('[data-board-add-column]');
+        // The Columns section holds the list, its Add column button and the new column's template.
+        const section = list.closest('[data-board-columns-section]');
+        const template = /** @type {HTMLTemplateElement} */ (section.querySelector('template[data-board-column-template]'));
+        const addButton = section.querySelector('[data-board-add-column]');
         const form = list.closest('form');
 
         const rows = () => Array.from(list.querySelectorAll(':scope > [data-board-column]'));

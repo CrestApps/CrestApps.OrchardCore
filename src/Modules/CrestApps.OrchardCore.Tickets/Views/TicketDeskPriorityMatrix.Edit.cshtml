@@ -11,44 +11,46 @@
     };
 }
 
-<fieldset class="mb-3">
-    <legend class="form-label fs-6">@T["Priority matrix"]</legend>
-    <span asp-validation-for="Cells" class="text-danger"></span>
-    <span class="text-danger" data-valmsg-for="PriorityMatrix"></span>
-    <div class="table-responsive">
-        <table class="table table-sm align-middle mb-1">
-            <thead>
-                <tr>
-                    <th scope="col">@T["Impact / urgency"]</th>
-                    @foreach (var urgency in levels)
-                    {
-                        <th scope="col">@T["{0} urgency", Name(urgency)]</th>
-                    }
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var impact in levels)
-                {
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Priority matrix"]</div>
+    <div class="card-body">
+        <span asp-validation-for="Cells" class="text-danger"></span>
+        <span class="text-danger" data-valmsg-for="PriorityMatrix"></span>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-1">
+                <thead>
                     <tr>
-                        <th scope="row">@T["{0} impact", Name(impact)]</th>
+                        <th scope="col">@T["Impact / urgency"]</th>
                         @foreach (var urgency in levels)
                         {
-                            var index = TicketDeskPriorityMatrixDisplayDriver.IndexOf(impact, urgency);
-                            var current = index < Model.Cells.Count ? Model.Cells[index] : null;
-                            <td>
-                                <select name="@(Html.NameFor(m => m.Cells) + "[" + index + "]")" class="form-select form-select-sm" aria-label="@T["Priority for {0} impact and {1} urgency", Name(impact), Name(urgency)]">
-                                    <option value="">@T["Leave as it is"]</option>
-                                    @foreach (var priority in Model.Priorities)
-                                    {
-                                        <option value="@priority.Value" selected="@(priority.Value == current)">@priority.Text</option>
-                                    }
-                                </select>
-                            </td>
+                            <th scope="col">@T["{0} urgency", Name(urgency)]</th>
                         }
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var impact in levels)
+                    {
+                        <tr>
+                            <th scope="row">@T["{0} impact", Name(impact)]</th>
+                            @foreach (var urgency in levels)
+                            {
+                                var index = TicketDeskPriorityMatrixDisplayDriver.IndexOf(impact, urgency);
+                                var current = index < Model.Cells.Count ? Model.Cells[index] : null;
+                                <td>
+                                    <select name="@(Html.NameFor(m => m.Cells) + "[" + index + "]")" class="form-select form-select-sm" aria-label="@T["Priority for {0} impact and {1} urgency", Name(impact), Name(urgency)]">
+                                        <option value="">@T["Leave as it is"]</option>
+                                        @foreach (var priority in Model.Priorities)
+                                        {
+                                            <option value="@priority.Value" selected="@(priority.Value == current)">@priority.Text</option>
+                                        }
+                                    </select>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <span class="hint">@T["When an agent sets a ticket's impact and urgency, it gets the priority of their cell, unless they choose a priority themselves. A new ticket with both gets it too."]</span>
     </div>
-    <span class="hint">@T["When an agent sets a ticket's impact and urgency, it gets the priority of their cell, unless they choose a priority themselves. A new ticket with both gets it too."]</span>
-</fieldset>
+</div>

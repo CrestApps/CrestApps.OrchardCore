@@ -102,8 +102,10 @@ public sealed class Startup : StartupBase
             .AddTemplatedEmailKind(TicketsConstants.EmailGroup, TicketsConstants.EmailKinds.Reply, LocalizationSource.Create<Startup>("Reply from an agent"), LocalizationSource.Create<Startup>("{{ Reply.Body }}, {{ Reply.AuthorName }}"))
             .AddTemplatedEmailKind(TicketsConstants.EmailGroup, TicketsConstants.EmailKinds.Solved, LocalizationSource.Create<Startup>("Ticket solved"))
             .AddTemplatedEmailKind(TicketsConstants.EmailGroup, TicketsConstants.EmailKinds.Rating, LocalizationSource.Create<Startup>("Rate a solved ticket"));
+        // Settings > Service Desk: the notification templates, and the AI profile for replies with AI on.
         services.AddSiteDisplayDriver<TicketEmailSettingsDisplayDriver>();
-        services.AddSiteSettingsPermission(TicketEmailSettingsDisplayDriver.GroupId, TicketsPermissions.ManageTicketSettings);
+        services.AddSiteSettingsPermission(TicketSettingsAdminMenu.GroupId, TicketsPermissions.ManageTicketSettings);
+        services.AddNavigationProvider<TicketSettingsAdminMenu>();
 
         // The settings records' rules come with the feature that imports them.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketStatus>, TicketSettingsRecordHandler<TicketStatus>>());

@@ -1,26 +1,29 @@
-using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
-namespace CrestApps.OrchardCore.Tickets.AI;
+namespace CrestApps.OrchardCore.Tickets.Navigation;
 
 /// <summary>
-/// Adds Settings &gt; Service Desk, with the service desk's AI settings. Registered only with AI on.
+/// Adds Settings &gt; Service Desk, the service desk's site settings: the notification templates of the messages
+/// requesters get and, with AI on, the AI profile for replies.
 /// </summary>
-[RequireFeatures(AIConstants.Feature.Area)]
-internal sealed class TicketAISettingsAdminMenu : AdminNavigationProvider
+internal sealed class TicketSettingsAdminMenu : AdminNavigationProvider
 {
+    /// <summary>
+    /// The settings group of Settings &gt; Service Desk.
+    /// </summary>
+    public const string GroupId = "service-desk";
+
     private static readonly RouteValueDictionary _routeValues = new()
     {
         { "area", "OrchardCore.Settings" },
-        { "groupId", TicketAISettingsDisplayDriver.GroupId },
+        { "groupId", GroupId },
     };
 
     internal readonly IStringLocalizer S;
 
-    public TicketAISettingsAdminMenu(IStringLocalizer<TicketAISettingsAdminMenu> stringLocalizer)
+    public TicketSettingsAdminMenu(IStringLocalizer<TicketSettingsAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
     }

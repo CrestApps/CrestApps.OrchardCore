@@ -50,7 +50,7 @@ In a template the built HTML is `{{ Content }}`, the subject `{{ Subject }}`, th
 
 ## Editing a module's templates
 
-A module whose site templates live in its settings uses the shared editor rather than writing its own: its settings driver fills a `TemplatedEmailTemplatesEditorViewModel` with `TemplatedEmailTemplatesEditor.Build` (one template per kind of its group, and the layout), renders the `TemplatedEmailTemplatesEditor` shape (Resources), and reads it back with `TemplatedEmailTemplatesEditor.Apply`, which keeps the templates of kinds no feature registers now and reports each part that can't be used by its field name. Tickets edits its e-mails this way (**Settings > Tickets > E-mails**).
+A module whose site templates live in its settings uses the shared editor rather than writing its own: its settings driver fills a `TemplatedEmailTemplatesEditorViewModel` with `TemplatedEmailTemplatesEditor.Build` (one template per kind of its group, and the layout), renders the `TemplatedEmailTemplatesEditor` shape (Resources), and reads it back with `TemplatedEmailTemplatesEditor.Apply`, which keeps the templates of kinds no feature registers now and reports each part that can't be used by its field name. Tickets edits its requester messages this way (**Settings > Service Desk**, **Notification templates**).
 
 ## Commerce
 

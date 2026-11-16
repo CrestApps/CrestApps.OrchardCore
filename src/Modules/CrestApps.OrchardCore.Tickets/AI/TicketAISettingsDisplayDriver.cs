@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Tickets.Navigation;
 using CrestApps.OrchardCore.Tickets.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -21,11 +22,6 @@ namespace CrestApps.OrchardCore.Tickets.AI;
 [RequireFeatures(AIConstants.Feature.Area)]
 internal sealed class TicketAISettingsDisplayDriver : SiteDisplayDriver<TicketAISettings>
 {
-    /// <summary>
-    /// The settings group of Settings &gt; Service Desk.
-    /// </summary>
-    public const string GroupId = "service-desk";
-
     private readonly IAIProfileManager _profiles;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
@@ -44,8 +40,9 @@ internal sealed class TicketAISettingsDisplayDriver : SiteDisplayDriver<TicketAI
         S = stringLocalizer;
     }
 
+    // Settings > Service Desk, whose menu item and permission come with Tickets.
     protected override string SettingsGroupId
-        => GroupId;
+        => TicketSettingsAdminMenu.GroupId;
 
     public override IDisplayResult Edit(ISite site, TicketAISettings settings, BuildEditorContext context)
         => Initialize<TicketAISettingsViewModel>("TicketAISettings_Edit", async model =>
@@ -54,7 +51,7 @@ internal sealed class TicketAISettingsDisplayDriver : SiteDisplayDriver<TicketAI
             model.Profiles = [.. (await _profiles.GetAsync(AIProfileType.Chat))
                 .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.CurrentCultureIgnoreCase)
                 .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId, profile.ItemId == settings.ReplyProfileId))];
-        }).Location("Content:5")
+        }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TicketsPermissions.ManageTicketSettings))
         .OnGroup(SettingsGroupId);
 

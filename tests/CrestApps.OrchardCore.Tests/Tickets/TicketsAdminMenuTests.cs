@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Agreements.Navigation;
 using CrestApps.OrchardCore.BusinessHours.Navigation;
 using CrestApps.OrchardCore.ServiceLevels.Navigation;
+using CrestApps.OrchardCore.Tickets;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Navigation;
 using CrestApps.OrchardCore.Tickets.Services;
@@ -13,9 +14,10 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Tests.Tickets;
 
 /// <summary>
-/// The help desk has one Service Desk menu (the ticket list and its own setup). The records other modules share sit
-/// under Content, like Teams: business hours schedules, agreements and service level policies, each in one place.
-/// Settings is for site settings, and Orchard Core 4 has no Configuration menu.
+/// The help desk has one Service Desk menu (the ticket list and its own setup), and its site settings (the notification
+/// templates, the AI profile) are under Settings &gt; Service Desk. The records other modules share sit under Content, like
+/// Teams: business hours schedules, agreements and service level policies, each in one place. Orchard Core 4 has no
+/// Configuration menu.
 /// </summary>
 public sealed class TicketsAdminMenuTests
 {
@@ -42,8 +44,26 @@ public sealed class TicketsAdminMenuTests
         var tickets = Assert.Single(builder.Build());
         Assert.Equal("serviceDesk", tickets.Id);
         Assert.Equal("Service Desk", tickets.Text.Value);
-        string[] setup = ["ticketDesks", "ticketStatuses", "ticketPriorities", "ticketViews", "ticketEmails"];
+        string[] setup = ["ticketDesks", "ticketStatuses", "ticketPriorities", "ticketViews"];
         Assert.Equal(canViewTickets ? ["ticketList", "ticketBoards", .. setup] : setup, tickets.Items.OrderBy(item => item.Position).Select(item => item.Id));
+    }
+
+    [Fact]
+    public async Task TheServiceDesksSiteSettings_AreUnderSettings_WithTheNotificationTemplates()
+    {
+        // Arrange
+        var builder = new NavigationBuilder();
+
+        // Act
+        await new TicketSettingsAdminMenu(new PassThroughLocalizer<TicketSettingsAdminMenu>()).BuildNavigationAsync(NavigationConstants.AdminId, builder);
+
+        // Assert: one Settings > Service Desk page, for those who manage the service desk, holding the notification
+        // templates (and the AI profile for replies, with AI on) in one settings group.
+        var settings = Assert.Single(builder.Build());
+        Assert.Equal("Settings", settings.Text.Value);
+        var page = Assert.Single(settings.Items);
+        Assert.Equal(("serviceDeskSettings", "Service Desk", "service-desk"), (page.Id, page.Text.Value, (string)page.RouteValues["groupId"]));
+        Assert.Contains(page.Permissions, permission => permission.Name == TicketsPermissions.ManageTicketSettings.Name);
     }
 
     [Fact]
