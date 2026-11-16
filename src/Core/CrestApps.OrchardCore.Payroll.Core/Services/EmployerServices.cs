@@ -6,6 +6,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Parties.Services;
+using CrestApps.OrchardCore.Payroll.Core.Canada;
 using CrestApps.OrchardCore.Payroll.Core.Indexes;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
@@ -194,6 +195,12 @@ public sealed class EmployerHandler : CatalogEntryHandlerBase<Employer>
             {
                 context.Result.Fail(new ValidationResult(S["A registration's rate needs the day it starts."], [nameof(Employer.Registrations)]));
             }
+        }
+
+        // The T4's box 45 takes one of the CRA's five dental benefits codes.
+        if (item.GetCanadaSettings().DentalBenefitsCode is { } dental && !CanadaEmployerSettings.IsDentalBenefitsCode(dental))
+        {
+            context.Result.Fail(new ValidationResult(S["Choose one of the five dental benefits codes."], [nameof(CanadaEmployerSettings.DentalBenefitsCode)]));
         }
     }
 }

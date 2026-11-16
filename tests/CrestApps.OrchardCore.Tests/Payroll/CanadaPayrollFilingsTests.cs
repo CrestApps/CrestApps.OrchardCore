@@ -186,6 +186,29 @@ public sealed class CanadaPayrollFilingsTests
     }
 
     [Fact]
+    public async Task AnEmployersDentalBenefitsCode_IsOneOfTheFive_ForARecipeAndTheEditorAlike()
+    {
+        await using var harness = await CreateHarnessAsync();
+        var (_, employer) = await SeedAsync(harness, quebec: false);
+
+        var (bad, good) = await harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<IEmployerManager>();
+
+            employer.Put(new CanadaEmployerSettings { DentalBenefitsCode = 6 });
+
+            var refused = await manager.ValidateAsync(employer);
+
+            employer.Put(new CanadaEmployerSettings { DentalBenefitsCode = 5 });
+
+            return (refused, await manager.ValidateAsync(employer));
+        }, commit: false);
+
+        Assert.Contains(bad.Errors, error => error.MemberNames.Contains(nameof(CanadaEmployerSettings.DentalBenefitsCode)));
+        Assert.True(good.Succeeded, string.Join(" ", good.Errors.Select(error => error.ErrorMessage)));
+    }
+
+    [Fact]
     public void ByProvinceOfEmployment_PutsAStatementWithNoProvinceWithTheOneBefore()
     {
         static PayStatement Statement(int day, string province)
