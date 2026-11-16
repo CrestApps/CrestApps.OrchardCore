@@ -1167,6 +1167,8 @@ The planning session's review of a4c2a24bb..847c62ac1. The full run before the f
   - T6: `IncomeTaxRuleSourceDisplayDriver` is public in Taxation.Core (which now references OrchardCore.DisplayManagement), and a source registered with `usesWithholdingEditor: false` keeps the generic card off.
   - T7 and nits: the stale "Taxes >" paths, **Sales tax rules** beside **Income tax rules**, the rule list's sources from its controller, and the menu's indentation.
 
+**Validation** on 81d35ef9a: Release `-warnaserror` 0 warnings and 0 errors; the full test project 16,352 tests, 0 failed, 1 skipped; `npm run rebuild` wrote 0 changed files and `git diff` is empty; the manuals check passed (170 User, 189 Technical pages) and the docs build succeeded (its two HTML warnings are on the fundraising and inbound call center pages, untouched here). Fresh site (Payroll, US Income Tax, no Commerce): one Commerce item with the store icon holding Income tax rules, Jurisdictions and Tables; the policy editor's new option, the two-stage pay run policy kept; both rule forms load; the Contoso approver still gets 404 for Fabrikam's request and reopens the one they decided; the Finance user, named by stage 2 but without pay run approval, has an empty inbox (A2: a stage's approvers also need the pay runs' access, so a finance stage for pay runs names people who approve pay runs).
+
 ### For Mike
 
 What only you can settle before the first live pay:
