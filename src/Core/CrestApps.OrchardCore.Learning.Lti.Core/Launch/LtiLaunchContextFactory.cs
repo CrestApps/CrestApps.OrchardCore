@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Learning.Lti.Core.DeepLinking;
 using CrestApps.OrchardCore.Learning.Lti.Core.Services;
 using CrestApps.OrchardCore.Learning.Lti.Models;
 using CrestApps.OrchardCore.Learning.Models;
@@ -27,6 +28,7 @@ public sealed class LtiLaunchContextFactory : ILtiLaunchContextFactory
     private readonly IContentManager _contentManager;
     private readonly LtiLineItemStore _lineItems;
     private readonly ILtiPlatform _platform;
+    private readonly LtiDeepLinkingDataTokens _deepLinkingData;
     private readonly IClock _clock;
 
     /// <summary>
@@ -38,6 +40,7 @@ public sealed class LtiLaunchContextFactory : ILtiLaunchContextFactory
     /// <param name="contentManager">The content manager.</param>
     /// <param name="lineItems">The line item store.</param>
     /// <param name="platform">The platform.</param>
+    /// <param name="deepLinkingData">The Deep Linking data tokens.</param>
     /// <param name="clock">The clock.</param>
     public LtiLaunchContextFactory(
         UserManager<IUser> userManager,
@@ -46,6 +49,7 @@ public sealed class LtiLaunchContextFactory : ILtiLaunchContextFactory
         IContentManager contentManager,
         LtiLineItemStore lineItems,
         ILtiPlatform platform,
+        LtiDeepLinkingDataTokens deepLinkingData,
         IClock clock)
     {
         _userManager = userManager;
@@ -54,6 +58,7 @@ public sealed class LtiLaunchContextFactory : ILtiLaunchContextFactory
         _contentManager = contentManager;
         _lineItems = lineItems;
         _platform = platform;
+        _deepLinkingData = deepLinkingData;
         _clock = clock;
     }
 
@@ -68,7 +73,10 @@ public sealed class LtiLaunchContextFactory : ILtiLaunchContextFactory
             return null;
         }
 
-        var course = await _courseStructure.GetCourseAsync(hint.CourseId);
+        // Content is picked for a course that may not be published yet; a launch needs the published course.
+        var course = hint.MessageType == LtiConstants.MessageTypes.DeepLinkingRequest
+            ? await _contentManager.GetAsync(hint.CourseId, VersionOptions.Latest)
+            : await _courseStructure.GetCourseAsync(hint.CourseId);
 
         if (course is null)
         {
@@ -101,6 +109,13 @@ public sealed class LtiLaunchContextFactory : ILtiLaunchContextFactory
         if (hint.MessageType == LtiConstants.MessageTypes.DeepLinkingRequest)
         {
             context.TargetLinkUri = string.IsNullOrWhiteSpace(tool.DeepLinkingUrl) ? tool.TargetLinkUri : tool.DeepLinkingUrl;
+            context.DeepLinkingData = _deepLinkingData.Create(new LtiDeepLinkingData
+            {
+                ToolId = tool.ItemId,
+                UserId = hint.UserId,
+                CourseId = course.ContentItemId,
+                ReturnUrl = hint.ReturnUrl,
+            });
 
             return context;
         }

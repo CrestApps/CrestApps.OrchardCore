@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Learning.Lti;
+using CrestApps.OrchardCore.Learning.Lti.Core.DeepLinking;
 using CrestApps.OrchardCore.Learning.Lti.Core.Launch;
 using CrestApps.OrchardCore.Learning.Lti.Core.Services;
 using CrestApps.OrchardCore.Learning;
@@ -41,6 +42,8 @@ public static class LearningLtiCoreServiceCollectionExtensions
         services.TryAddScoped<ILtiToolDirectory, LtiToolDirectory>();
         services.TryAddScoped<ILtiLaunchContextFactory, LtiLaunchContextFactory>();
         services.TryAddScoped<LtiAuthorizationService>();
+        services.TryAddSingleton<LtiDeepLinkingDataTokens>();
+        services.TryAddScoped<LtiDeepLinkingService>();
 
         services.AddCourseItemKind<ExternalToolItemPart>(LtiConstants.ExternalToolKind, kind =>
         {

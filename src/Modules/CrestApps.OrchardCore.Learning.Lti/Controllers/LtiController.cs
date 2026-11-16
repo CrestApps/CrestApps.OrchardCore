@@ -1,9 +1,8 @@
 using System.Security.Claims;
-using System.Text;
-using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Learning.Lti.Core.Launch;
 using CrestApps.OrchardCore.Learning.Lti.Core.Services;
 using CrestApps.OrchardCore.Learning.Lti.Models;
+using CrestApps.OrchardCore.Learning.Lti.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -167,7 +166,7 @@ public sealed class LtiController : Controller
             fields["state"] = result.State;
         }
 
-        return FormPost(result.RedirectUri, fields, S["Opening the tool…"], S["Continue"]);
+        return LtiPages.FormPost(this, result.RedirectUri, fields, S["Opening the tool…"], S["Continue"]);
     }
 
     /// <summary>
@@ -181,40 +180,6 @@ public sealed class LtiController : Controller
         Response.Headers.CacheControl = "public, max-age=300";
 
         return Content(keySet.ToJsonString(), "application/json");
-    }
-
-    /// <summary>
-    /// Writes a page that posts fields to an address as soon as it loads, with a button for browsers without script.
-    /// </summary>
-    internal ContentResult FormPost(string action, IReadOnlyDictionary<string, string> fields, string message, string button)
-    {
-        var html = new StringBuilder();
-        var encoder = HtmlEncoder.Default;
-
-        html.Append("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name=\"robots\" content=\"noindex\"><title>")
-            .Append(encoder.Encode(message))
-            .Append("</title></head><body><form method=\"post\" action=\"")
-            .Append(encoder.Encode(action))
-            .Append("\"><p>")
-            .Append(encoder.Encode(message))
-            .Append("</p>");
-
-        foreach (var (name, value) in fields)
-        {
-            html.Append("<input type=\"hidden\" name=\"")
-                .Append(encoder.Encode(name))
-                .Append("\" value=\"")
-                .Append(encoder.Encode(value ?? string.Empty))
-                .Append("\">");
-        }
-
-        html.Append("<noscript><button type=\"submit\">")
-            .Append(encoder.Encode(button))
-            .Append("</button></noscript></form><script>document.forms[0].submit();</script></body></html>");
-
-        Response.Headers["Referrer-Policy"] = "no-referrer";
-
-        return Content(html.ToString(), "text/html; charset=utf-8");
     }
 
     internal IActionResult LaunchError(string message, int statusCode = StatusCodes.Status200OK)

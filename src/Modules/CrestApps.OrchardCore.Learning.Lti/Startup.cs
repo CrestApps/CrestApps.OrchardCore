@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Learning.Lti.Migrations;
 using CrestApps.OrchardCore.Learning.Lti.Models;
 using CrestApps.OrchardCore.Learning.Lti.Navigation;
 using CrestApps.OrchardCore.Learning.Lti.Services;
+using CrestApps.OrchardCore.Learning.Models;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -37,11 +38,15 @@ public sealed class Startup : StartupBase
         services.AddLearningLtiCore();
         services.AddScoped<ICatalogEntryHandler<ExternalTool>, ExternalToolHandler>();
         services.AddScoped<ExternalToolClients>();
+        services.AddScoped<LtiDeepLinkItemWriter>();
         services.AddDisplayDriver<ExternalTool, ExternalToolDisplayDriver>();
 
         services.AddContentPart<ExternalToolItemPart>()
             .UseDisplayDriver<ExternalToolItemPartDisplayDriver>()
             .UseDisplayDriver<ExternalToolItemPartLearnerDisplayDriver>();
+
+        services.AddContentPart<CoursePart>()
+            .UseDisplayDriver<CourseExternalToolsDisplayDriver>();
 
         services.AddPermissionProvider<LtiPermissionProvider>();
         services.AddNavigationProvider<LtiAdminMenu>();
