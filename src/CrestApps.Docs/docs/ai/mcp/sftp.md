@@ -99,6 +99,8 @@ When creating an SFTP resource in the admin UI, you can configure:
 
 > **Note**: Passwords and private keys are not exported for security reasons. You must manually set them after importing.
 
+A stored password, private key or passphrase is kept when the field is left blank only while the resource signs in to the same account on the same server: changing the host, the port, the user name or the host key fingerprint, in the editor or in a recipe, drops them, and they must be entered again. The proxy password is kept while the proxy's type, host, port and user name are the same.
+
 ## Authentication Methods
 
 ### Password Authentication

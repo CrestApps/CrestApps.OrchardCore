@@ -148,15 +148,25 @@ public sealed class AgentFeedSettingsDisplayDriver : SiteDisplayDriver<AgentFeed
         settings.TargetCountries = countries;
 
         var sftp = settings.Sftp ??= new AgentFeedSftpSettings();
+        var host = Clean(model.SftpHost);
+        var port = model.SftpPort is > 0 and <= 65535 ? model.SftpPort : 22;
+        var username = Clean(model.SftpUsername);
+        var fingerprint = Clean(model.SftpHostKeyFingerprint);
+
+        // The stored password and key were given for one account on the server the host key identifies; another host,
+        // port, user name or host key drops them, so a user who never saw them can't send them to a server of their own.
+        var sameAccount = SecretDestination.SameServer(sftp.Host, sftp.Port, host, port) &&
+            SecretDestination.SameValue(sftp.Username, username) &&
+            SecretDestination.SameValue(sftp.HostKeyFingerprint, fingerprint);
 
         sftp.Enabled = model.SftpEnabled;
-        sftp.Host = Clean(model.SftpHost);
-        sftp.Port = model.SftpPort is > 0 and <= 65535 ? model.SftpPort : 22;
-        sftp.Username = Clean(model.SftpUsername);
-        sftp.Password = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, sftp.Password, model.SftpPassword, model.RemoveSftpPassword);
-        sftp.PrivateKey = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, sftp.PrivateKey, model.SftpPrivateKey, model.RemoveSftpPrivateKey);
-        sftp.PrivateKeyPassphrase = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, sftp.PrivateKeyPassphrase, model.SftpPrivateKeyPassphrase, model.RemoveSftpPrivateKey);
-        sftp.HostKeyFingerprint = Clean(model.SftpHostKeyFingerprint);
+        sftp.Host = host;
+        sftp.Port = port;
+        sftp.Username = username;
+        sftp.Password = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, SecretDestination.Keep(sftp.Password, sameAccount), model.SftpPassword, model.RemoveSftpPassword);
+        sftp.PrivateKey = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, SecretDestination.Keep(sftp.PrivateKey, sameAccount), model.SftpPrivateKey, model.RemoveSftpPrivateKey);
+        sftp.PrivateKeyPassphrase = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, SecretDestination.Keep(sftp.PrivateKeyPassphrase, sameAccount), model.SftpPrivateKeyPassphrase, model.RemoveSftpPrivateKey);
+        sftp.HostKeyFingerprint = fingerprint;
         sftp.RemoteFolder = Clean(model.SftpRemoteFolder) ?? "/";
         sftp.Format = model.SftpFormat is OpenAIProductFeedFormats.CsvGzip ? OpenAIProductFeedFormats.CsvGzip : OpenAIProductFeedFormats.JsonLinesGzip;
         sftp.Currency = CurrencyCodeUtility.IsValid(model.SftpCurrency) ? CurrencyCodeUtility.Normalize(model.SftpCurrency) : null;

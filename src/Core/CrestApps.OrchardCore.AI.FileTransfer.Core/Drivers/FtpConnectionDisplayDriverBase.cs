@@ -13,7 +13,8 @@ namespace CrestApps.OrchardCore.AI.FileTransfer.Core.Drivers;
 /// <summary>
 /// The base of a driver that edits an FTP or FTPS connection stored as <see cref="FtpConnectionMetadata"/>, such as an
 /// FTP file source or an FTP MCP resource. Both editors validate the connection the same way: a host is required and
-/// a port, when given, is a valid port. The password is protected, never shown, and kept when left blank.
+/// a port, when given, is a valid port. The password is protected, never shown, and kept when left blank while the
+/// connection signs in to the same account on the same server: a change of host, port or user name drops it.
 /// </summary>
 /// <typeparam name="TModel">The record type the driver edits.</typeparam>
 public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TModel>
@@ -69,7 +70,8 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
     /// </summary>
     /// <param name="context">The editor update context the validation errors are added to.</param>
     /// <param name="model">The posted editor model.</param>
-    /// <param name="existing">The stored connection, whose password is kept when none is posted.</param>
+    /// <param name="existing">The stored connection, whose password is kept when none is posted and the host, port and
+    /// user name are unchanged.</param>
     /// <returns>The connection to store.</returns>
     protected FtpConnectionMetadata ApplyConnectionFields(UpdateEditorContext context, FtpConnectionFieldsViewModel model, FtpConnectionMetadata existing)
     {
@@ -100,12 +102,27 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.EncryptionMode), S["Sending a user name without TLS is turned off on this site. Choose Explicit or Implicit encryption."]);
         }
 
+        var host = model.Host?.Trim();
+        var username = FileTransferFields.Trimmed(model.Username);
+
+        // The stored password was given for one account on one server. A user who may edit the connection, but never saw
+        // the password, must not be able to send it to a server of their own, so another host, port or user name drops it.
+        var storedPassword = SecretDestination.Keep(existing?.Password, FileTransferFields.SameAccount(existing?.Host, existing?.Port, existing?.Username, host, model.Port, username));
+
+        if (username is not null &&
+            storedPassword is null &&
+            ProtectedSettingExtensions.HasSecret(existing?.Password) &&
+            string.IsNullOrWhiteSpace(model.Password))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Password), S["The server or the user name changed, so enter the password again."]);
+        }
+
         return new FtpConnectionMetadata
         {
-            Host = model.Host?.Trim(),
+            Host = host,
             Port = model.Port,
-            Username = FileTransferFields.Trimmed(model.Username),
-            Password = _dataProtectionProvider.ApplySecret(FtpResourceConstants.DataProtectionPurpose, existing?.Password, model.Password),
+            Username = username,
+            Password = _dataProtectionProvider.ApplySecret(FtpResourceConstants.DataProtectionPurpose, storedPassword, model.Password),
             EncryptionMode = FileTransferFields.Trimmed(model.EncryptionMode),
             DataConnectionType = FileTransferFields.Trimmed(model.DataConnectionType),
             ValidateAnyCertificate = model.ValidateAnyCertificate,

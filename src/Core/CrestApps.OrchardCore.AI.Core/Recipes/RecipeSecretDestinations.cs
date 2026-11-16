@@ -6,22 +6,30 @@ using CrestApps.OrchardCore.Core.Security;
 namespace CrestApps.OrchardCore.AI.Core.Recipes;
 
 /// <summary>
-/// Applies the editors' rule for stored secrets to a recipe that updates an AI connection, deployment, tool instance or
-/// data source: a recipe that leaves a secret out keeps the stored one, so when it also points the entry at another
+/// Applies the editors' rule for stored secrets to a recipe or an API call that updates an AI connection, deployment,
+/// tool instance, data source, file source or web crawler: an update that leaves a secret out keeps the stored one, so when it also points the entry at another
 /// address, or makes it sign in another way, the secrets it kept are dropped and must be given again.
 /// </summary>
 /// <remarks>
 /// An address is any text member whose name ends with <c>Endpoint</c> or <c>Url</c>, compared by scheme, host and port
 /// with <see cref="SecretDestination"/>; a member whose name ends with <c>AuthenticationType</c>, <c>EnvironmentType</c>
-/// or <c>CloudId</c> is compared as it is. A secret is a text member <see cref="IngestionSourceSecrets.IsSecret"/> names,
+/// or <c>CloudId</c> is compared as it is. A connection addressed by host rather than by URL, such as FTP or SFTP, is
+/// an object with a <c>Host</c> member; in it, the host, port and user name, the SFTP host key fingerprint and the
+/// proxy's type, host, port and user name are compared as they are, with <see cref="SecretDestination.SameValue"/>, as
+/// the FTP and SFTP editors compare them. A secret is a text member <see cref="IngestionSourceSecrets.IsSecret"/> names,
 /// in <see cref="ExtensibleEntity.Properties"/>. Matching by name covers the metadata of every provider without listing
 /// it, as the deployment plans do.
 /// </remarks>
 public static class RecipeSecretDestinations
 {
+    private const string HostMember = "Host";
+
     private static readonly string[] _addressSuffixes = ["Endpoint", "Url"];
 
     private static readonly string[] _exactSuffixes = ["AuthenticationType", "EnvironmentType", "CloudId"];
+
+    // The members of a connection addressed by host that say which server and account a secret is used with.
+    private static readonly string[] _serverMembers = [HostMember, "Port", "Username", "HostKeyFingerprint", "ProxyType", "ProxyHost", "ProxyPort", "ProxyUsername"];
 
     /// <summary>
     /// Takes the JSON of an entry before a recipe changes it.
@@ -145,7 +153,7 @@ public static class RecipeSecretDestinations
             current.TryGetValue(path, out var now);
 
             var same = path.EndsWith('*')
-                ? string.Equals(was?.Trim(), now?.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? SecretDestination.SameValue(was, now)
                 : SecretDestination.SameOrigin(was, now);
 
             if (!same)
@@ -169,6 +177,8 @@ public static class RecipeSecretDestinations
 
     private static void Collect(JsonObject node, string prefix, Dictionary<string, string> result)
     {
+        var addressedByHost = node.Any(member => string.Equals(member.Key, HostMember, StringComparison.OrdinalIgnoreCase));
+
         foreach (var (name, value) in node)
         {
             var path = prefix + "/" + name.ToUpperInvariant();
@@ -181,12 +191,15 @@ public static class RecipeSecretDestinations
             {
                 result[path] = address;
             }
-            else if (EndsWithAny(name, _exactSuffixes) && value is JsonValue && value.ToString() is { Length: > 0 } exact)
+            else if ((EndsWithAny(name, _exactSuffixes) || (addressedByHost && IsServerMember(name))) && value is JsonValue && value.ToString() is { Length: > 0 } exact)
             {
                 result[path + "*"] = exact;
             }
         }
     }
+
+    private static bool IsServerMember(string name)
+        => _serverMembers.Contains(name, StringComparer.OrdinalIgnoreCase);
 
     private static bool EndsWithAny(string name, string[] suffixes)
     {

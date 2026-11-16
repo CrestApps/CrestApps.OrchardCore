@@ -149,7 +149,7 @@ A conversation as listed:
 | `GET`, `POST data-sources`; `GET`, `PUT`, `DELETE data-sources/{id}` | Data sources, in the shape their recipe step takes. Creating one needs its `Source`. `GET` takes `source` to list one kind. |
 | The same on `file-sources` and `web-crawlers` | File sources and web crawlers. |
 
-A `GET` returns a record's secrets, such as an API key or a password, only in their protected form. A `PUT` that leaves a secret out, or sends back that protected value, keeps the stored secret only while the record still sends it to the same place: when the same update changes the scheme, host or port of an endpoint or URL, or the authentication type, the kept secret is dropped, as the editor and the recipe step drop it. Send the secret again with such a change; a record that needs it answers `400` until it is given.
+A `GET` returns a record's secrets, such as an API key or a password, only in their protected form. A `PUT` that leaves a secret out, or sends back that protected value, keeps the stored secret only while the record still sends it to the same place: when the same update changes the scheme, host or port of an endpoint or URL, the host, port, user name or host key fingerprint of an FTP or SFTP connection, or the authentication type, the kept secret is dropped, as the editor and the recipe step drop it. Send the secret again with such a change; a record that needs it answers `400` until it is given.
 
 ## Phone numbers
 

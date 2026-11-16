@@ -43,6 +43,28 @@ public static class SecretDestination
     }
 
     /// <summary>
+    /// Returns whether two host names and ports name the same server, for a connection addressed by host rather than by
+    /// URL, such as FTP or SFTP: the same host name, ignoring case and surrounding spaces, and the same port. A blank port
+    /// is the protocol's default, a place of its own, as a blank address is.
+    /// </summary>
+    /// <param name="storedHost">The host the secret was stored for.</param>
+    /// <param name="storedPort">The port the secret was stored for.</param>
+    /// <param name="postedHost">The host the connection will use.</param>
+    /// <param name="postedPort">The port the connection will use.</param>
+    public static bool SameServer(string storedHost, int? storedPort, string postedHost, int? postedPort)
+        => SameValue(storedHost, postedHost) && storedPort == postedPort;
+
+    /// <summary>
+    /// Returns whether a setting that decides where or how a secret is used, such as a user name, an authentication type
+    /// or a host key fingerprint, is unchanged: compared without regard to case or surrounding spaces, a blank value being
+    /// the same as another blank one.
+    /// </summary>
+    /// <param name="stored">The value the secret was stored with.</param>
+    /// <param name="posted">The value the connection will use.</param>
+    public static bool SameValue(string stored, string posted)
+        => string.Equals(Trimmed(stored), Trimmed(posted), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Returns the stored secret when it may still be used, or <see langword="null"/> when the connection now sends to
     /// another place or signs in another way.
     /// </summary>
@@ -50,4 +72,7 @@ public static class SecretDestination
     /// <param name="samePlace">Whether the address and the way of signing in are unchanged.</param>
     public static string Keep(string stored, bool samePlace)
         => samePlace ? stored : null;
+
+    private static string Trimmed(string value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

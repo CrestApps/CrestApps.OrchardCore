@@ -117,7 +117,12 @@ trusts the server only when it shows that key, and a connection without one is r
 the fingerprint existed fails to connect until one is added.
 
 A stored password, private key, or passphrase is never sent back to the editor. Leaving the field blank on
-save keeps the stored value; type a new one to replace it.
+save keeps the stored value while the connection signs in to the same account on the same server; type a new one to
+replace it. Changing the host, the port or the user name, or for SFTP the host key fingerprint, drops the stored
+password, private key and passphrase, so they must be entered again: a user who may edit the source but never saw them
+can't send them to a server of their own, or sign in with the key somewhere else. The SFTP proxy password is kept while
+the proxy's type, host, port and user name are the same. The `FileSources` recipe step and the `file-sources` API apply
+the same rule.
 
 Both feed the same ingestion pipeline as the local connector, so the shared fields above behave identically.
 
@@ -203,7 +208,7 @@ The `FileSources` recipe step creates or updates file sources. A file source is 
 }
 ```
 
-The **File sources** deployment step (Artificial Intelligence category) exports every file source. Passwords, private keys, passphrases, tokens and other secrets are never exported: they are protected with the keys of the site that stored them. When a recipe updates a file source and leaves a secret out, the stored secret is kept; after importing a new FTP or SFTP file source, open it and enter its password or key.
+The **File sources** deployment step (Artificial Intelligence category) exports every file source. Passwords, private keys, passphrases, tokens and other secrets are never exported: they are protected with the keys of the site that stored them. When a recipe updates a file source and leaves a secret out, the stored secret is kept, unless the same update changes the connection's host, port, user name or host key fingerprint; after importing a new FTP or SFTP file source, open it and enter its password or key.
 
 ## Related
 

@@ -87,13 +87,13 @@ public sealed class IngestionSourceRecipeRoundTripTests
         var target = new InMemorySourceManager<FileSource>();
         var stored = new FileSource { ItemId = SourceId, Source = FileSystemIngestionConnector.ConnectorName, DisplayText = "Policies" };
 
-        stored.Properties["FtpConnectionMetadata"] = new JsonObject { ["Host"] = "old.example.test", ["Password"] = "kept" };
+        stored.Properties["FtpConnectionMetadata"] = new JsonObject { ["Host"] = "ftp.example.test", ["Username"] = "deploy", ["Password"] = "kept" };
         target.Entries.Add(stored);
 
         var step = new FileSourcesStep(target, ConnectorOptions(), RecipeRoundTrip.Localizer<FileSourcesStep>());
         var recipe = JsonNode.Parse($$"""
             { "name": "FileSources", "Sources": [ { "ItemId": "{{SourceId}}", "Source": "{{FileSystemIngestionConnector.ConnectorName}}", "DisplayText": "Policies",
-              "Properties": { "FtpConnectionMetadata": { "Host": "new.example.test" } } } ] }
+              "Properties": { "FtpConnectionMetadata": { "Host": "FTP.example.test", "Username": "deploy", "ConnectTimeout": 5000 } } } ] }
             """).AsObject();
 
         // Act
@@ -104,8 +104,77 @@ public sealed class IngestionSourceRecipeRoundTripTests
 
         var metadata = JsonSerializerNode(Assert.Single(target.Entries).Properties["FtpConnectionMetadata"]);
 
-        Assert.Equal("new.example.test", metadata["Host"].GetValue<string>());
+        Assert.Equal(5000, metadata["ConnectTimeout"].GetValue<int>());
         Assert.Equal("kept", metadata["Password"].GetValue<string>());
+    }
+
+    /// <summary>
+    /// MD5 (fix verification, round 6): a recipe that kept the stored FTP or SFTP password also kept it when it pointed
+    /// the source at another server or account, which then received it with the next listing.
+    /// </summary>
+    [Theory]
+    [InlineData("FtpConnectionMetadata", "Host", "attacker.example.test")]
+    [InlineData("FtpConnectionMetadata", "Username", "root")]
+    [InlineData("FtpConnectionMetadata", "Port", 2121)]
+    [InlineData("SftpConnectionMetadata", "HostKeyFingerprint", "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8")]
+    public async Task FileSources_AnUpdateThatMovesTheConnection_DropsTheKeptSecrets(string metadataName, string member, object value)
+    {
+        // Arrange
+        var target = new InMemorySourceManager<FileSource>();
+        var stored = new FileSource { ItemId = SourceId, Source = FileSystemIngestionConnector.ConnectorName, DisplayText = "Policies" };
+
+        stored.Properties[metadataName] = new JsonObject
+        {
+            ["Host"] = "ftp.example.test",
+            ["Port"] = 21,
+            ["Username"] = "deploy",
+            ["HostKeyFingerprint"] = "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU",
+            ["Password"] = "kept",
+            ["PrivateKey"] = "kept-key",
+        };
+        target.Entries.Add(stored);
+
+        var connection = JsonSerializerNode(stored.Properties[metadataName]);
+        connection.Remove("Password");
+        connection.Remove("PrivateKey");
+        connection[member] = JsonValue.Create(value);
+
+        var step = new FileSourcesStep(target, ConnectorOptions(), RecipeRoundTrip.Localizer<FileSourcesStep>());
+        var recipe = new JsonObject
+        {
+            ["name"] = "FileSources",
+            ["Sources"] = new JsonArray(new JsonObject
+            {
+                ["ItemId"] = SourceId,
+                ["Source"] = FileSystemIngestionConnector.ConnectorName,
+                ["DisplayText"] = "Policies",
+                ["Properties"] = new JsonObject { [metadataName] = connection },
+            }),
+        };
+
+        // Act
+        var errors = await RecipeRoundTrip.RunAsync(step, recipe);
+
+        // Assert
+        Assert.Empty(errors);
+
+        var metadata = JsonSerializerNode(Assert.Single(target.Entries).Properties[metadataName]);
+
+        Assert.Null(metadata["Password"]);
+        Assert.Null(metadata["PrivateKey"]);
+    }
+
+    [Fact]
+    public void RecipeRule_ComparesUserNamesOnlyForAConnectionAddressedByHost()
+    {
+        // An HTTP connection is addressed by its URL: a new basic user name with the same URL keeps the password, as the
+        // connection editors keep it.
+        var dataSource = new AIDataSource();
+        dataSource.Properties["ElasticsearchSourceMetadata"] = new JsonObject { ["Url"] = "https://search.example.test/", ["Username"] = "reader", ["Password"] = "kept" };
+        var before = RecipeSecretDestinations.Snapshot(dataSource);
+        ((JsonObject)dataSource.Properties["ElasticsearchSourceMetadata"])["Username"] = "writer";
+
+        Assert.False(RecipeSecretDestinations.DropKeptSecrets(dataSource, before));
     }
 
     [Fact]

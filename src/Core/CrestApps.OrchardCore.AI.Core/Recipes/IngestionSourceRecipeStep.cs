@@ -16,7 +16,8 @@ namespace CrestApps.OrchardCore.AI.Core.Recipes;
 /// <remarks>
 /// A source's kind must be one that is registered on the site, which the derived step checks in
 /// <see cref="IsKnownSource"/>. Secrets are never carried by an export: when an update leaves one out, the stored secret
-/// is kept, and a new source without one waits for an administrator to enter it.
+/// is kept while the source still sends it to the same server and account (<see cref="RecipeSecretDestinations"/>), and
+/// a new source without one waits for an administrator to enter it.
 /// </remarks>
 /// <typeparam name="TSource">The ingestion source type.</typeparam>
 public abstract class IngestionSourceRecipeStep<TSource> : CatalogRecipeStepBase<TSource>
@@ -102,7 +103,9 @@ public abstract class IngestionSourceRecipeStep<TSource> : CatalogRecipeStepBase
             IngestionSourceSecrets.KeepStored(properties, stored);
         }
 
-        await _manager.UpdateAsync(entry, token);
+        // When the update also points the source at another server or account, such as another FTP host or user name,
+        // or another URL, the secrets it kept are dropped, as the editors drop them.
+        await RecipeSecretDestinations.UpdateAsync(entry, token, data => _manager.UpdateAsync(entry, data));
     }
 
     /// <inheritdoc/>

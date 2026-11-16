@@ -86,6 +86,69 @@ public sealed class AgentFeedSftpHostKeyTests
         Assert.Contains(context.Updater.ModelState, entry => entry.Key.EndsWith(nameof(AgentFeedSettingsViewModel.SftpHostKeyFingerprint), StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// MD5 (fix verification, round 6): the settings kept the stored SFTP password and key when the field came back blank,
+    /// whatever host the push now named, so a user who may change the settings, but never saw the password, could send it
+    /// to a server of their own with the next push.
+    /// </summary>
+    [Theory]
+    [InlineData("sftp.attacker.test", 22, "feeds", "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU", false)]
+    [InlineData("sftp.example.test", 2222, "feeds", "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU", false)]
+    [InlineData("sftp.example.test", 22, "root", "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU", false)]
+    [InlineData("sftp.example.test", 22, "feeds", "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8", false)]
+    [InlineData("SFTP.example.test", 22, "feeds", "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU", true)]
+    public async Task Settings_KeepTheStoredPasswordAndKey_OnlyForTheSameServerAndAccount(string host, int port, string username, string fingerprint, bool kept)
+    {
+        // Arrange
+        var protection = new EphemeralDataProtectionProvider();
+        var protector = protection.CreateProtector(AgentFeedSettings.ProtectionPurpose);
+        var settings = new AgentFeedSettings
+        {
+            Sftp = new AgentFeedSftpSettings
+            {
+                Host = "sftp.example.test",
+                Port = 22,
+                Username = "feeds",
+                HostKeyFingerprint = "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU",
+                Password = protector.Protect("password"),
+                PrivateKey = protector.Protect("key"),
+            },
+        };
+        var stored = settings.Sftp.Password;
+        var context = PostedFormUpdateModel.CreateContext(new AgentFeedSettingsViewModel
+        {
+            SftpHost = host,
+            SftpPort = port,
+            SftpUsername = username,
+            SftpHostKeyFingerprint = fingerprint,
+        });
+
+        // Act
+        await Driver(protection).UpdateAsync(new SiteSettings(), settings, context);
+
+        // Assert
+        Assert.Equal(kept, settings.Sftp.Password == stored);
+        Assert.Equal(kept, settings.Sftp.PrivateKey is not null);
+    }
+
+    private static AgentFeedSettingsDisplayDriver Driver(IDataProtectionProvider protection)
+    {
+        var authorization = new Mock<IAuthorizationService>();
+
+        authorization.Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Success());
+
+        return new AgentFeedSettingsDisplayDriver(
+            new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity("Test")) } },
+            authorization.Object,
+            (OpenAIProductFeedService)RuntimeHelpers.GetUninitializedObject(typeof(OpenAIProductFeedService)),
+            Mock.Of<IProductFeedService>(),
+            new InMemoryDocumentManager<AgentFeedStatusDocument>(),
+            protection,
+            Mock.Of<IHostEnvironment>(),
+            new PassThroughLocalizer());
+    }
+
     private sealed class PassThroughLocalizer : IStringLocalizer<AgentFeedSettingsDisplayDriver>
     {
         public LocalizedString this[string name]

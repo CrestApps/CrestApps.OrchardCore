@@ -96,6 +96,8 @@ When creating an FTP resource in the admin UI, you can configure:
 
 > **Note**: Passwords are not exported for security reasons. You must manually set the password after importing.
 
+A stored password is kept when the field is left blank only while the resource signs in to the same account on the same server: changing the host, the port or the user name, in the editor or in a recipe, drops it, and it must be entered again.
+
 ## Security Considerations
 
 - **Password Encryption**: Passwords are encrypted at rest using ASP.NET Core Data Protection
