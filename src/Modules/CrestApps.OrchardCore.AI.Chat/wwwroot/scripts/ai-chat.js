@@ -2800,6 +2800,7 @@
 				},
 				template: config.messageTemplate
 			};
+			window.CoreAIChatSurface.registerRoot(document.querySelector(config.appElementSelector));
 			const app = Vue.createApp(appDefinition).mount(config.appElementSelector);
 			if (widgetBehavior && typeof widgetBehavior.attach === "function") widgetBehavior.attach(app, config);
 			return app;
@@ -2892,8 +2893,11 @@
 		}
 		function scanForAutoInitialization(root) {
 			if (!root || typeof root.querySelectorAll !== "function") return;
-			if (typeof root.matches === "function" && root.matches(autoInitializeSelector)) initializeFromElement(root);
-			root.querySelectorAll(autoInitializeSelector).forEach(initializeFromElement);
+			const isPageMarkup = (element) => !window.CoreAIChatSurface.isInsideRenderedMessage(element);
+			if (typeof root.matches === "function" && root.matches(autoInitializeSelector) && isPageMarkup(root)) initializeFromElement(root);
+			root.querySelectorAll(autoInitializeSelector).forEach((element) => {
+				if (isPageMarkup(element)) initializeFromElement(element);
+			});
 		}
 		function startAutoInitialization() {
 			scanForAutoInitialization(document);

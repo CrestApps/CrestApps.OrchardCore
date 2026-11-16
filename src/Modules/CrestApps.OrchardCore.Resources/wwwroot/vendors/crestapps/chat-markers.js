@@ -250,6 +250,7 @@
 			"lowsrc",
 			"dynsrc"
 		];
+		const chartCanvasId = /^(?:chat|ci)_chart_\d+$/;
 		const safeStyle = /^[\w\s:;.%#,-]*$/;
 		function withFetcherLimits(config) {
 			const limited = Object.assign({}, config);
@@ -344,17 +345,47 @@
 				const src = node.getAttribute("src");
 				if (!isAllowedSource(src, options)) node.replaceWith(linkElement(src, node.getAttribute("alt")));
 			};
+			const attributeHook = function(node, data) {
+				const name = data && data.attrName;
+				if (typeof name !== "string") return;
+				if (name === "id") {
+					if (!(node && typeof node.tagName === "string" && node.tagName.toUpperCase() === "CANVAS" && chartCanvasId.test(data.attrValue))) data.keepAttr = false;
+					return;
+				}
+				if (name.startsWith("data-coreai-") || name.startsWith("data-chat-interaction-")) data.keepAttr = false;
+			};
 			purify.addHook(rawImageHook, hook);
+			purify.addHook("uponSanitizeAttribute", attributeHook);
 			try {
 				return purify.sanitize(html, withFetcherLimits(purifyConfig));
 			} finally {
 				purify.removeHook(rawImageHook, hook);
+				purify.removeHook("uponSanitizeAttribute", attributeHook);
 			}
 		}
 		return {
 			isAllowedSource,
 			linkHtml,
 			sanitize
+		};
+	})();
+	window.CoreAIChatSurface = window.CoreAIChatSurface || (function() {
+		"use strict";
+		const renderedMessageSelector = ".ai-chat-messages, .ai-chat-message-item, .ai-chat-message-body";
+		const mountedRoots = [];
+		function registerRoot(element) {
+			if (element && typeof element.contains === "function" && mountedRoots.indexOf(element) < 0) mountedRoots.push(element);
+		}
+		function isInsideRenderedMessage(element) {
+			if (!element) return false;
+			if (typeof element.closest === "function" && element.closest(renderedMessageSelector)) return true;
+			return mountedRoots.some(function(root) {
+				return root !== element && root.contains(element);
+			});
+		}
+		return {
+			registerRoot,
+			isInsideRenderedMessage
 		};
 	})();
 	//#endregion

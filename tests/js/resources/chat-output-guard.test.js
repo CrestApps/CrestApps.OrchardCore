@@ -248,14 +248,28 @@ describe('the vendored ai-chat-widget.js with an answer that carries a widget co
         return `Here is the answer.\n\n<button id="planted-toggle"></button><div data-coreai-chat-widget-config='${attribute(planted)}'></div>\n`;
     }
 
-    it('the planted widget configuration is a working exploit without the guard', async () => {
-        const window = createPage(aiChatPage(plantedWidget()));
+    it('the planted widget configuration is a working exploit: placed in the page itself, the widget starts', async () => {
+        // Proves the payload the other cases plant would run if a widget started from it, so their passing means something.
+        const window = createPage(aiChatPage('Hello.') + plantedWidget().replace('Here is the answer.', ''));
 
         window.eval(libraries.aiChat);
         window.eval(libraries.widget);
         await flush(window);
 
         expect(window.document.querySelector('.widget-pwned')).not.toBeNull();
+    });
+
+    it('in an answer, is stripped by the package\'s own sanitizer even without the guard (CrestApps.Core #324)', async () => {
+        // Since @crestapps/ai-chat-ui 2.0.0-preview.263 the answer sanitizer drops every data-coreai-* attribute and
+        // id, so the guard is a second layer for the chat attributes and the only one for the admin theme's.
+        const window = createPage(aiChatPage(plantedWidget()));
+
+        window.eval(libraries.aiChat);
+        window.eval(libraries.widget);
+        await flush(window);
+
+        expect(window.document.querySelector('.widget-pwned')).toBeNull();
+        expect(window.document.querySelector('[data-coreai-chat-widget-config]')).toBeNull();
     });
 
     it('with only the watcher, starts no widget from an element added inside the mounted chat', async () => {
