@@ -58,8 +58,10 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
   W-2/W-3 and the SSA EFW2 file format.
 - Garnishments (`CrestApps.OrchardCore.Payroll.Garnishments`): orders withheld within the law's limits and sent to
   their payees by check or deposit.
-- United States Payroll (`CrestApps.OrchardCore.Payroll.UnitedStates`): the Form W-4 election and withholding method; the
-  federal tax rules for 2026 as a recipe.
+- United States Payroll Filings (`CrestApps.OrchardCore.Payroll.UnitedStates`): Forms 941, 940, 945, W-2/W-3,
+  1099-NEC and 1096 and the EFW2 file, over Taxation's United States Income Tax (Form W-4 and the 2026 federal rules).
+- Canada Payroll Filings (`CrestApps.OrchardCore.Payroll.Canada`): T4 and RL-1 slips and summaries, the T4 XML file,
+  and CRA and Revenu Québec remittances, over Taxation's Canada Income Tax.
 - My Pay (`CrestApps.OrchardCore.Payroll.SelfService`): `MyPayController` (own statements, stubs, elections and net
   pay split through the profile editor's `MyPay` group), `MyPayStaffHomeLinks`, the `PayDetailsChanged` security notice.
 
@@ -68,13 +70,13 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
 - `IPayCalculator` runs the `IPayCalculationStep`s (`PayCalculationOrder`) over a `PayCalculationContext` built by
   `PayCalculationContextFactory`; gross-ups repeat them. `PayStatement` and its lines; accumulators from
   `PayStatementLineIndex` (`IPayAccumulatorService`). **Preview the next pay** on a profile.
-- `IPayrollTaxProvider` (stateless); **Payroll Tax Tables** (`PayrollTaxRule`, **Payroll > Setup > Tax rules**, the
-  `PayrollTaxRules` recipe and deployment steps) over Taxation's tables.
+- Taxes come from Taxation's Income Tax feature (`IIncomeTaxProvider`, income tax rules under **Taxes > Income tax
+  rules**): the taxes step maps a statement to `IncomeTaxRequest` and the result back to tax lines.
 
 ## Pay code rules
 
 - A **Payroll** card on pay codes (`PayrollPayCodeSettings`, defaults by class and kind through `GetPayrollSettings`):
-  calculation, tax treatment per category (`AddPayrollTaxCategory`), flags, period, yearly and lifetime limits,
+  calculation, tax treatment per category (Taxation's `AddIncomeTaxCategory`), flags, period, yearly and lifetime limits,
   priority, arrears, proration, retro, form boxes (`AddPayrollFormBox`).
 - `PayLimits` and `PayCodeTaxMatrix` (Payroll.Core), the seeded SAL, BONUS, COMM, TIPS, REIMB and LOAN codes, and
   `PayCodeBaseUsage` keeping a base code of a percent from being deleted.

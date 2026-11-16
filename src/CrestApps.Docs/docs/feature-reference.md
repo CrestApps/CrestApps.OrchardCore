@@ -234,7 +234,11 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Approvals` | Approvals | [Approvals](./modules/approvals) |
 | `CrestApps.OrchardCore.Payroll.PaySetup` | Pay Setup | [Payroll](./modules/payroll) |
 | `CrestApps.OrchardCore.Payroll` | Payroll | [Payroll](./modules/payroll) |
-| `CrestApps.OrchardCore.Payroll.TaxTables` | Payroll Tax Tables | [Payroll](./modules/payroll#taxes) |
+| `CrestApps.OrchardCore.Payroll.UnitedStates` | United States Payroll Filings | [Payroll](./modules/payroll#united-states) |
+| `CrestApps.OrchardCore.Payroll.Canada` | Canada Payroll Filings | [Payroll](./modules/payroll#canada) |
+| `CrestApps.OrchardCore.Taxation.IncomeTax` | Income Tax | [Taxation](./modules/taxation#income-tax) |
+| `CrestApps.OrchardCore.Taxation.IncomeTax.UnitedStates` | United States Income Tax | [Taxation](./modules/taxation#country-packs) |
+| `CrestApps.OrchardCore.Taxation.IncomeTax.Canada` | Canada Income Tax | [Taxation](./modules/taxation#country-packs) |
 | `CrestApps.OrchardCore.Banking` | Banking | [Banking](./modules/banking) |
 | `CrestApps.OrchardCore.Checks` | Checks | [Checks](./modules/checks) |
 | `CrestApps.OrchardCore.Disbursements` | Disbursements | [Disbursements](./modules/disbursements) |
@@ -305,7 +309,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.PointOfSale.WebRegister` | Point of Sale Web Register | [Point of Sale](./modules/point-of-sale#web-register) |
 | `CrestApps.OrchardCore.PayLater` | Pay Later | [Pay Later](./modules/pay-later) |
 | `CrestApps.OrchardCore.Receipts` | Receipts | [Receipts](./modules/receipts) |
-| `CrestApps.OrchardCore.Taxation` | Taxation | [Taxation](./modules/taxation) |
+| `CrestApps.OrchardCore.Taxation` | Sales Tax | [Taxation](./modules/taxation) |
 | `CrestApps.OrchardCore.Taxation.Tables` | Tax Tables | [Taxation](./modules/taxation#features) |
 | `CrestApps.OrchardCore.Taxation.TaxJar` | TaxJar | [Taxation](./modules/taxation#taxjar) |
 | `CrestApps.OrchardCore.Transactions` | Transactions | [Transactions](./modules/transactions) |

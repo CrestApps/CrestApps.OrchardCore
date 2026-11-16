@@ -2,16 +2,16 @@
 sidebar_label: Taxation
 sidebar_position: 15
 title: Taxation Framework
-description: A provider-agnostic, extensible taxation framework for Orchard Core that models tax as a determination rather than a stored rate, with order-wide thresholds for import duty, the EU VAT standard rates recipe, the TaxJar connector and the VAT one-stop-shop report.
+description: A provider-agnostic, extensible taxation framework for Orchard Core. Sales Tax models tax as a determination rather than a stored rate, with order-wide thresholds for import duty, the EU VAT standard rates recipe, the TaxJar connector and the VAT one-stop-shop report. Income Tax works out taxes on income for any country, with the United States and Canada packs.
 user_manual: user-manual/commerce/taxes
 ---
 
 | | |
 | --- | --- |
-| **Feature Name** | Taxation |
+| **Feature Name** | Sales Tax |
 | **Feature ID** | `CrestApps.OrchardCore.Taxation` |
 | **Category** | Commerce |
-| **Other features** | TaxJar (`CrestApps.OrchardCore.Taxation.TaxJar`, see [TaxJar](#taxjar)) |
+| **Other features** | Tax Tables, Income Tax, United States Income Tax, Canada Income Tax (see [Income tax](#income-tax)), TaxJar (`CrestApps.OrchardCore.Taxation.TaxJar`, see [TaxJar](#taxjar)) |
 
 Provides a provider-agnostic, extensible, international taxation framework that any Orchard Core content type or CrestApps module (Products, Subscriptions, Payments, Commerce, Bookings, Services, and custom content) can plug into.
 
@@ -39,8 +39,11 @@ The framework is split into three assemblies:
 
 | Feature | Contents |
 | --- | --- |
-| **Tax Tables** (`CrestApps.OrchardCore.Taxation.Tables`) | Tax jurisdictions, tax tables and the calculation methods, under **Taxes > Jurisdictions** and **Taxes > Tables**, with their recipe and deployment steps. No Commerce dependency: payroll uses it too (`AddTaxTablesCore()` registers the services). |
-| **Taxation** (`CrestApps.OrchardCore.Taxation`) | Depends on Tax Tables and Commerce: categories, types, rules, the `TaxationPart`, the sales tax engine and tax origin settings. Sites that had Taxation on get Tax Tables with it. |
+| **Tax Tables** (`CrestApps.OrchardCore.Taxation.Tables`) | Tax jurisdictions, tax tables and the calculation methods, under **Taxes > Jurisdictions** and **Taxes > Tables**, with their recipe and deployment steps. No Commerce dependency: Sales Tax and Income Tax share it (`AddTaxTablesCore()` registers the services). |
+| **Sales Tax** (`CrestApps.OrchardCore.Taxation`) | Depends on Tax Tables and Commerce: categories, types, rules, the `TaxationPart`, the sales tax engine and tax origin settings. Commerce (orders, checkout, point of sale) uses it. The id is the module's, kept from when the feature was named Taxation. |
+| **Income Tax** (`CrestApps.OrchardCore.Taxation.IncomeTax`) | Depends on Tax Tables only: income tax rules, the built-in income tax provider and its seam, tax categories, election forms and withholding methods. Payroll uses it; any module that pays income can. See [Income tax](#income-tax). |
+| **United States Income Tax** (`CrestApps.OrchardCore.Taxation.IncomeTax.UnitedStates`) | Form W-4 and its withholding method, backup withholding, and the federal rules as dated recipes. |
+| **Canada Income Tax** (`CrestApps.OrchardCore.Taxation.IncomeTax.Canada`) | The TD1 and TP-1015.3 claims, the CRA's and Revenu Québec's formulas, CPP, QPP, EI and QPIP, and the yearly figures as dated recipes. |
 | **TaxJar** | See [TaxJar](#taxjar). |
 
 A module whose records point at tax tables registers an `ITaxTableUsage`, so a table in use can't be deleted.
@@ -448,6 +451,68 @@ The main extension points are:
 | `ITaxDeterminationProvider` | Short-circuits the engine with an external determination. |
 
 An `ITaxDeterminationProvider` whose `CanHandle` returns `true` takes over the entire calculation, which is how third-party tax services can be layered on top of the same abstractions; [TaxJar](#taxjar) is one. Providers are asked by their `Order`, lowest first, and the first that can handle the context determines it. The engine checks that every item is in the context's currency before asking any provider.
+
+## Income tax
+
+Income Tax works out taxes on income: income tax withholding at every level (federal, state or province, local) and the statutory contributions on earnings, such as US Social Security, Medicare and unemployment, or the Canada Pension Plan, Employment Insurance and their Quebec counterparts. It never references Commerce or Payroll. Payroll's taxes step maps a pay statement to the request and the result back to tax lines, and Payroll keeps what is built from pay records: accumulators, liabilities and deposits, the employer's returns and slips, and year end.
+
+### The provider seam
+
+`IIncomeTaxProvider.CalculateAsync(IncomeTaxRequest)` returns an `IncomeTaxResult` of `IncomeTaxLine`s and warnings. The request names no module's records:
+
+| Member | What it carries |
+| --- | --- |
+| `PayerId`, `EarnerId` | Ids for a provider that keeps its own records. |
+| `RegisteredJurisdictions` | The jurisdictions the payer is registered in. |
+| `IncomeKind`, `ContractorWithholding` | Employment, contractor, pension or other income; whether a contractor's payments are withheld on. |
+| `HomeJurisdictions`, `WorkJurisdictions` | Where the earner lives and works, such as `CA`, `CA-ON`. |
+| `Elections` | `IncomeTaxElection`s: the values of each jurisdiction's withholding form in effect. |
+| `PayDate`, `PeriodsPerYear`, `Currency` | When, how often, in what. |
+| `Income`, `SupplementalIncome`, `SupplementalMethod` | The period's regular and supplemental income of each tax category, and how supplemental income is withheld on. |
+| `YearIncome`, `YearSupplementalIncome` | The year's income of each category before this payment. |
+| `TaxesToDate` | `IncomeTaxToDate` by tax code: the year's taxable income and tax, and the period's, for wage bases, maximums and a second payment in a period. |
+
+Each line has the tax code, name, jurisdiction, the jurisdiction that collects it (`CollectedBy`), the category, the payer (`IncomeTaxPayer`), the taxable income, the part withheld at a flat rate, and the amount. Register a provider with `services.TryAddEnumerable(ServiceDescriptor.Scoped<IIncomeTaxProvider, MyProvider>())`; Payroll's settings choose one when there are several.
+
+### Income tax rules
+
+The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s in effect on the pay date, managed under **Taxes > Income tax rules** with the **Manage income tax rules** permission. A rule applies when the payer is registered in the jurisdiction that collects it, it is for the kind of income, the person is in its jurisdiction (for one below a country), and the person is in none of its excepted jurisdictions. Its fields express each country's taxes without code:
+
+| Field | Use |
+| --- | --- |
+| `Jurisdiction`, `CollectedBy` | Any level; another agency that collects it (a province's tax the CRA collects is `CA-ON` collected by `CA`). |
+| `ByPlaceOfWork` | Match the jurisdiction by where the person works when known (Canada's province of employment). |
+| `ExceptJurisdictions` | People it doesn't apply to (`CA-QC` for the Canada Pension Plan). |
+| `Category`, `IncomeKinds`, `Payer` | The income taxed, the kinds of income, who pays. |
+| `Method` with `Rate`, `FixedAmount`, `TaxTableId` | A Taxation calculation method, or a country's withholding method with its `Tables` and `Parameters`. |
+| `WageBase`, `WageThreshold` | The most income taxed in a year; only the year's income above an amount (a second tier). |
+| `YearlyExemption` | An amount never taxed, taken off each pay in proportion to the periods of a year, cut to cents. |
+| `YearlyMaximum` | The most tax in a year. |
+| `ShareOfTaxCode`, `ShareMultiplier` | A share of another tax of the same pay, such as an employer's 1.4 times the EI premium. |
+| `Annualize`, `UsesElections`, `AllowanceAmount` | Tables written for a year; the person's election (exempt, allowances, extra withholding). |
+| `SupplementalRate`, `SupplementalExcessRate`, `SupplementalExcessThreshold` | Flat rates on supplemental income. |
+| `EffectiveFrom`, `EffectiveTo`, `Enabled` | Dated versions; two versions of one tax code can't overlap. |
+
+Contributions and flat taxes are worked out first, then withholding methods that give credits for them (`UsesOtherTaxes`), then shares; lines come back in jurisdiction and tax code order. Rules are imported and exported with the `IncomeTaxRules` recipe and deployment step, and kept in the `IncomeTax` YesSql collection.
+
+### Country packs
+
+A country pack registers what its formulas need:
+
+```csharp
+services.AddIncomeTaxCategory("InsurableEarnings", LocalizationSource.Create("Insurable earnings (EI, QPIP)", typeof(Startup)));
+services.AddElectionFieldSet(MyElectionFields.Create());     // the fields of a withholding form, for a jurisdiction or a prefix such as CA-*
+services.AddIncomeTaxWithholdingMethod<MyWithholdingMethod>();
+```
+
+An `IIncomeTaxWithholdingMethod` declares its tables (optional ones with `Required: false`) and parameters, and gets an `IncomeTaxWithholdingContext`: the rule, the request, the election, the period's income, the supplemental income when it `HandlesSupplementalIncome`, the lines worked out before it, and functions that compute a table's brackets, its lowest rate and its rate at an amount.
+
+| Pack | Election forms | Methods | Recipe |
+| --- | --- | --- | --- |
+| United States Income Tax | Form W-4 (`US`) | `UnitedStatesFormW4` (Publication 15-T percentage method) | `IncomeTaxUnitedStatesFederal2026` |
+| Canada Income Tax | TD1 (`CA`), provincial TD1 (`CA-*`), TP-1015.3 (`CA-QC`) | `CanadaFederal` and `CanadaProvincial` (CRA T4127, Option 1, with the bonus method), `QuebecTP1015` (Revenu Québec TP-1015.F) | `IncomeTaxCanada2026` |
+
+The Canada recipe ships every province and territory, the July 1, 2026 changes for British Columbia, Newfoundland and Labrador and Prince Edward Island, CPP and CPP2 with the basic exemption, EI with the employer's 1.4 times, and in Quebec QPP, QPP2, QPIP and the reduced EI rate. A province's own items are parameters of its rule: a basic amount that falls with net income (Manitoba, Yukon), Alberta's supplemental credit, Yukon's employment credit, Ontario's surtax, health premium table and tax reduction, and British Columbia's tax reduction. The bracket tables carry small fixed amounts so the progressive method gives exactly R × A − K with the CRA's rounded constants.
 
 ## TaxJar
 
