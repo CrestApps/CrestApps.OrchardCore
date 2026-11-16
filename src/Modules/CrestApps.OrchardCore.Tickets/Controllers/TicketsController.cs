@@ -315,6 +315,30 @@ public sealed class TicketsController : Controller
     {
         var model = new TicketCreateViewModel { ContentType = contentType, Requester = requester, AccountId = accountId };
 
+        // The type is chosen once, before the form: the form is that type's, and it can't change there.
+        if (string.IsNullOrEmpty(contentType))
+        {
+            var offered = await OfferedTypesAsync();
+
+            if (offered.Count == 0)
+            {
+                return Forbid();
+            }
+
+            if (offered.Count > 1)
+            {
+                return View("ChooseType", new TicketTypeChoiceViewModel
+                {
+                    Types = offered,
+                    Requester = requester,
+                    AccountId = accountId,
+                    Conversation = conversation,
+                });
+            }
+
+            model.ContentType = offered[0].Value;
+        }
+
         if (!await PrepareCreateAsync(model))
         {
             return model.Desks.Count == 0 ? Forbid() : NotFound();
@@ -1310,6 +1334,33 @@ public sealed class TicketsController : Controller
                 || (!string.IsNullOrEmpty(view.SharedWithTeamId) && teams.Contains(view.SharedWithTeamId)))
             .OrderBy(view => view.Order)
             .ThenBy(view => view.Name, StringComparer.CurrentCultureIgnoreCase)];
+    }
+
+    // The ticket types a desk the user may create tickets on (reply on) takes, with their descriptions.
+    private async Task<List<TicketTypeChoice>> OfferedTypesAsync()
+    {
+        var cancellationToken = HttpContext.RequestAborted;
+        var desks = new List<TicketDesk>();
+
+        foreach (var desk in await _desks.GetAllAsync(cancellationToken))
+        {
+            if (await _authorizationService.AuthorizeAsync(User, TicketsPermissions.ForDesk(TicketOperation.Reply, desk)))
+            {
+                desks.Add(desk);
+            }
+        }
+
+        var choices = new List<TicketTypeChoice>();
+
+        foreach (var type in await TicketTypesAsync())
+        {
+            if (desks.Any(desk => desk.TicketTypes.Count == 0 || desk.TicketTypes.Contains(type.Value, StringComparer.OrdinalIgnoreCase)))
+            {
+                choices.Add(new TicketTypeChoice(type.Value, type.Text, (await TypeSettingsAsync(type.Value)).PortalDescription));
+            }
+        }
+
+        return choices;
     }
 
     private async Task<List<SelectListItem>> TicketTypesAsync()

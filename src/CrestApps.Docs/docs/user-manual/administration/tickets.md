@@ -52,7 +52,7 @@ To change a board later, open it and select **Edit board**. A board you share ca
 
 ## Open a ticket for someone
 
-1. Select **New ticket**, or **New ticket** on an account's **Tickets** tab.
+1. Select **New ticket** and the kind of ticket (with several ticket types, the menu lists them), or **New ticket** on an account's **Tickets** tab, which asks which kind first. The form then asks what that kind of ticket needs; to open another kind, go back and choose it.
 2. Choose who it is **for**, or enter a guest's name and e-mail.
 3. Enter the **Subject** and the first message, and attach files if you need to: drag them onto the form, paste them, or select **browse**. Files you add later join the ones already there, and the × next to a file removes it. The reply box takes files the same way.
 4. Choose the **Desk** and, if you want, a **Priority**.
@@ -147,6 +147,8 @@ The permissions to view and work tickets exist for each desk, so HR tickets can 
 ## The account tab
 
 An account's page has a **Tickets** tab: its latest tickets you may see, how many are open, **New ticket** for the account, and **View all in the ticket list**, which opens the ticket list showing only that account's tickets, in every state. Remove the **Account** filter there to see every ticket again.
+
+The account's **Service** tab starts with **Service level**: the service level its tickets get. A ticket covered by one of the account's agreements gets that agreement's policy; the account's other tickets get the account's own policy, or, without one, their category's, ticket type's or desk's. Select **Change** to set the account's own policy.
 
 ## Sort tickets into categories
 

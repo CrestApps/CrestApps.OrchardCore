@@ -3,28 +3,30 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Doubles;
-using CrestApps.OrchardCore.Tickets;
 using CrestApps.OrchardCore.Tickets.Controllers;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
+using CrestApps.OrchardCore.Tickets.ViewModels;
+using CrestApps.OrchardCore.Tickets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
-using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
+using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.DisplayManagement;
+using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.DisplayManagement;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.Tests.Tickets;
 
@@ -123,6 +125,45 @@ public sealed class TicketsControllerTests
         kit.Tickets.Verify(service => service.UpdateAsync("t1", It.IsAny<TicketUpdate>(), It.IsAny<TicketActor>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task NewTicket_WithoutAType_AsksForOne_OfTheTypesADeskTheAgentCreatesOnTakes()
+    {
+        // Arrange: Ben replies on Support, which takes tickets and IT requests; HR takes only HR requests, and Ben may not
+        // reply there.
+        var support = new TicketDesk { ItemId = "support", Name = "Support", TicketTypes = ["Ticket", "ITRequest"] };
+        var hr = new TicketDesk { ItemId = "hr", Name = "HR", TicketTypes = ["HRRequest"] };
+        var kit = new ControllerKit(["Ticket", "ITRequest", "HRRequest"], [support, hr]);
+        kit.Grant(TicketsPermissions.ForDesk(TicketOperation.Reply, support));
+
+        // Act
+        var result = await kit.Controller.Create(accountId: "acme", requester: "User:dana");
+
+        // Assert: the type is chosen once, before the form, and the account and requester come along.
+        var view = Assert.IsType<ViewResult>(result);
+        Assert.Equal("ChooseType", view.ViewName);
+        var model = Assert.IsType<TicketTypeChoiceViewModel>(view.Model);
+        Assert.Equal(["IT request", "Ticket"], model.Types.Select(type => type.Text));
+        Assert.Equal(("acme", "User:dana"), (model.AccountId, model.Requester));
+    }
+
+    [Fact]
+    public async Task NewTicket_WithOneTypeToChooseFrom_OpensItsFormAtOnce()
+    {
+        // Arrange
+        var support = new TicketDesk { ItemId = "support", Name = "Support", TicketTypes = ["Ticket"] };
+        var hr = new TicketDesk { ItemId = "hr", Name = "HR", TicketTypes = ["HRRequest"] };
+        var kit = new ControllerKit(["Ticket", "HRRequest"], [support, hr]);
+        kit.Grant(TicketsPermissions.ForDesk(TicketOperation.Reply, support));
+
+        // Act
+        var result = await kit.Controller.Create();
+
+        // Assert
+        var view = Assert.IsType<ViewResult>(result);
+        Assert.Null(view.ViewName);
+        Assert.Equal("Ticket", Assert.IsType<TicketCreateViewModel>(view.Model).ContentType);
+    }
+
     private static ContentItem Ticket(string id, string deskId, string statusId = "open", string assigneeId = "ben")
     {
         var item = new ContentItem { ContentItemId = id, ContentType = TicketsConstants.DefaultContentType, DisplayText = id };
@@ -136,7 +177,14 @@ public sealed class TicketsControllerTests
         private readonly HashSet<string> _granted = new(StringComparer.Ordinal);
 
         public ControllerKit(params TicketOperation[] allowed)
+            : this(null, null, allowed)
         {
+        }
+
+        public ControllerKit(string[] types, TicketDesk[] desks, params TicketOperation[] allowed)
+        {
+            desks ??= [_support, _hr];
+
             Ticket = TicketsControllerTests.Ticket("t1", "support");
             Tickets.Setup(service => service.GetAsync("t1")).ReturnsAsync(Ticket);
             Access.Setup(service => service.CanAsync(It.IsAny<ClaimsPrincipal>(), Ticket, It.IsAny<TicketOperation>(), It.IsAny<CancellationToken>()))
@@ -144,10 +192,10 @@ public sealed class TicketsControllerTests
             Access.Setup(service => service.GetViewScopesAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Dictionary<string, TicketViewScope> { ["support"] = TicketViewScope.All, ["hr"] = TicketViewScope.All });
 
-            var desks = new Mock<ICatalog<TicketDesk>>();
-            desks.Setup(catalog => catalog.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([_support, _hr]);
-            desks.Setup(catalog => catalog.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((string id, CancellationToken _) => new[] { _support, _hr }.FirstOrDefault(desk => desk.ItemId == id));
+            var deskCatalog = new Mock<ICatalog<TicketDesk>>();
+            deskCatalog.Setup(catalog => catalog.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(desks);
+            deskCatalog.Setup(catalog => catalog.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string id, CancellationToken _) => desks.FirstOrDefault(desk => desk.ItemId == id));
 
             var authorization = new Mock<IAuthorizationService>();
             authorization.Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
@@ -167,11 +215,11 @@ public sealed class TicketsControllerTests
                 Tickets.Object,
                 Access.Object,
                 new Mock<ICatalog<TicketStatus>>().Object,
-                new Mock<ICatalog<TicketPriority>>().Object,
-                desks.Object,
+                Priorities().Object,
+                deskCatalog.Object,
                 new Mock<ICatalog<TicketView>>().Object,
                 new Mock<IContentManager>().Object,
-                new Mock<IContentDefinitionManager>().Object,
+                Definitions(types).Object,
                 new Mock<IContentItemDisplayManager>().Object,
                 new Mock<IUpdateModelAccessor>().Object,
                 new Mock<IPartyDirectory>().Object,
@@ -200,5 +248,26 @@ public sealed class TicketsControllerTests
 
         public void Grant(Permission permission)
             => _granted.Add(permission.Name);
+
+        private static Mock<ICatalog<TicketPriority>> Priorities()
+        {
+            var priorities = new Mock<ICatalog<TicketPriority>>();
+            priorities.Setup(catalog => catalog.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
+            return priorities;
+        }
+
+        // The ticket types (content types with the Ticket part), named after their technical names.
+        private static Mock<IContentDefinitionManager> Definitions(string[] types)
+        {
+            var definitions = new Mock<IContentDefinitionManager>();
+            var names = new Dictionary<string, string>(StringComparer.Ordinal) { ["Ticket"] = "Ticket", ["ITRequest"] = "IT request", ["HRRequest"] = "HR request" };
+            var list = (types ?? []).Select(name => new ContentTypeDefinition(name, names.GetValueOrDefault(name, name),
+                [new ContentTypePartDefinition(TicketsConstants.PartName, new ContentPartDefinition(TicketsConstants.PartName, [], []), [])], [])).ToList();
+            definitions.Setup(value => value.ListTypeDefinitionsAsync()).ReturnsAsync(list);
+            definitions.Setup(value => value.GetTypeDefinitionAsync(It.IsAny<string>())).ReturnsAsync((string name) => list.FirstOrDefault(type => type.Name == name));
+
+            return definitions;
+        }
     }
 }

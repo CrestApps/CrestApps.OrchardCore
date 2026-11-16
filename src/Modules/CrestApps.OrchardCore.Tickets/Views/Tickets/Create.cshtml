@@ -1,6 +1,11 @@
 @model TicketCreateViewModel
 
-<zone Name="Title"><breadcrumb name="TicketsCreate" title="@T["New ticket"]">
+@{
+    // The form is one ticket type's, chosen before it (New ticket, or the type page); it can't change here.
+    var typeName = Model.Types.FirstOrDefault(type => type.Selected)?.Text;
+}
+
+<zone Name="Title"><breadcrumb name="TicketsCreate" title="@(string.IsNullOrEmpty(typeName) ? T["New ticket"] : T["New ticket: {0}", typeName])">
     <breadcrumb-item id="Tickets" action="Index" controller="Tickets" area="CrestApps.OrchardCore.Tickets">@T["Tickets"]</breadcrumb-item>
 </breadcrumb></zone>
 
@@ -8,21 +13,6 @@
     @Html.ValidationSummary()
     <input type="hidden" asp-for="AccountId" />
     <input type="hidden" asp-for="ConversationId" />
-
-    @if (Model.Types.Count > 1)
-    {
-        <div class="ocat-wrapper">
-            <span class="ocat-label">@T["Ticket type"]</span>
-            <div class="ocat-end">
-                <div class="btn-group flex-wrap" role="group" aria-label="@T["Ticket type"]">
-                    @foreach (var type in Model.Types)
-                    {
-                        <a class="btn btn-sm @(type.Selected ? "btn-primary" : "btn-outline-secondary")" asp-action="Create" asp-route-contentType="@type.Value" asp-route-requester="@Model.Requester" asp-route-accountId="@Model.AccountId" aria-current="@(type.Selected ? "true" : null)">@type.Text</a>
-                    }
-                </div>
-            </div>
-        </div>
-    }
 
     <div class="ocat-wrapper">
         <label class="ocat-label">@T["Requester"]</label>

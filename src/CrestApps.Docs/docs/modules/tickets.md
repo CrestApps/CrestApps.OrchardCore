@@ -40,6 +40,9 @@ Every change goes through `ITicketService` under a lock per ticket: create, upda
 | `Solved` | Answered; a reply from the requester within the desk's reopen window reopens it |
 | `Closed` | Final and read only; a reply after it opens a follow-up ticket |
 
+
+**New ticket** is one ticket type's form (`Admin/tickets/new/{contentType}`), built by that type's editor; the type is chosen before it and can't change on it. Opened without a type (from an account, a messaging conversation or a link), it shows **What kind of ticket?** with the types a desk the agent may reply on takes, each with its **Description for customers**, and carries the account, requester and conversation to the form; with only one such type it opens that type's form at once.
+
 ## Categories and the questions that follow them
 
 A ticket type can take its **categories** from an Orchard Core taxonomy (Hardware > Laptop > Battery): the Ticket part's settings name the taxonomy (`TicketPartSettings.CategoryTaxonomyId`), whether a category is required on the forms (`CategoryRequired`, agents' page, portal, web form; never for the API, workflows or e-mail) and whether only a category without sub-categories may be chosen (`CategoryLeavesOnly`). Several types may share a taxonomy. The Tickets feature defines a `TicketCategory` term type with the `TicketCategoryPart`; any taxonomy whose terms carry the part works.
@@ -245,7 +248,7 @@ This is the agents' API: `entries` returns internal notes to anyone who may view
 
 ## Accounts, personal data and AI tools
 
-With Accounts on, an account's page has a **Tickets** tab with its latest 25 tickets in the user's scope, **New ticket** for the account, and **View all in the ticket list**, which opens the list filtered to the account (`?accountId=`, every state). The list shows the filter as an **Account** chip that removes it; the account's name shows to a user who may view the account.
+With Accounts on, an account's **Service** tab has a **Service level** card (`AccountServiceLevelDisplayDriver`, for users who may view tickets): the policy of each agreement in force that names one, for the tickets it covers, then the account's own (`TicketAccountPart`), with **Change** to edit the account and links to the policies for those who manage them. An account's page also has a **Tickets** tab with its latest 25 tickets in the user's scope, **New ticket** for the account, and **View all in the ticket list**, which opens the list filtered to the account (`?accountId=`, every state). The list shows the filter as an **Account** chip that removes it; the account's name shows to a user who may view the account.
 
 Tickets takes part in [personal data](./personal-data) requests: a person's tickets are found by their user and by the e-mail kept on a guest's ticket. An export lists each ticket and its public replies. An erasure:
 

@@ -207,6 +207,40 @@ public sealed class TicketRow
 }
 
 /// <summary>
+/// The page that asks which kind of ticket to create, before the form.
+/// </summary>
+public sealed class TicketTypeChoiceViewModel
+{
+    /// <summary>
+    /// Gets or sets the ticket types the user may create.
+    /// </summary>
+    public IReadOnlyList<TicketTypeChoice> Types { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the requester the ticket is for, carried to the form.
+    /// </summary>
+    public string Requester { get; set; }
+
+    /// <summary>
+    /// Gets or sets the account the ticket is for, carried to the form.
+    /// </summary>
+    public string AccountId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the messaging conversation the ticket starts from, carried to the form.
+    /// </summary>
+    public string Conversation { get; set; }
+}
+
+/// <summary>
+/// A ticket type to choose before the new ticket form.
+/// </summary>
+/// <param name="Value">The type's technical name.</param>
+/// <param name="Text">Its display name.</param>
+/// <param name="Description">What it is for, if the type says.</param>
+public sealed record TicketTypeChoice(string Value, string Text, string Description);
+
+/// <summary>
 /// The new-ticket page: the ticket type's editor and the ticket's own values.
 /// </summary>
 public sealed class TicketCreateViewModel
