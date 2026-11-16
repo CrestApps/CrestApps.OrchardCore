@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.Learning;
 using CrestApps.OrchardCore.Learning.Classes;
+using CrestApps.OrchardCore.Learning.Classes.Core.Services;
 using CrestApps.OrchardCore.Learning.Classes.Models;
 using CrestApps.OrchardCore.Learning.Classes.Services;
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Scheduling;
@@ -12,6 +14,7 @@ using CrestApps.OrchardCore.Scheduling.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Learning.Assessments;
 using CrestApps.OrchardCore.Tests.Scheduling;
+using CrestApps.OrchardCore.YesSql.Core.WorkQueues;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -247,6 +250,60 @@ public sealed class ClassRegistrationTests
         Assert.Null(after.MinutesAttended);
     }
 
+    [Fact]
+    public async Task Attendance_AfterTheLearnersAccessEnded_StillCompletesTheClassItem()
+    {
+        // Arrange: the access window closed the day before the roster was marked.
+        var (h, session) = await CreateAsync();
+        await using var _ = h;
+        var ana = await EnrollAsync(h, "ana");
+        var place = await RegisterAsync(h, ana, session);
+
+        await h.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<EnrollmentStore>();
+            var enrollment = await store.FindByIdAsync(ana.ItemId);
+
+            enrollment.AccessEndsUtc = CalendarTestHarness.Now.AddDays(-1);
+            await store.SaveAsync(enrollment);
+
+            return true;
+        });
+
+        // Act
+        await MarkAsync(h, session, place.Registration.Appointment.ItemId, AppointmentAttendance.Attended);
+        var progress = await h.RunAsync(services => services.GetRequiredService<ILearnerProgressService>().GetAsync(ana.ItemId));
+
+        // Assert
+        Assert.Equal(CourseItemState.Completed, progress.Items.SingleOrDefault(item => item.ContentItemId == "class1")?.State);
+    }
+
+    [Fact]
+    public async Task Attendance_ThatCouldNotBeRecordedThen_IsRecordedLater()
+    {
+        // Arrange: the enrollment is suspended when the roster is marked, and active again afterwards.
+        var clock = new TestClock { UtcNow = CalendarTestHarness.Now };
+        var (h, session) = await CreateAsync(clock: clock);
+        await using var _ = h;
+        var ana = await EnrollAsync(h, "ana");
+        var place = await RegisterAsync(h, ana, session);
+
+        await h.RunAsync(services => services.GetRequiredService<IEnrollmentService>().ChangeStatusAsync(ana.ItemId, EnrollmentStatus.Suspended, "admin", "Paused"));
+        await MarkAsync(h, session, place.Registration.Appointment.ItemId, AppointmentAttendance.Attended);
+        var before = await h.RunAsync(services => services.GetRequiredService<ILearnerProgressService>().GetAsync(ana.ItemId));
+        await h.RunAsync(services => services.GetRequiredService<IEnrollmentService>().ChangeStatusAsync(ana.ItemId, EnrollmentStatus.Active, "admin", "Back"));
+
+        // Act
+        clock.UtcNow = clock.UtcNow.AddMinutes(2);
+        var settled = await h.RunAsync(services => services.GetRequiredService<ClassFollowUps>().RunDueAsync());
+        var after = await h.RunAsync(services => services.GetRequiredService<ILearnerProgressService>().GetAsync(ana.ItemId));
+
+        // Assert
+        Assert.NotEqual(CourseItemState.Completed, before.Items.SingleOrDefault(item => item.ContentItemId == "class1")?.State ?? CourseItemState.NotStarted);
+        Assert.Equal(1, settled);
+        Assert.Equal(CourseItemState.Completed, after.Items.SingleOrDefault(item => item.ContentItemId == "class1")?.State);
+    }
+
     private static IClassRegistrationService Registrations(IServiceProvider services)
         => services.GetRequiredService<IClassRegistrationService>();
 
@@ -280,9 +337,9 @@ public sealed class ClassRegistrationTests
         return result.Enrollment;
     }
 
-    private static async Task<(CalendarTestHarness Harness, SchedulingSession Session)> CreateAsync(int capacity = 5, int? minimumMinutes = null, UserManager<IUser> users = null)
+    private static async Task<(CalendarTestHarness Harness, SchedulingSession Session)> CreateAsync(int capacity = 5, int? minimumMinutes = null, UserManager<IUser> users = null, TestClock clock = null)
     {
-        var clock = new TestClock { UtcNow = CalendarTestHarness.Now };
+        clock ??= new TestClock { UtcNow = CalendarTestHarness.Now };
         var (harness, courses, _) = await LearningTestHarness.CreateAsync(
             services =>
             {
@@ -298,9 +355,11 @@ public sealed class ClassRegistrationTests
             {
                 await SchedulingIndexSchema.CreateAsync(schemaBuilder);
                 await SchedulingSessionIndexSchema.CreateAsync(schemaBuilder);
+                await LeasedWorkItemIndexSchema.CreateAsync(schemaBuilder, ClassFollowUpWork.CollectionName);
             },
-            [new SchedulingResourceIndexProvider(), new AppointmentTypeIndexProvider(), new AppointmentIndexProvider(), new WaitlistEntryIndexProvider(), .. SchedulingSessionIndexSchema.Providers()],
-            [SchedulingConstants.CollectionName]);
+            // The follow-up queue's index provider comes from DI on a site; the harness store needs it listed.
+            [new SchedulingResourceIndexProvider(), new AppointmentTypeIndexProvider(), new AppointmentIndexProvider(), new WaitlistEntryIndexProvider(), .. SchedulingSessionIndexSchema.Providers(), new LeasedWorkItemIndexProvider<ClassFollowUpWork>(ClassFollowUpWork.CollectionName)],
+            [SchedulingConstants.CollectionName, ClassFollowUpWork.CollectionName]);
 
         courses.AddCourse("c1");
         courses.AddItem("c1", "lesson");

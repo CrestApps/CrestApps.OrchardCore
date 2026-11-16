@@ -5,11 +5,15 @@ using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Services;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
+using CrestApps.OrchardCore.Tests.Learning.Assessments;
+using CrestApps.OrchardCore.WorkQueues;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Classes;
 
@@ -103,6 +107,30 @@ public sealed class ClassShiftSegmentObserverTests
         kit.Shifts.VerifyNoOtherCalls();
     }
 
+    [Fact]
+    public async Task ABusyShiftPlan_WhenThePlaceIsCancelled_QueuesTheRemovalToBeTriedAgain()
+    {
+        // Arrange: the worker's shifts are being changed by someone else, so the removal throws.
+        var kit = new Kit();
+        var queued = new List<ClassFollowUpWork>();
+
+        kit.Shifts
+            .Setup(service => service.RemoveSegmentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("The shifts of worker 'staff-ana' are being changed by someone else."));
+        kit.Queue
+            .Setup(queue => queue.EnqueueAsync(It.IsAny<ClassFollowUpWork>(), It.IsAny<CancellationToken>()))
+            .Callback<ClassFollowUpWork, CancellationToken>((work, _) => queued.Add(work))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await kit.Observer.OnChangedAsync(Change(AppointmentChangeKind.Cancelled, Registration("user-ana")), TestContext.Current.CancellationToken);
+
+        // Assert
+        var work = Assert.Single(queued);
+        Assert.Equal((ClassFollowUpKinds.ShiftSegments, "appointment-1", "tester"), (work.Kind, work.AppointmentId, work.Actor));
+        kit.Session.Verify(session => session.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static Appointment Registration(string userId)
     {
         return new Appointment
@@ -141,15 +169,25 @@ public sealed class ClassShiftSegmentObserverTests
             });
 
             var services = new ServiceCollection()
+                .AddLogging()
                 .AddSingleton(Shifts.Object)
                 .AddSingleton(staff.Object)
                 .AddSingleton(sessions.Object)
+                .AddSingleton(Queue.Object)
+                .AddSingleton(Session.Object)
+                .AddSingleton<IClock>(new TestClock { UtcNow = _firstStart.AddDays(-7) })
+                .AddScoped<ClassFollowUps>()
+                .AddScoped<ClassShiftSegmentPlanner>()
                 .BuildServiceProvider();
 
             Observer = new ClassShiftSegmentObserver(services, NullLogger<ClassShiftSegmentObserver>.Instance);
         }
 
         public Mock<IShiftService> Shifts { get; } = new();
+
+        public Mock<ILeasedWorkQueue<ClassFollowUpWork>> Queue { get; } = new();
+
+        public Mock<ISession> Session { get; } = new();
 
         public ClassShiftSegmentObserver Observer { get; }
     }

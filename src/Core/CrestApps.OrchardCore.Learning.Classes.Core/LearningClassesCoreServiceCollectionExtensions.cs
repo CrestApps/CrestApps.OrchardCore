@@ -16,8 +16,9 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class LearningClassesCoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the class course item kind, class registration, and the observers that complete a class item on
-    /// attendance and give up an enrollment's places when it ends.
+    /// Registers the class course item kind, class registration, the observers that complete a class item on
+    /// attendance and give up an enrollment's places when it ends, and the queue that retries their unfinished work.
+    /// The feature's migration creates the queue's table.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <returns>The service collection.</returns>
@@ -26,6 +27,13 @@ public static class LearningClassesCoreServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddScoped<IClassRegistrationService, DefaultClassRegistrationService>();
+        services.TryAddScoped<ClassFollowUps>();
+        services.TryAddScoped<ClassAttendanceRecorder>();
+        services.AddLeasedWorkQueue<ClassFollowUpWork>(options =>
+        {
+            options.CollectionName = ClassFollowUpWork.CollectionName;
+            options.RemoveCompletedItems = true;
+        });
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAppointmentObserver, ClassAttendanceObserver>());
         services.AddEnrollmentObserver<ClassEnrollmentObserver>();
         services.AddCourseItemKind<ClassPart>(ClassesConstants.ClassKind, kind =>

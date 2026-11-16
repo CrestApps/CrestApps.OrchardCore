@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Scheduling.Services;
 using CrestApps.OrchardCore.Workforce;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data.Migration;
@@ -38,6 +39,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<ClassSessionRow, ClassSessionRowDisplayDriver>();
         services.AddDisplayDriver<ClassRosterRow, ClassRosterRowDisplayDriver>();
         services.AddDisplayDriver<ClassWaitlistRow, ClassWaitlistRowDisplayDriver>();
+        services.AddSingleton<IBackgroundTask, ClassFollowUpBackgroundTask>();
     }
 }
 
@@ -51,6 +53,7 @@ public sealed class WorkforceStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.TryAddScoped<ClassShiftSegmentPlanner>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAppointmentObserver, ClassShiftSegmentObserver>());
     }
 }

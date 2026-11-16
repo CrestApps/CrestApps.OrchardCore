@@ -1,6 +1,8 @@
+using CrestApps.OrchardCore.Learning.Classes.Core.Services;
 using CrestApps.OrchardCore.Learning.Classes.Models;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
+using CrestApps.OrchardCore.YesSql.Core.WorkQueues;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -9,7 +11,8 @@ using OrchardCore.Title.Models;
 namespace CrestApps.OrchardCore.Learning.Classes.Migrations;
 
 /// <summary>
-/// Creates the class part and the class course item type, and adds the type to the course outlines.
+/// Creates the class part and the class course item type, adds the type to the course outlines, and creates the table
+/// of the queue that retries work on class registrations.
 /// </summary>
 internal sealed class ClassesMigrations : DataMigration
 {
@@ -46,7 +49,16 @@ internal sealed class ClassesMigrations : DataMigration
                 })));
 
         await _courseListSynchronizer.SynchronizeAsync();
+        await LeasedWorkItemIndexSchema.CreateAsync(SchemaBuilder, ClassFollowUpWork.CollectionName);
 
-        return 1;
+        return 2;
+    }
+
+    // The queue that retries attendance and shift plan work on class registrations.
+    public async Task<int> UpdateFrom1Async()
+    {
+        await LeasedWorkItemIndexSchema.CreateAsync(SchemaBuilder, ClassFollowUpWork.CollectionName);
+
+        return 2;
     }
 }
