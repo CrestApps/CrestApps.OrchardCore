@@ -1,14 +1,18 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Patterns;
 using OrchardCore.Autoroute.Core.Indexes;
 using OrchardCore.ContentManagement.Routing;
+using OrchardCore.Environment.Extensions;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 
 /// <summary>
-/// Answers whether the store already serves URLs under a first path segment: one of its routes starts with it, or one
-/// of its pages' paths does. A site sold on that prefix of the store's address would take those URLs from the store.
+/// Answers whether the store already serves URLs under a first path segment: one of its routes starts with it, one of
+/// its pages' paths does, or it is a module's or theme's id or a top-level entry of the web root, whose static files
+/// Orchard Core serves under <c>/{segment}/</c> without an endpoint. A site sold on that prefix of the store's address
+/// would take those URLs from the store.
 /// </summary>
 /// <remarks>
 /// Orchard Core builds the endpoints of a tenant on the tenant's own container, so the <see cref="EndpointDataSource"/>
@@ -16,9 +20,13 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 /// </remarks>
 public sealed class StoreRouteSegments
 {
+    private const int PageSize = 500;
+
     private readonly EndpointDataSource _endpoints;
     private readonly IEnumerable<IAutorouteEntries> _autorouteEntries;
     private readonly ISession _session;
+    private readonly IExtensionManager _extensionManager;
+    private readonly IWebHostEnvironment _environment;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StoreRouteSegments"/> class.
@@ -26,14 +34,20 @@ public sealed class StoreRouteSegments
     /// <param name="endpoints">The store's endpoints.</param>
     /// <param name="autorouteEntries">The Autoroute entries, present only while Autoroute is enabled.</param>
     /// <param name="session">The store's session, which reads its pages' paths.</param>
+    /// <param name="extensionManager">The modules and themes, whose static files are served under their ids.</param>
+    /// <param name="environment">The host environment, whose web root is served from the root of every address.</param>
     public StoreRouteSegments(
         EndpointDataSource endpoints,
         IEnumerable<IAutorouteEntries> autorouteEntries,
-        ISession session)
+        ISession session,
+        IExtensionManager extensionManager,
+        IWebHostEnvironment environment)
     {
         _endpoints = endpoints;
         _autorouteEntries = autorouteEntries;
         _session = session;
+        _extensionManager = extensionManager;
+        _environment = environment;
     }
 
     /// <summary>
@@ -48,7 +62,8 @@ public sealed class StoreRouteSegments
             return false;
         }
 
-        if (_endpoints.Endpoints.OfType<RouteEndpoint>().Any(endpoint => StartsWith(endpoint.RoutePattern, segment)))
+        if (_endpoints.Endpoints.OfType<RouteEndpoint>().Any(endpoint => StartsWith(endpoint.RoutePattern, segment)) ||
+            IsStaticFileFolder(segment))
         {
             return true;
         }
@@ -59,20 +74,66 @@ public sealed class StoreRouteSegments
             return false;
         }
 
-        var path = segment.ToLowerInvariant();
-        var under = path + "/";
-        var rooted = "/" + path;
-        var rootedUnder = rooted + "/";
+        // The database compares text in its own collation, which is exact on PostgreSQL (YesSql makes SQLite's text columns
+        // NOCASE), so a page whose path is "Pricing" was not found for "pricing". The query only narrows the rows to the
+        // segment's first character in either case; the first segments of the paths are compared here, without case.
+        var lower = char.ToLowerInvariant(segment[0]).ToString();
+        var upper = char.ToUpperInvariant(segment[0]).ToString();
+        var rootedLower = "/" + lower;
+        var rootedUpper = "/" + upper;
 
-        var page = await _session
-            .QueryIndex<AutoroutePartIndex>(index =>
-                index.Path == path ||
-                index.Path == rooted ||
-                index.Path.StartsWith(under) ||
-                index.Path.StartsWith(rootedUnder))
-            .FirstOrDefaultAsync(cancellationToken);
+        for (var skip = 0; ; skip += PageSize)
+        {
+            var pages = (await _session
+                .QueryIndex<AutoroutePartIndex>(index =>
+                    index.Path.StartsWith(lower) ||
+                    index.Path.StartsWith(upper) ||
+                    index.Path.StartsWith(rootedLower) ||
+                    index.Path.StartsWith(rootedUpper))
+                .OrderBy(index => index.Id)
+                .Skip(skip)
+                .Take(PageSize)
+                .ListAsync(cancellationToken))
+                .ToList();
 
-        return page is not null;
+            if (pages.Any(page => FirstSegmentIs(page.Path, segment)))
+            {
+                return true;
+            }
+
+            if (pages.Count < PageSize)
+            {
+                return false;
+            }
+        }
+    }
+
+    // Orchard Core serves a module's or theme's wwwroot under /{module}/, and the host's web root from the root, with the
+    // static file middleware, so neither has an endpoint.
+    private bool IsStaticFileFolder(string segment)
+    {
+        if (_extensionManager.GetExtensions().Any(extension => string.Equals(extension.Id, segment, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        var webRoot = _environment.WebRootFileProvider?.GetDirectoryContents(string.Empty);
+
+        return webRoot is { Exists: true } &&
+            webRoot.Any(entry => string.Equals(entry.Name, segment, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool FirstSegmentIs(string path, string segment)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return false;
+        }
+
+        var trimmed = path.AsSpan().TrimStart('/');
+        var end = trimmed.IndexOf('/');
+
+        return (end < 0 ? trimmed : trimmed[..end]).Equals(segment, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool StartsWith(RoutePattern pattern, string segment)
