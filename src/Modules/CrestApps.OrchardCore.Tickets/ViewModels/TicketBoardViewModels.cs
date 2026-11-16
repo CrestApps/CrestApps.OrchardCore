@@ -179,6 +179,11 @@ public class TicketBoardPageViewModel
     /// Gets or sets whether the user may arrange the board.
     /// </summary>
     public bool CanManage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the address of the hub that pings the board when tickets change, when SignalR is on.
+    /// </summary>
+    public string HubUrl { get; set; }
 }
 
 /// <summary>

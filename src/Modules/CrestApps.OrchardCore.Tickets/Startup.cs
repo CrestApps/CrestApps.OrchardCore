@@ -22,11 +22,14 @@ using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Navigation;
 using CrestApps.OrchardCore.Tickets.Notifications;
 using CrestApps.OrchardCore.Tickets.Portal;
+using CrestApps.OrchardCore.Tickets.RealTime;
 using CrestApps.OrchardCore.Tickets.Recipes;
 using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.Tickets.ViewModels;
 using CrestApps.OrchardCore.Timeline;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -193,6 +196,25 @@ public sealed class NotificationsStartup : StartupBase
             LocalizationSource.Create<Startup>("Ticket workflow notices"),
             type => type.Description = LocalizationSource.Create<Startup>("When a workflow's Notify About Ticket task tells you about a ticket."));
     }
+}
+
+/// <summary>
+/// Pings open ticket boards over SignalR when tickets change, so they reload at once; the boards still poll every 20
+/// seconds when they aren't connected.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.SignalR)]
+public sealed class RealTimeStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<TicketBoardNotifier>();
+        services.AddScoped<ITicketObserver>(serviceProvider => serviceProvider.GetRequiredService<TicketBoardNotifier>());
+    }
+
+    /// <inheritdoc/>
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.MapHub<TicketBoardHub>(SignalRHubRoutes.GetHubPath<TicketBoardHub>());
 }
 
 /// <summary>

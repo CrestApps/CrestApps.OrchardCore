@@ -5,7 +5,8 @@
  * Shows a board's columns and the tickets in them as cards. A card is dragged to another column (or moved from its
  * menu, with the keyboard or on a touch screen) to change the ticket's status: the server sets the status through the
  * ticket service and answers with the card as it is now, with the statuses to choose from when the column has several
- * and no default, or with the reason the move was refused, in which case the card goes back. The board loads its data
+ * and no default, or with the reason the move was refused, in which case the card goes back. With SignalR on, the board
+ * is pinged when tickets change and loads its data again at once; otherwise (or while the connection is down) it loads
  * again every 20 seconds while the page is visible, so a card moves when its status changes elsewhere.
  *
  * The drag code knows nothing of tickets beyond the data contract: columns with statuses, cards with a status, and a
@@ -101,7 +102,36 @@
         return { columns: result, placed: moved };
     }
 
-    globalThis.CrestAppsTicketBoard = { format, columnOf, canDrop, countOf, relativeTime, placeCard };
+    // Connects to the hub that pings boards when tickets change: onPing on each ping, and onConnected(true) once the board
+    // has joined (false while the connection is down), so the board polls only while it isn't connected.
+    async function connectLive(hubUrl, signalR, onPing, onConnected) {
+        if (!hubUrl || !signalR) {
+            onConnected(false);
+
+            return null;
+        }
+
+        const connection = new signalR.HubConnectionBuilder().withUrl(hubUrl).withAutomaticReconnect().build();
+
+        connection.on('TicketsChanged', onPing);
+        connection.onreconnecting(() => onConnected(false));
+        connection.onreconnected(async () => {
+            onConnected(Boolean(await connection.invoke('Subscribe')));
+            onPing();
+        });
+        connection.onclose(() => onConnected(false));
+
+        try {
+            await connection.start();
+            onConnected(Boolean(await connection.invoke('Subscribe')));
+        } catch {
+            onConnected(false);
+        }
+
+        return connection;
+    }
+
+    globalThis.CrestAppsTicketBoard = { format, columnOf, canDrop, countOf, relativeTime, placeCard, connectLive };
 
     if (typeof document === 'undefined' || !document.getElementById) {
         return;
@@ -587,8 +617,25 @@
 
         const dialogOpen = () => dialogElement && dialogElement.classList.contains('show');
 
+        // Pinged by the server when tickets change; the poll below covers a board that isn't connected.
+        let connected = false;
+        let pingTimer = 0;
+
+        const reloadSoon = () => {
+            window.clearTimeout(pingTimer);
+            pingTimer = window.setTimeout(() => {
+                if (document.visibilityState === 'visible' && !dragging && !busy && !dialogOpen()) {
+                    load();
+                }
+            }, 500);
+        };
+
+        const connect = () => connectLive(root.dataset.hubUrl, /** @type {any} */ (window).signalR, reloadSoon, (value) => {
+            connected = value;
+        });
+
         window.setInterval(() => {
-            if (document.visibilityState === 'visible' && !dragging && !busy && !dialogOpen()) {
+            if (!connected && document.visibilityState === 'visible' && !dragging && !busy && !dialogOpen()) {
                 load();
             }
         }, refreshMs);
@@ -600,6 +647,7 @@
         });
 
         load();
+        connect();
     }
 
     if (document.readyState === 'loading') {

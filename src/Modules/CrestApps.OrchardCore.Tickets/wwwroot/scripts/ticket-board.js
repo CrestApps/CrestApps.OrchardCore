@@ -68,13 +68,35 @@
 				placed: moved
 			};
 		}
+		async function connectLive(hubUrl, signalR, onPing, onConnected) {
+			if (!hubUrl || !signalR) {
+				onConnected(false);
+				return null;
+			}
+			const connection = new signalR.HubConnectionBuilder().withUrl(hubUrl).withAutomaticReconnect().build();
+			connection.on("TicketsChanged", onPing);
+			connection.onreconnecting(() => onConnected(false));
+			connection.onreconnected(async () => {
+				onConnected(Boolean(await connection.invoke("Subscribe")));
+				onPing();
+			});
+			connection.onclose(() => onConnected(false));
+			try {
+				await connection.start();
+				onConnected(Boolean(await connection.invoke("Subscribe")));
+			} catch {
+				onConnected(false);
+			}
+			return connection;
+		}
 		globalThis.CrestAppsTicketBoard = {
 			format,
 			columnOf,
 			canDrop,
 			countOf,
 			relativeTime,
-			placeCard
+			placeCard,
+			connectLive
 		};
 		if (typeof document === "undefined" || !document.getElementById) return;
 		function start() {
@@ -371,13 +393,31 @@
 			});
 			assignee.addEventListener("change", filtersChanged);
 			const dialogOpen = () => dialogElement && dialogElement.classList.contains("show");
+			let connected = false;
+			let pingTimer = 0;
+			const reloadSoon = () => {
+				window.clearTimeout(pingTimer);
+				pingTimer = window.setTimeout(() => {
+					if (document.visibilityState === "visible" && !dragging && !busy && !dialogOpen()) load();
+				}, 500);
+			};
+			const connect = () => connectLive(
+				root.dataset.hubUrl,
+				/** @type {any} */
+				window.signalR,
+				reloadSoon,
+				(value) => {
+					connected = value;
+				}
+			);
 			window.setInterval(() => {
-				if (document.visibilityState === "visible" && !dragging && !busy && !dialogOpen()) load();
+				if (!connected && document.visibilityState === "visible" && !dragging && !busy && !dialogOpen()) load();
 			}, refreshMs);
 			document.addEventListener("visibilitychange", () => {
 				if (document.visibilityState === "visible" && !dragging && !busy) load();
 			});
 			load();
+			connect();
 		}
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
 		else start();

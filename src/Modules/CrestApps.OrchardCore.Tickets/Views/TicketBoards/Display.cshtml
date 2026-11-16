@@ -40,6 +40,10 @@
 </zone>
 
 <style asp-name="@TicketsResourceConfiguration.BoardStyle"></style>
+@if (!string.IsNullOrEmpty(Model.HubUrl))
+{
+    <script asp-name="signalr" at="Foot"></script>
+}
 <script asp-name="@TicketsResourceConfiguration.BoardScript" at="Foot"></script>
 
 <div class="card text-bg-theme mb-3 position-sticky action-bar">
@@ -86,6 +90,7 @@
 <div id="ticket-board"
      data-data-url="@Url.Action("Data", new { id = Model.Board.ItemId })"
      data-move-url="@Url.Action("Move", new { id = Model.Board.ItemId })"
+     data-hub-url="@Model.HubUrl"
      data-texts="@JsonSerializer.Serialize(texts)">
     @Html.AntiForgeryToken()
     <div class="alert alert-warning d-none" role="alert" data-board-message></div>

@@ -257,6 +257,7 @@ public sealed class TicketBoardsController : Controller
             Board = board,
             Boards = [.. boards],
             CanManage = await _boards.CanManageAsync(User, board),
+            HubUrl = HttpContext.RequestServices.GetService(typeof(RealTime.TicketBoardNotifier)) is null ? null : CrestApps.OrchardCore.SignalRHubRoutes.GetTenantAwareHubUrl<RealTime.TicketBoardHub>(HttpContext),
         });
     }
 

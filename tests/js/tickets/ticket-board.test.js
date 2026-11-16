@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.Tickets/Assets/js/ticket-board.js';
 
@@ -105,5 +105,60 @@ describe('relativeTime', () => {
 describe('format', () => {
     it('fills every placeholder', () => {
         expect(board.format('{0} is now {1}; {0}.', 'T-1', 'Open')).toBe('T-1 is now Open; T-1.');
+    });
+});
+
+// With SignalR on, the board joins the hub and reloads when pinged; it polls only while it isn't connected.
+describe('connectLive', () => {
+    function fakeSignalR(subscribed) {
+        const handlers = {};
+        const connection = {
+            on: (name, handler) => { handlers[name] = handler; },
+            onreconnecting: (handler) => { handlers.reconnecting = handler; },
+            onreconnected: (handler) => { handlers.reconnected = handler; },
+            onclose: (handler) => { handlers.close = handler; },
+            start: vi.fn(async () => {}),
+            invoke: vi.fn(async () => subscribed),
+        };
+        const builder = { withUrl: () => builder, withAutomaticReconnect: () => builder, build: () => connection };
+
+        return { signalR: { HubConnectionBuilder: function HubConnectionBuilder() { return builder; } }, handlers, connection };
+    }
+
+    it('joins, then reloads on each ping', async () => {
+        const { signalR, handlers, connection } = fakeSignalR(true);
+        const onPing = vi.fn();
+        const states = [];
+
+        await board.connectLive('/hubs/tickets', signalR, onPing, (value) => states.push(value));
+        handlers.TicketsChanged();
+
+        expect(connection.invoke).toHaveBeenCalledWith('Subscribe');
+        expect(states).toEqual([true]);
+        expect(onPing).toHaveBeenCalledTimes(1);
+    });
+
+    it('polls again while the connection is down, and reloads once it is back', async () => {
+        const { signalR, handlers } = fakeSignalR(true);
+        const onPing = vi.fn();
+        const states = [];
+
+        await board.connectLive('/hubs/tickets', signalR, onPing, (value) => states.push(value));
+        handlers.reconnecting();
+        await handlers.reconnected();
+
+        expect(states).toEqual([true, false, true]);
+        expect(onPing).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps polling without SignalR, or when the user may not join', async () => {
+        const states = [];
+        const { signalR } = fakeSignalR(false);
+
+        await board.connectLive('', signalR, vi.fn(), (value) => states.push(value));
+        await board.connectLive('/hubs/tickets', undefined, vi.fn(), (value) => states.push(value));
+        await board.connectLive('/hubs/tickets', signalR, vi.fn(), (value) => states.push(value));
+
+        expect(states).toEqual([false, false, false]);
     });
 });
