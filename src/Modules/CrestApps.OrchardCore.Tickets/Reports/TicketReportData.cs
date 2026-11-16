@@ -41,6 +41,16 @@ internal sealed record TicketFacts(
     int ReopenCount,
     int EscalationLevel)
 {
+    /// <summary>
+    /// Gets the ticket's number.
+    /// </summary>
+    public string Number { get; init; }
+
+    /// <summary>
+    /// Gets the account the ticket is for.
+    /// </summary>
+    public string AccountId { get; init; }
+
     public bool IsOpen => Category is TicketStatusCategory.New or TicketStatusCategory.Open or TicketStatusCategory.Pending or TicketStatusCategory.OnHold;
 
     public double? FirstResponseMinutes => FirstResponseUtc is { } at && at >= CreatedUtc ? (at - CreatedUtc).TotalMinutes : null;
@@ -138,7 +148,11 @@ internal sealed class TicketReportData
                 row.ReplyCount,
                 row.AgentReplyCount,
                 row.ReopenCount,
-                row.EscalationLevel)));
+                row.EscalationLevel)
+            {
+                Number = row.Number,
+                AccountId = row.AccountId,
+            }));
 
             if (rows.Count < BatchSize)
             {
