@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Learning.Lti.Core.Launch;
 using CrestApps.OrchardCore.Learning.Lti.Core.Services;
 using CrestApps.OrchardCore.Learning.Lti.Deployments;
 using CrestApps.OrchardCore.Learning.Lti.Models;
+using CrestApps.OrchardCore.Learning.Lti.Services;
 using CrestApps.OrchardCore.PersonalData;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore;
@@ -26,6 +27,50 @@ public sealed class LtiDataTests
     public LtiDataTests(LearningSiteFixture fixture)
     {
         _fixture = fixture;
+    }
+
+    [Fact]
+    public async Task Validation_TheEditorsRedirectUrisAndKeySet_AreCheckedByTheToolsHandler_AndARecipeNeedsOnlyTheSettings()
+    {
+        // Arrange and act
+        var (badInput, nothing, recipe) = await _fixture.InTenantAsync(async services =>
+        {
+            var manager = services.GetRequiredService<IExternalToolManager>();
+            var clients = services.GetRequiredService<ExternalToolClients>();
+
+            async Task<ExternalTool> NewToolAsync()
+            {
+                var tool = await manager.NewAsync();
+
+                tool.Name = "Checked tool";
+                tool.ClientId = "lti-check-" + Guid.NewGuid().ToString("n");
+                tool.DeploymentId = "deployment-check";
+                tool.LoginInitiationUrl = "https://check.example.com/login";
+                tool.TargetLinkUri = "https://check.example.com/launch";
+
+                return tool;
+            }
+
+            var edited = await NewToolAsync();
+            clients.SetPending(edited, ["not an address", "https://check.example.com/launch#fragment"], "{\"keys\":[]}");
+            var first = await manager.ValidateAsync(edited);
+
+            clients.SetPending(edited, [], null);
+            var second = await manager.ValidateAsync(edited);
+
+            var imported = await manager.ValidateAsync(await NewToolAsync());
+
+            return (first, second, imported);
+        });
+
+        // Assert
+        Assert.False(badInput.Succeeded);
+        Assert.Equal(2, badInput.Errors.Count(error => error.MemberNames.Contains("RedirectUris")));
+        Assert.Contains(badInput.Errors, error => error.MemberNames.Contains("KeySet"));
+        Assert.False(nothing.Succeeded);
+        Assert.Contains(nothing.Errors, error => error.MemberNames.Contains("RedirectUris"));
+        Assert.Contains(nothing.Errors, error => error.MemberNames.Contains(nameof(ExternalTool.JwksUrl)));
+        Assert.True(recipe.Succeeded);
     }
 
     [Fact]

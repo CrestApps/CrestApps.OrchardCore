@@ -58,17 +58,21 @@ public sealed class LtiDeepLinkingTests
         // The request's session is committed when its scope ends, which can be after the response body arrived.
         ContentItem picked = null;
         string draftVersion = null;
+        string outline = null;
 
         for (var attempt = 0; attempt < 50 && picked is null; attempt++)
         {
-            (picked, draftVersion) = await _fixture.InTenantAsync(async services =>
+            (picked, draftVersion, outline) = await _fixture.InTenantAsync(async services =>
             {
                 var contentManager = services.GetRequiredService<IContentManager>();
                 var course = await contentManager.GetAsync(_fixture.CourseId, VersionOptions.Latest);
                 var ids = course.Get<CourseOutlinePart>(nameof(CourseOutlinePart)).Sections.SelectMany(section => section.Items).Select(item => item.ContentItemId).ToArray();
                 var items = await contentManager.GetAsync(ids, VersionOptions.Published);
 
-                return (items.SingleOrDefault(item => item.DisplayText == "Pallet stacking drill"), course.Published ? null : course.ContentItemVersionId);
+                return (
+                    items.SingleOrDefault(item => item.DisplayText == "Pallet stacking drill"),
+                    course.Published ? null : course.ContentItemVersionId,
+                    $"published={course.Published}, outline=[{string.Join(", ", items.Select(item => item.DisplayText))}]");
             });
 
             if (picked is null)
@@ -77,7 +81,7 @@ public sealed class LtiDeepLinkingTests
             }
         }
 
-        Assert.NotNull(picked);
+        Assert.True(picked is not null, $"{outline}; response: {html}");
         Assert.NotNull(draftVersion);
 
         var part = picked.Get<ExternalToolItemPart>(nameof(ExternalToolItemPart));
@@ -88,6 +92,8 @@ public sealed class LtiDeepLinkingTests
         Assert.Equal("Pallet drill", part.LineItemLabel);
         Assert.Equal("drill=pallets", part.CustomParameters);
         Assert.True(picked.Get<CourseItemPart>(nameof(CourseItemPart)).Gradable);
+
+        await DiscardCourseDraftAsync("Pallet stacking drill");
     }
 
     [Fact]
@@ -120,6 +126,48 @@ public sealed class LtiDeepLinkingTests
         // Assert
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
+
+        await DiscardCourseDraftAsync("Once only");
+    }
+
+    // Picked items go into a draft of the shared course. The draft is discarded so the other tests of the collection,
+    // which edit the course with DraftRequired, start from the published course: left in place, the full run lost the
+    // published course (the course page answered 404 and launches failed).
+    private async Task DiscardCourseDraftAsync(string pickedTitle)
+    {
+        // The request's session is committed when its scope ends, which can be after the response body arrived, so the
+        // draft is discarded only once it holds the picked item; discarding earlier raced the request's own commit.
+        for (var attempt = 0; attempt < 50; attempt++)
+        {
+            var discarded = await _fixture.InTenantAsync(async services =>
+            {
+                var contentManager = services.GetRequiredService<IContentManager>();
+                var latest = await contentManager.GetAsync(_fixture.CourseId, VersionOptions.Latest);
+
+                if (latest.Published)
+                {
+                    return false;
+                }
+
+                var ids = latest.Get<CourseOutlinePart>(nameof(CourseOutlinePart)).Sections.SelectMany(section => section.Items).Select(item => item.ContentItemId).ToArray();
+
+                if (!(await contentManager.GetAsync(ids, VersionOptions.Latest)).Any(item => item.DisplayText == pickedTitle))
+                {
+                    return false;
+                }
+
+                await contentManager.DiscardDraftAsync(latest);
+
+                return true;
+            });
+
+            if (discarded)
+            {
+                return;
+            }
+
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+        }
     }
 
     // Starts a Deep Linking request as the site's administrator and returns the settings claim of its id token.

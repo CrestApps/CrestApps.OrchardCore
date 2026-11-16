@@ -2,13 +2,10 @@ using CrestApps.OrchardCore.Learning.Lti.Core.Launch;
 using CrestApps.OrchardCore.Learning.Lti.Models;
 using CrestApps.OrchardCore.Learning.Lti.Services;
 using CrestApps.OrchardCore.Learning.Lti.ViewModels;
-using Microsoft.Extensions.Localization;
-using Microsoft.IdentityModel.Tokens;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Learning.Lti.Drivers;
 
@@ -20,20 +17,13 @@ internal sealed class ExternalToolDisplayDriver : DisplayDriver<ExternalTool>
 {
     private readonly ExternalToolClients _clients;
     private readonly ILtiPlatform _platform;
-    private readonly ILtiToolDirectory _tools;
-
-    internal readonly IStringLocalizer S;
 
     public ExternalToolDisplayDriver(
         ExternalToolClients clients,
-        ILtiPlatform platform,
-        ILtiToolDirectory tools,
-        IStringLocalizer<ExternalToolDisplayDriver> stringLocalizer)
+        ILtiPlatform platform)
     {
         _clients = clients;
         _platform = platform;
-        _tools = tools;
-        S = stringLocalizer;
     }
 
     public override Task<IDisplayResult> DisplayAsync(ExternalTool tool, BuildDisplayContext context)
@@ -114,82 +104,11 @@ internal sealed class ExternalToolDisplayDriver : DisplayDriver<ExternalTool>
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
-        if (redirectUris.Count == 0)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.RedirectUris), S["Enter at least one redirect URI: where the tool receives its launches."]);
-        }
-
-        foreach (var uri in redirectUris)
-        {
-            if (!Uri.TryCreate(uri, UriKind.Absolute, out var parsed) || (parsed.Scheme != Uri.UriSchemeHttps && parsed.Scheme != Uri.UriSchemeHttp) || !string.IsNullOrEmpty(parsed.Fragment))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.RedirectUris), S["Each redirect URI must be a full address that starts with https:// and has no fragment. Not valid: {0}", uri]);
-            }
-        }
-
-        JsonWebKeySet keySet = null;
-
-        if (!string.IsNullOrWhiteSpace(model.KeySet))
-        {
-            keySet = ReadKeySet(model.KeySet);
-
-            if (keySet is null)
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.KeySet), S["Enter a JSON Web Key Set with at least one RSA signing key (public keys only), such as {\"keys\":[{\"kty\":\"RSA\",\"kid\":\"…\",\"n\":\"…\",\"e\":\"AQAB\"}]}."]);
-            }
-        }
-        else if (!string.IsNullOrWhiteSpace(tool.JwksUrl))
-        {
-            var keys = await _tools.GetSigningKeysAsync(tool, refresh: true);
-
-            if (keys.Count == 0)
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.JwksUrl), S["The key set could not be read from the JWKS URL, or it has no signing key. Check that the tool is reachable from the site."]);
-            }
-            else
-            {
-                keySet = new JsonWebKeySet();
-
-                foreach (var key in keys)
-                {
-                    if (key is JsonWebKey jsonWebKey)
-                    {
-                        keySet.Keys.Add(jsonWebKey);
-                    }
-                    else if (key is RsaSecurityKey rsa)
-                    {
-                        keySet.Keys.Add(JsonWebKeyConverter.ConvertFromRSASecurityKey(rsa));
-                    }
-                }
-            }
-        }
-        else
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.JwksUrl), S["Enter the tool's JWKS URL or paste its key set: the platform checks the tool's messages and service requests with them."]);
-        }
-
-        _clients.SetPending(tool, redirectUris, keySet);
+        // The redirect URIs and the key set belong to the tool's OpenID application, which a recipe carries with the
+        // OpenID applications step; the tool's handler checks them when the tool is saved.
+        _clients.SetPending(tool, redirectUris, model.KeySet);
 
         return Edit(tool, context);
-    }
-
-    private static JsonWebKeySet ReadKeySet(string json)
-    {
-        try
-        {
-            var keySet = new JsonWebKeySet(json);
-
-            if (keySet.Keys.Count == 0 || keySet.Keys.Any(key => key.HasPrivateKey) || keySet.GetSigningKeys().Count == 0)
-            {
-                return null;
-            }
-
-            return keySet;
-        }
-        catch (Exception exception) when (exception is ArgumentException or System.Text.Json.JsonException)
-        {
-            return null;
-        }
     }
 
     private static string Clean(string value)

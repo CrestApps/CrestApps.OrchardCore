@@ -6,7 +6,9 @@ using CrestApps.OrchardCore.Learning.Lti.Core.Launch;
 using CrestApps.OrchardCore.Learning.Lti.Core.Services;
 using CrestApps.OrchardCore.Learning.Lti.Models;
 using CrestApps.OrchardCore.Learning.Lti.Services;
+using CrestApps.OrchardCore.Learning.Lti.ViewModels;
 using Microsoft.Extensions.Localization;
+using Microsoft.IdentityModel.Tokens;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Learning.Lti.Handlers;
@@ -17,8 +19,13 @@ namespace CrestApps.OrchardCore.Learning.Lti.Handlers;
 /// </summary>
 internal sealed class ExternalToolHandler : CatalogEntryHandlerBase<ExternalTool>
 {
+    // The editor fields of the tool's OpenID application; the errors land on them.
+    private const string RedirectUrisMember = nameof(ExternalToolViewModel.RedirectUris);
+    private const string KeySetMember = nameof(ExternalToolViewModel.KeySet);
+
     private readonly IExternalToolStore _store;
     private readonly ExternalToolClients _clients;
+    private readonly ILtiToolDirectory _tools;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -26,11 +33,13 @@ internal sealed class ExternalToolHandler : CatalogEntryHandlerBase<ExternalTool
     public ExternalToolHandler(
         IExternalToolStore store,
         ExternalToolClients clients,
+        ILtiToolDirectory tools,
         IClock clock,
         IStringLocalizer<ExternalToolHandler> stringLocalizer)
     {
         _store = store;
         _clients = clients;
+        _tools = tools;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -88,7 +97,105 @@ internal sealed class ExternalToolHandler : CatalogEntryHandlerBase<ExternalTool
         RequireUrl(context, tool.TargetLinkUri, nameof(ExternalTool.TargetLinkUri), required: true);
         RequireUrl(context, tool.DeepLinkingUrl, nameof(ExternalTool.DeepLinkingUrl), required: false);
         RequireUrl(context, tool.JwksUrl, nameof(ExternalTool.JwksUrl), required: false);
+
+        // The redirect URIs and the key set of the tool's OpenID application, when the editor bound them. A recipe
+        // carries them with the OpenID applications step, so they are checked here only for the editor.
+        if (_clients.TryGetPending(tool.ItemId, out var pending))
+        {
+            await ValidateClientAsync(context, pending, cancellationToken);
+        }
     }
+
+    private async Task ValidateClientAsync(ValidatingContext<ExternalTool> context, ExternalToolClients.PendingClient pending, CancellationToken cancellationToken)
+    {
+        var tool = context.Model;
+
+        if (pending.RedirectUris.Count == 0)
+        {
+            context.Result.Fail(new ValidationResult(S["Enter at least one redirect URI: where the tool receives its launches."], [RedirectUrisMember]));
+        }
+
+        foreach (var uri in pending.RedirectUris)
+        {
+            if (!IsAddress(uri))
+            {
+                context.Result.Fail(new ValidationResult(S["Each redirect URI must be a full address that starts with https:// and has no fragment. Not valid: {0}", uri], [RedirectUrisMember]));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(pending.KeySetJson))
+        {
+            pending.KeySet = ReadKeySet(pending.KeySetJson);
+
+            if (pending.KeySet is null)
+            {
+                context.Result.Fail(new ValidationResult(S["Enter a JSON Web Key Set with at least one RSA signing key (public keys only), such as {\"keys\":[{\"kty\":\"RSA\",\"kid\":\"…\",\"n\":\"…\",\"e\":\"AQAB\"}]}."], [KeySetMember]));
+            }
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(tool.JwksUrl))
+        {
+            context.Result.Fail(new ValidationResult(S["Enter the tool's JWKS URL or paste its key set: the platform checks the tool's messages and service requests with them."], [nameof(ExternalTool.JwksUrl)]));
+
+            return;
+        }
+
+        if (!IsAddress(tool.JwksUrl))
+        {
+            return;
+        }
+
+        var keys = await _tools.GetSigningKeysAsync(tool, refresh: true, cancellationToken);
+
+        if (keys.Count == 0)
+        {
+            context.Result.Fail(new ValidationResult(S["The key set could not be read from the JWKS URL, or it has no signing key. Check that the tool is reachable from the site."], [nameof(ExternalTool.JwksUrl)]));
+
+            return;
+        }
+
+        var keySet = new JsonWebKeySet();
+
+        foreach (var key in keys)
+        {
+            if (key is JsonWebKey jsonWebKey)
+            {
+                keySet.Keys.Add(jsonWebKey);
+            }
+            else if (key is RsaSecurityKey rsa)
+            {
+                keySet.Keys.Add(JsonWebKeyConverter.ConvertFromRSASecurityKey(rsa));
+            }
+        }
+
+        pending.KeySet = keySet;
+    }
+
+    private static JsonWebKeySet ReadKeySet(string json)
+    {
+        try
+        {
+            var keySet = new JsonWebKeySet(json);
+
+            if (keySet.Keys.Count == 0 || keySet.Keys.Any(key => key.HasPrivateKey) || keySet.GetSigningKeys().Count == 0)
+            {
+                return null;
+            }
+
+            return keySet;
+        }
+        catch (Exception exception) when (exception is ArgumentException or System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static bool IsAddress(string value)
+        => Uri.TryCreate(value, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
+            && string.IsNullOrEmpty(uri.Fragment);
 
     public override Task DeletedAsync(DeletedContext<ExternalTool> context, CancellationToken cancellationToken = default)
         => _clients.DeleteAsync(context.Model.ClientId);

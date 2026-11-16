@@ -51,10 +51,17 @@ public sealed class ExternalToolClients
     }
 
     /// <summary>
-    /// Holds the redirect URIs and the key set the editor bound, until the tool is saved.
+    /// Holds the redirect URIs and the key set (as the JSON entered, or empty to read the tool's JWKS URL) the editor
+    /// bound, until the tool is checked and saved.
     /// </summary>
-    public void SetPending(ExternalTool tool, IReadOnlyList<string> redirectUris, JsonWebKeySet keySet)
+    public void SetPending(ExternalTool tool, IReadOnlyList<string> redirectUris, string keySet)
         => _pending[tool.ItemId] = new PendingClient(redirectUris, keySet);
+
+    /// <summary>
+    /// Returns what the editor bound for a tool in this request, when it did.
+    /// </summary>
+    public bool TryGetPending(string toolId, out PendingClient pending)
+        => _pending.TryGetValue(toolId ?? string.Empty, out pending);
 
     /// <summary>
     /// Writes the tool's application, made when it does not exist.
@@ -147,5 +154,31 @@ public sealed class ExternalToolClients
         }
     }
 
-    private sealed record PendingClient(IReadOnlyList<string> RedirectUris, JsonWebKeySet KeySet);
+    /// <summary>
+    /// What the editor bound for a tool's application: the redirect URIs, the key set as entered, and the key set the
+    /// tool's handler resolved from it (or from the JWKS URL) once it passed.
+    /// </summary>
+    public sealed class PendingClient
+    {
+        internal PendingClient(IReadOnlyList<string> redirectUris, string keySetJson)
+        {
+            RedirectUris = redirectUris ?? [];
+            KeySetJson = keySetJson;
+        }
+
+        /// <summary>
+        /// Gets the redirect URIs.
+        /// </summary>
+        public IReadOnlyList<string> RedirectUris { get; }
+
+        /// <summary>
+        /// Gets the key set as entered; empty when the tool's JWKS URL is to be read.
+        /// </summary>
+        public string KeySetJson { get; }
+
+        /// <summary>
+        /// Gets or sets the key set written to the application.
+        /// </summary>
+        public JsonWebKeySet KeySet { get; set; }
+    }
 }
