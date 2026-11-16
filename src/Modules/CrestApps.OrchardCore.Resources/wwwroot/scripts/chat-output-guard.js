@@ -5,16 +5,13 @@
 (function() {
 	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/chat-output-guard/guard.js
 	var chatAttributePattern = /^data-(?:coreai-chat|chat-interaction)(?:-|$)/i;
-	var autoStartAttributes = [
-		"data-coreai-chat-config",
-		"data-coreai-chat-app-element-selector",
-		"data-chat-interaction-config"
-	];
+	var allowedDataAttributePattern = /^data-(?:chart-id|agui-(?:tool-call|interrupt|approved)|doc-index|error-index|carousel-(?:key|size|size-option|step|target)|stack-offset|active-index|image-count)$/i;
 	var chartCanvasIdPattern = /^chat_chart_\d+$/;
 	var sanitizerMarker = "__crestAppsChatOutputGuard";
 	var watcherMarker = "__crestAppsChatOutputWatcher";
 	/**
-	* Returns whether an answer may keep an attribute: no chat configuration, and no id except a chart's canvas.
+	* Returns whether an answer may keep an attribute: no data attribute but the chat's own, and no id except a chart's
+	* canvas.
 	* @param {string} elementName The element's tag name.
 	* @param {string} attributeName The attribute's name.
 	* @param {string} attributeValue The attribute's value.
@@ -22,7 +19,7 @@
 	*/
 	function isAllowedAttribute(elementName, attributeName, attributeValue) {
 		const name = String(attributeName || "").toLowerCase();
-		if (chatAttributePattern.test(name)) return false;
+		if (name.startsWith("data-")) return allowedDataAttributePattern.test(name);
 		if (name === "id") return String(elementName || "").toUpperCase() === "CANVAS" && chartCanvasIdPattern.test(String(attributeValue || ""));
 		return true;
 	}
@@ -45,11 +42,13 @@
 		return false;
 	}
 	function disarm(element) {
-		for (const name of autoStartAttributes) if (element.hasAttribute(name)) element.removeAttribute(name);
+		for (const name of element.getAttributeNames()) if (chatAttributePattern.test(name)) element.removeAttribute(name);
 	}
 	/**
-	* Removes the auto-start attributes from anything added inside a mounted chat app (a rendered message), before the chat
-	* scripts' own watchers see it. It must be installed before those scripts run: mutation observers are called in the
+	* Removes every chat and chat widget attribute from anything added inside a mounted chat app (a rendered message),
+	* before the chat scripts' own watchers see it. It uses the attribute pattern rather than a list of names, so an
+	* attribute a later package version starts on is covered too. It leaves the other data attributes alone: the chat's own
+	* template renders some inside the app. It must be installed before those scripts run: mutation observers are called in the
 	* order they were created.
 	* @param {Window} window The page's window.
 	* @returns {MutationObserver|null} The observer, or null when the page has none.
@@ -61,7 +60,7 @@
 			for (const mutation of mutations) for (const node of mutation.addedNodes) {
 				if (!node || node.nodeType !== 1 || !isInsideMountedApp(node)) continue;
 				disarm(node);
-				node.querySelectorAll(autoStartAttributes.map((name) => `[${name}]`).join(",")).forEach(disarm);
+				node.querySelectorAll("*").forEach(disarm);
 			}
 		});
 		observer.observe(window.document.documentElement, {
