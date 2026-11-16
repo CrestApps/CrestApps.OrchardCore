@@ -55,7 +55,9 @@ public interface ILearnerProgressService
     Task<ProgressUpdate> AcknowledgeAsync(Enrollment enrollment, string itemId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Records a scored result of a course item, such as a graded quiz or submission.
+    /// Records a scored result of a course item, such as a graded quiz or submission. A result a member of the staff gave
+    /// (<see cref="CourseItemResult.RecordedBy"/>) is recorded on the manual path, without the learner's access window and
+    /// the item's release rules.
     /// </summary>
     /// <param name="enrollment">The enrollment.</param>
     /// <param name="result">The result.</param>

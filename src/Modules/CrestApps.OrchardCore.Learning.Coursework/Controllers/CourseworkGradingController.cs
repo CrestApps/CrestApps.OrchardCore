@@ -268,7 +268,9 @@ public sealed class CourseworkGradingController : Controller
             SubmissionErrors.InvalidScore => H["Choose a level for every criterion, or give points between zero and the most the work is out of."],
             SubmissionErrors.NotGradable => H["This submission cannot be graded: the learner handed in a newer one, or it is with the learner to hand in again."],
             SubmissionErrors.OwnSubmission => H["Nobody grades their own work."],
-            SubmissionErrors.Busy => H["The submission is being changed. Try again in a moment."],
+            SubmissionErrors.Busy => H["The submission or the learner's enrollment is being changed. Try again in a moment."],
+            SubmissionErrors.EnrollmentNotActive => H["The learner's enrollment is not active (suspended, ended or withdrawn), so the grade cannot count in the course grade. Nothing was changed. Make the enrollment active, then grade again."],
+            SubmissionErrors.NotRecorded => H["The grade could not be recorded in the learner's progress, for instance because the item is no longer in the course. Nothing was changed."],
             _ => H["The submission could not be changed."],
         };
 }

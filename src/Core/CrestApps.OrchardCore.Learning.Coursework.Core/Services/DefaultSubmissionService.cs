@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.FileStorage;
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Coursework.Models;
 using CrestApps.OrchardCore.Learning.Coursework.Services;
 using CrestApps.OrchardCore.Learning.Models;
@@ -14,8 +15,11 @@ namespace CrestApps.OrchardCore.Learning.Coursework.Core.Services;
 
 /// <summary>
 /// Hands in, grades and returns coursework. Every write runs under one lock per enrollment and coursework item on a
-/// fresh read of the submission, saves the submission before it reports to Learning (whose progress write commits the
-/// session), commits before the lock is let go, and tells the observers after the commit. A write that reaches the
+/// fresh read of the submission, commits before the lock is let go, and tells the observers after the commit. A hand-in
+/// saves the submission before it reports to Learning (whose progress write commits the session), so the learner's work
+/// is kept even when Learning does not take the result. A grade or a return is a staff write: it reports to Learning on
+/// the manual path first and changes the submission only once Learning took it, so a refused grade fails with a reason
+/// instead of showing as graded and never reaching the gradebook. A write that reaches the
 /// enrollment takes the enrollment lock inside this one; enrollment writes never take a coursework lock, so the order
 /// cannot deadlock.
 /// </summary>
@@ -267,6 +271,31 @@ internal sealed class DefaultSubmissionService : ISubmissionService
 
             // The days late and the penalty are set when the work is first graded; a regrade applies them again.
             var (daysLate, penalty) = CourseworkLatePolicy.Resolve(submission, part);
+            var finalScore = CourseworkLatePolicy.Apply(score.Percent, penalty);
+
+            // A grade is reported before the submission changes: Learning commits its write whether or not it takes the
+            // result, so a grade it refuses must leave nothing behind to commit, and the grader is told.
+            var refused = await ReportStaffAsync(submission.EnrollmentId, new CourseItemResult
+            {
+                ItemId = submission.CourseworkId,
+                Score = finalScore,
+                Submitted = true,
+                Graded = true,
+                Attempts = submission.Attempt,
+            }, request.Actor, cancellationToken);
+
+            if (refused is not null)
+            {
+                return SubmissionResult.Fail(refused, submission);
+            }
+
+            submission = await ReadAgainAsync(submission, cancellationToken);
+
+            if (submission is null)
+            {
+                return SubmissionResult.Fail(SubmissionErrors.NotFound);
+            }
+
             var now = _clock.UtcNow;
 
             if (regrade)
@@ -278,7 +307,7 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             submission.RawScore = score.Percent;
             submission.DaysLate = daysLate;
             submission.LatePenaltyPercent = penalty;
-            submission.Score = CourseworkLatePolicy.Apply(score.Percent, penalty);
+            submission.Score = finalScore;
             submission.Points = score.Points;
             submission.MaxPoints = score.MaxPoints;
             submission.RubricId = score.RubricId;
@@ -288,14 +317,6 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             submission.GradedUtc = now;
 
             await _store.UpdateAsync(submission, cancellationToken);
-            await ReportAsync(submission.EnrollmentId, new CourseItemResult
-            {
-                ItemId = submission.CourseworkId,
-                Score = submission.Score,
-                Submitted = true,
-                Graded = true,
-                Attempts = submission.Attempt,
-            }, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
 
             graded = submission;
@@ -341,6 +362,26 @@ internal sealed class DefaultSubmissionService : ISubmissionService
                 return SubmissionResult.Fail(SubmissionErrors.NotGradable, submission);
             }
 
+            // As for a grade, Learning hears of the return first, so a return it refuses changes nothing.
+            var refused = await ReportStaffAsync(submission.EnrollmentId, new CourseItemResult
+            {
+                ItemId = submission.CourseworkId,
+                ResetScore = true,
+                Attempts = submission.Attempt,
+            }, actor, cancellationToken);
+
+            if (refused is not null)
+            {
+                return SubmissionResult.Fail(refused, submission);
+            }
+
+            submission = await ReadAgainAsync(submission, cancellationToken);
+
+            if (submission is null)
+            {
+                return SubmissionResult.Fail(SubmissionErrors.NotFound);
+            }
+
             var now = _clock.UtcNow;
 
             // A grade the work had stops counting; it is kept in the history.
@@ -361,12 +402,6 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             submission.ReturnedUtc = now;
 
             await _store.UpdateAsync(submission, cancellationToken);
-            await ReportAsync(submission.EnrollmentId, new CourseItemResult
-            {
-                ItemId = submission.CourseworkId,
-                ResetScore = true,
-                Attempts = submission.Attempt,
-            }, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
 
             returned = submission;
@@ -565,12 +600,46 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             return;
         }
 
-        var update = await _progress.RecordResultAsync(enrollment, result, cancellationToken);
+        var update = await _progress.RecordWithRetryAsync(enrollment, result, cancellationToken);
 
         if (update?.RefusedReason is not null && _logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation("The coursework result of item {ItemId} was not recorded on enrollment {EnrollmentId}: {Reason}.", result.ItemId, enrollmentId, update.RefusedReason);
         }
+    }
+
+    // Learning commits the session when it records a result, and a commit makes the session forget the documents read
+    // before it: saving that copy would add a second record with the same id. The submission is read again under the
+    // coursework lock, which keeps everyone else from changing it in between.
+    private Task<Submission> ReadAgainAsync(Submission submission, CancellationToken cancellationToken)
+        => _store.FindFreshAsync(submission.ItemId, cancellationToken);
+
+    // A grade or a return is a staff write, recorded on Learning's manual path. Returns the error to show when Learning
+    // refuses it, or null when it was recorded (or the enrollment is gone, so there is nothing to report to).
+    private async Task<string> ReportStaffAsync(string enrollmentId, CourseItemResult result, string actor, CancellationToken cancellationToken)
+    {
+        var enrollment = string.IsNullOrEmpty(enrollmentId) ? null : await _enrollments.FindByIdAsync(enrollmentId, cancellationToken);
+
+        if (enrollment is null)
+        {
+            return null;
+        }
+
+        var refused = (await _progress.RecordStaffResultAsync(enrollment, result, actor, cancellationToken))?.RefusedReason;
+
+        if (refused is null)
+        {
+            return null;
+        }
+
+        _logger.LogWarning("The coursework result of item {ItemId} was refused on enrollment {EnrollmentId}: {Reason}. Nothing was changed.", result.ItemId, enrollmentId, refused);
+
+        return refused switch
+        {
+            LearningRefusals.Busy => SubmissionErrors.Busy,
+            _ when StaffResultRecorder.IsEnrollmentNotActive(refused) => SubmissionErrors.EnrollmentNotActive,
+            _ => SubmissionErrors.NotRecorded,
+        };
     }
 
     private async Task<SubmissionResult> RunLockedAsync(string enrollmentId, string courseworkId, Func<Task<SubmissionResult>> work, CancellationToken cancellationToken)

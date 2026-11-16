@@ -212,7 +212,7 @@ public sealed class GradingController : Controller
         }
         else
         {
-            await _notifier.ErrorAsync(result.ErrorCode == AttemptErrors.InvalidScore ? H["A score is below zero or above the points of its question."] : H["The scores could not be saved."]);
+            await _notifier.ErrorAsync(result.ErrorCode == AttemptErrors.InvalidScore ? H["A score is below zero or above the points of its question."] : RecordErrorText(result.ErrorCode) ?? H["The scores could not be saved."]);
         }
 
         return RedirectToAction(nameof(Attempt), new { id });
@@ -385,7 +385,17 @@ public sealed class GradingController : Controller
         }
         else
         {
-            await _notifier.ErrorAsync(result.ErrorCode == AttemptErrors.ReasonRequired ? H["Say why."] : H["The attempt could not be changed."]);
+            await _notifier.ErrorAsync(result.ErrorCode == AttemptErrors.ReasonRequired ? H["Say why."] : RecordErrorText(result.ErrorCode) ?? H["The attempt could not be changed."]);
         }
     }
+
+    // Why a grade, a regrade or a void did not reach the learner's progress; nothing was changed.
+    private LocalizedHtmlString RecordErrorText(string errorCode)
+        => errorCode switch
+        {
+            AttemptErrors.EnrollmentNotActive => H["The learner's enrollment is not active (suspended, ended or withdrawn), so the score cannot count in the course grade. Nothing was changed. Make the enrollment active, then try again."],
+            AttemptErrors.Busy => H["The attempt or the learner's enrollment is being changed. Try again in a moment."],
+            AttemptErrors.NotRecorded => H["The score could not be recorded in the learner's progress, for instance because the quiz is no longer in the course. Nothing was changed."],
+            _ => null,
+        };
 }

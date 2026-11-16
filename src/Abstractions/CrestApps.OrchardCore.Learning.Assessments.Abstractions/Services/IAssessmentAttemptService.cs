@@ -229,4 +229,13 @@ public static class AttemptErrors
 
     /// <summary>The quiz has no questions.</summary>
     public const string NoQuestions = "NoQuestions";
+
+    /// <summary>
+    /// The learner's enrollment is not active (suspended, ended or withdrawn), so a grade cannot reach the learner's
+    /// progress; nothing was changed.
+    /// </summary>
+    public const string EnrollmentNotActive = "EnrollmentNotActive";
+
+    /// <summary>Learning refused the result for another reason, such as an item no longer in the course; nothing was changed.</summary>
+    public const string NotRecorded = "NotRecorded";
 }

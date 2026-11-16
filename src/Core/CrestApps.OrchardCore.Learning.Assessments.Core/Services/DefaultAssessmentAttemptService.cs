@@ -342,23 +342,34 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
 
         var before = attempt.Score;
         var wasGraded = attempt.Status == AttemptStatus.Graded;
+        var now = _clock.UtcNow;
+        AttemptScoreChange change = null;
 
-        foreach (var (index, score) in scores ?? new Dictionary<int, ManualScore>())
+        void Apply(AssessmentAttempt target)
         {
-            attempt.Items[index].ManualScore = score.Points;
-            attempt.Items[index].GraderComment = string.IsNullOrWhiteSpace(score.Comment) ? null : score.Comment.Trim();
+            foreach (var (index, score) in scores ?? new Dictionary<int, ManualScore>())
+            {
+                target.Items[index].ManualScore = score.Points;
+                target.Items[index].GraderComment = string.IsNullOrWhiteSpace(score.Comment) ? null : score.Comment.Trim();
+            }
+
+            target.Feedback = string.IsNullOrWhiteSpace(feedback) ? target.Feedback : feedback.Trim();
+            target.GradedBy = actor;
+            target.GradedUtc = now;
+            Total(target);
+
+            change = new AttemptScoreChange { ChangedUtc = now, Actor = actor, Kind = wasGraded ? "Overridden" : "Graded", From = before, To = target.Score };
+            target.ScoreHistory.Add(change);
         }
 
-        attempt.Feedback = string.IsNullOrWhiteSpace(feedback) ? attempt.Feedback : feedback.Trim();
-        attempt.GradedBy = actor;
-        attempt.GradedUtc = _clock.UtcNow;
-        Total(attempt);
+        var (saved, refused) = await ApplyStaffChangeAsync(attempt, Apply, actor, cancellationToken);
 
-        var change = new AttemptScoreChange { ChangedUtc = _clock.UtcNow, Actor = actor, Kind = wasGraded ? "Overridden" : "Graded", From = before, To = attempt.Score };
-        attempt.ScoreHistory.Add(change);
+        if (refused is not null)
+        {
+            return AttemptResult.Fail(refused);
+        }
 
-        await _attemptStore.UpdateAsync(attempt, cancellationToken);
-        await ReportAsync(attempt, cancellationToken);
+        attempt = saved;
 
         if (attempt.Status == AttemptStatus.Graded)
         {
@@ -387,19 +398,30 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
         }
 
         var before = attempt.Score;
+        var now = _clock.UtcNow;
+        AttemptScoreChange change = null;
 
-        foreach (var item in attempt.Items)
+        void Apply(AssessmentAttempt target)
         {
-            item.AutoScore = Scorer(item.QuestionType)?.Score(item);
+            foreach (var item in target.Items)
+            {
+                item.AutoScore = Scorer(item.QuestionType)?.Score(item);
+            }
+
+            Total(target);
+
+            change = new AttemptScoreChange { ChangedUtc = now, Actor = actor, Kind = "Regraded", From = before, To = target.Score, Reason = reason.Trim() };
+            target.ScoreHistory.Add(change);
         }
 
-        Total(attempt);
+        var (saved, refused) = await ApplyStaffChangeAsync(attempt, Apply, actor, cancellationToken);
 
-        var change = new AttemptScoreChange { ChangedUtc = _clock.UtcNow, Actor = actor, Kind = "Regraded", From = before, To = attempt.Score, Reason = reason.Trim() };
-        attempt.ScoreHistory.Add(change);
+        if (refused is not null)
+        {
+            return AttemptResult.Fail(refused);
+        }
 
-        await _attemptStore.UpdateAsync(attempt, cancellationToken);
-        await ReportAsync(attempt, cancellationToken);
+        attempt = saved;
         notifications.Add(() => NotifyAsync(observer => observer.ScoreChangedAsync(attempt, change, cancellationToken)));
 
         return new AttemptResult { Attempt = attempt };
@@ -425,16 +447,26 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
                 return new AttemptResult { Attempt = attempt };
             }
 
-            var change = new AttemptScoreChange { ChangedUtc = _clock.UtcNow, Actor = actor, Kind = "Voided", From = attempt.Score, To = null, Reason = reason.Trim() };
+            var now = _clock.UtcNow;
+            AttemptScoreChange change = null;
 
-            attempt.Status = AttemptStatus.Voided;
-            attempt.ScoreHistory.Add(change);
+            void Apply(AssessmentAttempt target)
+            {
+                change = new AttemptScoreChange { ChangedUtc = now, Actor = actor, Kind = "Voided", From = target.Score, To = null, Reason = reason.Trim() };
+                target.Status = AttemptStatus.Voided;
+                target.ScoreHistory.Add(change);
+            }
 
-            await _attemptStore.UpdateAsync(attempt, cancellationToken);
-            await ReportAsync(attempt, cancellationToken);
-            notifications.Add(() => NotifyAsync(observer => observer.ScoreChangedAsync(attempt, change, cancellationToken)));
+            var (saved, refused) = await ApplyStaffChangeAsync(attempt, Apply, actor, cancellationToken);
 
-            return new AttemptResult { Attempt = attempt };
+            if (refused is not null)
+            {
+                return AttemptResult.Fail(refused);
+            }
+
+            notifications.Add(() => NotifyAsync(observer => observer.ScoreChangedAsync(saved, change, cancellationToken)));
+
+            return new AttemptResult { Attempt = saved };
         }, cancellationToken);
     }
 
@@ -516,18 +548,71 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
         attempt.Passed = allScored ? attempt.PassMark is null || attempt.Percent >= attempt.PassMark : null;
     }
 
-    private async Task ReportAsync(AssessmentAttempt attempt, CancellationToken cancellationToken)
+    // The learner's own submit (or the submit at the deadline) reports on the learner's path.
+    private Task<string> ReportAsync(AssessmentAttempt attempt, CancellationToken cancellationToken)
+        => ReportCoreAsync(attempt, actor: null, cancellationToken);
+
+    // Grading, regrading and voiding are staff writes, recorded on Learning's manual path (no access window or release
+    // check). The change is applied to the attempt and reported before the attempt is saved: Learning commits its write
+    // whether or not it takes the result, so a result it refuses must leave nothing behind to commit. That commit also
+    // makes the session forget the attempt read before it (saving that copy would add a second record), so once Learning
+    // took the result the attempt is read again under its lock and the same change applied to the fresh copy.
+    private async Task<(AssessmentAttempt Attempt, string Error)> ApplyStaffChangeAsync(AssessmentAttempt attempt, Action<AssessmentAttempt> apply, string actor, CancellationToken cancellationToken)
+    {
+        apply(attempt);
+
+        var refused = await ReportStaffAsync(attempt, actor, cancellationToken);
+
+        if (refused is not null)
+        {
+            return (null, refused);
+        }
+
+        var fresh = await _attemptStore.FindFreshAsync(attempt.ItemId, cancellationToken);
+
+        if (fresh is null)
+        {
+            return (null, AttemptErrors.NotFound);
+        }
+
+        apply(fresh);
+        await _attemptStore.UpdateAsync(fresh, cancellationToken);
+
+        return (fresh, null);
+    }
+
+    // Returns the error to show when Learning refuses a staff result, or null when it was recorded.
+    private async Task<string> ReportStaffAsync(AssessmentAttempt attempt, string actor, CancellationToken cancellationToken)
+    {
+        var refused = await ReportCoreAsync(attempt, actor ?? string.Empty, cancellationToken);
+
+        if (refused is null)
+        {
+            return null;
+        }
+
+        _logger.LogWarning("The result of attempt {AttemptId} was refused on its enrollment: {Reason}. Nothing was changed.", attempt.ItemId, refused);
+
+        return refused switch
+        {
+            LearningRefusals.Busy => AttemptErrors.Busy,
+            _ when StaffResultRecorder.IsEnrollmentNotActive(refused) => AttemptErrors.EnrollmentNotActive,
+            _ => AttemptErrors.NotRecorded,
+        };
+    }
+
+    private async Task<string> ReportCoreAsync(AssessmentAttempt attempt, string actor, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(attempt.EnrollmentId))
         {
-            return;
+            return null;
         }
 
         var enrollment = await _enrollmentStore.FindByIdAsync(attempt.EnrollmentId, cancellationToken);
 
         if (enrollment is null)
         {
-            return;
+            return null;
         }
 
         var attempts = await _attemptStore.ListAsync(attempt.UserId, attempt.QuizId, cancellationToken);
@@ -544,18 +629,24 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
         var score = QuizGradeCalculator.Calculate(counted, method);
         var passMark = attempt.PassMark;
 
+        var result = new CourseItemResult
+        {
+            ItemId = attempt.QuizId,
+            Score = score,
+            Passed = score is null ? null : passMark is null || score >= passMark,
+            Submitted = counted.Any(entry => entry.SubmittedUtc is not null),
+            Graded = score is not null,
+            Attempts = counted.Count,
+            ResetScore = score is null,
+        };
+
         try
         {
-            await _progressService.RecordResultAsync(enrollment, new CourseItemResult
-            {
-                ItemId = attempt.QuizId,
-                Score = score,
-                Passed = score is null ? null : passMark is null || score >= passMark,
-                Submitted = counted.Any(entry => entry.SubmittedUtc is not null),
-                Graded = score is not null,
-                Attempts = counted.Count,
-                ResetScore = score is null,
-            }, cancellationToken);
+            var update = actor is null
+                ? await _progressService.RecordWithRetryAsync(enrollment, result, cancellationToken)
+                : await _progressService.RecordStaffResultAsync(enrollment, result, actor, cancellationToken);
+
+            return update?.RefusedReason;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

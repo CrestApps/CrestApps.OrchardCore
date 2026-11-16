@@ -55,4 +55,12 @@ public sealed class CourseItemResult
     /// quiz is voided. An item a staff member completed by hand stays completed.
     /// </summary>
     public bool ResetScore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user id of the member of the course staff who gave the result, such as a grader. A result with
+    /// one is recorded on the manual path, as <see cref="ILearnerProgressService.CompleteItemAsync"/> is: the enrollment
+    /// must be active, but the learner's access window and the item's release rules are not checked, because work handed
+    /// in while the learner had access is graded later. <see langword="null"/> for a result of the learner's own work.
+    /// </summary>
+    public string RecordedBy { get; set; }
 }

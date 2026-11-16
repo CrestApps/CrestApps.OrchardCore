@@ -22,7 +22,10 @@ public interface ISubmissionService
     /// Grades the current submission with rubric choices or points and feedback. Late work loses the coursework's late
     /// penalty: the raw score, the days late and the penalty are kept on the submission, and the score after the
     /// penalty is the one reported to the course grade. Grading graded work again needs a reason, keeps the earlier
-    /// grade and applies the same days late and penalty to the new raw score.
+    /// grade and applies the same days late and penalty to the new raw score. The grade is recorded on Learning's manual
+    /// path (no access window or release check); when Learning still refuses it, such as on a suspended enrollment, the
+    /// grading fails with <see cref="SubmissionErrors.EnrollmentNotActive"/>, <see cref="SubmissionErrors.Busy"/> or
+    /// <see cref="SubmissionErrors.NotRecorded"/> and the submission is not changed.
     /// </summary>
     /// <param name="request">The grade.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
@@ -241,4 +244,13 @@ public static class SubmissionErrors
 
     /// <summary>The coursework stopped taking work some days after the due date.</summary>
     public const string Closed = "Closed";
+
+    /// <summary>
+    /// The learner's enrollment is not active (suspended, ended or withdrawn), so a grade or a return cannot reach the
+    /// learner's progress; nothing was changed.
+    /// </summary>
+    public const string EnrollmentNotActive = "EnrollmentNotActive";
+
+    /// <summary>Learning refused the result for another reason, such as an item no longer in the course; nothing was changed.</summary>
+    public const string NotRecorded = "NotRecorded";
 }

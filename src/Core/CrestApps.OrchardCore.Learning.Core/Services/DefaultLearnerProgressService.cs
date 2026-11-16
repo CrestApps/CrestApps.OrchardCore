@@ -196,7 +196,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
             context.Result = result;
 
             return null;
-        }, cancellationToken, whenCompleted: completed => AfterCompletionAsync(completed, result, cancellationToken));
+        }, cancellationToken, manual: !string.IsNullOrEmpty(result.RecordedBy), whenCompleted: completed => AfterCompletionAsync(completed, result, cancellationToken));
     }
 
     // After completion the enrollment is a record, with two exceptions. A first score of a gradable item, such as work
@@ -658,7 +658,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (enrollment.Status == EnrollmentStatus.Active && await _completionEvaluator.IsCompleteAsync(outline, enrollment, progress, grade))
         {
-            Complete(enrollment, outline, progress, now, grade, passed, manual ? context.Item.CompletedBy : enrollment.UserId);
+            Complete(enrollment, outline, progress, now, grade, passed, manual ? context.Result?.RecordedBy ?? context.Item.CompletedBy : enrollment.UserId);
             enrollmentChanged = true;
             courseCompleted = true;
         }

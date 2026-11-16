@@ -37,7 +37,7 @@ internal sealed class CourseworkTestHarness : IAsyncDisposable
 
     public InMemoryProtectedFiles Files { get; }
 
-    public static async Task<CourseworkTestHarness> CreateAsync()
+    public static async Task<CourseworkTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
     {
         var files = new InMemoryProtectedFiles();
         InMemoryCourseworkContent content = null;
@@ -50,6 +50,7 @@ internal sealed class CourseworkTestHarness : IAsyncDisposable
                 services.AddSingleton<IProtectedFileStore<CourseworkFiles>>(files);
                 services.RemoveAll<ICourseworkContentSource>();
                 services.AddSingleton<ICourseworkContentSource>(_ => content);
+                configure?.Invoke(services);
             },
             CourseworkIndexSchema.CreateAsync,
             [new SubmissionIndexProvider()],
