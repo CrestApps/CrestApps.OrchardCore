@@ -185,14 +185,14 @@ public sealed class SigningKeyRing : ISigningKeyRing
     {
         GetKeySet(keySet);
 
-        return Records(await ReadAsync(), keySet).Any();
+        return Records(await ReadAsync(), keySet).Count > 0;
     }
 
     // The current key, after importing the keys of the set's import sources when the set has none yet. Saves the
     // document when it imported a key.
     private async Task<SigningKeyRecord> CurrentOrImportedAsync(SigningKeySetOptions options, SigningKeysDocument document)
     {
-        if (Records(document, options.Name).Any())
+        if (Records(document, options.Name).Count > 0)
         {
             return Current(document, options.Name);
         }
