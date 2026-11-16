@@ -55,7 +55,7 @@ internal sealed class CourseworkMigrations : DataMigration
                 .WithSettings(new CourseItemPartSettings
                 {
                     Kind = CourseworkConstants.CourseworkKind,
-                    DefaultCompletionMode = CompletionModes.Submitted,
+                    DefaultCompletionMode = CompletionModes.Graded,
                     Gradable = true,
                 })));
 
@@ -72,6 +72,21 @@ internal sealed class CourseworkMigrations : DataMigration
 
         await _courseListSynchronizer.SynchronizeAsync();
 
-        return 1;
+        return 2;
+    }
+
+    // New coursework completes when it is graded (review round 8, 7.1); items already made keep their own mode.
+    public async Task<int> UpdateFrom1Async()
+    {
+        await _contentDefinitionManager.AlterTypeDefinitionAsync(CourseworkConstants.ContentTypes.Coursework, type => type
+            .WithPart(nameof(CourseItemPart), part => part
+                .WithSettings(new CourseItemPartSettings
+                {
+                    Kind = CourseworkConstants.CourseworkKind,
+                    DefaultCompletionMode = CompletionModes.Graded,
+                    Gradable = true,
+                })));
+
+        return 2;
     }
 }

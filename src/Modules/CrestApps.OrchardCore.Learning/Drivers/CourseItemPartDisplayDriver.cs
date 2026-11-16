@@ -107,6 +107,10 @@ internal sealed class CourseItemPartDisplayDriver : ContentPartDisplayDriver<Cou
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.CompletionMode), S["Choose how the item is completed."]);
         }
+        else if (kind is not null && !kind.Allows(model.CompletionMode, model.Gradable))
+        {
+            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.CompletionMode), S["A gradable item of this kind completes when it is graded, so its grade reaches the course grade."]);
+        }
 
         if (model.PassMark is < 0 or > 100 || model.AfterMinimumScore is < 0 or > 100)
         {

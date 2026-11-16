@@ -196,7 +196,81 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
             context.Result = result;
 
             return null;
-        }, cancellationToken, whenCompleted: (completed, progress, notifications) => FlagForReviewAsync(completed, progress, result, notifications, cancellationToken));
+        }, cancellationToken, whenCompleted: completed => AfterCompletionAsync(completed, result, cancellationToken));
+    }
+
+    // After completion the enrollment is a record, with two exceptions. A first score of a gradable item, such as work
+    // graded after it was handed in, is recorded and the course grade and outcome recomputed, because the completion
+    // counted that item as nothing; the enrollment is flagged for review when the outcome changes. Otherwise a result only
+    // matters when it undoes what the completion rests on: the item's score was voided, fell, or is no longer a pass. Then
+    // the enrollment stays Completed and is flagged for review, once while open.
+    private async Task AfterCompletionAsync(CompletedContext context, CourseItemResult result, CancellationToken cancellationToken)
+    {
+        var enrollment = context.Enrollment;
+        var progress = context.Progress;
+        var notifications = context.Notifications;
+        var entry = context.Outline.Find(result.ItemId);
+        var existing = progress.Find(result.ItemId);
+
+        if (entry?.Part?.Gradable == true && existing?.Score is null && result.Score is not null && !result.ResetScore)
+        {
+            await RecordFirstScoreAfterCompletionAsync(context, entry, result, cancellationToken);
+
+            return;
+        }
+
+        await FlagForReviewAsync(enrollment, progress, result, notifications, cancellationToken);
+    }
+
+    private async Task RecordFirstScoreAfterCompletionAsync(CompletedContext context, CourseOutlineEntry entry, CourseItemResult result, CancellationToken cancellationToken)
+    {
+        var enrollment = context.Enrollment;
+        var progress = context.Progress;
+        var now = _clock.UtcNow;
+        var item = progress.Find(result.ItemId);
+
+        if (item is null)
+        {
+            item = new CourseItemProgress { ContentItemId = result.ItemId, State = CourseItemState.NotStarted };
+            progress.Items.Add(item);
+        }
+
+        item.Score = Math.Clamp(result.Score.Value, 0, 100);
+        item.Passed = result.Passed ?? (entry.Part.PassMark is { } passMark ? item.Score >= passMark : item.Passed);
+        item.SelfReported = result.SelfReported;
+        progress.ModifiedUtc = now;
+
+        if (context.IsNewProgress)
+        {
+            await _progressStore.CreateAsync(progress, cancellationToken);
+        }
+        else
+        {
+            await _progressStore.SaveAsync(progress, cancellationToken);
+        }
+
+        var grade = CourseGradeCalculator.Compute(context.Outline, progress);
+        var passed = CourseGradeCalculator.IsPassed(grade, context.Course.Get<CoursePart>(nameof(CoursePart))?.PassMark);
+        var outcomeChanged = passed != enrollment.Passed;
+
+        enrollment.Grade = grade;
+        enrollment.Passed = passed;
+        enrollment.ModifiedUtc = now;
+
+        if (outcomeChanged && !enrollment.NeedsReview)
+        {
+            enrollment.Review = new EnrollmentReview
+            {
+                Reason = LearningReviewReasons.ResultChangedAfterCompletion,
+                ItemId = result.ItemId,
+                PreviousScore = null,
+                NewScore = item.Score,
+                FlaggedUtc = now,
+            };
+            context.Notifications.Add(() => NotifyAsync(observer => observer.ReviewNeededAsync(enrollment, cancellationToken)));
+        }
+
+        await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
     }
 
     // After completion a result only matters when it undoes what the completion rests on: the item's score was voided,
@@ -417,7 +491,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         enrollment.Status = EnrollmentStatus.Completed;
     }
 
-    private Task<ProgressUpdate> UpdateAsync(Enrollment enrollment, string itemId, Func<UpdateContext, string> apply, CancellationToken cancellationToken, bool manual = false, Func<Enrollment, EnrollmentProgress, IList<Func<Task>>, Task> whenCompleted = null)
+    private Task<ProgressUpdate> UpdateAsync(Enrollment enrollment, string itemId, Func<UpdateContext, string> apply, CancellationToken cancellationToken, bool manual = false, Func<CompletedContext, Task> whenCompleted = null)
     {
         if (enrollment is null || string.IsNullOrEmpty(itemId))
         {
@@ -431,7 +505,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
             cancellationToken);
     }
 
-    private async Task<ProgressUpdate> UpdateCoreAsync(Enrollment enrollment, string itemId, Func<UpdateContext, string> apply, IList<Func<Task>> notifications, bool manual, CancellationToken cancellationToken, Func<Enrollment, EnrollmentProgress, IList<Func<Task>>, Task> whenCompleted = null)
+    private async Task<ProgressUpdate> UpdateCoreAsync(Enrollment enrollment, string itemId, Func<UpdateContext, string> apply, IList<Func<Task>> notifications, bool manual, CancellationToken cancellationToken, Func<CompletedContext, Task> whenCompleted = null)
     {
         // Read the enrollment again inside the lock: a caller may hold a copy read earlier or in another scope, and
         // deciding on that copy could complete the course twice or save a second document.
@@ -470,7 +544,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
             // changed after completion only flags the enrollment for a person to review.
             if (whenCompleted is not null)
             {
-                await whenCompleted(enrollment, progress, notifications);
+                await whenCompleted(new CompletedContext(enrollment, progress, isNewProgress, outline, course, notifications));
             }
 
             return new ProgressUpdate { Enrollment = enrollment, Progress = progress, Item = progress.Find(itemId) };
@@ -773,4 +847,6 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         public CourseItemResult Result { get; set; }
     }
+
+    private sealed record CompletedContext(Enrollment Enrollment, EnrollmentProgress Progress, bool IsNewProgress, CourseOutline Outline, ContentItem Course, IList<Func<Task>> Notifications);
 }

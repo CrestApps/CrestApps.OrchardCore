@@ -70,6 +70,21 @@ public sealed class CourseItemKindDescriptor
     public string DefaultCompletionMode => CompletionModes.Count > 0 ? CompletionModes[0] : Models.CompletionModes.Viewed;
 
     /// <summary>
+    /// Gets or sets whether a gradable item of this kind completes only when it is graded. Work that a person grades after
+    /// it is handed in would otherwise complete the course before its grade exists.
+    /// </summary>
+    public bool GradableCompletesWhenGraded { get; set; }
+
+    /// <summary>
+    /// Gets whether an item of this kind can use a completion mode.
+    /// </summary>
+    /// <param name="mode">The completion mode.</param>
+    /// <param name="gradable">Whether the item counts toward the course grade.</param>
+    /// <returns><see langword="true"/> when the kind supports the mode and, for a gradable item of a kind graded by a person, the mode is Graded.</returns>
+    public bool Allows(string mode, bool gradable)
+        => Supports(mode) && (!gradable || !GradableCompletesWhenGraded || mode == Models.CompletionModes.Graded);
+
+    /// <summary>
     /// Tells whether the kind supports a completion mode.
     /// </summary>
     /// <param name="mode">The completion mode.</param>

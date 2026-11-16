@@ -36,9 +36,12 @@ public static class LearningCourseworkCoreServiceCollectionExtensions
             kind.DisplayName = LocalizationSource.Create("Coursework", typeof(LearningCourseworkCoreServiceCollectionExtensions));
             kind.LearnerName = LocalizationSource.Create("Coursework", typeof(LearningCourseworkCoreServiceCollectionExtensions));
             kind.ContentType = CourseworkConstants.ContentTypes.Coursework;
-            kind.CompletionModes.Add(CompletionModes.Submitted);
+            // Graded first, so it is the default: a gradable item handed in last would otherwise complete the course
+            // before the grader gives its grade.
             kind.CompletionModes.Add(CompletionModes.Graded);
+            kind.CompletionModes.Add(CompletionModes.Submitted);
             kind.ProducesGrade = true;
+            kind.GradableCompletesWhenGraded = true;
             kind.Icon = "fa-solid fa-file-pen";
         });
 
