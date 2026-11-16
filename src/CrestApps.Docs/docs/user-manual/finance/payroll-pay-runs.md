@@ -12,7 +12,7 @@ A **pay run** pays the people of one employer for one period. Payroll works out 
 | --- | --- |
 | **Menu** | Payroll > Pay Runs |
 | **Permission** | Prepare pay runs, Approve pay runs, Process pay runs, Void pay statements, See pay runs (all employers, or one) |
-| **Feature** | Payroll; Direct Deposit to pay to bank accounts; Paychecks to pay by check |
+| **Feature** | Payroll; Banking's Direct Deposit to pay to bank accounts, and its Checks to pay by check |
 
 <AskYourAdmin />
 
@@ -46,7 +46,7 @@ Once the run is approved, someone who processes pay runs for the employer choose
 - a deposit row becomes a payment in **Disbursements** from the employer's funding account (choose it on the employer under **Funding account**). Make the bank file there, as for any other payment;
 - a check row becomes a check in the **Check register**, on the same account, with the statement printed as the stub of the check. Print it there.
 
-A deposit is paid by check when Direct Deposit is off and Paychecks is on. When a payment can't be made, such as an employer with no funding account, the run is **partly paid** and the statement shows why: fix it and choose **Pay what is left**.
+A deposit is paid by check when Banking's Direct Deposit is off and its Checks is on. Payroll has nothing of its own to turn on for either. When a payment can't be made, such as an employer with no funding account, the run is **partly paid** and the statement shows why: fix it and choose **Pay what is left**.
 
 Each person whose staff record has a user is told their statement is ready, by the notification center and the methods they chose (it holds no amount). **Download the stub** on a statement's page gives its PDF.
 

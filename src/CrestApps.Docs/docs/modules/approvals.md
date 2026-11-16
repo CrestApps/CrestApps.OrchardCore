@@ -60,7 +60,7 @@ var result = await approvalService.RequestAsync(new ApprovalSubmission
 
 - `IApprovalSubjectHandler` (`services.AddApprovalSubjectHandler<T>()`): `SubjectKind` and `ClosedAsync(request)`, called when a request about that kind is approved, rejected or withdrawn, so the module moves its record on.
 - `IApprovalObserver` (`services.AddApprovalObserver<T>()`): `OnChangedAsync(change)` after every change (`Requested`, `PartlyApproved`, `Approved`, `Rejected`, `Canceled`).
-- Source access: the module that owns the subject kind registers an `ISourceAccess` for it (see [Disbursements](./disbursements.md#who-sees-which-disbursements)). The request list, the decide page, the export, the data set and the workflow tasks show and act only on the requests the person's scope allows; viewing uses the View level, deciding and withdrawing the Manage level.
+- Source access: the module that owns the subject kind registers an `ISourceAccess` for it (see [Banking: who sees which disbursements](./banking.md#who-sees-which-disbursements)). The request list, the decide page, the export, the data set and the workflow tasks show and act only on the requests the person's scope allows; viewing uses the View level, deciding and withdrawing the Manage level.
 
 ## Notifications
 

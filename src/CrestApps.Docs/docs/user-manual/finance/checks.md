@@ -3,7 +3,7 @@ sidebar_label: Checks
 title: Checks
 description: "Print checks on blank or pre-printed stock, keep the check register, and void, reissue, stop or clear checks."
 technical_manual:
-  - modules/checks
+  - modules/banking
 ---
 
 Checks prints the business's checks and keeps a register of every check it wrote: its number, payee, amount and what happened to it. Paychecks, refunds and payments to vendors all go through the same register.
@@ -12,7 +12,7 @@ Checks prints the business's checks and keeps a register of every check it wrote
 | --- | --- |
 | **Menu** | Banking > Checks, Banking > Check Layouts |
 | **Permission** | View the check register; Issue and print checks; Manage check layouts |
-| **Feature** | Checks |
+| **Feature** | Checks (Banking module) |
 
 <AskYourAdmin />
 

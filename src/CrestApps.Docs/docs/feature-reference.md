@@ -239,10 +239,10 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Taxation.IncomeTax` | Income Tax | [Taxation](./modules/taxation#income-tax) |
 | `CrestApps.OrchardCore.Taxation.IncomeTax.UnitedStates` | United States Income Tax | [Taxation](./modules/taxation#country-packs) |
 | `CrestApps.OrchardCore.Taxation.IncomeTax.Canada` | Canada Income Tax | [Taxation](./modules/taxation#country-packs) |
-| `CrestApps.OrchardCore.Banking` | Banking | [Banking](./modules/banking) |
-| `CrestApps.OrchardCore.Banking.Checks` | Checks | [Checks](./modules/checks) |
-| `CrestApps.OrchardCore.Banking.Disbursements` | Disbursements | [Disbursements](./modules/disbursements) |
-| `CrestApps.OrchardCore.Banking.DirectDeposit` | Disbursements - Bank File (ACH) | [Disbursements](./modules/disbursements#providers) |
+| `CrestApps.OrchardCore.Banking` | Bank Accounts | [Banking](./modules/banking#bank-accounts) |
+| `CrestApps.OrchardCore.Banking.Checks` | Checks | [Banking](./modules/banking#checks) |
+| `CrestApps.OrchardCore.Banking.Disbursements` | Disbursements | [Banking](./modules/banking#disbursements-and-direct-deposit) |
+| `CrestApps.OrchardCore.Banking.DirectDeposit` | Direct Deposit | [Banking](./modules/banking#providers) |
 
 ## Geo
 

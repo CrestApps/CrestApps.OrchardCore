@@ -3,7 +3,7 @@ sidebar_label: Disbursements
 title: Disbursements
 description: "Send the business's payments in batches: as a bank file (ACH), by printed check, or recorded when paid another way, and follow each one until the bank pays it."
 technical_manual:
-  - modules/disbursements
+  - modules/banking
 ---
 
 Disbursements are the payments the business sends out: pay deposits, vendor payments, refunds. Each one is sent in a batch, as a bank file your bank processes, as printed checks, or recorded when you paid it another way, and you follow it until the bank pays it.
@@ -12,7 +12,7 @@ Disbursements are the payments the business sends out: pay deposits, vendor paym
 | --- | --- |
 | **Menu** | Banking > Disbursements, Banking > Disbursement Batches |
 | **Permission** | View disbursements; Manage disbursements |
-| **Feature** | Disbursements; Disbursements - Bank File (ACH) for bank files |
+| **Feature** | Disbursements (Banking module); Direct Deposit for ACH bank files to US dollar accounts |
 
 <AskYourAdmin />
 

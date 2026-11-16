@@ -57,8 +57,8 @@ What does not exist anywhere and this plan adds:
 | --- | --- | --- |
 | A PDF of anything but a `ReportDocument` | `Reports.Pdf` internals on PdfPig (`ReportPdfPage`, `ReportPdfFont*`), all `internal` | New `Pdf.Abstractions`/`Pdf.Core` (4.1) |
 | Bank account records, protected numbers | `IDataConnectionSecretManager`, `SavedPaymentMethod` (card tokens), `ISecureCaptureTokenSink` (masks, does not store) | New Banking block (4.2) |
-| Check printing | Nothing | New Checks block (4.3) |
-| Outbound payments, ACH files | Marketplace `IVendorPayoutProvider`, `VendorPayout` (module-private, tied to `Vendor` and `Order`) | New Disbursements block (4.4) |
+| Check printing | Nothing | New Checks block (4.3), a feature of the Banking module |
+| Outbound payments, ACH files | Marketplace `IVendorPayoutProvider`, `VendorPayout` (module-private, tied to `Vendor` and `Order`) | New Disbursements block (4.4), with Direct Deposit, features of the Banking module |
 | A shared approval | Six hand-written copies (timesheet, time off, shift trade, punch correction, predictability pay, B2B order) | New Approvals block (4.5) |
 | Protected fields inside a record, masking, reveal audit | `ProtectedSettingExtensions`, `IDataConnectionSecretManager`, private `MaskToLastFour` | Shared helper in Core (4.6) |
 | Money split with exact remainder | `DefaultCheckoutDiscountService.Allocate`, `MarketplaceLedger.GetRefundShare` | `Money.Allocate` (4.6) |
@@ -93,6 +93,7 @@ Every Orchard Core module (4.0 preview) and every CrestApps feature was checked 
 | API authentication and documentation, when an API is added | The `Api` scheme with OpenID Connect, Orchard OpenAPI | Token handling or API docs |
 | Personal data export and erasure | PersonalData | A privacy export |
 | Keys for protected data across servers | ASP.NET Data Protection with Orchard's key-ring features (Azure, Redis) | Key management |
+| Bank accounts, printed checks, money sent out, ACH bank files | The **Banking** module's four features: Bank Accounts, Checks, Disbursements, Direct Deposit (2026-11-15) | Payment features of its own. Payroll's deposit and check payment methods are startups of the Payroll feature that light up with Banking's features |
 | Taxes on income: income tax withholding at every level, social insurance and unemployment contributions, election forms, a country's formulas | Taxation's **Income Tax** feature and its country packs (United States, Canada) | Tax rules, a tax provider seam, withholding methods or election forms. Payroll keeps only the taxes step that maps a statement to Taxation's request (2026-11-15) |
 
 ## 3. The Workforce pay functions move to Payroll
@@ -152,7 +153,16 @@ Extracted from `Reports.Pdf`, which becomes the first consumer. Checks and Payro
 
 ### 4.2 Banking (`CrestApps.OrchardCore.Banking`)
 
-One record for a bank account, for the business's own accounts and for the accounts of people it pays.
+Since 2026-11-15 (section 13 "Banking in one module"), one module holds everything about banking: one set of projects (`Banking.Abstractions`, `Banking.Core`, the Banking module) with the sub-namespaces `.Checks`, `.Disbursements` and `.DirectDeposit`, and four features in the Finance category under the one Banking admin menu:
+
+| Feature | Id | Contents |
+| --- | --- | --- |
+| Bank Accounts | `CrestApps.OrchardCore.Banking` | This section |
+| Checks | `CrestApps.OrchardCore.Banking.Checks` | 4.3 |
+| Disbursements | `CrestApps.OrchardCore.Banking.Disbursements` | 4.4, with the paid-outside provider, and the printed check provider when Checks is on |
+| Direct Deposit | `CrestApps.OrchardCore.Banking.DirectDeposit` | 4.4's bank file (Nacha) provider for US dollar accounts, return and change files, prenotes, the Read a disbursement batch file step; other countries' formats (Canada's CPA 005) come as further providers |
+
+Bank Accounts keeps one record for a bank account, for the business's own accounts and for the accounts of people it pays.
 
 - `BankAccount`: owner (`PartyRef`), holder name, kind (checking, savings), country, currency, routing number, account number (protected, with last four digits kept for display), bank name, status (unverified, verification sent, verified, failed, closed), `Properties`.
 - `IBankRoutingValidator` per country (US ABA check digit first; Canada transit and institution, IBAN later).
@@ -160,7 +170,7 @@ One record for a bank account, for the business's own accounts and for the accou
 - Permissions: `ManageBankAccounts`, `ManageOwnBankAccounts`, `RevealBankAccountNumbers`. A reveal writes an Audit Trail event.
 - An account whose number changed returns to unverified, and an observer (`IBankAccountObserver`) lets consumers react (Payroll sends the owner a security notice and can ask for approval).
 
-### 4.3 Checks (`CrestApps.OrchardCore.Checks`)
+### 4.3 Checks (Banking's Checks feature, `CrestApps.OrchardCore.Banking.Checks`)
 
 Check printing for any module: paychecks first, then agency and vendor payments, refunds, Marketplace payouts.
 
@@ -176,7 +186,7 @@ Check printing for any module: paychecks first, then agency and vendor payments,
 - Signature images are kept in an encrypted tenant file store, not in the media library, which serves files to anyone with the URL.
 - Workflow events: Check Issued, Printed, Voided, Cleared.
 
-### 4.4 Disbursements (`CrestApps.OrchardCore.Disbursements`)
+### 4.4 Disbursements (Banking's Disbursements and Direct Deposit features)
 
 Money the business sends out. Marketplace vendor payouts are the first copy of this concept; Payroll net pay is the second.
 
@@ -184,7 +194,7 @@ Money the business sends out. Marketplace vendor payouts are the first copy of t
 - Status on a `TransitionTable`: Pending, Batched, Submitted, Settled, Returned, Failed, Canceled, Reversed.
 - `DisbursementBatch`: the disbursements sent together, the file, totals, who made and released it.
 - `IDisbursementProvider` by name. Built in:
-  - **Bank file (Nacha)**, feature `Disbursements.Nacha`: writes the ACH file (PPD credits for people, CCD for businesses, prenotes, optional offset entry). The file has header, batch and control records with hashes and trace numbers, so it is written by this feature and not by a pipeline file format. The business downloads it, or a Data Pipeline delivers it: the feature adds one pipeline step, **Read a disbursement batch file** (files out), which connects to Orchard's SFTP, FTP and web API destinations. Imports the bank's return and change files: a return moves the disbursement to Returned; a change notice updates the bank account.
+  - **Bank file (Nacha)**, Banking's Direct Deposit feature (`CrestApps.OrchardCore.Banking.DirectDeposit`, for US dollar accounts): writes the ACH file (PPD credits for people, CCD for businesses, prenotes, optional offset entry). The file has header, batch and control records with hashes and trace numbers, so it is written by this feature and not by a pipeline file format. The business downloads it, or a Data Pipeline delivers it: the feature adds one pipeline step, **Read a disbursement batch file** (files out), which connects to Orchard's SFTP, FTP and web API destinations. Imports the bank's return and change files: a return moves the disbursement to Returned; a change notice updates the bank account.
   - **Check**, when Checks is on: issues a `CheckRecord`.
   - **Manual**: paid outside the system, recorded.
 - `IDisbursementObserver` for consumers (Payroll shows a returned deposit on the pay run and reissues it).
@@ -224,8 +234,6 @@ Approvals is a record of a decision, with the rules about who may make it. It is
 | --- | --- | --- | --- |
 | Pay Setup | `CrestApps.OrchardCore.Payroll.PaySetup` | Pay schedules, pay codes, the `IPayInputSource` seam and, with Data Pipelines on, the Pay Inputs data set. Turned on by Time Clock or Payroll | None |
 | Payroll | `CrestApps.OrchardCore.Payroll` | Employers, pay profiles, pay items, pay runs, the engine, statements, accumulators, stubs | Pay Setup, Staff, Staff Compensation, Approvals, Taxation's Income Tax |
-| Direct Deposit | `CrestApps.OrchardCore.Payroll.DirectDeposit` | Net pay split across bank accounts and paid through Disbursements | Payroll, Banking, Disbursements |
-| Paychecks | `CrestApps.OrchardCore.Payroll.Checks` | Net pay and agency payments by printed check | Payroll, Checks |
 | My Pay | `CrestApps.OrchardCore.Payroll.SelfService` | Stubs, tax forms, elections and bank accounts for the employee | Payroll |
 | Garnishments | `CrestApps.OrchardCore.Payroll.Garnishments` | Orders, limits, priority, payee payments | Payroll |
 | Contractor Payments | `CrestApps.OrchardCore.Payroll.Contractors` | Payments with no withholding, year-end totals | Payroll |
@@ -243,7 +251,7 @@ Taxes on income are Taxation's (2026-11-15, section 13 "Payroll taxes moved to T
 | United States Income Tax | `CrestApps.OrchardCore.Taxation.IncomeTax.UnitedStates` | Form W-4 and its method, backup withholding, the dated federal recipe | Income Tax |
 | Canada Income Tax | `CrestApps.OrchardCore.Taxation.IncomeTax.Canada` | TD1 and TP-1015.3, the CRA and Revenu Québec formulas, CPP, QPP, EI, QPIP, the dated 2026 recipe | Income Tax |
 
-Optional integrations are `[RequireFeatures]` startups in the Payroll module: Recipes, Deployment, the Recipes schemas, Workflows, Data Pipelines, Reports, Audit Trail, Notifications, Teams, Webhooks (pay run and statement events through `IWebhookEventProvider`) and Calendars (pay dates and approval deadlines as a calendar type managed by code, so Calendar Reminders sends the reminders).
+Payroll has no payment feature of its own (2026-11-15): paying net pay by deposit lights up with Banking's Direct Deposit, and by check with Banking's Checks, as `[RequireFeatures]` startups of the Payroll feature. Other optional integrations are `[RequireFeatures]` startups in the Payroll module too: Recipes, Deployment, the Recipes schemas, Workflows, Data Pipelines, Reports, Audit Trail, Notifications, Teams, Webhooks (pay run and statement events through `IWebhookEventProvider`) and Calendars (pay dates and approval deadlines as a calendar type managed by code, so Calendar Reminders sends the reminders).
 
 ### 5.2 Setup records
 
@@ -310,7 +318,7 @@ Moved to Taxation on 2026-11-15 (section 13 "Payroll taxes moved to Taxation"): 
 
 ### 5.6 Payments and documents
 
-- Net pay follows the profile's distribution: Direct Deposit creates one `Disbursement` per bank account row; Paychecks creates a `CheckRecord` for a check row or when there is no verified account. Garnishment and benefit payees are paid the same two ways.
+- Net pay follows the profile's distribution: with Banking's Direct Deposit on, one `Disbursement` per bank account row; with Banking's Checks on, a `CheckRecord` for a check row or when there is no verified account. Garnishment and benefit payees are paid the same two ways.
 - The pay stub is a shape (`PayStatement` display) for the screen, so a site changes it with a theme or Orchard Templates, and a `Pdf.Core` document for download and for the check voucher. Stored PDFs go in an encrypted tenant file store.
 - A notice tells the employee the stub is ready and links to it, through `INotificationService` with a registered notification type (Pay statement ready, Deposit returned, Bank account changed, Tax form ready), so each person chooses e-mail, SMS or the notification center. No amount and no attachment is put in a notice.
 - Compliance: each tax line adds to a `TaxLiability` with a due date from the employer's deposit schedule; `Filing` records hold the totals of a form for a period with a status and an amendment link. The United States pack writes the quarterly and annual federal worksheets, W-2 and W-3 (PDF and the SSA file) and 1099-NEC. The business files them.
@@ -485,10 +493,12 @@ Decided 2026-11-13: the option in bold in every row.
 | 3 | State and local taxes | **Ship federal tables; states and localities through an adapter module for a commercial tax engine, with hand-entered rules as the fallback.** Or we maintain tables for every state ourselves (a standing yearly duty). Or federal only for now |
 | 4 | Compliance posture | **Calculate, generate documents and files; the business funds and files.** Or integrate a full-service provider behind the same seams |
 | 5 | The legal entity | **A Payroll `Employer` record, registered as a party kind.** Or a new shared Legal Entities block now (Commerce's `StoreProfileSettings` would move onto it). Accounts and Teams do not fit: accounts are the business's customers, and a team is a group, with a closed kind list |
-| 6 | New building blocks | **Pdf, Banking, Checks, Disbursements, Approvals as in section 4; Marketplace payouts move onto Disbursements in this plan (F8); the six existing approval copies move in a follow-up plan.** Or fewer blocks, kept private to Payroll |
+| 6 | New building blocks | **Pdf, Banking, Checks, Disbursements, Approvals as in section 4 (Banking, Checks and Disbursements one Banking module since 2026-11-15); Marketplace payouts move onto Disbursements in this plan (F8); the six existing approval copies move in a follow-up plan.** Or fewer blocks, kept private to Payroll |
 | 7 | Pull requests | **One pull request for the whole plan, a commit per slice** (Mike, 2026-11-14; first approved as three: blocks, Payroll, compliance). The planning session pushes and opens it once everything is implemented and validated |
 | 8 | Countries | **United States pack first, neutral core.** Canada added on 2026-11-15 (Mike: income tax must cover Canada at least) |
 | 9 | The export to an outside payroll system | **A data set and a ready-made Data Pipeline; Workforce's export page, column settings and `IPayrollExportProvider` are removed (section 3).** Or keep the page as a thin screen over the same data set. Or move the export code to Payroll unchanged (it then repeats what Data Pipelines does) |
+
+Note on decision 6 (2026-11-15): Banking, Checks and Disbursements, built as three module sets, are one Banking module with four features (Bank Accounts, Checks, Disbursements, Direct Deposit), at Mike's request: "Banking module that is responsible for direct deposit, printing checks and anything to do with banking all in one module". Payroll's own Direct Deposit and Paychecks features are gone.
 
 Note on decision 3 (2026-11-15): the tax rules, the provider seam and the country formulas moved from Payroll to Taxation's Income Tax feature, named for income tax because it covers any tax on income, not only payroll's ("Payroll Taxes" was the first name; Mike chose Income Tax). The decision itself stands: federal rules ship as dated recipes, states and localities come from a tax engine's provider behind `IIncomeTaxProvider` or hand-entered rules.
 
@@ -527,7 +537,7 @@ What is built, slice by slice, and where it differs from the plan above.
 
 ### F4 as built
 
-- Projects: `CrestApps.OrchardCore.Checks.Abstractions` (`CheckLayout`, `CheckRecord`, `CheckStatuses.Transitions`, `ICheckManager`, `ICheckService`, `ICheckPrinter`, `ICheckVoucherSource`, `ICheckObserver`, `ICheckMicrFormat`, `IAmountInWords`, `ICheckFileStore`, `MicrLine`, `MicrSymbols`, permissions), `CrestApps.OrchardCore.Checks.Core` (register store and index, `CheckService`, `CheckPrinter` on `Pdf.Core`, `UnitedStatesCheckMicrFormat`, `EnglishAmountInWords`, `CheckFileStore` on `EncryptedFileStore`, `CheckLayoutDefaults`), module `CrestApps.OrchardCore.Checks` (Finance, depends on Banking).
+- Projects: `CrestApps.OrchardCore.Banking.Abstractions` (`CheckLayout`, `CheckRecord`, `CheckStatuses.Transitions`, `ICheckManager`, `ICheckService`, `ICheckPrinter`, `ICheckVoucherSource`, `ICheckObserver`, `ICheckMicrFormat`, `IAmountInWords`, `ICheckFileStore`, `MicrLine`, `MicrSymbols`, permissions), `CrestApps.OrchardCore.Banking.Core` (register store and index, `CheckService`, `CheckPrinter` on `Pdf.Core`, `UnitedStatesCheckMicrFormat`, `EnglishAmountInWords`, `CheckFileStore` on `EncryptedFileStore`, `CheckLayoutDefaults`), module `CrestApps.OrchardCore.Banking.Checks` (Finance, depends on Banking).
 - Layouts are a named catalog (a document), like Taxation's types: there are few of them. The register is a YesSql collection with `CheckRecordIndex`.
 - Numbers come from `INumberSequence`, series `Checks:{bankAccountId}`, first number 1001, seeded from the highest number in the register; **Next numbers** (`SetNextNumberAsync`) refuses a number a check already has. Numbers are given at issue, not at print: a spoiled sheet is reissued (void and new number in one step).
 - MICR: no font is downloaded or shipped. The site uploads a TrueType font (stored encrypted in the tenant file store, never the media library), the layout says which four characters draw the symbols (`ABCD` by default), and printing with the check line on and no font refuses with a clear message; the layout list flags it. Positions follow the plan's reading of ANSI X9.100-160 (amount 1 to 12 blank, on-us symbol at 14 with the account ending at 15, transit symbols at 43 and 33, 44 blank, auxiliary on-us from 45 with the check number on six digits; personal format puts the check number after the account number), counted from 5/16 inch from the right edge, baseline 1/4 inch above the bottom. Tested position by position with Arial standing in for the font.
@@ -1089,7 +1099,7 @@ What only you can settle before the first live pay:
    - **Figures to confirm**: the T4127 tables came through a summarizing fetch tool (cross-checked several times and recomputed where possible), not a byte copy of the PDF: compare the federal and provincial brackets, constants and basic amounts in `income-tax-canada-2026.recipe.json` against the T4127 PDF (122nd and 123rd editions) once. The TP-1015.F figures were read from the PDF itself.
    - **Not confirmed**: the T4 box and Summary line names come from the 2025 RC4120 (the 2026 T4 XML spec, 2027V2, uses the same elements plus code 96); the CRA's "15% (10% in Quebec) when the result is 5,000 or less" bonus note is not implemented, since the line naming which amount is tested was not read; the T4 XML schema location attribute and zip name were not captured, so the file is not validated against the XSD.
    - **Owed**: a CRA PDOC comparison of a few pays, a T4 XML upload to the CRA's test (Internet file transfer validation), and an RL-1 check by someone who files with Revenu Québec.
-   - **Not built** (follow-ups): the Record of Employment; Canadian direct deposit (CPA Standard 005), so Canadian employees are paid by check; the commission (variable pay) methods of T4127 and TP-1015.F; Quebec employer contributions (Health Services Fund, labour standards, workforce skills); the PM proration of the CPP maximums for a person who starts or stops contributing during the year; an employee transferred between Quebec and another province during the year (K2RP and the transfer formulas); and box 10 of the T4 is the person's home province (Quebec when QPP was paid), not their work site's.
+   - **Not built** (follow-ups): the Record of Employment; Canadian direct deposit (CPA Standard 005, a further provider of Banking's Direct Deposit feature), so Canadian employees are paid by check; the commission (variable pay) methods of T4127 and TP-1015.F; Quebec employer contributions (Health Services Fund, labour standards, workforce skills); the PM proration of the CPP maximums for a person who starts or stops contributing during the year; an employee transferred between Quebec and another province during the year (K2RP and the transfer formulas); and box 10 of the T4 is the person's home province (Quebec when QPP was paid), not their work site's.
 11. **Follow-ups seen, not in this plan**:
    - Disbursements says only "Choose how the money is sent" when a deposit is made with no ACH provider feature on; a clearer setup hint would help.
    - The Staff module's pages also call the team manager without checking that Teams is on; worth the same guard.

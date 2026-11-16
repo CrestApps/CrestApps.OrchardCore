@@ -12,7 +12,7 @@ Bank accounts hold the accounts money is sent from and sent to: the business's o
 | --- | --- |
 | **Menu** | Banking > Bank Accounts, and Banking > My Bank Accounts for your own |
 | **Permission** | Manage bank accounts; Manage one's own bank accounts for your own; Reveal bank account numbers to see a full number |
-| **Feature** | Banking |
+| **Feature** | Bank Accounts (Banking module) |
 
 <AskYourAdmin />
 

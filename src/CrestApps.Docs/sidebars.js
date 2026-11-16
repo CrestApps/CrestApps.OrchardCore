@@ -490,8 +490,6 @@ const sidebars = {
             className: icon('list-checks'),
             items: [
                 'modules/banking',
-                'modules/checks',
-                'modules/disbursements',
                 'modules/approvals',
                 'modules/payroll',
             ],
