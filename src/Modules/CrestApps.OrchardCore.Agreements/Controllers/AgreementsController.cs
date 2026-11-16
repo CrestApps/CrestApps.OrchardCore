@@ -14,7 +14,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Settings;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Agreements.Controllers;
 
@@ -27,7 +27,7 @@ public sealed class AgreementsController : CatalogAdminController<Agreement>
     private const string IndexRoute = "agreements";
     private const string IndexRouteName = "AgreementsIndex";
 
-    private readonly ISiteService _siteService;
+    private readonly ILocalClock _localClock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgreementsController"/> class.
@@ -38,12 +38,12 @@ public sealed class AgreementsController : CatalogAdminController<Agreement>
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<Agreement> displayManager,
         INotifier notifier,
-        ISiteService siteService,
+        ILocalClock localClock,
         IHtmlLocalizer<AgreementsController> htmlLocalizer,
         IStringLocalizer<AgreementsController> stringLocalizer)
         : base(manager, authorizationService, updateModelAccessor, displayManager, notifier, htmlLocalizer, stringLocalizer)
     {
-        _siteService = siteService;
+        _localClock = localClock;
     }
 
     /// <inheritdoc/>
@@ -81,7 +81,8 @@ public sealed class AgreementsController : CatalogAdminController<Agreement>
     /// <inheritdoc/>
     protected override async Task<bool> InitializeNewAsync(Agreement model)
     {
-        model.TimeZoneId ??= (await _siteService.GetSiteSettingsAsync()).TimeZoneId;
+        // The time zone the user sees times in: theirs, the site's, or the server's when neither is set.
+        model.TimeZoneId ??= (await _localClock.GetLocalTimeZoneAsync())?.TimeZoneId;
 
         if (Request.Query.TryGetValue("accountId", out var accountId) && !string.IsNullOrWhiteSpace(accountId))
         {

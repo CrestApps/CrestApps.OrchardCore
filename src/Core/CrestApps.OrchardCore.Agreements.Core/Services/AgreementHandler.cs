@@ -3,6 +3,7 @@ using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Agreements.Core.Indexes;
 using CrestApps.OrchardCore.Agreements.Models;
+using CrestApps.OrchardCore.Agreements.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Numbering;
 using Microsoft.Extensions.Localization;
@@ -22,14 +23,21 @@ internal sealed class AgreementHandler : CatalogEntryHandlerBase<Agreement>
     private readonly ISession _session;
     private readonly INumberSequence _numberSequence;
     private readonly IClock _clock;
+    private readonly IEnumerable<IAgreementTermsValidator> _termsValidators;
 
     internal readonly IStringLocalizer S;
 
-    public AgreementHandler(ISession session, INumberSequence numberSequence, IClock clock, IStringLocalizer<AgreementHandler> stringLocalizer)
+    public AgreementHandler(
+        ISession session,
+        INumberSequence numberSequence,
+        IClock clock,
+        IEnumerable<IAgreementTermsValidator> termsValidators,
+        IStringLocalizer<AgreementHandler> stringLocalizer)
     {
         _session = session;
         _numberSequence = numberSequence;
         _clock = clock;
+        _termsValidators = termsValidators;
         S = stringLocalizer;
     }
 
@@ -90,7 +98,7 @@ internal sealed class AgreementHandler : CatalogEntryHandlerBase<Agreement>
     }
 
     /// <inheritdoc/>
-    public override Task ValidatingAsync(ValidatingContext<Agreement> context, CancellationToken cancellationToken = default)
+    public override async Task ValidatingAsync(ValidatingContext<Agreement> context, CancellationToken cancellationToken = default)
     {
         var agreement = context.Model;
         var hours = agreement.Hours ?? new AgreementHours();
@@ -124,6 +132,12 @@ internal sealed class AgreementHandler : CatalogEntryHandlerBase<Agreement>
             context.Result.Fail(new ValidationResult(S["Round time to none, 6, 15 or 30 minutes."], [nameof(Agreement.Hours)]));
         }
 
-        return Task.CompletedTask;
+        foreach (var validator in _termsValidators)
+        {
+            foreach (var error in await validator.ValidateAsync(agreement, cancellationToken) ?? [])
+            {
+                context.Result.Fail(error);
+            }
+        }
     }
 }

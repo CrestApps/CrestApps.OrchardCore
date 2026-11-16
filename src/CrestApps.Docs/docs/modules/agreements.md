@@ -73,3 +73,6 @@ The `Agreements` step creates or updates agreements by `ItemId`, with every valu
 - Keep your module's terms in `Properties` (`agreement.Put(new MyTerms { ... })`) and add a display driver on `Agreement` for their editor.
 - Register an `IAgreementUsageProvider` for the time your module spends under an agreement.
 - Register an `IAgreementObserver` to act when an agreement is about to end or passes a share of its hours.
+- Register an `IAgreementTermsValidator` to check your terms: the agreement's own rules call every validator, so the editor and recipes check the same set whichever feature carries the terms.
+
+Work Orders is one consumer: its visit schedules are `WorkOrderAgreementTerms` with a **Visits** panel, and the billable labor of its completed work orders counts against the hours (see [Work Orders](./work-orders.md#service-agreements)).

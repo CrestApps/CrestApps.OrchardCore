@@ -24,7 +24,7 @@ internal sealed class WorkOrdersRecipeStepSchema : IRecipeStep
             ("ServiceLevels", Array(ServiceLevel(), "Deprecated: Work Orders' own service level policies, as older recipes carried them. Each one becomes a shared policy; use the ServiceLevelPolicies step instead.")),
             ("SubStatuses", Array(SubStatus(), "The sub-statuses.")),
             ("Types", Array(TypeEntry(), "The work order types.")),
-            ("Agreements", Array(Agreement(), "The service agreements. Read only when the service agreements feature is on; their customers, accounts and assets must be on the site too.")));
+            ("Agreements", Array(Agreement(), "Agreements with visits, made as agreements of the Agreements module with their visits as Work Orders terms. Read only when the service agreements feature is on; their customers, accounts and assets must be on the site too.")));
 
         return ValueTask.FromResult(_cached);
     }
@@ -151,7 +151,7 @@ internal sealed class WorkOrdersRecipeStepSchema : IRecipeStep
             ("ItemId", ItemId("service agreement")),
             ("Number", Text("The number, such as SA-00001.")),
             ("Name", Text("The agreement name.")),
-            ("Status", Enum<ServiceAgreementStatus>("Where the agreement is.")),
+            ("Status", Enum<CrestApps.OrchardCore.Agreements.Models.AgreementStatus>("Where the agreement is.")),
             ("CustomerId", Text("The customer: the Orchard Core user id.")),
             ("AccountId", Text("The CRM account (the company) the agreement is with.")),
             ("Contact", OptionalObject(

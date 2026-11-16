@@ -1,59 +1,11 @@
 @using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels
-@model ServiceAgreementEditViewModel
+@model WorkOrderAgreementTermsViewModel
 
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
-<zone Name="Title"><breadcrumb name="ServiceAgreementsEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Service Agreement"] : T["Edit {0}", Model.Number])" /></zone>
 
-<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
-    <div asp-validation-summary="All" class="text-danger"></div>
-    <input type="hidden" asp-for="Id" />
     <div class="card text-bg-theme mb-3">
-        <div class="card-header">@T["Details"]</div>
-        <div class="card-body">
-            <div class="ocat-wrapper">
-                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
-                <div class="ocat-end">
-                    <input asp-for="Name" class="form-control" required placeholder="@T["Such as: Furnace care plan"]" />
-                </div>
-            </div>
-            <div class="ocat-wrapper">
-                <label asp-for="Status" class="ocat-label">@T["Status"]</label>
-                <div class="ocat-end">
-                    <select asp-for="Status" asp-items="Html.GetEnumSelectList<ServiceAgreementStatus>()" class="form-select"></select>
-                    <span class="hint">@T["Only an active agreement makes work orders."]</span>
-                </div>
-            </div>
-            <div class="ocat-wrapper">
-                <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
-                <div class="ocat-end">
-                    <select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="form-select">
-                        <option value="">@T["UTC"]</option>
-                    </select>
-                </div>
-            </div>
-            <div class="ocat-wrapper">
-                <label asp-for="StartDate" class="ocat-label">@T["Starts"]</label>
-                <div class="ocat-end">
-                    <input asp-for="StartDate" type="date" value="@Model.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" class="form-control" required style="max-width: 12rem" />
-                </div>
-            </div>
-            <div class="ocat-wrapper">
-                <label asp-for="EndDate" class="ocat-label">@T["Ends"]</label>
-                <div class="ocat-end">
-                    <input asp-for="EndDate" type="date" value="@Model.EndDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" class="form-control" style="max-width: 12rem" />
-                </div>
-            </div>
-            <div class="ocat-wrapper">
-                <label asp-for="ExpiringNoticeDays" class="ocat-label">@T["Notice before the end (days)"]</label>
-                <div class="ocat-end">
-                    <input asp-for="ExpiringNoticeDays" type="number" min="0" max="365" class="form-control" style="max-width: 12rem" />
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="card text-bg-theme mb-3">
-        <div class="card-header">@T["Visits"]</div>
+        <div class="card-header d-flex align-items-center">@T["Visits"]@if (!string.IsNullOrEmpty(Model.AgreementId)) { <a class="ms-auto small" asp-area="CrestApps.OrchardCore.WorkOrders" asp-controller="ServiceAgreements" asp-action="Details" asp-route-id="@Model.AgreementId">@T["Next visits and work orders"]</a> }</div>
         <div class="card-body">
             <p class="hint">@T["Each schedule repeats from the start date. Its work order is made the number of days ahead you choose, once for each visit. A schedule covers the agreement's assets unless you choose some of them for it. Leave a row empty to skip it."]</p>
             <div class="table-responsive mb-3">
@@ -129,43 +81,36 @@
     <div class="card text-bg-theme mb-3">
         <div class="card-header">@T["Who and where"]</div>
         <div class="card-body">
-            @foreach (var (kind, name) in Model.CustomerPickers)
+            @if (Model.CanChooseCustomer)
             {
-                var field = kind == "Customer" ? Html.NameFor(m => m.CustomerId).ToString() : Html.NameFor(m => m.AccountId).ToString();
-                var value = kind == "Customer" ? Model.CustomerId : Model.AccountId;
-                var label = kind == "Customer" ? T["Customer"].Value : T["Account"].Value;
-                var choose = kind == "Customer" ? T["Choose a customer"].Value : T["Choose an account"].Value;
-                var initial = string.IsNullOrEmpty(value) ? "[]" : System.Text.Json.JsonSerializer.Serialize(new[] { new { value, text = string.IsNullOrEmpty(name) ? value : name, selected = true } });
+                var initial = string.IsNullOrEmpty(Model.CustomerId) ? "[]" : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.CustomerId, text = string.IsNullOrEmpty(Model.CustomerName) ? Model.CustomerId : Model.CustomerName, selected = true } });
 
                 <div class="ocat-wrapper">
-                    <label class="ocat-label">@label</label>
+                    <label class="ocat-label">@T["Customer"]</label>
                     <div class="ocat-end">
                         @await Component.InvokeAsync("ItemSelector", new
                         {
-                            id = $"agreement-{kind.ToLowerInvariant()}",
-                            inputName = field,
-                            endpoint = kind == "Account" ? Url.RouteUrl(CrestApps.OrchardCore.Accounts.AccountsConstants.RouteNames.Search) : Url.Content($"~/Admin/api/crestapps/work-orders/customers/search?kind={kind}"),
+                            id = "agreement-customer",
+                            inputName = Html.NameFor(m => m.CustomerId).ToString(),
+                            endpoint = Url.Content("~/Admin/api/crestapps/work-orders/customers/search?kind=Customer"),
                             initialItemsJson = initial,
                             multiple = false,
                             enableSearch = true,
-                            buttonText = choose,
+                            buttonText = T["Choose a customer"].Value,
                             searchPlaceholder = T["Search by name"].Value,
                             emptyResultsText = T["Nothing found."].Value,
-                            noSelectionText = choose,
-                            selectedItemsLabel = label,
-                            availableItemsLabel = label,
+                            noSelectionText = T["Choose a customer"].Value,
+                            selectedItemsLabel = T["Customer"].Value,
+                            availableItemsLabel = T["Customer"].Value,
                             smallButton = false,
                         })
+                        <span class="hint">@T["When the visits are for a person rather than the account."]</span>
                     </div>
                 </div>
             }
-            @if (!Model.CustomerPickers.ContainsKey("Customer"))
+            else
             {
                 <input type="hidden" asp-for="CustomerId" />
-            }
-            @if (!Model.CustomerPickers.ContainsKey("Account"))
-            {
-                <input type="hidden" asp-for="AccountId" />
             }
             <div class="ocat-wrapper">
                 <label asp-for="ContactName" class="ocat-label">@T["Contact"]</label>
@@ -230,23 +175,5 @@
                 </div>
             </div>
             }
-            <div class="ocat-wrapper">
-                <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
-                <div class="ocat-end">
-                    <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
-                </div>
-            </div>
-            <div class="mb-3">
-                <button type="submit" class="btn btn-primary save">@T["Save"]</button>
-                @if (string.IsNullOrEmpty(Model.Id))
-                {
-                    <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
-                }
-                else
-                {
-                    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">@T["Cancel"]</a>
-                }
-            </div>
         </div>
     </div>
-</form>

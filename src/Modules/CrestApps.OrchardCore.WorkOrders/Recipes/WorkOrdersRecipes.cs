@@ -44,9 +44,46 @@ internal sealed class WorkOrdersRecipeStep : NamedRecipeStepHandler
         await ImportLegacyServiceLevelsAsync(context);
         await CatalogRecipeSections.ImportAsync(context, "SubStatuses", _services.GetRequiredService<WorkOrderSettingManager<WorkOrderSubStatus>>(), "sub-status");
         await CatalogRecipeSections.ImportAsync(context, "Types", _services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>(), "work order type");
-        if (_services.GetService<ServiceAgreementManager>() is { } agreements)
+        await ImportAgreementsAsync(context);
+    }
+
+    // Agreements with visits are agreements of the Agreements module; this section, in Work Orders' own form, makes them
+    // with their visits as Work Orders terms.
+    private async Task ImportAgreementsAsync(RecipeExecutionContext context)
+    {
+        if (context.Step["Agreements"] is not JsonArray items || _services.GetService<CrestApps.OrchardCore.WorkOrders.Core.Legacy.ServiceAgreementUpgrade>() is not { } upgrade)
         {
-            await CatalogRecipeSections.ImportAsync(context, "Agreements", agreements, "service agreement");
+            return;
+        }
+
+        var manager = _services.GetRequiredService<CrestApps.OrchardCore.Agreements.Services.IAgreementManager>();
+
+        foreach (var node in items.OfType<JsonObject>())
+        {
+            if (await upgrade.FromRecipeAsync(node) is not { } converted)
+            {
+                context.Errors.Add("A service agreement in the WorkOrders step has no name.");
+
+                continue;
+            }
+
+            var validation = await manager.ValidateAsync(converted.Agreement);
+
+            if (!validation.Succeeded)
+            {
+                context.Errors.Add($"The service agreement \"{converted.Agreement.Name}\" in the WorkOrders step was refused: {string.Join(" ", validation.Errors.Select(error => error.ErrorMessage))}");
+
+                continue;
+            }
+
+            if (converted.IsNew)
+            {
+                await manager.CreateAsync(converted.Agreement);
+            }
+            else
+            {
+                await manager.UpdateAsync(converted.Agreement);
+            }
         }
     }
 
@@ -127,10 +164,55 @@ internal sealed class WorkOrdersDeploymentSource : DeploymentSourceBase<WorkOrde
         node["Types"] = CatalogRecipeSections.Export((await _services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>().GetAllAsync()));
         if (step.IncludeAgreements)
         {
-            node["Agreements"] = CatalogRecipeSections.Export((_services.GetService<ServiceAgreementManager>() is { } managerAgreements ? await managerAgreements.GetAllAsync() : Enumerable.Empty<ServiceAgreement>()));
+            node["Agreements"] = await ExportAgreementsAsync();
         }
 
         result.Steps.Add(node);
+    }
+
+    // The agreements with visits, in Work Orders' own form, which the WorkOrders step reads back.
+    private async Task<JsonArray> ExportAgreementsAsync()
+    {
+        var array = new JsonArray();
+
+        if (_services.GetService<CrestApps.OrchardCore.Agreements.Services.IAgreementManager>() is not { } manager)
+        {
+            return array;
+        }
+
+        foreach (var agreement in await manager.GetAllAsync())
+        {
+            if (!CrestApps.Core.ExtensibleEntityExtensions.TryGet<WorkOrderAgreementTerms>(agreement, out var terms) || terms is null)
+            {
+                continue;
+            }
+
+            array.Add(JsonSerializer.SerializeToNode(new CrestApps.OrchardCore.WorkOrders.Core.Legacy.LegacyServiceAgreement
+            {
+                ItemId = agreement.ItemId,
+                Number = agreement.Number,
+                Name = agreement.Name,
+                Status = agreement.Status.ToString(),
+                CustomerId = terms.CustomerId,
+                AccountId = agreement.AccountId,
+                Contact = terms.Contact,
+                ServiceAddress = terms.ServiceAddress,
+                AccessNotes = terms.AccessNotes,
+                AssetIds = terms.AssetIds,
+                StartDate = agreement.StartDate,
+                EndDate = agreement.EndDate,
+                TimeZoneId = agreement.TimeZoneId,
+                Schedules = terms.Schedules,
+                Pricing = terms.Pricing,
+                PricePerVisit = terms.PricePerVisit,
+                ExpiringNoticeDays = agreement.ExpiringNoticeDays,
+                ExpiringNotifiedUtc = agreement.ExpiringNotifiedUtc,
+                Notes = agreement.Notes,
+                CreatedUtc = agreement.CreatedUtc,
+            }, JOptions.Default));
+        }
+
+        return array;
     }
 }
 

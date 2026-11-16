@@ -85,13 +85,13 @@ To come back for more work, enter what it is for under **Follow-up** and select 
 
 A service agreement makes the work orders of a customer's recurring visits, such as a furnace service every six months.
 
-1. Go to **Field Service > Service Agreements** and select **Add service agreement**.
-2. Enter a name, the days it starts and ends, and the notice you want before the end.
+1. Go to **Field Service > Service Agreements** (the **Agreements** list) and select **Add agreement**, or select **New agreement** on the account's page.
+2. Enter a name, the account, the days it starts and ends, and the notice you want before the end. If the agreement also covers hours of work, set them under **Covered hours**.
 3. Under **Visits**, add a row for each recurring visit: its name, the work order type, how often it repeats, how many days ahead its work order is made, and, when the visit is for only some of the assets covered, those assets. For anything else, choose **Custom rule** and enter an iCalendar rule, such as `FREQ=MONTHLY;BYDAY=2SU` for the second Sunday of each month.
 4. Under **Pricing**, choose whether the visits are included, so their work orders aren't invoiced, or invoiced at a price per visit.
-5. Enter the customer, contact, address and the assets covered, set the status to **Active** and select **Save**.
+5. Enter the customer (when the visits are for a person), contact, address and the assets covered, set the status to **Active** and select **Save**.
 
-The agreement's page shows the next visits of each schedule and the work orders made so far. Work orders are made each hour; select **Make due work orders now** to make them at once. Each visit gets one work order, for its whole day. An agreement past its end date becomes expired; a workflow can start when one comes within its notice, such as to offer a renewal.
+Select **Next visits and work orders** on the **Visits** panel to see the next visits of each schedule and the work orders made so far. Work orders are made each hour; select **Make due work orders now** to make them at once. Each visit gets one work order, for its whole day. The billable labor of the work orders done under the agreement counts against its covered hours. An agreement past its end date becomes expired; a workflow can start when one comes within its notice, such as to offer a renewal.
 
 ## Service levels on the page
 

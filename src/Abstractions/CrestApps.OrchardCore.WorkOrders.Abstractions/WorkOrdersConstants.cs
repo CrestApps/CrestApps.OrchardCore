@@ -37,16 +37,6 @@ public static class WorkOrdersConstants
     public const string NumberSeries = "WorkOrders.WorkOrder";
 
     /// <summary>
-    /// The prefix of service agreement numbers.
-    /// </summary>
-    public const string AgreementNumberPrefix = "SA-";
-
-    /// <summary>
-    /// The number sequence series that service agreement numbers come from.
-    /// </summary>
-    public const string AgreementNumberSeries = "WorkOrders.ServiceAgreement";
-
-    /// <summary>
     /// The feature identifiers.
     /// </summary>
     public static class Features

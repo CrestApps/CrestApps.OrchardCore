@@ -49,10 +49,11 @@ public static class WorkOrdersServiceCollectionExtensions
     /// <returns>The services.</returns>
     public static IServiceCollection AddServiceAgreementsCore(this IServiceCollection services)
     {
-        services.TryAddScoped<ServiceAgreementStore>();
-        services.TryAddScoped<ServiceAgreementManager>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ServiceAgreement>, ServiceAgreementHandler>());
+        services.AddAgreementsCore();
         services.TryAddScoped<ServiceAgreementScheduler>();
+        services.TryAddScoped<CrestApps.OrchardCore.WorkOrders.Core.Legacy.ServiceAgreementUpgrade>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<CrestApps.OrchardCore.Agreements.Services.IAgreementTermsValidator, WorkOrderAgreementTermsValidator>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<CrestApps.OrchardCore.Agreements.Services.IAgreementUsageProvider, WorkOrderAgreementUsageProvider>());
 
         return services;
     }

@@ -50,6 +50,8 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.ServiceLevels.Abstractions\CrestApps.OrchardCore.ServiceLevels.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Workforce.Abstractions\CrestApps.OrchardCore.Workforce.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Agreements.Abstractions\CrestApps.OrchardCore.Agreements.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Agreements.Core\CrestApps.OrchardCore.Agreements.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Assets.Core\CrestApps.OrchardCore.Assets.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Dispatch.Core\CrestApps.OrchardCore.Dispatch.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Inventory.Core\CrestApps.OrchardCore.Inventory.Core.csproj" />
