@@ -1,0 +1,78 @@
+@model LearningPackagePartViewModel
+
+@{
+    var part = Model.Part;
+    var imported = !string.IsNullOrEmpty(part?.PackageFileId);
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Learning package"]</div>
+    <div class="card-body">
+        @if (Model.IsNew)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <span class="hint">@T["Save the item first; then import a SCORM 1.2 package into it."]</span>
+                </div>
+            </div>
+        }
+        else if (Model.CanImport)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <a class="btn btn-secondary btn-sm" href="@Url.RouteUrl("LearningPackageUpload", new { contentItemId = Model.ContentItemId })"><i class="fa-solid fa-file-zipper me-1" aria-hidden="true"></i>@(imported ? T["Import another package"] : T["Import a package"])</a>
+                    <span class="hint">@T["A .zip file of a SCORM 1.2 package. The import goes into a draft; publish the item to give it to learners."]</span>
+                </div>
+            </div>
+        }
+
+        @if (!imported)
+        {
+            @if (!Model.IsNew)
+            {
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <span class="hint">@T["No package is imported yet. Learners cannot launch this item until one is."]</span>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Package"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext mb-0">@part.Title <span class="badge ta-badge ms-1">@part.Standard</span></p>
+                    <span class="hint">@T["{0}, {1} files.", part.FileName, part.FileCount]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Launched SCO"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext mb-0">@(part.LaunchItemTitle ?? part.LaunchItemIdentifier)</p>
+                    <span class="hint">@part.LaunchPath@(string.IsNullOrEmpty(part.LaunchQuery) ? null : "?" + part.LaunchQuery)</span>
+                    @if (part.ScoCount > 1)
+                    {
+                        <span class="hint">@T["The package has {0} SCOs; learners launch the first one.", part.ScoCount]</span>
+                    }
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Mastery score"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext mb-0">@(part.MasteryScore is { } mastery ? T["{0}%", mastery.ToString("0.##")] : T["None"])</p>
+                    <span class="hint">@T["From the manifest. When the package sends a score without passing or failing the learner, the score is compared with it."]</span>
+                </div>
+            </div>
+            @if (part.ImportedUtc is { } importedUtc)
+            {
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Imported"]</span>
+                    <div class="ocat-end">
+                        <p class="form-control-plaintext mb-0">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(importedUtc, DateTimeKind.Utc), Format: "g"))</p>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>

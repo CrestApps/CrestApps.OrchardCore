@@ -1,0 +1,89 @@
+@model PackagePanelViewModel
+
+@{
+    var state = Model.State;
+    var cmi = state?.Cmi;
+    var status = cmi?.LessonStatus;
+    var statusText = status switch
+    {
+        "passed" => T["Passed"],
+        "completed" => T["Completed"],
+        "failed" => T["Failed"],
+        "incomplete" => T["In progress"],
+        "browsed" => T["Browsed"],
+        _ => T["Not started"],
+    };
+    var statusClass = status switch
+    {
+        "passed" or "completed" => "text-bg-success",
+        "failed" => "text-bg-danger",
+        "incomplete" or "browsed" => "text-bg-info",
+        _ => "text-bg-secondary",
+    };
+}
+
+<div class="card mb-3 learning-package"
+     data-learning-package
+     data-launch-url="@Url.RouteUrl("LearningPackageLaunch", new { itemId = Model.PackageItemId })"
+     data-frame-title="@T["Learning package: {0}", Model.Part.Title ?? string.Empty]"
+     data-error-text="@T["The package could not be opened. Try again."]"
+     data-finished-text="@T["The session ended. Your progress is saved."]">
+    <div class="card-body">
+        @Html.AntiForgeryToken()
+
+        @if (!Model.SignedIn)
+        {
+            <p class="mb-0">@T["Sign in to open this package."]</p>
+        }
+        else if (!Model.Enrolled)
+        {
+            <p class="mb-0">@T["Enroll in the course to open this package."]</p>
+        }
+        else if (string.IsNullOrEmpty(Model.Part.PackageFileId))
+        {
+            <p class="mb-0">@T["This package is not ready yet."]</p>
+        }
+        else
+        {
+            <ul class="list-inline text-secondary small mb-3">
+                <li class="list-inline-item"><span class="badge @statusClass">@statusText</span></li>
+                @if (!string.IsNullOrEmpty(cmi?.ScoreRaw))
+                {
+                    <li class="list-inline-item"><i class="fa-solid fa-star-half-stroke me-1" aria-hidden="true"></i>@T["Score: {0}", cmi.ScoreRaw]@(string.IsNullOrEmpty(cmi.ScoreMax) ? null : " / " + cmi.ScoreMax)</li>
+                }
+                @if (cmi is not null && cmi.TotalTime != "0000:00:00.00")
+                {
+                    <li class="list-inline-item"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["Time: {0}", cmi.TotalTime]</li>
+                }
+                @if (state?.LastLaunchedUtc is { } lastLaunched)
+                {
+                    <li class="list-inline-item"><i class="fa-solid fa-clock-rotate-left me-1" aria-hidden="true"></i>@T["Last opened"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(lastLaunched, DateTimeKind.Utc), Format: "g"))</li>
+                }
+            </ul>
+
+            @if (Model.Review)
+            {
+                <p class="small text-secondary">@T["You completed this course. You can open the package again to review it; nothing you do now changes your record."]</p>
+            }
+
+            <p class="small text-secondary">@T["The package reports your progress itself, so its results are marked as reported by your browser."]</p>
+
+            @if (Model.CanLaunch)
+            {
+                <button type="button" class="btn btn-primary" data-package-launch>
+                    <i class="fa-solid fa-play me-1" aria-hidden="true"></i>@(Model.Review ? T["Review"] : Model.Resumes ? T["Resume"] : state is null ? T["Launch"] : T["Launch again"])
+                </button>
+            }
+            else
+            {
+                <p class="mb-0">@T["Your enrollment is not active, so the package cannot be opened."]</p>
+            }
+
+            <p class="small text-warning mt-2 mb-0 d-none" data-package-message role="status"></p>
+            <div class="learning-package-frame-host mt-3 d-none" data-package-frame-host></div>
+            <noscript><p class="mb-0">@T["The package needs JavaScript to run."]</p></noscript>
+        }
+    </div>
+</div>
+
+<script asp-src="~/CrestApps.OrchardCore.Learning.Packages/scripts/learning-package-player.min.js" debug-src="~/CrestApps.OrchardCore.Learning.Packages/scripts/learning-package-player.js" at="Foot"></script>

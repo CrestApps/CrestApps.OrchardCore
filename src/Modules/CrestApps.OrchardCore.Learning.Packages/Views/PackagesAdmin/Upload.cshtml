@@ -1,0 +1,40 @@
+@model PackageUploadViewModel
+
+<zone Name="Title">
+    <breadcrumb name="LearningPackageUpload" title="@T["Import a package"]">
+        <breadcrumb-item id="LearningPackageItem" url="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = Model.ContentItemId })">@Model.Title</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" enctype="multipart/form-data" action="@Url.RouteUrl("LearningPackageImport", new { contentItemId = Model.ContentItemId })" class="no-multisubmit">
+    @Html.AntiForgeryToken()
+    @Html.ValidationSummary()
+
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["SCORM 1.2 package"]</div>
+        <div class="card-body">
+            @if (!string.IsNullOrEmpty(Model.Part?.PackageFileId))
+            {
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Current package"]</span>
+                    <div class="ocat-end">
+                        <p class="form-control-plaintext mb-0">@Model.Part.Title (@Model.Part.FileName)</p>
+                        <span class="hint">@T["A new import replaces it in a draft of the item. Learners keep the current package until the draft is published."]</span>
+                    </div>
+                </div>
+            }
+            <div class="ocat-wrapper" asp-validation-class-for="ContentItemId">
+                <label for="package" class="ocat-label">@T["Package file"]</label>
+                <div class="ocat-end">
+                    <input id="package" name="package" type="file" class="form-control" accept=".zip,application/zip" required />
+                    <span class="hint">@T["A .zip file of up to {0} MB with imsmanifest.xml at its root. The files are checked, kept in a private store and opened only for learners who launch the item.", Model.MaxUploadMb]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-file-import me-1" aria-hidden="true"></i>@T["Import"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Edit" asp-controller="Admin" asp-area="OrchardCore.Contents" asp-route-contentItemId="@Model.ContentItemId">@T["Cancel"]</a>
+    </div>
+</form>
