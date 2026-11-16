@@ -1,12 +1,10 @@
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Users;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Users;
 using OrchardCore.Users.Events;
 using OrchardCore.Users.Handlers;
-using OrchardCore.Modules;
 using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Customers.Handlers;
@@ -71,16 +69,8 @@ public sealed class CustomerMergeUserEventHandler : UserEventHandlerBase
         _logger = logger;
     }
 
-    // Following the confirmation link is the round trip that proves the user controls the mailbox, so it is recorded
-    // before the guests that bought with the address are merged.
-    public override async Task ConfirmedAsync(UserConfirmContext context)
-    {
-        if (context.User is User user && !UserEmailOwnership.IsVerified(user.Properties, user.Email))
-        {
-            UserEmailOwnership.MarkVerified(user.Properties, user.Email, _serviceProvider.GetRequiredService<IClock>().UtcNow);
-            await _serviceProvider.GetRequiredService<UserManager<IUser>>().UpdateAsync(user);
-        }
-
-        await CustomerMerge.RunAsync(_serviceProvider, context.User, _logger);
-    }
+    // Following the confirmation link is the round trip that proves the user controls the mailbox. The Users building
+    // block's EmailOwnershipConfirmationHandler, registered before this one, records it; the merge then sees it.
+    public override Task ConfirmedAsync(UserConfirmContext context)
+        => CustomerMerge.RunAsync(_serviceProvider, context.User, _logger);
 }

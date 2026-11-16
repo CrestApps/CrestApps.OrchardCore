@@ -1,36 +1,14 @@
-using System.Net;
-using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Handlers;
-using CrestApps.OrchardCore.Tests.Utilities;
-using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Users.Controllers;
-using CrestApps.OrchardCore.Users.Services;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using Moq;
-using OrchardCore.Environment.Shell;
-using OrchardCore.Locking;
-using OrchardCore.Modules;
-using OrchardCore.Security.Services;
-using OrchardCore.Settings;
 using OrchardCore.Users;
 using OrchardCore.Users.Events;
-using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
-using OrchardCore.Users.Services;
-using YesSql;
-using YesSql.Provider.Sqlite;
-using YesSql.Sql;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Users;
 
@@ -38,59 +16,33 @@ namespace CrestApps.OrchardCore.Tests.Modules.Users;
 /// H3 (final security review): a correct e-mailed code marked the account's address proved and merged the guest orders
 /// placed with it, but kept whatever let someone in before the address was proved. Someone who registered with a guest
 /// buyer's address and their own password, or changed their email to it, then signed in with that password and read the
-/// buyer's orders. These run the controller with ASP.NET Core Identity's user manager over Orchard Core's own user store
-/// on SQLite, and the Customers feature's merge handler.
+/// buyer's orders. Since MD1 a code alone hands nothing over to such an account; the owner confirms the address with a
+/// second code, and that proof removes what was set before it, then merges. These run both controllers over Orchard
+/// Core's user store on SQLite, with the Customers feature's merge handler.
 /// </summary>
 public sealed class EmailSignInFirstProofTests : IAsyncLifetime
 {
     private const string Email = "pat@example.test";
-    private const string EarlierPassword = "Earlier-Passw0rd!";
 
-    private readonly string _databasePath = Path.Combine(AppContext.BaseDirectory, $"email-sign-in-first-proof-{Guid.NewGuid():N}.db");
-    private readonly IDistributedCache _cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
-    private readonly LocalLock _lock = new(NullLogger<LocalLock>.Instance);
     private readonly List<MergeSeen> _merges = [];
-    private readonly DateTime _now = DateTime.UtcNow;
-    private IStore _store;
-    private ServiceProvider _services;
+
+    private EmailSignInHarness _harness;
 
     public async ValueTask InitializeAsync()
-    {
-        _store = await CreateStoreAsync(_databasePath);
-
-        var services = new ServiceCollection();
-
-        services.AddLogging();
-        services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
-        services.AddIdentityCore<IUser>();
-        services.AddScoped(_ => _store.CreateSession());
-        services.AddScoped<IUserStore<IUser>>(provider => new UserStore(
-            provider.GetRequiredService<ISession>(),
-            provider.GetRequiredService<ILookupNormalizer>(),
-            Mock.Of<IUserIdGenerator>(),
-            NullLogger<UserStore>.Instance,
-            [],
-            Mock.Of<IRoleService>(),
-            provider.GetRequiredService<IDataProtectionProvider>()));
-
-        _services = services.BuildServiceProvider();
-    }
+        => _harness = await EmailSignInHarness.CreateAsync();
 
     public async ValueTask DisposeAsync()
-    {
-        await _services.DisposeAsync();
-        TemporarySqliteDatabase.DisposeAndDelete(_store, _databasePath);
-    }
+        => await _harness.DisposeAsync();
 
     [Fact]
     public async Task AnUnconfirmedAccountRegisteredWithTheAddress_LosesItsPasswordAndLogins_BeforeTheGuestsMerge()
     {
         // Arrange: somebody registered with the guest buyer's address, their own password and an external login, and
-        // never confirmed it.
-        var stampBefore = await CreateUserAsync(new User { UserId = "user-1", UserName = "squatter", Email = Email, IsEnabled = true });
+        // never confirmed it. The site does not require confirmation, so the code signs the buyer in.
+        var stampBefore = await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "squatter", Email = Email, IsEnabled = true });
 
-        // Act: the guest buyer signs in with the code e-mailed to their address.
-        var result = await SignInWithCodeAsync();
+        // Act: the guest buyer signs in with a code, then confirms the address is theirs.
+        var result = await SignInThenConfirmAsync("user-1");
 
         // Assert
         Assert.IsType<LocalRedirectResult>(result);
@@ -103,12 +55,12 @@ public sealed class EmailSignInFirstProofTests : IAsyncLifetime
         // Arrange: a confirmed account that proved its own address, then changed its email to the guest buyer's, as
         // Orchard Core's profile editor allows without a round trip.
         var user = new User { UserId = "user-2", UserName = "changer", Email = "changer@example.test", EmailConfirmed = true, IsEnabled = true };
-        UserEmailOwnership.MarkVerified(user.Properties, user.Email, _now.AddDays(-30));
+        UserEmailOwnership.MarkVerified(user.Properties, user.Email, _harness.Now.AddDays(-30));
         user.Email = Email;
-        var stampBefore = await CreateUserAsync(user);
+        var stampBefore = await _harness.CreateUserAsync(user);
 
         // Act
-        var result = await SignInWithCodeAsync();
+        var result = await SignInThenConfirmAsync("user-2");
 
         // Assert
         Assert.IsType<LocalRedirectResult>(result);
@@ -120,8 +72,8 @@ public sealed class EmailSignInFirstProofTests : IAsyncLifetime
     {
         // Arrange: the code is not the first proof of the address, so nothing set before it is in doubt.
         var user = new User { UserId = "user-3", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true };
-        UserEmailOwnership.MarkVerified(user.Properties, Email, _now.AddDays(-30));
-        var stampBefore = await CreateUserAsync(user);
+        UserEmailOwnership.MarkVerified(user.Properties, Email, _harness.Now.AddDays(-30));
+        var stampBefore = await _harness.CreateUserAsync(user);
 
         // Act
         var result = await SignInWithCodeAsync();
@@ -129,151 +81,75 @@ public sealed class EmailSignInFirstProofTests : IAsyncLifetime
         // Assert
         Assert.IsType<LocalRedirectResult>(result);
 
-        await using var scope = _services.CreateAsyncScope();
-        var manager = scope.ServiceProvider.GetRequiredService<UserManager<IUser>>();
-        var account = (User)await manager.FindByIdAsync("user-3");
+        await _harness.InRequestAsync(async services =>
+        {
+            var manager = services.GetRequiredService<UserManager<IUser>>();
+            var account = (User)await manager.FindByIdAsync("user-3");
 
-        Assert.True(await manager.CheckPasswordAsync(account, EarlierPassword));
-        Assert.Single(await manager.GetLoginsAsync(account));
-        Assert.Equal(stampBefore, account.SecurityStamp);
+            Assert.True(await manager.CheckPasswordAsync(account, EmailSignInHarness.Password));
+            Assert.Single(await manager.GetLoginsAsync(account));
+            Assert.Equal(stampBefore, account.SecurityStamp);
+
+            return true;
+        });
     }
 
     private async Task AssertTheCodeHolderAloneOwnsItAsync(string userId, string stampBefore)
     {
-        await using var scope = _services.CreateAsyncScope();
-        var manager = scope.ServiceProvider.GetRequiredService<UserManager<IUser>>();
-        var account = (User)await manager.FindByIdAsync(userId);
+        await _harness.InRequestAsync(async services =>
+        {
+            var manager = services.GetRequiredService<UserManager<IUser>>();
+            var account = (User)await manager.FindByIdAsync(userId);
 
-        Assert.False(await manager.HasPasswordAsync(account), "A password set before the address was proved must not survive its proof.");
-        Assert.False(await manager.CheckPasswordAsync(account, EarlierPassword));
-        Assert.Empty(await manager.GetLoginsAsync(account));
-        Assert.NotEqual(stampBefore, account.SecurityStamp);
-        Assert.True(account.EmailConfirmed);
-        Assert.True(UserEmailOwnership.IsVerified(account.Properties, account.Email));
+            Assert.False(await manager.HasPasswordAsync(account), "A password set before the address was proved must not survive its proof.");
+            Assert.False(await manager.CheckPasswordAsync(account, EmailSignInHarness.Password));
+            Assert.Empty(await manager.GetLoginsAsync(account));
+            Assert.NotEqual(stampBefore, account.SecurityStamp);
+            Assert.True(account.EmailConfirmed);
+            Assert.True(UserEmailOwnership.IsVerified(account.Properties, account.Email));
 
-        // The guests merged, and only once nothing set before the proof could sign in to the account.
+            return true;
+        });
+
+        // The guests merged once, and only once nothing set before the proof could sign in to the account.
         var merge = Assert.Single(_merges);
         Assert.Equal(userId, merge.UserId);
         Assert.False(merge.HadPassword);
         Assert.Equal(0, merge.Logins);
     }
 
-    // Creates the account with the earlier password and an external login, and returns its security stamp.
-    private async Task<string> CreateUserAsync(User user)
-    {
-        await using var scope = _services.CreateAsyncScope();
-        var manager = scope.ServiceProvider.GetRequiredService<UserManager<IUser>>();
-
-        user.LoginInfos.Add(new UserLoginInfo("GitHub", "github-" + user.UserId, "GitHub"));
-
-        var created = await manager.CreateAsync(user, EarlierPassword);
-
-        Assert.True(created.Succeeded, string.Join(", ", created.Errors.Select(error => error.Description)));
-        await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        return user.SecurityStamp;
-    }
-
-    // One request: the code is issued, then posted, then the request's session commits.
     private async Task<IActionResult> SignInWithCodeAsync()
     {
-        await using var scope = _services.CreateAsyncScope();
-        var manager = scope.ServiceProvider.GetRequiredService<UserManager<IUser>>();
-        var code = await CreateCodes().IssueAsync(Email, TestContext.Current.CancellationToken);
-        var result = await CreateController(manager, scope.ServiceProvider).Code(new EmailSignInViewModel { Email = Email, Code = code });
+        await _harness.InRequestAsync(services => _harness.CreateController(services).Index(new EmailSignInViewModel { Email = Email }));
+        var code = _harness.Sender.Sent[^1].Code;
 
-        await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        return result;
+        return await _harness.InRequestAsync(services => _harness.CreateController(services, LoginFormEvents(services)).Code(new EmailSignInViewModel { Email = Email, Code = code }));
     }
 
-    private EmailSignInCodes CreateCodes()
+    private async Task<IActionResult> SignInThenConfirmAsync(string userId)
     {
-        var clock = new Mock<IClock>();
-        clock.Setup(c => c.UtcNow).Returns(() => _now);
+        Assert.IsType<LocalRedirectResult>(await SignInWithCodeAsync());
+        Assert.Empty(_merges);
 
-        var options = new AttemptLimitOptions()
-            .AddPolicy(EmailSignInCodes.SendNetworkPolicy, 10, TimeSpan.FromMinutes(15))
-            .AddPolicy(EmailSignInCodes.SendEmailPolicy, 3, TimeSpan.FromMinutes(15))
-            .AddPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15));
-        var limiter = new DistributedAttemptLimiter(_cache, _lock, new ShellSettings { Name = "Default" }, clock.Object, Options.Create(options), NullLogger<DistributedAttemptLimiter>.Instance);
+        await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, userId).Confirm(new EmailSignInViewModel()));
+        var code = _harness.Sender.Sent[^1].Code;
 
-        return new EmailSignInCodes(_cache, limiter, new ShellSettings { Name = "Default" }, clock.Object, _lock);
+        return await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, userId, LoginFormEvents(services)).ConfirmCode(new EmailSignInViewModel { Code = code }));
     }
 
-    private EmailSignInController CreateController(UserManager<IUser> manager, IServiceProvider requestServices)
+    // The Customers feature's handler, resolving the merge service when the event fires, as in production.
+    private ILoginFormEvent[] LoginFormEvents(IServiceProvider requestServices)
     {
-        var clock = new Mock<IClock>();
-        clock.Setup(c => c.UtcNow).Returns(() => _now);
-
-        var site = new SiteSettings { SiteName = "Test site" };
-        var siteService = new Mock<ISiteService>();
-        siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site);
-
-        var signInManager = new Mock<SignInManager<IUser>>(manager, Mock.Of<IHttpContextAccessor>(), Mock.Of<IUserClaimsPrincipalFactory<IUser>>(), null, null, null, null);
-        signInManager.Setup(s => s.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>())).Returns(Task.CompletedTask);
-
-        // The Customers feature's handler, resolving the merge service when the event fires, as in production.
         var mergeServices = new ServiceCollection()
-            .AddSingleton<ICustomerMergeService>(new RecordingMergeService(manager, _merges))
+            .AddSingleton<ICustomerMergeService>(new RecordingMergeService(requestServices.GetRequiredService<UserManager<IUser>>(), _merges))
             .BuildServiceProvider();
-        ILoginFormEvent[] loginFormEvents = [new CustomerMergeLoginFormEvent(mergeServices, NullLogger<CustomerMergeLoginFormEvent>.Instance)];
 
-        var controller = new EmailSignInController(
-            manager,
-            signInManager.Object,
-            CreateCodes(),
-            Mock.Of<IEmailSignInCodeSender>(),
-            siteService.Object,
-            loginFormEvents,
-            clock.Object,
-            Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
-            Options.Create(new EmailSignInOptions()),
-            NullLogger<EmailSignInController>.Instance,
-            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<EmailSignInController>(),
-            Mock.Of<Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<EmailSignInController>>());
-
-        var httpContext = new DefaultHttpContext { RequestServices = requestServices };
-        httpContext.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.7");
-
-        var url = new Mock<IUrlHelper>();
-        url.Setup(u => u.IsLocalUrl(It.IsAny<string>())).Returns(true);
-        url.Setup(u => u.Content(It.IsAny<string>())).Returns("/");
-
-        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
-        controller.Url = url.Object;
-
-        return controller;
-    }
-
-    private static async Task<IStore> CreateStoreAsync(string databasePath)
-    {
-        var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
-        store.RegisterIndexes([new UserIndexProvider()]);
-        await store.InitializeAsync(TestContext.Current.CancellationToken);
-
-        await using var session = store.CreateSession();
-        var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
-        var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
-
-        // Orchard Core's Users migration creates the same columns.
-        await schemaBuilder.CreateMapIndexTableAsync<UserIndex>(table => table
-            .Column<string>("UserId", column => column.WithLength(26))
-            .Column<string>("NormalizedUserName", column => column.WithLength(255))
-            .Column<string>("NormalizedEmail", column => column.WithLength(255))
-            .Column<bool>("IsEnabled")
-            .Column<bool>("IsLockoutEnabled")
-            .Column<int>("AccessFailedCount")
-            .Column<DateTime>("LockoutEndUtc"));
-
-        await transaction.CommitAsync(TestContext.Current.CancellationToken);
-
-        return store;
+        return [new CustomerMergeLoginFormEvent(mergeServices, NullLogger<CustomerMergeLoginFormEvent>.Instance)];
     }
 
     private sealed record MergeSeen(string UserId, bool HadPassword, int Logins);
 
-    // Records what the account could be signed in with when its guests were merged into it.
+    // Records what the account could be signed in with when its guests were merged into it, in the request that merged.
     private sealed class RecordingMergeService : ICustomerMergeService
     {
         private readonly UserManager<IUser> _manager;

@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
@@ -34,9 +33,9 @@ public sealed class EmailSignInController : Controller
     private readonly IEmailSignInCodeSender _codeSender;
     private readonly ISiteService _siteService;
     private readonly IEnumerable<ILoginFormEvent> _loginFormEvents;
-    private readonly IClock _clock;
+    private readonly EmailOwnershipProof _proof;
     private readonly INotifier _notifier;
-    private readonly EmailSignInOptions _options;
+    private readonly EmailSignInEligibility _eligibility;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -49,17 +48,17 @@ public sealed class EmailSignInController : Controller
         IEmailSignInCodeSender codeSender,
         ISiteService siteService,
         IEnumerable<ILoginFormEvent> loginFormEvents,
-        IClock clock,
+        EmailOwnershipProof proof,
         INotifier notifier,
-        IOptions<EmailSignInOptions> options,
+        EmailSignInEligibility eligibility,
         ILogger<EmailSignInController> logger,
         IStringLocalizer<EmailSignInController> stringLocalizer,
         IHtmlLocalizer<EmailSignInController> htmlLocalizer)
     {
         _loginFormEvents = loginFormEvents;
-        _clock = clock;
+        _proof = proof;
         _notifier = notifier;
-        _options = options.Value;
+        _eligibility = eligibility;
         _userManager = userManager;
         _signInManager = signInManager;
         _codes = codes;
@@ -107,10 +106,13 @@ public sealed class EmailSignInController : Controller
             return View(model);
         }
 
-        if (await FindUserAsync(email) is { } user)
+        if (await FindUserAsync(email) is { } account)
         {
             // Sent after the response, so the time the mail server takes never tells a known address from an unknown one.
-            await _codeSender.QueueAsync(user.UserName, email, await _codes.IssueAsync(email, HttpContext.RequestAborted), HttpContext.RequestAborted);
+            // The code is for the account, and goes to the account's own address, never to what was typed.
+            var code = await _codes.IssueAsync(account.UserId, account.Email, HttpContext.RequestAborted);
+
+            await _codeSender.QueueAsync(account.User.UserName, account.Email, code, HttpContext.RequestAborted);
         }
 
         // The code form is shown straight away rather than through a redirect, so the email never goes in a URL.
@@ -144,17 +146,18 @@ public sealed class EmailSignInController : Controller
             return View(model);
         }
 
-        var user = string.IsNullOrEmpty(email) ? null : await FindUserAsync(email);
+        var found = string.IsNullOrEmpty(email) ? null : await FindUserAsync(email);
 
         // A wrong code and no account read the same.
-        if (user is null)
+        if (found is null)
         {
             await _loginFormEvents.InvokeAsync((handler, userName) => handler.LoggingInFailedAsync(userName), email, _logger);
 
             return CodeRefused(model);
         }
 
-        var check = await _codes.CheckAsync(email, model.Code, HttpContext.RequestAborted);
+        var user = found.User;
+        var check = await _codes.CheckAsync(found.UserId, found.Email, model.Code, HttpContext.RequestAborted);
 
         if (check != EmailSignInCodeCheck.Right)
         {
@@ -178,16 +181,26 @@ public sealed class EmailSignInController : Controller
 
         // The code proves the email is theirs, by a round trip, which is what lets a user claim what belongs to the address.
         // It is recorded before the login is validated, so Orchard's check that the email is confirmed sees it confirmed.
-        if (user is User account && (!account.EmailConfirmed || !UserEmailOwnership.IsVerified(account.Properties, account.Email)))
-        {
-            var proof = await RecordProofAsync(account);
+        var confirmationOffered = false;
 
-            if (proof == EmailProof.Failed)
+        if (user is User account && !UserEmailOwnership.IsVerified(account.Properties, account.Email) && EmailOwnershipProof.HasCredentials(account))
+        {
+            // A password or an external login set before anyone proved the address may be somebody else's, and recording
+            // the proof hands over what belongs to the address, so it would have to remove them. A code signs the owner in
+            // with nothing removed, recorded or confirmed (confirming would let that password in where confirmation is
+            // required); the owner confirms it is theirs, with a second code, when they choose to.
+            confirmationOffered = true;
+        }
+        else if (user is User proved && (!proved.EmailConfirmed || !UserEmailOwnership.IsVerified(proved.Properties, proved.Email)))
+        {
+            var proof = await _proof.RecordAsync(proved, HttpContext.RequestAborted);
+
+            if (proof == EmailProofResult.Failed)
             {
                 return CodeRefused(model);
             }
 
-            if (proof == EmailProof.CredentialsRemoved)
+            if (proof == EmailProofResult.CredentialsRemoved)
             {
                 await _notifier.InformationAsync(H["Your email address is confirmed. The password and other sign-ins this account had before were removed. Sign in with a code again, or set a new password with \"Forgot your password?\"."]);
             }
@@ -207,65 +220,18 @@ public sealed class EmailSignInController : Controller
 
         await _loginFormEvents.InvokeAsync((handler, signedIn) => handler.LoggedInAsync(signedIn), user, _logger);
 
+        if (confirmationOffered)
+        {
+            await _notifier.InformationAsync(H["You're signed in. To link what was placed with your email before, such as guest orders, <a href=\"{0}\">confirm it's you</a>.", Url.RouteUrl("EmailSignInConfirm", new { returnUrl = model.ReturnUrl })]);
+        }
+
         return !string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl)
             ? LocalRedirect(model.ReturnUrl)
             : LocalRedirect(Url.Content("~/"));
     }
 
-    // The code is the account's first proof of its address. Whatever could sign in to it before, a password, an external
-    // login or a session, was set before anyone proved the address, and may be somebody else's: whoever registered with
-    // it, or changed their email to it. It is removed, and the security stamp rotated so other sessions end, before the
-    // address is recorded as proved, which is what hands over what belongs to it (the guest orders placed with it).
-    private async Task<EmailProof> RecordProofAsync(User account)
-    {
-        var removed = false;
-
-        if (!UserEmailOwnership.IsVerified(account.Properties, account.Email))
-        {
-            if (await _userManager.HasPasswordAsync(account))
-            {
-                if (!(await _userManager.RemovePasswordAsync(account)).Succeeded)
-                {
-                    return EmailProof.Failed;
-                }
-
-                removed = true;
-            }
-
-            // A copy: Orchard Core's user store hands back the account's own list, which each removal changes.
-            foreach (var login in (await _userManager.GetLoginsAsync(account)).ToList())
-            {
-                if (!(await _userManager.RemoveLoginAsync(account, login.LoginProvider, login.ProviderKey)).Succeeded)
-                {
-                    return EmailProof.Failed;
-                }
-
-                removed = true;
-            }
-
-            if (!(await _userManager.UpdateSecurityStampAsync(account)).Succeeded)
-            {
-                return EmailProof.Failed;
-            }
-        }
-
-        account.EmailConfirmed = true;
-        UserEmailOwnership.MarkVerified(account.Properties, account.Email, _clock.UtcNow);
-
-        if (!(await _userManager.UpdateAsync(account)).Succeeded)
-        {
-            return EmailProof.Failed;
-        }
-
-        return removed ? EmailProof.CredentialsRemoved : EmailProof.Recorded;
-    }
-
-    private enum EmailProof
-    {
-        Failed,
-        Recorded,
-        CredentialsRemoved,
-    }
+    // An account a code can sign in to, with its id and its own address.
+    private sealed record CodeAccount(IUser User, string UserId, string Email);
 
     private ViewResult CodeRefused(EmailSignInViewModel model)
     {
@@ -278,41 +244,27 @@ public sealed class EmailSignInController : Controller
     private async Task<bool> IsLocalLoginDisabledAsync()
         => (await _siteService.GetSettingsAsync<LoginSettings>()).DisableLocalLogin;
 
-    // An account that can sign in with a code: enabled, not locked out, not using two-factor sign-in, which a code would
-    // get around, not in a role kept to password sign-in (Administrator by default), and not one that signs in only
-    // through an external provider, whose own checks a code would get around too.
-    private async Task<IUser> FindUserAsync(string email)
+    // An account that can sign in with a code (see EmailSignInEligibility). The typed address must be the account's own: a database that compares text loosely (SQL Server's default
+    // collation treats AE as Æ, TH as Þ and SS as ß) answers a look-alike address with another account.
+    private async Task<CodeAccount> FindUserAsync(string email)
     {
         var user = await _userManager.FindByEmailAsync(email);
 
         if (user is null ||
-            (user is User account && !account.IsEnabled) ||
-            await _userManager.IsLockedOutAsync(user) ||
-            await _userManager.GetTwoFactorEnabledAsync(user) ||
-            await IsInExcludedRoleAsync(user) ||
-            await SignsInOnlyExternallyAsync(user))
+            await _userManager.GetEmailAsync(user) is not { } accountEmail ||
+            !IsSameAddress(email, accountEmail) ||
+            !await _eligibility.AllowsAsync(user))
         {
             return null;
         }
 
-        return user;
+        return new CodeAccount(user, await _userManager.GetUserIdAsync(user), accountEmail);
     }
 
-    private async Task<bool> IsInExcludedRoleAsync(IUser user)
-    {
-        foreach (var role in _options.ExcludedRoles ?? [])
-        {
-            if (!string.IsNullOrWhiteSpace(role) && await _userManager.IsInRoleAsync(user, role))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private async Task<bool> SignsInOnlyExternallyAsync(IUser user)
-        => !await _userManager.HasPasswordAsync(user) && (await _userManager.GetLoginsAsync(user)).Count > 0;
+    // Compared as Orchard Core normalizes an address for its lookup, but exactly.
+    private static bool IsSameAddress(string typed, string accountEmail)
+        => !string.IsNullOrWhiteSpace(accountEmail) &&
+            string.Equals(typed?.Trim().Normalize().ToUpperInvariant(), accountEmail.Trim().Normalize().ToUpperInvariant(), StringComparison.Ordinal);
 }
 
 public class EmailSignInViewModel

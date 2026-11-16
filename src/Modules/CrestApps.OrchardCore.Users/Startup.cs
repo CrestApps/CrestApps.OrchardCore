@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.Users.Models;
 using CrestApps.OrchardCore.Users.Recipes;
 using CrestApps.OrchardCore.Users.Schemas;
 using CrestApps.OrchardCore.Users.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
@@ -223,6 +224,16 @@ public sealed class EmailCodeSignInStartup : StartupBase
     {
         services.AddScoped<EmailSignInCodes>();
         services.AddScoped<IEmailSignInCodeSender, EmailSignInCodeSender>();
+        services.AddScoped<EmailSignInEligibility>();
+        services.AddScoped<EmailOwnershipProof>();
+
+        // A proof that resets an account's earlier credentials ends its earlier sessions at once, not at the next
+        // security stamp check.
+        services.AddSingleton<UserCredentialsResets>();
+        services.AddTransient<IPostConfigureOptions<CookieAuthenticationOptions>, CredentialsResetCookieValidation>();
+
+        // A confirmation link proves the address as a code does, with or without the Customers feature.
+        services.AddEmailOwnershipConfirmation();
         services.AddDisplayDriver<LoginForm, EmailCodeLoginFormDisplayDriver>();
         services.Configure<EmailSignInOptions>(_shellConfiguration.GetSection(EmailSignInOptions.SectionName));
 

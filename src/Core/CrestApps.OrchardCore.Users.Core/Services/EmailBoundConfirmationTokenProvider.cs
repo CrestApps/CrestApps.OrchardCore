@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
 
-namespace CrestApps.OrchardCore.Customers.Services;
+namespace CrestApps.OrchardCore.Users.Core.Services;
 
 /// <summary>
 /// Orchard Core's e-mail confirmation token provider, with the token bound to the address it was sent to.
@@ -13,8 +13,9 @@ namespace CrestApps.OrchardCore.Customers.Services;
 /// <remarks>
 /// Orchard Core's token is bound to the user id and the security stamp only, and changing the e-mail in the profile
 /// editor rotates neither. An old confirmation link therefore confirmed whatever address the user had changed to, and
-/// <c>CustomerMergeUserEventHandler</c> recorded that address as proved and merged the guest orders placed with it. With
-/// the address in the token's purpose, a link only confirms the address it was e-mailed to.
+/// <see cref="Handlers.EmailOwnershipConfirmationHandler"/> recorded that address as proved, which hands over what
+/// belongs to it (the guest orders placed with it). With the address in the token's purpose, a link only confirms the
+/// address it was e-mailed to.
 /// </remarks>
 public sealed class EmailBoundConfirmationTokenProvider : DataProtectorTokenProvider<IUser>
 {

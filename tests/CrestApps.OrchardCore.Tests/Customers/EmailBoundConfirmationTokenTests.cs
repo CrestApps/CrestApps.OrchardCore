@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Users.Core.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -72,7 +72,7 @@ public sealed class EmailBoundConfirmationTokenTests
         services.AddTransient<EmailConfirmationTokenProvider>();
         services.AddTransient<IConfigureOptions<IdentityOptions>, EmailConfirmationIdentityOptionsConfigurations>();
 
-        // The Customers feature, which depends on Users, so its configuration runs after.
+        // The Users building block's replacement, which every feature adding it registers after Orchard Core's Users.
         services.AddTransient<EmailBoundConfirmationTokenProvider>();
         services.AddTransient<IConfigureOptions<IdentityOptions>, EmailBoundConfirmationIdentityOptions>();
 

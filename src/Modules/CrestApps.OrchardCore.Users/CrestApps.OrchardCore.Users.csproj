@@ -31,6 +31,9 @@
     <PackageReference Include="OrchardCore.Contents" />
     <PackageReference Include="OrchardCore.Media" />
     <PackageReference Include="OrchardCore.Email.Abstractions" />
+
+    <!-- Only for revoking OpenID tokens when the OpenID server is on; the Users module does not depend on it. -->
+    <PackageReference Include="OpenIddict.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

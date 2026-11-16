@@ -2,11 +2,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using OrchardCore.Users.Models;
 
-namespace CrestApps.OrchardCore.Customers.Services;
+namespace CrestApps.OrchardCore.Users.Core.Services;
 
 /// <summary>
 /// Puts <see cref="EmailBoundConfirmationTokenProvider"/> in place of Orchard Core's e-mail confirmation token provider,
-/// under the same name. It runs after Orchard Core's own configuration because this feature depends on Users.
+/// under the same name. It runs after Orchard Core's own configuration because every feature that adds it depends on Users.
 /// </summary>
 public sealed class EmailBoundConfirmationIdentityOptions : IConfigureOptions<IdentityOptions>
 {
