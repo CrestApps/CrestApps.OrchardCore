@@ -233,8 +233,8 @@ public sealed class ApprovalRequestsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // A request opens for those who may decide it, for its requester, and for those who see it through the permission
-    // and the subject type's access. Anyone else gets nothing, not even that it exists.
+    // A request opens for those who may decide it, for its requester and those who decided it, and for those who see
+    // it through the permission and the subject type's access. Anyone else gets nothing, not even that it exists.
     private async Task<ApprovalRequest> FindAsync(string id, SourceAccessLevel level)
     {
         if (string.IsNullOrEmpty(id) || await _manager.FindByIdAsync(id) is not { } request)
@@ -242,7 +242,10 @@ public sealed class ApprovalRequestsController : Controller
             return null;
         }
 
-        if (request.RequesterUserId is { } requester && requester == UserId())
+        var userId = UserId();
+
+        // Its requester, and whoever decided a stage of it, keep seeing it.
+        if (userId is not null && (request.RequesterUserId == userId || request.Decisions.Any(decision => decision.UserId == userId)))
         {
             return request;
         }

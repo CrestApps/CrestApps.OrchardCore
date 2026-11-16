@@ -184,7 +184,7 @@ A `DisplayDriver<ApprovalPolicy>` adds fields to the policy editor the same way,
 
 | Who | Sees | Decides |
 | --- | --- | --- |
-| A person a rule of the current stage names | **Waiting for me**, and the request page | Yes, with no Approvals permission |
+| A person a rule of the current stage names | **Waiting for me**, and the request page (still, after deciding it) | Yes, with no Approvals permission |
 | The requester | **My requests**, and the request page | No (unless the policy allows); may withdraw it |
 | `ViewApprovalRequests` | **All requests** of the subject types their source access allows | Only where a rule names them |
 | `ManageApprovalRequests` | as View | May withdraw any request their source access allows at the Manage level |

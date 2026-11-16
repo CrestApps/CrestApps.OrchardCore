@@ -72,7 +72,7 @@
     {
         <div class="card mb-3">
             <div class="card-header">@T["Stages"]</div>
-            <ol class="list-group list-group-flush list-group-numbered">
+            <ul class="list-group list-group-flush">
                 @for (var i = 0; i < stages.Count; i++)
                 {
                     var stage = stages[i];
@@ -83,10 +83,10 @@
                             ? T["{0} of {1} approvals", approvals, stage.RequiredApprovals]
                             : i == request.CurrentStage ? T["Closed"] : T["Not started"];
                     <li class="list-group-item @(i == request.CurrentStage && request.Status == ApprovalStatus.Pending ? "fw-semibold" : null)">
-                        @(stage.Title ?? T.GetString("Stage {0}", i + 1).Value) <span class="text-muted small">· @state</span>
+                        @T["Stage {0}", i + 1]@(string.IsNullOrEmpty(stage.Title) ? null : ": " + stage.Title) <span class="text-muted small">· @state</span>
                     </li>
                 }
-            </ol>
+            </ul>
         </div>
     }
 

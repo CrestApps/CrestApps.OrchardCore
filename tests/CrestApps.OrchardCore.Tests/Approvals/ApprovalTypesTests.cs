@@ -253,6 +253,21 @@ public sealed class ApprovalTypesTests
         Assert.Contains(provider.GetServices<IApproverRuleProvider>(), rule => rule.Name == AssigneeTeamApproverRuleProvider.Kind);
     }
 
+    [Fact]
+    public void TheRequestPage_HasATemplateForTheDisplayTypeDriversAddFieldsTo()
+    {
+        // The request page renders the request's DetailAdmin display; without a template every request page fails.
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        Assert.NotNull(directory);
+        Assert.True(File.Exists(Path.Combine(directory.FullName, "src", "Modules", "CrestApps.OrchardCore.Approvals", "Views", "ApprovalRequest.DetailAdmin.cshtml")));
+    }
+
     // The service with the real type catalog, directory and resolver, over in-memory stores.
     private sealed class Harness
     {

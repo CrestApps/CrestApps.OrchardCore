@@ -81,6 +81,9 @@ public sealed class ApprovalsAuthorizationTests
         Assert.IsType<RedirectToActionResult>(decided);
         Assert.Equal(ApprovalStatus.Approved, team.Status);
         Assert.Equal(ApprovalStatus.Pending, groupA.Status);
+
+        // Having decided it, Morgan still sees the request, though no longer named to decide it.
+        Assert.IsType<ViewResult>(await morgan.Decide(team.ItemId));
     }
 
     [Fact]

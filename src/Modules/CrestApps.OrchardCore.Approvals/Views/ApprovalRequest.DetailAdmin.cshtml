@@ -1,0 +1,9 @@
+@* The fields approval types add to a request's page with a display driver (display type DetailAdmin): nothing unless a driver fills a zone. *@
+@if (Model.Content != null)
+{
+    @await DisplayAsync(Model.Content)
+}
+@if (Model.Meta != null)
+{
+    @await DisplayAsync(Model.Meta)
+}
