@@ -134,7 +134,6 @@ public sealed class DuplicatePatternRatchetTests
         ["data protector outside Core"] = new(StringComparer.OrdinalIgnoreCase)
         {
             ["src/Core/CrestApps.OrchardCore.AgenticCommerce.Core/Services/MerchantSigningKeyService.cs"] = 1,
-            ["src/Core/CrestApps.OrchardCore.AI.Chat.Core/Services/ConnectionAddressAIVisitorIdentityResolver.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.Calendars.Core/Services/CalendarFeedTokens.cs"] = 3,
             ["src/Core/CrestApps.OrchardCore.Commerce.Api.Core/IdempotencyEndpointFilter.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core/Twilio/TwilioWebhookEndpoint.cs"] = 1,

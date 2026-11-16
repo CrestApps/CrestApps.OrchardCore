@@ -158,6 +158,12 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
         services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateSessionDocumentsDisplayDriver>();
         services.Configure<ChatSessionDocumentUploadOptions>(_shellConfiguration.GetSection(ChatSessionDocumentUploadOptions.SectionName));
 
+        // CrestApps.Core's upload endpoint caps the documents of a session; the tenant sets that cap under
+        // CrestApps_AI:ChatSessionDocuments:MaxFilesPerSession.
+        services
+            .AddOptions<ChatDocumentsOptions>()
+            .Configure<IOptions<ChatSessionDocumentUploadOptions>>((documents, uploads) => documents.MaxDocumentsPerSession = uploads.Value.MaxFilesPerSession);
+
         // Every upload has a ceiling, a signed-in user's by user and an anonymous visitor's by network; an operator
         // changes it under CrestApps_Throttling:AttemptPolicies:ai-chat-document-uploads.
         services
@@ -167,16 +173,15 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        // CrestApps.Core maps these routes without returning their builders, so a group carries the rate-limit group
-        // and the upload guard, which authorizes, limits session starts and caps documents before the upload runs.
-        var upload = routes.MapGroup(string.Empty);
-        upload.AddEndpointFilter<ChatSessionDocumentUploadGuard>();
-        upload.WithRateLimitGroup(ChatSessionDocumentUploadOptions.RateLimitGroup);
-        upload.AddUploadChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionUploadDocument);
+        // CrestApps.Core's upload endpoint authorizes, limits session starts and caps the documents of a session; the
+        // quota filter adds the per-caller ceiling on every upload. It runs after the package's antiforgery filter, so
+        // a forged request is refused before it is counted.
+        routes.AddUploadChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionUploadDocument)
+            .AddEndpointFilter<ChatSessionDocumentUploadQuotaFilter>()
+            .WithRateLimitGroup(ChatSessionDocumentUploadOptions.RateLimitGroup);
 
-        var remove = routes.MapGroup(string.Empty);
-        remove.WithRateLimitGroup(ChatSessionDocumentUploadOptions.RateLimitGroup);
-        remove.AddRemoveChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionRemoveDocument);
+        routes.AddRemoveChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionRemoveDocument)
+            .WithRateLimitGroup(ChatSessionDocumentUploadOptions.RateLimitGroup);
     }
 }
 

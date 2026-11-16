@@ -346,7 +346,7 @@ The **Remote address storage mode** supports the following values:
 - **Encrypted** &mdash; store the remote address encrypted at rest with Data Protection while still using a salted hash for throttling keys.
 
 :::info
-The remote-address value is read from the `X-Forwarded-For` header when present, otherwise from the connection remote IP address. When running behind a reverse proxy, make sure forwarded headers are configured so the correct visitor address is captured.
+The remote address is the connection's remote IP address; a client's `X-Forwarded-For` header is never read, so a visitor cannot pick the address the chat limits count. An IPv6 visitor is counted by its /64 network. When running behind a reverse proxy, enable Orchard Core's **Reverse Proxy** feature and list only your own proxies, so the connection carries the visitor's address instead of the proxy's.
 :::
 
 ---
