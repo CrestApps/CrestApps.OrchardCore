@@ -71,13 +71,13 @@ internal sealed class TicketsAdminMenu : AdminNavigationProvider
                     .Action("Index", "TicketBoards", TicketsConstants.Features.Tickets)
                     .LocalNav());
 
-                // The boards the user pinned, right after Boards, in the order pinned.
+                // The boards the user pinned, right after Boards (1.5) and before Desks (2), in the order pinned.
                 for (var index = 0; index < pinned.Count; index++)
                 {
                     var board = pinned[index];
                     var name = new LocalizedString(board.Name, board.Name);
 
-                    tickets.Add(name, $"1.5.{index + 1:D2}", item => item
+                    tickets.Add(name, name.PrefixPosition($"1.5.{index + 1:D2}"), item => item
                         .Id("ticketBoard-" + board.ItemId)
                         .Action("Display", "TicketBoards", new RouteValueDictionary
                         {

@@ -2,13 +2,11 @@
 
 <a asp-controller="TicketBoards" asp-action="Display" asp-route-id="@Model.Board.ItemId" class="btn btn-primary btn-sm">@T["Open"]</a>
 
-<form asp-controller="TicketBoards" asp-action="Pin" asp-route-id="@Model.Board.ItemId" method="post" class="d-inline">
-    <input type="hidden" name="pinned" value="@(Model.IsPinned ? "false" : "true")" />
-    <input type="hidden" name="returnUrl" value="@(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString)" />
-    <button type="submit" class="btn btn-outline-secondary btn-sm" aria-pressed="@(Model.IsPinned ? "true" : "false")" title="@(Model.IsPinned ? T["Remove it from your menu"] : T["Show it in your menu, under Service Desk"])">
-        <i class="fa-solid fa-thumbtack me-1" aria-hidden="true"></i>@(Model.IsPinned ? T["Unpin"] : T["Pin to menu"])
-    </button>
-</form>
+@* A link Orchard Core posts (the row sits inside the list's bulk form, which can't hold another form). *@
+<a asp-controller="TicketBoards" asp-action="Pin" asp-route-id="@Model.Board.ItemId" asp-route-pinned="@(Model.IsPinned ? "false" : "true")" asp-route-returnUrl="@(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString)"
+   class="btn btn-outline-secondary btn-sm"
+   data-url-af="UnsafeUrl"
+   title="@(Model.IsPinned ? T["Remove it from your menu"] : T["Show it in your menu, under Service Desk"])"><i class="fa-solid fa-thumbtack me-1" aria-hidden="true"></i>@(Model.IsPinned ? T["Unpin"] : T["Pin to menu"])</a>
 
 @if (Model.CanManage)
 {

@@ -67,10 +67,10 @@ public sealed class TicketsAdminMenuTests
         await menu.BuildNavigationAsync(NavigationConstants.AdminId, builder);
 
         // Assert
-        // Positions 1.5.01, 1.5.02... come right after Boards (1.5) and before Desks (2), compared as text or by number.
-        var items = Assert.Single(builder.Build()).Items.ToList();
-        var pinned = items.Where(item => item.Id?.StartsWith("ticketBoard-", StringComparison.Ordinal) == true).ToList();
-        Assert.Equal([("Escalations", "1.5.01"), ("Triage", "1.5.02")], pinned.Select(item => (item.Text.Value, item.Position)));
+        // In the menu's own order (Orchard Core's position comparer).
+        var items = Assert.Single(builder.Build()).Items.OrderBy(item => item.Position, global::OrchardCore.DisplayManagement.Zones.FlatPositionComparer.Instance).ToList();
+        Assert.Equal(["Tickets", "Boards", "Escalations", "Triage", "Desks"], items.Take(5).Select(item => item.Text.Value));
+        var pinned = items.Skip(2).Take(2).ToList();
         Assert.Equal(("ticketBoard-b2", "Display", "TicketBoards", "b2"), (pinned[0].Id, (string)pinned[0].RouteValues["action"], (string)pinned[0].RouteValues["controller"], (string)pinned[0].RouteValues["id"]));
     }
 
