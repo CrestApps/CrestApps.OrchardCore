@@ -74,6 +74,9 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
         CrestApps.OrchardCore.Learning.Packages.PackagesConstants.Features.Scorm,
         "OrchardCore.OpenId",
         "OrchardCore.OpenId.Management",
+        "OrchardCore.OpenId.Server",
+        "OrchardCore.OpenId.Validation",
+        "OrchardCore.Secrets",
         CrestApps.OrchardCore.Learning.Xapi.XapiConstants.Features.LearningRecordStore,
         CrestApps.OrchardCore.Learning.Packages.PackagesConstants.Features.Cmi5,
     ];
@@ -170,6 +173,22 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
                 {
                     ["name"] = "Themes",
                     ["Site"] = "CrestApps.OrchardCore.StorefrontTheme",
+                },
+                // The OpenID server with the token endpoint for client credentials (the LRS and the LTI services) and
+                // the authorization endpoint, and token validation on this tenant for the Api scheme.
+                new JsonObject
+                {
+                    ["name"] = "OpenIdServerSettings",
+                    ["AccessTokenFormat"] = 1,
+                    ["EnableTokenEndpoint"] = true,
+                    ["EnableAuthorizationEndpoint"] = true,
+                    ["AllowClientCredentialsFlow"] = true,
+                    ["AllowImplicitFlow"] = true,
+                },
+                new JsonObject
+                {
+                    ["name"] = "OpenIdValidationSettings",
+                    ["Tenant"] = ShellSettings.DefaultShellName,
                 },
                 new JsonObject
                 {
