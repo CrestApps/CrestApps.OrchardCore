@@ -1115,6 +1115,15 @@ The planning session's review of the Income Tax move and the Banking merge liste
 
 Dev sites built before the Banking merge or the Income Tax move must be recreated: the feature ids, projects, YesSql collection of income tax rules and recipe steps changed with no shims.
 
+- c6332c392 **What the full run found**: the Validation guard on configuration entries caught the dental code rule in the employer's display driver; `EmployerHandler` now holds it, so a recipe and the editor refuse the same codes (test included).
+
+**Validation on c6332c392**
+- `dotnet build CrestApps.OrchardCore.slnx -c Release -warnaserror`: 0 warnings, 0 errors.
+- Full test project: 16,309 tests, 0 failed, 1 skipped (14 min 48 s). The run before the fix, on 0c12eeabf, had the one guard failure above.
+- `npm run rebuild`: 109 asset groups, 0 files changed, `git diff` empty. Vitest 92 files and 1,488 tests; ESLint clean.
+- Docs: `npm run check:manuals` 170 User Manual and 189 Technical Manual pages; `docusaurus build` succeeds (with `SWC_NATIVE_BINDING_CACHE` set to a folder under the profile, the sandbox's known cache-permission problem).
+- Fresh site (data folder `App_Data_PayrollE2E8`, Release net11.0, Blank recipe, Canada Payroll Filings on): the employer editor shows the **Canada** card; code 6 is refused with "Choose one of the five dental benefits codes.", code 3 saves and shows again on edit; the income tax rule editor shows **Use the payer's own rate**.
+
 ### For Mike
 
 What only you can settle before the first live pay:
