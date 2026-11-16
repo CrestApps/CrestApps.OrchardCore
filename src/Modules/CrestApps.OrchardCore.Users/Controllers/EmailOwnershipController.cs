@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Users.Core.Services;
 using CrestApps.OrchardCore.Users.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -85,7 +86,7 @@ public sealed class EmailOwnershipController : Controller
             return RedirectToLocal(returnUrl);
         }
 
-        return View(new EmailSignInViewModel { Email = account.Email, ReturnUrl = returnUrl });
+        return View(CreateView(account, returnUrl));
     }
 
     [HttpPost("sign-in/email/confirm")]
@@ -98,7 +99,7 @@ public sealed class EmailOwnershipController : Controller
             return NotFound();
         }
 
-        var view = new EmailSignInViewModel { Email = account.Email, ReturnUrl = model.ReturnUrl };
+        var view = CreateView(account, model.ReturnUrl);
 
         if (!await _codes.TryCountSendAsync(account.Email, ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted))
         {
@@ -127,13 +128,31 @@ public sealed class EmailOwnershipController : Controller
             return NotFound();
         }
 
-        var view = new EmailSignInViewModel { Email = account.Email, ReturnUrl = model.ReturnUrl };
+        var view = CreateView(account, model.ReturnUrl);
 
         if (!await _codes.TryCountVerifyAsync(ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted))
         {
             ModelState.AddModelError(nameof(model.Code), S["Too many codes were tried. Wait a few minutes and try again."]);
 
             return View(view);
+        }
+
+        // The mailbox alone doesn't say whose the account's password and external logins are. They are kept when this
+        // request also shows them: signed in with them, or the password typed here. A wrong password is refused before
+        // the code is looked at, so it never spends the code, and it counts toward the lockout as at sign-in.
+        var credentialsShown = view.CredentialsShown;
+
+        if (!credentialsShown && !string.IsNullOrEmpty(model.Password))
+        {
+            if (string.IsNullOrEmpty(account.PasswordHash) || !await _userManager.CheckPasswordAsync(account, model.Password))
+            {
+                await _userManager.AccessFailedAsync(account);
+                ModelState.AddModelError(nameof(model.Password), S["That password isn't right. Leave it empty if you don't know it."]);
+
+                return View(view);
+            }
+
+            credentialsShown = true;
         }
 
         var check = await _codes.CheckAsync(account.UserId, account.Email, model.Code, HttpContext.RequestAborted);
@@ -145,7 +164,7 @@ public sealed class EmailOwnershipController : Controller
         }
 
         var proof = check == EmailSignInCodeCheck.Right
-            ? await _proof.RecordAsync(account, HttpContext.RequestAborted)
+            ? await _proof.RecordAsync(account, credentialsShown, HttpContext.RequestAborted)
             : EmailProofResult.Failed;
 
         if (proof == EmailProofResult.Failed)
@@ -155,9 +174,13 @@ public sealed class EmailOwnershipController : Controller
             return View(view);
         }
 
-        // Every earlier sign-in ended with the proof, this browser's too, so it is signed in again; signing in is also
-        // what hands over what belongs to the address.
-        await _signInManager.SignInAsync(account, isPersistent: false);
+        // When the credentials were removed, every earlier sign-in ended with the proof, this browser's too, so it is
+        // signed in again. Raising the sign-in is what hands over what belongs to the address.
+        if (proof == EmailProofResult.CredentialsRemoved)
+        {
+            await _signInManager.SignInAsync(account, isPersistent: false);
+        }
+
         await _loginFormEvents.InvokeAsync((handler, signedIn) => handler.LoggedInAsync(signedIn), account, _logger);
 
         await _notifier.SuccessAsync(proof == EmailProofResult.CredentialsRemoved
@@ -165,6 +188,22 @@ public sealed class EmailOwnershipController : Controller
             : H["Your email address is confirmed."]);
 
         return RedirectToLocal(model.ReturnUrl);
+    }
+
+    // What the confirmation pages show: whether this request already shows the account's credentials, and whether the
+    // account has a password to type instead.
+    private EmailSignInViewModel CreateView(User account, string returnUrl)
+    {
+        var credentialsShown = UserCredentialsProof.ShowsCredentials(User, account);
+
+        return new EmailSignInViewModel
+        {
+            Email = account.Email,
+            ReturnUrl = returnUrl,
+            HasCredentials = UserCredentialsProof.HasCredentials(account),
+            CredentialsShown = credentialsShown,
+            AsksPassword = !credentialsShown && !string.IsNullOrEmpty(account.PasswordHash),
+        };
     }
 
     // The signed-in account, when a code can confirm its address: the same accounts code sign-in serves, on a site that

@@ -146,6 +146,78 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         Assert.Empty(_harness.Revoked);
     }
 
+    // Owner decision 17 (the confirmation of an account with credentials): the mailbox alone doesn't say whose the
+    // password is. The owner who also shows it, by typing it with the code or by being signed in with it, keeps it.
+    [Fact]
+    public async Task ConfirmingWithThePassword_KeepsItAndTheLogins_AndMergesTheGuests()
+    {
+        // Arrange
+        var stampBefore = await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true });
+        await SignInWithCodeAsync();
+        await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1").Confirm(new EmailSignInViewModel()));
+        var code = _harness.Sender.Sent[^1].Code;
+
+        // Act
+        var confirmed = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", LoginFormEvents(services)).ConfirmCode(new EmailSignInViewModel { Code = code, Password = EmailSignInHarness.Password }));
+
+        // Assert
+        Assert.IsType<LocalRedirectResult>(confirmed);
+
+        var account = await FindAsync("user-1");
+        Assert.True(await CheckPasswordAsync(account));
+        Assert.Single(account.LoginInfos);
+        Assert.Equal(stampBefore, account.SecurityStamp);
+        Assert.True(UserEmailOwnership.IsVerified(account.Properties, account.Email));
+        Assert.Empty(_harness.Revoked);
+
+        var merge = Assert.Single(_merges);
+        Assert.True(merge.HadPassword);
+    }
+
+    [Fact]
+    public async Task AWrongPassword_IsRefused_BeforeTheCode_SoTheCodeStillWorks()
+    {
+        // Arrange
+        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true });
+        await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1").Confirm(new EmailSignInViewModel()));
+        var code = _harness.Sender.Sent[^1].Code;
+
+        // Act
+        var refused = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", LoginFormEvents(services)).ConfirmCode(new EmailSignInViewModel { Code = code, Password = "not-the-password" }));
+        var afterRefusal = await FindAsync("user-1");
+        var confirmed = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", LoginFormEvents(services)).ConfirmCode(new EmailSignInViewModel { Code = code }));
+
+        // Assert: nothing changed for the wrong password, and the same code then confirmed the address without it.
+        Assert.IsType<ViewResult>(refused);
+        Assert.False(UserEmailOwnership.IsVerified(afterRefusal.Properties, afterRefusal.Email));
+        Assert.Equal(1, afterRefusal.AccessFailedCount);
+        Assert.IsType<LocalRedirectResult>(confirmed);
+        Assert.False(await CheckPasswordAsync(await FindAsync("user-1")));
+    }
+
+    [Fact]
+    public async Task SignedInWithThePassword_ConfirmingKeepsIt()
+    {
+        // Arrange: a session a password began carries amr=pwd.
+        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true });
+        var signedInWithPassword = new System.Security.Claims.Claim("amr", "pwd");
+        var asked = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", null, signedInWithPassword).Confirm(new EmailSignInViewModel()));
+        var code = _harness.Sender.Sent[^1].Code;
+
+        // Act
+        await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", LoginFormEvents(services), signedInWithPassword).ConfirmCode(new EmailSignInViewModel { Code = code }));
+
+        // Assert
+        var view = Assert.IsType<EmailSignInViewModel>(Assert.IsType<ViewResult>(asked).Model);
+        Assert.True(view.CredentialsShown);
+        Assert.False(view.AsksPassword);
+
+        var account = await FindAsync("user-1");
+        Assert.True(await CheckPasswordAsync(account));
+        Assert.True(UserEmailOwnership.IsVerified(account.Properties, account.Email));
+        Assert.True(Assert.Single(_merges).HadPassword);
+    }
+
     private async Task<IActionResult> SignInWithCodeAsync()
     {
         await _harness.InRequestAsync(services => _harness.CreateController(services).Index(new EmailSignInViewModel { Email = Email }));

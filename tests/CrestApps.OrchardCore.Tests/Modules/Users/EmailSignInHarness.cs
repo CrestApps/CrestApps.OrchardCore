@@ -171,9 +171,10 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
     }
 
     /// <summary>
-    /// The confirmation pages, for a request signed in as <paramref name="userId"/>.
+    /// The confirmation pages, for a request signed in as <paramref name="userId"/>, with the claims a sign-in added
+    /// (none for an e-mailed code; <c>amr=pwd</c> for a password).
     /// </summary>
-    public EmailOwnershipController CreateConfirmController(IServiceProvider requestServices, string userId, IEnumerable<ILoginFormEvent> loginFormEvents = null)
+    public EmailOwnershipController CreateConfirmController(IServiceProvider requestServices, string userId, IEnumerable<ILoginFormEvent> loginFormEvents = null, params Claim[] signInClaims)
     {
         var manager = requestServices.GetRequiredService<UserManager<IUser>>();
 
@@ -191,7 +192,7 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<EmailOwnershipController>(),
             Mock.Of<Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<EmailOwnershipController>>());
 
-        return Prepare(controller, requestServices, userId);
+        return Prepare(controller, requestServices, userId, signInClaims);
     }
 
     /// <summary>
@@ -222,7 +223,7 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
         return siteService.Object;
     }
 
-    private static T Prepare<T>(T controller, IServiceProvider requestServices, string signedInUserId)
+    private static T Prepare<T>(T controller, IServiceProvider requestServices, string signedInUserId, params Claim[] signInClaims)
         where T : Controller
     {
         var httpContext = new DefaultHttpContext { RequestServices = requestServices };
@@ -230,7 +231,7 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
 
         if (signedInUserId is not null)
         {
-            httpContext.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, signedInUserId)], "Identity.Application"));
+            httpContext.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, signedInUserId), .. signInClaims], "Identity.Application"));
         }
 
         var url = new Mock<IUrlHelper>();
@@ -285,6 +286,7 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
         var services = new ServiceCollection();
 
         services.AddLogging();
+        services.AddHttpContextAccessor();
         services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
         services.AddIdentityCore<IUser>();
         services.AddSingleton(CreateClock());

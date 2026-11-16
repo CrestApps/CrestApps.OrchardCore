@@ -274,4 +274,25 @@ public class EmailSignInViewModel
     public string Code { get; set; }
 
     public string ReturnUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the account's password, typed on the confirmation page by an owner who knows it, so it is kept.
+    /// </summary>
+    public string Password { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the account has a password or an external login.
+    /// </summary>
+    public bool HasCredentials { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the request is signed in with the account's password or one of its
+    /// external logins, so confirming keeps them.
+    /// </summary>
+    public bool CredentialsShown { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the confirmation page offers the password field.
+    /// </summary>
+    public bool AsksPassword { get; set; }
 }

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Users.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
@@ -14,6 +15,11 @@ namespace CrestApps.OrchardCore.Users.Services;
 /// is removed, and the security stamp rotated so other sessions end, in the same update that records the address as
 /// proved, which is what hands over what belongs to it (the guest orders placed with it).
 /// </summary>
+/// <remarks>
+/// When the same request also showed the account's credentials (signed in with its password or one of its external
+/// logins, or the password typed with the code, see <see cref="UserCredentialsProof"/>), they are its owner's: the proof
+/// is recorded and nothing is removed.
+/// </remarks>
 public sealed class EmailOwnershipProof
 {
     private readonly UserManager<IUser> _userManager;
@@ -44,7 +50,7 @@ public sealed class EmailOwnershipProof
     /// </summary>
     /// <param name="account">The account.</param>
     public static bool HasCredentials(User account)
-        => !string.IsNullOrEmpty(account?.PasswordHash) || account?.LoginInfos is { Count: > 0 };
+        => UserCredentialsProof.HasCredentials(account);
 
     /// <summary>
     /// Confirms the account's address and records it as proved. Everything is saved in one update, and when that fails
@@ -52,16 +58,39 @@ public sealed class EmailOwnershipProof
     /// being recorded and the user told.
     /// </summary>
     /// <param name="account">The account whose address a code just proved.</param>
+    /// <param name="credentialsShown">Whether the same request showed the account's credentials, so they are kept.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public async Task<EmailProofResult> RecordAsync(User account, CancellationToken cancellationToken = default)
+    public Task<EmailProofResult> RecordAsync(User account, CancellationToken cancellationToken = default)
+        => RecordAsync(account, credentialsShown: false, cancellationToken);
+
+    /// <inheritdoc cref="RecordAsync(User, CancellationToken)"/>
+    public async Task<EmailProofResult> RecordAsync(User account, bool credentialsShown, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(account);
 
         cancellationToken.ThrowIfCancellationRequested();
 
         var firstProof = !UserEmailOwnership.IsVerified(account.Properties, account.Email);
-        var removed = firstProof && HasCredentials(account);
         var now = _clock.UtcNow;
+
+        if (firstProof && credentialsShown)
+        {
+            // Both the mailbox and the account's credentials were shown: they are the owner's, so nothing is removed.
+            UserEmailOwnership.MarkVerified(account.Properties, account.Email, now);
+            account.EmailConfirmed = true;
+
+            if (!(await _userManager.UpdateAsync(account)).Succeeded)
+            {
+                await _session.ResetAsync();
+                _logger.LogWarning("The proof of a user's email address could not be saved, so nothing of it was kept.");
+
+                return EmailProofResult.Failed;
+            }
+
+            return EmailProofResult.Recorded;
+        }
+
+        var removed = firstProof && HasCredentials(account);
 
         if (firstProof)
         {

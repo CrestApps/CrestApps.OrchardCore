@@ -46,8 +46,8 @@ public sealed class EmailConfirmationLinkProofTests : IAsyncLifetime
     [Fact]
     public async Task AConfirmationLink_RecordsTheAddressAsProved_WithoutTheCustomersFeature()
     {
-        // Arrange
-        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, IsEnabled = true });
+        // Arrange: an account with no password or external login, so the link is all there is to prove.
+        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, IsEnabled = true }, withPassword: false, withLogin: false);
         var link = await GenerateLinkAsync("user-1");
 
         // Act
@@ -59,6 +59,27 @@ public sealed class EmailConfirmationLinkProofTests : IAsyncLifetime
         var account = await FindAsync("user-1");
         Assert.True(account.EmailConfirmed);
         Assert.True(UserEmailOwnership.IsVerified(account.Properties, account.Email));
+    }
+
+    // Owner decision 17: someone registered with the address and a password of their own, and the address's owner
+    // follows the "confirm your account" mail without being signed in to that account. Orchard Core still confirms the
+    // address, but nothing that belongs to it is handed over.
+    [Fact]
+    public async Task AConfirmationLink_ConfirmsButDoesNotProveAnAccountWithAPassword_WhenTheRequestDoesntShowIt()
+    {
+        // Arrange
+        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "squatter", Email = Email, IsEnabled = true });
+        var link = await GenerateLinkAsync("user-1");
+
+        // Act
+        var result = await ConfirmAsync("user-1", link);
+
+        // Assert
+        Assert.IsType<ViewResult>(result);
+
+        var account = await FindAsync("user-1");
+        Assert.True(account.EmailConfirmed);
+        Assert.False(UserEmailOwnership.IsVerified(account.Properties, account.Email));
     }
 
     [Fact]

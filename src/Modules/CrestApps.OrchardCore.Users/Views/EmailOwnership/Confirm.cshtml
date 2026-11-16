@@ -7,7 +7,18 @@
 <div class="container my-5" style="max-width: 480px">
     <h1 class="h3 mb-2">@T["Confirm it's you"]</h1>
     <p class="text-muted">@T["Confirming that {0} is yours links what was placed with it before you had an account, such as guest orders. We'll email a six-digit code to it.", Model.Email]</p>
-    <p class="text-muted">@T["Confirming also removes the password and the other sign-ins this account had before its email was confirmed, and signs out its other sessions, because they may not be yours. Afterwards, sign in with a code, or set a new password with \"Forgot your password?\"."]</p>
+    @if (Model.CredentialsShown)
+    {
+        <p class="text-muted">@T["You signed in with this account's password or one of its own sign-ins, so they stay as they are."]</p>
+    }
+    else if (Model.AsksPassword)
+    {
+        <p class="text-muted">@T["If you know this account's password, enter it with the code and everything stays as it is. If you don't, confirming removes the password and the other sign-ins this account had before its email was confirmed, and signs out its other sessions, because they may not be yours. Afterwards, sign in with a code, or set a new password with \"Forgot your password?\"."]</p>
+    }
+    else if (Model.HasCredentials)
+    {
+        <p class="text-muted">@T["Confirming removes the sign-ins this account had before its email was confirmed, and signs out its other sessions, because they may not be yours. To keep them, sign in with one of them first, then confirm. Afterwards, sign in with a code, or set a password with \"Forgot your password?\"."]</p>
+    }
 
     <form action="@Url.RouteUrl("EmailSignInConfirm")" method="post" class="card">
         @Html.AntiForgeryToken()
