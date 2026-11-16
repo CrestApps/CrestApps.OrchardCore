@@ -491,6 +491,7 @@ const sidebars = {
                 'modules/learning-commerce',
                 'modules/learning-coursework',
                 'modules/learning-packages',
+                'modules/learning-xapi',
                 'modules/learning-programs',
             ],
         },

@@ -130,3 +130,36 @@ public sealed class XapiStatementAdminFilter
     /// <summary>Gets or sets the time before which statements were stored, in UTC.</summary>
     public DateTime? ToUtc { get; set; }
 }
+
+/// <summary>
+/// A statement imported as it was stored on another site.
+/// </summary>
+public sealed class XapiImportedStatement
+{
+    /// <summary>Gets or sets the statement, with its id, stored and authority.</summary>
+    public System.Text.Json.Nodes.JsonObject Statement { get; set; }
+
+    /// <summary>Gets or sets whether it was voided.</summary>
+    public bool Voided { get; set; }
+
+    /// <summary>Gets or sets the OpenID client id that stored it.</summary>
+    public string ClientId { get; set; }
+
+    /// <summary>Gets or sets the key of the credential that stored it.</summary>
+    public string AuthorityKey { get; set; }
+}
+
+/// <summary>
+/// What an import did.
+/// </summary>
+public sealed class XapiImportResult
+{
+    /// <summary>Gets or sets how many statements were imported.</summary>
+    public int Imported { get; set; }
+
+    /// <summary>Gets or sets how many were already on the site, the same.</summary>
+    public int Skipped { get; set; }
+
+    /// <summary>Gets the statements that were not imported, and why.</summary>
+    public IList<string> Errors { get; } = [];
+}

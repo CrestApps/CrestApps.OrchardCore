@@ -4,19 +4,29 @@ using CrestApps.OrchardCore.Learning.Xapi.Drivers;
 using CrestApps.OrchardCore.Learning.Xapi.Endpoints;
 using CrestApps.OrchardCore.Learning.Xapi.Migrations;
 using CrestApps.OrchardCore.Learning.Xapi.Navigation;
+using CrestApps.OrchardCore.Learning.Xapi.Recipes;
+using CrestApps.OrchardCore.Learning.Xapi.Reports;
 using CrestApps.OrchardCore.Learning.Xapi.Services;
 using CrestApps.OrchardCore.Learning.Xapi.ViewModels;
+using CrestApps.OrchardCore.Learning.Xapi.Workflows;
+using CrestApps.OrchardCore.PersonalData.Core;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DataSources;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.RateLimits;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.Learning.Xapi;
 
@@ -40,6 +50,7 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<XapiAdminMenu>();
         services.TryAddScoped<LearnerUserLookup>();
         services.AddDisplayDriver<XapiStatementRow, XapiStatementRowDisplayDriver>();
+        services.AddPersonalDataContributor<XapiPersonalDataContributor>();
     }
 
     /// <inheritdoc />
@@ -68,4 +79,79 @@ public sealed class RateLimitsStartup : StartupBase
                 permitLimit: RequestsPerMinute,
                 window: TimeSpan.FromMinutes(1))));
     }
+}
+
+/// <summary>
+/// Adds the Learning statements data source of Data Pipelines and the Report Builder.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
+public sealed class DataSourcesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<LearningStatementsReportDataSet>();
+        services.AddDataSource<LearningXapiDataSource>();
+    }
+}
+
+/// <summary>
+/// Imports statements with a recipe step.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
+public sealed class RecipesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddRecipeExecutionStep<LearningStatementsRecipeStep>();
+}
+
+/// <summary>
+/// Exports statements with a deployment step.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
+public sealed class DeploymentStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddDeployment<LearningStatementsDeploymentSource, LearningStatementsDeploymentStep, LearningStatementsDeploymentStepDisplayDriver>();
+}
+
+/// <summary>
+/// Describes the statements recipe and deployment steps to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class RecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, LearningStatementsRecipeStepSchema>();
+        services.AddDeploymentStepSchema<LearningStatementsDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
+/// Adds the Learning Statement Stored workflow event.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
+public sealed class WorkflowsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<LearningStatementStoredEvent, LearningStatementStoredEventDisplayDriver>();
+        services.AddXapiStatementObserver<LearningStatementWorkflowObserver>();
+    }
+}
+
+/// <summary>
+/// Describes the Learning Statement Stored event to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
+public sealed class WorkflowsSchemaStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddWorkflowActivitySchema<LearningStatementStoredEventSchema>();
 }

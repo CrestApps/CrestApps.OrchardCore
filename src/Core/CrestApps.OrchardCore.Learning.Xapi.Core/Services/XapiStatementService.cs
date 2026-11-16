@@ -242,6 +242,144 @@ public sealed class XapiStatementService
     }
 
     /// <summary>
+    /// Imports statements as they were stored on another site, such as from a recipe: each keeps its id, <c>stored</c>
+    /// and <c>authority</c>, and its voided mark. A statement already here is skipped when it is the same and reported
+    /// when it differs; an invalid statement is reported.
+    /// </summary>
+    /// <param name="items">The statements.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>How many were imported and skipped, and the errors.</returns>
+    public async Task<XapiImportResult> ImportAsync(IReadOnlyList<XapiImportedStatement> items, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        var result = new XapiImportResult();
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockKey, _lockTimeout, _lockExpiration);
+
+        if (!locked)
+        {
+            result.Errors.Add("The Learning Record Store is busy. Try again.");
+
+            return result;
+        }
+
+        await using (locker)
+        {
+            var sequence = await _store.CurrentSequenceAsync(cancellationToken);
+            var batch = new Dictionary<string, XapiStatementRecord>(StringComparer.Ordinal);
+            var records = new List<XapiStatementRecord>();
+
+            foreach (var item in items)
+            {
+                var statement = item?.Statement?.DeepClone() as JsonObject;
+                var error = statement is null ? "The statement is missing." : XapiStatementValidator.Validate(statement);
+
+                if (error is null && (statement["id"] is null || statement["stored"] is null || statement["authority"] is null))
+                {
+                    error = "An imported statement needs its id, stored and authority.";
+                }
+
+                if (error is not null)
+                {
+                    result.Errors.Add(error);
+
+                    continue;
+                }
+
+                XapiStatementNormalizer.Normalize(statement);
+
+                var id = statement["id"].GetValue<string>();
+                var existing = batch.GetValueOrDefault(id) ?? await _store.FindByStatementIdAsync(id, cancellationToken);
+
+                if (existing is not null)
+                {
+                    if (XapiStatementNormalizer.AreEquivalent(statement, JsonNode.Parse(existing.Statement).AsObject()))
+                    {
+                        result.Skipped++;
+                    }
+                    else
+                    {
+                        result.Errors.Add($"The statement {id} is already stored with other content.");
+                    }
+
+                    continue;
+                }
+
+                // The validation above checked that stored is a timestamp.
+                _ = XapiFormats.TryParseTimestamp(statement["stored"].GetValue<string>(), out var stored);
+                statement["version"] ??= XapiConstants.DefaultStatementVersion;
+                statement["timestamp"] ??= statement["stored"].DeepClone();
+
+                var record = await BuildRecordAsync(statement, XapiFormats.ToMilliseconds(stored), item.AuthorityKey, item.ClientId, [], cancellationToken);
+
+                record.Sequence = ++sequence;
+                record.Voided = item.Voided && !record.IsVoiding;
+
+                if (record.TargetStatementId is not null)
+                {
+                    var target = batch.GetValueOrDefault(record.TargetStatementId) ?? await _store.FindByStatementIdAsync(record.TargetStatementId, cancellationToken);
+
+                    record.Keys = XapiStatementNormalizer.Join(record.OwnKeys, target?.Keys);
+
+                    if (record.IsVoiding && target is not null && !target.IsVoiding && !target.Voided)
+                    {
+                        target.Voided = true;
+                        target.VoidedBy = record.StatementId;
+
+                        if (!batch.ContainsKey(target.StatementId))
+                        {
+                            await _store.UpdateAsync(target, cancellationToken);
+                        }
+                    }
+                }
+
+                batch[id] = record;
+                records.Add(record);
+                await _store.CreateAsync(record, cancellationToken);
+
+                foreach (var (activityId, definition) in DefinitionsOf(statement))
+                {
+                    await _activities.MergeAsync(activityId, definition, record.StoredUtc, cancellationToken);
+                }
+            }
+
+            foreach (var record in records)
+            {
+                await PropagateKeysAsync(record, batch, depth: 0, cancellationToken);
+            }
+
+            await _session.SaveChangesAsync(cancellationToken);
+            result.Imported = records.Count;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Deletes statements and the content of their attachments, as personal data erasure asks. A statement that refers
+    /// to a deleted one keeps its own keys.
+    /// </summary>
+    /// <param name="records">The statements.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    public async Task DeleteAsync(IReadOnlyList<XapiStatementRecord> records, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+
+        foreach (var record in records)
+        {
+            foreach (var file in record.Attachments ?? [])
+            {
+                await _files.DeleteAsync(file.FileId, cancellationToken);
+            }
+
+            await _store.DeleteAsync(record, cancellationToken);
+        }
+
+        await _session.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
     /// Gets the position of the last statement stored, which fixes the end of a query's pages.
     /// </summary>
     /// <param name="cancellationToken">A token to cancel the work.</param>
@@ -507,7 +645,6 @@ public sealed class XapiStatementService
 
             var now = XapiFormats.ToMilliseconds(_clock.UtcNow);
             var storedText = XapiFormats.FormatTimestamp(now);
-            var files = new Dictionary<string, XapiAttachmentFile>(StringComparer.OrdinalIgnoreCase);
             var batch = new Dictionary<string, XapiStatementRecord>(StringComparer.Ordinal);
             var records = new List<XapiStatementRecord>();
 
@@ -528,7 +665,7 @@ public sealed class XapiStatementService
                 statement["version"] ??= XapiConstants.DefaultStatementVersion;
                 statement["timestamp"] ??= storedText;
 
-                var record = await BuildRecordAsync(statement, now, authorityKey, clientId, prepared.Attachments, files, cancellationToken);
+                var record = await BuildRecordAsync(statement, now, authorityKey, clientId, prepared.Attachments, cancellationToken);
 
                 record.Sequence = ++sequence;
 
@@ -616,7 +753,6 @@ public sealed class XapiStatementService
         string authorityKey,
         string clientId,
         IReadOnlyList<XapiAttachmentContent> parts,
-        Dictionary<string, XapiAttachmentFile> files,
         CancellationToken cancellationToken)
     {
         var value = statement["object"].AsObject();
@@ -658,23 +794,17 @@ public sealed class XapiStatementService
                 continue;
             }
 
-            if (!files.TryGetValue(sha2, out var file))
+            // Each statement keeps its own copy, so erasing one statement never takes another's attachment.
+            using var content = new MemoryStream(part.Content, writable: false);
+            var saved = await _files.SaveAsync(sha2, content, cancellationToken);
+
+            record.Attachments.Add(new XapiAttachmentFile
             {
-                using var content = new MemoryStream(part.Content, writable: false);
-                var saved = await _files.SaveAsync(sha2, content, cancellationToken);
-
-                file = new XapiAttachmentFile
-                {
-                    Sha2 = sha2,
-                    FileId = saved.FileId,
-                    ContentType = string.IsNullOrEmpty(part.ContentType) ? XapiAgents.Text(attachment["contentType"]) : part.ContentType,
-                    Length = part.Content.Length,
-                };
-
-                files[sha2] = file;
-            }
-
-            record.Attachments.Add(file);
+                Sha2 = sha2,
+                FileId = saved.FileId,
+                ContentType = string.IsNullOrEmpty(part.ContentType) ? XapiAgents.Text(attachment["contentType"]) : part.ContentType,
+                Length = part.Content.Length,
+            });
         }
 
         record.Statement = statement.ToJsonString();

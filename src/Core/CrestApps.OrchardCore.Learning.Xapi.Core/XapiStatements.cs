@@ -27,9 +27,10 @@ public static class XapiAgents
             return null;
         }
 
+        // A mailbox is matched ignoring case, as mail systems do in practice.
         if (Text(value["mbox"]) is { } mbox)
         {
-            return "mbox:" + mbox;
+            return "mbox:" + mbox.ToLowerInvariant();
         }
 
         if (Text(value["mbox_sha1sum"]) is { } sha1)
