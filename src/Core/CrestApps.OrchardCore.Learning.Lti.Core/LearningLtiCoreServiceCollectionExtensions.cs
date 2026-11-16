@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Learning;
 using CrestApps.OrchardCore.Learning.Lti.Models;
 using CrestApps.OrchardCore.Learning.Models;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OpenIddict.Server;
 using OrchardCore.Localization;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -44,6 +45,13 @@ public static class LearningLtiCoreServiceCollectionExtensions
         services.TryAddScoped<LtiAuthorizationService>();
         services.TryAddSingleton<LtiDeepLinkingDataTokens>();
         services.TryAddScoped<LtiDeepLinkingService>();
+        services.TryAddScoped<LtiCourseMembers>();
+        services.TryAddScoped<LtiAgsService>();
+        services.TryAddScoped<LtiServiceAccess>();
+
+        // LTI tools' client assertions at the OpenID server's token endpoint (see LtiClientAssertionHandler).
+        services.Configure<OpenIddictServerOptions>(options => options.Handlers.Add(LtiClientAssertionHandler.Descriptor));
+        services.TryAdd(LtiClientAssertionHandler.Descriptor.ServiceDescriptor);
 
         services.AddCourseItemKind<ExternalToolItemPart>(LtiConstants.ExternalToolKind, kind =>
         {
