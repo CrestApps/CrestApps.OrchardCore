@@ -12,7 +12,7 @@ description: "The coursework course item of Learning: work learners hand in as t
 
 ## The coursework item
 
-Coursework is a content item of the **Coursework** type (`CourseworkLesson`, defined in code with `TitlePart`, `HtmlBodyPart` for the instructions, `CourseworkPart` and `CourseItemPart`). Its course item kind is `Coursework`. Its completion mode is **Submitted** by default (the item is done once the work is handed in); **Graded** waits for the grade. A new coursework item is **gradable**, so its grade counts in the course grade with the item's weight. Add it to a course outline like any other course item.
+Coursework is a content item of the **Coursework** type (`CourseworkLesson`, defined in code with `TitlePart`, `HtmlBodyPart` for the instructions, `CourseworkPart` and `CourseItemPart`). Its course item kind is `Coursework`. A new coursework item is **gradable**, so its grade counts in the course grade with the item's weight, and its completion mode is **Graded**: the item is done once the work is graded, so the course cannot complete before the grade is in. A gradable coursework item cannot use **Submitted** (done once the work is handed in); the editor refuses it. An item that is not gradable may use either. Add it to a course outline like any other course item.
 
 `CourseworkPart` holds:
 
