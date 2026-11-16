@@ -16,10 +16,11 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Tickets.Core.Services;
 
 /// <summary>
-/// E-mails the requester when their ticket is received, when an agent replies in public, and when it is solved, on a
-/// desk that e-mails requesters. Each e-mail is a templated e-mail of the Tickets group, so the site can write its own
-/// (<see cref="TicketEmailSettings"/>). It goes once the request's work is committed, so a change that is rolled back
-/// sends nothing, and a mail server that is down never undoes the change.
+/// Tells the requester when their ticket is received, when an agent replies in public, and when it is solved, on a
+/// desk that notifies requesters. Each message is a notification template of the Tickets group, so the site can write
+/// its own (<see cref="TicketEmailSettings"/>); a requester with a site account gets it through the site's
+/// notifications, anyone else by e-mail (<see cref="TicketEmailOutbox"/>). It goes once the request's work is
+/// committed, so a change that is rolled back sends nothing, and a mail server that is down never undoes the change.
 /// </summary>
 public sealed class TicketEmailObserver : ITicketObserver
 {
@@ -104,22 +105,23 @@ public sealed class TicketEmailObserver : ITicketObserver
     private static string Strong(string text)
         => string.IsNullOrEmpty(text) ? null : $"<p><strong>{Encode(text)}</strong></p>";
 
-    // The requester's e-mail, on a desk that e-mails requesters.
-    private async Task<string> RecipientAsync(ContentItem ticket, CancellationToken cancellationToken)
+    // The requester's account and e-mail, on a desk that notifies requesters; none when there's neither.
+    private async Task<TicketRequesterRecipient> RecipientAsync(ContentItem ticket, CancellationToken cancellationToken)
     {
         return ticket.TryGet<TicketPart>(out var part)
-            ? await TicketRequesterEmail.FindAsync(part, await _desks.FindByIdAsync(part.DeskId, cancellationToken), _parties, cancellationToken)
+            ? await TicketRequesterEmail.FindRecipientAsync(part, await _desks.FindByIdAsync(part.DeskId, cancellationToken), _parties, cancellationToken)
             : null;
     }
 
     // The e-mail is kept in the outbox and tried at once; one that fails is tried again later, and the reply shows it.
-    private async Task SendAsync(string kind, string to, TicketEmailModel model, TicketEmailReply reply, string subject, string html, string entryId, string ticketId, CancellationToken cancellationToken)
+    private async Task SendAsync(string kind, TicketRequesterRecipient to, TicketEmailModel model, TicketEmailReply reply, string subject, string html, string entryId, string ticketId, CancellationToken cancellationToken)
         => await _services.GetRequiredService<TicketEmailOutbox>().SendAsync(new TicketEmailOutboxItem
         {
             TicketId = ticketId,
             EntryId = entryId,
             Kind = kind,
-            To = to,
+            To = to.Email,
+            RecipientUserId = to.UserId,
             Reference = model.Number,
             Subject = subject,
             Html = html,

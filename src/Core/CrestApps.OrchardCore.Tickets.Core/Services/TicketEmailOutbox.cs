@@ -11,10 +11,11 @@ using YesSql;
 namespace CrestApps.OrchardCore.Tickets.Core.Services;
 
 /// <summary>
-/// Sends the requester e-mails of tickets and keeps what happened: an e-mail is stored, tried at once, and tried again
-/// later when it fails (after 5 minutes, 15 minutes, an hour, 4 hours and 12 hours), then given up. A reply's entry on the
-/// ticket says when its e-mail couldn't be delivered, so the agent doesn't believe the requester got an answer they
-/// never saw.
+/// Sends the requester messages of tickets and keeps what happened: a message is stored, tried at once, and tried again
+/// later when it fails (after 5 minutes, 15 minutes, an hour, 4 hours and 12 hours), then given up. A requester with a
+/// site account gets it through the site's notifications (<see cref="ITicketRequesterNotifier"/>), written by the
+/// site's notification template; anyone else gets it by e-mail. A reply's entry on the ticket says when its message
+/// couldn't be delivered, so the agent doesn't believe the requester got an answer they never saw.
 /// </summary>
 public sealed class TicketEmailOutbox
 {
@@ -27,6 +28,8 @@ public sealed class TicketEmailOutbox
 
     private readonly ISession _session;
     private readonly ITemplatedEmailSender _sender;
+    private readonly ITicketRequesterNotifier _notifier;
+    private readonly ITemplatedEmailTemplates _templates;
     private readonly ITimelineService _timeline;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -36,11 +39,21 @@ public sealed class TicketEmailOutbox
     /// <summary>
     /// Initializes a new instance of the <see cref="TicketEmailOutbox"/> class.
     /// </summary>
-    public TicketEmailOutbox(ISession session, ITemplatedEmailSender sender, ITimelineService timeline, IClock clock, ILogger<TicketEmailOutbox> logger, IStringLocalizer<TicketEmailOutbox> stringLocalizer)
+    public TicketEmailOutbox(
+        ISession session,
+        ITemplatedEmailSender sender,
+        IEnumerable<ITicketRequesterNotifier> notifiers,
+        IEnumerable<ITemplatedEmailTemplates> templates,
+        ITimelineService timeline,
+        IClock clock,
+        ILogger<TicketEmailOutbox> logger,
+        IStringLocalizer<TicketEmailOutbox> stringLocalizer)
     {
         _logger = logger;
         _session = session;
         _sender = sender;
+        _notifier = notifiers.LastOrDefault();
+        _templates = templates.LastOrDefault();
         _timeline = timeline;
         _clock = clock;
         S = stringLocalizer;
@@ -96,8 +109,19 @@ public sealed class TicketEmailOutbox
 
         try
         {
-            sent = await _sender.SendAsync(Email(item), _ => Task.FromResult(new TemplatedEmailContent { Subject = item.Subject, Html = item.Html }), cancellationToken);
-            item.LastError = sent ? null : S["The e-mail service didn't take it; check that the site's e-mail is set up."];
+            // A requester with an account hears of it through the site's notifications; one whose account is gone, or
+            // anyone without one, by e-mail.
+            sent = await NotifyAsync(item, cancellationToken);
+
+            if (sent)
+            {
+                item.LastError = null;
+            }
+            else
+            {
+                sent = await _sender.SendAsync(Email(item), _ => Task.FromResult(new TemplatedEmailContent { Subject = item.Subject, Html = item.Html }), cancellationToken);
+                item.LastError = sent ? null : S["The e-mail service didn't take it; check that the site's e-mail is set up."];
+            }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -128,6 +152,29 @@ public sealed class TicketEmailOutbox
         await MarkEntryAsync(item, cancellationToken);
 
         return sent;
+    }
+
+    // The message as the site's template writes it, sent as a notification; false when there's nobody to notify.
+    private async Task<bool> NotifyAsync(TicketEmailOutboxItem item, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(item.RecipientUserId) || _notifier is null)
+        {
+            return false;
+        }
+
+        var email = Email(item);
+        var message = _templates is null
+            ? new TemplatedEmailMessage(item.Subject, null, item.Html)
+            : await _templates.ApplyAsync(new TemplatedEmailContext
+            {
+                Kind = email.Kind,
+                Models = email.Models,
+                Subject = item.Subject,
+                Html = item.Html,
+                Values = new Dictionary<string, string>(),
+            }, cancellationToken);
+
+        return await _notifier.NotifyAsync(item.RecipientUserId, item, message, cancellationToken);
     }
 
     // The reply's entry shows a notice while its e-mail hasn't reached the requester.

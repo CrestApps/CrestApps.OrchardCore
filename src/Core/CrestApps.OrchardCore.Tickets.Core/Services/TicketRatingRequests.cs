@@ -104,8 +104,8 @@ public sealed class TicketRatingRequests
             foreach (var ticket in due)
             {
                 var part = ticket.GetOrCreate<TicketPart>();
-                var to = await TicketRequesterEmail.FindAsync(part, desk, _parties, cancellationToken);
-                var link = string.IsNullOrEmpty(to) ? null : await links.GetRatingLinkAsync(ticket, cancellationToken);
+                var to = await TicketRequesterEmail.FindRecipientAsync(part, desk, _parties, cancellationToken);
+                var link = to is null ? null : await links.GetRatingLinkAsync(ticket, cancellationToken);
 
                 // Marked first, so a request is never sent twice; one that can't be sent (no address, no site link) is
                 // marked too and not tried again.
@@ -127,7 +127,8 @@ public sealed class TicketRatingRequests
                 {
                     TicketId = ticket.ContentItemId,
                     Kind = TicketsConstants.EmailKinds.Rating,
-                    To = to,
+                    To = to.Email,
+                    RecipientUserId = to.UserId,
                     Reference = model.Number,
                     Subject = S["How did we do? {0}", model.Subject].Value,
                     Html = html,

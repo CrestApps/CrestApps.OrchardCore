@@ -100,6 +100,27 @@ internal sealed class TicketNotificationSender
     /// <param name="skip">Tells whether a user already has this notification (unread), so it isn't sent twice.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>How many were sent.</returns>
+    /// <summary>
+    /// Sends a notification already written to one user.
+    /// </summary>
+    /// <param name="userId">The user.</param>
+    /// <param name="message">The notification.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns><see langword="false"/> when the user can't be found.</returns>
+    public async Task<bool> SendToUserAsync(string userId, NotificationMessage message, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        if (string.IsNullOrEmpty(userId) || await _userManager.FindByIdAsync(userId) is not { } user)
+        {
+            return false;
+        }
+
+        await _notificationService.SendAsync(user, message, cancellationToken);
+
+        return true;
+    }
+
     public async Task<int> SendAsync(
         IEnumerable<string> userIds,
         ContentItem ticket,

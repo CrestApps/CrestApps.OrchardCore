@@ -171,6 +171,15 @@ public static class TicketsConstants
         /// <summary>An agent replied on your request (for a requester who signs in).</summary>
         public const string Replied = "TicketReplied";
 
+        /// <summary>Your request was received (for a requester who signs in).</summary>
+        public const string RequestReceived = "TicketRequestReceived";
+
+        /// <summary>Your request was solved (for a requester who signs in).</summary>
+        public const string RequestSolved = "TicketRequestSolved";
+
+        /// <summary>You are asked to rate how your solved request was handled (for a requester who signs in).</summary>
+        public const string RatingRequested = "TicketRatingRequested";
+
         /// <summary>A workflow's Notify About Ticket task.</summary>
         public const string Workflow = "TicketWorkflow";
     }

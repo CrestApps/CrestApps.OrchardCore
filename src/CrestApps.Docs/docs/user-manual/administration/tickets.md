@@ -10,7 +10,7 @@ A **ticket** is a request someone made: a customer who can't sign in, an employe
 
 | | |
 | --- | --- |
-| **Menu** | **Service Desk**: Tickets and Boards, and for those who manage the service desk, Desks, Statuses, Priorities, Views and E-mails |
+| **Menu** | **Service Desk**: Tickets and Boards, and for those who manage the service desk, Desks, Statuses, Priorities, Views and Notification templates |
 | **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support**; **Manage ticket settings** for the settings; **Manage shared ticket boards** or **Manage my own ticket boards** to make boards; **View ticket reports** for the reports |
 | **Feature** | Tickets |
 
@@ -119,7 +119,10 @@ With Notifications on, what happens on your tickets reaches you in the notificat
 | **Service-level targets** | A target of your ticket, or of your team's ticket that nobody has yet, is due soon or missed; once for each, until you read it |
 | **Tickets merged into yours** | Another ticket is merged into your ticket |
 | **Ticket workflow notices** | A workflow your administrator set up tells you about a ticket |
-| **Replies to your requests** | For requesters who sign in to the site: an agent replies on your request (the e-mail comes as before) |
+| **Your requests received** | For requesters who sign in to the site: a request you sent is received, with its number |
+| **Replies to your requests** | For requesters who sign in to the site: an agent replies on your request |
+| **Your requests solved** | For requesters who sign in to the site: a request you sent is solved |
+| **Rating your solved requests** | For requesters who sign in to the site: you are asked how a solved request was handled |
 | **Agreement hours**, **Agreements ending** | For an account's manager: an agreement used 80% or all of its hours, or is about to end |
 
 To choose how you get each one, open **Profile** from the user menu at the top right (if you may edit your own profile; otherwise ask your administrator) and use **Notification Types**: clear a type's box under a method, such as **Email Notifications**, to stop getting it that way. The notification center still lists every notice, so nothing is lost. A desk can stop assignment and team notices for all its tickets with **Tell the assignee** in its settings.
@@ -135,7 +138,7 @@ Under the **Service Desk** menu:
 | **Priorities** | The priorities and their order |
 | **Priority matrix** (on a desk) | The priority a ticket gets for each impact and urgency |
 | **Views** | Shared saved views of the list |
-| **E-mails** | The e-mails requesters get when a ticket is received, answered and solved |
+| **Notification templates** | The messages requesters get when a ticket is received, answered and solved, and when they are asked to rate it. A requester who signs in to the site gets them as notifications (in their notification center, and by e-mail or text message as they choose); anyone else gets them by e-mail |
 
 The permissions to view and work tickets exist for each desk, so HR tickets can stay with HR. Give a role **View all tickets**, **View the tickets of my teams** or **View the tickets assigned to me** on a desk to decide what its users see there.
 

@@ -28,6 +28,9 @@ internal sealed class TicketNotificationVisibilityHandler : INotificationVisibil
         TicketsConstants.NotificationTypes.ServiceLevel,
         TicketsConstants.NotificationTypes.Merged,
         TicketsConstants.NotificationTypes.Replied,
+        TicketsConstants.NotificationTypes.RequestReceived,
+        TicketsConstants.NotificationTypes.RequestSolved,
+        TicketsConstants.NotificationTypes.RatingRequested,
         TicketsConstants.NotificationTypes.Workflow,
     };
 
@@ -104,7 +107,10 @@ internal sealed class TicketNotificationVisibilityHandler : INotificationVisibil
                 && approval.CurrentStep >= 0
                 && approval.CurrentStep < approval.Steps.Count
                 && approval.Steps[approval.CurrentStep].ApproverIds.Contains(userId, StringComparer.Ordinal),
-            TicketsConstants.NotificationTypes.Replied => part.Requester == new PartyRef(PartyKinds.User, userId),
+            TicketsConstants.NotificationTypes.Replied
+                or TicketsConstants.NotificationTypes.RequestReceived
+                or TicketsConstants.NotificationTypes.RequestSolved
+                or TicketsConstants.NotificationTypes.RatingRequested => part.Requester == new PartyRef(PartyKinds.User, userId),
             _ => false,
         };
     }

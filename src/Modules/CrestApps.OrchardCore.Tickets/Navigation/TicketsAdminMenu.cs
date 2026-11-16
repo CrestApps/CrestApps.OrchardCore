@@ -86,7 +86,7 @@ internal sealed class TicketsAdminMenu : AdminNavigationProvider
                     .Action("Index", "TicketViews", TicketsConstants.Features.Tickets)
                     .Permission(TicketsPermissions.ManageTicketSettings)
                     .LocalNav())
-                .Add(S["E-mails"], S["E-mails"].PrefixPosition("6"), emails => emails
+                .Add(S["Notification templates"], S["Notification templates"].PrefixPosition("6"), emails => emails
                     .Id("ticketEmails")
                     .Action("Index", "Admin", _emailRouteValues)
                     .Permission(TicketsPermissions.ManageTicketSettings)

@@ -154,6 +154,9 @@ public sealed class NotificationsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddScoped<TicketNotificationSender>();
+
+        // A requester who has a site account gets the requester messages as notifications instead of e-mails.
+        services.TryAddScoped<ITicketRequesterNotifier, TicketRequesterNotifier>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketAssignmentNotifier>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketNotificationObserver>());
         services.AddDisplayDriver<Notification, TicketNotificationDisplayDriver>();
@@ -190,7 +193,19 @@ public sealed class NotificationsStartup : StartupBase
         services.AddNotificationType(
             TicketsConstants.NotificationTypes.Replied,
             LocalizationSource.Create<Startup>("Replies to your requests"),
-            type => type.Description = LocalizationSource.Create<Startup>("When an agent replies on a request you sent (you also get the reply by e-mail)."));
+            type => type.Description = LocalizationSource.Create<Startup>("When an agent replies on a request you sent."));
+        services.AddNotificationType(
+            TicketsConstants.NotificationTypes.RequestReceived,
+            LocalizationSource.Create<Startup>("Your requests received"),
+            type => type.Description = LocalizationSource.Create<Startup>("When a request you sent is received, with its number."));
+        services.AddNotificationType(
+            TicketsConstants.NotificationTypes.RequestSolved,
+            LocalizationSource.Create<Startup>("Your requests solved"),
+            type => type.Description = LocalizationSource.Create<Startup>("When a request you sent is solved."));
+        services.AddNotificationType(
+            TicketsConstants.NotificationTypes.RatingRequested,
+            LocalizationSource.Create<Startup>("Rating your solved requests"),
+            type => type.Description = LocalizationSource.Create<Startup>("When you are asked how a solved request of yours was handled."));
         services.AddNotificationType(
             TicketsConstants.NotificationTypes.Workflow,
             LocalizationSource.Create<Startup>("Ticket workflow notices"),

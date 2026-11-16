@@ -21,6 +21,13 @@ public sealed class TicketEmailOutboxItem
 
     public string To { get; set; }
 
+    /// <summary>
+    /// Gets or sets the requester's user id when they have a site account: the message then goes through the site's
+    /// notifications (<see cref="Services.ITicketRequesterNotifier"/>), and by e-mail to <see cref="To"/> only when the
+    /// account is gone or the Notifications feature is off.
+    /// </summary>
+    public string RecipientUserId { get; set; }
+
     public string Reference { get; set; }
 
     public string Subject { get; set; }

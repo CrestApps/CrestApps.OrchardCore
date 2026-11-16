@@ -142,19 +142,18 @@ public sealed class TicketNotificationObserverTests
     }
 
     [Fact]
-    public async Task AnAgentsPublicReply_TellsARequesterWhoSignsIn_InTheNotificationCenter()
+    public async Task AnAgentsPublicReply_ReachesTheRequesterOnlyThroughTheRequesterMessages()
     {
-        // Arrange
+        // Arrange: the requester signs in, so the reply's notification template reaches them as a notification
+        // (TicketRequesterNotificationTests); this observer adds no second notice.
         var (observer, sent) = Create(signedIn: "ana");
         var ticket = TicketNotificationTypesTests.Ticket("t1", assigneeId: "ana");
 
         // Act
         await observer.RepliedAsync(ticket, new TimelineEntry { Kind = TicketsConstants.EntryKinds.Reply, Visibility = TimelineVisibility.Public }, fromRequester: false, TestContext.Current.CancellationToken);
-        await observer.RepliedAsync(ticket, new TimelineEntry { Kind = TicketsConstants.EntryKinds.Reply, Visibility = TimelineVisibility.Internal }, fromRequester: false, TestContext.Current.CancellationToken);
 
         // Assert
-        var (to, message) = Assert.Single(sent);
-        Assert.Equal(("requester", TicketsConstants.NotificationTypes.Replied, "~/account/requests/T-t1"), (to, message.Type, message.Url));
+        Assert.Empty(sent);
     }
 
     private static TimelineEntry Note(string body)

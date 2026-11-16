@@ -83,6 +83,7 @@ internal sealed class TicketNotificationObserver : ITicketObserver
             return;
         }
 
+        // The requester hears of an agent's reply through the requester messages (the reply's notification template).
         if (fromRequester)
         {
             await _sender.SendAsync(
@@ -90,23 +91,6 @@ internal sealed class TicketNotificationObserver : ITicketObserver
                 ticket,
                 TicketsConstants.NotificationTypes.RequesterReplied,
                 title => S["The requester replied: {0}", title],
-                cancellationToken: cancellationToken);
-
-            return;
-        }
-
-        // A requester who signs in hears of an agent's public reply in the notification center too (the e-mail goes on).
-        if (entry?.Visibility == TimelineVisibility.Public
-            && part.Requester.Kind == PartyKinds.User
-            && !string.IsNullOrEmpty(part.Requester.Id)
-            && !string.IsNullOrEmpty(part.Number))
-        {
-            await _sender.SendAsync(
-                [part.Requester.Id],
-                ticket,
-                TicketsConstants.NotificationTypes.Replied,
-                title => S["Your request has a new reply: {0}", title],
-                url: "~/account/requests/" + Uri.EscapeDataString(part.Number),
                 cancellationToken: cancellationToken);
         }
     }
