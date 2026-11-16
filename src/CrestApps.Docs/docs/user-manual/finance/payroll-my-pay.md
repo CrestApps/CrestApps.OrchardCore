@@ -1,24 +1,28 @@
 ---
 sidebar_label: My pay
 title: My pay
-description: "See your own pay statements and download their stubs, add a tax election and choose where your pay goes, and get a notice when any of that changes."
+description: "See your own pay statements in your staff profile, download and print their stubs, add a tax election and choose where your pay goes, and get a notice when any of that changes."
 technical_manual:
   - modules/payroll
 ---
 
-**My pay** is your own pay: the statements of every employer that pays you, their stubs, your tax elections and where your net pay goes. You see only your own pay, never anyone else's.
+**My pay** is your own pay: the statements of every employer that pays you, their stubs, your tax elections and where your net pay goes. It is the **Pay** section of your own staff profile. You see only your own pay, never anyone else's.
 
 | | |
 | --- | --- |
-| **Menu** | Staff > My Profile > My pay |
+| **Menu** | Staff > My Profile > **My pay** (opens the **Pay** section of your profile) |
 | **Permission** | View own pay; Manage own pay details to change your elections and where your pay goes |
 | **Feature** | My Pay |
 
 <AskYourAdmin />
 
+## Confirm your password
+
+Pay is private: before showing it, the **Pay** section asks for your password. Choose **Confirm your password**, type it and choose **Confirm**. For the next 10 minutes your pay pages open without asking again; after that, or on another browser, you are asked again. If you sign in only with an outside account, set a password on your profile first.
+
 ## See your pay statements
 
-Open **My pay**. The list shows your statements, the newest first, with the pay date, the employer and your net pay. **Open** shows a statement: each line with its hours and amount, gross and net pay, and how your net pay was paid (by deposit to which account, or by which check). **Stub** or **Download the stub** gives the statement as a PDF, with the year's totals.
+Open **My pay**. **Pay statements** lists your statements, the newest first, with the pay date, the employer and your net pay. **Open** shows a statement: each line with its hours and amount, gross and net pay, and how your net pay was paid (by deposit to which account, or by which check). **Stub** or **Download the stub** gives the statement as a PDF, with the year's totals; **Print** prints the statement page.
 
 A statement shows once your pay is processed. A statement marked **Voided** was cancelled by a reversing statement, which is listed too; your payroll contact pays what is owed in a new statement.
 

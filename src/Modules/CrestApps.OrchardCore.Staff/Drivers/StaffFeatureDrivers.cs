@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Staff.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -100,6 +101,16 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
             return null;
         }
 
+        // Pay is private: until the viewer confirms their password, the card is the one prompt, or nothing.
+        switch (await StaffPayPrivacy.DecideAsync(_httpContextAccessor.HttpContext))
+        {
+            case StaffPayVisibility.Hide:
+                return null;
+            case StaffPayVisibility.Prompt:
+                return Dynamic(StaffPayPrivacy.PromptShape, shape => { shape.ConfirmUrl = StaffPayPrivacy.ConfirmUrl(_httpContextAccessor.HttpContext); })
+                    .Location(StaffProfileSections.DisplayType, StaffProfileSections.Location(StaffProfileSections.Pay, "0"));
+        }
+
         var pay = staff.TryGet<StaffPayRates>(out var rates) ? rates : new StaffPayRates();
         var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
 
@@ -129,6 +140,12 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
         if (!await CanManagePayAsync())
         {
             return null;
+        }
+
+        // Pay rates are private: until the editor confirms their password, the card is the prompt and saving leaves them.
+        if (await StaffPayPrivacy.DecideAsync(_httpContextAccessor.HttpContext) != StaffPayVisibility.Show)
+        {
+            return Dynamic(StaffPayPrivacy.PromptShape, shape => { shape.ConfirmUrl = StaffPayPrivacy.ConfirmUrl(_httpContextAccessor.HttpContext); });
         }
 
         var pay = staff.TryGet<StaffPayRates>(out var rates) ? rates : new StaffPayRates();
@@ -165,6 +182,12 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
         if (!await CanManagePayAsync())
         {
             return null;
+        }
+
+        if (_httpContextAccessor.HttpContext?.RequestServices.GetService<CrestApps.OrchardCore.Users.IPasswordConfirmation>() is not { } confirmation
+            || !await confirmation.IsConfirmedAsync(_httpContextAccessor.HttpContext.User))
+        {
+            return await EditAsync(staff, context);
         }
 
         var model = new StaffPayViewModel();

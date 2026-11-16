@@ -1,0 +1,73 @@
+@model MyPayIndexViewModel
+@* My Pay in the Pay section of the person's own staff profile (MyPayProfileDisplayDriver). *@
+
+<div class="card mb-3">
+    <div class="card-header"><i class="fa-solid fa-money-check-dollar" aria-hidden="true"></i> @T["My pay"]</div>
+    <div class="card-body">
+        @if (Model.ToReview.Count > 0)
+        {
+            <h5>@T["Your coming pay"]</h5>
+            <form method="get" class="no-multisubmit mb-4" data-list-management data-client-side-search="false">
+                <admin-list name="PayrollMyPayComingPay" context="Model.ComingPay"
+                            show-select-all="false"
+                            empty-message="@T["No pay to review."]">
+                    <admin-list-list item-css-class="list-group-item" />
+                    <admin-list-grid>
+                        <admin-list-column name="Name" position="20" title="@T["Pay date"]" />
+                        <admin-list-column name="Details" position="30" title="@T["Your answer"]" width="auto" />
+                        <admin-list-column type="Actions" title="@T["Actions"]" />
+                    </admin-list-grid>
+                </admin-list>
+            </form>
+        }
+        @if (Model.Profiles.Count > 0)
+        {
+            <h5>@T["Your pay details"]</h5>
+            <form method="get" class="no-multisubmit" data-list-management data-client-side-search="false">
+                <admin-list name="PayrollMyPayDetails" context="Model.PayDetails"
+                            show-select-all="false"
+                            empty-message="@T["No employer pays you yet."]">
+                    <admin-list-list item-css-class="list-group-item" />
+                    <admin-list-grid>
+                        <admin-list-column name="Name" position="20" title="@T["Employer"]" width="auto" />
+                        <admin-list-column type="Actions" title="@T["Actions"]" />
+                    </admin-list-grid>
+                </admin-list>
+            </form>
+            @if (Model.CanManageBankAccounts)
+            {
+                <p class="mt-2 mb-4"><a href="@Url.Content("~/Admin/banking/my-accounts")">@T["My bank accounts"]</a></p>
+            }
+        }
+
+        <h5>@T["Pay statements"]</h5>
+        <form method="get" class="no-multisubmit" data-list-management data-client-side-search="false">
+            <admin-list name="PayrollMyPayStatements" context="Model.Statements"
+                        show-select-all="false"
+                        empty-message="@T["No pay statement yet. Your statements show here once your pay is processed."]">
+                <admin-list-list item-css-class="list-group-item" />
+                <admin-list-grid>
+                    <admin-list-column name="Name" position="20" title="@T["Pay date"]" />
+                    <admin-list-column name="Details" position="30" title="@T["Pay"]" width="auto" />
+                    <admin-list-column type="Actions" title="@T["Actions"]" />
+                </admin-list-grid>
+            </admin-list>
+        </form>
+
+        @if (Model.HasTaxForms)
+        {
+            <h5 class="mt-4">@T["Tax forms"]</h5>
+            <form method="get" class="no-multisubmit" data-list-management data-client-side-search="false">
+                <admin-list name="PayrollMyPayTaxForms" context="Model.TaxForms"
+                            show-select-all="false"
+                            empty-message="@T["No tax form yet."]">
+                    <admin-list-list item-css-class="list-group-item" />
+                    <admin-list-grid>
+                        <admin-list-column name="Name" position="20" title="@T["Form"]" width="auto" />
+                        <admin-list-column type="Actions" title="@T["Actions"]" />
+                    </admin-list-grid>
+                </admin-list>
+            </form>
+        }
+    </div>
+</div>

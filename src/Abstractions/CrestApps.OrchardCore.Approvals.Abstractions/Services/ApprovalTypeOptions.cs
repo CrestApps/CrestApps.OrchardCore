@@ -40,4 +40,41 @@ public sealed class ApprovalType
     /// for a type that needs none.
     /// </summary>
     public Type HandlerType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the standard conditions a policy of this type is chosen by, which the policy editor shows: an
+    /// amount range and currency, and an access scope picked from the handler's
+    /// <see cref="IApprovalTypeHandler.GetScopesAsync"/>. A type adds other conditions with its own policy display
+    /// driver and <see cref="IApprovalTypeHandler.MatchesAsync"/>.
+    /// </summary>
+    public ApprovalConditions Conditions { get; set; }
 }
+
+/// <summary>
+/// The standard conditions an approval type's policies are chosen by.
+/// </summary>
+[Flags]
+public enum ApprovalConditions
+{
+    /// <summary>
+    /// None: a policy of the type is chosen by its type alone.
+    /// </summary>
+    None = 0,
+
+    /// <summary>
+    /// The request's amount, between a least and a most amount, in a currency.
+    /// </summary>
+    Amount = 1,
+
+    /// <summary>
+    /// The request's access scope, such as one employer.
+    /// </summary>
+    Scope = 2,
+}
+
+/// <summary>
+/// An access scope a policy can be limited to, such as one employer.
+/// </summary>
+/// <param name="Value">The stored scope, a request's <c>AccessScope</c>.</param>
+/// <param name="DisplayText">What people see.</param>
+public sealed record ApprovalScope(string Value, string DisplayText);

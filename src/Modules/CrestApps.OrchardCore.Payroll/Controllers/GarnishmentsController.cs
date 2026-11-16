@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
@@ -22,6 +23,8 @@ namespace CrestApps.OrchardCore.Payroll.Controllers;
 /// </summary>
 [Admin]
 [Feature(PayrollConstants.Features.Garnishments)]
+// Pay is private: the signed-in person confirms their password before seeing it.
+[ConfirmPassword]
 public sealed class GarnishmentsController : Controller
 {
     private readonly IGarnishmentOrderManager _manager;

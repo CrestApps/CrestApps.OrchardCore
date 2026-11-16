@@ -36,10 +36,10 @@ public class ApprovalPolicyViewModel
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the approval types the policy serves.
+    /// Gets or sets the policy's approval type as people see it.
     /// </summary>
-    public string[] Types { get; set; } = [];
-
+    [BindNever]
+    public string TypeDisplayName { get; set; }
     /// <summary>
     /// Gets or sets whether the policy is chosen for requests that name none.
     /// </summary>
@@ -49,26 +49,6 @@ public class ApprovalPolicyViewModel
     /// Gets or sets the order among policies, as text.
     /// </summary>
     public string Order { get; set; }
-
-    /// <summary>
-    /// Gets or sets the least amount, as text with a dot.
-    /// </summary>
-    public string MinimumAmount { get; set; }
-
-    /// <summary>
-    /// Gets or sets the most amount, as text with a dot.
-    /// </summary>
-    public string MaximumAmount { get; set; }
-
-    /// <summary>
-    /// Gets or sets the currency condition.
-    /// </summary>
-    public string Currency { get; set; }
-
-    /// <summary>
-    /// Gets or sets the access scope condition.
-    /// </summary>
-    public string AccessScope { get; set; }
 
     /// <summary>
     /// Gets or sets the stages.
@@ -96,12 +76,6 @@ public class ApprovalPolicyViewModel
     public string DueAfterHours { get; set; }
 
     /// <summary>
-    /// Gets or sets the approval types to choose from.
-    /// </summary>
-    [BindNever]
-    public IList<SelectListItem> TypeOptions { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets the approver rule providers to choose from, by name with what people see.
     /// </summary>
     [BindNever]
@@ -112,6 +86,50 @@ public class ApprovalPolicyViewModel
     /// </summary>
     [BindNever]
     public bool IsNew { get; set; }
+}
+
+/// <summary>
+/// The standard conditions of a policy, the ones its approval type opts into.
+/// </summary>
+public class ApprovalPolicyConditionsViewModel
+{
+    /// <summary>
+    /// Gets or sets the least amount, as text with a dot.
+    /// </summary>
+    public string MinimumAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most amount, as text with a dot.
+    /// </summary>
+    public string MaximumAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currency condition.
+    /// </summary>
+    public string Currency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the access scope condition.
+    /// </summary>
+    public string AccessScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the amount condition shows.
+    /// </summary>
+    [BindNever]
+    public bool ShowsAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the scope condition shows.
+    /// </summary>
+    [BindNever]
+    public bool ShowsScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the scopes to choose from; empty for a text box.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> ScopeOptions { get; set; } = [];
 }
 
 /// <summary>

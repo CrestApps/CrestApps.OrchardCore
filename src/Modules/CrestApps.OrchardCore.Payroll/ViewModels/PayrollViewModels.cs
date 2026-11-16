@@ -141,26 +141,6 @@ public class EmployersIndexViewModel
 }
 
 /// <summary>
-/// The pay profile list.
-/// </summary>
-public class PayProfilesIndexViewModel
-{
-    public string EmployerId { get; set; }
-
-    [BindNever]
-    public IList<SelectListItem> Employers { get; set; } = [];
-
-    [BindNever]
-    public IReadOnlyList<PayProfileRow> Profiles { get; set; } = [];
-
-    [BindNever]
-    public bool CanAdd { get; set; }
-
-    [BindNever]
-    public AdminListContext List { get; set; }
-}
-
-/// <summary>
 /// A row of the pay profile list.
 /// </summary>
 public class PayProfileRow

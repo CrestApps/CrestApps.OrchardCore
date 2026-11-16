@@ -1113,6 +1113,13 @@ public sealed class PayRunApprovalTypeHandler : ApprovalTypeHandlerBase
     }
 
     /// <inheritdoc />
+    /// <remarks>A pay run policy can be limited to one employer.</remarks>
+    public override async Task<IReadOnlyList<ApprovalScope>> GetScopesAsync(CancellationToken cancellationToken = default)
+        => [.. (await _services.GetRequiredService<IEmployerManager>().GetAllAsync(cancellationToken))
+            .OrderBy(employer => employer.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(employer => new ApprovalScope(employer.ItemId, employer.Name))];
+
+    /// <inheritdoc />
     public override async Task DecidingAsync(ApprovalDecidingContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);

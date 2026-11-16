@@ -15,7 +15,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Payroll;
 
 /// <summary>
-/// My Pay: the person's own statements, stubs, elections and net pay split, linked from Staff &gt; My Profile.
+/// My Pay: the person's own statements, stubs, elections and net pay split, in the Pay section of their staff profile.
 /// </summary>
 [Feature(PayrollConstants.Features.SelfService)]
 public sealed class MyPayStartup : StartupBase
@@ -28,6 +28,8 @@ public sealed class MyPayStartup : StartupBase
         services.AddDisplayDriver<MyPayProfileRow, MyPayProfileRowDisplayDriver>();
         services.AddDisplayDriver<MyPayTaxFormViewModel, CrestApps.OrchardCore.Payroll.Drivers.MyPayTaxFormDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IStaffHomeLinkProvider, MyPayStaffHomeLinks>());
+        services.AddScoped<CrestApps.OrchardCore.Payroll.Services.MyPayPageBuilder>();
+        services.AddDisplayDriver<StaffMember, CrestApps.OrchardCore.Payroll.Drivers.MyPayProfileDisplayDriver>();
     }
 }
 
@@ -53,7 +55,8 @@ internal sealed class MyPayStaffHomeLinks : IStaffHomeLinkProvider
             return [];
         }
 
-        return [new StaffHomeLink(S["My pay"], "~/Admin/my-pay", S["Your pay statements, tax elections and where your pay goes."], "fa-solid fa-money-check-dollar", 20)];
+        // A person's pay is the Pay section of their own profile.
+        return [new StaffHomeLink(S["My pay"], $"~/Admin/staff/profile/{staffMember.ItemId}#staff-pay", S["Your pay statements, tax elections and where your pay goes."], "fa-solid fa-money-check-dollar", 20)];
     }
 }
 

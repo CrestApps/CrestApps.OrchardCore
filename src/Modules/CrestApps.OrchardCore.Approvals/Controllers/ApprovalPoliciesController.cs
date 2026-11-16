@@ -1,5 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Approvals.Models;
+using CrestApps.OrchardCore.Approvals.Services;
+using Microsoft.Extensions.DependencyInjection;
 using CrestApps.OrchardCore.Core.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -49,9 +51,43 @@ public sealed class ApprovalPoliciesController : CatalogAdminController<Approval
     protected override LocalizedHtmlString DeletedNotification
         => H["The approval policy has been removed."];
 
+    /// <summary>
+    /// The view data key of the approval types "Add approval policy" offers.
+    /// </summary>
+    public const string TypesViewDataKey = "ApprovalTypes";
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A policy serves one approval type, chosen in "Add approval policy" (<c>?type=PayRun</c>) and fixed afterwards:
+    /// the type decides the conditions and fields its editor shows. With one type on offer, it is that one.
+    /// </remarks>
+    protected override Task<bool> InitializeNewAsync(ApprovalPolicy model)
+    {
+        var types = HttpContext.RequestServices.GetRequiredService<IApprovalTypeCatalog>().List();
+        var requested = Request.Query["type"].ToString();
+
+        if (string.IsNullOrWhiteSpace(requested) && types.Count == 1)
+        {
+            requested = types[0].Name;
+        }
+
+        if (types.FirstOrDefault(type => string.Equals(type.Name, requested, StringComparison.OrdinalIgnoreCase)) is not { } chosen)
+        {
+            return Task.FromResult(false);
+        }
+
+        model.Type = chosen.Name;
+
+        return Task.FromResult(true);
+    }
+
     [Admin("approvals/policies", "ApprovalPoliciesIndex")]
     public Task<IActionResult> Index()
-        => IndexAllAsync();
+    {
+        ViewData[TypesViewDataKey] = HttpContext.RequestServices.GetService<IApprovalTypeCatalog>()?.List() ?? [];
+
+        return IndexAllAsync();
+    }
 
     [Admin("approvals/policies/create", "ApprovalPoliciesCreate")]
     public Task<IActionResult> Create()

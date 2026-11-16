@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Staff.Models;
 using Microsoft.AspNetCore.Http;
@@ -43,6 +44,16 @@ internal sealed class StaffPayrollDisplayDriver : DisplayDriver<StaffMember>
         if (view.IsEmpty)
         {
             return null;
+        }
+
+        // Pay is private: until the viewer confirms their password, the card is the one prompt, or nothing.
+        switch (await StaffPayPrivacy.DecideAsync(_httpContextAccessor.HttpContext))
+        {
+            case StaffPayVisibility.Hide:
+                return null;
+            case StaffPayVisibility.Prompt:
+                return Dynamic(StaffPayPrivacy.PromptShape, shape => { shape.ConfirmUrl = StaffPayPrivacy.ConfirmUrl(_httpContextAccessor.HttpContext); })
+                    .Location(StaffProfileSections.DisplayType, StaffProfileSections.Location(StaffProfileSections.Pay, "0"));
         }
 
         var rows = new List<PayProfileRow>();

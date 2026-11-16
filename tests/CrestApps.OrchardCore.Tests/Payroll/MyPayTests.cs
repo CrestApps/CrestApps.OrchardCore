@@ -49,10 +49,10 @@ public sealed class MyPayTests
         await PayRunProcessingTests.ApproveAsync(harness, setup);
         var (draftIndex, draftId) = await harness.RunAsync(async services =>
         {
-            var index = Assert.IsType<ViewResult>(await Controller(services, lee).Index());
+            var index = await MyPayAsync(services, lee);
             var statements = await services.GetRequiredService<IPayRunService>().ListStatementsAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId));
 
-            return ((MyPayIndexViewModel)index.Model, statements.Single(statement => statement.StaffMemberId == setup.StaffMemberId).ItemId);
+            return (index, statements.Single(statement => statement.StaffMemberId == setup.StaffMemberId).ItemId);
         }, commit: false);
         var draftPage = await harness.RunAsync(async services => await Controller(services, lee).Statement(draftId), commit: false);
 
@@ -66,7 +66,7 @@ public sealed class MyPayTests
             var stubs = new PayStubService(services.GetRequiredService<IPayCodeManager>(), services.GetRequiredService<IPayAccumulatorService>(), new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<PayStubService>());
 
             return (
-                (MyPayIndexViewModel)Assert.IsType<ViewResult>(await Controller(services, lee).Index()).Model,
+                await MyPayAsync(services, lee),
                 await Controller(services, lee).Statement(leeStatement.ItemId),
                 await Controller(services, lee).Statement(samStatement.ItemId),
                 await Controller(services, lee).StatementPdf(leeStatement.ItemId, stubs),
@@ -217,6 +217,7 @@ public sealed class MyPayTests
         Assert.DoesNotContain("payrollPayRuns", employee);
         Assert.Contains("payrollPayRuns", clerk);
         Assert.DoesNotContain("payrollEmployees", clerk);
+        Assert.DoesNotContain("payrollEmployees", employee);
         Assert.DoesNotContain("payrollEmployers", clerk);
     }
 
@@ -286,7 +287,7 @@ public sealed class MyPayTests
             var reviews = services.GetRequiredService<PayStatementReviewService>();
 
             return (
-                (MyPayIndexViewModel)Assert.IsType<ViewResult>(await Controller(services, lee).Index()).Model,
+                await MyPayAsync(services, lee),
                 await Controller(services, lee).Review(draft.ItemId, reviews),
                 await Controller(services, sam).Review(draft.ItemId, reviews));
         }, commit: false);
@@ -350,7 +351,7 @@ public sealed class MyPayTests
         {
             var reviews = services.GetRequiredService<PayStatementReviewService>();
 
-            return ((MyPayIndexViewModel)Assert.IsType<ViewResult>(await Controller(services, lee).Index()).Model, await Controller(services, lee).ReviewPost(draft.ItemId, confirmed: false, note: "Late.", reviews));
+            return (await MyPayAsync(services, lee), await Controller(services, lee).ReviewPost(draft.ItemId, confirmed: false, note: "Late.", reviews));
         }, commit: false);
 
         Assert.Empty(afterSubmit.ToReview);
@@ -485,6 +486,18 @@ public sealed class MyPayTests
             member.UserId = userId;
             await staff.UpdateAsync(member);
         });
+
+    // The person's pay, as the Pay section of their staff profile shows it: My Pay sends staff there.
+    private static async Task<MyPayIndexViewModel> MyPayAsync(IServiceProvider services, ClaimsPrincipal user)
+    {
+        var redirect = Assert.IsType<RedirectToActionResult>(await Controller(services, user).Index());
+        var me = await services.GetRequiredService<IStaffDirectory>().FindByUserIdAsync(user.FindFirstValue(ClaimTypes.NameIdentifier), TestContext.Current.CancellationToken);
+
+        Assert.Equal(("Profile", "Staff", "staff-pay"), (redirect.ActionName, redirect.ControllerName, redirect.Fragment));
+        Assert.Equal(me.ItemId, redirect.RouteValues["id"]);
+
+        return await new MyPayPageBuilder(services, services.GetRequiredService<Microsoft.AspNetCore.Authorization.IAuthorizationService>()).BuildAsync(me, user, TestContext.Current.CancellationToken);
+    }
 
     private static MyPayController Controller(IServiceProvider services, ClaimsPrincipal user, Action<EmployeePayProfile, PayProfileEditTracker> edit = null)
     {

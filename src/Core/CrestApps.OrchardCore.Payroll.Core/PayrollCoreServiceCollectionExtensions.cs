@@ -74,6 +74,7 @@ public static class PayrollCoreServiceCollectionExtensions
         {
             type.DisplayName = LocalizationSource.Create<PayRunApprovalTypeHandler>("Pay run");
             type.Description = LocalizationSource.Create<PayRunApprovalTypeHandler>("A pay run of an employer, approved before it is processed.");
+            type.Conditions = ApprovalConditions.Amount | ApprovalConditions.Scope;
         });
         services.AddSourceAccess<PayRunSourceAccess>();
         services.AddSourceAccess<PayStatementSourceAccess>();

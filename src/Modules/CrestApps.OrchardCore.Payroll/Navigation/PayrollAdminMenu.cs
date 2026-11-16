@@ -69,11 +69,11 @@ public sealed class PayrollAdminMenu : AdminNavigationProvider
         // The pages follow permissions per employer, which a menu permission can't express: ask the payroll scope.
         var user = _httpContextAccessor.HttpContext?.User;
         var runs = await AnyAsync(user, PayrollPermissions.ViewPayRuns);
-        var profiles = await AnyAsync(user, PayrollPermissions.ViewPayProfiles);
         var employers = await AnyAsync(user, PayrollPermissions.ManagePayrollSettings);
         var filings = await AnyAsync(user, PayrollPermissions.ManagePayrollFilings);
 
-        if (runs || profiles || employers || filings)
+        // A person's pay setup is on their staff profile (Staff > All Staff), not in a Payroll list of its own.
+        if (runs || employers || filings)
         {
             builder.Add(S["Payroll"], S["Payroll"].PrefixPosition("6"), payroll =>
             {
@@ -84,14 +84,6 @@ public sealed class PayrollAdminMenu : AdminNavigationProvider
                     payroll.Add(S["Pay Runs"], S["Pay Runs"].PrefixPosition("10"), item => item
                         .Id("payrollPayRuns")
                         .Action("Index", "PayRuns", PayrollConstants.Features.Payroll)
-                        .LocalNav());
-                }
-
-                if (profiles)
-                {
-                    payroll.Add(S["Employees"], S["Employees"].PrefixPosition("20"), item => item
-                        .Id("payrollEmployees")
-                        .Action("Index", "PayProfiles", PayrollConstants.Features.Payroll)
                         .LocalNav());
                 }
 

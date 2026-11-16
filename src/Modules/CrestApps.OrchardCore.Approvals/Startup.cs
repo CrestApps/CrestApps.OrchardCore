@@ -45,6 +45,7 @@ public sealed class Startup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ApprovalPolicy>, ApprovalPolicyHandler>());
         services.AddHttpContextAccessor();
         services.AddDisplayDriver<ApprovalPolicy, ApprovalPolicyDisplayDriver>();
+        services.AddDisplayDriver<ApprovalPolicy, ApprovalPolicyConditionsDisplayDriver>();
         services.AddDisplayDriver<ApprovalRequest, ApprovalRequestDisplayDriver>();
         services.AddPermissionProvider<ApprovalsPermissionProvider>();
         services.AddNavigationProvider<ApprovalsAdminMenu>();

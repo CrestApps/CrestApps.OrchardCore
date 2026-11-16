@@ -10,14 +10,17 @@ namespace CrestApps.OrchardCore.Approvals.Core.Services;
 public sealed class ApprovalPolicyResolver : IApprovalPolicyResolver
 {
     private readonly INamedCatalogManager<ApprovalPolicy> _policies;
+    private readonly IApprovalTypeCatalog _types;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ApprovalPolicyResolver"/> class.
     /// </summary>
     /// <param name="policies">The policies.</param>
-    public ApprovalPolicyResolver(INamedCatalogManager<ApprovalPolicy> policies)
+    /// <param name="types">The approval types, for their own conditions.</param>
+    public ApprovalPolicyResolver(INamedCatalogManager<ApprovalPolicy> policies, IApprovalTypeCatalog types)
     {
         _policies = policies;
+        _types = types;
     }
 
     /// <inheritdoc />
@@ -33,11 +36,20 @@ public sealed class ApprovalPolicyResolver : IApprovalPolicyResolver
             return await _policies.FindByIdAsync(named, cancellationToken) ?? await _policies.FindByNameAsync(named, cancellationToken);
         }
 
-        return (await _policies.GetAllAsync(cancellationToken))
+        var handler = _types.GetHandler(submission.SubjectKind);
+
+        foreach (var policy in (await _policies.GetAllAsync(cancellationToken))
             .Where(policy => policy.Enabled && Matches(policy, submission))
             .OrderBy(policy => policy.Order)
-            .ThenBy(policy => policy.Name, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault();
+            .ThenBy(policy => policy.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            if (await handler.MatchesAsync(policy, submission, cancellationToken))
+            {
+                return policy;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

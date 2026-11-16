@@ -72,20 +72,22 @@ internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy
             View("ApprovalPolicy_ActionsMenu_SummaryAdmin", policy).Location("ActionsMenu:10"));
     }
 
+    // The policy's own fields at the top, its stages and built-in rules at the bottom; its type's conditions and fields
+    // go between (Content:2 to Content:9).
     public override IDisplayResult Edit(ApprovalPolicy policy, BuildEditorContext context)
+        => Combine(
+            Initialize<ApprovalPolicyViewModel>("ApprovalPolicyFields_Edit", model => Fill(model, policy, context)).Location("Content:1"),
+            Initialize<ApprovalPolicyViewModel>("ApprovalPolicyStages_Edit", model => Fill(model, policy, context)).Location("Content:10"));
+
+    private void Fill(ApprovalPolicyViewModel model, ApprovalPolicy policy, BuildEditorContext context)
     {
-        return Initialize<ApprovalPolicyViewModel>("ApprovalPolicyFields_Edit", model =>
         {
             model.Name = policy.Name;
             model.Title = policy.Title;
             model.Description = policy.Description;
-            model.Types = [.. policy.Types ?? []];
+            model.TypeDisplayName = TypeName(policy);
             model.Enabled = policy.Enabled;
             model.Order = policy.Order == 0 ? null : policy.Order.ToString(CultureInfo.InvariantCulture);
-            model.MinimumAmount = policy.MinimumAmount?.ToString("0.##########", CultureInfo.InvariantCulture);
-            model.MaximumAmount = policy.MaximumAmount?.ToString("0.##########", CultureInfo.InvariantCulture);
-            model.Currency = policy.Currency;
-            model.AccessScope = policy.AccessScope;
             model.AllowRequesterToApprove = policy.AllowRequesterToApprove;
             model.AllowSubjectToDecide = policy.AllowSubjectToDecide;
             model.AllowSamePersonAcrossStages = policy.AllowSamePersonAcrossStages;
@@ -117,18 +119,10 @@ internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy
                 }
             }
 
-            model.TypeOptions = [.. _types.List().Select(type => new SelectListItem(Localize(type.DisplayName) ?? type.Name, type.Name, model.Types.Contains(type.Name, StringComparer.OrdinalIgnoreCase)))];
-
-            // A type of a feature that is off is kept on the policy and shown by its name.
-            foreach (var missing in model.Types.Where(type => model.TypeOptions.All(option => !string.Equals(option.Value, type, StringComparison.OrdinalIgnoreCase))))
-            {
-                model.TypeOptions.Add(new SelectListItem(missing, missing, true));
-            }
-
             model.KindOptions = [new SelectListItem(S["Not used"], string.Empty), .. _providers
                 .OrderBy(provider => provider.Name, StringComparer.Ordinal)
                 .Select(provider => new SelectListItem(Localize(provider.DisplayName) ?? provider.Name, provider.Name))];
-        }).Location("Content:1");
+        }
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ApprovalPolicy policy, UpdateEditorContext context)
@@ -140,13 +134,8 @@ internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy
         policy.Name = Clean(model.Name);
         policy.Title = Clean(model.Title);
         policy.Description = Clean(model.Description);
-        policy.Types = [.. (model.Types ?? []).Where(type => !string.IsNullOrWhiteSpace(type)).Select(type => type.Trim()).Distinct(StringComparer.OrdinalIgnoreCase)];
         policy.Enabled = model.Enabled;
         policy.Order = Whole(model.Order, nameof(model.Order), context) ?? 0;
-        policy.MinimumAmount = Amount(model.MinimumAmount, nameof(model.MinimumAmount), context);
-        policy.MaximumAmount = Amount(model.MaximumAmount, nameof(model.MaximumAmount), context);
-        policy.Currency = Clean(model.Currency)?.ToUpperInvariant();
-        policy.AccessScope = Clean(model.AccessScope);
         policy.AllowRequesterToApprove = model.AllowRequesterToApprove;
         policy.AllowSubjectToDecide = model.AllowSubjectToDecide;
         policy.AllowSamePersonAcrossStages = model.AllowSamePersonAcrossStages;
@@ -191,6 +180,17 @@ internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy
     private string Localize(global::OrchardCore.Localization.LocalizationSource source)
         => source is null ? null : _localizerFactory.Localize(source).Value;
 
+    // The policy's type as people see it; a general policy serves the types it lists, or every type.
+    private string TypeName(ApprovalPolicy policy)
+    {
+        if (!string.IsNullOrEmpty(policy.Type))
+        {
+            return _types.Find(policy.Type) is { } type ? Localize(type.DisplayName) ?? type.Name : policy.Type;
+        }
+
+        return policy.Types is { Count: > 0 } ? S["General: {0}", string.Join(", ", policy.Types)] : S["General: any approval type"];
+    }
+
     // Numbers are typed as text so a culture never changes them; the handler checks ranges, as for a recipe.
     private int? Whole(string text, string field, UpdateEditorContext context)
     {
@@ -205,23 +205,6 @@ internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy
         }
 
         context.Updater.ModelState.AddModelError(Prefix, field, S["Enter a whole number, or leave it empty."]);
-
-        return null;
-    }
-
-    private decimal? Amount(string text, string field, UpdateEditorContext context)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return null;
-        }
-
-        if (decimal.TryParse(text.Trim(), NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value))
-        {
-            return value;
-        }
-
-        context.Updater.ModelState.AddModelError(Prefix, field, S["Enter an amount with a dot for decimals, or leave it empty."]);
 
         return null;
     }

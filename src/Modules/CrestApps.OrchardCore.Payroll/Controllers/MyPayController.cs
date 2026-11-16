@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -28,6 +29,8 @@ namespace CrestApps.OrchardCore.Payroll.Controllers;
 /// </summary>
 [Admin]
 [Feature(PayrollConstants.Features.SelfService)]
+// Pay is private: the signed-in person confirms their password before seeing it.
+[ConfirmPassword]
 public sealed class MyPayController : Controller
 {
     private readonly IStaffDirectory _staff;
@@ -111,66 +114,8 @@ public sealed class MyPayController : Controller
             return View(model);
         }
 
-        var meId = me.ItemId;
-        var draft = nameof(PayStatementStatus.Draft);
-        var statements = await _statements.ListAsync(index => index.StaffMemberId == meId && index.Status != draft, HttpContext.RequestAborted);
-        var employers = new Dictionary<string, string>(StringComparer.Ordinal);
-
-        foreach (var employerId in statements.Select(statement => statement.EmployerId).Distinct(StringComparer.Ordinal))
-        {
-            employers[employerId] = (await _employers.FindByIdAsync(employerId))?.Name ?? employerId;
-        }
-
-        model.Statements = new AdminListContext<MyPayStatementRow>
-        {
-            Source = [.. statements
-                .OrderByDescending(statement => statement.PayDate)
-                .ThenByDescending(statement => statement.Number, StringComparer.Ordinal)
-                .Select(statement => new MyPayStatementRow { Statement = statement, EmployerName = employers.GetValueOrDefault(statement.EmployerId) ?? statement.Snapshot?.EmployerName })],
-        };
-
-        foreach (var profile in await _profiles.ListByStaffMemberAsync(meId, HttpContext.RequestAborted))
-        {
-            model.Profiles.Add((profile, (await _employers.FindByIdAsync(profile.EmployerId))?.Name ?? profile.EmployerId));
-        }
-
-        model.CanManageDetails = await _authorizationService.AuthorizeAsync(User, PayrollPermissions.ManageOwnPayDetails);
-
-        // Coming pay to review before the run is submitted, when employees review their pay.
-        if (HttpContext.RequestServices.GetService<PayStatementReviewService>() is { } reviews)
-        {
-            foreach (var (statement, _) in await reviews.ListOpenAsync(meId, HttpContext.RequestAborted))
-            {
-                model.ToReview.Add((statement, (await _employers.FindByIdAsync(statement.EmployerId))?.Name ?? statement.Snapshot?.EmployerName));
-            }
-        }
-
-        // The person's filed tax forms, such as wage statements.
-        if (HttpContext.RequestServices.GetService<IPayrollFilingManager>() is { } filings && model.Profiles.Count > 0)
-        {
-            var forms = (await filings.ListByEmployersAsync([.. model.Profiles.Select(pair => pair.Profile.EmployerId).Distinct(StringComparer.Ordinal)], HttpContext.RequestAborted))
-                .Where(filing => filing.Status == PayrollFilingStatus.Filed)
-                .SelectMany(filing => filing.People.Where(person => person.StaffMemberId == meId).Select(person => new MyPayTaxFormViewModel
-                {
-                    Filing = filing,
-                    Person = person,
-                    EmployerName = model.Profiles.FirstOrDefault(pair => pair.Profile.EmployerId == filing.EmployerId).EmployerName,
-                }))
-                .OrderByDescending(form => form.Filing.Year)
-                .ToList();
-
-            model.HasTaxForms = forms.Count > 0;
-            model.TaxForms = new AdminListContext<MyPayTaxFormViewModel> { Source = forms };
-        }
-
-        model.ComingPay = new AdminListContext<MyPayComingPayRow> { Source = [.. model.ToReview.Select(pair => new MyPayComingPayRow { Statement = pair.Statement, EmployerName = pair.EmployerName })] };
-        model.PayDetails = new AdminListContext<MyPayProfileRow> { Source = [.. model.Profiles.Select(pair => new MyPayProfileRow { Profile = pair.Profile, EmployerName = pair.EmployerName, CanManageDetails = model.CanManageDetails })] };
-
-        // Banking keeps the person's own bank accounts: link to it when it is on.
-        model.CanManageBankAccounts = HttpContext.RequestServices.GetService<IBankAccountManager>() is not null
-            && await _authorizationService.AuthorizeAsync(User, BankingPermissions.ManageOwnBankAccounts);
-
-        return View(model);
+        // A person's pay is the Pay section of their own staff profile.
+        return RedirectToAction("Profile", "Staff", new { area = "CrestApps.OrchardCore.Staff", id = me.ItemId }, "staff-pay");
     }
 
     /// <summary>

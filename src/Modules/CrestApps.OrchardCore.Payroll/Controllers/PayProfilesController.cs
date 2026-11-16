@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -17,11 +18,14 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Payroll.Controllers;
 
 /// <summary>
-/// Payroll &gt; Employees: the pay profiles of the employers the user may see. Changing one needs Manage pay profiles for
-/// its employer, and nobody changes their own unless the settings allow it.
+/// The pages of a pay profile, opened from the Payroll card of a staff member's profile: there is no separate list of
+/// employees. Changing one needs Manage pay profiles for its employer, and nobody changes their own unless the settings
+/// allow it. Pay is private: every page asks for the user's password first.
 /// </summary>
 [Admin]
 [Feature(PayrollConstants.Features.Payroll)]
+// Pay is private: the signed-in person confirms their password before seeing it.
+[ConfirmPassword]
 public sealed class PayProfilesController : Controller
 {
     private readonly IPayProfileManager _manager;
@@ -34,7 +38,6 @@ public sealed class PayProfilesController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<EmployeePayProfile> _displayManager;
     private readonly INotifier _notifier;
-    private readonly IShapeFactory _shapeFactory;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -50,7 +53,6 @@ public sealed class PayProfilesController : Controller
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<EmployeePayProfile> displayManager,
         INotifier notifier,
-        IShapeFactory shapeFactory,
         IHtmlLocalizer<PayProfilesController> htmlLocalizer,
         IStringLocalizer<PayProfilesController> stringLocalizer)
     {
@@ -64,52 +66,8 @@ public sealed class PayProfilesController : Controller
         _updateModelAccessor = updateModelAccessor;
         _displayManager = displayManager;
         _notifier = notifier;
-        _shapeFactory = shapeFactory;
         H = htmlLocalizer;
         S = stringLocalizer;
-    }
-
-    [Admin("payroll/employees", "PayrollPayProfilesIndex")]
-    public async Task<IActionResult> Index(string employerId)
-    {
-        var view = await _scope.GetScopeAsync(User, PayrollPermissions.ViewPayProfiles, HttpContext.RequestAborted);
-
-        if (view.IsEmpty)
-        {
-            return Forbid();
-        }
-
-        var employers = (await _employers.ListAsync(HttpContext.RequestAborted)).Where(employer => view.Allows(employer.ItemId)).ToList();
-        var chosen = employers.Any(employer => employer.ItemId == employerId) ? [employerId] : employers.Select(employer => employer.ItemId).ToArray();
-        var profiles = (await _manager.ListByEmployersAsync(chosen, HttpContext.RequestAborted)).ToList();
-        var names = new Dictionary<string, string>(StringComparer.Ordinal);
-
-        foreach (var profile in profiles)
-        {
-            names[profile.ItemId] = await _names.StaffAsync(profile.StaffMemberId);
-        }
-
-        profiles = [.. profiles.OrderBy(profile => names[profile.ItemId], StringComparer.CurrentCultureIgnoreCase)];
-
-        var model = new PayProfilesIndexViewModel
-        {
-            EmployerId = chosen.Length == 1 && employers.Count > 1 ? chosen[0] : null,
-            Employers = [.. employers.Select(employer => new SelectListItem(employer.Name, employer.ItemId, employer.ItemId == employerId))],
-            CanAdd = !(await _scope.GetScopeAsync(User, PayrollPermissions.ManagePayProfiles, HttpContext.RequestAborted)).IsEmpty,
-        };
-
-        model.List = new AdminListContext<EmployeePayProfile>
-        {
-            Source = profiles,
-
-            // The employer filter goes in the list's toolbar.
-            ToolbarActions = await _shapeFactory.CreateAsync<PayProfilesIndexViewModel>("PayrollEmployerFilter", filter =>
-            {
-                filter.Employers = model.Employers;
-            }),
-        };
-
-        return View(model);
     }
 
     [Admin("payroll/employees/create", "PayrollPayProfilesCreate")]
@@ -242,7 +200,7 @@ public sealed class PayProfilesController : Controller
     {
         if (await FindAsync(id) is not { } profile)
         {
-            return RedirectToAction(nameof(Index));
+            return NotFound();
         }
 
         if (!await MayManageAsync(profile))
@@ -262,7 +220,8 @@ public sealed class PayProfilesController : Controller
             await _notifier.ErrorAsync(H["{0}", ex.Message]);
         }
 
-        return RedirectToAction(nameof(Index));
+        // Back to the person's staff profile, where their pay setup is.
+        return RedirectToAction("Profile", "Staff", new { area = "CrestApps.OrchardCore.Staff", id = profile.StaffMemberId });
     }
 
     /// <summary>

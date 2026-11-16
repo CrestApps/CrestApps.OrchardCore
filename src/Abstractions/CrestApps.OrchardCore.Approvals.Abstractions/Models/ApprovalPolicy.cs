@@ -28,7 +28,15 @@ public sealed class ApprovalPolicy : CatalogItem, INameAwareModel, IModifiedUtcA
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the approval types the policy serves, by name (<c>ApprovalTypeOptions</c>); empty serves any type.
+    /// Gets or sets the approval type the policy serves (<c>ApprovalTypeOptions</c>), chosen when it is added and fixed
+    /// afterwards; the type decides which conditions and fields the policy editor shows. Empty for a general policy, one
+    /// saved before policies had one type, which serves the types of <see cref="Types"/>, or every type.
+    /// </summary>
+    public string Type { get; set; }
+
+    /// <summary>
+    /// Gets or sets the approval types a policy saved before policies had one type serves; empty serves any type. A
+    /// policy with one is read as that <see cref="Type"/>.
     /// </summary>
     public List<string> Types { get; set; } = [];
 
@@ -123,7 +131,9 @@ public sealed class ApprovalPolicy : CatalogItem, INameAwareModel, IModifiedUtcA
     /// Returns whether the policy serves an approval type.
     /// </summary>
     /// <param name="type">The type's name.</param>
-    /// <returns><see langword="true"/> when it lists the type or lists none.</returns>
+    /// <returns><see langword="true"/> when it is the policy's type, or a general policy lists it or lists none.</returns>
     public bool Serves(string type)
-        => Types is not { Count: > 0 } || Types.Contains(type, StringComparer.OrdinalIgnoreCase);
+        => !string.IsNullOrEmpty(Type)
+            ? string.Equals(Type, type, StringComparison.OrdinalIgnoreCase)
+            : Types is not { Count: > 0 } || Types.Contains(type, StringComparer.OrdinalIgnoreCase);
 }

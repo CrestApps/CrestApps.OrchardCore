@@ -157,3 +157,18 @@ Adds **Email me a sign-in code** to the login form (`EmailCodeLoginFormDisplayDr
 `IUserAvatarProvider` gives the address of a user's picture. The User Avatars feature registers one, and the user search (`IUserSearchService`) fills `UserSearchResult.AvatarUrl` from it, so modules show faces (for example the staff organization chart) without knowing where pictures are kept.
 
 An `IUserAudienceProvider` can also leave users out of a search with `GetExcludedUserIdsAsync`, which only receives the users a search found. Staff uses it for the `StaffUnlinked` audience, so the staff editor offers only accounts that aren't linked to a staff member yet.
+
+## Confirm the password before private pages
+
+`IPasswordConfirmation` (Users.Abstractions) asks the signed-in person for their password before a page shows private data, such as pay. Put `[ConfirmPassword]` (Users.Core) on a controller or an action: until the person confirms, a GET is redirected to **Confirm your password** (`~/Admin/confirm-password`) and back, and a form posted after the confirmation ran out goes back to the page it was posted from. A confirmation is a cookie protected for that user only (`HttpOnly`, `SameSite=Strict`), valid for `Window` (10 minutes); a wrong password counts toward lockout.
+
+```csharp
+[Admin]
+[ConfirmPassword]
+public sealed class MyPayController : Controller
+{
+    // Every action asks first.
+}
+```
+
+A display driver that shows private data on a page others can open checks `IsConfirmedAsync(user)` itself and renders a prompt that links to `GetConfirmationUrl(returnUrl)`. Without the Users feature, `[ConfirmPassword]` refuses the page.

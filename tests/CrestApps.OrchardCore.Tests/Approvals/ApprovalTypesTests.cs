@@ -312,9 +312,81 @@ public sealed class ApprovalTypesTests
         await seeder.ServePayRunsOnlyAsync();
 
         // Assert: a ticket asking with no policy no longer lands on it.
-        Assert.Equal(["PayRun"], policy.Types);
+        Assert.Equal("PayRun", policy.Type);
         Assert.False(ApprovalPolicyResolver.Matches(policy, new ApprovalSubmission { SubjectKind = TicketApprovalType.Name }));
         policies.Verify(manager => manager.UpdateAsync(policy, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task TheResolver_SkipsAPolicyTheTypesOwnConditionRulesOut()
+    {
+        // Arrange: the first policy by order serves tickets, but the ticket type's own condition rules it out.
+        var harness = new Harness();
+
+        harness.Policies.Add(new ApprovalPolicy { ItemId = "vip", Name = "VipQueue", Type = TicketApprovalType.Name, Order = 1 });
+        harness.Policies.Add(new ApprovalPolicy { ItemId = "all", Name = "AllTickets", Type = TicketApprovalType.Name, Order = 5 });
+        harness.Ticket.UnmatchedPolicies.Add("VipQueue");
+
+        // Act
+        var resolved = await harness.Resolver.ResolveAsync(new ApprovalSubmission { SubjectKind = TicketApprovalType.Name }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("all", resolved?.ItemId);
+    }
+
+    [Fact]
+    public void APolicyOfOneType_ServesOnlyIt_AndAGeneralPolicyServesEveryType()
+    {
+        // Arrange
+        var ticketPolicy = new ApprovalPolicy { Name = "Tickets", Type = TicketApprovalType.Name };
+        var general = new ApprovalPolicy { Name = "General" };
+        var legacyList = new ApprovalPolicy { Name = "Both", Types = [TicketApprovalType.Name, "PayRun"] };
+
+        // Act and assert
+        Assert.True(ticketPolicy.Serves(TicketApprovalType.Name));
+        Assert.False(ticketPolicy.Serves("PayRun"));
+        Assert.True(general.Serves("PayRun"));
+        Assert.True(general.Serves(TicketApprovalType.Name));
+        Assert.True(legacyList.Serves("PayRun"));
+        Assert.False(legacyList.Serves("Invoice"));
+    }
+
+    [Theory]
+    [InlineData(new[] { "Ticket" }, "Ticket", 0)]
+    [InlineData(new[] { "Ticket", "PayRun" }, null, 2)]
+    [InlineData(new string[0], null, 0)]
+    public async Task APolicySavedWithAListOfTypes_LoadsAsItsOneType_OrStaysGeneral(string[] types, string expectedType, int expectedListCount)
+    {
+        // Arrange
+        var handler = new ApprovalPolicyHandler(Mock.Of<IClock>(), [new UsersApproverRuleProvider()], RecipeRoundTrip.Localizer<ApprovalPolicyHandler>());
+        var policy = new ApprovalPolicy { Name = "Old", Types = [.. types] };
+
+        // Act
+        await handler.LoadedAsync(new LoadedContext<ApprovalPolicy>(policy), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expectedType, policy.Type);
+        Assert.Equal(expectedListCount, policy.Types.Count);
+    }
+
+    [Fact]
+    public void TheConditionsEditor_ShowsOnlyForTypesThatOptIn_AndForGeneralPolicies()
+    {
+        // Arrange: Ticket opts into the amount only; Note opts into nothing.
+        var services = new ServiceCollection();
+
+        services.AddApprovalType<TicketApprovalType>(TicketApprovalType.Name, type => type.Conditions = ApprovalConditions.Amount);
+        services.AddApprovalType<TicketApprovalType>("Note");
+        services.AddSingleton(new TicketCalls());
+
+        var provider = services.BuildServiceProvider();
+        var types = new ApprovalTypeCatalog(provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ApprovalTypeOptions>>(), provider);
+        var driver = new global::CrestApps.OrchardCore.Approvals.Drivers.ApprovalPolicyConditionsDisplayDriver(types, RecipeRoundTrip.Localizer<global::CrestApps.OrchardCore.Approvals.Drivers.ApprovalPolicyConditionsDisplayDriver>());
+
+        // Act and assert
+        Assert.True(driver.CanHandleModel(new ApprovalPolicy { Type = TicketApprovalType.Name }));
+        Assert.False(driver.CanHandleModel(new ApprovalPolicy { Type = "Note" }));
+        Assert.True(driver.CanHandleModel(new ApprovalPolicy()));
     }
 
     [Fact]
@@ -374,12 +446,13 @@ public sealed class ApprovalTypesTests
             policies.Setup(manager => manager.GetAllAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => Policies);
 
+            var types = new ApprovalTypeCatalog(provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ApprovalTypeOptions>>(), provider);
+
             Store = new InMemoryApprovalRequestStore();
-            Resolver = new ApprovalPolicyResolver(policies.Object);
+            Resolver = new ApprovalPolicyResolver(policies.Object, types);
 
             var manager = new ApprovalRequestManager(Store, [new ApprovalRequestHandler(clock.Object)], NullLogger<CatalogManager<ApprovalRequest>>.Instance);
             var directory = new ApproverDirectory([new UsersApproverRuleProvider(), new AssigneeTeamApproverRuleProvider(), new FixedManagerApproverRuleProvider()]);
-            var types = new ApprovalTypeCatalog(provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ApprovalTypeOptions>>(), provider);
 
             Service = new ApprovalService(manager, policies.Object, directory, Resolver, types, new CrestApps.OrchardCore.Core.SourceAccess.SourceAccessService([]), [Observer], new KeyedDistributedLock(), new NoopApprovalCommitter(), clock.Object, RecipeRoundTrip.Localizer<ApprovalService>());
         }
@@ -402,6 +475,8 @@ public sealed class ApprovalTypesTests
         public List<string> Calls { get; } = [];
 
         public bool RefuseDecisions { get; set; }
+
+        public HashSet<string> UnmatchedPolicies { get; } = new(StringComparer.Ordinal);
     }
 
     private sealed class TicketApprovalData
@@ -450,6 +525,10 @@ public sealed class ApprovalTypesTests
 
             return Task.CompletedTask;
         }
+
+        // The type's own condition, as a help desk's queue would be: a policy it rules out is skipped.
+        public override Task<bool> MatchesAsync(ApprovalPolicy policy, ApprovalSubmission submission, CancellationToken cancellationToken = default)
+            => Task.FromResult(!_calls.UnmatchedPolicies.Contains(policy.Name));
 
         public override Task StageApprovedAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
             => Record("StageApproved");

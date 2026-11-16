@@ -2,7 +2,7 @@
 
 <zone Name="Title">
     <breadcrumb name="PayrollPayItemsCreate" title="@T["New pay item"]">
-        <breadcrumb-item id="PayrollPayProfiles" action="Index" controller="PayProfiles" area="CrestApps.OrchardCore.Payroll">@T["Employees"]</breadcrumb-item>
+        <breadcrumb-item id="StaffIndex" action="Index" controller="Staff" area="CrestApps.OrchardCore.Staff">@T["Staff"]</breadcrumb-item>
         <breadcrumb-item id="PayrollPayItems" action="Index" controller="PayItems" area="CrestApps.OrchardCore.Payroll" route-profileId="@ViewContext.RouteData.Values["profileId"]">@T["Pay items"]</breadcrumb-item>
     </breadcrumb>
 </zone>

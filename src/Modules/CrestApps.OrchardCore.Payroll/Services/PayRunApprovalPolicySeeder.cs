@@ -43,7 +43,7 @@ public sealed class PayRunApprovalPolicySeeder
         policy.Description = S["A pay run is approved before it is processed. People who approve pay runs, for every employer or for the run's employer, decide."];
         policy.Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Permission, Value = PayrollPermissions.ApprovePayRuns.Name }];
         policy.RequiredApprovals = 1;
-        policy.Types = [PayrollConstants.PayRunSubjectKind];
+        policy.Type = PayrollConstants.PayRunSubjectKind;
         policy.AllowRequesterToApprove = settings?.AllowPreparerToApprove == true;
         policy.AllowSubjectToDecide = settings?.AllowPreparerToApprove == true;
         policy.DueAfterHours = 48;
@@ -61,9 +61,9 @@ public sealed class PayRunApprovalPolicySeeder
     /// <returns>A task.</returns>
     public async Task ServePayRunsOnlyAsync()
     {
-        if (await _policies.FindByNameAsync(PayrollConstants.PayRunApprovalPolicy) is { } policy && policy.Types is not { Count: > 0 })
+        if (await _policies.FindByNameAsync(PayrollConstants.PayRunApprovalPolicy) is { } policy && string.IsNullOrEmpty(policy.Type) && policy.Types is not { Count: > 0 })
         {
-            policy.Types = [PayrollConstants.PayRunSubjectKind];
+            policy.Type = PayrollConstants.PayRunSubjectKind;
             await _policies.UpdateAsync(policy);
         }
     }

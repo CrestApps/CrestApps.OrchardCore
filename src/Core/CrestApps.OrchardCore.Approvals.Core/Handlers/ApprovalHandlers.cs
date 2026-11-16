@@ -80,8 +80,28 @@ public sealed class ApprovalPolicyHandler : CatalogEntryHandlerBase<ApprovalPoli
     public override Task InitializingAsync(InitializingContext<ApprovalPolicy> context, CancellationToken cancellationToken = default)
     {
         Populate(context.Model, context.Data);
+        OneType(context.Model);
 
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public override Task LoadedAsync(LoadedContext<ApprovalPolicy> context, CancellationToken cancellationToken = default)
+    {
+        OneType(context.Model);
+
+        return Task.CompletedTask;
+    }
+
+    // A policy saved when policies served a list of types, with one in it, is that type's policy; with several or none it
+    // stays a general policy.
+    private static void OneType(ApprovalPolicy policy)
+    {
+        if (string.IsNullOrWhiteSpace(policy.Type) && policy.Types is { Count: 1 })
+        {
+            policy.Type = policy.Types[0];
+            policy.Types = [];
+        }
     }
 
     /// <inheritdoc />
@@ -89,6 +109,7 @@ public sealed class ApprovalPolicyHandler : CatalogEntryHandlerBase<ApprovalPoli
     {
         context.Model.ModifiedUtc = _clock.UtcNow;
         Populate(context.Model, context.Data);
+        OneType(context.Model);
 
         return Task.CompletedTask;
     }
@@ -167,6 +188,7 @@ public sealed class ApprovalPolicyHandler : CatalogEntryHandlerBase<ApprovalPoli
         policy.AllowSubjectToDecide = json.ContainsKey(nameof(ApprovalPolicy.AllowSubjectToDecide)) ? values.AllowSubjectToDecide : policy.AllowSubjectToDecide;
         policy.AllowSamePersonAcrossStages = json.ContainsKey(nameof(ApprovalPolicy.AllowSamePersonAcrossStages)) ? values.AllowSamePersonAcrossStages : policy.AllowSamePersonAcrossStages;
         policy.DueAfterHours = json.ContainsKey(nameof(ApprovalPolicy.DueAfterHours)) ? values.DueAfterHours : policy.DueAfterHours;
+        policy.Type = json.ContainsKey(nameof(ApprovalPolicy.Type)) ? values.Type?.Trim() : policy.Type;
         policy.Types = json.ContainsKey(nameof(ApprovalPolicy.Types)) ? values.Types ?? [] : policy.Types;
         policy.Enabled = json.ContainsKey(nameof(ApprovalPolicy.Enabled)) ? values.Enabled : policy.Enabled;
         policy.Order = json.ContainsKey(nameof(ApprovalPolicy.Order)) ? values.Order : policy.Order;

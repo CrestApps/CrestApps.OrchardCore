@@ -103,7 +103,7 @@ public class ValidationOwnershipArchitectureTests
             "Enter a whole number, or leave it empty.",
             "The hours and the order are typed as text so a culture never changes them; a recipe carries the numbers, whose ranges the handler checks."),
         (
-            "src/Modules/CrestApps.OrchardCore.Approvals/Drivers/ApprovalPolicyDisplayDriver.cs",
+            "src/Modules/CrestApps.OrchardCore.Approvals/Drivers/ApprovalPolicyConditionsDisplayDriver.cs",
             "Enter an amount with a dot for decimals, or leave it empty.",
             "The amount conditions are typed as text with a dot so a decimal comma never changes them; a recipe carries the numbers, whose order the handler checks."),
         (

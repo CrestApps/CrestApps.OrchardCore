@@ -48,6 +48,24 @@ public interface IApprovalTypeHandler
     Task StageApprovedAsync(ApprovalRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the access scopes a policy of the type can be limited to, for a type whose
+    /// <see cref="ApprovalType.Conditions"/> include <see cref="ApprovalConditions.Scope"/>, such as the employers.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The scopes.</returns>
+    Task<IReadOnlyList<ApprovalScope>> GetScopesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns whether a policy of the type matches what is asked by the type's own conditions, after its type and
+    /// standard conditions matched; the conditions are what the type's policy display driver stored on the policy.
+    /// </summary>
+    /// <param name="policy">The policy.</param>
+    /// <param name="submission">What is asked.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns><see langword="true"/> when it matches.</returns>
+    Task<bool> MatchesAsync(ApprovalPolicy policy, ApprovalSubmission submission, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Called after the last stage is approved.
     /// </summary>
     /// <param name="request">The approved request.</param>
@@ -108,6 +126,14 @@ public abstract class ApprovalTypeHandlerBase : IApprovalTypeHandler
     /// <inheritdoc />
     public virtual Task StageApprovedAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <inheritdoc />
+    public virtual Task<IReadOnlyList<ApprovalScope>> GetScopesAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<ApprovalScope>>([]);
+
+    /// <inheritdoc />
+    public virtual Task<bool> MatchesAsync(ApprovalPolicy policy, ApprovalSubmission submission, CancellationToken cancellationToken = default)
+        => Task.FromResult(true);
 
     /// <inheritdoc />
     public virtual Task ApprovedAsync(ApprovalRequest request, CancellationToken cancellationToken = default)

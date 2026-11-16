@@ -11,7 +11,9 @@ All in `CrestApps.OrchardCore.Approvals.Abstractions`:
 - `services.AddApprovalType<THandler>(name, ...)`: an approval type with a display name and a handler derived from
   `ApprovalTypeHandlerBase`, whose hooks fill and check a request (`RequestingAsync`), check a decision
   (`DecidingAsync`), and follow it (`StageApprovedAsync`, `ApprovedAsync`, `RejectedAsync`, `CanceledAsync`) in the
-  decision's unit of work. A type keeps its own data on the request with `Put`.
+  decision's unit of work. A type keeps its own data on the request with `Put`. It opts into the standard policy
+  conditions with `Conditions` (an amount range, a scope listed by `GetScopesAsync`) and checks its own with
+  `MatchesAsync`.
 - `services.AddApproverRuleProvider<T>()`: a way to name approvers (`IApproverRuleProvider`), beside the built-in
   Permission, Role and Users, and Manager and Staff with Staff on. Its value editor in the policy editor is the
   `ApproverRuleValue_Edit__{Kind}` shape alternate.
@@ -25,7 +27,8 @@ All in `CrestApps.OrchardCore.Approvals.Abstractions`:
 
 ## Policies and stages
 
-A policy lists the approval types it serves, an order, optional amount, currency and scope conditions, and up to ten
+A policy approves one approval type, chosen in the **Add approval policy** dialog (a policy saved with several types,
+or none, is a general policy serving any type), and has an order, optional amount, currency and scope conditions, and up to ten
 stages decided one after the other, each with approver rules and the approvals it needs. A policy without stages is one
 stage. Two rules are built in, on by default and checked at every stage: the person who asked can't approve, and
 nobody decides a request about themselves. One rejection at any stage rejects the request.

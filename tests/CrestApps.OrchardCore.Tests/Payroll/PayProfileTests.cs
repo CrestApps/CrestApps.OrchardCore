@@ -507,12 +507,11 @@ public sealed class PayProfileTests
         var revealer = CalendarTestHarness.User("revealer", PayrollPermissionTemplates.For(PayrollPermissions.ViewTaxIds, contoso.ItemId).Name);
         var self = CalendarTestHarness.User("lee-user", PayrollPermissions.ManagePayProfiles.Name);
 
-        var (list, other, own, hidden, shown, shownHeaders, selfDelete) = await harness.RunAsync(async services =>
+        var (other, own, hidden, shown, shownHeaders, selfDelete) = await harness.RunAsync(async services =>
         {
             var revealing = Controller(services, revealer);
 
             return (
-                await Controller(services, clerk).Index(null),
                 await Controller(services, clerk).Edit(kimProfile.ItemId),
                 await Controller(services, clerk).Edit(leeProfile.ItemId),
                 await Controller(services, clerk).TaxId(leeProfile.ItemId),
@@ -521,10 +520,6 @@ public sealed class PayProfileTests
                 await Controller(services, self).Delete(leeProfile.ItemId));
         }, commit: false);
 
-        var listed = Assert.IsType<PayProfilesIndexViewModel>(Assert.IsType<ViewResult>(list).Model);
-
-        Assert.Equal([leeProfile.ItemId], listed.List.Source.Cast<EmployeePayProfile>().Select(profile => profile.ItemId));
-        Assert.True(listed.CanAdd);
         Assert.IsType<ForbidResult>(other);
         Assert.IsType<ViewResult>(own);
         Assert.IsType<ForbidResult>(hidden);
@@ -619,12 +614,6 @@ public sealed class PayProfileTests
             .Setup(manager => manager.BuildEditorAsync(Moq.It.IsAny<EmployeePayProfile>(), Moq.It.IsAny<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModel>(), Moq.It.IsAny<bool>(), Moq.It.IsAny<string>(), Moq.It.IsAny<string>()))
             .ReturnsAsync(Moq.Mock.Of<global::OrchardCore.DisplayManagement.IShape>());
 
-        var shapeFactory = new Moq.Mock<global::OrchardCore.DisplayManagement.IShapeFactory>();
-
-        shapeFactory
-            .Setup(factory => factory.CreateAsync(Moq.It.IsAny<string>(), Moq.It.IsAny<Func<ValueTask<global::OrchardCore.DisplayManagement.IShape>>>(), Moq.It.IsAny<Action<global::OrchardCore.DisplayManagement.Implementation.ShapeCreatingContext>>(), Moq.It.IsAny<Action<global::OrchardCore.DisplayManagement.Implementation.ShapeCreatedContext>>()))
-            .ReturnsAsync(Moq.Mock.Of<global::OrchardCore.DisplayManagement.IShape>());
-
         return new PayProfilesController(
             services.GetRequiredService<IPayProfileManager>(),
             services.GetRequiredService<IPayProfileService>(),
@@ -636,7 +625,6 @@ public sealed class PayProfileTests
             Moq.Mock.Of<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor>(),
             displayManager.Object,
             Moq.Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
-            shapeFactory.Object,
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughHtmlLocalizer<PayProfilesController>(),
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<PayProfilesController>())
         {

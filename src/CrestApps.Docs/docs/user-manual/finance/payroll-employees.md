@@ -10,15 +10,17 @@ A **pay profile** is what an employer needs to pay a staff member. A person paid
 
 | | |
 | --- | --- |
-| **Menu** | Payroll > Employees, and the **Payroll** card on a staff member's profile |
+| **Menu** | Staff > a staff member's profile > **Pay** > **Payroll** card |
 | **Permission** | See pay profiles, Manage pay profiles (all employers, or one), See full tax ids |
 | **Feature** | Payroll |
 
 <AskYourAdmin />
 
+Pay profiles live on the staff member: there is no separate list of employees. Open **Staff**, open the person's profile and choose **Pay**. Pay is private, so the section first asks for your password (see [Confirm your password to see pay](#confirm-your-password-to-see-pay)). What keeps people from being paid also shows on each pay run.
+
 ## Add a pay profile
 
-1. Open **Payroll > Employees** and choose **Add pay profile**, or choose **Add pay profile** on the **Payroll** card of a staff member's profile.
+1. On the **Payroll** card of the staff member's **Pay** section, choose **Add pay profile**.
 2. Choose the **Staff member** and the **Employer**, then the **Pay schedule**, the **Worker type** and whether the person is paid overtime.
 3. Choose **Save**. The page opens again with every card and a list of what is still missing before the person can be paid.
 
@@ -38,7 +40,7 @@ People who may see full tax ids get **Show the full number** next to the last ch
 
 ## Pay items
 
-A **pay item** is an amount paid or taken every pay period until it ends: an allowance, a loan repayment, a contribution. Choose **Pay items** on a profile's row in **Payroll > Employees** or at the top of its page, then **Add pay item**:
+A **pay item** is an amount paid or taken every pay period until it ends: an allowance, a loan repayment, a contribution. Choose **Pay items** on a profile's row on the **Payroll** card or at the top of its page, then **Add pay item**:
 
 1. Choose the **Pay code**.
 2. Enter an **Amount** or a **Percent**, not both, with a dot for decimals.
@@ -50,3 +52,7 @@ A profile with pay items can't be deleted: remove its items first, or set its st
 ## Your own pay
 
 Nobody can change their own pay profile in these pages, even with the permission, unless **Settings > Payroll** allows it.
+
+## Confirm your password to see pay
+
+Every page that shows pay statements or pay details, yours or someone else's, first asks for your password, so nobody can read pay at a computer you left signed in. Type your password and choose **Confirm**: pay pages then open without asking again for 10 minutes. A user who signs in only with an outside account (such as Microsoft) sets a password on their profile first.

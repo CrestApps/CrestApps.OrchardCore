@@ -40,7 +40,7 @@ internal sealed class ApprovalsTestContext
 
         PolicyManager = policies.Object;
         Types = new ListApprovalTypeCatalog(Handlers);
-        Service = new ApprovalService(Manager, PolicyManager, Directory, new ApprovalPolicyResolver(PolicyManager), Types, Access, Observers, Locks, new NoopApprovalCommitter(), clock.Object, RecipeRoundTrip.Localizer<ApprovalService>());
+        Service = new ApprovalService(Manager, PolicyManager, Directory, new ApprovalPolicyResolver(PolicyManager, Types), Types, Access, Observers, Locks, new NoopApprovalCommitter(), clock.Object, RecipeRoundTrip.Localizer<ApprovalService>());
     }
 
     public DateTime Now { get; set; } = new(2026, 11, 13, 15, 0, 0, DateTimeKind.Utc);
@@ -275,6 +275,22 @@ internal sealed class ListApprovalTypeCatalog : IApprovalTypeCatalog
             foreach (var handler in _handlers)
             {
                 if (!await handler.CanAccessAsync(request, user, cancellationToken))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public Task<IReadOnlyList<ApprovalScope>> GetScopesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ApprovalScope>>([]);
+
+        public async Task<bool> MatchesAsync(ApprovalPolicy policy, ApprovalSubmission submission, CancellationToken cancellationToken = default)
+        {
+            foreach (var handler in _handlers)
+            {
+                if (!await handler.MatchesAsync(policy, submission, cancellationToken))
                 {
                     return false;
                 }

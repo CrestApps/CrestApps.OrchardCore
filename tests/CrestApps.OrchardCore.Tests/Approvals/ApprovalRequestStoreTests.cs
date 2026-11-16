@@ -166,12 +166,13 @@ public sealed class ApprovalRequestStoreTests : IAsyncLifetime
 
         var manager = new ApprovalRequestManager(new ApprovalRequestStore(session), [new global::CrestApps.OrchardCore.Approvals.Core.Handlers.ApprovalRequestHandler(clock.Object)], Microsoft.Extensions.Logging.Abstractions.NullLogger<global::CrestApps.Core.Services.CatalogManager<ApprovalRequest>>.Instance);
         var policies = new Moq.Mock<global::CrestApps.Core.Services.INamedCatalogManager<ApprovalPolicy>>();
+        var types = new ListApprovalTypeCatalog([handler]);
         var service = new ApprovalService(
             manager,
             policies.Object,
             new NamedApproverDirectory(),
-            new ApprovalPolicyResolver(policies.Object),
-            new ListApprovalTypeCatalog([handler]),
+            new ApprovalPolicyResolver(policies.Object, types),
+            types,
             new SourceAccessService([]),
             [],
             new KeyedDistributedLock(),

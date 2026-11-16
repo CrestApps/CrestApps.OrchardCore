@@ -15,7 +15,7 @@
 {
     <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Only when named"]</span>
 }
-@foreach (var typeName in policy.Types ?? [])
+@foreach (var typeName in string.IsNullOrEmpty(policy.Type) ? policy.Types ?? [] : [policy.Type])
 {
     var type = Types.Find(typeName);
     <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Approval type"]"><i class="fa-solid fa-tag text-secondary me-1" aria-hidden="true"></i>@(type?.DisplayName is { } name ? LocalizerFactory.Localize(name).Value : typeName)</span>

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
@@ -19,6 +20,8 @@ namespace CrestApps.OrchardCore.Payroll.Controllers;
 /// </summary>
 [Admin]
 [Feature(PayrollConstants.Features.Payroll)]
+// Pay is private: the signed-in person confirms their password before seeing it.
+[ConfirmPassword]
 public sealed class PayItemsController : Controller
 {
     private readonly IPayItemManager _manager;

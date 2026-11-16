@@ -61,4 +61,9 @@
 
 <div class="mb-3">
     <a class="btn btn-secondary" asp-action="StatementPdf" asp-route-id="@statement.ItemId"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Download the stub"]</a>
+    <button type="button" class="btn btn-secondary d-print-none" data-pay-statement-print><i class="fa-solid fa-print" aria-hidden="true"></i> @T["Print"]</button>
 </div>
+
+<script at="Foot">
+    document.querySelectorAll('[data-pay-statement-print]').forEach(button => button.addEventListener('click', () => window.print()));
+</script>

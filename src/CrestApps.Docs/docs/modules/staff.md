@@ -154,3 +154,7 @@ The `Staff` recipe step creates or updates staff members, matched by id, then em
 ## Upgrading from Workforce workers
 
 Workforce used to keep its own `WorkerProfile` records. The Workforce migration moves each worker into the `Staff` collection as a staff member with the **same id**, so every stored worker id (punches, timesheets, shifts, time off, visits, territories, skills) still points at the same person. Workforce's hours and availability move to `WorkforceStaffSettings`, pay rates to `StaffPayRates`, the kiosk PIN to `StaffBadge`, and the manager worker id becomes the manager. A site that ran Workforce before Staff existed gets the Staff feature turned on first; the move runs at the next start. The old worker index tables are left in place, empty.
+
+## Private pay cards
+
+Pay cards on a profile ask for the viewer's password first (`StaffPayPrivacy`, Staff.Core, over the Users module's `IPasswordConfirmation`). A module's pay card calls `StaffPayPrivacy.DecideAsync(httpContext)`: `Show` renders the card, `Prompt` renders the `StaffPayConfirmation` shape (with `ConfirmUrl`) in its place, and `Hide` renders nothing, so a profile shows one prompt however many pay cards it has. The Staff **Pay** card and Payroll's cards (the **Payroll** card, and **My pay** on the person's own profile) use it.

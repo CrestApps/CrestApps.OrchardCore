@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Payroll.Core.Calculation;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc;
 using OrchardCore.Admin;
 using OrchardCore.Modules;
@@ -14,6 +15,8 @@ namespace CrestApps.OrchardCore.Payroll.Controllers;
 /// </summary>
 [Admin]
 [Feature(PayrollConstants.Features.Payroll)]
+// Pay is private: the signed-in person confirms their password before seeing it.
+[ConfirmPassword]
 public sealed class PayPreviewsController : Controller
 {
     private readonly IPayProfileManager _profiles;

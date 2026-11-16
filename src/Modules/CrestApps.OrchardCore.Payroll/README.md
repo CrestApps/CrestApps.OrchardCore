@@ -88,5 +88,5 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
   `AddElectionFieldSet`), the split of net pay, and blockers (`IPayProfileBlockerProvider`). Changes and reveals reach
   `IPayProfileObserver`; with Audit Trail on, they are written there.
 - `EmployeePayItem` (`IPayItemManager`): standing amounts or percents with dates, goal, limits and an employer match.
-- **Payroll > Employees**, the staff profile's **Payroll** card, the **Employees** data set, the `PayrollPayProfiles` and
+- The staff profile's **Payroll** card (there is no separate employees list), the **Employees** data set, the `PayrollPayProfiles` and
   `PayrollPayItems` recipe steps and the **Pay profiles** deployment step.

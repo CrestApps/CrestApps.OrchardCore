@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -160,6 +161,7 @@ public sealed class PayRunsController : Controller
         return View(model);
     }
 
+    [ConfirmPassword]
     [Admin("payroll/pay-runs/{id}", "PayrollPayRunsDetails")]
     public async Task<IActionResult> Details(string id)
     {
@@ -385,6 +387,7 @@ public sealed class PayRunsController : Controller
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    [ConfirmPassword]
     [Admin("payroll/pay-runs/statements/{id}", "PayrollPayRunsStatement")]
     public async Task<IActionResult> Statement(string id, [FromServices] PayStatementStore statements)
     {
@@ -417,6 +420,7 @@ public sealed class PayRunsController : Controller
     /// <param name="statements">The statements.</param>
     /// <param name="stubs">Writes the stub.</param>
     /// <returns>The file.</returns>
+    [ConfirmPassword]
     [Admin("payroll/pay-runs/statements/{id}/pdf", "PayrollPayRunsStatementPdf")]
     public async Task<IActionResult> StatementPdf(string id, [FromServices] PayStatementStore statements, [FromServices] PayStubService stubs)
     {
@@ -465,6 +469,7 @@ public sealed class PayRunsController : Controller
     /// <param name="statements">The statements.</param>
     /// <returns>The statement page.</returns>
     [HttpPost]
+    [ConfirmPassword]
     [Admin("payroll/pay-runs/statements/{id}/void", "PayrollPayRunsVoidStatement")]
     public async Task<IActionResult> VoidStatement(string id, string reason, [FromServices] PayStatementStore statements)
     {
@@ -492,6 +497,7 @@ public sealed class PayRunsController : Controller
     /// <param name="statements">The statements.</param>
     /// <returns>The statement page.</returns>
     [HttpPost]
+    [ConfirmPassword]
     [Admin("payroll/pay-runs/statements/{id}/payments/{index}/reissue", "PayrollPayRunsReissuePayment")]
     public async Task<IActionResult> ReissuePayment(string id, int index, string reason, bool byCheck, [FromServices] PayStatementStore statements)
     {

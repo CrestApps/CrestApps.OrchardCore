@@ -34,15 +34,17 @@ You don't need any Approvals permission to decide what a policy asks you to deci
 
 ## Set who may approve
 
-1. Open **Approvals > Policies** and choose **Add approval policy**, or **Edit** an existing one.
+1. Open **Approvals > Policies** and choose **Add approval policy**. Choose what the policy approves, such as **Pay run**: the form then shows only the fields that type needs. To change a policy, choose **Edit**; what it approves can't change.
 2. Give it a **Title** and a **Technical name**. A feature that names its policy asks for it by name (Payroll asks for `PayRunApproval`).
-3. Under **When it is used**, choose the **Approval types** it approves (none chosen means every type) and, if it is only for some requests, an **Amount** range and currency or a **Scope**, such as one employer. Policies are tried by **Order**, lowest first; the first enabled one that matches a request is used. Clear **Choose this policy for requests that name none** to use it only when a feature names it.
+3. If it is only for some requests, fill in the conditions its type offers, such as an **Amount** range and currency, or a **Scope** such as one employer for pay runs. Policies are tried by **Order**, lowest first; the first enabled one that matches a request is used. Clear **Choose this policy for requests that name none** to use it only when a feature names it.
 4. Under **Stage 1**, add the rules of who decides first: anyone with a permission, anyone in a role, named users, the manager of the person the request is about, or named staff members (features can add more, such as a ticket's team). Set **Approvals needed**.
 5. To add a second or third stage, fill in its rules the same way. A stage without rules isn't used.
 6. Set **Due after (hours)** if requests should be decided within a time, and leave the built-in rules off unless you are a very small team where the same person must ask and approve, or decide more than one stage (**Let one person decide more than one stage**).
 7. Choose **Save**. A warning tells you when fewer people can decide a stage today than it needs.
 
 Changing a policy doesn't change requests already made.
+
+A policy saved before policies had one type, and that served several types or every type, shows **General** as what it approves: it still serves any type and shows every condition.
 
 ## Remind approvers
 

@@ -35,10 +35,13 @@ services.AddApprovalType<TicketApprovalTypeHandler>("Ticket", type =>
 {
     type.DisplayName = LocalizationSource.Create<TicketApprovalTypeHandler>("Ticket");
     type.Description = LocalizationSource.Create<TicketApprovalTypeHandler>("A ticket that needs a manager's yes before the work starts.");
+
+    // The standard conditions its policies offer: an amount range and currency, and a scope.
+    type.Conditions = ApprovalConditions.Amount | ApprovalConditions.Scope;
 });
 ```
 
-The name is stored on requests and policies and never changes. The display name shows on the requests list (with a **Type** filter), on the request page, in the policy editor's **Approval types**, on workflow events, and in the **Type** column of the **Approval requests** data set. A type whose feature is off keeps its requests and policies; its requests get a handler that does nothing.
+The name is stored on requests and policies and never changes. The display name shows on the requests list (with a **Type** filter), on the request page, on the card of the **Add approval policy** dialog (with the description), on workflow events, and in the **Type** column of the **Approval requests** data set. A type whose feature is off keeps its requests and policies; its requests get a handler that does nothing.
 
 ## Write the handler
 
@@ -134,7 +137,20 @@ Rules stored before providers were open held a number (0 Permission, 1 Role, 2 M
 
 ## Policies
 
-An `ApprovalPolicy` (`INamedCatalogManager<ApprovalPolicy>`) has a `Name` modules and workflows ask for, a `Title`, `Types` (empty serves every type), `Enabled` (chosen for requests that name none), `Order`, the conditions `MinimumAmount`, `MaximumAmount`, `Currency` and `AccessScope`, `Stages` (each a `Title`, `Approvers` and `RequiredApprovals`, ten at most), the two built-in rules and `DueAfterHours`. A policy without `Stages` is one stage made of its `Approvers` and `RequiredApprovals`, as policies saved before stages; `GetStages()` returns either. A request copies the stages when it is made, so a later change of the policy never changes a request already asked.
+An `ApprovalPolicy` (`INamedCatalogManager<ApprovalPolicy>`) has a `Name` modules and workflows ask for, a `Title`, the one `Type` it approves (chosen in the **Add approval policy** dialog and fixed afterwards), `Enabled` (chosen for requests that name none), `Order`, the conditions `MinimumAmount`, `MaximumAmount`, `Currency` and `AccessScope`, `Stages` (each a `Title`, `Approvers` and `RequiredApprovals`, ten at most), the two built-in rules and `DueAfterHours`. A policy without `Stages` is one stage made of its `Approvers` and `RequiredApprovals`, as policies saved before stages; `GetStages()` returns either. A request copies the stages when it is made, so a later change of the policy never changes a request already asked.
+
+Policies saved when a policy served a list of `Types` load with that list's type as `Type` when it held one; with several or none they stay **general** policies that serve any type (`Serves(type)`), show every standard condition, and keep `Types` as it was.
+
+### Conditions
+
+A type opts into the standard conditions with `ApprovalType.Conditions`: `Amount` shows the amount range and currency, `Scope` shows a **Scope** list filled by the handler's `GetScopesAsync` (Payroll's pay run type lists its employers, matched to `ApprovalSubmission.AccessScope`). A condition the type doesn't use is cleared when the policy is saved, so it can't keep choosing the policy unseen.
+
+A condition of the type's own goes in a `DisplayDriver<ApprovalPolicy>` whose `CanHandleModel` accepts only policies of the type, stored on the policy with `Put`, and the handler's `MatchesAsync` checks it: the resolver tries enabled policies by `Order`, keeps those whose type and standard conditions match, and takes the first `MatchesAsync` accepts.
+
+```csharp
+public override Task<bool> MatchesAsync(ApprovalPolicy policy, ApprovalSubmission submission, CancellationToken cancellationToken = default)
+    => Task.FromResult(!policy.TryGet<TicketPolicyQueue>(out var queue) || string.IsNullOrEmpty(queue.Queue) || queue.Queue == submission.AccessScope);
+```
 
 Time sheet example: a policy `TimesheetApproval` for the `Timesheet` type with two stages, **Manager** (`Manager`, 1 approval) then **Payroll** (`Role` Payroll Clerk, 1 approval); and a policy for expenses over 1,000 USD with `Order` 10 and three stages, before the general expense policy with `Order` 50.
 
@@ -181,7 +197,7 @@ public sealed class TicketApprovalDisplayDriver : DisplayDriver<ApprovalRequest>
 }
 ```
 
-A `DisplayDriver<ApprovalPolicy>` adds fields to the policy editor the same way, stored on the policy with `Put`.
+A `DisplayDriver<ApprovalPolicy>` adds fields to the policy editor the same way, stored on the policy with `Put`; check `policy.Type` in `CanHandleModel` so the fields show only on your type's policies. The editor's own shapes are `ApprovalPolicyFields_Edit` (`Content:1`), `ApprovalPolicyConditions_Edit` (`Content:2`, only for types with conditions) and `ApprovalPolicyStages_Edit` (`Content:10`). Each card of the **Add approval policy** dialog is the `ApprovalPolicyType_Link` shape with the alternate `ApprovalPolicyType_Link__{Name}`, so a type can give its card its own look.
 
 ## Who sees and decides requests
 
