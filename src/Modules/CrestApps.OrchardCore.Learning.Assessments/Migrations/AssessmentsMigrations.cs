@@ -41,6 +41,7 @@ internal sealed class AssessmentsMigrations : DataMigration
     public async Task<int> CreateAsync()
     {
         await AssessmentsIndexSchema.CreateAsync(SchemaBuilder);
+        await QuestionSourceIndexProvider.CreateTableAsync(SchemaBuilder);
 
         await _contentDefinitionManager.AlterPartDefinitionAsync(nameof(QuestionPart), part => part
             .WithDisplayName("Question")
@@ -109,6 +110,16 @@ internal sealed class AssessmentsMigrations : DataMigration
 
         await _courseListSynchronizer.SynchronizeAsync();
 
-        return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index of imported questions by their source identifier (QTI import).
+    /// </summary>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await QuestionSourceIndexProvider.CreateTableAsync(SchemaBuilder);
+
+        return 2;
     }
 }

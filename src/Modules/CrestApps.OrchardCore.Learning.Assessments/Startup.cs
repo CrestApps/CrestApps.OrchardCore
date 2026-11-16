@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer;
 using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer.Qti;
 using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.ContentTransfer.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.PersonalData.Core;
 using OrchardCore.Notifications;
@@ -57,7 +58,8 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<AssessmentsMigrations>()
             .AddIndexProvider<AssessmentAttemptIndexProvider>()
             .AddIndexProvider<AssessmentOverrideIndexProvider>()
-            .AddIndexProvider<GradeScaleIndexProvider>();
+            .AddIndexProvider<GradeScaleIndexProvider>()
+            .AddIndexProvider<QuestionSourceIndexProvider>();
 
         services.AddLearningAssessmentsCore();
 
@@ -272,6 +274,11 @@ public sealed class AssessmentsContentTransferStartup : StartupBase
 
         // One import creates questions of every kind, each row naming its type.
         services.AddSingleton<IContentImportRowTypeProvider, QuestionRowTypeProvider>();
+
+        // The question bank of an import, and a row matched to the question it imported before.
+        services.AddScoped<IDisplayDriver<ImportContent>, QuestionImportOptionsDisplayDriver>();
+        services.AddScoped<IContentImportHandler, QuestionBankImportHandler>();
+        services.AddScoped<IContentImportRowFilter, QuestionSourceRowFilter>();
     }
 }
 
@@ -287,5 +294,6 @@ public sealed class QtiImportStartup : StartupBase
         services.AddSingleton<IContentTransferFileFormatProvider, QtiPackageFileFormatProvider>();
         services.AddSingleton<IContentTransferFileFormatProvider, QtiItemFileFormatProvider>();
         services.AddScoped<IContentImportHandler, QtiQuestionImportHandler>();
+        services.AddScoped<IContentImportHandler, QtiMediaImportHandler>();
     }
 }

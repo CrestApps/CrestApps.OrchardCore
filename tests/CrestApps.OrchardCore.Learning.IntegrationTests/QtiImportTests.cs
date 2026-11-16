@@ -1,0 +1,217 @@
+using System.IO.Compression;
+using System.Reflection;
+using System.Text;
+using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.ContentTransfer.BackgroundTasks;
+using CrestApps.OrchardCore.ContentTransfer.Indexes;
+using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.OrchardCore.Learning.Assessments;
+using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer;
+using CrestApps.OrchardCore.Learning.Assessments.Models;
+using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.ContentManagement;
+using OrchardCore.Entities;
+using OrchardCore.Lists.Indexes;
+using OrchardCore.Media;
+using OrchardCore.Title.Models;
+using YesSql;
+
+namespace CrestApps.OrchardCore.Learning.IntegrationTests;
+
+/// <summary>
+/// QTI import on a running site: a QTI 3.0 package imported through ContentTransfer's background import becomes
+/// questions of several kinds in the chosen question bank, with its picture in the media library; an unsupported item is
+/// a failed row; importing the package again updates the same questions.
+/// </summary>
+[Collection(LearningSiteCollection.Name)]
+public sealed class QtiImportTests
+{
+    private const string Namespace30 = "http://www.imsglobal.org/xsd/imsqtiasi_v3p0";
+
+    private readonly LearningSiteFixture _fixture;
+
+    public QtiImportTests(LearningSiteFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
+    [Fact]
+    public async Task AQtiPackage_ImportsIntoTheChosenBank_WithItsPicture_ReportsTheItemItSkips_AndUpdatesOnTheNextImport()
+    {
+        // Arrange
+        var bankId = await _fixture.InTenantAsync(async services =>
+        {
+            var contentManager = services.GetRequiredService<IContentManager>();
+            var bank = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.QuestionBank);
+            bank.Alter<TitlePart>(part => part.Title = "QTI bank");
+            await contentManager.CreateAsync(bank, VersionOptions.Published);
+
+            return bank.ContentItemId;
+        });
+
+        var package = Package();
+
+        // Act
+        var first = await ImportAsync(package, bankId);
+        var firstQuestions = await QuestionsAsync(bankId);
+        var second = await ImportAsync(package, bankId);
+        var secondQuestions = await QuestionsAsync(bankId);
+
+        // Assert
+        Assert.Equal(ContentTransferEntryStatus.CompletedWithErrors, first.Status);
+        var stats = first.GetOrCreate<ImportFileProcessStatsPart>();
+        Assert.Equal(3, stats.ImportedCount);
+        var error = Assert.Single(stats.ErrorMessages);
+        Assert.Contains("hotspot", error.Value, StringComparison.Ordinal);
+        Assert.Contains("hotspotInteraction", error.Value, StringComparison.Ordinal);
+
+        Assert.Equal(3, firstQuestions.Count);
+        Assert.Equal(
+            [AssessmentsConstants.ContentTypes.EssayQuestion, AssessmentsConstants.ContentTypes.OrderingQuestion, AssessmentsConstants.ContentTypes.SingleChoiceQuestion],
+            firstQuestions.Select(question => question.ContentType).Order(StringComparer.Ordinal));
+
+        var choice = firstQuestions.Single(question => question.ContentType == AssessmentsConstants.ContentTypes.SingleChoiceQuestion);
+        var part = choice.Get<QuestionPart>(nameof(QuestionPart));
+        Assert.Equal("choice", part.SourceIdentifier);
+        Assert.Equal("bank.zip/items/choice.xml", part.SourceFile);
+        var mediaPath = $"qti-imports/{first.EntryId}/items/images/sign.png";
+        Assert.Contains(mediaPath, part.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("qti-media:", part.Prompt, StringComparison.Ordinal);
+        Assert.Equal(["Stay with it", "Leave it"], choice.Get<ChoiceQuestionPart>(nameof(ChoiceQuestionPart)).Options.Select(option => option.Text));
+
+        var ordering = firstQuestions.Single(question => question.ContentType == AssessmentsConstants.ContentTypes.OrderingQuestion);
+        Assert.Equal(["Plan", "Do", "Check", "Act"], ordering.Get<OrderingQuestionPart>(nameof(OrderingQuestionPart)).Items.Select(item => item.Text));
+
+        var stored = await _fixture.InTenantAsync(services => services.GetRequiredService<IMediaFileStore>().GetFileInfoAsync(mediaPath));
+        Assert.NotNull(stored);
+
+        Assert.Equal(3, second.GetOrCreate<ImportFileProcessStatsPart>().ImportedCount);
+        Assert.Equal(firstQuestions.Select(question => question.ContentItemId).Order(StringComparer.Ordinal), secondQuestions.Select(question => question.ContentItemId).Order(StringComparer.Ordinal));
+    }
+
+    private async Task<ContentTransferEntry> ImportAsync(byte[] package, string bankId)
+    {
+        var entryId = await QueueAndRunAsync(package, bankId);
+
+        // The import of the entry runs in a scope of its own, as the deferred task the upload starts runs it.
+        await _fixture.InTenantAsync(services =>
+        {
+            var method = typeof(ImportFilesBackgroundTask).GetMethod("ProcessEntriesAsync", BindingFlags.NonPublic | BindingFlags.Static, [typeof(IServiceProvider), typeof(string), typeof(CancellationToken)]);
+
+            return (Task)method.Invoke(null, [services, entryId, CancellationToken.None]);
+        });
+
+        // Read in a scope of its own: the session that queued the entry keeps the copy it saved.
+        return await _fixture.InTenantAsync(services => services.GetRequiredService<ISession>()
+            .Query<ContentTransferEntry, ContentTransferEntryIndex>(index => index.EntryId == entryId)
+            .FirstOrDefaultAsync());
+    }
+
+    private Task<string> QueueAndRunAsync(byte[] package, string bankId)
+        => _fixture.InTenantAsync(async services =>
+        {
+            var store = services.GetRequiredService<IContentTransferFileStore>();
+            var session = services.GetRequiredService<ISession>();
+            var storedName = await store.CreateFileFromStreamAsync(Guid.NewGuid().ToString("n") + ".zip", new MemoryStream(package), false);
+            var entry = new ContentTransferEntry
+            {
+                EntryId = Guid.NewGuid().ToString("n")[..26],
+                ContentType = AssessmentsConstants.ContentTypes.SingleChoiceQuestion,
+                UploadedFileName = "bank.zip",
+                StoredFileName = storedName,
+                Status = ContentTransferEntryStatus.Pending,
+                Direction = ContentTransferDirection.Import,
+                CreatedUtc = DateTime.UtcNow,
+            };
+
+            entry.Put(new ImportContentOptionsPart
+            {
+                PublishImportedContent = true,
+                RowContentTypes =
+                [
+                    AssessmentsConstants.ContentTypes.SingleChoiceQuestion,
+                    AssessmentsConstants.ContentTypes.MultipleChoiceQuestion,
+                    AssessmentsConstants.ContentTypes.TrueFalseQuestion,
+                    AssessmentsConstants.ContentTypes.ShortTextQuestion,
+                    AssessmentsConstants.ContentTypes.NumericQuestion,
+                    AssessmentsConstants.ContentTypes.MatchingQuestion,
+                    AssessmentsConstants.ContentTypes.OrderingQuestion,
+                    AssessmentsConstants.ContentTypes.FillInBlanksQuestion,
+                    AssessmentsConstants.ContentTypes.EssayQuestion,
+                ],
+            });
+            entry.Put(new QuestionImportOptionsPart { QuestionBankId = bankId });
+
+            await session.SaveAsync(entry, false, collection: null);
+            await session.SaveChangesAsync();
+
+            return entry.EntryId;
+        });
+
+    private Task<List<ContentItem>> QuestionsAsync(string bankId)
+        => _fixture.InTenantAsync(async services =>
+        {
+            var items = await services.GetRequiredService<ISession>()
+                .Query<ContentItem, ContainedPartIndex>(index => index.ListContentItemId == bankId)
+                .ListAsync();
+
+            return items.Where(item => item.Latest).ToList();
+        });
+
+    private static byte[] Package()
+    {
+        string Item(string identifier, string declarations, string body, string processing) => $"""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <qti-assessment-item xmlns="{Namespace30}" identifier="{identifier}" title="{identifier}" adaptive="false" time-dependent="false">
+            {declarations}
+            <qti-item-body>{body}</qti-item-body>
+            {processing}
+            </qti-assessment-item>
+            """;
+
+        var files = new (string Name, byte[] Content)[]
+        {
+            ("imsmanifest.xml", Encoding.UTF8.GetBytes("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1" identifier="M">
+                  <resources>
+                    <resource identifier="choice" type="imsqti_item_xmlv3p0" href="items/choice.xml"><file href="items/choice.xml"/></resource>
+                    <resource identifier="order" type="imsqti_item_xmlv3p0" href="items/order.xml"><file href="items/order.xml"/></resource>
+                    <resource identifier="essay" type="imsqti_item_xmlv3p0" href="items/essay.xml"><file href="items/essay.xml"/></resource>
+                    <resource identifier="hotspot" type="imsqti_item_xmlv3p0" href="items/hotspot.xml"><file href="items/hotspot.xml"/></resource>
+                  </resources>
+                </manifest>
+                """)),
+            ("items/choice.xml", Encoding.UTF8.GetBytes(Item("choice",
+                """<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"><qti-correct-response><qti-value>A</qti-value></qti-correct-response></qti-response-declaration>""",
+                """<p><img src="images/sign.png" alt="Sign"/></p><qti-choice-interaction response-identifier="RESPONSE" max-choices="1"><qti-prompt>What does the sign say?</qti-prompt><qti-simple-choice identifier="A">Stay with it</qti-simple-choice><qti-simple-choice identifier="B">Leave it</qti-simple-choice></qti-choice-interaction>""",
+                """<qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct.xml"/>"""))),
+            ("items/order.xml", Encoding.UTF8.GetBytes(Item("order",
+                """<qti-response-declaration identifier="RESPONSE" cardinality="ordered" base-type="identifier"><qti-correct-response><qti-value>P</qti-value><qti-value>D</qti-value><qti-value>C</qti-value><qti-value>A</qti-value></qti-correct-response></qti-response-declaration>""",
+                """<qti-order-interaction response-identifier="RESPONSE"><qti-prompt>Put the steps in order.</qti-prompt><qti-simple-choice identifier="D">Do</qti-simple-choice><qti-simple-choice identifier="A">Act</qti-simple-choice><qti-simple-choice identifier="P">Plan</qti-simple-choice><qti-simple-choice identifier="C">Check</qti-simple-choice></qti-order-interaction>""",
+                """<qti-response-processing template="https://purl.imsglobal.org/spec/qti/v3p0/rptemplates/match_correct.xml"/>"""))),
+            ("items/essay.xml", Encoding.UTF8.GetBytes(Item("essay",
+                """<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>""",
+                """<p>Describe a safe lift.</p><qti-extended-text-interaction response-identifier="RESPONSE"/>""",
+                string.Empty))),
+            ("items/hotspot.xml", Encoding.UTF8.GetBytes(Item("hotspot",
+                """<qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier"/>""",
+                """<qti-hotspot-interaction response-identifier="RESPONSE" max-choices="1"/>""",
+                string.Empty))),
+            ("items/images/sign.png", Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==")),
+        };
+
+        using var stream = new MemoryStream();
+
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var (name, content) in files)
+            {
+                using var writer = archive.CreateEntry(name).Open();
+                writer.Write(content);
+            }
+        }
+
+        return stream.ToArray();
+    }
+}
