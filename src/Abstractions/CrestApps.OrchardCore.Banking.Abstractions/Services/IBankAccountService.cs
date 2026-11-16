@@ -14,6 +14,23 @@ public interface IBankAccountService
     IReadOnlyList<IBankAccountVerifier> Verifiers { get; }
 
     /// <summary>
+    /// Gets the link providers the enabled features registered. Ask each whether it is available before showing it.
+    /// </summary>
+    IReadOnlyList<IBankAccountLinkProvider> LinkProviders { get; }
+
+    /// <summary>
+    /// Writes a linked account's numbers and status on an account that is not saved yet: the numbers go through
+    /// <see cref="ApplyNumbers"/>, so a number that differs from the stored one is recorded as changed, then the account
+    /// moves to the result's status with the provider as its <see cref="BankAccount.VerificationMethod"/>. The kind and
+    /// the bank's name are filled in when the result has them.
+    /// </summary>
+    /// <param name="account">The account, with its <see cref="BankAccount.Country"/> set.</param>
+    /// <param name="providerName">The link provider's name.</param>
+    /// <param name="result">What the provider read from the bank.</param>
+    /// <returns>Why the result was refused; empty when it was applied.</returns>
+    IReadOnlyList<BankAccountNumberError> ApplyLink(BankAccount account, string providerName, BankAccountLinkResult result);
+
+    /// <summary>
     /// Checks and stores a routing number and an account number on an account that is not saved yet. A blank value
     /// keeps the stored one. A number that differs from the stored one takes the account back to
     /// <see cref="BankAccountStatus.Unverified"/>, and the save tells the observers.

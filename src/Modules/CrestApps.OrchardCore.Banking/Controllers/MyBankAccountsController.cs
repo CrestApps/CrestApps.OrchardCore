@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Services;
+using CrestApps.OrchardCore.Banking.ViewModels;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Parties.Models;
@@ -30,6 +31,7 @@ public sealed class MyBankAccountsController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<BankAccount> _displayManager;
     private readonly INotifier _notifier;
+    private readonly BankAccountLinkFlow _linkFlow;
 
     internal readonly IHtmlLocalizer H;
 
@@ -41,6 +43,7 @@ public sealed class MyBankAccountsController : Controller
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<BankAccount> displayManager,
         INotifier notifier,
+        BankAccountLinkFlow linkFlow,
         IHtmlLocalizer<MyBankAccountsController> htmlLocalizer)
     {
         _manager = manager;
@@ -50,6 +53,7 @@ public sealed class MyBankAccountsController : Controller
         _updateModelAccessor = updateModelAccessor;
         _displayManager = displayManager;
         _notifier = notifier;
+        _linkFlow = linkFlow;
         H = htmlLocalizer;
     }
 
@@ -173,6 +177,95 @@ public sealed class MyBankAccountsController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// Shows the page where the person links their bank with a provider: to add an account when <paramref name="id"/>
+    /// is empty, or to replace the numbers of one of their own accounts with the bank's.
+    /// </summary>
+    /// <param name="provider">The link provider's name.</param>
+    /// <param name="id">The account's id, or empty for a new account.</param>
+    [Admin("banking/my-accounts/link/{provider}/{id?}", "MyBankAccountsLink")]
+    public async Task<IActionResult> Link(string provider, string id)
+    {
+        if (await FindLinkTargetAsync(provider, id) is not { } target)
+        {
+            return await RefuseAsync();
+        }
+
+        var (model, error) = await _linkFlow.StartAsync(target.Provider, target.Context);
+
+        if (model is null)
+        {
+            await _notifier.ErrorAsync(H["Your bank can't be linked: {0}", error]);
+
+            return string.IsNullOrEmpty(id) ? RedirectToAction(nameof(Create)) : RedirectToAction(nameof(Edit), new { id });
+        }
+
+        model.FormAction = Url.Action(nameof(Link), new { provider = target.Provider.Name, id });
+        model.CancelUrl = string.IsNullOrEmpty(id) ? Url.Action(nameof(Create)) : Url.Action(nameof(Edit), new { id });
+
+        return View(model);
+    }
+
+    /// <summary>
+    /// Saves the account the person linked.
+    /// </summary>
+    /// <param name="provider">The link provider's name.</param>
+    /// <param name="id">The account's id, or empty for a new account.</param>
+    /// <param name="clientResult">What the provider's browser part posted.</param>
+    /// <param name="model">For a new account, its name and holder.</param>
+    [HttpPost]
+    [ActionName(nameof(Link))]
+    [Admin("banking/my-accounts/link/{provider}/{id?}", "MyBankAccountsLink")]
+    public async Task<IActionResult> LinkPost(string provider, string id, string clientResult, BankAccountLinkViewModel model)
+    {
+        if (await FindLinkTargetAsync(provider, id) is not { } target)
+        {
+            return await RefuseAsync();
+        }
+
+        var errors = await _linkFlow.CompleteAsync(target.Provider, target.Context, clientResult, model?.Name, model?.HolderName);
+
+        if (errors.Count > 0)
+        {
+            foreach (var error in errors)
+            {
+                await _notifier.ErrorAsync(H["Your bank was not linked: {0}", error]);
+            }
+
+            return RedirectToAction(nameof(Link), new { provider = target.Provider.Name, id });
+        }
+
+        await _notifier.SuccessAsync(target.Context.Account.CanReceivePayments()
+            ? H["Your bank account has been linked and verified. It can receive payments now."]
+            : H["Your bank account has been linked. It can receive payments once the bank confirms it."]);
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    private async Task<(IBankAccountLinkProvider Provider, BankAccountLinkContext Context)?> FindLinkTargetAsync(string provider, string id)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, BankingPermissions.ManageOwnBankAccounts)
+            || await _linkFlow.FindProviderAsync(provider) is not { } linkProvider)
+        {
+            return null;
+        }
+
+        var isNew = string.IsNullOrEmpty(id);
+        var account = isNew ? await NewAccountAsync() : await FindOwnAsync(id);
+
+        if (account is null)
+        {
+            return null;
+        }
+
+        return (linkProvider, new BankAccountLinkContext
+        {
+            Account = account,
+            IsNew = isNew,
+            UserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+        });
     }
 
     private async Task<BankAccount> NewAccountAsync()

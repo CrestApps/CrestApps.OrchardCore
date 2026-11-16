@@ -109,6 +109,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Outreach.Core/CrestApps.OrchardCore.Outreach.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Pdf.Core/CrestApps.OrchardCore.Pdf.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.PhoneNumbers.Core/CrestApps.OrchardCore.PhoneNumbers.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Plaid.Core/CrestApps.OrchardCore.Plaid.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Products.Core/CrestApps.OrchardCore.Products.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Receipts.Core/CrestApps.OrchardCore.Receipts.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
@@ -263,6 +264,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Omnichannel/CrestApps.OrchardCore.Omnichannel.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/CrestApps.OrchardCore.PhoneNumbers.Verifications.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.PhoneNumbers/CrestApps.OrchardCore.PhoneNumbers.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Plaid/CrestApps.OrchardCore.Plaid.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Telephony.Azure/CrestApps.OrchardCore.Telephony.Azure.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/CrestApps.OrchardCore.Omnichannel.Messaging.csproj" />

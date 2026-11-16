@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Banking.Controllers;
 using CrestApps.OrchardCore.Banking.Deployments;
 using CrestApps.OrchardCore.Banking.Drivers;
 using CrestApps.OrchardCore.Banking.Models;
+using CrestApps.OrchardCore.Banking.Services;
 using CrestApps.OrchardCore.Banking.ViewModels;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Parties.Services;
@@ -44,6 +45,79 @@ public sealed class BankingAuthorizationTests
         Assert.IsType<NotFoundResult>(editPost);
         Assert.IsType<NotFoundResult>(close);
         Assert.Equal(BankAccountStatus.Unverified, (await context.Manager.FindByIdAsync(account.ItemId, TestContext.Current.CancellationToken)).Status);
+    }
+
+    [Fact]
+    public async Task MyAccounts_LinkingSomeoneElsesAccount_IsNotFound_AndNothingChanges()
+    {
+        // Arrange
+        var provider = new BankAccountLinkTests.FakeLinkProvider(BankAccountLinkTests.Linked("555666777"));
+        var context = new BankingTestContext(linkProviders: [provider]);
+        var account = await context.CreateAsync(owner: _lee);
+        var controller = MyAccountsController(context, "pat");
+
+        // Act
+        var link = await controller.Link(provider.Name, account.ItemId);
+        var linkPost = await controller.LinkPost(provider.Name, account.ItemId, "{}", new BankAccountLinkViewModel());
+
+        // Assert
+        Assert.IsType<NotFoundResult>(link);
+        Assert.IsType<NotFoundResult>(linkPost);
+        Assert.False(provider.Finished);
+        Assert.Equal(BankAccountStatus.Unverified, (await context.Manager.FindByIdAsync(account.ItemId, TestContext.Current.CancellationToken)).Status);
+    }
+
+    [Fact]
+    public async Task MyAccounts_LinkingWithoutThePermission_IsForbidden()
+    {
+        // Arrange
+        var provider = new BankAccountLinkTests.FakeLinkProvider(BankAccountLinkTests.Linked("555666777"));
+        var context = new BankingTestContext(linkProviders: [provider]);
+        var controller = MyAccountsController(context, "pat", granted: false);
+
+        // Act
+        var linkPost = await controller.LinkPost(provider.Name, null, "{}", new BankAccountLinkViewModel { HolderName = "Pat" });
+
+        // Assert
+        Assert.IsType<ForbidResult>(linkPost);
+        Assert.Empty(context.Store.Entries);
+    }
+
+    [Fact]
+    public async Task MyAccounts_LinkingWithAProviderThatIsNotAvailable_IsNotFound()
+    {
+        // Arrange
+        var provider = new BankAccountLinkTests.FakeLinkProvider(BankAccountLinkTests.Linked("555666777")) { Available = false };
+        var context = new BankingTestContext(linkProviders: [provider]);
+        var controller = MyAccountsController(context, "pat");
+
+        // Act
+        var linkPost = await controller.LinkPost(provider.Name, null, "{}", new BankAccountLinkViewModel { HolderName = "Pat" });
+
+        // Assert
+        Assert.IsType<NotFoundResult>(linkPost);
+        Assert.Empty(context.Store.Entries);
+    }
+
+    [Fact]
+    public async Task MyAccounts_LinkingANewAccount_SavesItVerifiedAndOwnedByThePerson()
+    {
+        // Arrange
+        var provider = new BankAccountLinkTests.FakeLinkProvider(BankAccountLinkTests.Linked("555666777"));
+        var context = new BankingTestContext(linkProviders: [provider]);
+        var notifier = new RecordingNotifier();
+        var controller = MyAccountsController(context, "pat", notifier: notifier);
+
+        // Act
+        var result = await controller.LinkPost(provider.Name, null, "{}", new BankAccountLinkViewModel { HolderName = "Pat Doe" });
+
+        // Assert
+        Assert.IsType<RedirectToActionResult>(result);
+        var account = Assert.Single(context.Store.Entries);
+        Assert.Equal(_pat, account.Owner);
+        Assert.Equal(BankAccountStatus.Verified, account.Status);
+        Assert.Equal(provider.Name, account.VerificationMethod);
+        Assert.Contains(notifier.Entries, entry => entry.Type == NotifyType.Success);
     }
 
     [Fact]
@@ -260,6 +334,7 @@ public sealed class BankingAuthorizationTests
             updateModelAccessor.Object,
             (displayManager ?? new Mock<IDisplayManager<BankAccount>>()).Object,
             notifier ?? new RecordingNotifier(),
+            new BankAccountLinkFlow(context.Service, context.Manager, Mock.Of<IShapeFactory>(), RecipeRoundTrip.Localizer<BankAccountLinkFlow>()),
             new EchoHtmlLocalizer<MyBankAccountsController>());
 
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = TestSecurity.User(userName) } };

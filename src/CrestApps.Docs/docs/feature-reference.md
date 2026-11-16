@@ -239,6 +239,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Checks` | Checks | [Checks](./modules/checks) |
 | `CrestApps.OrchardCore.Disbursements` | Disbursements | [Disbursements](./modules/disbursements) |
 | `CrestApps.OrchardCore.Disbursements.Nacha` | Disbursements - Bank File (ACH) | [Disbursements](./modules/disbursements#providers) |
+| `CrestApps.OrchardCore.Plaid` | Plaid Bank Account Linking | [Plaid](./modules/plaid) |
 
 ## Geo
 

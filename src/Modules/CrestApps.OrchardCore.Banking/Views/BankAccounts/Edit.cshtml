@@ -30,6 +30,13 @@
         {
             <button class="btn btn-secondary action-bar-secondary" type="submit" formaction="@Url.Action("Verify", new { id, verifier = verifier.Name })">@T["Check with {0}", verifier.DisplayName]</button>
         }
+        @foreach (var provider in BankAccountService.LinkProviders)
+        {
+            if (await provider.IsAvailableAsync())
+            {
+                <a class="btn btn-secondary action-bar-secondary" role="button" href="@Url.Action("Link", new { id, provider = provider.Name })">@T["Link with {0}", provider.DisplayName]</a>
+            }
+        }
         <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
     </div>
 </form>

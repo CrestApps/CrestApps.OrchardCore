@@ -58,6 +58,22 @@ public static class BankingServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers a way for a person to link their bank, so the account is saved with the bank's numbers.
+    /// </summary>
+    /// <typeparam name="TProvider">The provider.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddBankAccountLinkProvider<TProvider>(this IServiceCollection services)
+        where TProvider : class, IBankAccountLinkProvider
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IBankAccountLinkProvider, TProvider>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers an observer of bank account changes.
     /// </summary>
     /// <typeparam name="TObserver">The observer.</typeparam>

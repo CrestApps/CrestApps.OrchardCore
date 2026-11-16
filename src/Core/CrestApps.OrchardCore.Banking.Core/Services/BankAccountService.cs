@@ -32,6 +32,7 @@ public sealed class BankAccountService : IBankAccountService
     /// <param name="protector">The protector of account numbers.</param>
     /// <param name="validators">The routing checks of each country.</param>
     /// <param name="verifiers">The verifiers.</param>
+    /// <param name="linkProviders">The link providers.</param>
     /// <param name="manager">The account manager.</param>
     /// <param name="tracker">The changes of this request.</param>
     /// <param name="observers">The observers of account changes.</param>
@@ -44,6 +45,7 @@ public sealed class BankAccountService : IBankAccountService
         ISensitiveValueProtector protector,
         IEnumerable<IBankRoutingValidator> validators,
         IEnumerable<IBankAccountVerifier> verifiers,
+        IEnumerable<IBankAccountLinkProvider> linkProviders,
         IBankAccountManager manager,
         BankAccountChangeTracker tracker,
         IEnumerable<IBankAccountObserver> observers,
@@ -56,6 +58,7 @@ public sealed class BankAccountService : IBankAccountService
         _protector = protector;
         _validators = validators.ToArray();
         Verifiers = verifiers.ToArray();
+        LinkProviders = linkProviders.ToArray();
         _manager = manager;
         _tracker = tracker;
         _observers = observers;
@@ -68,6 +71,64 @@ public sealed class BankAccountService : IBankAccountService
 
     /// <inheritdoc />
     public IReadOnlyList<IBankAccountVerifier> Verifiers { get; }
+
+    /// <inheritdoc />
+    public IReadOnlyList<IBankAccountLinkProvider> LinkProviders { get; }
+
+    /// <inheritdoc />
+    public IReadOnlyList<BankAccountNumberError> ApplyLink(BankAccount account, string providerName, BankAccountLinkResult result)
+    {
+        ArgumentNullException.ThrowIfNull(account);
+        ArgumentException.ThrowIfNullOrEmpty(providerName);
+        ArgumentNullException.ThrowIfNull(result);
+
+        if (account.Status == BankAccountStatus.Closed)
+        {
+            return [new BankAccountNumberError(nameof(BankAccount.AccountNumber), S["A closed account can't be changed. Add a new account instead."])];
+        }
+
+        if (!result.Succeeded)
+        {
+            return [new BankAccountNumberError(nameof(BankAccount.AccountNumber), string.IsNullOrEmpty(result.Message) ? S["The bank could not be linked."] : result.Message)];
+        }
+
+        if (string.IsNullOrWhiteSpace(result.RoutingNumber) || string.IsNullOrWhiteSpace(result.AccountNumber))
+        {
+            return [new BankAccountNumberError(nameof(BankAccount.AccountNumber), S["The bank did not give the account's numbers. Enter them yourself instead."])];
+        }
+
+        if (result.Status is not (BankAccountStatus.Verified or BankAccountStatus.VerificationSent))
+        {
+            return [new BankAccountNumberError(nameof(BankAccount.Status), S["The account can't move to {0}.", result.Status.ToString()])];
+        }
+
+        var errors = ApplyNumbers(account, result.RoutingNumber, result.AccountNumber);
+
+        if (errors.Count > 0)
+        {
+            return errors;
+        }
+
+        if (result.Kind is { } kind)
+        {
+            account.Kind = kind;
+        }
+
+        if (string.IsNullOrWhiteSpace(account.BankName) && !string.IsNullOrWhiteSpace(result.BankName))
+        {
+            account.BankName = result.BankName.Trim();
+        }
+
+        if (!TrySetStatus(account, result.Status, reason: null, verificationMethod: providerName))
+        {
+            return [new BankAccountNumberError(nameof(BankAccount.Status), S["The account can't move to {0}.", result.Status.ToString()])];
+        }
+
+        // Linking again with the same numbers keeps the status, so record who verified it this time.
+        account.VerificationMethod = providerName;
+
+        return [];
+    }
 
     /// <inheritdoc />
     public IReadOnlyList<BankAccountNumberError> ApplyNumbers(BankAccount account, string routingNumber, string accountNumber)

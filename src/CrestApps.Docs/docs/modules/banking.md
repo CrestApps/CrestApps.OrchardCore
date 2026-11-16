@@ -57,7 +57,9 @@ Write numbers and status through `IBankAccountService`, never by setting the fie
 | `StartVerificationAsync(account, verifierName)` | Asks a verifier to check the account and saves the status it returns. |
 | `RevealAccountNumberAsync(account, reason)` | Reads the full number, writes a log entry (the account id, who read it and why, never the number) and tells the observers. The log entry is written whether or not the Audit Trail is on; keep the Audit Trail on so each read is also an event people can search. Call it only for a user with **Reveal bank account numbers**, or for a file a payment needs. |
 | `GetUsagesAsync(account)` | Why records of other modules point to the account, such as checks drawn on it. |
+| `ApplyLink(account, providerName, result)` | Writes what a link provider read from the bank on an unsaved account: the numbers go through `ApplyNumbers` (so a different number is recorded as `NumberChanged`), then the account moves to the result's status (usually `Verified`) with the provider as `VerificationMethod`. Fills `Kind` and an empty `BankName`. Refuses a closed account, a refused result and a result without numbers. |
 | `Verifiers` | The verifiers the enabled features registered. |
+| `LinkProviders` | The link providers the enabled features registered. Ask each `IsAvailableAsync` before showing it. |
 
 The service checks no permission; the caller does. `IBankAccountManager` (a catalog manager) stores the accounts and lists them by owner with `ListByOwnersAsync`.
 
@@ -67,9 +69,30 @@ The service checks no permission; the caller does. `IBankAccountManager` (a cata
 | --- | --- | --- |
 | `IBankRoutingValidator` | `AddBankRoutingValidator<T>()` | The routing and account number checks of one country. The United States check (nine-digit ABA number with its 3-7-1 check digit, account numbers of up to 17 letters and digits) is built in. A country without one gets letters and digits, up to 34 characters. |
 | `IBankAccountVerifier` | `AddBankAccountVerifier<T>()` | A way to check an account, such as a zero-amount test entry. The account page offers one **Check with** button per verifier. |
+| `IBankAccountLinkProvider` | `AddBankAccountLinkProvider<T>()` | A way for a person to link their bank in the browser so the account is saved with the bank's own numbers, usually verified at once. [Plaid](./plaid) is the first. See [Linking a bank](#linking-a-bank). |
 | `IBankAccountObserver` | `AddBankAccountObserver<T>()` | Told after each save (`Created`, `Updated`, `NumberChanged`, `StatusChanged`, `Deleted`) and after each reveal (`NumberRevealed`), with who did it and why. It never receives the number in clear text. Payroll uses it to send a security notice when a pay account changes. |
 | `IBankAccountUsage` | `AddBankAccountUsage<T>()` | Tells that a module's records point to an account. An account in use can't be deleted: the handler refuses (`DeletingAsync` throws with the reasons) and the admin page says why and offers to close it instead. Checks registers one for the accounts checks are drawn on. |
 | `IUserPartySource` (Parties) | `AddUserPartySource<T>()` | Tells which parties a signed-in user is. Staff registers one, so a person's staff record owns their pay accounts on **My bank accounts**. |
+
+## Linking a bank
+
+A link provider lets a person sign in to their bank in the browser and choose the account, so nobody types the numbers and the account is verified at once. Banking owns the pages; the provider never adds routes to them and Banking never names a vendor.
+
+| Page | Route | Permission |
+| --- | --- | --- |
+| **My Bank Accounts > Add** shows **Link your bank with {provider}** per available provider; linking makes a new account | `banking/my-accounts/link/{provider}` | `ManageOwnBankAccounts` |
+| **My Bank Accounts > Edit** shows **Link your bank with {provider} instead**; the bank's numbers replace the stored ones | `banking/my-accounts/link/{provider}/{id}` | `ManageOwnBankAccounts`, own accounts only |
+| The admin account page shows **Link with {provider}** in the action bar's secondary buttons | `banking/accounts/link/{id}/{provider}` | `ManageBankAccounts` |
+
+The flow (`BankAccountLinkFlow` in the module):
+
+1. `StartAsync(context)` returns a `BankAccountLinkStart`: the shape to render and a client payload, such as a short-lived token. Banking renders the shape inside a form that has a hidden `clientResult` field and a `[data-bank-account-link-open]` button.
+2. The shape's script opens the provider when the button is clicked (after the form's own checks pass, such as the holder's name of a new account), writes what the provider returned into `clientResult` and submits the form.
+3. Banking calls `CompleteAsync(context, clientResult)`, which returns a `BankAccountLinkResult` with the numbers in clear text (in memory only), the kind, the bank's name, the last digits and the status.
+4. Banking applies it with `IBankAccountService.ApplyLink`, validates and saves the account. A new account is named from the bank and the last digits unless the person names it.
+5. Banking calls `FinishAsync(context, result, saved)` either way, so the provider keeps or lets go of what it holds (for Plaid, the item and its access token).
+
+A closed account can't be linked. A changed number fires `NumberChanged` as a typed one does, so consumers such as Payroll still send their security notice.
 
 ## Admin screens and permissions
 

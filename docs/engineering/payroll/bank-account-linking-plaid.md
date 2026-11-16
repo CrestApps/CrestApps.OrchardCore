@@ -1,6 +1,6 @@
 # Instant bank account verification (Plaid) — design note
 
-Status: **draft, waiting for Mike's agreement**. Nothing is built yet. Branch `ma/keen-yalow-7407fa`, on top of `ma/payroll-module-design-f04b4a` (Banking exists only there).
+Status: **agreed by Mike on 2026-11-15 (all six recommended decisions) and built**; see section 13 for what changed while building. Branch `ma/keen-yalow-7407fa`, on top of `ma/payroll-module-design-f04b4a` (Banking exists only there).
 
 ## 1. Goal
 
@@ -142,3 +142,17 @@ Banking owns the pages and endpoints, so the vendor module never adds routes to 
 ## 12. Live sandbox run
 
 Needs Plaid sandbox keys (client id and sandbox secret) from Mike. With them: link the sandbox bank (`user_good` / `pass_good`) from My Bank Accounts and from the admin page, a pending automatic micro-deposit account (Plaid's sandbox `/sandbox/item/set_verification_status`), and a webhook through a tunnel. Without them it is listed as owed.
+
+## 13. As built (2026-11-15)
+
+- Banking: `IBankAccountLinkProvider` (`StartAsync`, `CompleteAsync`, `FinishAsync(saved)`, `IsAvailableAsync`), `BankAccountLinkContext`, `BankAccountLinkStart`, `BankAccountLinkResult`, `AddBankAccountLinkProvider<T>()`, `IBankAccountService.LinkProviders` and `ApplyLink` (not saving, like `ApplyNumbers`). The pages are plain MVC actions, not JSON endpoints: `GET`/`POST banking/my-accounts/link/{provider}/{id?}` and `banking/accounts/link/{id}/{provider}`, a shared `_BankAccountLinkForm` partial with a hidden `clientResult` field, and `BankAccountLinkFlow` doing start, apply, validate, save and finish for both controllers.
+- Plaid: `CrestApps.OrchardCore.Plaid.Core` (client, webhook verifier, link provider, item store and cleaner, observer, inbox handler, `AddPlaidCore()`) and the module (settings, credentials from the named secret, link site, webhook endpoint, migration, Plaid Link shape, admin menu, settings schema).
+- Deviation: no micro-deposit flows. Plaid's automated and same-day micro-deposits are opt-in at link token creation and a pending account has no numbers, which Banking's validation refuses in Verification sent. So they are not turned on: a link gives numbers at once or is refused (and its item removed), and the AUTH webhooks are ignored. Items are kept only for tokenized account numbers.
+- Deviation: the secret is chosen from a select of the tenant's text secrets (`ISecretManager.GetSecretInfosAsync`), with a link to Security > Secrets, instead of the `SelectSecret` view component, so the module compiles against `OrchardCore.Secrets.Abstractions` only.
+- Deviation: no personal-data contributor. A kept item holds an item id and a protected token tied to a bank account, not to a user, and Banking itself has none; erasing a bank account (delete or close) removes its item through the observer.
+- Not done: the live sandbox run (no Plaid sandbox keys here). Owed: link a sandbox bank (`user_good` / `pass_good`) from My Bank Accounts and from the admin page, a tokenized-number bank (Platypus OAuth Bank, `ins_127287`) and a `USER_PERMISSION_REVOKED` webhook through a tunnel (`/sandbox/item/fire_webhook`).
+- Deviation: the repo's retry guard requires `Retry.DisableForUnsafeHttpMethods()` on every standard resilience handler. The Plaid handler calls it and then lets only requests `PlaidClient` marks retryable (`/link/token/create`, `/auth/get`, `/item/remove`, `/webhook_verification_key/get`) retry on transient failures; everything else, the exchange included, keeps the no-retry rule.
+- Tests (all pass): `BankAccountLinkTests` (10), four link cases in `BankingAuthorizationTests`, `PlaidClientTests` (6, with the retry pipeline), `PlaidWebhookVerifierTests` (6, a local P-256 key), `PlaidBankAccountLinkProviderTests` (12), `PlaidWebhookInboxHandlerTests` (8, with the observer), `PlaidSettingsTests` (7). Namespaces: Banking 70, Disbursements 75, Plaid 39, Architecture 320, Validation 122. The vitest view lint (21) and the manuals check (169 user, 192 technical pages) pass.
+- Browser (fresh site `App_Data_Plaid`, `https://localhost:5793`, Blank recipe, `admin`, outbound blocked by a dead proxy): the feature enables with Secrets and the inbox; **Settings > Plaid** renders with the webhook URL and the Secrets link; a text secret `Plaid.Secret` (dummy value) is picked and saved; **My Bank Accounts > Add** shows **Link your bank with Plaid**, which comes back with "Plaid did not answer" when Plaid can't be reached; **Link your bank with Plaid instead** shows on My Bank Accounts > Edit and **Link with Plaid** in the admin account page's action bar; **Test the connection** reports "Plaid could not be reached from this server"; unsigned or malformed webhooks are answered 400.
+- Bug found in the browser and fixed with a regression test (`PlaidSettingsTests.SecretPicker_ListsTextSecretsByTheirStoredTypeName`): the secrets store records the type as `OrchardCore.Secrets.TextSecret`, so an existing secret was listed as "not created yet".
+- Not checked in the browser: the link page itself with Plaid Link open, which needs a real link token (sandbox keys).

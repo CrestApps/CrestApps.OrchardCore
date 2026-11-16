@@ -87,6 +87,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Disbursements/CrestApps.OrchardCore.Disbursements.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.PayLater/CrestApps.OrchardCore.PayLater.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Payroll/CrestApps.OrchardCore.Payroll.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Plaid/CrestApps.OrchardCore.Plaid.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Transactions/CrestApps.OrchardCore.Transactions.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Commerce/CrestApps.OrchardCore.Commerce.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.PhoneNumbers.Core/CrestApps.OrchardCore.PhoneNumbers.Core.csproj" />

@@ -24,7 +24,7 @@ internal sealed class BankingTestContext
 
     public const string OtherValidRoutingNumber = "011000015";
 
-    public BankingTestContext(IEnumerable<IBankAccountVerifier> verifiers = null)
+    public BankingTestContext(IEnumerable<IBankAccountVerifier> verifiers = null, IEnumerable<IBankAccountLinkProvider> linkProviders = null)
     {
         var clock = new Mock<IClock>();
 
@@ -43,6 +43,7 @@ internal sealed class BankingTestContext
             Protector,
             [new UnitedStatesBankRoutingValidator()],
             verifiers ?? [],
+            linkProviders ?? [],
             Manager,
             Tracker,
             [Observer],
