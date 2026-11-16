@@ -47,12 +47,49 @@ public sealed class TicketTime
     /// <param name="ticket">The ticket.</param>
     /// <returns>The stage, or <see langword="null"/> when the desk records no time.</returns>
     public async Task<string> StageIdAsync(ContentItem ticket)
-    {
-        var deskId = ticket?.GetOrCreate<TicketPart>().DeskId;
+        => (await SettingsAsync(ticket))?.StageId;
 
-        return string.IsNullOrEmpty(deskId) || await _desks.FindByIdAsync(deskId) is not { } desk
-            ? null
-            : desk.TryGet<TicketDeskTimeSettings>(out var settings) && !string.IsNullOrEmpty(settings.StageId) ? settings.StageId : null;
+    /// <summary>
+    /// Logs time a user spent on a ticket after the fact. The entry takes its place in the user's day: the time it
+    /// covers (their work, say) is cut around it, so their total doesn't change.
+    /// </summary>
+    /// <param name="ticket">The ticket.</param>
+    /// <param name="log">Who, how long, when, what and whether it is billed.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The entry, or why it wasn't logged.</returns>
+    public async Task<TimeTrackerResult> LogAsync(ContentItem ticket, TicketTimeLog log, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(ticket);
+        ArgumentNullException.ThrowIfNull(log);
+
+        if (await SettingsAsync(ticket) is not { } settings)
+        {
+            return TimeTrackerResult.Fail(S["This ticket's desk doesn't record time."]);
+        }
+
+        if (log.Minutes < 1 || log.Minutes > TicketTimeLog.MaxMinutes)
+        {
+            return TimeTrackerResult.Fail(S["Enter the time spent, from a minute to 24 hours."]);
+        }
+
+        var start = log.StartUtc ?? _clock.UtcNow.AddMinutes(-log.Minutes);
+        var number = ticket.GetOrCreate<TicketPart>().Number;
+
+        return await _tracker.InsertAsync(
+            new TimeEntry
+            {
+                UserId = log.UserId,
+                UserName = log.UserName,
+                StageId = !log.Billable && !string.IsNullOrEmpty(settings.NotBilledStageId) ? settings.NotBilledStageId : settings.StageId,
+                StartUtc = start,
+                EndUtc = start.AddMinutes(log.Minutes),
+                Source = TimeTrackerConstants.Sources.Ticket,
+                SourceRef = SourceRefOf(ticket.ContentItemId),
+                Note = string.IsNullOrWhiteSpace(log.Note) ? null : log.Note.Trim(),
+            },
+            log.Actor,
+            string.IsNullOrEmpty(number) ? S["Time logged on a ticket"].Value : S["Time logged on ticket {0}", number].Value,
+            cancellationToken);
     }
 
     /// <summary>
@@ -131,36 +168,68 @@ public sealed class TicketTime
     /// <param name="userId">The user asking.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The ticket's time.</returns>
-    public async Task<TicketTimeSummary> SummarizeAsync(string ticketId, string userId, CancellationToken cancellationToken = default)
+    public Task<TicketTimeSummary> SummarizeAsync(string ticketId, string userId, CancellationToken cancellationToken = default)
+        => SummarizeAsync(ticketId, null, userId, cancellationToken);
+
+    /// <summary>
+    /// The time worked on a ticket, by person, with its entries and what isn't billed, and whether a user is working on
+    /// it now.
+    /// </summary>
+    /// <param name="ticket">The ticket.</param>
+    /// <param name="userId">The user asking.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The ticket's time.</returns>
+    public async Task<TicketTimeSummary> SummarizeAsync(ContentItem ticket, string userId, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(ticket);
+
+        return await SummarizeAsync(ticket.ContentItemId, await SettingsAsync(ticket), userId, cancellationToken);
+    }
+
+    private async Task<TicketTimeSummary> SummarizeAsync(string ticketId, TicketDeskTimeSettings settings, string userId, CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;
         var entries = await _tracker.ListAsync(new TimeEntryQuery { SourceRef = SourceRefOf(ticketId) }, cancellationToken);
+        var notBilledStageId = string.IsNullOrEmpty(settings?.NotBilledStageId) ? null : settings.NotBilledStageId;
+
+        int MinutesOf(TimeEntry entry) => (int)Math.Round(((entry.EndUtc ?? now) - entry.StartUtc).TotalMinutes);
+
         var people = entries
             .GroupBy(entry => entry.UserId, StringComparer.Ordinal)
             .Select(group => new TicketTimePerson(
                 group.Key,
                 group.Select(entry => entry.UserName).LastOrDefault(name => !string.IsNullOrEmpty(name)) ?? group.Key,
-                (int)Math.Round(group.Sum(entry => ((entry.EndUtc ?? now) - entry.StartUtc).TotalMinutes))))
+                group.Sum(MinutesOf)))
             .OrderByDescending(person => person.Minutes)
             .ToList();
         var mine = entries.FirstOrDefault(entry => entry.UserId == userId && entry.EndUtc is null);
 
-        return new TicketTimeSummary(people, people.Sum(person => person.Minutes), mine?.StartUtc);
+        return new TicketTimeSummary(people, people.Sum(person => person.Minutes), mine?.StartUtc)
+        {
+            Entries = [.. entries
+                .OrderByDescending(entry => entry.StartUtc)
+                .Select(entry => new TicketTimeEntry(
+                    string.IsNullOrEmpty(entry.UserName) ? entry.UserId : entry.UserName,
+                    entry.StartUtc,
+                    entry.EndUtc,
+                    MinutesOf(entry),
+                    entry.Note,
+                    entry.StageId != notBilledStageId))],
+            NotBilledMinutes = notBilledStageId is null ? 0 : entries.Where(entry => entry.StageId == notBilledStageId).Sum(MinutesOf),
+            CanChooseBillable = notBilledStageId is not null,
+        };
+    }
+
+    // The ticket desk's time settings, when it records time.
+    private async Task<TicketDeskTimeSettings> SettingsAsync(ContentItem ticket)
+    {
+        var deskId = ticket?.GetOrCreate<TicketPart>().DeskId;
+
+        return string.IsNullOrEmpty(deskId)
+            || await _desks.FindByIdAsync(deskId) is not { } desk
+            || !desk.TryGet<TicketDeskTimeSettings>(out var settings)
+            || string.IsNullOrEmpty(settings.StageId)
+            ? null
+            : settings;
     }
 }
-
-/// <summary>
-/// The time worked on a ticket.
-/// </summary>
-/// <param name="People">Each person's minutes, most first.</param>
-/// <param name="TotalMinutes">All of it.</param>
-/// <param name="WorkingSinceUtc">When the user asking started working on it, while they are.</param>
-public sealed record TicketTimeSummary(IReadOnlyList<TicketTimePerson> People, int TotalMinutes, DateTime? WorkingSinceUtc);
-
-/// <summary>
-/// One person's time on a ticket.
-/// </summary>
-/// <param name="UserId">The user.</param>
-/// <param name="Name">Their name.</param>
-/// <param name="Minutes">Their minutes.</param>
-public sealed record TicketTimePerson(string UserId, string Name, int Minutes);

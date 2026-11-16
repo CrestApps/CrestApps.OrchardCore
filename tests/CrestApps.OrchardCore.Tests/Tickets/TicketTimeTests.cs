@@ -81,6 +81,63 @@ public sealed class TicketTimeTests
         Assert.False(noStage.Succeeded);
     }
 
+    [Fact]
+    public async Task LoggedTime_TakesItsPlaceInTheAgentsDay_InTheBillableOrNotBilledStage_AndTheTicketListsIt()
+    {
+        // Arrange (Ana works from 9:00; at 11:00 she logs 30 minutes from 10:00, and 15 minutes not billed that just ended)
+        await using var kit = await Kit.CreateAsync();
+        var t1 = Ticket("t1", "support");
+        await kit.SwitchAsync(kit.WorkStageId, 0);
+        kit.Now = _nine.AddMinutes(120);
+
+        // Act
+        var billable = await kit.RunAsync(time => time.LogAsync(t1, new TicketTimeLog { UserId = "ana", UserName = "Ana", Actor = "ana", Minutes = 30, StartUtc = _nine.AddMinutes(60), Note = "Reset the router", Billable = true }));
+        var notBilled = await kit.RunAsync(time => time.LogAsync(t1, new TicketTimeLog { UserId = "ana", UserName = "Ana", Actor = "ana", Minutes = 15, Note = "Internal handover", Billable = false }));
+        var overlapping = await kit.RunAsync(time => time.LogAsync(t1, new TicketTimeLog { UserId = "ana", UserName = "Ana", Actor = "ana", Minutes = 20, StartUtc = _nine.AddMinutes(80) }));
+        var tooLong = await kit.RunAsync(time => time.LogAsync(t1, new TicketTimeLog { UserId = "ana", UserName = "Ana", Actor = "ana", Minutes = 25 * 60 }));
+        var summary = await kit.RunAsync(time => time.SummarizeAsync(t1, "ana"));
+        var day = await kit.Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().ListAsync(new TimeEntryQuery { UserIds = ["ana"] }), commit: false);
+
+        // Assert
+        Assert.True(billable.Succeeded, string.Join(" ", billable.Errors));
+        Assert.True(notBilled.Succeeded, string.Join(" ", notBilled.Errors));
+        Assert.Equal(kit.TicketStageId, billable.Entry.StageId);
+        Assert.Equal(kit.NotBilledStageId, notBilled.Entry.StageId);
+        Assert.Equal(TimeTrackerConstants.Sources.Ticket, billable.Entry.Source);
+        Assert.Equal("Ticket:t1", billable.Entry.SourceRef);
+        Assert.Equal(_nine.AddMinutes(105), notBilled.Entry.StartUtc);
+        Assert.StartsWith("It overlaps other time from", Assert.Single(overlapping.Errors));
+        Assert.False(tooLong.Succeeded);
+        Assert.Equal(45, summary.TotalMinutes);
+        Assert.Equal(15, summary.NotBilledMinutes);
+        Assert.Equal(["Internal handover", "Reset the router"], summary.Entries.Select(entry => entry.Note));
+        Assert.Equal([false, true], summary.Entries.Select(entry => entry.Billable));
+        Assert.True(summary.CanChooseBillable);
+        Assert.Equal(
+            [kit.WorkStageId, kit.TicketStageId, kit.WorkStageId, kit.NotBilledStageId, kit.WorkStageId],
+            day.Select(entry => entry.StageId));
+    }
+
+    [Theory]
+    [InlineData("30", 30)]
+    [InlineData("45m", 45)]
+    [InlineData("45 min", 45)]
+    [InlineData("1h", 60)]
+    [InlineData("1h 30m", 90)]
+    [InlineData("1h30", 90)]
+    [InlineData("2 hours 5 minutes", 125)]
+    [InlineData("1:30", 90)]
+    [InlineData("1.5h", 90)]
+    [InlineData("1,5 h", 90)]
+    [InlineData(" 0:05 ", 5)]
+    [InlineData("", null)]
+    [InlineData("0", null)]
+    [InlineData("abc", null)]
+    [InlineData("1:75", null)]
+    [InlineData("-10", null)]
+    public void TimeSpent_IsReadInTheWaysPeopleWriteIt(string value, int? minutes)
+        => Assert.Equal(minutes, TicketTimeDuration.ParseMinutes(value));
+
     private static ContentItem Ticket(string id, string deskId)
     {
         var ticket = new ContentItem { ContentItemId = id, ContentType = "Ticket" };
@@ -98,6 +155,8 @@ public sealed class TicketTimeTests
         public string WorkStageId { get; private set; }
 
         public string TicketStageId { get; private set; }
+
+        public string NotBilledStageId { get; private set; }
 
         public static async Task<Kit> CreateAsync()
         {
@@ -125,7 +184,8 @@ public sealed class TicketTimeTests
 
             kit.WorkStageId = await kit.StageAsync("Work");
             kit.TicketStageId = await kit.StageAsync("Tickets");
-            support.Put(new TicketDeskTimeSettings { StageId = kit.TicketStageId });
+            kit.NotBilledStageId = await kit.StageAsync("Tickets, not billed");
+            support.Put(new TicketDeskTimeSettings { StageId = kit.TicketStageId, NotBilledStageId = kit.NotBilledStageId });
 
             return kit;
         }
