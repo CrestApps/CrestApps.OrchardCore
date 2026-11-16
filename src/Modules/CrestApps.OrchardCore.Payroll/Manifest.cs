@@ -53,6 +53,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = PayrollConstants.Features.Canada,
+    Name = "Canada Payroll Filings",
+    Description = "The employer's Canadian payroll filings made from pay statements: source deductions remitted to the CRA and to Revenu Québec on the employer's remitter schedule, T4 slips and the T4 Summary with the T4 XML file, and RL-1 slips with the RL-1 Summary, shown to people in My Pay. The deductions themselves come from Taxation's Canada Income Tax.",
+    Category = "Payroll",
+    Dependencies =
+    [
+        PayrollConstants.Features.Payroll,
+        TaxationConstants.Feature.IncomeTaxCanada,
+    ]
+)]
+
+[assembly: Feature(
     Id = PayrollConstants.Features.Garnishments,
     Name = "Garnishments",
     Description = "Garnishment orders (support, tax levies, bankruptcy, student loans, creditors) withheld from pay within the limits the law sets on disposable earnings, in order of priority, and sent to their payees by check or deposit.",

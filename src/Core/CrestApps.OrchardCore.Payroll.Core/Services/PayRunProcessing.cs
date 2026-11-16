@@ -625,6 +625,7 @@ public sealed partial class DefaultPayRunService
             Rate = line.Rate,
             Amount = -line.Amount,
             Jurisdiction = line.Jurisdiction,
+            RemittedTo = line.RemittedTo,
             Payer = line.Payer,
             TaxableWages = -line.TaxableWages,
             FlatWages = -line.FlatWages,

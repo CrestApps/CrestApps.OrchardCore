@@ -169,6 +169,12 @@ public sealed class IncomeTaxLine
     /// <summary>Gets or sets the jurisdiction.</summary>
     public string Jurisdiction { get; set; }
 
+    /// <summary>
+    /// Gets or sets the jurisdiction whose agency the tax is remitted to, such as CA for a province's tax the CRA
+    /// collects; the same as <see cref="Jurisdiction"/> when that agency collects its own.
+    /// </summary>
+    public string CollectedBy { get; set; }
+
     /// <summary>Gets or sets the tax category the income was taken from.</summary>
     public string Category { get; set; }
 

@@ -398,6 +398,8 @@ public sealed class TaxLiabilityService : ITaxLiabilityService
         {
             foreach (var line in statement.Lines.Where(line => line.Type == PayLineType.Tax && !string.IsNullOrEmpty(line.Jurisdiction)))
             {
+                // A tax another jurisdiction's agency collects is owed to that agency, with its own taxes.
+                var jurisdiction = string.IsNullOrEmpty(line.RemittedTo) ? line.Jurisdiction : line.RemittedTo;
                 var group = line.TaxCategory switch
                 {
                     IncomeTaxCategories.Unemployment => TaxLiabilityGroups.Unemployment,
@@ -408,9 +410,9 @@ public sealed class TaxLiabilityService : ITaxLiabilityService
                 };
                 var schedule = group == TaxLiabilityGroups.Unemployment
                     ? DepositSchedules.Quarterly
-                    : employer.Registrations.FirstOrDefault(registration => string.Equals(registration.Jurisdiction, line.Jurisdiction, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(registration.DepositFrequency))?.DepositFrequency ?? DepositSchedules.Monthly;
+                    : employer.Registrations.FirstOrDefault(registration => string.Equals(registration.Jurisdiction, jurisdiction, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(registration.DepositFrequency))?.DepositFrequency ?? DepositSchedules.Monthly;
                 var (start, end, due) = Period(schedule, statement.PayDate);
-                var period = new TaxLiabilityPeriod { EmployerId = employerId, Jurisdiction = line.Jurisdiction, Group = group, Schedule = schedule, PeriodStart = start, PeriodEnd = end, DueDate = due, Currency = statement.Currency };
+                var period = new TaxLiabilityPeriod { EmployerId = employerId, Jurisdiction = jurisdiction, Group = group, Schedule = schedule, PeriodStart = start, PeriodEnd = end, DueDate = due, Currency = statement.Currency };
 
                 if (!periods.TryGetValue(period.Key, out var existing))
                 {
@@ -444,8 +446,9 @@ public sealed class TaxLiabilityService : ITaxLiabilityService
     /// <summary>
     /// Gets the liability period of a pay date under a deposit schedule, and its due date: monthly by the 15th of the
     /// next month; semi-weekly, Wednesday to Friday by the next Wednesday and Saturday to Tuesday by the next Friday;
-    /// quarterly by the last day of the month after the quarter; yearly by the last day of January. Due dates are not
-    /// moved off weekends and holidays.
+    /// quarterly by the last day of the month after the quarter, or by its 15th (Canada); twice a month by the 25th and
+    /// the next 10th; four times a month by the third working day after each part; yearly by the last day of January.
+    /// Due dates are not moved off weekends and holidays, but the working days of the four-times schedule skip weekends.
     /// </summary>
     /// <param name="schedule">The schedule.</param>
     /// <param name="payDate">The pay date.</param>
@@ -472,6 +475,43 @@ public sealed class TaxLiabilityService : ITaxLiabilityService
                     var last = first.AddMonths(3).AddDays(-1);
 
                     return (first, last, first.AddMonths(4).AddDays(-1));
+                }
+
+            case DepositSchedules.QuarterlyMidMonth:
+                {
+                    var first = new DateOnly(payDate.Year, (((payDate.Month - 1) / 3) * 3) + 1, 1);
+
+                    return (first, first.AddMonths(3).AddDays(-1), first.AddMonths(3).AddDays(14));
+                }
+
+            case DepositSchedules.TwiceMonthly:
+                {
+                    var first = new DateOnly(payDate.Year, payDate.Month, 1);
+
+                    return payDate.Day <= 15
+                        ? (first, first.AddDays(14), first.AddDays(24))
+                        : (first.AddDays(15), first.AddMonths(1).AddDays(-1), first.AddMonths(1).AddDays(9));
+                }
+
+            case DepositSchedules.FourTimesMonthly:
+                {
+                    var first = new DateOnly(payDate.Year, payDate.Month, 1);
+                    var part = Math.Min(3, (payDate.Day - 1) / 7);
+                    var start = first.AddDays(part * 7);
+                    var end = part == 3 ? first.AddMonths(1).AddDays(-1) : start.AddDays(6);
+                    var due = end;
+
+                    for (var days = 0; days < 3;)
+                    {
+                        due = due.AddDays(1);
+
+                        if (due.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday))
+                        {
+                            days++;
+                        }
+                    }
+
+                    return (start, end, due);
                 }
 
             case DepositSchedules.Annual:

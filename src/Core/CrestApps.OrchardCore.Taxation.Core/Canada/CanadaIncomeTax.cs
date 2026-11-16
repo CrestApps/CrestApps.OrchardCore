@@ -25,6 +25,16 @@ public static class CanadaIncomeTax
     /// <summary>Quebec's withholding method (Revenu Québec, TP-1015.F).</summary>
     public const string QuebecMethod = "QuebecTP1015";
 
+    /// <summary>The tax categories the pack adds.</summary>
+    public static class Categories
+    {
+        /// <summary>
+        /// Insurable earnings, the base of Employment Insurance and the Quebec Parental Insurance Plan; remitted with the
+        /// other source deductions.
+        /// </summary>
+        public const string InsurableEarnings = "InsurableEarnings";
+    }
+
     /// <summary>The tax codes the methods read the contributions of the same pay by.</summary>
     public static class TaxCodes
     {
@@ -181,6 +191,7 @@ public static class CanadaIncomeTax
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.AddIncomeTaxCategory(Categories.InsurableEarnings, LocalizationSource.Create("Insurable earnings (EI, QPIP)", typeof(CanadaIncomeTax)));
         services.AddElectionFieldSet(CanadaElectionFields.Federal());
         services.AddElectionFieldSet(CanadaElectionFields.Provincial());
         services.AddElectionFieldSet(CanadaElectionFields.Quebec());

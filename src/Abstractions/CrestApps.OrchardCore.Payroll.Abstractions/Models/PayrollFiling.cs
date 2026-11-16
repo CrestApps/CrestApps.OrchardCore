@@ -78,6 +78,23 @@ public static class DepositSchedules
 
     /// <summary>By the last day of January of the next year.</summary>
     public const string Annual = "Annual";
+
+    /// <summary>
+    /// Every quarter, by the 15th of the month after it (a Canadian quarterly remitter).
+    /// </summary>
+    public const string QuarterlyMidMonth = "QuarterlyMidMonth";
+
+    /// <summary>
+    /// Twice a month: the 1st to the 15th by the 25th, the 16th to the month's end by the 10th of the next month (a
+    /// Canadian accelerated remitter, threshold 1).
+    /// </summary>
+    public const string TwiceMonthly = "TwiceMonthly";
+
+    /// <summary>
+    /// Four times a month: the 1st to the 7th, the 8th to the 14th, the 15th to the 21st and the 22nd to the month's
+    /// end, each by the third working day after it (a Canadian accelerated remitter, threshold 2).
+    /// </summary>
+    public const string FourTimesMonthly = "FourTimesMonthly";
 }
 
 /// <summary>

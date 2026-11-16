@@ -214,7 +214,7 @@ public sealed class CanadaIncomeTaxTests
             Currency = "CAD",
         };
 
-        foreach (var category in new[] { IncomeTaxCategories.IncomeTax, IncomeTaxCategories.SocialInsurance, IncomeTaxCategories.Unemployment })
+        foreach (var category in new[] { IncomeTaxCategories.IncomeTax, IncomeTaxCategories.SocialInsurance, CanadaIncomeTax.Categories.InsurableEarnings })
         {
             request.Income[category] = pay;
             request.SupplementalIncome[category] = bonus;

@@ -576,6 +576,7 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
                 TaxCategory = tax.Category,
                 Description = tax.Name,
                 Jurisdiction = tax.Jurisdiction,
+                RemittedTo = string.IsNullOrEmpty(tax.CollectedBy) || string.Equals(tax.CollectedBy, tax.Jurisdiction, StringComparison.OrdinalIgnoreCase) ? null : tax.CollectedBy,
                 Payer = tax.Payer == IncomeTaxPayer.Employer ? PayLinePayer.Employer : PayLinePayer.Employee,
                 TaxableWages = context.Round(tax.TaxableIncome),
                 FlatWages = tax.FlatIncome > 0 ? context.Round(tax.FlatIncome) : null,

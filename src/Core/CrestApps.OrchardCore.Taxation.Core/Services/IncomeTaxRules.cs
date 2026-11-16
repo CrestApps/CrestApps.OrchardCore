@@ -609,6 +609,7 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
             TaxCode = rule.TaxCode,
             Name = rule.Name,
             Jurisdiction = rule.Jurisdiction,
+            CollectedBy = rule.CollectedBy ?? rule.Jurisdiction,
             Category = rule.Category,
             Payer = rule.Payer,
             TaxableIncome = taxableIncome,

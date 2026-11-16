@@ -734,6 +734,12 @@ public sealed class FormW2Texts
 
     /// <summary>Gets or sets the label of the employer's tax id.</summary>
     public string EmployerTaxId { get; set; } = "Employer identification number (EIN)";
+
+    /// <summary>Gets or sets the employer's tax id to print, or <see langword="null"/> for the employer's own.</summary>
+    public string EmployerTaxIdValue { get; set; }
+
+    /// <summary>Gets or sets how the person's masked tax id is printed, with {0} its last digits.</summary>
+    public string TaxIdFormat { get; set; } = "XXX-XX-{0}";
 }
 
 /// <summary>
@@ -880,7 +886,7 @@ public static class FormW2Document
         y += 20;
 
         Text(employer?.PrintedName, bold, 10, Margin, y);
-        TextRight($"{texts.EmployerTaxId}: {employer?.TaxId}", regular, 8, right, y);
+        TextRight($"{texts.EmployerTaxId}: {texts.EmployerTaxIdValue ?? employer?.TaxId}", regular, 8, right, y);
         y += 13;
 
         foreach (var line in employerAddress)
@@ -891,7 +897,7 @@ public static class FormW2Document
 
         y += 10;
         Text(person.Name, bold, 10, Margin, y);
-        TextRight($"{texts.TaxId}: XXX-XX-{person.TaxIdHint}", regular, 8, right, y);
+        TextRight($"{texts.TaxId}: {string.Format(CultureInfo.InvariantCulture, texts.TaxIdFormat, person.TaxIdHint)}", regular, 8, right, y);
         y += 13;
 
         foreach (var line in person.Address)

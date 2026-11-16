@@ -273,6 +273,12 @@ public sealed class PayStatementLine
     public string Jurisdiction { get; set; }
 
     /// <summary>
+    /// Gets or sets the jurisdiction whose agency a tax line is remitted to, when it isn't <see cref="Jurisdiction"/>
+    /// (a province's tax the CRA collects is remitted under CA), or <see langword="null"/>.
+    /// </summary>
+    public string RemittedTo { get; set; }
+
+    /// <summary>
     /// Gets or sets who pays: the employee (taken from pay) or the employer (on top of pay).
     /// </summary>
     public PayLinePayer Payer { get; set; }

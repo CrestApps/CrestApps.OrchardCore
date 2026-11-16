@@ -85,7 +85,7 @@ internal sealed class CanadaPay
         // The part of the pay's contributions that comes from periodic pay, by the share of pensionable or insurable
         // earnings the bonus is (F5A = F5 × (PI − B) ÷ PI).
         var pensionable = Total(request, IncomeTaxCategories.SocialInsurance, context.Income + context.SupplementalIncome);
-        var insurable = Total(request, IncomeTaxCategories.Unemployment, context.Income + context.SupplementalIncome);
+        var insurable = Total(request, CanadaIncomeTax.Categories.InsurableEarnings, context.Income + context.SupplementalIncome);
         var bonus = context.SupplementalIncome;
         var pensionShare = pensionable > 0 ? Math.Max(0, pensionable - bonus) / pensionable : 1m;
         var insuranceShare = insurable > 0 ? Math.Max(0, insurable - bonus) / insurable : 1m;
