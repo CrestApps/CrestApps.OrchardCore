@@ -104,6 +104,12 @@ public sealed class ServiceLevelTimer : CatalogItem
     public long? ElapsedSeconds { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the timer's business hours schedule is never open (it was changed after the timer started),
+    /// so the timer counts around the clock until the schedule opens again.
+    /// </summary>
+    public bool NoBusinessHours { get; set; }
+
+    /// <summary>
     /// Gets whether the timer still measures something: it is running or paused.
     /// </summary>
     [JsonIgnore]

@@ -20,7 +20,7 @@ A **service level policy** says how long a piece of work may take: how soon it m
 
 1. Go to **Tools > Service Levels** and select **Add Policy**. When more than one kind of work uses service levels, choose the one the policy is for, such as **For Work orders**.
 2. In **General**, enter a **Name** such as *Premium support*.
-3. In **Counted on**, choose the business hours schedule the targets are counted in, or **Around the clock** to count every hour. A schedule that is never open can't be chosen: no target could be met. See [Business Hours Schedules](business-hours-schedules.md).
+3. In **Counted on**, choose the business hours schedule the targets are counted in, or **Around the clock** to count every hour. A schedule that is never open can't be chosen: no target could be met. If a schedule in use is later changed so that it never opens, the targets on it count around the clock instead, and a ticket shows **No business hours** by the target and notes it in its history. See [Business Hours Schedules](business-hours-schedules.md).
 4. In **Warn at**, enter how much of a target may pass before a warning is raised, such as *80* %.
 5. In **Targets**, enter the minutes allowed for each metric at each priority. Leave a cell empty for no target. The **Any other priority** row applies to every priority that has no row of its own.
 6. Some kinds of work add their own card. For work orders, **Pause in** chooses the statuses in which the timers stop, such as **On hold**.

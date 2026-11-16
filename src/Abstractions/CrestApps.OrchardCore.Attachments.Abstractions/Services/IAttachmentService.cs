@@ -44,6 +44,20 @@ public interface IAttachmentService
     Task<IReadOnlyList<Attachment>> ListAsync(RecordRef owner, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists, oldest first, a page of the attachments of records of some kinds that were uploaded before a time, such
+    /// as for a sweep of files whose record never kept them.
+    /// </summary>
+    /// <param name="ownerKinds">The kinds of the records the attachments belong to.</param>
+    /// <param name="uploadedBeforeUtc">The time they were uploaded before.</param>
+    /// <param name="uploadedFromUtc">The time of the last attachment of the previous page (attachments uploaded at that
+    /// time come again, so a caller skips those it has seen), or <see langword="null"/> for the first page.</param>
+    /// <param name="take">How many at most.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The attachments.</returns>
+    Task<IReadOnlyList<Attachment>> ListUploadedBeforeAsync(IReadOnlyCollection<string> ownerKinds, DateTime uploadedBeforeUtc, DateTime? uploadedFromUtc, int take, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<Attachment>>([]);
+
+    /// <summary>
     /// Reads an attachment's bytes.
     /// </summary>
     /// <param name="attachment">The attachment.</param>

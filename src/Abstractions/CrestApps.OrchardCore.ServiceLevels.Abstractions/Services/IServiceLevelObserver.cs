@@ -32,4 +32,13 @@ public interface IServiceLevelObserver
     /// <param name="cancellationToken">A token to cancel the work.</param>
     Task CompletedAsync(ServiceLevelTimer timer, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <summary>
+    /// A running timer's business hours schedule was changed so that it is never open, so the timer now counts around
+    /// the clock (<see cref="ServiceLevelTimer.NoBusinessHours"/>). Told once, when it happens.
+    /// </summary>
+    /// <param name="timer">The timer.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    Task NoBusinessHoursAsync(ServiceLevelTimer timer, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

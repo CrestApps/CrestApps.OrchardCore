@@ -1,7 +1,8 @@
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.Tickets.Models;
-using CrestApps.OrchardCore.Timeline.Services;
+using CrestApps.OrchardCore.Timeline.Core.Services;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
@@ -11,24 +12,37 @@ namespace CrestApps.OrchardCore.Tickets.Core.Handlers;
 
 /// <summary>
 /// Removes a deleted ticket's timeline and stops its service-level timers, whichever way the item was removed (the
-/// ticket service or Orchard's content pages), after the request's work is committed.
+/// ticket service or Orchard's content pages). The timeline is deleted by <see cref="TimelineDeletionStep"/>, asked for
+/// in the removal's own transaction, so a failure is run again instead of leaving the entries and files behind; the
+/// timers stop after the request's work is committed.
 /// </summary>
 public sealed class TicketContentCleanup : ContentHandlerBase
 {
-    /// <inheritdoc/>
-    public override Task RemovedAsync(RemoveContentContext context)
-    {
-        if (context.NoActiveVersionLeft && context.ContentItem.Has<TicketPart>() && ShellScope.Current is not null)
-        {
-            var subject = new RecordRef(TicketsConstants.RecordKind, context.ContentItem.ContentItemId);
+    private readonly ResumableSteps _steps;
 
-            ShellScope.AddDeferredTask(async scope =>
-            {
-                await scope.ServiceProvider.GetRequiredService<IServiceLevelTracker>().CancelAsync(subject);
-                await scope.ServiceProvider.GetRequiredService<ITimelineService>().DeleteAllAsync(subject);
-            });
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TicketContentCleanup"/> class.
+    /// </summary>
+    public TicketContentCleanup(ResumableSteps steps)
+    {
+        _steps = steps;
+    }
+
+    /// <inheritdoc/>
+    public override async Task RemovedAsync(RemoveContentContext context)
+    {
+        if (!context.NoActiveVersionLeft || !context.ContentItem.Has<TicketPart>())
+        {
+            return;
         }
 
-        return Task.CompletedTask;
+        var subject = new RecordRef(TicketsConstants.RecordKind, context.ContentItem.ContentItemId);
+
+        await TimelineDeletionStep.RequestAsync(_steps, subject);
+
+        if (ShellScope.Current is not null)
+        {
+            ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<IServiceLevelTracker>().CancelAsync(subject));
+        }
     }
 }

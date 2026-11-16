@@ -2,6 +2,10 @@ using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
+using CrestApps.OrchardCore.Timeline.Models;
+using CrestApps.OrchardCore.Timeline.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 
@@ -16,6 +20,9 @@ public sealed class TicketServiceLevelObserver : IServiceLevelObserver
     private readonly IContentManager _contentManager;
     private readonly IEnumerable<ITicketObserver> _observers;
     private readonly ILogger _logger;
+    private readonly IServiceProvider _services;
+
+    internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TicketServiceLevelObserver"/> class.
@@ -23,11 +30,39 @@ public sealed class TicketServiceLevelObserver : IServiceLevelObserver
     /// <param name="contentManager">The content manager.</param>
     /// <param name="observers">The ticket observers.</param>
     /// <param name="logger">The logger.</param>
-    public TicketServiceLevelObserver(IContentManager contentManager, IEnumerable<ITicketObserver> observers, ILogger<TicketServiceLevelObserver> logger)
+    /// <param name="services">The services, for the timeline service when a target loses its business hours.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public TicketServiceLevelObserver(
+        IContentManager contentManager,
+        IEnumerable<ITicketObserver> observers,
+        ILogger<TicketServiceLevelObserver> logger,
+        IServiceProvider services,
+        IStringLocalizer<TicketServiceLevelObserver> stringLocalizer)
     {
         _contentManager = contentManager;
         _observers = observers;
         _logger = logger;
+        _services = services;
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public async Task NoBusinessHoursAsync(ServiceLevelTimer timer, CancellationToken cancellationToken = default)
+    {
+        if (!string.Equals(timer?.Subject.Kind, TicketsConstants.RecordKind, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        // The ticket's history says why its target now counts around the clock. The timeline service is resolved here:
+        // it reaches the record sources, which lead back to the ticket service that constructs this observer's tracker.
+        await _services.GetRequiredService<ITimelineService>().AddAsync(new TimelineEntry
+        {
+            Subject = timer.Subject,
+            Kind = TicketsConstants.EntryKinds.Event,
+            Visibility = TimelineVisibility.Internal,
+            Body = S["The business hours of the service level are never open now, so its target counts around the clock until they open again."],
+        }, cancellationToken);
     }
 
     /// <inheritdoc/>

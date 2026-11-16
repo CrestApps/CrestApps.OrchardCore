@@ -24,7 +24,9 @@ public static class TimelineCoreServiceCollectionExtensions
         services.TryAddScoped<ITimelineService, DefaultTimelineService>();
         services.TryAddScoped<ITimelineAccessService, DefaultTimelineAccessService>();
         services.TryAddScoped<ITimelineFileService, DefaultTimelineFileService>();
+        services.TryAddScoped<TimelineOrphanFileSweeper>();
         services.AddResumableStep<TimelineFileIndexStep>();
+        services.AddResumableStep<TimelineDeletionStep>();
 
         return services;
     }

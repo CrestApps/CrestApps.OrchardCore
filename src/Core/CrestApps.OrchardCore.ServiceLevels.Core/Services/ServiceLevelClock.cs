@@ -7,11 +7,18 @@ namespace CrestApps.OrchardCore.ServiceLevels.Core.Services;
 
 /// <summary>
 /// Counts a service level timer on its Business Hours schedule. The timer keeps the time it has used so far, in
-/// seconds of its hours, so pausing, resuming and changing the target never count closed hours or paused time.
+/// seconds of its hours, so pausing, resuming and changing the target never count closed hours or paused time. A
+/// schedule that is never open (changed so after the timer started) counts around the clock, the same for the time used
+/// and the time left, so the timer neither freezes nor runs late forever, and the timer says so
+/// (<see cref="ServiceLevelTimer.NoBusinessHours"/>).
 /// </summary>
 public sealed class ServiceLevelClock
 {
+    // How far ahead a schedule is looked at to tell it never opens.
+    private static readonly TimeSpan _openHorizon = TimeSpan.FromDays(366);
+
     private readonly IOpenHoursService _openHours;
+    private readonly Dictionary<string, bool> _neverOpen = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ServiceLevelClock"/> class.
@@ -38,7 +45,7 @@ public sealed class ServiceLevelClock
             return;
         }
 
-        var used = await _openHours.GetOpenTimeBetweenAsync(timer.HoursScheduleId, timer.CountingSinceUtc, atUtc, cancellationToken: cancellationToken);
+        var used = await _openHours.GetOpenTimeBetweenAsync(await CountedScheduleAsync(timer, timer.CountingSinceUtc, cancellationToken), timer.CountingSinceUtc, atUtc, cancellationToken: cancellationToken);
 
         timer.UsedSeconds += ToSeconds(used);
         timer.CountingSinceUtc = atUtc;
@@ -57,9 +64,11 @@ public sealed class ServiceLevelClock
         var left = Math.Max(timer.TargetSeconds - timer.UsedSeconds, 0);
         var leftToWarning = Math.Max(WarningSeconds(timer) - timer.UsedSeconds, 0);
 
+        var schedule = await CountedScheduleAsync(timer, fromUtc, cancellationToken);
+
         timer.CountingSinceUtc = fromUtc;
-        timer.DueUtc = await _openHours.AddOpenTimeAsync(timer.HoursScheduleId, fromUtc, TimeSpan.FromSeconds(left), cancellationToken: cancellationToken);
-        timer.WarnAtUtc = await _openHours.AddOpenTimeAsync(timer.HoursScheduleId, fromUtc, TimeSpan.FromSeconds(leftToWarning), cancellationToken: cancellationToken);
+        timer.DueUtc = await _openHours.AddOpenTimeAsync(schedule, fromUtc, TimeSpan.FromSeconds(left), cancellationToken: cancellationToken);
+        timer.WarnAtUtc = await _openHours.AddOpenTimeAsync(schedule, fromUtc, TimeSpan.FromSeconds(leftToWarning), cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -78,7 +87,7 @@ public sealed class ServiceLevelClock
             return timer.ElapsedSeconds ?? timer.UsedSeconds;
         }
 
-        return timer.UsedSeconds + ToSeconds(await _openHours.GetOpenTimeBetweenAsync(timer.HoursScheduleId, timer.CountingSinceUtc, atUtc, cancellationToken: cancellationToken));
+        return timer.UsedSeconds + ToSeconds(await _openHours.GetOpenTimeBetweenAsync(await CountedScheduleAsync(timer, timer.CountingSinceUtc, cancellationToken), timer.CountingSinceUtc, atUtc, cancellationToken: cancellationToken));
     }
 
     /// <summary>
@@ -126,6 +135,39 @@ public sealed class ServiceLevelClock
         var percent = timer.WarningPercent is >= 1 and <= 99 ? timer.WarningPercent : ServiceLevelsConstants.DefaultWarningPercent;
 
         return timer.TargetSeconds * percent / 100;
+    }
+
+    /// <summary>
+    /// Gets whether a schedule is never open in the year from an instant. A schedule nobody knows isn't "never open": it
+    /// counts around the clock already.
+    /// </summary>
+    /// <param name="scheduleId">The schedule, or <see langword="null"/>.</param>
+    /// <param name="fromUtc">The instant.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns><see langword="true"/> when the schedule exists and has no open time in the year.</returns>
+    public async Task<bool> IsNeverOpenAsync(string scheduleId, DateTime fromUtc, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(scheduleId))
+        {
+            return false;
+        }
+
+        if (!_neverOpen.TryGetValue(scheduleId, out var neverOpen))
+        {
+            var windows = await _openHours.GetOpenWindowsAsync(scheduleId, fromUtc, fromUtc + _openHorizon, cancellationToken: cancellationToken);
+            neverOpen = windows is { Count: 0 };
+            _neverOpen[scheduleId] = neverOpen;
+        }
+
+        return neverOpen;
+    }
+
+    // The schedule the timer counts on: its own, or around the clock (null) while it is never open; the timer keeps which.
+    private async Task<string> CountedScheduleAsync(ServiceLevelTimer timer, DateTime fromUtc, CancellationToken cancellationToken)
+    {
+        timer.NoBusinessHours = await IsNeverOpenAsync(timer.HoursScheduleId, fromUtc, cancellationToken);
+
+        return timer.NoBusinessHours ? null : timer.HoursScheduleId;
     }
 
     private static long ToSeconds(TimeSpan time)

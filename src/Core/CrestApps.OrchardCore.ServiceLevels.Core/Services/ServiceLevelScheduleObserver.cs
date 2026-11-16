@@ -107,6 +107,7 @@ public sealed class ServiceLevelScheduleChangesStep : IResumableStep
     private readonly IServiceLevelPolicyManager _policies;
     private readonly IServiceLevelTimerStore _timers;
     private readonly ServiceLevelClock _timerClock;
+    private readonly IEnumerable<IServiceLevelObserver> _observers;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ServiceLevelScheduleChangesStep"/> class.
@@ -114,11 +115,13 @@ public sealed class ServiceLevelScheduleChangesStep : IResumableStep
     /// <param name="policies">The policy manager.</param>
     /// <param name="timers">The timer store.</param>
     /// <param name="timerClock">The service level clock.</param>
-    public ServiceLevelScheduleChangesStep(IServiceLevelPolicyManager policies, IServiceLevelTimerStore timers, ServiceLevelClock timerClock)
+    /// <param name="observers">The observers, told when a timer's schedule is no longer ever open.</param>
+    public ServiceLevelScheduleChangesStep(IServiceLevelPolicyManager policies, IServiceLevelTimerStore timers, ServiceLevelClock timerClock, IEnumerable<IServiceLevelObserver> observers)
     {
         _policies = policies;
         _timers = timers;
         _timerClock = timerClock;
+        _observers = observers;
     }
 
     /// <inheritdoc/>
@@ -149,9 +152,20 @@ public sealed class ServiceLevelScheduleChangesStep : IResumableStep
 
             foreach (var timer in behind)
             {
+                var hadHours = !timer.NoBusinessHours;
+
                 ServiceLevelClock.SettleOn(timer, change.OldHours, change.AtUtc);
                 await _timerClock.ScheduleAsync(timer, change.AtUtc, cancellationToken);
                 await _timers.UpdateAsync(timer, cancellationToken);
+
+                // A schedule that is no longer ever open: the record's module notes it, once.
+                if (hadHours && timer.NoBusinessHours)
+                {
+                    foreach (var observer in _observers)
+                    {
+                        await observer.NoBusinessHoursAsync(timer, cancellationToken);
+                    }
+                }
             }
 
             budget -= behind.Count;

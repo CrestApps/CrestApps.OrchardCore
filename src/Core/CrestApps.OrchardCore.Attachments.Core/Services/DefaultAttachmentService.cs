@@ -176,6 +176,10 @@ public sealed class DefaultAttachmentService : IAttachmentService
         => _store.ListByOwnerAsync(owner, cancellationToken);
 
     /// <inheritdoc/>
+    public Task<IReadOnlyList<Attachment>> ListUploadedBeforeAsync(IReadOnlyCollection<string> ownerKinds, DateTime uploadedBeforeUtc, DateTime? uploadedFromUtc, int take, CancellationToken cancellationToken = default)
+        => _store.ListUploadedBeforeAsync(ownerKinds, uploadedBeforeUtc, uploadedFromUtc, take, cancellationToken);
+
+    /// <inheritdoc/>
     public Task<byte[]> ReadAsync(Attachment attachment, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(attachment);

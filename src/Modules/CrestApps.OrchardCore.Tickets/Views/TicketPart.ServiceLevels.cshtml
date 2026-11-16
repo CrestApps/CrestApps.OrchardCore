@@ -34,6 +34,10 @@
                                     <span class="badge ta-badge fw-normal"><i class="fa-solid fa-pause me-1" aria-hidden="true"></i>@T["Paused"]</span>
                                     break;
                                 default:
+                                    if (timer.NoBusinessHours)
+                                    {
+                                        <span class="badge text-bg-warning fw-normal me-1" title="@T["Its business hours schedule is never open, so the target counts around the clock."]">@T["No business hours"]</span>
+                                    }
                                     if (timer.DueUtc <= Model.NowUtc)
                                     {
                                         <span class="badge text-bg-danger fw-normal">@T["Past its target"]</span>

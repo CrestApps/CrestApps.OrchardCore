@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Attachments;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Timeline.BackgroundTasks;
 using CrestApps.OrchardCore.Timeline.Core;
 using CrestApps.OrchardCore.Timeline.Core.Indexes;
 using CrestApps.OrchardCore.Timeline.Deployments;
@@ -9,6 +10,7 @@ using CrestApps.OrchardCore.Timeline.Recipes;
 using CrestApps.OrchardCore.Timeline.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -30,6 +32,7 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddSingleton<IBackgroundTask, TimelineOrphanFilesBackgroundTask>();
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(TimelineConstants.CollectionName));
         services.AddDataMigration<TimelineMigrations>()
             .AddIndexProvider<TimelineEntryIndexProvider>();
