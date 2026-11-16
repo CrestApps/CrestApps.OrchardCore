@@ -133,6 +133,43 @@ public sealed class CustomerRecordTests
         }
     }
 
+    /// <summary>
+    /// HT1 (fix-verification review): on SQL Server's default collation <c>AE</c> equals <c>Æ</c>, so an account proved
+    /// for <c>victim@æther.com</c> was also given the guest orders of <c>victim@aether.com</c>. The index column here
+    /// compares the way SQL Server's does.
+    /// </summary>
+    [Fact]
+    public async Task TheGuestsOfAnAddress_AreOnlyThoseWithThatExactAddress_WhereTheDatabaseComparesLoosely()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"crestapps-customers-{Guid.NewGuid():N}.db");
+        var yesSql = await CreateStoreAsync(path, looseEmailCollation: true);
+
+        try
+        {
+            await using (var session = yesSql.CreateSession())
+            {
+                var store = new CustomerStore(session, []);
+
+                await store.CreateAsync(new Customer { ItemId = "victim", DisplayName = "Victim", Email = "victim@aether.com" }, TestContext.Current.CancellationToken);
+                await store.CreateAsync(new Customer { ItemId = "look-alike", DisplayName = "Look-alike", Email = "victim@æther.com" }, TestContext.Current.CancellationToken);
+                await store.CreateAsync(new Customer { ItemId = "other-case", DisplayName = "Victim again", Email = " Victim@AETHER.com " }, TestContext.Current.CancellationToken);
+                await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            await using (var session = yesSql.CreateSession())
+            {
+                var store = new CustomerStore(session, []);
+
+                Assert.Equal(["look-alike"], (await store.ListGuestsByEmailAsync("victim@æther.com", TestContext.Current.CancellationToken)).Select(customer => customer.ItemId));
+                Assert.Equal(["other-case", "victim"], (await store.ListGuestsByEmailAsync("VICTIM@aether.com", TestContext.Current.CancellationToken)).Select(customer => customer.ItemId).Order());
+            }
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(yesSql, path);
+        }
+    }
+
     [Fact]
     public async Task MakingACustomer_RunsTheCreatedHandlersOnce_AndUpdatingItDoesNot()
     {
@@ -177,18 +214,32 @@ public sealed class CustomerRecordTests
         return new DefaultCustomerService(store, users.Object, distributedLock.Object, clock.Object, NullLogger<DefaultCustomerService>.Instance);
     }
 
-    private static async Task<IStore> CreateStoreAsync(string databasePath)
+    private static async Task<IStore> CreateStoreAsync(string databasePath, bool looseEmailCollation = false)
     {
-        var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
+        var connectionString = $"Data Source={databasePath};Pooling=False";
+        var store = StoreFactory.Create(configuration =>
+        {
+            configuration.UseSqLite(connectionString);
+            configuration.ConnectionFactory = new LooseCollationConnectionFactory(connectionString);
+        });
         store.RegisterIndexes([new CustomerIndexProvider()], CustomersConstants.CollectionName);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(CustomersConstants.CollectionName, TestContext.Current.CancellationToken);
 
-        await using var session = store.CreateSession();
-        var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
-        var migration = new CustomerMigrations { SchemaBuilder = new SchemaBuilder(store.Configuration, transaction) };
-        await migration.CreateAsync();
-        await transaction.CommitAsync(TestContext.Current.CancellationToken);
+        await using (var session = store.CreateSession())
+        {
+            var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            var migration = new CustomerMigrations { SchemaBuilder = new SchemaBuilder(store.Configuration, transaction) };
+            await migration.CreateAsync();
+            await transaction.CommitAsync(TestContext.Current.CancellationToken);
+        }
+
+        if (looseEmailCollation)
+        {
+            // The rebuilt table keeps none of the table's indexes, which would compare exactly; these tests need none.
+            var table = await LooseCollationConnectionFactory.FindTableAsync(connectionString, nameof(CustomerIndex));
+            await LooseCollationConnectionFactory.UseLooseCollationAsync(connectionString, table, nameof(CustomerIndex.NormalizedEmail));
+        }
 
         return store;
     }

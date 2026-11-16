@@ -90,7 +90,7 @@ public sealed class EmailSignInFirstProofTests : IAsyncLifetime
         var stampBefore = await CreateUserAsync(new User { UserId = "user-1", UserName = "squatter", Email = Email, IsEnabled = true });
 
         // Act: the guest buyer signs in with the code e-mailed to their address.
-        var result = await SignInWithCodeAsync();
+        var result = await SignInWithCodeAsync("user-1");
 
         // Assert
         Assert.IsType<LocalRedirectResult>(result);
@@ -108,7 +108,7 @@ public sealed class EmailSignInFirstProofTests : IAsyncLifetime
         var stampBefore = await CreateUserAsync(user);
 
         // Act
-        var result = await SignInWithCodeAsync();
+        var result = await SignInWithCodeAsync("user-2");
 
         // Assert
         Assert.IsType<LocalRedirectResult>(result);
@@ -124,7 +124,7 @@ public sealed class EmailSignInFirstProofTests : IAsyncLifetime
         var stampBefore = await CreateUserAsync(user);
 
         // Act
-        var result = await SignInWithCodeAsync();
+        var result = await SignInWithCodeAsync("user-3");
 
         // Assert
         Assert.IsType<LocalRedirectResult>(result);
@@ -175,11 +175,11 @@ public sealed class EmailSignInFirstProofTests : IAsyncLifetime
     }
 
     // One request: the code is issued, then posted, then the request's session commits.
-    private async Task<IActionResult> SignInWithCodeAsync()
+    private async Task<IActionResult> SignInWithCodeAsync(string userId)
     {
         await using var scope = _services.CreateAsyncScope();
         var manager = scope.ServiceProvider.GetRequiredService<UserManager<IUser>>();
-        var code = await CreateCodes().IssueAsync(Email, TestContext.Current.CancellationToken);
+        var code = await CreateCodes().IssueAsync(userId, Email, TestContext.Current.CancellationToken);
         var result = await CreateController(manager, scope.ServiceProvider).Code(new EmailSignInViewModel { Email = Email, Code = code });
 
         await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);

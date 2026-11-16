@@ -11,7 +11,10 @@ namespace CrestApps.OrchardCore.Users.Services;
 
 /// <summary>
 /// The six-digit codes emailed for signing in without a password. A code lives ten minutes and five tries; only its
-/// hash is kept, in the distributed cache, per tenant, under a key that holds a hash of the email rather than the email.
+/// hash is kept, in the distributed cache, per tenant, under a key that holds a hash of the account's id. A code is for
+/// one account and the address it was mailed to: it is keyed on the account, not on what was typed, because a database
+/// that compares text loosely (SQL Server's default collation treats <c>AE</c> as <c>Æ</c>) finds an account for a
+/// look-alike address; and its hash holds the address, so it stops working if the account's address changes.
 /// Sending is limited per client network and per email, and checking per client network, by the shared attempt
 /// limiter's policies, which an operator can change under <c>CrestApps_Throttling:AttemptPolicies</c>.
 /// </summary>
@@ -74,14 +77,19 @@ public sealed class EmailSignInCodes
         => (await _attemptLimiter.AcquireAsync(VerifyNetworkPolicy, network ?? "unknown", cancellationToken)).Allowed;
 
     /// <summary>
-    /// Makes a new code for the email, replacing any earlier one, and returns it.
+    /// Makes a new code for the account, replacing any earlier one, and returns it.
     /// </summary>
-    public async Task<string> IssueAsync(string email, CancellationToken cancellationToken = default)
+    /// <param name="userId">The account's id.</param>
+    /// <param name="email">The account's own address, which the code is mailed to.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public async Task<string> IssueAsync(string userId, string email, CancellationToken cancellationToken = default)
     {
-        var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
-        var entry = new CodeEntry(Hash(email, code), _clock.UtcNow + _lifetime, 0);
+        ArgumentException.ThrowIfNullOrEmpty(userId);
 
-        await _cache.SetStringAsync(CodeKey(email), JsonSerializer.Serialize(entry), new DistributedCacheEntryOptions
+        var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
+        var entry = new CodeEntry(Hash(userId, email, code), _clock.UtcNow + _lifetime, 0);
+
+        await _cache.SetStringAsync(CodeKey(userId), JsonSerializer.Serialize(entry), new DistributedCacheEntryOptions
         {
             AbsoluteExpiration = entry.ExpiresUtc,
         }, cancellationToken);
@@ -92,16 +100,30 @@ public sealed class EmailSignInCodes
     /// <summary>
     /// Checks a code, counting the try. A right code is used up.
     /// </summary>
-    public async Task<bool> VerifyAsync(string email, string code, CancellationToken cancellationToken = default)
-        => await CheckAsync(email, code, cancellationToken) == EmailSignInCodeCheck.Right;
+    /// <param name="userId">The account's id.</param>
+    /// <param name="email">The account's own address now.</param>
+    /// <param name="code">The code that was typed.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public async Task<bool> VerifyAsync(string userId, string email, string code, CancellationToken cancellationToken = default)
+        => await CheckAsync(userId, email, code, cancellationToken) == EmailSignInCodeCheck.Right;
 
     /// <summary>
     /// Checks a code, counting the try, and tells a wrong code apart from no code to compare it with (none was sent, it
-    /// expired or its tries are used up). A right code is used up.
+    /// expired or its tries are used up). A right code is used up. A code mailed to an address the account no longer
+    /// has is wrong.
     /// </summary>
-    public async Task<EmailSignInCodeCheck> CheckAsync(string email, string code, CancellationToken cancellationToken = default)
+    /// <param name="userId">The account's id.</param>
+    /// <param name="email">The account's own address now.</param>
+    /// <param name="code">The code that was typed.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public async Task<EmailSignInCodeCheck> CheckAsync(string userId, string email, string code, CancellationToken cancellationToken = default)
     {
-        var key = CodeKey(email);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return EmailSignInCodeCheck.NoCode;
+        }
+
+        var key = CodeKey(userId);
 
         // The read, the count and the write happen under one lock per tenant and email, and the attempt is counted before
         // the code is compared. Without both, parallel guesses all saw fewer than five attempts and a six-digit code could
@@ -128,7 +150,7 @@ public sealed class EmailSignInCodes
             }, cancellationToken);
 
             var digits = new string([.. (code ?? string.Empty).Where(char.IsAsciiDigit)]);
-            var match = digits.Length == 6 && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(entry.Hash), Encoding.ASCII.GetBytes(Hash(email, digits)));
+            var match = digits.Length == 6 && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(entry.Hash), Encoding.ASCII.GetBytes(Hash(userId, email, digits)));
 
             if (match)
             {
@@ -139,12 +161,12 @@ public sealed class EmailSignInCodes
         }
     }
 
-    // The email never goes into a cache key as it is: the key holds a hash of it.
-    private string CodeKey(string email)
-        => $"CrestApps.EmailSignIn:{_shellSettings.Name}:code:{Sha256Hex($"{_shellSettings.Name}|{Normalize(email)}")}";
+    // The key holds a hash of the account's id, compared exactly; nothing typed goes into it.
+    private string CodeKey(string userId)
+        => $"CrestApps.EmailSignIn:{_shellSettings.Name}:code:{Sha256Hex($"{_shellSettings.Name}|user|{userId}")}";
 
-    private string Hash(string email, string code)
-        => Sha256Hex($"{_shellSettings.Name}|{Normalize(email)}|{code}");
+    private string Hash(string userId, string email, string code)
+        => Sha256Hex($"{_shellSettings.Name}|{userId}|{Normalize(email)}|{code}");
 
     private static string Sha256Hex(string value)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));

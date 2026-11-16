@@ -14,8 +14,8 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Tests.Customers;
 
 /// <summary>
-/// A code emailed for signing in works once, for ten minutes and five tries, for the email and tenant it was made
-/// for; and sending them is limited per email and per address.
+/// A code emailed for signing in works once, for ten minutes and five tries, for the account, address and tenant it was
+/// made for; and sending them is limited per email and per address.
 /// </summary>
 public sealed class EmailSignInCodesTests
 {
@@ -27,71 +27,76 @@ public sealed class EmailSignInCodesTests
     public async Task TheRightCodeWorksOnce()
     {
         var codes = Create();
-        var code = await codes.IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+        var code = await codes.IssueAsync("user-1", "jordan@example.test", TestContext.Current.CancellationToken);
 
         Assert.Matches("^[0-9]{6}$", code);
-        Assert.True(await codes.VerifyAsync(" Jordan@Example.TEST ", code, TestContext.Current.CancellationToken));
-        Assert.False(await codes.VerifyAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
+        Assert.True(await codes.VerifyAsync("user-1", " Jordan@Example.TEST ", code, TestContext.Current.CancellationToken));
+        Assert.False(await codes.VerifyAsync("user-1", "jordan@example.test", code, TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task SpacesInTheTypedCodeAreIgnored()
     {
         var codes = Create();
-        var code = await codes.IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+        var code = await codes.IssueAsync("user-1", "jordan@example.test", TestContext.Current.CancellationToken);
 
-        Assert.True(await codes.VerifyAsync("jordan@example.test", code[..3] + " " + code[3..], TestContext.Current.CancellationToken));
+        Assert.True(await codes.VerifyAsync("user-1", "jordan@example.test", code[..3] + " " + code[3..], TestContext.Current.CancellationToken));
     }
 
+    /// <summary>
+    /// HT1 (fix-verification review): a code is for the account it was issued to and the address it was mailed to, not
+    /// for whatever address finds the account.
+    /// </summary>
     [Fact]
-    public async Task ACodeIsForItsEmailAndTenantOnly()
+    public async Task ACodeIsForItsAccountItsAddressAndItsTenantOnly()
     {
-        var code = await Create("tenant-a").IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+        var code = await Create("tenant-a").IssueAsync("user-1", "jordan@example.test", TestContext.Current.CancellationToken);
 
-        Assert.False(await Create("tenant-a").VerifyAsync("someone@example.test", code, TestContext.Current.CancellationToken));
-        Assert.False(await Create("tenant-b").VerifyAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
-        Assert.True(await Create("tenant-a").VerifyAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
+        Assert.False(await Create("tenant-a").VerifyAsync("user-2", "jordan@example.test", code, TestContext.Current.CancellationToken));
+        Assert.False(await Create("tenant-a").VerifyAsync("user-1", "someone@example.test", code, TestContext.Current.CancellationToken));
+        Assert.False(await Create("tenant-b").VerifyAsync("user-1", "jordan@example.test", code, TestContext.Current.CancellationToken));
+        Assert.True(await Create("tenant-a").VerifyAsync("user-1", "jordan@example.test", code, TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task FiveWrongTriesUseTheCodeUp()
     {
         var codes = Create();
-        var code = await codes.IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+        var code = await codes.IssueAsync("user-1", "jordan@example.test", TestContext.Current.CancellationToken);
         var wrong = code == "000000" ? "111111" : "000000";
 
         for (var i = 0; i < EmailSignInCodes.MaxAttempts; i++)
         {
-            Assert.False(await codes.VerifyAsync("jordan@example.test", wrong, TestContext.Current.CancellationToken));
+            Assert.False(await codes.VerifyAsync("user-1", "jordan@example.test", wrong, TestContext.Current.CancellationToken));
         }
 
-        Assert.False(await codes.VerifyAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
+        Assert.False(await codes.VerifyAsync("user-1", "jordan@example.test", code, TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task ACodeExpiresAfterTenMinutes()
     {
         var codes = Create();
-        var code = await codes.IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+        var code = await codes.IssueAsync("user-1", "jordan@example.test", TestContext.Current.CancellationToken);
 
         _now = _now.AddMinutes(11);
 
-        Assert.False(await codes.VerifyAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
+        Assert.False(await codes.VerifyAsync("user-1", "jordan@example.test", code, TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task ANewCodeReplacesTheLastOne()
     {
         var codes = Create();
-        var first = await codes.IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
-        var second = await codes.IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+        var first = await codes.IssueAsync("user-1", "jordan@example.test", TestContext.Current.CancellationToken);
+        var second = await codes.IssueAsync("user-1", "jordan@example.test", TestContext.Current.CancellationToken);
 
         if (first != second)
         {
-            Assert.False(await codes.VerifyAsync("jordan@example.test", first, TestContext.Current.CancellationToken));
+            Assert.False(await codes.VerifyAsync("user-1", "jordan@example.test", first, TestContext.Current.CancellationToken));
         }
 
-        Assert.True(await codes.VerifyAsync("jordan@example.test", second, TestContext.Current.CancellationToken));
+        Assert.True(await codes.VerifyAsync("user-1", "jordan@example.test", second, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -133,14 +138,14 @@ public sealed class EmailSignInCodesTests
     public async Task ParallelWrongGuesses_UseTheCodeUp()
     {
         var codes = Create();
-        var code = await codes.IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+        var code = await codes.IssueAsync("user-1", "jordan@example.test", TestContext.Current.CancellationToken);
         var wrong = code == "000000" ? "111111" : "000000";
 
         var results = await Task.WhenAll(Enumerable.Range(0, 100)
-            .Select(_ => Task.Run(() => codes.VerifyAsync("jordan@example.test", wrong, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken)));
+            .Select(_ => Task.Run(() => codes.VerifyAsync("user-1", "jordan@example.test", wrong, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken)));
 
         Assert.DoesNotContain(true, results);
-        Assert.False(await codes.VerifyAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
+        Assert.False(await codes.VerifyAsync("user-1", "jordan@example.test", code, TestContext.Current.CancellationToken));
     }
 
     /// <summary>
@@ -163,7 +168,7 @@ public sealed class EmailSignInCodesTests
     [Fact]
     public async Task WhenTheLockCantBeTaken_TheGuessIsRefused()
     {
-        var code = await Create().IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+        var code = await Create().IssueAsync("user-1", "jordan@example.test", TestContext.Current.CancellationToken);
 
         var busy = new Mock<IDistributedLock>();
         busy.Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
@@ -173,7 +178,7 @@ public sealed class EmailSignInCodesTests
         clock.Setup(c => c.UtcNow).Returns(() => _now);
         var codes = new EmailSignInCodes(_cache, CreateLimiter(clock.Object), new ShellSettings { Name = "Default" }, clock.Object, busy.Object);
 
-        Assert.False(await codes.VerifyAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
+        Assert.False(await codes.VerifyAsync("user-1", "jordan@example.test", code, TestContext.Current.CancellationToken));
     }
 
     private EmailSignInCodes Create(string tenant = "Default")
@@ -200,14 +205,14 @@ public sealed class EmailSignInCodesTests
     {
         var codes = Create();
 
-        Assert.Equal(EmailSignInCodeCheck.NoCode, await codes.CheckAsync("jordan@example.test", "123456", TestContext.Current.CancellationToken));
+        Assert.Equal(EmailSignInCodeCheck.NoCode, await codes.CheckAsync("user-1", "jordan@example.test", "123456", TestContext.Current.CancellationToken));
 
-        var code = await codes.IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+        var code = await codes.IssueAsync("user-1", "jordan@example.test", TestContext.Current.CancellationToken);
         var wrong = code == "000000" ? "111111" : "000000";
 
-        Assert.Equal(EmailSignInCodeCheck.Wrong, await codes.CheckAsync("jordan@example.test", wrong, TestContext.Current.CancellationToken));
-        Assert.Equal(EmailSignInCodeCheck.Right, await codes.CheckAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
-        Assert.Equal(EmailSignInCodeCheck.NoCode, await codes.CheckAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
+        Assert.Equal(EmailSignInCodeCheck.Wrong, await codes.CheckAsync("user-1", "jordan@example.test", wrong, TestContext.Current.CancellationToken));
+        Assert.Equal(EmailSignInCodeCheck.Right, await codes.CheckAsync("user-1", "jordan@example.test", code, TestContext.Current.CancellationToken));
+        Assert.Equal(EmailSignInCodeCheck.NoCode, await codes.CheckAsync("user-1", "jordan@example.test", code, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -222,7 +227,7 @@ public sealed class EmailSignInCodesTests
         clock.Setup(c => c.UtcNow).Returns(() => _now);
         var codes = new EmailSignInCodes(cache.Object, CreateLimiter(clock.Object), new ShellSettings { Name = "Default" }, clock.Object, _lock);
 
-        await codes.IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+        await codes.IssueAsync("user-1", "jordan@example.test", TestContext.Current.CancellationToken);
 
         Assert.NotEmpty(keys);
         Assert.DoesNotContain(keys, key => key.Contains("JORDAN", StringComparison.OrdinalIgnoreCase));

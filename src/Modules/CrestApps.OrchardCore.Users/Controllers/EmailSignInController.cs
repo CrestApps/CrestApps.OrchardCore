@@ -107,10 +107,13 @@ public sealed class EmailSignInController : Controller
             return View(model);
         }
 
-        if (await FindUserAsync(email) is { } user)
+        if (await FindUserAsync(email) is { } account)
         {
             // Sent after the response, so the time the mail server takes never tells a known address from an unknown one.
-            await _codeSender.QueueAsync(user.UserName, email, await _codes.IssueAsync(email, HttpContext.RequestAborted), HttpContext.RequestAborted);
+            // The code is for the account, and goes to the account's own address, never to what was typed.
+            var code = await _codes.IssueAsync(account.UserId, account.Email, HttpContext.RequestAborted);
+
+            await _codeSender.QueueAsync(account.User.UserName, account.Email, code, HttpContext.RequestAborted);
         }
 
         // The code form is shown straight away rather than through a redirect, so the email never goes in a URL.
@@ -144,17 +147,18 @@ public sealed class EmailSignInController : Controller
             return View(model);
         }
 
-        var user = string.IsNullOrEmpty(email) ? null : await FindUserAsync(email);
+        var found = string.IsNullOrEmpty(email) ? null : await FindUserAsync(email);
 
         // A wrong code and no account read the same.
-        if (user is null)
+        if (found is null)
         {
             await _loginFormEvents.InvokeAsync((handler, userName) => handler.LoggingInFailedAsync(userName), email, _logger);
 
             return CodeRefused(model);
         }
 
-        var check = await _codes.CheckAsync(email, model.Code, HttpContext.RequestAborted);
+        var user = found.User;
+        var check = await _codes.CheckAsync(found.UserId, found.Email, model.Code, HttpContext.RequestAborted);
 
         if (check != EmailSignInCodeCheck.Right)
         {
@@ -267,6 +271,9 @@ public sealed class EmailSignInController : Controller
         CredentialsRemoved,
     }
 
+    // An account a code can sign in to, with its id and its own address.
+    private sealed record CodeAccount(IUser User, string UserId, string Email);
+
     private ViewResult CodeRefused(EmailSignInViewModel model)
     {
         ModelState.AddModelError(nameof(model.Code), S["That code isn't right or has expired. Check the latest email, or ask for a new code."]);
@@ -281,11 +288,15 @@ public sealed class EmailSignInController : Controller
     // An account that can sign in with a code: enabled, not locked out, not using two-factor sign-in, which a code would
     // get around, not in a role kept to password sign-in (Administrator by default), and not one that signs in only
     // through an external provider, whose own checks a code would get around too.
-    private async Task<IUser> FindUserAsync(string email)
+    // The typed address must be the account's own: a database that compares text loosely (SQL Server's default
+    // collation treats AE as Æ, TH as Þ and SS as ß) answers a look-alike address with another account.
+    private async Task<CodeAccount> FindUserAsync(string email)
     {
         var user = await _userManager.FindByEmailAsync(email);
 
         if (user is null ||
+            await _userManager.GetEmailAsync(user) is not { } accountEmail ||
+            !IsSameAddress(email, accountEmail) ||
             (user is User account && !account.IsEnabled) ||
             await _userManager.IsLockedOutAsync(user) ||
             await _userManager.GetTwoFactorEnabledAsync(user) ||
@@ -295,8 +306,13 @@ public sealed class EmailSignInController : Controller
             return null;
         }
 
-        return user;
+        return new CodeAccount(user, await _userManager.GetUserIdAsync(user), accountEmail);
     }
+
+    // Compared as Orchard Core normalizes an address for its lookup, but exactly.
+    private static bool IsSameAddress(string typed, string accountEmail)
+        => !string.IsNullOrWhiteSpace(accountEmail) &&
+            string.Equals(typed?.Trim().Normalize().ToUpperInvariant(), accountEmail.Trim().Normalize().ToUpperInvariant(), StringComparison.Ordinal);
 
     private async Task<bool> IsInExcludedRoleAsync(IUser user)
     {

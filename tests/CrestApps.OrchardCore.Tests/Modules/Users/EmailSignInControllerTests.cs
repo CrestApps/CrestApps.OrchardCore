@@ -47,6 +47,8 @@ public sealed class EmailSignInControllerTests
     {
         _userManager = new Mock<UserManager<IUser>>(Mock.Of<IUserStore<IUser>>(), null, null, null, null, null, null, null, null);
         _userManager.Setup(manager => manager.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync(_user);
+        _userManager.Setup(manager => manager.GetEmailAsync(It.IsAny<IUser>())).ReturnsAsync((IUser user) => ((User)user).Email);
+        _userManager.Setup(manager => manager.GetUserIdAsync(It.IsAny<IUser>())).ReturnsAsync((IUser user) => ((User)user).UserId);
         _userManager.Setup(manager => manager.IsLockedOutAsync(It.IsAny<IUser>())).ReturnsAsync(false);
         _userManager.Setup(manager => manager.GetTwoFactorEnabledAsync(It.IsAny<IUser>())).ReturnsAsync(false);
         _userManager.Setup(manager => manager.IsInRoleAsync(It.IsAny<IUser>(), It.IsAny<string>())).ReturnsAsync(false);
@@ -77,7 +79,7 @@ public sealed class EmailSignInControllerTests
         // Arrange: Orchard's reCAPTCHA login handler reports an error from LoggingInAsync when the form carries no
         // captcha response, and the code form has no captcha widget.
         _loginFormEvents.Add(new ReCaptchaLikeLoginFormEvent());
-        var code = await CreateCodes().IssueAsync(Email, TestContext.Current.CancellationToken);
+        var code = await CreateCodes().IssueAsync(_user.UserId, Email, TestContext.Current.CancellationToken);
         var controller = CreateController();
 
         // Act
@@ -96,7 +98,7 @@ public sealed class EmailSignInControllerTests
         // the site requires confirmed e-mails. The code itself proves the address.
         _user.EmailConfirmed = false;
         _loginFormEvents.Add(new EmailConfirmationLikeLoginFormEvent());
-        var code = await CreateCodes().IssueAsync(Email, TestContext.Current.CancellationToken);
+        var code = await CreateCodes().IssueAsync(_user.UserId, Email, TestContext.Current.CancellationToken);
 
         // Act
         var result = await CreateController().Code(new EmailSignInViewModel { Email = Email, Code = code });
@@ -128,7 +130,7 @@ public sealed class EmailSignInControllerTests
     public async Task AWrongGuess_AgainstALiveCode_CountsTowardTheLockout_AndRaisesTheEvents()
     {
         // Arrange
-        var code = await CreateCodes().IssueAsync(Email, TestContext.Current.CancellationToken);
+        var code = await CreateCodes().IssueAsync(_user.UserId, Email, TestContext.Current.CancellationToken);
         var wrong = code == "000000" ? "111111" : "000000";
         _userManager.SetupSequence(manager => manager.IsLockedOutAsync(It.IsAny<IUser>()))
             .ReturnsAsync(false)
@@ -149,7 +151,7 @@ public sealed class EmailSignInControllerTests
     public async Task TheRightCode_RaisesTheLoginEvents_AndResetsTheFailures()
     {
         // Arrange
-        var code = await CreateCodes().IssueAsync(Email, TestContext.Current.CancellationToken);
+        var code = await CreateCodes().IssueAsync(_user.UserId, Email, TestContext.Current.CancellationToken);
 
         // Act
         await CreateController().Code(new EmailSignInViewModel { Email = Email, Code = code });
@@ -204,7 +206,7 @@ public sealed class EmailSignInControllerTests
     {
         // Arrange
         var controller = CreateController();
-        var code = await CreateCodes().IssueAsync(Email, TestContext.Current.CancellationToken);
+        var code = await CreateCodes().IssueAsync(_user.UserId, Email, TestContext.Current.CancellationToken);
 
         // Act: thirty checks from one network use its allowance, so the right code from it is turned away.
         for (var i = 0; i < 30; i++)
@@ -247,7 +249,7 @@ public sealed class EmailSignInControllerTests
     {
         // Arrange
         _loginSettings.DisableLocalLogin = true;
-        var code = await CreateCodes().IssueAsync(Email, TestContext.Current.CancellationToken);
+        var code = await CreateCodes().IssueAsync(_user.UserId, Email, TestContext.Current.CancellationToken);
         var controller = CreateController();
 
         // Act
@@ -272,7 +274,7 @@ public sealed class EmailSignInControllerTests
         // Arrange
         _userManager.Setup(manager => manager.HasPasswordAsync(_user)).ReturnsAsync(false);
         _userManager.Setup(manager => manager.GetLoginsAsync(_user)).ReturnsAsync([new UserLoginInfo("Microsoft", "key-1", "Microsoft")]);
-        var code = await CreateCodes().IssueAsync(Email, TestContext.Current.CancellationToken);
+        var code = await CreateCodes().IssueAsync(_user.UserId, Email, TestContext.Current.CancellationToken);
 
         // Act
         var result = await CreateController().Code(new EmailSignInViewModel { Email = Email, Code = code });
