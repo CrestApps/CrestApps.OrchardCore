@@ -100,6 +100,9 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<ApprovalRequestedEvent, ApprovalEventActivityDisplayDriver<ApprovalRequestedEvent>>();
         services.AddActivity<ApprovalApprovedEvent, ApprovalEventActivityDisplayDriver<ApprovalApprovedEvent>>();
         services.AddActivity<ApprovalRejectedEvent, ApprovalEventActivityDisplayDriver<ApprovalRejectedEvent>>();
+        services.AddActivity<ApprovalPartlyApprovedEvent, ApprovalEventActivityDisplayDriver<ApprovalPartlyApprovedEvent>>();
+        services.AddActivity<ApprovalStageApprovedEvent, ApprovalEventActivityDisplayDriver<ApprovalStageApprovedEvent>>();
+        services.AddActivity<ApprovalCanceledEvent, ApprovalEventActivityDisplayDriver<ApprovalCanceledEvent>>();
         services.AddActivity<RequestApprovalTask, ApprovalTaskDisplayDriver<RequestApprovalTask>>();
         services.AddActivity<ApproveRequestTask, ApprovalTaskDisplayDriver<ApproveRequestTask>>();
         services.AddActivity<RejectRequestTask, ApprovalTaskDisplayDriver<RejectRequestTask>>();
@@ -121,6 +124,9 @@ public sealed class WorkflowsRecipeSchemaStartup : StartupBase
             .AddWorkflowActivitySchema<ApprovalRequestedEventSchema>()
             .AddWorkflowActivitySchema<ApprovalApprovedEventSchema>()
             .AddWorkflowActivitySchema<ApprovalRejectedEventSchema>()
+            .AddWorkflowActivitySchema<ApprovalPartlyApprovedEventSchema>()
+            .AddWorkflowActivitySchema<ApprovalStageApprovedEventSchema>()
+            .AddWorkflowActivitySchema<ApprovalCanceledEventSchema>()
             .AddWorkflowActivitySchema<RequestApprovalTaskSchema>()
             .AddWorkflowActivitySchema<ApproveRequestTaskSchema>()
             .AddWorkflowActivitySchema<RejectRequestTaskSchema>()

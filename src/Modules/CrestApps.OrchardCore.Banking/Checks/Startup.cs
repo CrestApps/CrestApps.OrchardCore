@@ -76,6 +76,9 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<CheckPrintedEvent, CheckEventActivityDisplayDriver<CheckPrintedEvent>>();
         services.AddActivity<CheckVoidedEvent, CheckEventActivityDisplayDriver<CheckVoidedEvent>>();
         services.AddActivity<CheckClearedEvent, CheckEventActivityDisplayDriver<CheckClearedEvent>>();
+        services.AddActivity<CheckStopPaymentEvent, CheckEventActivityDisplayDriver<CheckStopPaymentEvent>>();
+        services.AddActivity<CheckReissuedEvent, CheckEventActivityDisplayDriver<CheckReissuedEvent>>();
+        services.AddActivity<CheckStaleEvent, CheckEventActivityDisplayDriver<CheckStaleEvent>>();
         services.AddActivity<MarkStaleChecksTask, MarkStaleChecksTaskDisplayDriver>();
         services.AddCheckObserver<ChecksWorkflowObserver>();
     }
@@ -96,6 +99,9 @@ public sealed class WorkflowsRecipeSchemaStartup : StartupBase
             .AddWorkflowActivitySchema<CheckPrintedEventSchema>()
             .AddWorkflowActivitySchema<CheckVoidedEventSchema>()
             .AddWorkflowActivitySchema<CheckClearedEventSchema>()
+            .AddWorkflowActivitySchema<CheckStopPaymentEventSchema>()
+            .AddWorkflowActivitySchema<CheckReissuedEventSchema>()
+            .AddWorkflowActivitySchema<CheckStaleEventSchema>()
             .AddWorkflowActivitySchema<MarkStaleChecksTaskSchema>();
     }
 }

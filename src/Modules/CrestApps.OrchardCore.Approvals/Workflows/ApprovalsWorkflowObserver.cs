@@ -23,13 +23,7 @@ internal sealed class ApprovalsWorkflowObserver : IApprovalObserver
 
     public async Task OnChangedAsync(ApprovalChange change, CancellationToken cancellationToken = default)
     {
-        var name = change.Kind switch
-        {
-            ApprovalChangeKind.Requested => nameof(ApprovalRequestedEvent),
-            ApprovalChangeKind.Approved => nameof(ApprovalApprovedEvent),
-            ApprovalChangeKind.Rejected => nameof(ApprovalRejectedEvent),
-            _ => null,
-        };
+        var name = EventFor(change.Kind);
 
         if (name is null)
         {
@@ -39,8 +33,8 @@ internal sealed class ApprovalsWorkflowObserver : IApprovalObserver
         var request = change.Request;
         var approvers = new List<string>();
 
-        // The approvers' user names, for Notify User Task in a reminder workflow.
-        if (change.Kind == ApprovalChangeKind.Requested && _serviceProvider.GetService<UserManager<IUser>>() is { } userManager)
+        // The approvers' user names, for Notify User Task in a reminder workflow; after a stage, the next stage's.
+        if (change.Kind is (ApprovalChangeKind.Requested or ApprovalChangeKind.StageApproved) && _serviceProvider.GetService<UserManager<IUser>>() is { } userManager)
         {
             foreach (var userId in await _serviceProvider.GetRequiredService<IApprovalService>().GetApproverUserIdsAsync(request, cancellationToken))
             {
@@ -51,26 +45,42 @@ internal sealed class ApprovalsWorkflowObserver : IApprovalObserver
             }
         }
 
-        var input = new Dictionary<string, object>
-        {
-            ["RequestId"] = request.ItemId,
-            ["SubjectKind"] = request.SubjectKind,
-            ["SubjectId"] = request.SubjectId,
-            ["Title"] = request.Title,
-            ["PolicyId"] = request.PolicyId,
-            ["PolicyTitle"] = request.PolicyTitle,
-            ["Status"] = request.Status.ToString(),
-            ["Change"] = change.Kind.ToString(),
-            ["RequesterName"] = request.RequesterName,
-            ["ApproverUserNames"] = string.Join(",", approvers),
-            ["Decider"] = change.Actor,
-            ["Note"] = change.Decision?.Note,
-            ["DueUtc"] = request.DueUtc,
-            ["Stage"] = request.CurrentStage + 1,
-            ["Amount"] = request.Amount,
-            ["Currency"] = request.Currency,
-        };
+        var input = Input(change, approvers);
 
         ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<IWorkflowManager>().TriggerEventAsync(name, input, request.ItemId));
     }
+
+    // The event a change starts, or null for none.
+    internal static string EventFor(ApprovalChangeKind kind)
+        => kind switch
+        {
+            ApprovalChangeKind.Requested => nameof(ApprovalRequestedEvent),
+            ApprovalChangeKind.PartlyApproved => nameof(ApprovalPartlyApprovedEvent),
+            ApprovalChangeKind.StageApproved => nameof(ApprovalStageApprovedEvent),
+            ApprovalChangeKind.Approved => nameof(ApprovalApprovedEvent),
+            ApprovalChangeKind.Rejected => nameof(ApprovalRejectedEvent),
+            ApprovalChangeKind.Canceled => nameof(ApprovalCanceledEvent),
+            _ => null,
+        };
+
+    internal static Dictionary<string, object> Input(ApprovalChange change, IReadOnlyCollection<string> approvers)
+        => new()
+        {
+            ["RequestId"] = change.Request.ItemId,
+            ["SubjectKind"] = change.Request.SubjectKind,
+            ["SubjectId"] = change.Request.SubjectId,
+            ["Title"] = change.Request.Title,
+            ["PolicyId"] = change.Request.PolicyId,
+            ["PolicyTitle"] = change.Request.PolicyTitle,
+            ["Status"] = change.Request.Status.ToString(),
+            ["Change"] = change.Kind.ToString(),
+            ["RequesterName"] = change.Request.RequesterName,
+            ["ApproverUserNames"] = string.Join(",", approvers ?? []),
+            ["Decider"] = change.Actor,
+            ["Note"] = change.Decision?.Note ?? (change.Kind == ApprovalChangeKind.Canceled ? change.Request.CancelReason : null),
+            ["DueUtc"] = change.Request.DueUtc,
+            ["Stage"] = change.Request.CurrentStage + 1,
+            ["Amount"] = change.Request.Amount,
+            ["Currency"] = change.Request.Currency,
+        };
 }

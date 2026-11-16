@@ -48,7 +48,7 @@ A policy saved before policies had one type, and that served several types or ev
 
 ## Remind approvers
 
-Apply the recipe **Automation: remind approvers** from **Configuration > Recipes**. It adds a workflow, turned off, that reminds the approvers every weekday at 9 while a request waits. Open **Workflows > Remind approvers of pending requests** to change the time, then turn it on. A workflow's approval events can be limited to one approval type.
+Apply the recipe **Automation: remind approvers** from **Configuration > Recipes**. It adds a workflow, turned off, that reminds the approvers every weekday at 9 while a request waits. Open **Workflows > Remind approvers of pending requests** to change the time, then turn it on. A workflow's approval events can be limited to one approval type. Workflows can also start when a request is asked, partly approved, when a stage is approved, when it is approved or rejected, and when it is withdrawn.
 
 ## Choose how you are told
 

@@ -120,8 +120,20 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<DisbursementSettledEvent, DisbursementEventActivityDisplayDriver<DisbursementSettledEvent>>();
         services.AddActivity<DisbursementReturnedEvent, DisbursementEventActivityDisplayDriver<DisbursementReturnedEvent>>();
         services.AddActivity<DisbursementFailedEvent, DisbursementEventActivityDisplayDriver<DisbursementFailedEvent>>();
+        services.AddActivity<DisbursementCreatedEvent, DisbursementEventActivityDisplayDriver<DisbursementCreatedEvent>>();
+        services.AddActivity<DisbursementBatchedEvent, DisbursementEventActivityDisplayDriver<DisbursementBatchedEvent>>();
+        services.AddActivity<DisbursementUnbatchedEvent, DisbursementEventActivityDisplayDriver<DisbursementUnbatchedEvent>>();
+        services.AddActivity<DisbursementCanceledEvent, DisbursementEventActivityDisplayDriver<DisbursementCanceledEvent>>();
+        services.AddActivity<DisbursementReversedEvent, DisbursementEventActivityDisplayDriver<DisbursementReversedEvent>>();
+        services.AddActivity<DisbursementBatchCreatedEvent, DisbursementEventActivityDisplayDriver<DisbursementBatchCreatedEvent>>();
+        services.AddActivity<DisbursementBatchReleasedEvent, DisbursementEventActivityDisplayDriver<DisbursementBatchReleasedEvent>>();
+        services.AddActivity<DisbursementBatchReopenedEvent, DisbursementEventActivityDisplayDriver<DisbursementBatchReopenedEvent>>();
+        services.AddActivity<DisbursementBatchCanceledEvent, DisbursementEventActivityDisplayDriver<DisbursementBatchCanceledEvent>>();
+        services.AddActivity<DisbursementBatchSettledEvent, DisbursementEventActivityDisplayDriver<DisbursementBatchSettledEvent>>();
+        services.AddActivity<DisbursementReturnsAppliedEvent, DisbursementEventActivityDisplayDriver<DisbursementReturnsAppliedEvent>>();
         services.AddActivity<SettleDisbursementBatchesTask, SettleDisbursementBatchesTaskDisplayDriver>();
         services.AddDisbursementObserver<DisbursementsWorkflowObserver>();
+        services.AddDisbursementBatchObserver<DisbursementsWorkflowObserver>();
     }
 }
 
@@ -140,6 +152,17 @@ public sealed class WorkflowsRecipeSchemaStartup : StartupBase
             .AddWorkflowActivitySchema<DisbursementSettledEventSchema>()
             .AddWorkflowActivitySchema<DisbursementReturnedEventSchema>()
             .AddWorkflowActivitySchema<DisbursementFailedEventSchema>()
+            .AddWorkflowActivitySchema<DisbursementCreatedEventSchema>()
+            .AddWorkflowActivitySchema<DisbursementBatchedEventSchema>()
+            .AddWorkflowActivitySchema<DisbursementUnbatchedEventSchema>()
+            .AddWorkflowActivitySchema<DisbursementCanceledEventSchema>()
+            .AddWorkflowActivitySchema<DisbursementReversedEventSchema>()
+            .AddWorkflowActivitySchema<DisbursementBatchCreatedEventSchema>()
+            .AddWorkflowActivitySchema<DisbursementBatchReleasedEventSchema>()
+            .AddWorkflowActivitySchema<DisbursementBatchReopenedEventSchema>()
+            .AddWorkflowActivitySchema<DisbursementBatchCanceledEventSchema>()
+            .AddWorkflowActivitySchema<DisbursementBatchSettledEventSchema>()
+            .AddWorkflowActivitySchema<DisbursementReturnsAppliedEventSchema>()
             .AddWorkflowActivitySchema<SettleDisbursementBatchesTaskSchema>();
     }
 }

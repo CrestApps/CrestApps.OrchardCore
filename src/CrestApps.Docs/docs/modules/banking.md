@@ -125,7 +125,8 @@ With Data Pipelines on, the **Banking** data source has a **Bank accounts** data
 
 ### Workflows and Audit Trail
 
-- **Bank Account Changed** (event, category Banking): input `BankAccountId`, `Name`, `OwnerKind`, `OwnerId`, `Status`, `PreviousStatus`, `Changes`, `Actor`. A reveal does not start it, and the input holds no number.
+- **Bank Account Changed** (event, category Banking): input `BankAccountId`, `Name`, `OwnerKind`, `OwnerId`, `Status`, `PreviousStatus`, `Reason`, `Changes`, `Actor`. A reveal does not start it, and the input holds no number.
+- **Bank Account Status Changed** (event, category Banking): starts with Bank Account Changed when the status moves, such as when an account is verified, fails, is closed, or goes back to unverified after a number change. Its **Status** setting limits it to one new status (`Verified`, `Closed`...). Same input.
 - Audit Trail category **Banking**: Bank account added, changed, number changed, status changed, removed, and number shown, with the user id and name of who did it. Each event records the masked number only.
 
 ## Checks
@@ -143,7 +144,7 @@ A `CheckLayout` (a named catalog record, kept in a document) says how checks pri
 | `Fields` | The place of each field (`CheckFieldNames`: Date, Payee, PayeeAddress, Amount, AmountInWords, Memo, Number, Payer, Bank, Signature, SecondSignature) in points from the top left of the check: `X`, `Y`, `Width`, `FontSize`, `Hidden`. A new layout starts with places that stay above the check line's clear band (`CheckLayoutDefaults`). |
 | `OffsetX`, `OffsetY` | Calibration in points (at most 72 either way). |
 | `PrintMicr`, `MicrCountry`, `UseAuxiliaryOnUs`, `MicrFontSize`, `MicrSymbolCharacters` | The check line: on or off, the country format, business (check number in the auxiliary on-us field) or personal format, the font size, and the four characters the font draws the transit, amount, on-us and dash symbols on (`ABCD` in most fonts). |
-| `PayerName`, `PayerAddress` | Printed on blank stock. |
+| `PayerName`, `PayerAddress` | Printed on blank stock. The address is entered with the shared address editor of the Addresses module (`IAddressEditorService`), in its country's format; the designer previews it. |
 | `SecondSignatureAbove` | The amount above which a second signature line prints. |
 | `HasSignature`, `HasSecondSignature`, `HasMicrFont` | Whether the files are stored. |
 
@@ -197,7 +198,7 @@ A print run lays out the check line of every check before it draws anything, so 
 | Permission | Allows |
 | --- | --- |
 | `ManageCheckLayouts` | **Banking > Check Layouts**. Security critical. |
-| `ManageChecks` | **Write a check**, print (the list's bulk action **Print with** and the layout's name), reprint, void, reissue, stop payment, mark cleared, **Next numbers**. Security critical. |
+| `ManageChecks` | **Write a check** (the payee's optional address uses the shared address editor, in its country's format, so Checks depends on the Addresses feature), print (the list's bulk action **Print with** and the layout's name), reprint, void, reissue, stop payment, mark cleared, **Next numbers**. Security critical. |
 | `ViewCheckRegister` | **Banking > Checks**, the register, filtered by bank account and status and searched by payee or number. |
 
 A print returns one PDF (`Cache-Control: no-store`) and records the checks as printed in one print run (`PrintRunId`). The bulk print refuses a check already printed: **Reprint** in its menu asks for the layout and a reason, prints it, and records a `Reprinted` change. A spoiled sheet can also be reissued from the check's menu. A new check is dated today in the site's time zone, and **Mark cleared** records today's date in that zone.
@@ -215,7 +216,7 @@ Both steps have schemas for CrestApps Recipes.
 
 ### Workflows
 
-Events (category Checks): **Check Issued**, **Check Printed** (also a reprint, `Change` = `Reprinted`), **Check Voided** (also stop payment and reissue; `Change` says which) and **Check Cleared**. Input: `CheckId`, `Number`, `BankAccountId`, `PayeeName`, `Amount`, `Currency`, `CheckDate`, `SourceKind`, `SourceId`, `Status`, `Change`, `ReplacedById`, `Reason`, `Actor`.
+Events (category Checks): **Check Issued**, **Check Printed** (also a reprint, `Change` = `Reprinted`), **Check Voided** (also stop payment and reissue; `Change` says which), **Check Stop Payment** and **Check Reissued** (each starts with Check Voided; `ReplacedById` is the new check), **Check Stale** (by hand or by Mark Stale Checks) and **Check Cleared**. Input: `CheckId`, `Number`, `BankAccountId`, `PayeeName`, `Amount`, `Currency`, `CheckDate`, `SourceKind`, `SourceId`, `Status`, `Change`, `ReplacedById`, `Reason`, `Actor`.
 
 Task: **Mark Stale Checks** (`AgeInDays`, 180 by default) marks stale every printed check dated more than that many days before today, in the site's time zone, and writes the count to the workflow output `StaleChecks`. Run it from a Timer Event once a day.
 
@@ -304,6 +305,8 @@ Both steps have schemas for CrestApps Recipes.
 
 ### Workflows
 
-Events (category Disbursements): **Disbursement Submitted**, **Settled**, **Returned** and **Failed** (also cancelled and reversed). Input: `DisbursementId`, `PayeeName`, `Amount`, `Currency`, `Method`, `Status`, `Change`, `SourceKind`, `SourceId`, `BatchId`, `TraceNumber`, `FailureCode`, `FailureReason`, `IsPrenote`, `EffectiveDate`, `Actor`. Never an account number.
+Events (category Disbursements): **Disbursement Created**, **Disbursement Added to Batch**, **Disbursement Removed from Batch** (its open batch was cancelled or reopened), **Disbursement Submitted**, **Settled**, **Returned**, **Failed** (also cancelled and reversed), and **Disbursement Canceled** and **Disbursement Reversed** (each starts with Failed). Input: `DisbursementId`, `PayeeName`, `Amount`, `Currency`, `Method`, `Status`, `Change`, `SourceKind`, `SourceId`, `BatchId`, `TraceNumber`, `FailureCode`, `FailureReason`, `IsPrenote`, `EffectiveDate`, `Actor`. Never an account number.
+
+Batch events (category Disbursements, from `IDisbursementBatchObserver`): **Disbursement Batch Created**, **Released** (a release the provider paid in full starts Settled too), **Reopened** (a batch stuck in sending; `Reason` says why), **Canceled** and **Settled**. Input: `BatchId`, `Provider`, `SourceBankAccountId`, `SourceBankAccountName`, `EffectiveDate`, `Count`, `TotalAmount`, `Currency`, `Status`, `PreviousStatus`, `SourceKind`, `AccessScope`, `FileName`, `ProviderReference`, `Change`, `Reason`, `Settled` (how many it paid), `Actor`. Never the file or an account number. **Disbursement Returns Applied** starts when a returns file is applied, with `Returned`, `Problems` (a count), `ProblemMessages` and `Actor`; each returned disbursement also starts Disbursement Returned.
 
 Task: **Settle Disbursement Batches** (`AgeInDays`, 3 by default) records as paid the released batches older than the age that the bank did not return, which also verifies the accounts of their test entries. Run it from a Timer Event once a day; it writes the count to the workflow output `SettledDisbursements`.

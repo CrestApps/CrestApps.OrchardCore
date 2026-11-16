@@ -645,6 +645,7 @@ public sealed class PayrollFilingService : IPayrollFilingService
         }
 
         result.Filing = filing;
+        await TellAsync(PayrollFilingChangeKind.Prepared, filing.EmployerId, filing.Year, filing, user, cancellationToken);
 
         return result;
     }
@@ -681,6 +682,8 @@ public sealed class PayrollFilingService : IPayrollFilingService
             amended.Status = PayrollFilingStatus.Amended;
             await _filings.UpdateAsync(amended, cancellationToken: cancellationToken);
         }
+
+        await TellAsync(PayrollFilingChangeKind.Filed, filing.EmployerId, filing.Year, filing, user, cancellationToken);
 
         // Each person with a statement in it is told their form is ready, with no amount.
         if (_forms.FirstOrDefault(form => form.Name == filing.Form) is { HasPersonStatements: true } definition)
@@ -736,6 +739,7 @@ public sealed class PayrollFilingService : IPayrollFilingService
         await FillAsync(employer, definition, amendment, user, cancellationToken);
         await _filings.CreateAsync(amendment, cancellationToken);
         result.Filing = amendment;
+        await TellAsync(PayrollFilingChangeKind.Amended, amendment.EmployerId, amendment.Year, amendment, user, cancellationToken);
 
         return result;
     }
@@ -797,6 +801,7 @@ public sealed class PayrollFilingService : IPayrollFilingService
         {
             fresh.ClosedYears.Add(year);
             await _employers.UpdateAsync(fresh, cancellationToken: cancellationToken);
+            await TellAsync(PayrollFilingChangeKind.YearClosed, fresh.ItemId, year, null, user, cancellationToken);
         }
 
         return result;
@@ -812,9 +817,28 @@ public sealed class PayrollFilingService : IPayrollFilingService
         if (fresh.ClosedYears.Remove(year))
         {
             await _employers.UpdateAsync(fresh, cancellationToken: cancellationToken);
+            await TellAsync(PayrollFilingChangeKind.YearReopened, fresh.ItemId, year, null, user, cancellationToken);
         }
 
         return new PayrollFilingResult();
+    }
+
+    private async Task TellAsync(PayrollFilingChangeKind kind, string employerId, int year, PayrollFiling filing, ClaimsPrincipal user, CancellationToken cancellationToken)
+    {
+        var change = new PayrollFilingChange
+        {
+            Kind = kind,
+            EmployerId = employerId,
+            Year = year,
+            Filing = filing,
+            Actor = user?.Identity?.IsAuthenticated == true ? user.Identity.Name : null,
+            ActorId = user?.Identity?.IsAuthenticated == true ? user.FindFirstValue(ClaimTypes.NameIdentifier) : null,
+        };
+
+        foreach (var observer in _services.GetServices<IPayrollFilingObserver>())
+        {
+            await observer.ChangedAsync(change, cancellationToken);
+        }
     }
 
     private async Task FillAsync(Employer employer, IPayrollFilingForm definition, PayrollFiling filing, ClaimsPrincipal user, CancellationToken cancellationToken)

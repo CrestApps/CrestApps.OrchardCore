@@ -87,10 +87,12 @@ public sealed class GarnishmentsTests
     {
         var payments = new DisbursementsTestContext();
         var origin = await payments.OriginAsync();
+        var observer = new RecordingGarnishmentObserver();
         await using var harness = await PayRunTests.CreateHarnessAsync(services =>
         {
             PayRunProcessingTests.AddPayments(services, payments, deposits: false, checks: true);
             services.AddGarnishmentsCore();
+            services.AddSingleton<IGarnishmentObserver>(observer);
         });
         var setup = await PayRunTests.SetUpAsync(harness, employerSetup: employer => employer.FundingBankAccountId = origin.ItemId);
         var orderId = await harness.RunAsync(async services =>
@@ -160,6 +162,11 @@ public sealed class GarnishmentsTests
         Assert.Equal((0m, GarnishmentStatus.Active), (after.Withheld, after.Status));
         Assert.True(Assert.Single(after.Remittances).Voided);
         Assert.Equal(CrestApps.OrchardCore.Banking.Checks.Models.CheckStatus.Voided, voidedCheck.Status);
+
+        // The workflow events: withheld with the check sent, the order completed, then the remittance voided.
+        Assert.Equal([GarnishmentChangeKind.Withheld, GarnishmentChangeKind.Completed, GarnishmentChangeKind.RemittanceVoided], observer.Changes.Select(change => change.Kind));
+        Assert.Equal((remittance.ReferenceId, 400m, statement.ItemId), (observer.Changes[0].Remittance.ReferenceId, observer.Changes[0].Remittance.Amount, observer.Changes[0].Statement.ItemId));
+        Assert.True(observer.Changes[2].Remittance.Voided);
     }
 
     [Fact]

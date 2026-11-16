@@ -40,4 +40,20 @@ public static class DisbursementsServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers an observer of disbursement batch changes.
+    /// </summary>
+    /// <typeparam name="TObserver">The observer.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddDisbursementBatchObserver<TObserver>(this IServiceCollection services)
+        where TObserver : class, IDisbursementBatchObserver
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IDisbursementBatchObserver, TObserver>());
+
+        return services;
+    }
 }

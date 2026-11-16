@@ -111,3 +111,115 @@ internal sealed class PayProfileChangedEventSchema : PayrollEventSchemaBase
 
     protected override string Description => "Starts when a pay profile changes, such as its tax id, a tax election or where net pay goes; Change says what. Input: ProfileId, StaffMemberId, EmployerId, Change, Actor and Reason.";
 }
+
+internal sealed class PayRunCanceledEventSchema : PayrollEventSchemaBase
+{
+    public override string Name => nameof(PayRunCanceledEvent);
+
+    protected override string DisplayText => "Pay Run Canceled";
+
+    protected override string Description => "Starts when a pay run is cancelled; Note is the reason. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Change, Actor and Note.";
+}
+
+internal static class PayrollFilingEventInputs
+{
+    public const string Filing = " Input: FilingId, EmployerId, Form, Year, Quarter, Period, Status, FiledOn, Reference, AmendsId, People, Change and Actor.";
+
+    public const string Year = " Input: EmployerId, Year, Change and Actor.";
+
+    public const string Deposit = " Input: DepositId, EmployerId, Jurisdiction, Group, PeriodStart, PeriodEnd, Amount, PaidOn, Reference and RecordedBy.";
+
+    public const string Order = " Input: OrderId, EmployerId, StaffMemberId, ProfileId, Type, CaseNumber, Agency, Status, TotalOwed, PayeeName, PaymentMethod and StartDate.";
+
+    public const string Remittance = " Input: OrderId, EmployerId, StaffMemberId, Type, CaseNumber, Agency, PayeeName, Status, Withheld, TotalOwed, Remaining, StatementId, StatementNumber, PayDate, Amount, Currency, Method, ReferenceId, Reference, Problem and Change.";
+}
+
+internal sealed class PayrollFilingPreparedEventSchema : PayrollEventSchemaBase
+{
+    public override string Name => nameof(PayrollFilingPreparedEvent);
+
+    protected override string DisplayText => "Payroll Filing Prepared";
+
+    protected override string Description => "Starts when a tax filing draft is prepared, or prepared again." + PayrollFilingEventInputs.Filing;
+}
+
+internal sealed class PayrollFilingFiledEventSchema : PayrollEventSchemaBase
+{
+    public override string Name => nameof(PayrollFilingFiledEvent);
+
+    protected override string DisplayText => "Payroll Filing Filed";
+
+    protected override string Description => "Starts when a tax filing is marked as filed." + PayrollFilingEventInputs.Filing;
+}
+
+internal sealed class PayrollFilingAmendedEventSchema : PayrollEventSchemaBase
+{
+    public override string Name => nameof(PayrollFilingAmendedEvent);
+
+    protected override string DisplayText => "Payroll Filing Amended";
+
+    protected override string Description => "Starts when an amendment of a filed tax filing is started; AmendsId is the filing it corrects." + PayrollFilingEventInputs.Filing;
+}
+
+internal sealed class PayrollYearClosedEventSchema : PayrollEventSchemaBase
+{
+    public override string Name => nameof(PayrollYearClosedEvent);
+
+    protected override string DisplayText => "Payroll Year Closed";
+
+    protected override string Description => "Starts when an employer's payroll year is closed." + PayrollFilingEventInputs.Year;
+}
+
+internal sealed class PayrollYearReopenedEventSchema : PayrollEventSchemaBase
+{
+    public override string Name => nameof(PayrollYearReopenedEvent);
+
+    protected override string DisplayText => "Payroll Year Reopened";
+
+    protected override string Description => "Starts when an employer's closed payroll year is reopened." + PayrollFilingEventInputs.Year;
+}
+
+internal sealed class TaxDepositRecordedEventSchema : PayrollEventSchemaBase
+{
+    public override string Name => nameof(TaxDepositRecordedEvent);
+
+    protected override string DisplayText => "Tax Deposit Recorded";
+
+    protected override string Description => "Starts when a tax deposit is recorded." + PayrollFilingEventInputs.Deposit;
+}
+
+internal sealed class GarnishmentOrderCreatedEventSchema : PayrollEventSchemaBase
+{
+    public override string Name => nameof(GarnishmentOrderCreatedEvent);
+
+    protected override string DisplayText => "Garnishment Order Created";
+
+    protected override string Description => "Starts when a garnishment order is added." + PayrollFilingEventInputs.Order;
+}
+
+internal sealed class GarnishmentWithheldEventSchema : PayrollEventSchemaBase
+{
+    public override string Name => nameof(GarnishmentWithheldEvent);
+
+    protected override string DisplayText => "Garnishment Withheld";
+
+    protected override string Description => "Starts when a garnishment order withholds from a pay statement and sends it to the payee; Problem says when the payment could not be made." + PayrollFilingEventInputs.Remittance;
+}
+
+internal sealed class GarnishmentRemittanceVoidedEventSchema : PayrollEventSchemaBase
+{
+    public override string Name => nameof(GarnishmentRemittanceVoidedEvent);
+
+    protected override string DisplayText => "Garnishment Remittance Voided";
+
+    protected override string Description => "Starts when a garnishment remittance is voided with its pay statement and the payee's payment is stopped." + PayrollFilingEventInputs.Remittance;
+}
+
+internal sealed class GarnishmentOrderCompletedEventSchema : PayrollEventSchemaBase
+{
+    public override string Name => nameof(GarnishmentOrderCompletedEvent);
+
+    protected override string DisplayText => "Garnishment Order Completed";
+
+    protected override string Description => "Starts when a garnishment order owes nothing more and is completed." + PayrollFilingEventInputs.Remittance;
+}

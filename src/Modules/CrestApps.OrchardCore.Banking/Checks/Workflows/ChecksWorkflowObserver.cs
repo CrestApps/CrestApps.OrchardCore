@@ -8,28 +8,54 @@ using OrchardCore.Workflows.Services;
 namespace CrestApps.OrchardCore.Banking.Checks.Workflows;
 
 /// <summary>
-/// Starts the Checks workflow events once the change is committed.
+/// Starts the Checks workflow events once the change is committed. A stopped or reissued check starts Check Voided too,
+/// as it always did, besides its own event.
 /// </summary>
 internal sealed class ChecksWorkflowObserver : ICheckObserver
 {
     public Task OnChangedAsync(CheckChange change, CancellationToken cancellationToken = default)
     {
-        var name = change.Kind switch
-        {
-            CheckChangeKind.Issued => nameof(CheckIssuedEvent),
-            CheckChangeKind.Printed or CheckChangeKind.Reprinted => nameof(CheckPrintedEvent),
-            CheckChangeKind.Cleared => nameof(CheckClearedEvent),
-            CheckChangeKind.Voided or CheckChangeKind.StopPayment or CheckChangeKind.Reissued => nameof(CheckVoidedEvent),
-            _ => null,
-        };
+        var names = EventsFor(change.Kind);
 
-        if (name is null)
+        if (names.Length == 0)
         {
             return Task.CompletedTask;
         }
 
+        var input = Input(change);
+        var checkId = change.Check.ItemId;
+
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var workflows = scope.ServiceProvider.GetRequiredService<IWorkflowManager>();
+
+            foreach (var name in names)
+            {
+                await workflows.TriggerEventAsync(name, input, checkId);
+            }
+        });
+
+        return Task.CompletedTask;
+    }
+
+    internal static string[] EventsFor(CheckChangeKind kind)
+        => kind switch
+        {
+            CheckChangeKind.Issued => [nameof(CheckIssuedEvent)],
+            CheckChangeKind.Printed or CheckChangeKind.Reprinted => [nameof(CheckPrintedEvent)],
+            CheckChangeKind.Cleared => [nameof(CheckClearedEvent)],
+            CheckChangeKind.Voided => [nameof(CheckVoidedEvent)],
+            CheckChangeKind.StopPayment => [nameof(CheckVoidedEvent), nameof(CheckStopPaymentEvent)],
+            CheckChangeKind.Reissued => [nameof(CheckVoidedEvent), nameof(CheckReissuedEvent)],
+            CheckChangeKind.Stale => [nameof(CheckStaleEvent)],
+            _ => [],
+        };
+
+    internal static Dictionary<string, object> Input(CheckChange change)
+    {
         var check = change.Check;
-        var input = new Dictionary<string, object>
+
+        return new Dictionary<string, object>
         {
             ["CheckId"] = check.ItemId,
             ["Number"] = check.Number,
@@ -46,9 +72,5 @@ internal sealed class ChecksWorkflowObserver : ICheckObserver
             ["Reason"] = change.Reason,
             ["Actor"] = change.Actor,
         };
-
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<IWorkflowManager>().TriggerEventAsync(name, input, check.ItemId));
-
-        return Task.CompletedTask;
     }
 }

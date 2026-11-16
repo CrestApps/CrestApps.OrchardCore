@@ -21,7 +21,7 @@ Checks prints the business's checks and keeps a register of every check it wrote
 1. Open **Banking > Check Layouts** and choose **Add check layout**.
 2. Choose the **Paper**: blank check paper, or pre-printed checks from your bank or printer.
 3. Choose the **Sheet**: where the check sits on the page, with vouchers above or below it, or three checks a page.
-4. On blank paper, fill in the **Payer** name and address that print on the check.
+4. On blank paper, fill in the **Payer** name and address that print on the check. Choose the address's country first: the fields follow its format.
 5. Under **Signatures**, upload a signature picture if you want one printed, and the amount above which a second signature line prints.
 6. Under **Check line (MICR)**, tick **Print the check line** for blank paper and upload the check line font. The font is not included: use a MICR E-13B TrueType font you are licensed to use. Your bank reads the line only when it is printed with magnetic toner.
 7. Choose **Save**.
@@ -73,7 +73,7 @@ When you load a new box of pre-printed checks, choose **Next numbers**, pick the
 | **Voided** | Cancelled. It keeps its number. |
 | **Stop payment** | You asked the bank not to pay it. Record it with **Stop payment**, and ask the bank too. |
 | **Reissued** | Replaced by another check. If the bank pays it anyway, choose **Mark cleared**: the register flags it **Paid after reissue**, so you can check whether the replacement was paid too. |
-| **Stale** | Too old for the bank to pay. Your administrator can mark old checks stale every day with the **Mark Stale Checks** workflow task. |
+| **Stale** | Too old for the bank to pay. Your administrator can mark old checks stale every day with the **Mark Stale Checks** workflow task, and start a workflow when a check goes stale. |
 
 ## Who sees which checks
 

@@ -11,8 +11,56 @@ namespace CrestApps.OrchardCore.Payroll.Workflows;
 /// Starts Payroll's workflow events once the change is committed (a deferred task of the shell scope), so a workflow
 /// never sees a change that was rolled back. Amounts are in the input for the workflow's own use; nothing is sent.
 /// </summary>
-internal sealed class PayrollWorkflowObserver : IPayRunObserver, IPayStatementObserver, IPayProfileObserver
+internal sealed class PayrollWorkflowObserver : IPayRunObserver, IPayStatementObserver, IPayProfileObserver, IPayrollFilingObserver
 {
+    /// <inheritdoc />
+    public Task ChangedAsync(PayrollFilingChange change, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+
+        Trigger([EventFor(change.Kind)], FilingInput(change), change.Filing?.ItemId ?? change.EmployerId);
+
+        return Task.CompletedTask;
+    }
+
+    // The event a change of a filing or a payroll year starts.
+    internal static string EventFor(PayrollFilingChangeKind kind)
+        => kind switch
+        {
+            PayrollFilingChangeKind.Prepared => nameof(PayrollFilingPreparedEvent),
+            PayrollFilingChangeKind.Filed => nameof(PayrollFilingFiledEvent),
+            PayrollFilingChangeKind.Amended => nameof(PayrollFilingAmendedEvent),
+            PayrollFilingChangeKind.YearClosed => nameof(PayrollYearClosedEvent),
+            PayrollFilingChangeKind.YearReopened => nameof(PayrollYearReopenedEvent),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+        };
+
+    internal static Dictionary<string, object> FilingInput(PayrollFilingChange change)
+    {
+        var input = new Dictionary<string, object>
+        {
+            ["EmployerId"] = change.EmployerId,
+            ["Year"] = change.Year,
+            ["Change"] = change.Kind.ToString(),
+            ["Actor"] = change.Actor,
+        };
+
+        if (change.Filing is { } filing)
+        {
+            input["FilingId"] = filing.ItemId;
+            input["Form"] = filing.Form;
+            input["Quarter"] = filing.Quarter;
+            input["Period"] = filing.Period;
+            input["Status"] = filing.Status.ToString();
+            input["FiledOn"] = filing.FiledOn is { } filedOn ? Day(filedOn) : null;
+            input["Reference"] = filing.Reference;
+            input["AmendsId"] = filing.AmendsId;
+            input["People"] = filing.People.Count;
+        }
+
+        return input;
+    }
+
     /// <inheritdoc />
     public Task ChangedAsync(PayRunChange change, CancellationToken cancellationToken = default)
     {
@@ -99,6 +147,7 @@ internal sealed class PayrollWorkflowObserver : IPayRunObserver, IPayStatementOb
             PayRunChangeKind.Paid => [nameof(PayRunProcessedEvent), nameof(PayRunPaidEvent)],
             PayRunChangeKind.PartiallyPaid => [nameof(PayRunProcessedEvent)],
             PayRunChangeKind.Failed => [nameof(PayRunProcessedEvent), nameof(PayRunFailedEvent)],
+            PayRunChangeKind.Canceled => [nameof(PayRunCanceledEvent)],
             _ => Array.Empty<string>(),
         };
 
@@ -118,7 +167,7 @@ internal sealed class PayrollWorkflowObserver : IPayRunObserver, IPayStatementOb
             ["Change"] = change,
         };
 
-    private static void Trigger(string[] names, Dictionary<string, object> input, string correlationId)
+    internal static void Trigger(string[] names, Dictionary<string, object> input, string correlationId)
     {
         if (names.Length == 0)
         {
@@ -136,6 +185,6 @@ internal sealed class PayrollWorkflowObserver : IPayRunObserver, IPayStatementOb
         });
     }
 
-    private static string Day(DateOnly day)
+    internal static string Day(DateOnly day)
         => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }

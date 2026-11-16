@@ -178,7 +178,7 @@ if (!result.Succeeded)
 
 Name a policy with `Policy` (id or technical name) to use it whatever its conditions, as Payroll does with `PayRunApproval`; a named policy that doesn't serve the type is refused. Asking again while a request is pending returns it; asking with another `SubjectVersion` withdraws it and asks again.
 
-From a workflow: **Request Approval** takes the approval type, an optional policy, the subject's id, scope, title, page, amount and currency (Liquid), and writes `ApprovalRequestId`. The **Approval Requested**, **Approval Approved** and **Approval Rejected** events take an optional **Approval type**, so a workflow starts only for its type.
+From a workflow: **Request Approval** takes the approval type, an optional policy, the subject's id, scope, title, page, amount and currency (Liquid), and writes `ApprovalRequestId`. The **Approval Requested**, **Approval Partly Approved**, **Approval Stage Approved**, **Approval Approved**, **Approval Rejected** and **Approval Canceled** events take an optional **Approval type**, so a workflow starts only for its type.
 
 ## Add fields with display drivers
 
@@ -226,7 +226,7 @@ Other extension points: `IApprovalObserver` (`services.AddApprovalObserver<T>()`
 
 **Notifications.** With `OrchardCore.Notifications` on, the notification center is the approver's inbox: `Approval` (**Approvals to decide**) for each stage's approvers, removed when the stage or the request closes, and `ApprovalDecided` (**Approval decisions**) for the requester.
 
-**Workflows.** Events: Approval Requested, Approval Approved, Approval Rejected (correlation id is the request id; input `RequestId`, `SubjectKind`, `SubjectId`, `Title`, `PolicyId`, `PolicyTitle`, `Status`, `Change`, `RequesterName`, `ApproverUserNames`, `Decider`, `Note`, `DueUtc`, `Stage`, `Amount`, `Currency`). Tasks: Request Approval, Approve Request and Reject Request (decide as the person the workflow runs for; outcomes `Done`, `NotAllowed`, `NotFound`), Get Approval Request. The **Automation: remind approvers** recipe adds a disabled reminder workflow (a Timer Event and Notify User Task).
+**Workflows.** Events: Approval Requested, Approval Partly Approved (one approver approved and more are needed), Approval Stage Approved (the next stage starts; `Stage` and `ApproverUserNames` are the new stage's), Approval Approved, Approval Rejected and Approval Canceled (withdrawn; `Note` is the reason) (correlation id is the request id; input `RequestId`, `SubjectKind`, `SubjectId`, `Title`, `PolicyId`, `PolicyTitle`, `Status`, `Change`, `RequesterName`, `ApproverUserNames`, `Decider`, `Note`, `DueUtc`, `Stage`, `Amount`, `Currency`). Tasks: Request Approval, Approve Request and Reject Request (decide as the person the workflow runs for; outcomes `Done`, `NotAllowed`, `NotFound`), Get Approval Request. The **Automation: remind approvers** recipe adds a disabled reminder workflow (a Timer Event and Notify User Task).
 
 **Data.** The **Approval requests** data set (`ApprovalRequests`) has a row per request with its type, stage, policy, status, amount, approvals, requester, deciders and dates. Recipe and deployment steps `ApprovalPolicies` (with `Types`, `Enabled`, `Order`, the conditions and `Stages`) and `ApprovalRequests` (history only).
 

@@ -225,3 +225,191 @@ public sealed class PayProfileChangedEvent : PayrollEventActivity
     /// <inheritdoc />
     public override LocalizedString DisplayText => S["Pay Profile Changed"];
 }
+
+/// <summary>
+/// Starts when a pay run is cancelled; Note is the reason.
+/// </summary>
+public sealed class PayRunCanceledEvent : PayrollEventActivity
+{
+    public PayRunCanceledEvent(IStringLocalizer<PayRunCanceledEvent> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
+    /// <inheritdoc />
+    public override string Name => nameof(PayRunCanceledEvent);
+
+    /// <inheritdoc />
+    public override LocalizedString DisplayText => S["Pay Run Canceled"];
+}
+
+/// <summary>
+/// Starts when a tax filing draft is prepared, or prepared again.
+/// </summary>
+public sealed class PayrollFilingPreparedEvent : PayrollEventActivity
+{
+    public PayrollFilingPreparedEvent(IStringLocalizer<PayrollFilingPreparedEvent> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
+    /// <inheritdoc />
+    public override string Name => nameof(PayrollFilingPreparedEvent);
+
+    /// <inheritdoc />
+    public override LocalizedString DisplayText => S["Payroll Filing Prepared"];
+}
+
+/// <summary>
+/// Starts when a tax filing is marked as filed.
+/// </summary>
+public sealed class PayrollFilingFiledEvent : PayrollEventActivity
+{
+    public PayrollFilingFiledEvent(IStringLocalizer<PayrollFilingFiledEvent> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
+    /// <inheritdoc />
+    public override string Name => nameof(PayrollFilingFiledEvent);
+
+    /// <inheritdoc />
+    public override LocalizedString DisplayText => S["Payroll Filing Filed"];
+}
+
+/// <summary>
+/// Starts when an amendment of a filed tax filing is started; AmendsId is the filing it corrects.
+/// </summary>
+public sealed class PayrollFilingAmendedEvent : PayrollEventActivity
+{
+    public PayrollFilingAmendedEvent(IStringLocalizer<PayrollFilingAmendedEvent> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
+    /// <inheritdoc />
+    public override string Name => nameof(PayrollFilingAmendedEvent);
+
+    /// <inheritdoc />
+    public override LocalizedString DisplayText => S["Payroll Filing Amended"];
+}
+
+/// <summary>
+/// Starts when an employer's payroll year is closed.
+/// </summary>
+public sealed class PayrollYearClosedEvent : PayrollEventActivity
+{
+    public PayrollYearClosedEvent(IStringLocalizer<PayrollYearClosedEvent> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
+    /// <inheritdoc />
+    public override string Name => nameof(PayrollYearClosedEvent);
+
+    /// <inheritdoc />
+    public override LocalizedString DisplayText => S["Payroll Year Closed"];
+}
+
+/// <summary>
+/// Starts when an employer's closed payroll year is reopened.
+/// </summary>
+public sealed class PayrollYearReopenedEvent : PayrollEventActivity
+{
+    public PayrollYearReopenedEvent(IStringLocalizer<PayrollYearReopenedEvent> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
+    /// <inheritdoc />
+    public override string Name => nameof(PayrollYearReopenedEvent);
+
+    /// <inheritdoc />
+    public override LocalizedString DisplayText => S["Payroll Year Reopened"];
+}
+
+/// <summary>
+/// Starts when a tax deposit is recorded.
+/// </summary>
+public sealed class TaxDepositRecordedEvent : PayrollEventActivity
+{
+    public TaxDepositRecordedEvent(IStringLocalizer<TaxDepositRecordedEvent> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
+    /// <inheritdoc />
+    public override string Name => nameof(TaxDepositRecordedEvent);
+
+    /// <inheritdoc />
+    public override LocalizedString DisplayText => S["Tax Deposit Recorded"];
+}
+
+/// <summary>
+/// Starts when a garnishment order is added.
+/// </summary>
+public sealed class GarnishmentOrderCreatedEvent : PayrollEventActivity
+{
+    public GarnishmentOrderCreatedEvent(IStringLocalizer<GarnishmentOrderCreatedEvent> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
+    /// <inheritdoc />
+    public override string Name => nameof(GarnishmentOrderCreatedEvent);
+
+    /// <inheritdoc />
+    public override LocalizedString DisplayText => S["Garnishment Order Created"];
+}
+
+/// <summary>
+/// Starts when a garnishment order withholds from a pay statement and sends it to the payee; Problem says when the payment
+/// could not be made.
+/// </summary>
+public sealed class GarnishmentWithheldEvent : PayrollEventActivity
+{
+    public GarnishmentWithheldEvent(IStringLocalizer<GarnishmentWithheldEvent> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
+    /// <inheritdoc />
+    public override string Name => nameof(GarnishmentWithheldEvent);
+
+    /// <inheritdoc />
+    public override LocalizedString DisplayText => S["Garnishment Withheld"];
+}
+
+/// <summary>
+/// Starts when a garnishment remittance is voided with its pay statement and the payee's payment is stopped.
+/// </summary>
+public sealed class GarnishmentRemittanceVoidedEvent : PayrollEventActivity
+{
+    public GarnishmentRemittanceVoidedEvent(IStringLocalizer<GarnishmentRemittanceVoidedEvent> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
+    /// <inheritdoc />
+    public override string Name => nameof(GarnishmentRemittanceVoidedEvent);
+
+    /// <inheritdoc />
+    public override LocalizedString DisplayText => S["Garnishment Remittance Voided"];
+}
+
+/// <summary>
+/// Starts when a garnishment order owes nothing more and is completed.
+/// </summary>
+public sealed class GarnishmentOrderCompletedEvent : PayrollEventActivity
+{
+    public GarnishmentOrderCompletedEvent(IStringLocalizer<GarnishmentOrderCompletedEvent> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
+    /// <inheritdoc />
+    public override string Name => nameof(GarnishmentOrderCompletedEvent);
+
+    /// <inheritdoc />
+    public override LocalizedString DisplayText => S["Garnishment Order Completed"];
+}

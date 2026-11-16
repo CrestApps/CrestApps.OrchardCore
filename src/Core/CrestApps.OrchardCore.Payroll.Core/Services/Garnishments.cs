@@ -566,9 +566,12 @@ public sealed class GarnishmentStatementObserver : IPayStatementObserver
 
             order.Withheld += amount;
 
-            if (order.Remaining is 0)
+            var completed = false;
+
+            if (order.Remaining is 0 && order.Status != GarnishmentStatus.Completed)
             {
                 order.Status = GarnishmentStatus.Completed;
+                completed = true;
             }
 
             order.Remittances.Add(row);
@@ -577,6 +580,13 @@ public sealed class GarnishmentStatementObserver : IPayStatementObserver
             if (order.PaymentMethod != GarnishmentPaymentMethod.Outside && amount > 0)
             {
                 await SendAsync(order, statement, row, cancellationToken);
+            }
+
+            await TellAsync(GarnishmentChangeKind.Withheld, order, statement, voided: false, cancellationToken);
+
+            if (completed)
+            {
+                await TellAsync(GarnishmentChangeKind.Completed, order, statement, voided: false, cancellationToken);
             }
 
             await Committer().CommitAsync(cancellationToken);
@@ -627,7 +637,38 @@ public sealed class GarnishmentStatementObserver : IPayStatementObserver
             }
 
             await _orders.UpdateAsync(fresh, cancellationToken: cancellationToken);
+
+            if (stopped)
+            {
+                await TellAsync(GarnishmentChangeKind.RemittanceVoided, fresh, statement, voided: true, cancellationToken);
+            }
+
             await Committer().CommitAsync(cancellationToken);
+        }
+    }
+
+    // Tells the observers, with the order read again: paying may have saved the remittance's payment or problem.
+    private async Task TellAsync(GarnishmentChangeKind kind, GarnishmentOrder order, PayStatement statement, bool voided, CancellationToken cancellationToken)
+    {
+        var observers = _services.GetServices<IGarnishmentObserver>().ToArray();
+
+        if (observers.Length == 0)
+        {
+            return;
+        }
+
+        var fresh = await _orders.FindByIdAsync(order.ItemId, cancellationToken) ?? order;
+        var change = new GarnishmentChange
+        {
+            Kind = kind,
+            Order = fresh,
+            Remittance = fresh.Remittances.LastOrDefault(remittance => remittance.StatementId == statement.ItemId && remittance.Voided == voided),
+            Statement = statement,
+        };
+
+        foreach (var observer in observers)
+        {
+            await observer.ChangedAsync(change, cancellationToken);
         }
     }
 

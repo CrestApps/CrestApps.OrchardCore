@@ -42,7 +42,7 @@ For a bank file, choose **Download the bank file** and send it to your bank, or 
 
 ## When the bank pays or returns a payment
 
-- After the bank's return window, choose **Mark paid** in the batch's menu, or have your administrator run the **Settle Disbursement Batches** workflow task every day.
+- After the bank's return window, choose **Mark paid** in the batch's menu, or have your administrator run the **Settle Disbursement Batches** workflow task every day. Workflows can also start when a batch is made, released, reopened, cancelled or settled, and when a returns file is applied.
 - When the bank sends a return file, choose **Import a return file** in **Disbursement Batches**. Returned payments are marked **Returned** with the bank's reason. A notice of change corrects the payee's bank account, which must then be verified again before money goes to it.
 
 ## Check a payee's bank account with a test entry

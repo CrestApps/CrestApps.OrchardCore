@@ -38,6 +38,7 @@ internal sealed class DisbursementsTestContext
         BatchStore = new InMemoryDisbursementBatchStore();
         Files = new InMemoryDisbursementFileStore();
         Observer = new RecordingDisbursementObserver();
+        BatchObserver = new RecordingDisbursementBatchObserver();
         Manager = new DisbursementManager(Store, [new DisbursementHandler(clock.Object)], NullLogger<CatalogManager<Disbursement>>.Instance);
         Batches = new DisbursementBatchManager(BatchStore, [new DisbursementBatchHandler(clock.Object)], NullLogger<CatalogManager<DisbursementBatch>>.Instance);
 
@@ -72,7 +73,8 @@ internal sealed class DisbursementsTestContext
             new NoopDisbursementCommitter(),
             Checks.LocalClock,
             clock.Object,
-            RecipeRoundTrip.Localizer<DisbursementService>());
+            RecipeRoundTrip.Localizer<DisbursementService>(),
+            [BatchObserver]);
 
         Banking.Usages.Add(new DisbursementBankAccountUsage(Store, RecipeRoundTrip.Localizer<DisbursementBankAccountUsage>()));
         Checks.Observers.Add(new CheckDisbursementObserver(Services));
@@ -99,6 +101,8 @@ internal sealed class DisbursementsTestContext
     public InMemoryDisbursementFileStore Files { get; }
 
     public RecordingDisbursementObserver Observer { get; }
+
+    public RecordingDisbursementBatchObserver BatchObserver { get; }
 
     public DisbursementManager Manager { get; }
 
@@ -275,6 +279,27 @@ internal sealed class RecordingDisbursementObserver : IDisbursementObserver
     public Task OnChangedAsync(DisbursementChange change, CancellationToken cancellationToken = default)
     {
         Changes.Add(change);
+
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class RecordingDisbursementBatchObserver : IDisbursementBatchObserver
+{
+    public List<DisbursementBatchChange> Changes { get; } = [];
+
+    public List<DisbursementImportResult> Returns { get; } = [];
+
+    public Task OnChangedAsync(DisbursementBatchChange change, CancellationToken cancellationToken = default)
+    {
+        Changes.Add(change);
+
+        return Task.CompletedTask;
+    }
+
+    public Task OnReturnsAppliedAsync(DisbursementImportResult result, string actor, CancellationToken cancellationToken = default)
+    {
+        Returns.Add(result);
 
         return Task.CompletedTask;
     }

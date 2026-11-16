@@ -248,7 +248,7 @@ public sealed class PayrollIntegrationTests
         Assert.Equal([nameof(PayRunProcessedEvent), nameof(PayRunPaidEvent)], PayrollWorkflowObserver.EventsFor(PayRunChangeKind.Paid));
         Assert.Equal([nameof(PayRunProcessedEvent)], PayrollWorkflowObserver.EventsFor(PayRunChangeKind.PartiallyPaid));
         Assert.Equal([nameof(PayRunProcessedEvent), nameof(PayRunFailedEvent)], PayrollWorkflowObserver.EventsFor(PayRunChangeKind.Failed));
-        Assert.Empty(PayrollWorkflowObserver.EventsFor(PayRunChangeKind.Canceled));
+        Assert.Equal([nameof(PayRunCanceledEvent)], PayrollWorkflowObserver.EventsFor(PayRunChangeKind.Canceled));
     }
 
     [Fact]

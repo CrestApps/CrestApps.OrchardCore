@@ -1180,6 +1180,15 @@ Mike's review of the approval policies, Payroll > Employees and My Pay:
 
 **Tests**: the resolver skips a policy the type's `MatchesAsync` rules out; one-type and general policies serve the right types; a list of one type loads as `Type`; the conditions editor shows only for types that opt in; the confirmation holds for its user only and not for a changed cookie; `[ConfirmPassword]` sends a GET to confirm and back, a late POST back to its page, lets a confirmed person through and refuses without the service; profile pay cards show one prompt then show; every pay page carries the attribute (the pay run list doesn't); My Pay redirects staff to their profile; no Employees menu item.
 
+### Data portability, workflow events and the check address editors (2026-11-16)
+
+Mike asked that every CRUD import and export through Orchard (a recipe step, its `IRecipeStep` schema, a deployment step), that lifecycle moments raise workflow events, and that checks reuse the Addresses building block.
+
+- **Audit.** Every record type with an admin CRUD in Payroll, Banking, Approvals, the income tax part of Taxation and Staff has a recipe step, a registered `IRecipeStep` schema and a deployment step. Left out on purpose: pay runs and pay previews (pay history is exported without runs, `payroll.md`), and disbursement batches (imported disbursements are never batched, `banking.md`).
+- **Deployment plans were broken.** The Employers, Pay schedules, Pay codes and Income tax rules steps used `SummaryDeploymentStepDisplayDriver` without their `Summary` and `Thumbnail` views, so every deployment plan page of a site with Payroll threw "The shape type 'EmployersDeploymentStep_Thumbnail' is not found". The views are added, and so are the Webhooks module's (the same gap). `DeploymentStepViewsArchitectureTests` now fails when a step without its own driver has no views.
+- **Check address editors.** Checks stored `Address` from Addresses but had their own flat fields with the country fixed to US. **Write a check** (the payee) and the check layout (the payer on blank stock) now use the shared address editor (`IAddressEditorService`, `CreateAddressEditorAsync`) with its country formats and validation, as Payroll's employer, pay profile and garnishment payee do; the check designer previews the payer from the shared editor's fields. Checks depends on the Addresses feature.
+- **Workflow events.** See the module docs' Workflows sections for the events added this round (pay runs, approvals, checks, disbursements and their batches, bank account status, garnishments, filings).
+
 ### For Mike
 
 What only you can settle before the first live pay:

@@ -83,6 +83,7 @@ public sealed class WorkflowsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddActivity<BankAccountChangedEvent, BankAccountChangedEventDisplayDriver>();
+        services.AddActivity<BankAccountStatusChangedEvent, BankAccountStatusChangedEventDisplayDriver>();
         services.AddBankAccountObserver<BankingWorkflowObserver>();
     }
 }
@@ -97,6 +98,7 @@ public sealed class WorkflowsRecipeSchemaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddWorkflowActivitySchema<BankAccountChangedEventSchema>();
+        services.AddWorkflowActivitySchema<BankAccountStatusChangedEventSchema>();
     }
 }
 

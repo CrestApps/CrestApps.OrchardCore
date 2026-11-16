@@ -30,6 +30,7 @@ public sealed class DisbursementService : IDisbursementService
     private readonly IBankAccountManager _bankAccounts;
     private readonly IBankAccountService _bankAccountService;
     private readonly IEnumerable<IDisbursementObserver> _observers;
+    private readonly IEnumerable<IDisbursementBatchObserver> _batchObservers;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IDistributedLock _locks;
     private readonly IDisbursementCommitter _committer;
@@ -52,6 +53,7 @@ public sealed class DisbursementService : IDisbursementService
     /// <param name="httpContextAccessor">The HTTP context accessor, for who made a change.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="batchObservers">The observers of batch changes.</param>
     public DisbursementService(
         IDisbursementManager manager,
         IDisbursementBatchManager batches,
@@ -66,7 +68,8 @@ public sealed class DisbursementService : IDisbursementService
         IDisbursementCommitter committer,
         ILocalClock localClock,
         IClock clock,
-        IStringLocalizer<DisbursementService> stringLocalizer)
+        IStringLocalizer<DisbursementService> stringLocalizer,
+        IEnumerable<IDisbursementBatchObserver> batchObservers = null)
     {
         _manager = manager;
         _batches = batches;
@@ -76,6 +79,7 @@ public sealed class DisbursementService : IDisbursementService
         _bankAccountService = bankAccountService;
         Providers = providers.ToArray();
         _observers = observers;
+        _batchObservers = batchObservers ?? [];
         _httpContextAccessor = httpContextAccessor;
         _locks = locks;
         _committer = committer;
@@ -390,6 +394,8 @@ public sealed class DisbursementService : IDisbursementService
             });
         }
 
+        await NotifyBatchAsync(batch, DisbursementBatchChangeKind.Created, null, null, 0, cancellationToken);
+
         return (batch, problems);
     }
 
@@ -515,6 +521,7 @@ public sealed class DisbursementService : IDisbursementService
         batch.ReleasedBy = Actor().Name;
 
         await _batches.UpdateAsync(batch, cancellationToken: cancellationToken);
+        await NotifyBatchAsync(batch, DisbursementBatchChangeKind.Released, DisbursementBatchStatus.Open, null, disbursements.Count(entry => entry.Status == DisbursementStatus.Settled), cancellationToken);
         await _committer.CommitAsync(cancellationToken);
 
         return ([], batch);
@@ -549,6 +556,7 @@ public sealed class DisbursementService : IDisbursementService
             current.Status = DisbursementBatchStatus.Open;
             current.ProviderReference = string.IsNullOrWhiteSpace(reason) ? current.ProviderReference : "Reopened: " + reason.Trim();
             await _batches.UpdateAsync(current, cancellationToken: cancellationToken);
+            await NotifyBatchAsync(current, DisbursementBatchChangeKind.Reopened, DisbursementBatchStatus.Releasing, reason.NullIfEmpty(), 0, cancellationToken);
             await _committer.CommitAsync(cancellationToken);
             batch.Status = current.Status;
 
@@ -580,6 +588,7 @@ public sealed class DisbursementService : IDisbursementService
 
         batch.Status = DisbursementBatchStatus.Canceled;
         await _batches.UpdateAsync(batch, cancellationToken: cancellationToken);
+        await NotifyBatchAsync(batch, DisbursementBatchChangeKind.Canceled, DisbursementBatchStatus.Open, null, 0, cancellationToken);
 
         return true;
     }
@@ -606,6 +615,7 @@ public sealed class DisbursementService : IDisbursementService
 
         batch.Status = DisbursementBatchStatus.Settled;
         await _batches.UpdateAsync(batch, cancellationToken: cancellationToken);
+        await NotifyBatchAsync(batch, DisbursementBatchChangeKind.Settled, DisbursementBatchStatus.Released, null, count, cancellationToken);
 
         return count;
     }
@@ -706,6 +716,16 @@ public sealed class DisbursementService : IDisbursementService
             else if (disbursement.Status != DisbursementStatus.Returned)
             {
                 result.Problems.Add(S["The disbursement with trace number {0} is {1} and can't be returned.", entry.TraceNumber, disbursement.Status.ToString()]);
+            }
+        }
+
+        if (result.Returned > 0 || result.Problems.Count > 0)
+        {
+            var actor = Actor().Name;
+
+            foreach (var observer in _batchObservers)
+            {
+                await observer.OnReturnsAppliedAsync(result, actor, cancellationToken);
             }
         }
 
@@ -811,6 +831,26 @@ public sealed class DisbursementService : IDisbursementService
         };
 
         foreach (var observer in _observers)
+        {
+            await observer.OnChangedAsync(change, cancellationToken);
+        }
+    }
+
+    private async Task NotifyBatchAsync(DisbursementBatch batch, DisbursementBatchChangeKind kind, DisbursementBatchStatus? previous, string reason, int settled, CancellationToken cancellationToken)
+    {
+        var (name, id) = Actor();
+        var change = new DisbursementBatchChange
+        {
+            Batch = batch,
+            Kind = kind,
+            PreviousStatus = previous,
+            Reason = reason,
+            Settled = settled,
+            Actor = name,
+            ActorId = id,
+        };
+
+        foreach (var observer in _batchObservers)
         {
             await observer.OnChangedAsync(change, cancellationToken);
         }
