@@ -27,6 +27,7 @@ public sealed class XapiStatementService
     private const int MaxReferenceDepth = 10;
 
     private readonly XapiStatementStore _store;
+    private readonly XapiActivityStore _activities;
     private readonly ISession _session;
     private readonly IProtectedFileStore<XapiAttachmentFiles> _files;
     private readonly IEnumerable<IXapiStatementFilter> _filters;
@@ -41,6 +42,7 @@ public sealed class XapiStatementService
     /// </summary>
     public XapiStatementService(
         XapiStatementStore store,
+        XapiActivityStore activities,
         ISession session,
         IProtectedFileStore<XapiAttachmentFiles> files,
         IEnumerable<IXapiStatementFilter> filters,
@@ -51,6 +53,7 @@ public sealed class XapiStatementService
         ILogger<XapiStatementService> logger)
     {
         _store = store;
+        _activities = activities;
         _session = session;
         _files = files;
         _filters = filters;
@@ -566,6 +569,15 @@ public sealed class XapiStatementService
                 await _store.CreateAsync(record, cancellationToken);
             }
 
+            // The canonical definitions of the activities the statements describe.
+            foreach (var statement in prepared.Statements.Where(statement => !existingIds.Contains(statement["id"].GetValue<string>())))
+            {
+                foreach (var (activityId, definition) in DefinitionsOf(statement))
+                {
+                    await _activities.MergeAsync(activityId, definition, now, cancellationToken);
+                }
+            }
+
             // Statements stored earlier that refer to these ones now match the filters of what they refer to.
             foreach (var record in records)
             {
@@ -686,6 +698,42 @@ public sealed class XapiStatementService
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 _logger.LogError(exception, "A statement observer failed after {Count} statements were stored.", records.Count);
+            }
+        }
+    }
+
+    private static IEnumerable<(string ActivityId, JsonObject Definition)> DefinitionsOf(JsonObject statement)
+    {
+        var activities = new List<JsonNode>();
+
+        void Collect(JsonObject body)
+        {
+            if (body?["object"] is JsonObject value && XapiStatementValidator.ObjectTypeOf(value) == "Activity")
+            {
+                activities.Add(value);
+            }
+
+            if (body?["context"]?["contextActivities"] is JsonObject contextActivities)
+            {
+                foreach (var (_, list) in contextActivities)
+                {
+                    activities.AddRange(list is JsonArray array ? array : [list]);
+                }
+            }
+        }
+
+        Collect(statement);
+
+        if (statement["object"] is JsonObject sub && XapiStatementValidator.ObjectTypeOf(sub) == "SubStatement")
+        {
+            Collect(sub);
+        }
+
+        foreach (var activity in activities)
+        {
+            if (XapiAgents.Text(activity?["id"]) is { } id && activity["definition"] is JsonObject definition && definition.Count > 0)
+            {
+                yield return (id, definition);
             }
         }
     }

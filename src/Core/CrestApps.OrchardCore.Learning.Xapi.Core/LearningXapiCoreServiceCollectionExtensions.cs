@@ -11,7 +11,8 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class LearningXapiCoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the statement store and service, the resources and the protected file area of attachments.
+    /// Registers the statement and document stores, the resources, the request handler, the credentials and launch
+    /// tokens, and the protected file area of attachments.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <returns>The service collection.</returns>
@@ -24,6 +25,13 @@ public static class LearningXapiCoreServiceCollectionExtensions
         services.TryAddScoped<XapiStatementStore>();
         services.TryAddScoped<XapiStatementService>();
         services.TryAddScoped<XapiStatementsResource>();
+        services.TryAddScoped<XapiDocumentStore>();
+        services.TryAddScoped<XapiActivityStore>();
+        services.TryAddScoped<XapiDocumentsResource>();
+        services.TryAddScoped<XapiEndpointHandler>();
+        services.TryAddScoped<XapiHomePage>();
+        services.TryAddScoped<XapiLaunchTokens>();
+        services.TryAddScoped<XapiAuthenticator>();
 
         return services;
     }

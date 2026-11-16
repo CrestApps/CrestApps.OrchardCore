@@ -176,6 +176,8 @@ public static class XapiIndexSchema
     public static IEnumerable<IIndexProvider> IndexProviders()
     {
         yield return new XapiStatementIndexProvider();
+        yield return new XapiDocumentIndexProvider();
+        yield return new XapiActivityIndexProvider();
     }
 
     /// <summary>
@@ -186,6 +188,7 @@ public static class XapiIndexSchema
     public static async Task CreateAllAsync(ISchemaBuilder schemaBuilder)
     {
         await CreateStatementTablesAsync(schemaBuilder);
+        await XapiDocumentIndexSchema.CreateAsync(schemaBuilder);
     }
 
     /// <summary>

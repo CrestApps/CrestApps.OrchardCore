@@ -1,0 +1,8 @@
+@model ShapeViewModel<XapiStatementRow>
+
+@{
+    var row = Model.Value;
+}
+
+<a href="@Url.RouteUrl("LearningStatement", new { id = row.Record.StatementId })">@row.Actor <span class="text-secondary">@row.Summary.Verb</span> @row.Summary.Object</a>
+<div class="admin-list-secondary">@row.Record.Verb</div>

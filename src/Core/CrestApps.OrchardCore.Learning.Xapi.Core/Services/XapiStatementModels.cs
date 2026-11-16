@@ -103,3 +103,30 @@ public sealed class XapiQueryResult
     /// <summary>Gets whether more statements match.</summary>
     public bool HasMore { get; init; }
 }
+
+/// <summary>
+/// The filters of the admin list of statements. Every filter matches the statement itself, not the statement it refers to.
+/// </summary>
+public sealed class XapiStatementAdminFilter
+{
+    /// <summary>Gets or sets the verb id.</summary>
+    public string Verb { get; set; }
+
+    /// <summary>Gets or sets the activity id of the object.</summary>
+    public string Activity { get; set; }
+
+    /// <summary>Gets or sets the registration.</summary>
+    public string Registration { get; set; }
+
+    /// <summary>Gets the agent keys the actor may have.</summary>
+    public IList<string> ActorKeys { get; } = [];
+
+    /// <summary>Gets or sets an account name the actor may have, on any home page.</summary>
+    public string ActorAccountName { get; set; }
+
+    /// <summary>Gets or sets the first time statements were stored, in UTC.</summary>
+    public DateTime? FromUtc { get; set; }
+
+    /// <summary>Gets or sets the time before which statements were stored, in UTC.</summary>
+    public DateTime? ToUtc { get; set; }
+}

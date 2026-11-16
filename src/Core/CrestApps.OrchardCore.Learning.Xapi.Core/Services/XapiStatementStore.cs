@@ -135,6 +135,68 @@ public sealed class XapiStatementStore : DocumentCatalog<XapiStatementRecord, Xa
         return last?.Sequence ?? 0;
     }
 
+    /// <summary>
+    /// Reads a page of statements for the admin list, newest first, voided ones included.
+    /// </summary>
+    /// <param name="filter">The filters.</param>
+    /// <param name="skip">How many to skip.</param>
+    /// <param name="take">The page size.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>How many match, and the page.</returns>
+    public async Task<(int Count, IReadOnlyList<XapiStatementRecord> Items)> PageForAdminAsync(XapiStatementAdminFilter filter, int skip, int take, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(filter);
+
+        var query = Session.Query<XapiStatementRecord, XapiStatementIndex>(collection: CollectionName);
+
+        if (!string.IsNullOrEmpty(filter.Verb))
+        {
+            var hash = XapiAgents.Hash(filter.Verb);
+
+            query = query.Where(index => index.VerbHash == hash);
+        }
+
+        if (!string.IsNullOrEmpty(filter.Activity))
+        {
+            var hash = XapiAgents.Hash(filter.Activity);
+
+            query = query.Where(index => index.ObjectHash == hash);
+        }
+
+        if (!string.IsNullOrEmpty(filter.Registration))
+        {
+            var registration = filter.Registration.ToLowerInvariant();
+
+            query = query.Where(index => index.Registration == registration);
+        }
+
+        if (filter.ActorKeys.Count > 0 || !string.IsNullOrEmpty(filter.ActorAccountName))
+        {
+            var hashes = filter.ActorKeys.Select(XapiAgents.Hash).ToArray();
+            var accountName = filter.ActorAccountName ?? string.Empty;
+
+            query = query.Where(index => index.ActorHash.IsIn(hashes) || index.ActorAccountName == accountName);
+        }
+
+        if (filter.FromUtc is { } from)
+        {
+            query = query.Where(index => index.StoredUtc >= from);
+        }
+
+        if (filter.ToUtc is { } to)
+        {
+            query = query.Where(index => index.StoredUtc < to);
+        }
+
+        var count = await query.CountAsync(cancellationToken);
+        var items = await query.OrderByDescending(index => index.Sequence)
+            .Skip(Math.Max(skip, 0))
+            .Take(Math.Max(take, 1))
+            .ListAsync(cancellationToken);
+
+        return (count, items.ToArray());
+    }
+
     internal async Task<XapiQueryResult> QueryAsync(XapiStatementQuery filter, XapiReadScope scope, CancellationToken cancellationToken = default)
     {
         IQuery<XapiStatementRecord> query = Session.Query<XapiStatementRecord>(collection: CollectionName);

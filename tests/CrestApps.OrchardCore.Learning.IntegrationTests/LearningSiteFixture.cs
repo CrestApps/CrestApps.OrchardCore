@@ -72,6 +72,9 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
         CrestApps.OrchardCore.Learning.Classes.ClassesConstants.Feature,
         CrestApps.OrchardCore.Learning.Coursework.CourseworkConstants.Feature,
         CrestApps.OrchardCore.Learning.Packages.PackagesConstants.Features.Scorm,
+        "OrchardCore.OpenId",
+        "OrchardCore.OpenId.Management",
+        CrestApps.OrchardCore.Learning.Xapi.XapiConstants.Features.LearningRecordStore,
     ];
 
     private WebApplication _application;

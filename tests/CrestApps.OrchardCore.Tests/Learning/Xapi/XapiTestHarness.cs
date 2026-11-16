@@ -67,6 +67,7 @@ internal sealed class XapiTestHarness : IAsyncDisposable
             {
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(clock);
+                services.AddHttpContextAccessor();
                 services.AddLearningXapiCore();
                 services.RemoveAll<IProtectedFileStore<XapiAttachmentFiles>>();
                 services.AddSingleton<IProtectedFileStore<XapiAttachmentFiles>>(files);
@@ -83,6 +84,26 @@ internal sealed class XapiTestHarness : IAsyncDisposable
 
     public Task<XapiResponse> StatementsAsync(XapiRequest request, XapiCredential credential = null)
         => Inner.RunAsync(services => services.GetRequiredService<XapiStatementsResource>().HandleAsync(request, credential ?? Admin), commit: false);
+
+    public Task<XapiResponse> HandleAsync(XapiRequest request, XapiCredential credential)
+        => Inner.RunAsync(services => services.GetRequiredService<XapiEndpointHandler>().HandleAsync(request, credential), commit: false);
+
+    public Task<XapiResponse> DocumentAsync(string method, string resource, IDictionary<string, string> query, object body = null, XapiCredential credential = null, IDictionary<string, string> headers = null, string contentType = null)
+    {
+        var request = XapiRequest.Create(method, resource, body, query);
+
+        foreach (var (name, value) in headers ?? new Dictionary<string, string>())
+        {
+            request.Headers[name] = value;
+        }
+
+        if (contentType is not null)
+        {
+            request.Headers["Content-Type"] = contentType;
+        }
+
+        return HandleAsync(request, credential ?? Admin);
+    }
 
     public Task<XapiResponse> PutAsync(string id, object statement, XapiCredential credential = null)
         => StatementsAsync(XapiRequest.Create("PUT", "statements", statement, new Dictionary<string, string> { ["statementId"] = id }), credential);

@@ -65,6 +65,9 @@ public sealed class XapiLaunchScope
     /// <summary>Gets or sets when the token expires, in UTC.</summary>
     public DateTime ExpiresUtc { get; set; }
 
+    /// <summary>Gets or sets the state ids the launch may read but not change, such as the launch data a module wrote.</summary>
+    public IList<string> ReadOnlyStateIds { get; set; } = [];
+
     /// <summary>Gets or sets the launching module's own values, such as the enrollment and the course item.</summary>
     public IDictionary<string, string> Properties { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
 }

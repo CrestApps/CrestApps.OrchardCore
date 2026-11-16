@@ -27,6 +27,8 @@
     <PackageReference Include="OrchardCore.Abstractions" />
     <PackageReference Include="OrchardCore.Data.Abstractions" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.OpenId.Core" />
+    <PackageReference Include="OrchardCore.Roles.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
