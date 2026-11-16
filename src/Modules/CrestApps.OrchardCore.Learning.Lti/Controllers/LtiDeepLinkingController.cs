@@ -141,9 +141,12 @@ public sealed class LtiDeepLinkingController : Controller
         var created = await _writer.WriteAsync(response.Tool, course.ContentItemId, response.Items, S["External tools"]);
         var lines = new List<string>
         {
-            created.Count == 0
-                ? S["Nothing was added to {0}.", course.DisplayText]
-                : S["{0} items were added to the end of the last section of {1}: {2}. Publish the course to show them to learners.", created.Count, course.DisplayText, string.Join(", ", created.Select(item => item.DisplayText))],
+            created.Count switch
+            {
+                0 => S["Nothing was added to {0}.", course.DisplayText],
+                1 => S["One item was added to the end of the last section of {0}: {1}. Publish the course to show it to learners.", course.DisplayText, created[0].DisplayText],
+                _ => S["{0} items were added to the end of the last section of {1}: {2}. Publish the course to show them to learners.", created.Count, course.DisplayText, string.Join(", ", created.Select(item => item.DisplayText))],
+            },
         };
 
         if (response.RefusedTypes.Count > 0)

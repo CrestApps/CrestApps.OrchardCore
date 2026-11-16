@@ -30,6 +30,24 @@ public sealed class LtiDataTests
     }
 
     [Fact]
+    public async Task Admin_TheToolsListAndTheNewToolEditor_RenderForTheAdministrator()
+    {
+        // Arrange
+        using var http = await _fixture.CreateClientAsync("admin");
+
+        // Act
+        var list = await http.GetAsync("Admin/learning/external-tools", TestContext.Current.CancellationToken);
+        var editor = await http.GetAsync("Admin/learning/external-tools/create", TestContext.Current.CancellationToken);
+        var html = await editor.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(System.Net.HttpStatusCode.OK, list.StatusCode);
+        Assert.True(editor.StatusCode == System.Net.HttpStatusCode.OK, html);
+        Assert.Contains("Give the tool these platform details", html, StringComparison.Ordinal);
+        Assert.Contains("learning/lti/jwks", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Validation_TheEditorsRedirectUrisAndKeySet_AreCheckedByTheToolsHandler_AndARecipeNeedsOnlyTheSettings()
     {
         // Arrange and act
