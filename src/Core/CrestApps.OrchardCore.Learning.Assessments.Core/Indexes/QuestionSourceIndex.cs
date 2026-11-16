@@ -35,12 +35,12 @@ public sealed class QuestionSourceIndexProvider : IndexProvider<ContentItem>
     /// <inheritdoc />
     public override void Describe(DescribeContext<ContentItem> context)
         => context.For<QuestionSourceIndex>()
-            .When(item => item.Latest && !string.IsNullOrEmpty(item.As<QuestionPart>()?.SourceIdentifier))
+            .When(item => item.Latest && !string.IsNullOrEmpty(item.Get<QuestionPart>(nameof(QuestionPart))?.SourceIdentifier))
             .Map(item => new QuestionSourceIndex
             {
                 ContentItemId = item.ContentItemId,
-                SourceIdentifier = Truncate(item.As<QuestionPart>().SourceIdentifier),
-                QuestionBankId = item.As<ContainedPart>()?.ListContentItemId,
+                SourceIdentifier = Truncate(item.Get<QuestionPart>(nameof(QuestionPart)).SourceIdentifier),
+                QuestionBankId = item.Get<ContainedPart>(nameof(ContainedPart))?.ListContentItemId,
             });
 
     /// <summary>
