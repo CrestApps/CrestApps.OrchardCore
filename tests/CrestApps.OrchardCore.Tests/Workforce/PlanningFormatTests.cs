@@ -87,6 +87,26 @@ public sealed class PlanningFormatTests
     }
 
     [Fact]
+    public void Segments_OfADraftShiftGivenToAnotherWorker_DropTheSegmentsPlacedForThePreviousWorker()
+    {
+        // Arrange: the class segment belongs to the previous worker, and its source could never take it back otherwise.
+        var day = new DateTime(2026, 11, 9, 9, 0, 0);
+        DraftShiftSegment[] before =
+        [
+            new DraftShiftSegment { ActivityCodeId = "training", Start = day.AddHours(1), End = day.AddHours(2), Source = "Tests.Class", SourceId = "class-1" },
+        ];
+        var errors = new List<string>();
+        var segments = SegmentFormat.Read("10:00-11:00 Team training\n13:00-13:30 Meal", _codes, errors);
+
+        // Act
+        var draft = SegmentFormat.KeepSources(SegmentFormat.ToDraft(segments, day), before, workerChanged: true);
+
+        // Assert
+        var kept = Assert.Single(draft);
+        Assert.Equal(("meal", null), (kept.ActivityCodeId, kept.Source));
+    }
+
+    [Fact]
     public void CoverageRows_ReadWeekdaysAndDates_WithAnOptionalMaximum()
     {
         // Arrange

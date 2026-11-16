@@ -169,6 +169,69 @@ public sealed class SchedulingSessionTests
         Assert.Equal(WaitlistStatus.Waiting, cidTooLate.WaitlistEntry.Status);
     }
 
+    [Fact]
+    public async Task AnOfferedPlace_IsHeldNoLongerThanTheSessionStart()
+    {
+        // Arrange: the offer hours reach past the start of the session.
+        await using var harness = await SchedulingTestSupport.CreateAsync(services => Configure(services, new CrestApps.OrchardCore.Tests.Learning.Assessments.TestClock { UtcNow = CalendarTestHarness.Now }));
+        var resource = await SchedulingTestSupport.AddResourceAsync(harness, "Trainer");
+        var type = await SchedulingTestSupport.AddTypeAsync(harness, [resource.ItemId]);
+        var session = await SaveAsync(harness, type, resource, capacity: 1, offerHours: 24 * 30);
+        var ana = await RegisterAsync(harness, session, "ana");
+        await RegisterAsync(harness, session, "ben");
+
+        // Act
+        await harness.RunAsync(services => services.GetRequiredService<ISchedulingSessionService>().CancelRegistrationAsync(ana.Appointment.ItemId, "Sick"));
+        var offer = (await RegistrationsAsync(harness, session)).Single(appointment => appointment.UserId == "ben");
+
+        // Assert
+        Assert.Equal(AppointmentStatus.Held, offer.Status);
+        Assert.Equal(session.StartUtc, offer.HoldExpiresUtc);
+    }
+
+    [Fact]
+    public async Task AcceptingAnOffer_OfATypeThatNeedsConfirmation_IsRequested_AndSaysSo()
+    {
+        // Arrange
+        await using var harness = await SchedulingTestSupport.CreateAsync(services => Configure(services, new CrestApps.OrchardCore.Tests.Learning.Assessments.TestClock { UtcNow = CalendarTestHarness.Now }));
+        var resource = await SchedulingTestSupport.AddResourceAsync(harness, "Trainer");
+        var type = await SchedulingTestSupport.AddTypeAsync(harness, [resource.ItemId], type => type.RequiresConfirmation = true);
+        var session = await SaveAsync(harness, type, resource, capacity: 1);
+        var ana = await RegisterAsync(harness, session, "ana");
+        await RegisterAsync(harness, session, "ben");
+        await harness.RunAsync(services => services.GetRequiredService<ISchedulingSessionService>().CancelRegistrationAsync(ana.Appointment.ItemId, "Sick"));
+        var offer = (await RegistrationsAsync(harness, session)).Single(appointment => appointment.UserId == "ben" && appointment.Status == AppointmentStatus.Held);
+
+        // Act
+        var (accepted, kinds) = await harness.RunAsync(async services =>
+        {
+            var result = await services.GetRequiredService<ISchedulingSessionService>().AcceptOfferAsync(offer.ItemId);
+
+            return (result, services.GetRequiredService<CrestApps.OrchardCore.Scheduling.Core.Services.AppointmentChangeQueue>().Pending.Select(change => change.Kind).ToList());
+        });
+
+        // Assert
+        Assert.Equal(AppointmentStatus.Requested, accepted.Appointment.Status);
+        Assert.Equal([AppointmentChangeKind.Requested], kinds);
+    }
+
+    [Fact]
+    public async Task SavingTheRosterAgain_LeavesUnmarkedRegistrationsAlone()
+    {
+        // Arrange
+        await using var harness = await SchedulingTestSupport.CreateAsync(services => Configure(services, new CrestApps.OrchardCore.Tests.Learning.Assessments.TestClock { UtcNow = CalendarTestHarness.Now }));
+        var resource = await SchedulingTestSupport.AddResourceAsync(harness, "Trainer");
+        var type = await SchedulingTestSupport.AddTypeAsync(harness, [resource.ItemId]);
+        var session = await SaveAsync(harness, type, resource, capacity: 5);
+        var ana = await RegisterAsync(harness, session, "ana");
+
+        // Act
+        var changed = await harness.RunAsync(services => services.GetRequiredService<ISchedulingSessionService>().RecordAttendanceAsync(session.ItemId, [new SessionAttendanceMark(ana.Appointment.ItemId, AppointmentAttendance.Unmarked)]));
+
+        // Assert
+        Assert.Equal(0, changed);
+    }
+
     private static void Configure(IServiceCollection services, CrestApps.OrchardCore.Tests.Learning.Assessments.TestClock clock)
     {
         services.RemoveAll<IDistributedLock>();
@@ -177,7 +240,7 @@ public sealed class SchedulingSessionTests
         services.AddSingleton<IClock>(clock);
     }
 
-    private static async Task<SchedulingSession> SaveAsync(CalendarTestHarness harness, AppointmentType type, SchedulingResource resource, int capacity, SchedulingWaitlistMode waitlist = SchedulingWaitlistMode.AutoPromote, int meetings = 1)
+    private static async Task<SchedulingSession> SaveAsync(CalendarTestHarness harness, AppointmentType type, SchedulingResource resource, int capacity, SchedulingWaitlistMode waitlist = SchedulingWaitlistMode.AutoPromote, int meetings = 1, int offerHours = 24)
     {
         var start = SchedulingTestSupport.Utc(SchedulingTestSupport.Day.AddDays(7).AddHours(9));
         var session = new SchedulingSession
@@ -187,6 +250,7 @@ public sealed class SchedulingSessionTests
             Capacity = capacity,
             ResourceIds = [resource.ItemId],
             WaitlistMode = waitlist,
+            OfferHours = offerHours,
             Meetings = Enumerable.Range(0, meetings).Select(day => new SchedulingSessionMeeting { StartUtc = start.AddDays(day), EndUtc = start.AddDays(day).AddHours(2) }).ToList(),
         };
 

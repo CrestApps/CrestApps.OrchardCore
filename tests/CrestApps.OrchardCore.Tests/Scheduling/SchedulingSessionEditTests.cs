@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Scheduling.Core.Services;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Services;
@@ -90,6 +91,27 @@ public sealed class SchedulingSessionEditTests
         var rescheduled = changes.Where(change => change.Kind == AppointmentChangeKind.Rescheduled).ToList();
         Assert.Equal(["ana", "ben"], rescheduled.Select(change => change.Appointment.UserId).Order());
         Assert.All(rescheduled, change => Assert.Equal(previousStart, change.PreviousStartUtc));
+    }
+
+    [Fact]
+    public async Task ANewMeetingLink_IsWrittenToTheSessionsCalendarEvent()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        var session = await SaveNewAsync(harness, capacity: 3);
+
+        // Act
+        var errors = await EditAsync(harness, session.ItemId, edited => edited.MeetingUrl = "https://meet.example.com/forklift");
+        var description = await harness.RunAsync(async services =>
+        {
+            var stored = await services.GetRequiredService<ISchedulingSessionService>().FindByIdAsync(session.ItemId);
+
+            return (await services.GetRequiredService<ICalendarEventManager>().FindByIdAsync(stored.CalendarEventId))?.Description;
+        });
+
+        // Assert
+        Assert.Empty(errors);
+        Assert.Equal("https://meet.example.com/forklift", description);
     }
 
     private static Task<CalendarTestHarness> CreateAsync()

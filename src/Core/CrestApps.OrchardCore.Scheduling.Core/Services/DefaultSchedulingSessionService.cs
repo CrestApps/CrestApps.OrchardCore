@@ -414,7 +414,7 @@ public sealed class DefaultSchedulingSessionService : ISchedulingSessionService
             await MarkWaitlistBookedAsync(session.ItemId, appointment.ItemId, cancellationToken);
             await AddAttendeeAsync(session, appointment, actor);
             await _session.SaveChangesAsync(cancellationToken);
-            Enqueue(AppointmentChangeKind.Confirmed, appointment, type, actor);
+            Enqueue(appointment.Status == AppointmentStatus.Requested ? AppointmentChangeKind.Requested : AppointmentChangeKind.Confirmed, appointment, type, actor);
 
             return new SessionRegistrationResult { Appointment = appointment };
         }
@@ -528,10 +528,12 @@ public sealed class DefaultSchedulingSessionService : ISchedulingSessionService
                 continue;
             }
 
-            var minutes = mark.Attendance switch
+            // Not marked keeps no minutes, so a roster saved again leaves unmarked rows alone.
+            int? minutes = mark.Attendance switch
             {
                 AppointmentAttendance.Absent => 0,
                 AppointmentAttendance.Attended => mark.MinutesAttended ?? session.TotalMinutes,
+                AppointmentAttendance.Unmarked => null,
                 _ => Math.Clamp(mark.MinutesAttended ?? 0, 0, session.TotalMinutes),
             };
             // Not marked takes a marked registration back to its confirmed place.
@@ -549,7 +551,7 @@ public sealed class DefaultSchedulingSessionService : ISchedulingSessionService
             }
 
             appointment.Attendance = mark.Attendance;
-            appointment.MinutesAttended = mark.Attendance == AppointmentAttendance.Unmarked ? null : minutes;
+            appointment.MinutesAttended = minutes;
             appointment.Status = status;
             appointment.ModifiedUtc = _clock.UtcNow;
             await _appointments.UpdateAsync(appointment, cancellationToken);
@@ -661,7 +663,10 @@ public sealed class DefaultSchedulingSessionService : ISchedulingSessionService
         if (session.WaitlistMode == SchedulingWaitlistMode.AutoPromote)
         {
             held = NewAppointment(session, type, entry.UserId, entry.CustomerName, entry.CustomerEmail, entry.Source, entry.SourceId, held: true);
-            held.HoldExpiresUtc = _clock.UtcNow.AddHours(session.OfferHours);
+            // The offer never outlasts the start of the session.
+            var expires = _clock.UtcNow.AddHours(session.OfferHours);
+
+            held.HoldExpiresUtc = expires < session.StartUtc ? expires : session.StartUtc;
             entry.AppointmentId = held.ItemId;
             entry.OfferExpiresUtc = held.HoldExpiresUtc;
             await _appointments.CreateAsync(held, cancellationToken);
@@ -740,6 +745,7 @@ public sealed class DefaultSchedulingSessionService : ISchedulingSessionService
                 target.Start = CalendarTime.ToLocal(session.StartUtc, target.TimeZoneId);
                 target.End = CalendarTime.ToLocal(session.EndUtc, target.TimeZoneId);
                 target.Location = session.Location ?? type?.Location;
+                target.Description = session.MeetingUrl;
             }, Options(actor));
 
             return;
