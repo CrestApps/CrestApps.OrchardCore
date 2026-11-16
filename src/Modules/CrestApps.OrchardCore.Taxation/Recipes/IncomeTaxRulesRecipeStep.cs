@@ -64,6 +64,7 @@ internal sealed class IncomeTaxRulesRecipeStepSchema : IRecipeStep
                             ("Jurisdiction", Text("The jurisdiction, such as US, US-CA, CA or CA-QC.")),
                             ("CollectedBy", Text("The jurisdiction whose registration covers the tax when it isn't the rule's own, such as CA for a province's tax the CRA collects.")),
                             ("ExceptJurisdictions", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("Jurisdictions whose people the rule doesn't apply to, such as CA-QC for the Canada Pension Plan.")),
+                            ("ByPlaceOfWork", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Match the jurisdiction by where the person works when that is known, never by where they live (Canada's province of employment).")),
                             ("IncomeKinds", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Employment", "Contractor", "Pension", "Other")).Description("The kinds of income the rule applies to; empty for employment income (or contractor payments for ContractorWithholding).")),
                             ("Category", Text("The tax category whose income is taxed: IncomeTax, SocialInsurance, Unemployment or one a country pack adds.")),
                             ("Payer", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Employee", "Employer").Description("Who pays.")),

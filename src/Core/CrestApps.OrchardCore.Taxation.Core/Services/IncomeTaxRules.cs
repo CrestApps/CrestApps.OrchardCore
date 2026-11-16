@@ -383,11 +383,17 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var personal = (request.HomeJurisdictions ?? []).Concat(request.WorkJurisdictions ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var rules = (await _rules.ListAsync(cancellationToken))
-            .Where(rule => rule.AppliesOn(request.PayDate)
-                && registered.Contains(rule.CollectedBy ?? rule.Jurisdiction)
-                && rule.AppliesTo(request.IncomeKind)
-                && (!rule.Jurisdiction.Contains('-', StringComparison.Ordinal) || personal.Count == 0 || personal.Contains(rule.Jurisdiction))
-                && !(rule.ExceptJurisdictions ?? []).Any(personal.Contains))
+            .Where(rule =>
+            {
+                // Where the person is, for this rule: where they work alone when the rule goes by it and that is known.
+                var place = rule.ByPlaceOfWork ? PlaceOfWork(request, rule.Jurisdiction) ?? personal : personal;
+
+                return rule.AppliesOn(request.PayDate)
+                    && registered.Contains(rule.CollectedBy ?? rule.Jurisdiction)
+                    && rule.AppliesTo(request.IncomeKind)
+                    && (!rule.Jurisdiction.Contains('-', StringComparison.Ordinal) || place.Count == 0 || place.Contains(rule.Jurisdiction))
+                    && !(rule.ExceptJurisdictions ?? []).Any(place.Contains);
+            })
             .OrderBy(rule => rule.Jurisdiction, StringComparer.Ordinal)
             .ThenBy(rule => rule.TaxCode, StringComparer.Ordinal)
             .ToList();
@@ -424,6 +430,32 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Gets where a person works within a jurisdiction's country, when it is known: the work jurisdictions of that
+    /// country, with the country itself.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <param name="jurisdiction">A jurisdiction of the country, such as CA-ON.</param>
+    /// <returns>The place of work, or <see langword="null"/> when no work jurisdiction of the country is known.</returns>
+    public static HashSet<string> PlaceOfWork(IncomeTaxRequest request, string jurisdiction)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var country = jurisdiction?.Split('-')[0];
+        var work = (request.WorkJurisdictions ?? [])
+            .Where(candidate => candidate.StartsWith(country + "-", StringComparison.OrdinalIgnoreCase))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (work.Count == 0)
+        {
+            return null;
+        }
+
+        work.Add(country);
+
+        return work;
     }
 
     private IIncomeTaxWithholdingMethod WithholdingMethod(IncomeTaxRule rule)

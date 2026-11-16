@@ -18,6 +18,8 @@ public class IncomeTaxRuleViewModel
 
     public string ExceptJurisdictions { get; set; }
 
+    public bool ByPlaceOfWork { get; set; }
+
     public string Category { get; set; }
 
     public string[] IncomeKinds { get; set; } = [];

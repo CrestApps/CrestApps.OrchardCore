@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Taxation.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using OrchardCore.Localization;
@@ -73,7 +74,7 @@ internal sealed class CanadaPay
     public static CanadaPay From(IncomeTaxWithholdingContext context)
     {
         var request = context.Request;
-        var quebec = context.PersonIn(CanadaIncomeTax.Quebec);
+        var quebec = WorksInQuebec(request);
         var periods = Math.Max(1, context.PeriodsPerYear);
         var rate = quebec ? context.Parameter(CanadaIncomeTax.Parameters.QppRate, 0.0630m) : context.Parameter(CanadaIncomeTax.Parameters.CppRate, 0.0595m);
         var baseRate = quebec ? context.Parameter(CanadaIncomeTax.Parameters.QppBaseRate, 0.0530m) : context.Parameter(CanadaIncomeTax.Parameters.CppBaseRate, 0.0495m);
@@ -108,6 +109,16 @@ internal sealed class CanadaPay
             AnnualDeductions = Amount(federal, CanadaIncomeTax.Fields.AnnualDeductions),
         };
     }
+
+    /// <summary>
+    /// Gets whether the person's province of employment is Quebec: where they work when that is known, else where they
+    /// live.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <returns>Whether it is.</returns>
+    public static bool WorksInQuebec(IncomeTaxRequest request)
+        => (IncomeTaxRulesProvider.PlaceOfWork(request, CanadaIncomeTax.Quebec) ?? [.. request.HomeJurisdictions ?? []])
+            .Contains(CanadaIncomeTax.Quebec, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets a basic personal amount that falls with net income (the federal BPAF, Yukon's BPAYT, Manitoba's BPAMB), or

@@ -42,6 +42,15 @@
             </div>
         </div>
         <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="ByPlaceOfWork" type="checkbox" class="form-check-input" />
+                    <label asp-for="ByPlaceOfWork" class="form-check-label">@T["By where the person works"]</label>
+                    <span class="hint dashed">@T["The jurisdiction is matched by where the person works when that is known, never by where they live, as Canada taxes by the province of employment."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
             <label asp-for="Category" class="ocat-label">@T["Income taxed"]</label>
             <div class="ocat-end">
                 <select asp-for="Category" asp-items="Model.Categories" class="form-select" style="max-width: 20rem"></select>

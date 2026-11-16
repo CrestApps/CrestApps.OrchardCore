@@ -133,6 +133,21 @@ public sealed class CanadaIncomeTaxTests
     }
 
     [Fact]
+    public async Task APersonLivingInQuebecAndWorkingInOntario_IsTaxedByTheProvinceOfEmployment()
+    {
+        await using var harness = await CreateHarnessAsync();
+
+        Assert.Empty(await ImportRecipeAsync(harness));
+
+        var request = Request("CA-ON", 26, new DateOnly(2026, 3, 13), 2500m, 0m);
+
+        request.HomeJurisdictions = ["CA", "CA-QC"];
+
+        // As anyone working in Ontario: CPP, EI at the full rate, Ontario tax; nothing of Quebec's.
+        Assert.Equal(Expect(cpp: 140.74m, ei: 40.75m, federal: 242.58m, provincial: 131.46m, province: "CA-ON"), await AmountsAsync(harness, request));
+    }
+
+    [Fact]
     public async Task ATD1AboveTheBasicAmount_LowersFederalAndProvincialTax()
     {
         await using var harness = await CreateHarnessAsync();

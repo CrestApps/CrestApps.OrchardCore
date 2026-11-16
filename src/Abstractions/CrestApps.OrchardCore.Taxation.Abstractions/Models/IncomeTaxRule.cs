@@ -37,6 +37,12 @@ public sealed class IncomeTaxRule : CatalogItem, INameAwareModel, IModifiedUtcAw
     public string CollectedBy { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether a jurisdiction below a country is matched by where the person works when
+    /// that is known, never by where they live (Canada's province of employment); otherwise home and work both count.
+    /// </summary>
+    public bool ByPlaceOfWork { get; set; }
+
+    /// <summary>
     /// Gets or sets the jurisdictions whose people the rule doesn't apply to, such as CA-QC for the Canada Pension Plan
     /// (Quebec has its own plan).
     /// </summary>
