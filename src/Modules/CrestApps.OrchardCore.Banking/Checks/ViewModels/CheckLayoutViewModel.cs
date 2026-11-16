@@ -1,7 +1,9 @@
+using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Banking.Checks.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Banking.Checks.ViewModels;
 
@@ -66,29 +68,20 @@ public class CheckLayoutViewModel
     public string PayerName { get; set; }
 
     /// <summary>
-    /// Gets or sets the payer's street.
+    /// Gets or sets the payer's address printed on blank stock, in the shared address editor.
     /// </summary>
-    public string PayerAddressLine1 { get; set; }
+    public AddressEditorViewModel PayerAddress { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the payer's second address line.
+    /// Gets or sets the address editor's shape.
     /// </summary>
-    public string PayerAddressLine2 { get; set; }
+    [BindNever]
+    public IShape PayerAddressEditor { get; set; }
 
-    /// <summary>
-    /// Gets or sets the payer's city.
-    /// </summary>
-    public string PayerCity { get; set; }
 
-    /// <summary>
-    /// Gets or sets the payer's state or region.
-    /// </summary>
-    public string PayerRegion { get; set; }
 
-    /// <summary>
-    /// Gets or sets the payer's postal code.
-    /// </summary>
-    public string PayerPostalCode { get; set; }
+
+
 
     /// <summary>
     /// Gets or sets the amount above which a second signature prints, as text.

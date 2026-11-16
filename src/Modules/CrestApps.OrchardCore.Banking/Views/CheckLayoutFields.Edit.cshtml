@@ -131,15 +131,9 @@
                 <input asp-for="PayerName" data-designer-payer="PayerName" class="form-control" maxlength="255" />
             </div>
         </div>
-        <div class="ocat-wrapper">
-            <label asp-for="PayerAddressLine1" class="ocat-label">@T["Address"]</label>
-            <div class="ocat-end">
-                <input asp-for="PayerAddressLine1" data-designer-payer="PayerAddressLine1" class="form-control mb-1" maxlength="255" placeholder="@T["Street"]" />
-                <input asp-for="PayerAddressLine2" data-designer-payer="PayerAddressLine2" class="form-control mb-1" maxlength="255" placeholder="@T["Suite or unit"]" />
-                <input asp-for="PayerCity" data-designer-payer="PayerCity" class="form-control mb-1" maxlength="100" placeholder="@T["City"]" />
-                <input asp-for="PayerRegion" data-designer-payer="PayerRegion" class="form-control mb-1" maxlength="100" placeholder="@T["State"]" />
-                <input asp-for="PayerPostalCode" data-designer-payer="PayerPostalCode" class="form-control" maxlength="20" placeholder="@T["Postal code"]" />
-            </div>
+        @* The designer reads the payer's address from these fields for its preview. *@
+        <div data-designer-payer-address>
+            @await DisplayAsync(Model.PayerAddressEditor)
         </div>
     </div>
 </div>

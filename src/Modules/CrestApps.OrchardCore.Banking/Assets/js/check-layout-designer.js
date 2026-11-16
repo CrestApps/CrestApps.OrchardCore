@@ -146,6 +146,17 @@
       return /** @type {HTMLInputElement | null} */ (form.querySelector(selector));
     }
 
+    /**
+     * Reads a part of the payer's address from the shared address editor, skipping the region box it disabled.
+     * @param {string} part
+     * @returns {string}
+     */
+    function payerAddress(part) {
+      var field = /** @type {HTMLInputElement | null} */ (form.querySelector('[data-designer-payer-address] [name$=".' + part + '"]:not([disabled])'));
+
+      return field?.value.trim() || '';
+    }
+
     var offsetX = input('[data-designer-offset="x"]');
     var offsetY = input('[data-designer-offset="y"]');
     var stock = /** @type {HTMLSelectElement | null} */ (form.querySelector('[data-designer-stock]'));
@@ -241,15 +252,11 @@
       }
 
       if (name === 'Payer') {
-        var payer = ['PayerName', 'PayerAddressLine1', 'PayerAddressLine2']
-          .map(function (key) {
-            return input('[data-designer-payer="' + key + '"]')?.value.trim() || '';
-          })
+        var payer = [input('[data-designer-payer="PayerName"]')?.value.trim() || '']
+          .concat(['AddressLine1', 'AddressLine2'].map(payerAddress))
           .filter(Boolean);
-        var city = ['PayerCity', 'PayerRegion', 'PayerPostalCode']
-          .map(function (key) {
-            return input('[data-designer-payer="' + key + '"]')?.value.trim() || '';
-          })
+        var city = ['City', 'Region', 'PostalCode']
+          .map(payerAddress)
           .filter(Boolean)
           .join(' ');
 

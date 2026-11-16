@@ -44,16 +44,7 @@
 <div class="card mb-3">
     <div class="card-header">@T["Payee's address"]</div>
     <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="PayeeAddressLine1" class="ocat-label">@T["Address"]</label>
-            <div class="ocat-end">
-                <input asp-for="PayeeAddressLine1" class="form-control mb-1" maxlength="255" placeholder="@T["Street"]" />
-                <input asp-for="PayeeAddressLine2" class="form-control mb-1" maxlength="255" placeholder="@T["Suite or unit"]" />
-                <input asp-for="PayeeCity" class="form-control mb-1" maxlength="100" placeholder="@T["City"]" />
-                <input asp-for="PayeeRegion" class="form-control mb-1" maxlength="100" placeholder="@T["State"]" />
-                <input asp-for="PayeePostalCode" class="form-control" maxlength="20" placeholder="@T["Postal code"]" />
-                <span class="hint">@T["Optional. It prints for a window envelope."]</span>
-            </div>
-        </div>
+        <p class="hint">@T["Optional. It prints for a window envelope."]</p>
+        @await DisplayAsync(Model.PayeeAddressEditor)
     </div>
 </div>

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Banking;
 using CrestApps.OrchardCore.Banking.Checks;
 using CrestApps.OrchardCore.Banking.Disbursements;
@@ -31,6 +32,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         BankingConstants.Features.Banking,
+        AddressConstants.Feature.ModuleId,
     ]
 )]
 

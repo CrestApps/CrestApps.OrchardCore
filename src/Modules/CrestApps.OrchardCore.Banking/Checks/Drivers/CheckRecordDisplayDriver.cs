@@ -1,5 +1,5 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Services;
 using CrestApps.OrchardCore.Banking.Checks.Models;
@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Parties.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
@@ -23,13 +24,22 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
 {
     private readonly IBankAccountManager _bankAccounts;
     private readonly ILocalClock _localClock;
+    private readonly IAddressEditorService _addressEditor;
+    private readonly IShapeFactory _shapeFactory;
 
     internal readonly IStringLocalizer S;
 
-    public CheckRecordDisplayDriver(IBankAccountManager bankAccounts, ILocalClock localClock, IStringLocalizer<CheckRecordDisplayDriver> stringLocalizer)
+    public CheckRecordDisplayDriver(
+        IBankAccountManager bankAccounts,
+        ILocalClock localClock,
+        IAddressEditorService addressEditor,
+        IShapeFactory shapeFactory,
+        IStringLocalizer<CheckRecordDisplayDriver> stringLocalizer)
     {
         _localClock = localClock;
         _bankAccounts = bankAccounts;
+        _addressEditor = addressEditor;
+        _shapeFactory = shapeFactory;
         S = stringLocalizer;
     }
 
@@ -62,8 +72,13 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
     }
 
     public override async Task<IDisplayResult> EditAsync(CheckRecord check, BuildEditorContext context)
+        => await EditorAsync(check, await _addressEditor.BuildAsync(check.PayeeAddress, AddressOptions(check.PayeeAddress?.Country)));
+
+    // The editor, with the payee's address as stored or as posted.
+    private async Task<IDisplayResult> EditorAsync(CheckRecord check, AddressEditorViewModel payeeAddress)
     {
         var accounts = await BusinessAccountsAsync();
+        var addressEditor = await _shapeFactory.CreateAddressEditorAsync(payeeAddress, $"{Prefix}.{nameof(CheckRecordViewModel.PayeeAddress)}");
 
         // A new check is dated today in the site's time zone, never the UTC date.
         var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
@@ -72,11 +87,8 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
         {
             model.BankAccountId = check.BankAccountId;
             model.PayeeName = check.PayeeName;
-            model.PayeeAddressLine1 = check.PayeeAddress?.AddressLine1;
-            model.PayeeAddressLine2 = check.PayeeAddress?.AddressLine2;
-            model.PayeeCity = check.PayeeAddress?.City;
-            model.PayeeRegion = check.PayeeAddress?.Region;
-            model.PayeePostalCode = check.PayeeAddress?.PostalCode;
+            model.PayeeAddress = payeeAddress;
+            model.PayeeAddressEditor = addressEditor;
             model.Amount = check.Amount > 0 ? check.Amount.ToString(CultureInfo.InvariantCulture) : null;
             model.CheckDate = (check.CheckDate == default ? today : check.CheckDate).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             model.Memo = check.Memo;
@@ -95,17 +107,24 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
         check.BankAccountId = model.BankAccountId;
         check.PayeeName = string.IsNullOrWhiteSpace(model.PayeeName) ? null : model.PayeeName.Trim();
         check.Payee = default(PartyRef);
-        check.PayeeAddress = string.IsNullOrWhiteSpace(model.PayeeAddressLine1) && string.IsNullOrWhiteSpace(model.PayeeCity)
-            ? null
-            : new Address
+        // The payee's address is optional; one that is entered is checked by its country's format.
+        model.PayeeAddress ??= new AddressEditorViewModel();
+
+        if (!model.PayeeAddress.HasAnyValue())
+        {
+            check.PayeeAddress = null;
+        }
+        else
+        {
+            var result = await _addressEditor.ValidateAsync(model.PayeeAddress, context.Updater.ModelState, $"{Prefix}.{nameof(model.PayeeAddress)}", AddressOptions(model.PayeeAddress.Country));
+
+            if (result.IsValid)
             {
-                AddressLine1 = model.PayeeAddressLine1?.Trim(),
-                AddressLine2 = model.PayeeAddressLine2?.Trim(),
-                City = model.PayeeCity?.Trim(),
-                Region = model.PayeeRegion?.Trim(),
-                PostalCode = model.PayeePostalCode?.Trim(),
-                Country = "US",
-            };
+                check.PayeeAddress = result.Address;
+            }
+        }
+
+        await _addressEditor.PopulateAsync(model.PayeeAddress, AddressOptions(model.PayeeAddress.Country));
         check.Memo = string.IsNullOrWhiteSpace(model.Memo) ? null : model.Memo.Trim();
 
         if (decimal.TryParse(model.Amount?.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) && amount > 0)
@@ -126,8 +145,16 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.CheckDate), S["Enter the check date."]);
         }
 
-        return await EditAsync(check, context);
+        return await EditorAsync(check, model.PayeeAddress);
     }
+
+    private static AddressEditorOptions AddressOptions(string country)
+        => new()
+        {
+            ShowName = false,
+            ShowCompany = false,
+            DefaultCountry = string.IsNullOrWhiteSpace(country) ? null : country,
+        };
 
     private async Task<IReadOnlyList<BankAccount>> BusinessAccountsAsync()
         => (await _bankAccounts.ListByOwnersAsync([default]))

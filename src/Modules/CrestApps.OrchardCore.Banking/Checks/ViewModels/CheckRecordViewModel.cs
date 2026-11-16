@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.Addresses.Core.Editing;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Banking.Checks.ViewModels;
 
@@ -19,29 +21,20 @@ public class CheckRecordViewModel
     public string PayeeName { get; set; }
 
     /// <summary>
-    /// Gets or sets the payee's street.
+    /// Gets or sets the payee's address, in the shared address editor.
     /// </summary>
-    public string PayeeAddressLine1 { get; set; }
+    public AddressEditorViewModel PayeeAddress { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the payee's second address line.
+    /// Gets or sets the address editor's shape.
     /// </summary>
-    public string PayeeAddressLine2 { get; set; }
+    [BindNever]
+    public IShape PayeeAddressEditor { get; set; }
 
-    /// <summary>
-    /// Gets or sets the payee's city.
-    /// </summary>
-    public string PayeeCity { get; set; }
 
-    /// <summary>
-    /// Gets or sets the payee's state or region.
-    /// </summary>
-    public string PayeeRegion { get; set; }
 
-    /// <summary>
-    /// Gets or sets the payee's postal code.
-    /// </summary>
-    public string PayeePostalCode { get; set; }
+
+
 
     /// <summary>
     /// Gets or sets the amount, as invariant text.

@@ -1,5 +1,5 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Banking.Checks.Core.Services;
 using CrestApps.OrchardCore.Banking.Checks.Models;
 using CrestApps.OrchardCore.Banking.Checks.Services;
@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
@@ -20,12 +21,16 @@ internal sealed class CheckLayoutDisplayDriver : DisplayDriver<CheckLayout>
     private const long MaxFontBytes = 2 * 1024 * 1024;
 
     private readonly ICheckFileStore _files;
+    private readonly IAddressEditorService _addressEditor;
+    private readonly IShapeFactory _shapeFactory;
 
     internal readonly IStringLocalizer S;
 
-    public CheckLayoutDisplayDriver(ICheckFileStore files, IStringLocalizer<CheckLayoutDisplayDriver> stringLocalizer)
+    public CheckLayoutDisplayDriver(ICheckFileStore files, IAddressEditorService addressEditor, IShapeFactory shapeFactory, IStringLocalizer<CheckLayoutDisplayDriver> stringLocalizer)
     {
         _files = files;
+        _addressEditor = addressEditor;
+        _shapeFactory = shapeFactory;
         S = stringLocalizer;
     }
 
@@ -54,8 +59,14 @@ internal sealed class CheckLayoutDisplayDriver : DisplayDriver<CheckLayout>
     }
 
     public override IDisplayResult Edit(CheckLayout layout, BuildEditorContext context)
-        => Initialize<CheckLayoutViewModel>("CheckLayoutFields_Edit", model =>
+        => Editor(layout, null);
+
+    // The editor, with the payer's address as stored, or as posted when it is given.
+    private ShapeResult Editor(CheckLayout layout, AddressEditorViewModel postedPayerAddress)
+        => Initialize<CheckLayoutViewModel>("CheckLayoutFields_Edit", async model =>
         {
+            model.PayerAddress = postedPayerAddress ?? await _addressEditor.BuildAsync(layout.PayerAddress, AddressOptions(layout.PayerAddress?.Country));
+            model.PayerAddressEditor = await _shapeFactory.CreateAddressEditorAsync(model.PayerAddress, $"{Prefix}.{nameof(CheckLayoutViewModel.PayerAddress)}");
             model.Name = layout.Name;
             model.Description = layout.Description;
             model.Stock = layout.Stock;
@@ -67,11 +78,6 @@ internal sealed class CheckLayoutDisplayDriver : DisplayDriver<CheckLayout>
             model.MicrFontSize = Text(layout.MicrFontSize);
             model.MicrSymbolCharacters = layout.MicrSymbolCharacters;
             model.PayerName = layout.PayerName;
-            model.PayerAddressLine1 = layout.PayerAddress?.AddressLine1;
-            model.PayerAddressLine2 = layout.PayerAddress?.AddressLine2;
-            model.PayerCity = layout.PayerAddress?.City;
-            model.PayerRegion = layout.PayerAddress?.Region;
-            model.PayerPostalCode = layout.PayerAddress?.PostalCode;
             model.SecondSignatureAbove = layout.SecondSignatureAbove?.ToString(CultureInfo.InvariantCulture);
             model.HasSignature = layout.HasSignature;
             model.HasSecondSignature = layout.HasSecondSignature;
@@ -121,17 +127,24 @@ internal sealed class CheckLayoutDisplayDriver : DisplayDriver<CheckLayout>
         layout.UseAuxiliaryOnUs = model.UseAuxiliaryOnUs;
         layout.MicrSymbolCharacters = Clean(model.MicrSymbolCharacters);
         layout.PayerName = Clean(model.PayerName);
-        layout.PayerAddress = string.IsNullOrWhiteSpace(model.PayerAddressLine1) && string.IsNullOrWhiteSpace(model.PayerCity)
-            ? null
-            : new Address
+        // The payer's address is optional; one that is entered is checked by its country's format.
+        model.PayerAddress ??= new AddressEditorViewModel();
+
+        if (!model.PayerAddress.HasAnyValue())
+        {
+            layout.PayerAddress = null;
+        }
+        else
+        {
+            var result = await _addressEditor.ValidateAsync(model.PayerAddress, context.Updater.ModelState, $"{Prefix}.{nameof(model.PayerAddress)}", AddressOptions(model.PayerAddress.Country));
+
+            if (result.IsValid)
             {
-                AddressLine1 = Clean(model.PayerAddressLine1),
-                AddressLine2 = Clean(model.PayerAddressLine2),
-                City = Clean(model.PayerCity),
-                Region = Clean(model.PayerRegion),
-                PostalCode = Clean(model.PayerPostalCode),
-                Country = "US",
-            };
+                layout.PayerAddress = result.Address;
+            }
+        }
+
+        await _addressEditor.PopulateAsync(model.PayerAddress, AddressOptions(model.PayerAddress.Country));
 
         layout.OffsetX = Number(model.OffsetX, nameof(model.OffsetX), context) ?? 0;
         layout.OffsetY = Number(model.OffsetY, nameof(model.OffsetY), context) ?? 0;
@@ -171,8 +184,16 @@ internal sealed class CheckLayoutDisplayDriver : DisplayDriver<CheckLayout>
         layout.HasSecondSignature = await StoreFileAsync(layout, ChecksConstants.LayoutFiles.SecondSignature, model.SecondSignatureFile, model.RemoveSecondSignature, layout.HasSecondSignature, isFont: false, nameof(model.SecondSignatureFile), context);
         layout.HasMicrFont = await StoreFileAsync(layout, ChecksConstants.LayoutFiles.MicrFont, model.MicrFontFile, model.RemoveMicrFont, layout.HasMicrFont, isFont: true, nameof(model.MicrFontFile), context);
 
-        return Edit(layout, context);
+        return Editor(layout, model.PayerAddress);
     }
+
+    private static AddressEditorOptions AddressOptions(string country)
+        => new()
+        {
+            ShowName = false,
+            ShowCompany = false,
+            DefaultCountry = string.IsNullOrWhiteSpace(country) ? null : country,
+        };
 
     private async Task<bool> StoreFileAsync(CheckLayout layout, string kind, IFormFile file, bool remove, bool stored, bool isFont, string field, UpdateEditorContext context)
     {
