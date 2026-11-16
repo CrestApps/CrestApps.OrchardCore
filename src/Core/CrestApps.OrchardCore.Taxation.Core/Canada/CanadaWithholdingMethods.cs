@@ -24,6 +24,12 @@ internal sealed class CanadaPay
     /// <summary>Gets the period's regular income (I).</summary>
     public decimal Income { get; private init; }
 
+    /// <summary>
+    /// Gets the regular income of a period the bonus is added to when the payment has none of its own (a bonus paid
+    /// alone), or zero.
+    /// </summary>
+    public decimal RegularIncome { get; private init; }
+
     /// <summary>Gets the payment's bonus or retroactive pay (B).</summary>
     public decimal Bonus { get; private init; }
 
@@ -58,9 +64,17 @@ internal sealed class CanadaPay
     public decimal AnnualIncome
         => (Periods * (Income - PeriodicEnhancement)) - PrescribedZone - AnnualDeductions;
 
+    /// <summary>
+    /// Gets the annual taxable income of the regular pay the bonus method adds bonuses to: this payment's, or for a bonus
+    /// paid alone, a year of the person's regular pay (without the enhancement deduction that pay would have, which
+    /// withholds a little more on the bonus than PDOC does).
+    /// </summary>
+    public decimal AnnualRegularIncome
+        => Income > 0 || RegularIncome <= 0 ? AnnualIncome : (Periods * RegularIncome) - PrescribedZone - AnnualDeductions;
+
     /// <summary>Gets the annual taxable income with the bonuses of the year before this one (step 2 of the bonus method).</summary>
     public decimal AnnualIncomeWithEarlierBonuses
-        => AnnualIncome + YearBonuses;
+        => AnnualRegularIncome + YearBonuses;
 
     /// <summary>Gets the annual taxable income with this bonus too (step 1 of the bonus method).</summary>
     public decimal AnnualIncomeWithBonus
@@ -97,6 +111,7 @@ internal sealed class CanadaPay
         {
             Periods = periods,
             Income = context.Income,
+            RegularIncome = bonus > 0 && context.Income <= 0 ? RegularIncomePerPeriod(request) : 0m,
             Bonus = bonus,
             YearBonuses = bonus > 0 && request.YearSupplementalIncome.TryGetValue(IncomeTaxCategories.IncomeTax, out var earlier) ? earlier : 0m,
             Quebec = quebec,
@@ -109,6 +124,14 @@ internal sealed class CanadaPay
             AnnualDeductions = Amount(federal, CanadaIncomeTax.Fields.AnnualDeductions),
         };
     }
+
+    /// <summary>
+    /// Gets the person's regular income of a period sent with a payment that has none of its own, or zero.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <returns>The income.</returns>
+    public static decimal RegularIncomePerPeriod(IncomeTaxRequest request)
+        => request.RegularIncomePerPeriod is not null && request.RegularIncomePerPeriod.TryGetValue(IncomeTaxCategories.IncomeTax, out var income) ? Math.Max(0, income) : 0m;
 
     /// <summary>
     /// Gets whether the person's province of employment is Quebec: where they work when that is known, else where they
@@ -465,12 +488,15 @@ public sealed class QuebecWithholdingMethod : IIncomeTaxWithholdingMethod
         var periodicEnhancement = pensionable > 0 ? enhancement * (Math.Max(0, pensionable - lumpSum) / pensionable) : enhancement;
         var lumpSumEnhancement = enhancement - periodicEnhancement;
 
+        // A lump sum paid alone is taxed on top of a year of the person's regular salary, not on top of nothing.
+        var baseSalary = salary <= 0 && lumpSum > 0 ? CanadaPay.RegularIncomePerPeriod(request) : salary;
+
         // H: the deduction for workers, 6% of the period's salary up to the year's maximum over the periods.
-        var workerDeduction = Math.Min(context.Parameter(CanadaIncomeTax.Parameters.WorkerDeductionRate) * salary, context.Parameter(CanadaIncomeTax.Parameters.WorkerDeductionMaximum) / periods);
+        var workerDeduction = Math.Min(context.Parameter(CanadaIncomeTax.Parameters.WorkerDeductionRate) * baseSalary, context.Parameter(CanadaIncomeTax.Parameters.WorkerDeductionMaximum) / periods);
         var deductions = context.Amount(CanadaIncomeTax.Fields.AnnualDeductions);
         var claim = Math.Round(context.AmountOrNull(CanadaIncomeTax.Fields.ClaimAmount) ?? context.Parameter(CanadaIncomeTax.Parameters.BasicAmount), 0, MidpointRounding.AwayFromZero);
         var lowest = await context.LowestRateAsync(BracketsTable, cancellationToken);
-        var annual = (periods * (salary - workerDeduction - periodicEnhancement)) - deductions;
+        var annual = (periods * (baseSalary - workerDeduction - periodicEnhancement)) - deductions;
         var tax = 0m;
 
         if (salary > 0)
@@ -480,7 +506,7 @@ public sealed class QuebecWithholdingMethod : IIncomeTaxWithholdingMethod
 
         if (lumpSum > 0)
         {
-            if ((periods * salary) + earlierLumpSums + lumpSum <= context.Parameter(CanadaIncomeTax.Parameters.LumpSumThreshold))
+            if ((periods * baseSalary) + earlierLumpSums + lumpSum <= context.Parameter(CanadaIncomeTax.Parameters.LumpSumThreshold))
             {
                 tax += context.Parameter(CanadaIncomeTax.Parameters.LumpSumRate) * lumpSum;
             }

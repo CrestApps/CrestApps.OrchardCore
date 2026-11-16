@@ -73,6 +73,14 @@ public sealed class IncomeTaxRequest
     /// <summary>Gets or sets the supplemental income of each tax category (part of none of <see cref="Income"/>).</summary>
     public IDictionary<string, decimal> SupplementalIncome { get; set; } = new Dictionary<string, decimal>(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Gets or sets the earner's regular income of each tax category for one pay period (from their latest regular
+    /// payment or their salary), sent with a payment that has no regular income of its own, such as a bonus paid
+    /// alone: withholding methods that add supplemental income to a year of regular pay (Canada's bonus method, an
+    /// aggregate method) add it to this pay instead of to nothing.
+    /// </summary>
+    public IDictionary<string, decimal> RegularIncomePerPeriod { get; set; } = new Dictionary<string, decimal>(StringComparer.Ordinal);
+
     /// <summary>Gets or sets how supplemental income is withheld on.</summary>
     public SupplementalWithholdingMethod SupplementalMethod { get; set; }
 

@@ -535,6 +535,12 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
         var ownSupplemental = withholding?.HandlesSupplementalIncome == true;
         var flat = !ownSupplemental && request.SupplementalMethod == SupplementalWithholdingMethod.Flat && rule.SupplementalRate is not null;
 
+        // Supplemental income paid alone and aggregated is withheld on with the regular pay of a period (the latest one,
+        // when no earlier payment of this period had any), as an income tax table expects a whole period.
+        var aloneWith = !flat && !ownSupplemental && regular <= 0 && supplemental > 0 && request.RegularIncomePerPeriod is not null && request.RegularIncomePerPeriod.TryGetValue(rule.Category, out var periodRegular)
+            ? Math.Max(0, periodRegular)
+            : 0m;
+
         if (!flat && !ownSupplemental)
         {
             regular += supplemental;
@@ -586,6 +592,11 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
         var prior = (rule.Annualize || withholding is not null) && !ownSupplemental
             ? Math.Max(0, toDate.PeriodTaxableIncome - toDate.PeriodFlatIncome)
             : 0;
+
+        if (prior == 0 && (rule.Annualize || withholding is not null))
+        {
+            prior = aloneWith;
+        }
         var tax = 0m;
 
         if (ownSupplemental)

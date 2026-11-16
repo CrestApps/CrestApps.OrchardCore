@@ -171,6 +171,83 @@ public sealed class UnitedStatesPayrollTests
     }
 
     [Fact]
+    public async Task ABonusPaidAloneInAPeriodWithNoRegularPay_ByTheAggregateMethod_IsWithheldWithAPeriodOfRegularPay()
+    {
+        await using var harness = await CreateHarnessAsync();
+
+        Assert.Empty(await ImportRecipeAsync(harness));
+
+        var request = Request(0m);
+
+        request.SupplementalIncome[IncomeTaxCategories.IncomeTax] = 1000m;
+        request.Elections = [new IncomeTaxElection { Jurisdiction = "US", Values = new() { ["FormYear"] = "2020", ["FilingStatus"] = "Single", ["ExtraWithholding"] = "10" } }];
+
+        // Alone, the tables see 1000 as a whole period: W(1000) = (26000 - 8600 = 17400: 10% of 9900 = 990) / 26 = 38.08,
+        // with the 10 of extra withholding: 48.08.
+        Assert.Equal((48.08m, 1000m), Taxed(await CalculateAsync(harness, request), "US-FIT"));
+
+        // With the latest period's regular pay of 2000 it is added to (Pub. 15, supplemental wages paid separately):
+        // W(3000) - W(2000) = 164.23, and no extra withholding again.
+        request.RegularIncomePerPeriod[IncomeTaxCategories.IncomeTax] = 2000m;
+
+        Assert.Equal((164.23m, 1000m), Taxed(await CalculateAsync(harness, request), "US-FIT"));
+    }
+
+    [Fact]
+    public void TaxRequest_ForABonusPaidAlone_CarriesAPeriodOfRegularPay_FromTheLatestStatementOrTheSalary()
+    {
+        var regular = new PayCode { ItemId = "reg", Code = "REG", Class = PayCodeClass.Earning, Kind = PayCodeKinds.Regular };
+        var bonus = new PayCode { ItemId = "bonus", Code = "BONUS", Class = PayCodeClass.Earning, Kind = PayCodeKinds.Bonus };
+        var settings = PayrollPayCodeSettingsExtensions.DefaultsFor(regular);
+
+        settings.TaxTreatment[IncomeTaxCategories.IncomeTax] = PayCodeTaxTreatment.Taxed;
+        regular.Put(settings);
+
+        var bonusSettings = PayrollPayCodeSettingsExtensions.DefaultsFor(bonus);
+
+        bonusSettings.TaxTreatment[IncomeTaxCategories.IncomeTax] = PayCodeTaxTreatment.Taxed;
+        bonusSettings.Supplemental = true;
+        bonus.Put(bonusSettings);
+
+        var context = new PayCalculationContext
+        {
+            Codes = new Dictionary<string, PayCode> { ["reg"] = regular, ["bonus"] = bonus },
+            PayDate = new DateOnly(2026, 11, 20),
+            Schedule = new PaySchedule { Frequency = PayFrequency.Biweekly },
+            Pay = new global::CrestApps.OrchardCore.Staff.Models.StaffPayRates { AnnualSalary = 52000m },
+            History =
+            [
+                new PayStatement { PayDate = new DateOnly(2026, 10, 23), Lines = [new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "reg", Amount = 1800m }] },
+                new PayStatement { PayDate = new DateOnly(2026, 11, 6), Lines = [new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "reg", Amount = 2100m }] },
+
+                // A bonus paid alone earlier is no regular pay.
+                new PayStatement { PayDate = new DateOnly(2026, 11, 13), Lines = [new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "bonus", Amount = 500m }] },
+            ],
+        };
+
+        context.Lines.Add(new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "bonus", Amount = 5000m });
+
+        var categories = new IncomeTaxCategoryOptions();
+
+        categories.Categories.Add(new IncomeTaxCategory(IncomeTaxCategories.IncomeTax, global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesPayrollTests>("Income tax")));
+
+        var step = new TaxesPayCalculationStep([], Options.Create(categories), new ServiceCollection().BuildServiceProvider(), new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<TaxesPayCalculationStep>());
+
+        // The latest statement with regular pay: 2100.
+        Assert.Equal(2100m, step.Request(context).RegularIncomePerPeriod[IncomeTaxCategories.IncomeTax]);
+
+        // No earlier statement: the salary over the periods, 52000 / 26.
+        context.History = [];
+
+        Assert.Equal(2000m, step.Request(context).RegularIncomePerPeriod[IncomeTaxCategories.IncomeTax]);
+
+        // With regular pay of its own, the payment carries none.
+        context.Lines.Add(new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "reg", Amount = 2000m });
+
+        Assert.Empty(step.Request(context).RegularIncomePerPeriod);
+    }
+
+    [Fact]
     public async Task RegularPayAfterAFlatRateBonusInThePeriod_IsWithheldByTheTablesAlone_WithItsExtraWithholding()
     {
         await using var harness = await CreateHarnessAsync();

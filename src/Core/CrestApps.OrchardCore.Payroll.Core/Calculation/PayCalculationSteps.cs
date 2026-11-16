@@ -607,7 +607,8 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
         var supplemental = amounts.Where(pair => pair.Code.GetPayrollSettings().Supplemental && pair.Code.Class != PayCodeClass.Deduction).Select(pair => new PayCodeAmount(pair.Code, pair.Line.Amount)).ToList();
         var categories = _categories.Categories.Select(category => category.Name)
             .Concat(amounts.SelectMany(pair => pair.Code.GetPayrollSettings().TaxTreatment.Keys))
-            .Distinct(StringComparer.Ordinal);
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
         var request = new IncomeTaxRequest
         {
             PayerId = context.Employer?.ItemId,
@@ -672,7 +673,62 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
             request.YearIncome[category] = Math.Max(0, yearNet) + request.YearSupplementalIncome[category];
         }
 
+        // A payment with no regular earnings of its own (a bonus paid alone) carries a period of the person's regular
+        // pay, which the bonus method and the aggregate method add it to.
+        if (supplemental.Any(amount => amount.Amount > 0) && !regular.Any(amount => amount.Code.Class == PayCodeClass.Earning && amount.Amount > 0))
+        {
+            foreach (var (category, amount) in RegularPerPeriod(context, categories))
+            {
+                request.RegularIncomePerPeriod[category] = amount;
+            }
+        }
+
         return request;
+    }
+
+    /// <summary>
+    /// Gets a period of a person's regular pay, by tax category: the regular earnings of their latest earlier statement
+    /// that has any, else their salary over the periods of a year.
+    /// </summary>
+    /// <param name="context">The calculation.</param>
+    /// <param name="categories">The tax categories.</param>
+    /// <returns>The pay of each category.</returns>
+    public static IReadOnlyDictionary<string, decimal> RegularPerPeriod(PayCalculationContext context, IEnumerable<string> categories)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var result = new Dictionary<string, decimal>(StringComparer.Ordinal);
+        var latest = context.History
+            .Where(statement => statement.VoidOf is null && string.IsNullOrEmpty(statement.VoidedBy) && statement.PayDate <= context.PayDate)
+            .OrderByDescending(statement => statement.PayDate)
+            .Select(statement => statement.Lines
+                .Where(line => line.Type != PayLineType.Tax && string.IsNullOrEmpty(line.RetroFor) && context.Code(line.PayCodeId) is { } code && !code.GetPayrollSettings().Supplemental)
+                .Where(line => !(line.Type == PayLineType.EmployerContribution && context.Code(line.PayCodeId).Class == PayCodeClass.Deduction))
+                .Select(line => new PayCodeAmount(context.Code(line.PayCodeId), line.Amount))
+                .ToList())
+            .FirstOrDefault(amounts => amounts.Any(amount => amount.Code.Class == PayCodeClass.Earning && amount.Amount > 0));
+
+        if (latest is not null)
+        {
+            foreach (var category in categories)
+            {
+                result[category] = Math.Max(0, PayCodeTaxMatrix.NetWagesFor(category, latest));
+            }
+
+            return result;
+        }
+
+        if (context.Pay?.SalaryOn(context.PayDate) is { } salary && salary > 0)
+        {
+            var periods = context.SalaryPeriods ?? PayCalculator.PeriodsPerYear(context.Schedule?.Frequency ?? PayFrequency.Biweekly);
+
+            foreach (var category in categories)
+            {
+                result[category] = Math.Round(salary / Math.Max(1, periods), 2, MidpointRounding.AwayFromZero);
+            }
+        }
+
+        return result;
     }
 
     // A contractor is withheld on when the profile says so or no tax id is on file.

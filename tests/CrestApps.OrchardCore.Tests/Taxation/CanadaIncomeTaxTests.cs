@@ -100,6 +100,43 @@ public sealed class CanadaIncomeTaxTests
         Assert.Equal((338.02m, 71.50m, 23.65m, 709.23m, 817.66m), (amounts["CA-QC-QPP"], amounts["CA-EI-QC"], amounts["CA-QC-QPIP"], amounts["CA-FIT"], amounts["CA-QC-PIT"]));
     }
 
+    [Theory]
+    [InlineData("CA-ON", "CA-ON-PIT")]
+    [InlineData("CA-QC", "CA-QC-PIT")]
+    public async Task ABonusPaidAlone_IsWithheldOnTopOfAYearOfRegularPay_NotOfNothing(string province, string provincialCode)
+    {
+        await using var harness = await CreateHarnessAsync();
+
+        Assert.Empty(await ImportRecipeAsync(harness));
+
+        var payDate = new DateOnly(2026, 3, 13);
+
+        // The bonus method's share of a 5,000 bonus paid with 2,500 of pay: what it adds to the pay's tax.
+        var withPay = await AmountsAsync(harness, Request(province, 26, payDate, 2500m, 5000m));
+        var payAlone = await AmountsAsync(harness, Request(province, 26, payDate, 2500m, 0m));
+
+        // The same bonus paid alone, before (annualizing this payment's regular pay of nothing) and after (a period of
+        // the person's regular pay of 2,500 sent with it).
+        var unlinked = await AmountsAsync(harness, Request(province, 26, payDate, 0m, 5000m));
+        var request = Request(province, 26, payDate, 0m, 5000m);
+
+        request.RegularIncomePerPeriod[IncomeTaxCategories.IncomeTax] = 2500m;
+
+        var alone = await AmountsAsync(harness, request);
+
+        foreach (var code in new[] { "CA-FIT", provincialCode })
+        {
+            var share = withPay[code] - payAlone[code];
+
+            // A year of 65,000 puts the bonus in a higher bracket than a year of nothing does.
+            Assert.True(alone[code] > unlinked.GetValueOrDefault(code) + 100m, $"{code}: {alone[code]} vs {unlinked.GetValueOrDefault(code)}");
+
+            // What is left between the two is the pay's own enhancement deduction and credits, which a bonus paid alone
+            // has none of: within 3%.
+            Assert.InRange(alone[code], share * 0.97m, share * 1.03m);
+        }
+    }
+
     [Fact]
     public async Task TheMaximums_AreReachedDuringTheYear_AndCpp2StartsAboveTheFirstCeiling()
     {
