@@ -7,10 +7,13 @@ using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Security;
 using CrestApps.Core.AI.Speech;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Connections.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
@@ -94,6 +97,93 @@ public sealed class AIChatHubSynthesizeSpeechVoiceTests
         Assert.Equal("alloy", harness.TextToSpeech.VoiceId);
     }
 
+    // CrestApps.Core #324 put read-aloud under the per-message limit. This hub replaces the base method, so it has to
+    // apply the limit itself or a caller could have any amount of text synthesized.
+    [Fact]
+    public async Task SynthesizeSpeech_CallerIsOverTheMessageLimit_SpeaksNothing()
+    {
+        // Arrange
+        var limiter = new Mock<IChatRateLimiter>();
+        limiter
+            .Setup(l => l.EvaluateAsync(It.IsAny<PromptSecurityContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(RateLimitResult.Throttled(30, 21, 20));
+        var harness = new Harness("en-US-GuyNeural", "en-US-JennyNeural", _azureSpeechVoices, services => services.AddSingleton(limiter.Object));
+
+        // Act
+        await harness.Hub.SynthesizeSpeech("profile-1", "session-1", "Hello there.", voiceName: null);
+
+        // Assert
+        Assert.False(harness.TextToSpeech.WasCalled);
+        harness.Caller.Verify(client => client.ReceiveError(It.IsAny<string>()), Times.Once);
+        limiter.Verify(l => l.EvaluateAsync(It.Is<PromptSecurityContext>(c => c.ProfileId == "profile-1" && c.SessionId == "session-1"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // Read-aloud ignored the profile's speech settings (CrestApps.Core #292): the pronunciation dictionary, the
+    // fallback deployment and the speaking rate applied to calls and conversations, not to the chat.
+    [Fact]
+    public async Task SynthesizeSpeech_ProfileHasAPronunciationDictionary_SpeaksTheAlias()
+    {
+        // Arrange
+        var harness = new Harness("en-US-GuyNeural", "en-US-JennyNeural", _azureSpeechVoices, configureProfile: profile =>
+            profile.AlterSettings<AIProfileSpeechSettings>(speech => speech.PronunciationEntries = [new PronunciationEntry { Text = "CrestApps", Alias = "Crest Apps" }]));
+
+        // Act
+        await harness.Hub.SynthesizeSpeech("profile-1", "session-1", "Welcome to CrestApps.", voiceName: null);
+
+        // Assert
+        Assert.Equal("Welcome to Crest Apps.", harness.TextToSpeech.Text);
+    }
+
+    [Fact]
+    public async Task SynthesizeSpeech_ProfileVoiceIsNotOfferedButThePersonaVoiceIs_SpeaksWithThePersonaVoice()
+    {
+        // Arrange
+        var personas = new Mock<IAIPersonaResolver>();
+        personas
+            .Setup(r => r.ResolveAsync(It.IsAny<ExtensibleEntity>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResolvedAIPersona { Id = "persona-1", VoiceName = "en-US-GuyNeural" });
+        var harness = new Harness("marin", "en-US-JennyNeural", _azureSpeechVoices, services => services.AddSingleton(personas.Object));
+
+        // Act
+        await harness.Hub.SynthesizeSpeech("profile-1", "session-1", "Hello there.", "marin");
+
+        // Assert
+        Assert.Equal("en-US-GuyNeural", harness.TextToSpeech.VoiceId);
+    }
+
+    // Over long polling each invocation is answered on a request of its own, so IHttpContextAccessor is empty when the
+    // hub method runs, and the visitor identity every limiter keys on was empty too. The base hub (CrestApps.Core #324)
+    // gives the invocation the connection's request; this hub replaces the method, so it must do the same.
+    [Fact]
+    public async Task SynthesizeSpeech_OverLongPolling_TheLimiterSeesTheConnectionsRequest()
+    {
+        // Arrange
+        var connectionRequest = new DefaultHttpContext();
+        var features = new FeatureCollection();
+        features.Set<IHttpContextFeature>(new ConnectionHttpContextFeature { HttpContext = connectionRequest });
+        var accessor = new HttpContextAccessor();
+        HttpContext seen = null;
+        var limiter = new Mock<IChatRateLimiter>();
+        limiter
+            .Setup(l => l.EvaluateAsync(It.IsAny<PromptSecurityContext>(), It.IsAny<CancellationToken>()))
+            .Callback(() => seen = accessor.HttpContext)
+            .ReturnsAsync(RateLimitResult.Allowed);
+        var harness = new Harness(
+            "en-US-GuyNeural",
+            "en-US-JennyNeural",
+            _azureSpeechVoices,
+            services => services.AddSingleton<IHttpContextAccessor>(accessor).AddSingleton(limiter.Object),
+            features: features);
+
+        // Act
+        await harness.Hub.SynthesizeSpeech("profile-1", "session-1", "Hello there.", voiceName: null);
+
+        // Assert
+        Assert.Same(connectionRequest, seen);
+        Assert.Null(accessor.HttpContext);
+        Assert.True(harness.TextToSpeech.WasCalled);
+    }
+
     [Fact]
     public async Task SelectVoiceAsync_AskedTwice_FetchesTheVoiceListOnce()
     {
@@ -121,10 +211,17 @@ public sealed class AIChatHubSynthesizeSpeechVoiceTests
 
     private sealed class Harness
     {
-        public Harness(string profileVoice, string siteDefaultVoice, SpeechVoice[] offeredVoices)
+        public Harness(
+            string profileVoice,
+            string siteDefaultVoice,
+            SpeechVoice[] offeredVoices,
+            Action<IServiceCollection> configureServices = null,
+            Action<AIProfile> configureProfile = null,
+            FeatureCollection features = null)
         {
             var profile = new AIProfile { ItemId = "profile-1", Name = "support", Type = AIProfileType.Chat };
             profile.AlterSettings<ChatModeProfileSettings>(settings => settings.VoiceName = profileVoice);
+            configureProfile?.Invoke(profile);
 
             var profileManager = new Mock<IAIProfileManager>();
             profileManager
@@ -148,15 +245,16 @@ public sealed class AIChatHubSynthesizeSpeechVoiceTests
                 .Setup(resolver => resolver.GetSpeechVoicesAsync(deployment))
                 .ReturnsAsync(offeredVoices);
 
-            var services = new ServiceCollection()
+            var serviceCollection = new ServiceCollection()
                 .AddSingleton(profileManager.Object)
                 .AddSingleton(deploymentManager.Object)
                 .AddSingleton(clientFactory.Object)
                 .AddSingleton(voiceResolver.Object)
                 .AddSingleton<IMemoryCache>(new MemoryCache(new MemoryCacheOptions()))
                 .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
-                .AddSingleton<TextToSpeechVoiceSelector>()
-                .BuildServiceProvider();
+                .AddSingleton<TextToSpeechVoiceSelector>();
+            configureServices?.Invoke(serviceCollection);
+            var services = serviceCollection.BuildServiceProvider();
 
             var clients = new Mock<IHubCallerClients<IAIChatHubClient>>();
             clients.SetupGet(c => c.Caller).Returns(Caller.Object);
@@ -164,7 +262,7 @@ public sealed class AIChatHubSynthesizeSpeechVoiceTests
             var context = new Mock<HubCallerContext>();
             context.SetupGet(c => c.ConnectionId).Returns("connection-1");
             context.SetupGet(c => c.ConnectionAborted).Returns(CancellationToken.None);
-            context.SetupGet(c => c.Features).Returns(new FeatureCollection());
+            context.SetupGet(c => c.Features).Returns(features ?? new FeatureCollection());
             context.SetupGet(c => c.User).Returns(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "Test")));
 
             var deploymentSettings = new DefaultAIDeploymentSettings
@@ -212,11 +310,18 @@ public sealed class AIChatHubSynthesizeSpeechVoiceTests
             => Task.FromResult(_deploymentSettings);
     }
 
+    private sealed class ConnectionHttpContextFeature : IHttpContextFeature
+    {
+        public HttpContext HttpContext { get; set; }
+    }
+
     private sealed class RecordingTextToSpeechClient : ITextToSpeechClient
     {
         public bool WasCalled { get; private set; }
 
         public string VoiceId { get; private set; }
+
+        public string Text { get; private set; }
 
         public Task<TextToSpeechResponse> GetAudioAsync(string text, TextToSpeechOptions options = null, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
@@ -228,6 +333,7 @@ public sealed class AIChatHubSynthesizeSpeechVoiceTests
         {
             WasCalled = true;
             VoiceId = options?.VoiceId;
+            Text = text;
 
             await Task.CompletedTask;
 

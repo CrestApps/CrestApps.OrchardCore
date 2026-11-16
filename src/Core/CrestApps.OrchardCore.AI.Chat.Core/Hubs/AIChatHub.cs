@@ -13,6 +13,7 @@ using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.Core.AI.Security;
+using CrestApps.Core.AI.Services;
 using CrestApps.Core.Security;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
@@ -21,6 +22,7 @@ using Cysharp.Text;
 using Fluid;
 using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -121,19 +123,11 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         }
 
         // Captured eagerly, as the base hub does: the caller context is not guaranteed once the invocation returns.
-        var user = Context?.User;
         var connectionId = Context?.ConnectionId;
-        var userId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = Context?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        await ExecuteInScopeAsync(async services =>
+        await RunAsCallerAsync(async services =>
         {
-            var userAccessor = services.GetService<IUserAccessor>();
-
-            if (userAccessor is not null)
-            {
-                userAccessor.User = user;
-            }
-
             var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
             var chatSession = await sessionManager.FindAsync(sessionId);
 
@@ -193,6 +187,47 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
                     prompts.Count,
                     userId,
                     connectionId);
+            }
+        });
+    }
+
+    // Runs the work of a method this hub replaces as the caller, as the base hub's own scope does. The user accessor
+    // carries the caller. Where the transport left IHttpContextAccessor empty (long polling answers each invocation on a
+    // request of its own) it carries the connection's request for the invocation, since the visitor identity, and with it
+    // every rate limiter's key and an anonymous visitor's sessions, are read from it.
+    private Task RunAsCallerAsync(Func<IServiceProvider, Task> action)
+    {
+        // Captured eagerly, as the base hub does: the caller context is not guaranteed once the invocation returns.
+        var user = Context?.User;
+        var connectionContext = Context?.GetHttpContext();
+
+        return ExecuteInScopeAsync(async services =>
+        {
+            var userAccessor = services.GetService<IUserAccessor>();
+
+            if (userAccessor is not null)
+            {
+                userAccessor.User = user;
+            }
+
+            var httpContextAccessor = services.GetService<IHttpContextAccessor>();
+            var setConnectionContext = httpContextAccessor is not null && httpContextAccessor.HttpContext is null && connectionContext is not null;
+
+            if (setConnectionContext)
+            {
+                httpContextAccessor.HttpContext = connectionContext;
+            }
+
+            try
+            {
+                await action(services);
+            }
+            finally
+            {
+                if (setConnectionContext)
+                {
+                    httpContextAccessor.HttpContext = null;
+                }
             }
         });
     }
@@ -272,21 +307,12 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
             return;
         }
 
-        // Captured eagerly, as the base hub does: the caller context is not guaranteed once the invocation returns.
-        var user = Context?.User;
         var cancellationToken = Context.ConnectionAborted;
 
         try
         {
-            await ExecuteInScopeAsync(async services =>
+            await RunAsCallerAsync(async services =>
             {
-                var userAccessor = services.GetService<IUserAccessor>();
-
-                if (userAccessor is not null)
-                {
-                    userAccessor.User = user;
-                }
-
                 var profileManager = services.GetRequiredService<IAIProfileManager>();
                 var profile = await profileManager.FindByIdAsync(profileId);
 
@@ -300,6 +326,16 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
                 if (!await AuthorizeProfileAsync(services, profile))
                 {
                     await Clients.Caller.ReceiveError(GetNotAuthorizedMessage());
+
+                    return;
+                }
+
+                // Each read-aloud reaches a provider, so it counts against the per-message limit, as in the base hub.
+                var messageLimit = await EvaluateMessageRateLimitAsync(services, profile, sessionId, cancellationToken);
+
+                if (messageLimit.IsBlocked)
+                {
+                    await Clients.Caller.ReceiveError(GetBlockedPromptMessage(messageLimit));
 
                     return;
                 }
@@ -325,15 +361,27 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
                     return;
                 }
 
+                // The persona's voice comes after the profile's own, as in the base hub, and like every candidate it is
+                // used only when the deployment offers it.
+                var persona = await services.ResolvePersonaAsync(profile, cancellationToken);
                 var voiceSelector = services.GetRequiredService<TextToSpeechVoiceSelector>();
                 var effectiveVoiceName = await voiceSelector.SelectVoiceAsync(
                     deployment,
                     voiceName,
                     chatModeSettings?.VoiceName,
+                    persona?.VoiceName,
                     deploymentSettings.DefaultTextToSpeechVoiceId);
 
+                // The profile's speech settings (fallback deployment, pronunciation dictionary, speaking rate) apply to
+                // read-aloud too.
                 var clientFactory = services.GetRequiredService<IAIClientFactory>();
-                using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(deployment);
+                using var textToSpeechClient = await ProfileSpeech.DecorateAsync(
+                    await clientFactory.CreateTextToSpeechClientAsync(deployment),
+                    ProfileSpeech.GetSettings(profile),
+                    deploymentManager,
+                    clientFactory,
+                    Logger,
+                    cancellationToken);
                 await StreamSpeechAsync(textToSpeechClient, sessionId ?? string.Empty, text, effectiveVoiceName, cancellationToken);
             });
         }
