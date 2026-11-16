@@ -325,7 +325,7 @@ public sealed class EmailSignInControllerTests
             codeSender ?? Mock.Of<IEmailSignInCodeSender>(),
             siteService.Object,
             _loginFormEvents,
-            new EmailOwnershipProof(_userManager.Object, Mock.Of<global::YesSql.ISession>(), clock.Object, NullLogger<EmailOwnershipProof>.Instance),
+            new EmailOwnershipProof(_userManager.Object, Mock.Of<global::YesSql.ISession>(), new UserCredentialsResets(_cache, new ShellSettings { Name = "Default" }, Options.Create(new SecurityStampValidatorOptions())), [], clock.Object, NullLogger<EmailOwnershipProof>.Instance),
             Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
             new EmailSignInEligibility(_userManager.Object, Options.Create(new EmailSignInOptions())),
             NullLogger<EmailSignInController>.Instance,

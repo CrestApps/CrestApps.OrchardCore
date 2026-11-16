@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Handlers;
 using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Users.Controllers;
+using CrestApps.OrchardCore.Users.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -116,6 +117,12 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         Assert.Equal("user-1", merge.UserId);
         Assert.False(merge.HadPassword);
         Assert.Equal(0, merge.Logins);
+
+        // HT2: every earlier sign-in ends now, not at the next stamp check: the reset is on the user, a cookie issued
+        // before it is refused, and what an OpenID server issued is revoked.
+        Assert.True(account.Properties.ContainsKey(UserCredentialsResets.PropertyName));
+        Assert.True(await _harness.CredentialsResets.IsBeforeResetAsync("user-1", _harness.Now.AddMinutes(-1), TestContext.Current.CancellationToken));
+        Assert.Equal(["user-1"], _harness.Revoked);
     }
 
     [Fact]
@@ -136,6 +143,7 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         Assert.True(await CheckPasswordAsync(account));
         Assert.False(UserEmailOwnership.IsVerified(account.Properties, account.Email));
         Assert.Empty(_merges);
+        Assert.Empty(_harness.Revoked);
     }
 
     private async Task<IActionResult> SignInWithCodeAsync()

@@ -18,17 +18,23 @@ public sealed class EmailOwnershipProof
 {
     private readonly UserManager<IUser> _userManager;
     private readonly ISession _session;
+    private readonly UserCredentialsResets _credentialsResets;
+    private readonly IEnumerable<IUserSignInRevocation> _revocations;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
     public EmailOwnershipProof(
         UserManager<IUser> userManager,
         ISession session,
+        UserCredentialsResets credentialsResets,
+        IEnumerable<IUserSignInRevocation> revocations,
         IClock clock,
         ILogger<EmailOwnershipProof> logger)
     {
         _userManager = userManager;
         _session = session;
+        _credentialsResets = credentialsResets;
+        _revocations = revocations;
         _clock = clock;
         _logger = logger;
     }
@@ -55,12 +61,14 @@ public sealed class EmailOwnershipProof
 
         var firstProof = !UserEmailOwnership.IsVerified(account.Properties, account.Email);
         var removed = firstProof && HasCredentials(account);
+        var now = _clock.UtcNow;
 
         if (firstProof)
         {
             account.PasswordHash = null;
             account.LoginInfos?.Clear();
-            UserEmailOwnership.MarkVerified(account.Properties, account.Email, _clock.UtcNow);
+            UserCredentialsResets.Record(account.Properties, now);
+            UserEmailOwnership.MarkVerified(account.Properties, account.Email, now);
         }
 
         account.EmailConfirmed = true;
@@ -78,6 +86,31 @@ public sealed class EmailOwnershipProof
             return EmailProofResult.Failed;
         }
 
+        if (firstProof)
+        {
+            await EndEarlierSignInsAsync(account.UserId, now, cancellationToken);
+        }
+
         return removed ? EmailProofResult.CredentialsRemoved : EmailProofResult.Recorded;
+    }
+
+    // The new stamp ends earlier sessions only at Identity's next stamp check, up to 30 minutes later by default: the
+    // cookie validation refuses them from now on, and tokens an OpenID server issued are revoked. This runs after the
+    // update is saved; a revocation commits the request's session as it goes.
+    private async Task EndEarlierSignInsAsync(string userId, DateTime resetUtc, CancellationToken cancellationToken)
+    {
+        await _credentialsResets.PublishAsync(userId, resetUtc, cancellationToken);
+
+        foreach (var revocation in _revocations)
+        {
+            try
+            {
+                await revocation.RevokeAsync(userId, cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogError(exception, "What was issued to a user could not be revoked after the proof of their email address reset their credentials.");
+            }
+        }
     }
 }

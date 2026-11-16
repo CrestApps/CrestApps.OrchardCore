@@ -65,6 +65,13 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
     public RecordingCodeSender Sender { get; } = new();
 
     /// <summary>
+    /// The user ids whose OpenID tokens and other issued sign-ins were revoked.
+    /// </summary>
+    public List<string> Revoked { get; } = [];
+
+    public UserCredentialsResets CredentialsResets => new(Cache, new ShellSettings { Name = "Default" }, Options.Create(new SecurityStampValidatorOptions()));
+
+    /// <summary>
     /// The user event handlers Orchard Core's user store raises its events on.
     /// </summary>
     public List<IUserEventHandler> UserEventHandlers { get; } = [];
@@ -194,6 +201,8 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
         => new(
             requestServices.GetRequiredService<UserManager<IUser>>(),
             requestServices.GetRequiredService<ISession>(),
+            CredentialsResets,
+            [new RecordingRevocation(Revoked)],
             CreateClock(),
             NullLogger<EmailOwnershipProof>.Instance);
 
@@ -300,6 +309,21 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
     }
 
     public sealed record SentCode(string UserName, string Email, string Code);
+
+    private sealed class RecordingRevocation : IUserSignInRevocation
+    {
+        private readonly List<string> _revoked;
+
+        public RecordingRevocation(List<string> revoked)
+            => _revoked = revoked;
+
+        public Task RevokeAsync(string userId, CancellationToken cancellationToken = default)
+        {
+            _revoked.Add(userId);
+
+            return Task.CompletedTask;
+        }
+    }
 
     /// <summary>
     /// Records the codes that would be mailed, and to which address.
