@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.Lti</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Lti Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts of External Tools (LTI 1.3 with Learning as the platform): the external tool settings record, the
+      External tool course item part, the line items and scores of Assignment and Grade Services, the LTI constants
+      (claims, scopes, roles, media types), the Manage external tools permission and the score observer.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS LTI Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Abstractions\CrestApps.OrchardCore.Learning.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
