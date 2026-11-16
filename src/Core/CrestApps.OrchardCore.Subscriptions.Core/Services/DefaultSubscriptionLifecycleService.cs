@@ -264,6 +264,10 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
     /// <inheritdoc/>
     public Task<Subscription> ExpireAsync(string subscriptionId, string reason, CancellationToken cancellationToken = default)
+        => ExpireAsync(subscriptionId, reason, source: null, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<Subscription> ExpireAsync(string subscriptionId, string reason, string source, CancellationToken cancellationToken = default)
         => MutateAsync(SubscriptionsTelemetry.OperationExpire, subscriptionId, subscription =>
         {
             if (subscription.Status == SubscriptionStatus.Expired)
@@ -286,11 +290,12 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
             {
                 CreatedUtc = now,
                 Type = SubscriptionEventType.Expired,
+                Source = source,
                 Message = reason,
             });
 
             return SubscriptionTransition.Changed;
-        }, cancellationToken);
+        }, cancellationToken, source);
 
     /// <inheritdoc/>
     public Task<Subscription> SyncFromProviderAsync(string subscriptionId, SubscriptionProviderSyncContext context, CancellationToken cancellationToken = default)

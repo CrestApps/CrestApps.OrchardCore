@@ -70,6 +70,17 @@ public interface ISubscriptionLifecycleService
     Task<Subscription> ExpireAsync(string subscriptionId, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Ends the agreement, naming what ended it, which the lifecycle handlers see as
+    /// <see cref="SubscriptionLifecycleContext.Source"/>.
+    /// </summary>
+    /// <param name="subscriptionId">The subscription identifier.</param>
+    /// <param name="reason">The reason recorded.</param>
+    /// <param name="source">What ended it.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<Subscription> ExpireAsync(string subscriptionId, string reason, string source, CancellationToken cancellationToken = default)
+        => ExpireAsync(subscriptionId, reason, cancellationToken);
+
+    /// <summary>
     /// Applies the state a provider reports, so the local record follows the gateway that actually bills.
     /// </summary>
     /// <param name="subscriptionId">The subscription identifier.</param>

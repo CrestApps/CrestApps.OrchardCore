@@ -1,8 +1,10 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
+using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Subscriptions.Tasks;
@@ -15,6 +17,7 @@ using Moq;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using OrchardCore.Workflows.Services;
 
 namespace CrestApps.OrchardCore.Tests.Subscriptions;
 
@@ -104,6 +107,56 @@ public sealed class SubscriptionLifecycleBackgroundTaskTests
         Assert.Equal(SubscriptionStatus.Expired, Assert.Single(store.Subscriptions).Status);
     }
 
+    /// <summary>
+    /// Selling-sites Mild (fix verification): the first sweep after the upgrade found every canceled subscription ever
+    /// recorded and raised the expired workflow event for each, so a store with an "expired" e-mail mailed everyone who
+    /// ever canceled. A subscription whose paid period ended long before the sweep found it is expired without the event;
+    /// one that just lapsed still raises it.
+    /// </summary>
+    [Fact]
+    public async Task DoWorkAsync_ExpiresTheBacklogOfLongCanceledSubscriptions_WithoutRaisingTheirEvent()
+    {
+        var workflows = new Mock<IWorkflowManager>();
+        var (task, services, store) = CreateTask(
+            [Canceled("canceled-last-year", _now.AddYears(-1)), Canceled("canceled-last-month", _now.AddMonths(-1)), Canceled("just-lapsed", _now.AddHours(-1))],
+            isGateway: true,
+            handlers: [new WorkflowSubscriptionLifecycleHandler(workflows.Object, NullLogger<WorkflowSubscriptionLifecycleHandler>.Instance)]);
+
+        await task.DoWorkAsync(services, TestContext.Current.CancellationToken);
+
+        Assert.All(store.Subscriptions, subscription => Assert.Equal(SubscriptionStatus.Expired, subscription.Status));
+        workflows.Verify(w => w.TriggerEventAsync(SubscriptionExpiredEvent.EventName, It.IsAny<IDictionary<string, object>>(), "just-lapsed", It.IsAny<bool>(), It.IsAny<bool>()), Times.Once);
+        workflows.Verify(w => w.TriggerEventAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>(), "canceled-last-year", It.IsAny<bool>(), It.IsAny<bool>()), Times.Never);
+        workflows.Verify(w => w.TriggerEventAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>(), "canceled-last-month", It.IsAny<bool>(), It.IsAny<bool>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Selling-sites Mild (fix verification): the lapsed agreements were read in one unpaged query. They are read a page at
+    /// a time, and a backlog larger than a page is still expired in the same run.
+    /// </summary>
+    [Fact]
+    public async Task DoWorkAsync_ExpiresABacklogLargerThanOnePage()
+    {
+        var seeds = Enumerable.Range(1, 250).Select(index => Canceled($"canceled-{index}", _now.AddYears(-1))).ToArray();
+        var (task, services, store) = CreateTask(seeds, isGateway: true, handlers: []);
+
+        await task.DoWorkAsync(services, TestContext.Current.CancellationToken);
+
+        Assert.Equal(250, store.Subscriptions.Count(subscription => subscription.Status == SubscriptionStatus.Expired));
+    }
+
+    private static Subscription Canceled(string itemId, DateTime periodEnd)
+    {
+        var subscription = CreateDue("Stripe");
+        subscription.ItemId = itemId;
+        subscription.Status = SubscriptionStatus.Canceled;
+        subscription.CancelAtPeriodEnd = true;
+        subscription.NextBillingUtc = null;
+        subscription.CurrentPeriodEndUtc = periodEnd;
+
+        return subscription;
+    }
+
     private static Subscription CreateDue(string providerKey)
         => new()
         {
@@ -126,8 +179,15 @@ public sealed class SubscriptionLifecycleBackgroundTaskTests
         };
 
     private static (SubscriptionLifecycleBackgroundTask Task, IServiceProvider Services, InMemorySubscriptionStore Store) CreateTask(Subscription seed, bool isGateway)
+        => CreateTask([seed], isGateway, handlers: []);
+
+    private static (SubscriptionLifecycleBackgroundTask Task, IServiceProvider Services, InMemorySubscriptionStore Store) CreateTask(
+        Subscription[] seeds,
+        bool isGateway,
+        ISubscriptionLifecycleHandler[] handlers)
     {
-        var store = new InMemorySubscriptionStore(seed);
+        var seed = seeds[0];
+        var store = new InMemorySubscriptionStore(seeds);
         var manager = new SubscriptionManager(store, [], NullLogger<CatalogManager<Subscription>>.Instance);
 
         var lifecycle = new DefaultSubscriptionLifecycleService(
@@ -135,7 +195,7 @@ public sealed class SubscriptionLifecycleBackgroundTaskTests
             new LocalLock(NullLogger<LocalLock>.Instance),
             SiteServiceFactory.Create(new SubscriptionSettings { DunningGraceDays = 7 }),
             new TestClock(_now),
-            [],
+            handlers,
             NullLogger<DefaultSubscriptionLifecycleService>.Instance);
 
         var provider = new Mock<ICheckoutPaymentProvider>();
