@@ -52,6 +52,20 @@ public sealed class Startup : StartupBase
 }
 
 /// <summary>
+/// The approver rules of Staff: the subject's manager and named staff members.
+/// </summary>
+[RequireFeatures(CrestApps.OrchardCore.Staff.StaffConstants.Features.Staff)]
+public sealed class StaffStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddApproverRuleProvider<Services.ManagerApproverRuleProvider>();
+        services.AddApproverRuleProvider<Services.StaffApproverRuleProvider>();
+    }
+}
+
+/// <summary>
 /// Makes Orchard's notification center the approver's inbox: two notification types each person chooses delivery
 /// for, and the observer that sends and removes the notices.
 /// </summary>

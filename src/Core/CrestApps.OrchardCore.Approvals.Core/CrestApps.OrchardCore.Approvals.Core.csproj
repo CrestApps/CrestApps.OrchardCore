@@ -7,7 +7,7 @@
       $(CrestAppsDescription)
 
       Core services for approvals: the request store and index, the policy rules, who may decide (a permission, a
-      role, the subject's manager or named staff), the two built-in rules, and the notices to approvers through
+      role or named users, and any approver rule provider a module adds), the two built-in rules, and the notices to approvers through
       Orchard Notifications.
     </Description>
     <PackageTags>$(PackageTags) Approvals Core</PackageTags>
@@ -36,7 +36,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Approvals.Abstractions\CrestApps.OrchardCore.Approvals.Abstractions.csproj" />
-    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Staff.Abstractions\CrestApps.OrchardCore.Staff.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
   </ItemGroup>

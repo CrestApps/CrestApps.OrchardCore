@@ -11,7 +11,12 @@ namespace CrestApps.OrchardCore.Approvals.ViewModels;
 public class ApprovalPolicyViewModel
 {
     /// <summary>
-    /// The number of approver rule rows the editor shows.
+    /// The number of stage cards the editor shows; a stage without approvers isn't saved.
+    /// </summary>
+    public const int StageSlots = 3;
+
+    /// <summary>
+    /// The number of approver rule rows each stage shows.
     /// </summary>
     public const int RuleSlots = 4;
 
@@ -31,55 +36,140 @@ public class ApprovalPolicyViewModel
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets how many approvals are required.
+    /// Gets or sets the approval types the policy serves.
     /// </summary>
-    public int RequiredApprovals { get; set; } = 1;
+    public string[] Types { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets a value indicating whether the requester may approve.
+    /// Gets or sets whether the policy is chosen for requests that name none.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the order among policies, as text.
+    /// </summary>
+    public string Order { get; set; }
+
+    /// <summary>
+    /// Gets or sets the least amount, as text with a dot.
+    /// </summary>
+    public string MinimumAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most amount, as text with a dot.
+    /// </summary>
+    public string MaximumAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currency condition.
+    /// </summary>
+    public string Currency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the access scope condition.
+    /// </summary>
+    public string AccessScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stages.
+    /// </summary>
+    public List<ApprovalStageViewModel> Stages { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the requester may approve.
     /// </summary>
     public bool AllowRequesterToApprove { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether a person may decide a request about themselves.
+    /// Gets or sets whether a person may decide a request about themselves.
     /// </summary>
     public bool AllowSubjectToDecide { get; set; }
 
     /// <summary>
-    /// Gets or sets the hours after which a request is due, as text.
+    /// Gets or sets the hours until a request is due, as text.
     /// </summary>
     public string DueAfterHours { get; set; }
 
     /// <summary>
-    /// Gets or sets the approver rules; an empty row is ignored.
+    /// Gets or sets the approval types to choose from.
     /// </summary>
-    public List<ApproverRuleViewModel> Approvers { get; set; } = [];
+    [BindNever]
+    public IList<SelectListItem> TypeOptions { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the kinds of approver rules.
+    /// Gets or sets the approver rule providers to choose from, by name with what people see.
     /// </summary>
     [BindNever]
     public IList<SelectListItem> KindOptions { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets a value indicating whether the policy is new.
+    /// Gets or sets whether the policy is new.
     /// </summary>
     [BindNever]
     public bool IsNew { get; set; }
 }
 
 /// <summary>
-/// One approver rule row of the policy editor.
+/// One stage in the policy editor.
+/// </summary>
+public class ApprovalStageViewModel
+{
+    /// <summary>
+    /// Gets or sets the stage's title.
+    /// </summary>
+    public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many approvals the stage needs.
+    /// </summary>
+    public int RequiredApprovals { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the approver rules.
+    /// </summary>
+    public List<ApproverRuleViewModel> Approvers { get; set; } = [];
+}
+
+/// <summary>
+/// One approver rule row in the policy editor: the provider chosen, and each provider's value editor's value (only
+/// the chosen provider's is kept).
 /// </summary>
 public class ApproverRuleViewModel
 {
     /// <summary>
-    /// Gets or sets the kind, or empty for an unused row.
+    /// Gets or sets the provider's name, or empty for an unused row.
     /// </summary>
     public string Kind { get; set; }
 
     /// <summary>
-    /// Gets or sets the permission name, role name or staff ids.
+    /// Gets or sets the values posted by each provider's editor, by provider name; a multiple choice posts several.
+    /// </summary>
+    public Dictionary<string, string[]> Values { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+}
+
+/// <summary>
+/// The shape model of an approver rule value editor (<c>ApproverRuleValue_Edit</c>, with the alternate
+/// <c>ApproverRuleValue_Edit__{Kind}</c>): the field name to post under and the current value.
+/// </summary>
+public class ApproverRuleValueEditorViewModel
+{
+    /// <summary>
+    /// Gets or sets the provider's name.
+    /// </summary>
+    public string Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the form field name the editor posts its value under.
+    /// </summary>
+    public string FieldName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the element id prefix.
+    /// </summary>
+    public string FieldId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the rule's value when its kind is this provider's, or <see langword="null"/>.
     /// </summary>
     public string Value { get; set; }
 }
@@ -90,19 +180,56 @@ public class ApproverRuleViewModel
 public class ApprovalRequestsIndexViewModel
 {
     /// <summary>
-    /// Gets or sets the status filter; pending by default.
+    /// The list of the requests waiting for the reader's decision.
+    /// </summary>
+    public const string WaitingView = "Waiting";
+
+    /// <summary>
+    /// The list of every request the reader may see.
+    /// </summary>
+    public const string AllView = "All";
+
+    /// <summary>
+    /// The list of the requests the reader made.
+    /// </summary>
+    public const string MineView = "Mine";
+
+    /// <summary>
+    /// Gets or sets which list: <see cref="WaitingView"/>, <see cref="AllView"/> or <see cref="MineView"/>.
+    /// </summary>
+    public string View { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status shown.
     /// </summary>
     public string Status { get; set; }
 
     /// <summary>
-    /// Gets or sets the list.
+    /// Gets or sets the approval type shown, or empty for every type.
+    /// </summary>
+    public string Type { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the reader may see every request.
+    /// </summary>
+    [BindNever]
+    public bool CanSeeAll { get; set; }
+
+    /// <summary>
+    /// Gets or sets the approval types to filter by.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> TypeOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the requests.
     /// </summary>
     [BindNever]
     public AdminListContext<ApprovalRequest> List { get; set; }
 }
 
 /// <summary>
-/// The page that shows a request and takes a decision.
+/// The page of one request.
 /// </summary>
 public class ApprovalDecideViewModel
 {
@@ -118,31 +245,55 @@ public class ApprovalDecideViewModel
     public ApprovalRequest Request { get; set; }
 
     /// <summary>
-    /// Gets or sets whether the person may decide, and why not.
+    /// Gets or sets the request's type as people see it.
+    /// </summary>
+    [BindNever]
+    public string TypeDisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the type's handler shows for the subject.
+    /// </summary>
+    [BindNever]
+    public string SubjectDisplay { get; set; }
+
+    /// <summary>
+    /// Gets or sets the subject's page from the type's handler.
+    /// </summary>
+    [BindNever]
+    public string SubjectUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the shape modules add fields to (display type <c>DetailAdmin</c>).
+    /// </summary>
+    [BindNever]
+    public object Display { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the reader may decide.
     /// </summary>
     [BindNever]
     public ApprovalEligibility Eligibility { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the person may cancel it.
+    /// Gets or sets whether the reader may withdraw it.
     /// </summary>
     [BindNever]
     public bool CanCancel { get; set; }
 
     /// <summary>
-    /// Gets or sets the request's creation time, in the person's time zone.
+    /// Gets or sets when it was made, in the reader's time zone.
     /// </summary>
     [BindNever]
     public DateTimeOffset CreatedLocal { get; set; }
 
     /// <summary>
-    /// Gets or sets the due time, in the person's time zone.
+    /// Gets or sets when it is due, in the reader's time zone.
     /// </summary>
     [BindNever]
     public DateTimeOffset? DueLocal { get; set; }
 
     /// <summary>
-    /// Gets or sets each decision's time, in the person's time zone.
+    /// Gets or sets when each decision was made, in the reader's time zone.
     /// </summary>
     [BindNever]
     public IList<DateTimeOffset> DecisionTimes { get; set; } = [];

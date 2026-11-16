@@ -66,6 +66,9 @@ internal sealed class ApprovalsWorkflowObserver : IApprovalObserver
             ["Decider"] = change.Actor,
             ["Note"] = change.Decision?.Note,
             ["DueUtc"] = request.DueUtc,
+            ["Stage"] = request.CurrentStage + 1,
+            ["Amount"] = request.Amount,
+            ["Currency"] = request.Currency,
         };
 
         ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<IWorkflowManager>().TriggerEventAsync(name, input, request.ItemId));

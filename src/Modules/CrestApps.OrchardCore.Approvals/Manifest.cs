@@ -12,6 +12,6 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ApprovalsConstants.Features.Approvals,
     Name = "Approvals",
-    Description = "Approvals for any module: policies that say who may decide (a permission, a role, the manager or named staff) and how many must, the record of each decision, the approver's inbox in the notification center, and workflow events and tasks for stages, reminders and escalations.",
+    Description = "Approvals for any module: approval types modules register (pay runs, tickets, time sheets), policies chosen by type and amount with stages decided one after the other, who may decide each stage (a permission, a role, named users, the manager, named staff or a rule a module adds) and how many must, the record of each decision, a Waiting for me inbox, and workflow events and tasks for reminders and escalations.",
     Category = "Workflows"
 )]

@@ -6,12 +6,13 @@ namespace CrestApps.OrchardCore.Approvals.Models;
 public sealed class ApprovalSubmission
 {
     /// <summary>
-    /// Gets or sets the policy, by id or technical name.
+    /// Gets or sets the policy, by id or technical name; empty to use the first enabled policy whose types and
+    /// conditions match (<c>IApprovalPolicyResolver</c>).
     /// </summary>
     public string Policy { get; set; }
 
     /// <summary>
-    /// Gets or sets the subject's kind.
+    /// Gets or sets the approval type's name, the kind of the subject, such as <c>PayRun</c>.
     /// </summary>
     public string SubjectKind { get; set; }
 

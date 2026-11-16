@@ -1,16 +1,32 @@
+@using CrestApps.OrchardCore.Approvals.Services
 @using CrestApps.OrchardCore.Currencies
+@using Microsoft.Extensions.Localization
+@using OrchardCore
+@inject IApprovalTypeCatalog Types
+@inject IStringLocalizerFactory LocalizerFactory
 @model ShapeViewModel<ApprovalRequest>
 
 @{
     var request = Model.Value;
+    var type = Types.Find(request.SubjectKind);
+    var stages = request.GetStages();
+    var stage = request.GetCurrentStage();
 }
 
 <div class="admin-list-secondary">
-    @request.PolicyTitle
+    <span class="fw-semibold">@(type?.DisplayName is { } name ? LocalizerFactory.Localize(name).Value : request.SubjectKind)</span>
+    <span> · @request.PolicyTitle</span>
     <span> · @(string.IsNullOrEmpty(request.RequesterName) ? T["asked by a workflow"] : T["asked by {0}", request.RequesterName])</span>
     @if (request.Amount is { } amount && !string.IsNullOrEmpty(request.Currency))
     {
         <span> · @CurrencyScale.Format(amount, request.Currency)</span>
     }
-    <span> · @T["{0} of {1} approvals", request.ApprovalCount, request.RequiredApprovals]</span>
+    @if (stages.Count > 1)
+    {
+        <span> · @T["stage {0} of {1}: {2} of {3} approvals", request.CurrentStage + 1, stages.Count, request.StageApprovalCount, stage.RequiredApprovals]</span>
+    }
+    else
+    {
+        <span> · @T["{0} of {1} approvals", request.StageApprovalCount, stage.RequiredApprovals]</span>
+    }
 </div>

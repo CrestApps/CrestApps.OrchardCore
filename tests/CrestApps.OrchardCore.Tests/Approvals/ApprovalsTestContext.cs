@@ -38,7 +38,8 @@ internal sealed class ApprovalsTestContext
             .ReturnsAsync((string name, CancellationToken _) => Policies.FirstOrDefault(policy => policy.Name == name));
 
         PolicyManager = policies.Object;
-        Service = new ApprovalService(Manager, PolicyManager, Directory, Handlers, Observers, Locks, new NoopApprovalCommitter(), clock.Object, RecipeRoundTrip.Localizer<ApprovalService>());
+        Types = new ListApprovalTypeCatalog(Handlers);
+        Service = new ApprovalService(Manager, PolicyManager, Directory, new ApprovalPolicyResolver(PolicyManager), Types, Observers, Locks, new NoopApprovalCommitter(), clock.Object, RecipeRoundTrip.Localizer<ApprovalService>());
     }
 
     public DateTime Now { get; set; } = new(2026, 11, 13, 15, 0, 0, DateTimeKind.Utc);
@@ -59,7 +60,9 @@ internal sealed class ApprovalsTestContext
 
     public List<IApprovalObserver> Observers { get; }
 
-    public List<IApprovalSubjectHandler> Handlers { get; }
+    public List<IApprovalTypeHandler> Handlers { get; }
+
+    public ListApprovalTypeCatalog Types { get; }
 
     public ApprovalService Service { get; }
 
@@ -77,7 +80,7 @@ internal sealed class ApprovalsTestContext
             AllowRequesterToApprove = allowRequester,
             AllowSubjectToDecide = allowSubject,
             DueAfterHours = dueAfterHours,
-            Approvers = [new ApproverRule { Kind = ApproverKind.Permission, Value = "Finance" }],
+            Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Permission, Value = "Finance" }],
         };
 
         Policies.Add(policy);
@@ -121,6 +124,8 @@ internal sealed class InMemoryApprovalRequestStore : InMemoryCatalog<ApprovalReq
             .Where(entry => access.Allows(entry.SubjectKind, entry.AccessScope))
             .Where(entry => query.Status is null || entry.Status == query.Status)
             .Where(entry => string.IsNullOrEmpty(query.PolicyId) || entry.PolicyId == query.PolicyId)
+            .Where(entry => string.IsNullOrEmpty(query.Type) || entry.SubjectKind == query.Type)
+            .Where(entry => string.IsNullOrEmpty(query.RequesterUserId) || entry.RequesterUserId == query.RequesterUserId)
             .ToList();
         var ordered = query.OldestFirst ? matching.OrderBy(entry => entry.CreatedUtc) : matching.OrderByDescending(entry => entry.CreatedUtc);
 
@@ -143,6 +148,9 @@ internal sealed class NamedApproverDirectory : IApproverDirectory
 
     public Task<IReadOnlyList<string>> GetUserIdsAsync(ApproverRule rule, ApprovalRequest request, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<string>>(People.GetValueOrDefault(rule.Value ?? string.Empty, []).Select(name => name + "-id").ToList());
+
+    public bool DependsOnRequest(ApproverRule rule)
+        => rule.Kind == ApproverRuleKinds.Manager;
 }
 
 internal sealed class RecordingApprovalObserver : IApprovalObserver
@@ -157,17 +165,110 @@ internal sealed class RecordingApprovalObserver : IApprovalObserver
     }
 }
 
-internal sealed class RecordingSubjectHandler : IApprovalSubjectHandler
+internal sealed class RecordingSubjectHandler : ApprovalTypeHandlerBase
 {
-    public string SubjectKind => "PayRun";
-
     public List<ApprovalStatus> Closed { get; } = [];
 
-    public Task ClosedAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+    public override Task ApprovedAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+        => RecordAsync(request);
+
+    public override Task RejectedAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+        => RecordAsync(request);
+
+    public override Task CanceledAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+        => RecordAsync(request);
+
+    private Task RecordAsync(ApprovalRequest request)
     {
         Closed.Add(request.Status);
 
         return Task.CompletedTask;
+    }
+}
+
+// The PayRun type's handler is every handler a test adds, called in turn; other types have none.
+internal sealed class ListApprovalTypeCatalog : IApprovalTypeCatalog
+{
+    private readonly List<IApprovalTypeHandler> _handlers;
+
+    public ListApprovalTypeCatalog(List<IApprovalTypeHandler> handlers)
+    {
+        _handlers = handlers;
+    }
+
+    public Dictionary<string, IApprovalTypeHandler> Others { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public IReadOnlyList<ApprovalType> List()
+        => [new ApprovalType { Name = "PayRun" }, .. Others.Keys.Select(name => new ApprovalType { Name = name })];
+
+    public ApprovalType Find(string name)
+        => List().FirstOrDefault(type => string.Equals(type.Name, name, StringComparison.OrdinalIgnoreCase));
+
+    public IApprovalTypeHandler GetHandler(string name)
+        => Others.TryGetValue(name ?? string.Empty, out var handler) ? handler : new FanOut(string.Equals(name, "PayRun", StringComparison.OrdinalIgnoreCase) ? _handlers : []);
+
+    private sealed class FanOut : IApprovalTypeHandler
+    {
+        private readonly List<IApprovalTypeHandler> _handlers;
+
+        public FanOut(List<IApprovalTypeHandler> handlers)
+        {
+            _handlers = handlers;
+        }
+
+        public async Task RequestingAsync(ApprovalRequestingContext context, CancellationToken cancellationToken = default)
+        {
+            foreach (var handler in _handlers)
+            {
+                await handler.RequestingAsync(context, cancellationToken);
+            }
+        }
+
+        public async Task DecidingAsync(ApprovalDecidingContext context, CancellationToken cancellationToken = default)
+        {
+            foreach (var handler in _handlers)
+            {
+                await handler.DecidingAsync(context, cancellationToken);
+            }
+        }
+
+        public async Task StageApprovedAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+        {
+            foreach (var handler in _handlers)
+            {
+                await handler.StageApprovedAsync(request, cancellationToken);
+            }
+        }
+
+        public async Task ApprovedAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+        {
+            foreach (var handler in _handlers)
+            {
+                await handler.ApprovedAsync(request, cancellationToken);
+            }
+        }
+
+        public async Task RejectedAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+        {
+            foreach (var handler in _handlers)
+            {
+                await handler.RejectedAsync(request, cancellationToken);
+            }
+        }
+
+        public async Task CanceledAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+        {
+            foreach (var handler in _handlers)
+            {
+                await handler.CanceledAsync(request, cancellationToken);
+            }
+        }
+
+        public Task<string> GetSubjectUrlAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(request.SubjectUrl);
+
+        public Task<string> GetSubjectDisplayAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(request.Title);
     }
 }
 

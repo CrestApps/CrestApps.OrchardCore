@@ -2,16 +2,16 @@
 
 @model ApprovalTaskViewModel
 
-<p class="hint">@T["Asks for an approval under a policy."]</p>
+<p class="hint">@T["Asks for an approval of a type, under the policy named or the first enabled one whose type and conditions match."]</p>
+<div class="mb-3">
+    <label asp-for="SubjectKind" class="form-label">@T["Approval type"]</label>
+    <input asp-for="SubjectKind" class="form-control code" />
+    <span class="hint">@T["The type's name, such as PayRun or Ticket. Liquid."]</span>
+</div>
 <div class="mb-3">
     <label asp-for="Policy" class="form-label">@T["Policy (id or technical name)"]</label>
     <input asp-for="Policy" class="form-control code" />
-    <span class="hint">@T["Liquid."]</span>
-</div>
-<div class="mb-3">
-    <label asp-for="SubjectKind" class="form-label">@T["Subject kind"]</label>
-    <input asp-for="SubjectKind" class="form-control code" />
-    <span class="hint">@T["Liquid."]</span>
+    <span class="hint">@T["Empty to choose the policy by type, amount and scope. Liquid."]</span>
 </div>
 <div class="mb-3">
     <label asp-for="SubjectId" class="form-label">@T["Subject id"]</label>
@@ -32,4 +32,12 @@
     <label asp-for="SubjectUrl" class="form-label">@T["Subject page"]</label>
     <input asp-for="SubjectUrl" class="form-control code" />
     <span class="hint">@T["Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="Amount" class="form-label">@T["Amount"]</label>
+    <div class="input-group">
+        <input asp-for="Amount" class="form-control code" />
+        <input asp-for="Currency" class="form-control code" placeholder="USD" aria-label="@T["Currency"]" />
+    </div>
+    <span class="hint">@T["A number with a dot, and its currency, for policies chosen by amount. Liquid."]</span>
 </div>

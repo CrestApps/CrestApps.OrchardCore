@@ -1,12 +1,14 @@
 using System.Linq.Expressions;
 using CrestApps.OrchardCore.Approvals.Core.Indexes;
 using CrestApps.OrchardCore.Approvals.Models;
+using CrestApps.OrchardCore.Approvals.Services;
 using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using CrestApps.OrchardCore.SourceAccess;
 using CrestApps.OrchardCore.YesSql.Core.SourceAccess;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.DataSources;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -33,7 +35,7 @@ public sealed class ApprovalRequestsReportDataSet : IndexedReportDataSet<Approva
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="access">Who may see the requests of each subject kind.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public ApprovalRequestsReportDataSet(ISession session, IAuthorizationService authorizationService, ISourceAccessService access, IStringLocalizer<ApprovalRequestsReportDataSet> stringLocalizer)
+    public ApprovalRequestsReportDataSet(ISession session, IAuthorizationService authorizationService, ISourceAccessService access, IApprovalTypeCatalog types, IStringLocalizerFactory localizerFactory, IStringLocalizer<ApprovalRequestsReportDataSet> stringLocalizer)
         : base(
             new DataSetDescriptor(DataSetName, stringLocalizer["Approval requests"], stringLocalizer["One row per approval request: what was asked, the policy, the status, who asked, who decided and the dates."]),
             session,
@@ -50,6 +52,8 @@ public sealed class ApprovalRequestsReportDataSet : IndexedReportDataSet<Approva
         AddField("ItemId", S["ID"], DataFieldType.Text, record => record.ItemId, group).Identifier();
         AddField("Title", S["Title"], DataFieldType.Text, record => record.Title, group);
         AddField("SubjectKind", S["Subject kind"], DataFieldType.Text, record => record.SubjectKind, group);
+        AddField("Type", S["Type"], DataFieldType.Text, record => types.Find(record.SubjectKind)?.DisplayName is { } name ? localizerFactory.Localize(name).Value : record.SubjectKind, group).Description = S["The approval type as people see it, such as Pay run."].Value;
+        AddField("Stage", S["Stage"], DataFieldType.Integer, record => record.CurrentStage + 1, group).Description = S["The stage being decided, or the last one decided, from 1."].Value;
         AddField("SubjectId", S["Subject ID"], DataFieldType.Text, record => record.SubjectId, group);
         AddField("PolicyId", S["Policy ID"], DataFieldType.Text, record => record.PolicyId, group);
         AddField("PolicyTitle", S["Policy"], DataFieldType.Text, record => record.PolicyTitle, group);

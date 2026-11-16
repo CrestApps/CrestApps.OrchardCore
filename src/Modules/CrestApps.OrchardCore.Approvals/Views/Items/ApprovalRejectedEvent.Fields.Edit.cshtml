@@ -1,6 +1,10 @@
 @using CrestApps.OrchardCore.Approvals.Workflows
-@using OrchardCore.Workflows.ViewModels
 
-@model ActivityViewModel<ApprovalRejectedEvent>
+@model ApprovalEventViewModel
 
-<p class="hint">@T["Starts when an approver rejects a request. Input: RequestId, SubjectKind, SubjectId, Title, PolicyId, PolicyTitle, Status, Change, RequesterName, ApproverUserNames (comma separated, for Notify User Task), Decider, Note and DueUtc."]</p>
+<p class="hint">@T["Starts when an approver rejects a request. Input: RequestId, SubjectKind, SubjectId, Title, PolicyId, PolicyTitle, Status, Change, RequesterName, ApproverUserNames (comma separated, for Notify User Task), Decider, Note, DueUtc, Stage, Amount and Currency."]</p>
+<div class="mb-3">
+    <label asp-for="ApprovalType" class="form-label">@T["Approval type"]</label>
+    <input asp-for="ApprovalType" class="form-control code" />
+    <span class="hint">@T["Only requests of this type, such as PayRun or Ticket; empty for every type."]</span>
+</div>

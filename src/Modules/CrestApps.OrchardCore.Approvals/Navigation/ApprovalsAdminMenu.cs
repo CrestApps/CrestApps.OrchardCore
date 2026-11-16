@@ -30,7 +30,6 @@ public sealed class ApprovalsAdminMenu : AdminNavigationProvider
             .Add(S["Requests"], S["Requests"].PrefixPosition("10"), requests => requests
                 .Id("approvalRequests")
                 .Action("Index", "ApprovalRequests", ApprovalsConstants.Features.Approvals)
-                .Permission(ApprovalsPermissions.ViewApprovalRequests)
                 .LocalNav())
             .Add(S["Policies"], S["Policies"].PrefixPosition("20"), policies => policies
                 .Id("approvalPolicies")

@@ -99,7 +99,7 @@ public sealed class ApprovalRequestStoreTests : IAsyncLifetime
     {
         // Arrange
         await using var session = _store.CreateSession();
-        var dataSet = new ApprovalRequestsReportDataSet(session, TestSecurity.Granting(ApprovalsPermissions.ViewApprovalRequests), Access(), RecipeRoundTrip.Localizer<ApprovalRequestsReportDataSet>());
+        var dataSet = new ApprovalRequestsReportDataSet(session, TestSecurity.Granting(ApprovalsPermissions.ViewApprovalRequests), Access(), new ListApprovalTypeCatalog([]), new CrestApps.OrchardCore.Tests.Modules.Reports.Designer.PassThroughStringLocalizerFactory(), RecipeRoundTrip.Localizer<ApprovalRequestsReportDataSet>());
         var query = new DataSourceQuery
         {
             DataSet = ApprovalRequestsReportDataSet.DataSetName,

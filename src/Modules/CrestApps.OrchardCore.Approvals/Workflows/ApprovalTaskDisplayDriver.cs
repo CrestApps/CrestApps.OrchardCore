@@ -74,6 +74,16 @@ public class ApprovalTaskViewModel
     public string SubjectUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets the amount (Liquid).
+    /// </summary>
+    public string Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currency (Liquid).
+    /// </summary>
+    public string Currency { get; set; }
+
+    /// <summary>
     /// Gets or sets the request id.
     /// </summary>
     public string RequestId { get; set; }

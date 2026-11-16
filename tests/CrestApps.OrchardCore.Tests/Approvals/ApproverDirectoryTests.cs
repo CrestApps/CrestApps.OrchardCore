@@ -28,8 +28,8 @@ public sealed class ApproverDirectoryTests
     {
         // Arrange
         var directory = Directory(new ServiceCollection(), TestSecurity.Granting(_finance));
-        var rule = new ApproverRule { Kind = ApproverKind.Permission, Value = "ApproveFinance" };
-        var unknown = new ApproverRule { Kind = ApproverKind.Permission, Value = "Missing" };
+        var rule = new ApproverRule { Kind = ApproverRuleKinds.Permission, Value = "ApproveFinance" };
+        var unknown = new ApproverRule { Kind = ApproverRuleKinds.Permission, Value = "Missing" };
 
         // Act + Assert
         Assert.True(await directory.IsNamedAsync(rule, new ApprovalRequest(), TestSecurity.User("pat"), TestContext.Current.CancellationToken));
@@ -42,7 +42,7 @@ public sealed class ApproverDirectoryTests
     {
         // Arrange
         var directory = Directory(new ServiceCollection(), TestSecurity.Granting());
-        var rule = new ApproverRule { Kind = ApproverKind.Role, Value = "Payroll" };
+        var rule = new ApproverRule { Kind = ApproverRuleKinds.Role, Value = "Payroll" };
         var member = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Name, "pat"), new Claim(ClaimTypes.NameIdentifier, "pat-id"), new Claim(ClaimTypes.Role, "Payroll")], "test"));
 
         // Act + Assert
@@ -59,7 +59,7 @@ public sealed class ApproverDirectoryTests
             .ReturnsAsync([new StaffMember { ItemId = "staff-pat", UserId = "pat-id" }, new StaffMember { ItemId = "staff-lee", UserId = "lee-id" }, new StaffMember { ItemId = "staff-none" }]);
         var services = new ServiceCollection().AddSingleton(hierarchy.Object);
         var directory = Directory(services, TestSecurity.Granting());
-        var rule = new ApproverRule { Kind = ApproverKind.Manager };
+        var rule = new ApproverRule { Kind = ApproverRuleKinds.Manager };
         var request = new ApprovalRequest { SubjectStaffMemberId = "staff-kim" };
 
         // Act
@@ -83,7 +83,7 @@ public sealed class ApproverDirectoryTests
         staff.Setup(service => service.GetAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IEnumerable<string> ids, CancellationToken _) => ids.ToDictionary(id => id, id => new StaffMember { ItemId = id, UserId = id.Replace("staff-", string.Empty, StringComparison.Ordinal) + "-id" }));
         var directory = Directory(new ServiceCollection().AddSingleton(staff.Object), TestSecurity.Granting());
-        var rule = new ApproverRule { Kind = ApproverKind.Staff, Value = "staff-pat, staff-lee" };
+        var rule = new ApproverRule { Kind = ApproverRuleKinds.Staff, Value = "staff-pat, staff-lee" };
 
         // Act + Assert
         Assert.True(await directory.IsNamedAsync(rule, new ApprovalRequest(), TestSecurity.User("lee"), TestContext.Current.CancellationToken));
@@ -134,11 +134,57 @@ public sealed class ApproverDirectoryTests
         Assert.Contains("Missing hours", told.Message.Summary, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task UsersRule_NamesTheListedUsers()
+    {
+        // Arrange
+        var directory = Directory(new ServiceCollection(), TestSecurity.Granting());
+        var rule = new ApproverRule { Kind = ApproverRuleKinds.Users, Value = "pat-id, lee-id" };
+
+        // Act + Assert
+        Assert.True(await directory.IsNamedAsync(rule, new ApprovalRequest(), TestSecurity.User("lee"), TestContext.Current.CancellationToken));
+        Assert.False(await directory.IsNamedAsync(rule, new ApprovalRequest(), TestSecurity.User("kim"), TestContext.Current.CancellationToken));
+        Assert.Equal(["pat-id", "lee-id"], await directory.GetUserIdsAsync(rule, new ApprovalRequest(), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ARuleWhoseProviderIsOff_NamesNobody_AndOnlyTheManagerDependsOnTheRequest()
+    {
+        // Arrange: Staff is off, so neither the manager nor the staff provider is registered.
+        var directory = Directory(new ServiceCollection(), TestSecurity.Granting(_finance));
+        var withStaff = Directory(new ServiceCollection().AddSingleton(new Mock<IStaffHierarchy>().Object).AddSingleton(new Mock<IStaffDirectory>().Object), TestSecurity.Granting(_finance));
+
+        // Act + Assert
+        Assert.False(await directory.IsNamedAsync(new ApproverRule { Kind = ApproverRuleKinds.Manager }, new ApprovalRequest { SubjectStaffMemberId = "staff-kim" }, TestSecurity.User("pat"), TestContext.Current.CancellationToken));
+        Assert.False(await directory.IsNamedAsync(new ApproverRule { Kind = "ProjectLead", Value = "x" }, new ApprovalRequest(), TestSecurity.User("pat"), TestContext.Current.CancellationToken));
+        Assert.True(withStaff.DependsOnRequest(new ApproverRule { Kind = ApproverRuleKinds.Manager }));
+        Assert.False(withStaff.DependsOnRequest(new ApproverRule { Kind = ApproverRuleKinds.Permission, Value = "ApproveFinance" }));
+    }
+
+    // The built-in providers; the manager and staff ones only when the Staff services are there, as with Staff on.
     private static ApproverDirectory Directory(IServiceCollection services, Microsoft.AspNetCore.Authorization.IAuthorizationService authorization)
     {
-        var provider = new Mock<IPermissionProvider>();
-        provider.Setup(entry => entry.GetPermissionsAsync()).ReturnsAsync([_finance]);
+        var permissions = new Mock<IPermissionProvider>();
+        permissions.Setup(entry => entry.GetPermissionsAsync()).ReturnsAsync([_finance]);
 
-        return new ApproverDirectory(authorization, [provider.Object], services.BuildServiceProvider());
+        var serviceProvider = services.BuildServiceProvider();
+        var providers = new List<CrestApps.OrchardCore.Approvals.Services.IApproverRuleProvider>
+        {
+            new PermissionApproverRuleProvider(authorization, [permissions.Object], serviceProvider),
+            new RoleApproverRuleProvider(serviceProvider),
+            new UsersApproverRuleProvider(),
+        };
+
+        if (serviceProvider.GetService<IStaffHierarchy>() is { } hierarchy)
+        {
+            providers.Add(new CrestApps.OrchardCore.Approvals.Services.ManagerApproverRuleProvider(hierarchy));
+        }
+
+        if (serviceProvider.GetService<IStaffDirectory>() is { } staff)
+        {
+            providers.Add(new CrestApps.OrchardCore.Approvals.Services.StaffApproverRuleProvider(staff));
+        }
+
+        return new ApproverDirectory(providers);
     }
 }

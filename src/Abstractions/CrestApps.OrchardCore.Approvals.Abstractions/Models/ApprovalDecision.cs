@@ -42,6 +42,11 @@ public sealed class ApprovalDecision
     public string Note { get; set; }
 
     /// <summary>
+    /// Gets or sets the index of the stage the decision was made in, from 0.
+    /// </summary>
+    public int Stage { get; set; }
+
+    /// <summary>
     /// Gets or sets when the decision was made.
     /// </summary>
     public DateTime DecidedUtc { get; set; }

@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Approvals;
 using CrestApps.OrchardCore.Approvals.Services;
 using CrestApps.OrchardCore.Banking.Checks;
 using CrestApps.OrchardCore.Core;
@@ -69,7 +70,11 @@ public static class PayrollCoreServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayRunInput>, PayRunInputHandler>());
         services.TryAddScoped<DefaultPayRunService>();
         services.TryAddScoped<IPayRunService>(serviceProvider => serviceProvider.GetRequiredService<DefaultPayRunService>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IApprovalSubjectHandler, PayRunApprovalSubjectHandler>());
+        services.AddApprovalType<PayRunApprovalTypeHandler>(PayrollConstants.PayRunSubjectKind, type =>
+        {
+            type.DisplayName = LocalizationSource.Create<PayRunApprovalTypeHandler>("Pay run");
+            type.Description = LocalizationSource.Create<PayRunApprovalTypeHandler>("A pay run of an employer, approved before it is processed.");
+        });
         services.AddSourceAccess<PayRunSourceAccess>();
         services.AddSourceAccess<PayStatementSourceAccess>();
         services.TryAddScoped<PayRunInputImporter>();

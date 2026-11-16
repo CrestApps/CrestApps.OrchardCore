@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Approvals.Models;
+using CrestApps.OrchardCore.Approvals.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
@@ -59,17 +60,19 @@ public sealed class ApprovalPolicyHandler : CatalogEntryHandlerBase<ApprovalPoli
     };
 
     private readonly IClock _clock;
-
+    private readonly IEnumerable<IApproverRuleProvider> _providers;
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ApprovalPolicyHandler"/> class.
     /// </summary>
     /// <param name="clock">The clock.</param>
+    /// <param name="providers">The approver rule providers, to check the rules that need a value.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public ApprovalPolicyHandler(IClock clock, IStringLocalizer<ApprovalPolicyHandler> stringLocalizer)
+    public ApprovalPolicyHandler(IClock clock, IEnumerable<IApproverRuleProvider> providers, IStringLocalizer<ApprovalPolicyHandler> stringLocalizer)
     {
         _clock = clock;
+        _providers = providers;
         S = stringLocalizer;
     }
 
@@ -100,19 +103,44 @@ public sealed class ApprovalPolicyHandler : CatalogEntryHandlerBase<ApprovalPoli
             context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(ApprovalPolicy.Name)]));
         }
 
-        if (policy.RequiredApprovals is < 1 or > 10)
+        var stages = policy.GetStages();
+
+        if (stages.Count > 10)
         {
-            context.Result.Fail(new ValidationResult(S["One to ten approvals can be required."], [nameof(ApprovalPolicy.RequiredApprovals)]));
+            context.Result.Fail(new ValidationResult(S["A policy has ten stages at most."], [nameof(ApprovalPolicy.Stages)]));
         }
 
-        if (policy.Approvers.Count == 0)
+        foreach (var (stage, index) in stages.Select((stage, index) => (stage, index + 1)))
         {
-            context.Result.Fail(new ValidationResult(S["Say who may approve: a permission, a role, the manager or named staff."], [nameof(ApprovalPolicy.Approvers)]));
+            if (stage.RequiredApprovals is < 1 or > 10)
+            {
+                context.Result.Fail(new ValidationResult(S["One to ten approvals can be required at stage {0}.", index], [nameof(ApprovalPolicy.RequiredApprovals)]));
+            }
+
+            if (stage.Approvers.Count == 0)
+            {
+                context.Result.Fail(new ValidationResult(S["Say who may approve at stage {0}: a permission, a role, named users, the manager or another approver rule.", index], [nameof(ApprovalPolicy.Approvers)]));
+            }
+
+            foreach (var rule in stage.Approvers)
+            {
+                var provider = _providers.FirstOrDefault(candidate => string.Equals(candidate.Name, rule.Kind, StringComparison.OrdinalIgnoreCase));
+
+                // A rule of a provider whose feature is off is kept: it names nobody until the feature is on again.
+                if (string.IsNullOrWhiteSpace(rule.Kind))
+                {
+                    context.Result.Fail(new ValidationResult(S["Each approver rule at stage {0} needs a kind.", index], [nameof(ApprovalPolicy.Approvers)]));
+                }
+                else if (provider?.NeedsValue == true && string.IsNullOrWhiteSpace(rule.Value))
+                {
+                    context.Result.Fail(new ValidationResult(S["The approver rule {0} at stage {1} needs a value.", rule.Kind, index], [nameof(ApprovalPolicy.Approvers)]));
+                }
+            }
         }
 
-        if (policy.Approvers.Any(rule => rule.Kind != ApproverKind.Manager && string.IsNullOrWhiteSpace(rule.Value)))
+        if (policy.MinimumAmount is { } minimum && policy.MaximumAmount is { } maximum && minimum > maximum)
         {
-            context.Result.Fail(new ValidationResult(S["Each approver rule but the manager needs a permission, a role or staff members."], [nameof(ApprovalPolicy.Approvers)]));
+            context.Result.Fail(new ValidationResult(S["The least amount is more than the most amount."], [nameof(ApprovalPolicy.MinimumAmount)]));
         }
 
         if (policy.DueAfterHours is < 1)
@@ -138,5 +166,13 @@ public sealed class ApprovalPolicyHandler : CatalogEntryHandlerBase<ApprovalPoli
         policy.AllowRequesterToApprove = json.ContainsKey(nameof(ApprovalPolicy.AllowRequesterToApprove)) ? values.AllowRequesterToApprove : policy.AllowRequesterToApprove;
         policy.AllowSubjectToDecide = json.ContainsKey(nameof(ApprovalPolicy.AllowSubjectToDecide)) ? values.AllowSubjectToDecide : policy.AllowSubjectToDecide;
         policy.DueAfterHours = json.ContainsKey(nameof(ApprovalPolicy.DueAfterHours)) ? values.DueAfterHours : policy.DueAfterHours;
+        policy.Types = json.ContainsKey(nameof(ApprovalPolicy.Types)) ? values.Types ?? [] : policy.Types;
+        policy.Enabled = json.ContainsKey(nameof(ApprovalPolicy.Enabled)) ? values.Enabled : policy.Enabled;
+        policy.Order = json.ContainsKey(nameof(ApprovalPolicy.Order)) ? values.Order : policy.Order;
+        policy.MinimumAmount = json.ContainsKey(nameof(ApprovalPolicy.MinimumAmount)) ? values.MinimumAmount : policy.MinimumAmount;
+        policy.MaximumAmount = json.ContainsKey(nameof(ApprovalPolicy.MaximumAmount)) ? values.MaximumAmount : policy.MaximumAmount;
+        policy.Currency = json.ContainsKey(nameof(ApprovalPolicy.Currency)) ? values.Currency : policy.Currency;
+        policy.AccessScope = json.ContainsKey(nameof(ApprovalPolicy.AccessScope)) ? values.AccessScope : policy.AccessScope;
+        policy.Stages = json.ContainsKey(nameof(ApprovalPolicy.Stages)) ? values.Stages ?? [] : policy.Stages;
     }
 }

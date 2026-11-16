@@ -4,13 +4,15 @@ using CrestApps.Core.Models;
 namespace CrestApps.OrchardCore.Approvals.Models;
 
 /// <summary>
-/// The record of a decision someone asked for about a subject (an open kind and id, such as a pay run), with the
-/// policy that says who may decide it and the decisions made.
+/// The record of a decision someone asked for about a subject of an approval type (such as a pay run, a ticket or a
+/// time sheet), with the stages of the policy that say who may decide it, and the decisions made. A type keeps its own
+/// data on the request with <c>Put</c> and reads it with <c>TryGet</c>.
 /// </summary>
 public sealed class ApprovalRequest : CatalogItem, IModifiedUtcAwareModel
 {
     /// <summary>
-    /// Gets or sets the kind of the subject, such as <c>PayRun</c>.
+    /// Gets or sets the approval type's name (<c>ApprovalTypeOptions</c>), the kind of the subject, such as
+    /// <c>PayRun</c>.
     /// </summary>
     public string SubjectKind { get; set; }
 
@@ -67,9 +69,21 @@ public sealed class ApprovalRequest : CatalogItem, IModifiedUtcAwareModel
     public string PolicyTitle { get; set; }
 
     /// <summary>
-    /// Gets or sets how many approvals the request needs, copied from the policy when it was made.
+    /// Gets or sets how many approvals a request made before stages needs, copied from the policy when it was made.
     /// </summary>
     public int RequiredApprovals { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the stages, copied from the policy when the request was made, so a later change of the policy
+    /// never changes who decides a request already asked. Empty for a request made before stages: it has one stage,
+    /// <see cref="Approvers"/> and <see cref="RequiredApprovals"/>.
+    /// </summary>
+    public List<ApprovalStage> Stages { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the index of the stage being decided, from 0.
+    /// </summary>
+    public int CurrentStage { get; set; }
 
     /// <summary>
     /// Gets or sets the requester's user id, or <see langword="null"/> when a workflow asked.
@@ -122,8 +136,7 @@ public sealed class ApprovalRequest : CatalogItem, IModifiedUtcAwareModel
     public DateTime? ModifiedUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets who may decide, copied from the policy when the request was made, so a later change of the policy
-    /// never changes who decides a request already asked.
+    /// Gets or sets who may decide a request made before stages, copied from the policy when it was made.
     /// </summary>
     public List<ApproverRule> Approvers { get; set; } = [];
 
@@ -145,8 +158,34 @@ public sealed class ApprovalRequest : CatalogItem, IModifiedUtcAwareModel
     public string SubjectVersion { get; set; }
 
     /// <summary>
-    /// Gets the number of approvals made.
+    /// Gets the number of approvals made, in every stage.
     /// </summary>
     public int ApprovalCount
         => Decisions.Count(decision => decision.Kind == ApprovalDecisionKind.Approve);
+
+    /// <summary>
+    /// Gets the number of approvals made in the current stage.
+    /// </summary>
+    public int StageApprovalCount
+        => Decisions.Count(decision => decision.Kind == ApprovalDecisionKind.Approve && decision.Stage == CurrentStage);
+
+    /// <summary>
+    /// Returns the request's stages: <see cref="Stages"/>, or the one stage of a request made before stages.
+    /// </summary>
+    /// <returns>The stages.</returns>
+    public IReadOnlyList<ApprovalStage> GetStages()
+        => Stages is { Count: > 0 }
+            ? Stages
+            : [new ApprovalStage { Approvers = Approvers ?? [], RequiredApprovals = Math.Max(1, RequiredApprovals) }];
+
+    /// <summary>
+    /// Returns the stage being decided.
+    /// </summary>
+    /// <returns>The stage.</returns>
+    public ApprovalStage GetCurrentStage()
+    {
+        var stages = GetStages();
+
+        return stages[Math.Clamp(CurrentStage, 0, stages.Count - 1)];
+    }
 }

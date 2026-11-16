@@ -5,4 +5,8 @@
 @model ActivityViewModel<ApprovalApprovedEvent>
 
 <header><h4><i class="fa-solid fa-circle-check" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Approval Approved"])</h4></header>
-<p class="hint">@T["Starts when a request has the approvals it needs. Input: RequestId, SubjectKind, SubjectId, Title, PolicyId, PolicyTitle, Status, Change, RequesterName, ApproverUserNames (comma separated, for Notify User Task), Decider, Note and DueUtc."]</p>
+<p class="hint">@T["Starts when a request has the approvals it needs. Input: RequestId, SubjectKind, SubjectId, Title, PolicyId, PolicyTitle, Status, Change, RequesterName, ApproverUserNames (comma separated, for Notify User Task), Decider, Note, DueUtc, Stage, Amount and Currency."]</p>
+@if (!string.IsNullOrEmpty(Model.Activity.ApprovalType))
+{
+    <p class="small mb-0">@T["Type: {0}", Model.Activity.ApprovalType]</p>
+}

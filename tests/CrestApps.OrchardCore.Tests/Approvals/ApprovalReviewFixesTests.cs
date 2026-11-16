@@ -21,14 +21,14 @@ public sealed class ApprovalReviewFixesTests
 
         // Act: the policy editor loosens it, tries to approve their own request, and tightens it again.
         policy.AllowRequesterToApprove = true;
-        policy.Approvers.Add(new ApproverRule { Kind = ApproverKind.Permission, Value = "Everyone" });
+        policy.Approvers.Add(new ApproverRule { Kind = ApproverRuleKinds.Permission, Value = "Everyone" });
         var result = await context.Service.DecideAsync(request, TestSecurity.User("riley"), ApprovalDecisionKind.Approve, null, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Succeeded);
         Assert.Equal(ApprovalStatus.Pending, request.Status);
         Assert.False(request.AllowRequesterToApprove);
-        Assert.Single(request.Approvers);
+        Assert.Single(request.GetCurrentStage().Approvers);
     }
 
     [Fact]
@@ -81,12 +81,12 @@ public sealed class ApprovalReviewFixesTests
         // Arrange
         var context = new ApprovalsTestContext();
         context.Directory.People["Small"] = ["pat"];
-        var small = new ApprovalPolicy { Name = "Small", RequiredApprovals = 2, Approvers = [new ApproverRule { Kind = ApproverKind.Permission, Value = "Small" }] };
-        var manager = new ApprovalPolicy { Name = "Manager", RequiredApprovals = 2, Approvers = [new ApproverRule { Kind = ApproverKind.Manager }] };
+        var small = new ApprovalPolicy { Name = "Small", RequiredApprovals = 2, Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Permission, Value = "Small" }] };
+        var manager = new ApprovalPolicy { Name = "Manager", RequiredApprovals = 2, Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Manager }] };
 
         // Act
-        var smallCount = await context.Directory.CountPeopleAsync(small, TestContext.Current.CancellationToken);
-        var managerCount = await context.Directory.CountPeopleAsync(manager, TestContext.Current.CancellationToken);
+        var smallCount = await context.Directory.CountPeopleAsync(small.GetStages()[0], TestContext.Current.CancellationToken);
+        var managerCount = await context.Directory.CountPeopleAsync(manager.GetStages()[0], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, smallCount);

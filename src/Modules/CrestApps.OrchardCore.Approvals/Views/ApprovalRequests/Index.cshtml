@@ -4,27 +4,35 @@
     <breadcrumb name="ApprovalRequests" title="@T["Approvals"]" />
 </zone>
 
-<form asp-action="Index" method="get" class="no-multisubmit">
+<form asp-action="Index" method="get" id="approval-requests-filter" class="no-multisubmit">
+    <input type="hidden" asp-for="View" />
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-2 gy-2 align-items-center">
-                <div class="col">
-                    <select asp-for="Status" class="form-select" onchange="this.form.submit()" aria-label="@T["Status"]">
-                        <option value="Pending">@T["Waiting for a decision"]</option>
-                        <option value="Approved">@T["Approved"]</option>
-                        <option value="Rejected">@T["Rejected"]</option>
-                        <option value="Canceled">@T["Withdrawn"]</option>
-                        <option value="All">@T["All requests"]</option>
-                    </select>
-                </div>
-            </div>
+            <ul class="nav nav-pills">
+                <li class="nav-item">
+                    <a class="nav-link @(Model.View == ApprovalRequestsIndexViewModel.WaitingView ? "active" : null)" asp-action="Index" asp-route-view="@ApprovalRequestsIndexViewModel.WaitingView" asp-route-type="@Model.Type">@T["Waiting for me"]</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(Model.View == ApprovalRequestsIndexViewModel.MineView ? "active" : null)" asp-action="Index" asp-route-view="@ApprovalRequestsIndexViewModel.MineView" asp-route-type="@Model.Type">@T["My requests"]</a>
+                </li>
+                @if (Model.CanSeeAll)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @(Model.View == ApprovalRequestsIndexViewModel.AllView ? "active" : null)" asp-action="Index" asp-route-view="@ApprovalRequestsIndexViewModel.AllView" asp-route-type="@Model.Type">@T["All requests"]</a>
+                    </li>
+                }
+            </ul>
         </div>
     </div>
 </form>
 
+@{
+    Model.List.ToolbarActions = await New.ApprovalRequestsFilter(ViewModel: Model, FormId: "approval-requests-filter");
+}
+
 <admin-list name="ApprovalRequests" context="Model.List"
             show-select-all="false"
-            empty-message="@T["<strong>Nothing here!</strong> No approval request matches."]">
+            empty-message="@(Model.View == ApprovalRequestsIndexViewModel.WaitingView ? T["<strong>Nothing here!</strong> No request is waiting for your decision."] : T["<strong>Nothing here!</strong> No approval request matches."])">
     <admin-list-list item-css-class="list-group-item" />
     <admin-list-grid>
         <admin-list-column name="Request" position="10" title="@T["Request"]" />

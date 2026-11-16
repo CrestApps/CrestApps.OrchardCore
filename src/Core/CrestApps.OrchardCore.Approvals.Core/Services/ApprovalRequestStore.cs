@@ -76,6 +76,18 @@ public sealed class ApprovalRequestStore : DocumentCatalog<ApprovalRequest, Appr
             requests = requests.Where(index => index.PolicyId == policyId);
         }
 
+        if (!string.IsNullOrEmpty(query.Type))
+        {
+            var type = query.Type;
+            requests = requests.Where(index => index.SourceKind == type);
+        }
+
+        if (!string.IsNullOrEmpty(query.RequesterUserId))
+        {
+            var requester = query.RequesterUserId;
+            requests = requests.Where(index => index.RequesterUserId == requester);
+        }
+
         var count = await requests.CountAsync(cancellationToken);
         var ordered = query.OldestFirst
             ? requests.OrderBy(index => index.CreatedUtc).ThenBy(index => index.Id)

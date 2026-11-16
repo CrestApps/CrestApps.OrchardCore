@@ -4,9 +4,11 @@ using CrestApps.Core.Models;
 namespace CrestApps.OrchardCore.Approvals.Models;
 
 /// <summary>
-/// Who may decide a kind of approval and how many of them must approve. A request follows the policy it was made
-/// under; the two built-in rules (the requester can't approve, nobody decides a request about their own record) can
-/// each be turned off, such as for a one-person business.
+/// Who may decide approvals of some types, in what stages, and how many of them must approve each stage. A request
+/// names its policy, or gets the first enabled one whose types and conditions match (<c>IApprovalPolicyResolver</c>).
+/// A request follows the policy as it was when it was made; the two built-in rules (the requester can't approve,
+/// nobody decides a request about their own record) apply at every stage and can each be turned off, such as for a
+/// one-person business.
 /// </summary>
 public sealed class ApprovalPolicy : CatalogItem, INameAwareModel, IModifiedUtcAwareModel
 {
@@ -26,12 +28,58 @@ public sealed class ApprovalPolicy : CatalogItem, INameAwareModel, IModifiedUtcA
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the ways to be an approver; anyone any rule names may approve.
+    /// Gets or sets the approval types the policy serves, by name (<c>ApprovalTypeOptions</c>); empty serves any type.
+    /// </summary>
+    public List<string> Types { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the policy is chosen for requests that name no policy. A request that
+    /// names it still uses it.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets where the policy comes when one is chosen for a request that names none; lower first.
+    /// </summary>
+    public int Order { get; set; }
+
+    /// <summary>
+    /// Gets or sets the least amount a request must have for the policy to be chosen, or <see langword="null"/>.
+    /// </summary>
+    public decimal? MinimumAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most amount a request may have for the policy to be chosen, or <see langword="null"/>.
+    /// </summary>
+    public decimal? MaximumAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currency a request's amount must be in for the policy to be chosen, or <see langword="null"/>
+    /// for any.
+    /// </summary>
+    public string Currency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the access scope a request must have for the policy to be chosen, such as one employer, or
+    /// <see langword="null"/> for any.
+    /// </summary>
+    public string AccessScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stages, decided one after the other. Empty means one stage made of <see cref="Approvers"/>
+    /// and <see cref="RequiredApprovals"/>, as a policy saved before stages had.
+    /// </summary>
+    public List<ApprovalStage> Stages { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the ways to be an approver of a policy without <see cref="Stages"/>; anyone any rule names may
+    /// approve.
     /// </summary>
     public List<ApproverRule> Approvers { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets how many different approvers must approve, 1 or more. One rejection rejects the request.
+    /// Gets or sets how many different approvers must approve a policy without <see cref="Stages"/>, 1 or more. One
+    /// rejection rejects the request.
     /// </summary>
     public int RequiredApprovals { get; set; } = 1;
 
@@ -54,4 +102,22 @@ public sealed class ApprovalPolicy : CatalogItem, INameAwareModel, IModifiedUtcA
     /// Gets or sets when the policy last changed.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Returns the stages a request under the policy goes through: <see cref="Stages"/>, or one stage made of
+    /// <see cref="Approvers"/> and <see cref="RequiredApprovals"/>.
+    /// </summary>
+    /// <returns>Copies of the stages.</returns>
+    public IReadOnlyList<ApprovalStage> GetStages()
+        => Stages is { Count: > 0 }
+            ? [.. Stages.Select(stage => stage.Clone())]
+            : [new ApprovalStage { Approvers = [.. (Approvers ?? []).Select(rule => rule.Clone())], RequiredApprovals = RequiredApprovals }];
+
+    /// <summary>
+    /// Returns whether the policy serves an approval type.
+    /// </summary>
+    /// <param name="type">The type's name.</param>
+    /// <returns><see langword="true"/> when it lists the type or lists none.</returns>
+    public bool Serves(string type)
+        => Types is not { Count: > 0 } || Types.Contains(type, StringComparer.OrdinalIgnoreCase);
 }

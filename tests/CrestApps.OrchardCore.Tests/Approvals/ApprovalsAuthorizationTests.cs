@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Approvals;
+using CrestApps.OrchardCore.Approvals.Core.Services;
 using CrestApps.OrchardCore.Approvals.Controllers;
 using CrestApps.OrchardCore.Approvals.Deployments;
 using CrestApps.OrchardCore.Approvals.Models;
@@ -32,11 +33,11 @@ public sealed class ApprovalsAuthorizationTests
     private const string PayRun = "PayRun";
 
     [Fact]
-    public async Task Decide_ARequestAboutASubjectThePersonMayNotSee_IsNotFound()
+    public async Task Decide_ARequestThePersonMayNeitherSeeNorDecide_IsNotFound()
     {
-        // Arrange
+        // Arrange: Sam may view requests, but not group A's, and no policy names Sam.
         var (context, _, groupA) = await SeedAsync();
-        var controller = Controller(context, "lee");
+        var controller = Controller(context, "sam", grants: [ApprovalsPermissions.ViewApprovalRequests, ApprovalsPermissions.ManageApprovalRequests]);
 
         // Act + Assert
         Assert.IsType<NotFoundResult>(await controller.Decide(groupA.ItemId));
@@ -61,16 +62,72 @@ public sealed class ApprovalsAuthorizationTests
     }
 
     [Fact]
-    public async Task Pages_WithoutViewApprovalRequests_AreForbidden()
+    public async Task AManagerWithoutApprovalsPermissions_DecidesTheirTeamsRequest_AndGetsNotFoundForOthers()
+    {
+        // Arrange: Morgan holds no Approvals permission; the time sheet policy names Morgan as the team's manager.
+        var (context, open, groupA) = await SeedAsync();
+        var timesheet = TimesheetPolicy(context);
+        var team = (await context.Service.RequestAsync(new ApprovalSubmission { Policy = timesheet.Name, SubjectKind = "Timesheet", SubjectId = "t-1", Title = "Week 46" }, TestSecurity.User("riley"), TestContext.Current.CancellationToken)).Request;
+        var morgan = Controller(context, "morgan", grants: []);
+
+        // Act
+        var page = await morgan.Decide(team.ItemId);
+        var others = new[] { await morgan.Decide(open.ItemId), await morgan.Decide(groupA.ItemId), await morgan.DecidePost(groupA.ItemId, new ApprovalDecideViewModel(), "Approve") };
+        var decided = await morgan.DecidePost(team.ItemId, new ApprovalDecideViewModel(), "Approve");
+
+        // Assert
+        Assert.IsType<ViewResult>(page);
+        Assert.All(others, result => Assert.IsType<NotFoundResult>(result));
+        Assert.IsType<RedirectToActionResult>(decided);
+        Assert.Equal(ApprovalStatus.Approved, team.Status);
+        Assert.Equal(ApprovalStatus.Pending, groupA.Status);
+    }
+
+    [Fact]
+    public async Task ARequesterWithoutApprovalsPermissions_SeesAndWithdrawsTheirOwnRequest_Only()
+    {
+        // Arrange: Jo, whom no policy names, asked for one request; Riley asked for the open one.
+        var (context, open, _) = await SeedAsync();
+        var jos = (await context.Service.RequestAsync(new ApprovalSubmission { Policy = "PayRunApproval", SubjectKind = "Expense", SubjectId = "e-2", Title = "Jo's expense" }, TestSecurity.User("jo"), TestContext.Current.CancellationToken)).Request;
+        var jo = Controller(context, "jo", grants: []);
+
+        // Act
+        var own = await jo.Decide(jos.ItemId);
+        var other = await jo.Decide(open.ItemId);
+        var withdrawOther = await jo.Cancel(open.ItemId, null);
+        var withdrawn = await jo.Cancel(jos.ItemId, "Not needed");
+
+        // Assert
+        Assert.IsType<ViewResult>(own);
+        Assert.IsType<NotFoundResult>(other);
+        Assert.IsType<NotFoundResult>(withdrawOther);
+        Assert.Equal(ApprovalStatus.Pending, open.Status);
+        Assert.IsType<RedirectToActionResult>(withdrawn);
+        Assert.Equal(ApprovalStatus.Canceled, jos.Status);
+    }
+
+    [Fact]
+    public async Task WaitingForMe_ListsOnlyTheRequestsWhoseCurrentStageNamesThePerson()
     {
         // Arrange
-        var (context, open, _) = await SeedAsync();
-        var controller = Controller(context, "pat", grants: []);
+        var (context, open, groupA) = await SeedAsync();
+        var timesheet = TimesheetPolicy(context);
+        var team = (await context.Service.RequestAsync(new ApprovalSubmission { Policy = timesheet.Name, SubjectKind = "Timesheet", SubjectId = "t-1", Title = "Week 46" }, TestSecurity.User("riley"), TestContext.Current.CancellationToken)).Request;
+        var inbox = new ApprovalInbox(context.Store, context.Service);
 
-        // Act + Assert
-        Assert.IsType<ForbidResult>(await controller.Decide(open.ItemId));
-        Assert.IsType<ForbidResult>(await controller.DecidePost(open.ItemId, new ApprovalDecideViewModel(), "Approve"));
-        Assert.IsType<ForbidResult>(await controller.Cancel(open.ItemId, null));
+        // Act
+        var (morganCount, morgans) = await inbox.ListWaitingAsync(TestSecurity.User("morgan"), null, 0, 10, TestContext.Current.CancellationToken);
+        var (patCount, pats) = await inbox.ListWaitingAsync(TestSecurity.User("pat"), null, 0, 10, TestContext.Current.CancellationToken);
+        var (_, patsTimesheets) = await inbox.ListWaitingAsync(TestSecurity.User("pat"), "Timesheet", 0, 10, TestContext.Current.CancellationToken);
+        var (_, rileys) = await inbox.ListWaitingAsync(TestSecurity.User("riley"), null, 0, 10, TestContext.Current.CancellationToken);
+
+        // Assert: the requester decides none of their own.
+        Assert.Equal(1, morganCount);
+        Assert.Equal([team.ItemId], morgans.Select(request => request.ItemId));
+        Assert.Equal(2, patCount);
+        Assert.Equal(new[] { open.ItemId, groupA.ItemId }.Order(StringComparer.Ordinal), pats.Select(request => request.ItemId).Order(StringComparer.Ordinal));
+        Assert.Empty(patsTimesheets);
+        Assert.Empty(rileys);
     }
 
     [Fact]
@@ -295,17 +352,42 @@ public sealed class ApprovalsAuthorizationTests
     private static ApprovalRequestsDeploymentSource ExportSource(ApprovalsTestContext context, IHttpContextAccessor accessor, RecordingNotifier notifier, params Permission[] grants)
         => new(context.Store, Access(), accessor, TestSecurity.Granting(grants), notifier, new EchoHtmlLocalizer<ApprovalRequestsDeploymentSource>());
 
+    // A policy whose one rule names the team's manager, Morgan.
+    private static ApprovalPolicy TimesheetPolicy(ApprovalsTestContext context)
+    {
+        context.Directory.People["Team"] = ["morgan"];
+
+        var policy = new ApprovalPolicy
+        {
+            ItemId = "policy-Timesheet",
+            Name = "TimesheetApproval",
+            Title = "Time sheet approval",
+            Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Manager, Value = "Team" }],
+        };
+
+        context.Policies.Add(policy);
+
+        return policy;
+    }
+
     private static ApprovalRequestsController Controller(ApprovalsTestContext context, string userName, Permission[] grants = null)
     {
+        var display = new Mock<global::OrchardCore.DisplayManagement.IDisplayManager<ApprovalRequest>>();
         var controller = new ApprovalRequestsController(
             context.Manager,
             context.Store,
             context.Service,
+            context.Types,
+            new ApprovalInbox(context.Store, context.Service),
             Access(),
             TestSecurity.Granting(grants ?? [ApprovalsPermissions.ViewApprovalRequests, ApprovalsPermissions.ManageApprovalRequests]),
+            display.Object,
+            new Mock<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor>().Object,
+            new CrestApps.OrchardCore.Tests.Modules.Reports.Designer.PassThroughStringLocalizerFactory(),
             new RecordingNotifier(),
             new FixedOffsetLocalClock(() => context.Now, TimeSpan.FromHours(-5)),
-            new EchoHtmlLocalizer<ApprovalRequestsController>());
+            new EchoHtmlLocalizer<ApprovalRequestsController>(),
+            RecipeRoundTrip.Localizer<ApprovalRequestsController>());
 
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = TestSecurity.User(userName) } };
 

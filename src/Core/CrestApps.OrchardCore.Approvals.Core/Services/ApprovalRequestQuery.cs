@@ -19,6 +19,16 @@ public sealed class ApprovalRequestQuery
     public string PolicyId { get; set; }
 
     /// <summary>
+    /// Gets or sets the approval type (the requests' <c>SubjectKind</c>), or <see langword="null"/> for every type.
+    /// </summary>
+    public string Type { get; set; }
+
+    /// <summary>
+    /// Gets or sets the requester's user id, for the requests a person made, or <see langword="null"/>.
+    /// </summary>
+    public string RequesterUserId { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the oldest come first; the newest do by default.
     /// </summary>
     public bool OldestFirst { get; set; }

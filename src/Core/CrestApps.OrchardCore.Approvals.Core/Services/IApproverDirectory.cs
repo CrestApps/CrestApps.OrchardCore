@@ -4,8 +4,8 @@ using CrestApps.OrchardCore.Approvals.Models;
 namespace CrestApps.OrchardCore.Approvals.Core.Services;
 
 /// <summary>
-/// Answers the questions approver rules ask: does a person hold a permission or a role, who manages a staff member,
-/// which user is a staff member, and who the people of a rule are, for notices.
+/// Answers the questions approver rules ask, through the approver rule provider each rule names: is a person named by
+/// a rule, and who the people of a rule are, for notices.
 /// </summary>
 public interface IApproverDirectory
 {
@@ -27,4 +27,11 @@ public interface IApproverDirectory
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The user ids.</returns>
     Task<IReadOnlyList<string>> GetUserIdsAsync(ApproverRule rule, ApprovalRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns whether who a rule names depends on each request, such as the subject's manager.
+    /// </summary>
+    /// <param name="rule">The rule.</param>
+    /// <returns><see langword="true"/> when it does.</returns>
+    bool DependsOnRequest(ApproverRule rule);
 }

@@ -3,11 +3,12 @@
 
 @{
     var request = Model.Request;
+    var stages = request.GetStages();
 }
 
 <zone Name="Title">
     <breadcrumb name="ApprovalRequestsDecide" title="@(string.IsNullOrEmpty(request.Title) ? T["Approval request"] : T["Request: {0}", request.Title])">
-        <breadcrumb-item id="ApprovalRequests" action="Index" controller="ApprovalRequests" area="CrestApps.OrchardCore.Approvals" permission="@ApprovalsPermissions.ViewApprovalRequests.Name">@T["Approvals"]</breadcrumb-item>
+        <breadcrumb-item id="ApprovalRequests" action="Index" controller="ApprovalRequests" area="CrestApps.OrchardCore.Approvals">@T["Approvals"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -18,8 +19,10 @@
         <div class="card-header">@T["The request"]</div>
         <div class="card-body">
             <dl class="row mb-0">
+                <dt class="col-sm-3">@T["Type"]</dt>
+                <dd class="col-sm-9">@Model.TypeDisplayName</dd>
                 <dt class="col-sm-3">@T["Asked"]</dt>
-                <dd class="col-sm-9">@request.Title</dd>
+                <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.SubjectDisplay) ? request.Title : Model.SubjectDisplay)</dd>
                 <dt class="col-sm-3">@T["Policy"]</dt>
                 <dd class="col-sm-9">@request.PolicyTitle</dd>
                 <dt class="col-sm-3">@T["Requested by"]</dt>
@@ -51,17 +54,46 @@
                         ApprovalStatus.Approved => T["Approved"],
                         ApprovalStatus.Rejected => T["Rejected"],
                         ApprovalStatus.Canceled => string.IsNullOrEmpty(request.CancelReason) ? T["Withdrawn"] : T["Withdrawn: {0}", request.CancelReason],
-                        _ => T["Waiting: {0} of {1} approvals", request.ApprovalCount, request.RequiredApprovals],
+                        _ => stages.Count > 1
+                            ? T["Waiting at stage {0} of {1}: {2} of {3} approvals", request.CurrentStage + 1, stages.Count, request.StageApprovalCount, request.GetCurrentStage().RequiredApprovals]
+                            : T["Waiting: {0} of {1} approvals", request.StageApprovalCount, request.GetCurrentStage().RequiredApprovals],
                     })
                 </dd>
-                @if (!string.IsNullOrEmpty(request.SubjectUrl))
+                @if (!string.IsNullOrEmpty(Model.SubjectUrl))
                 {
                     <dt class="col-sm-3">@T["Subject"]</dt>
-                    <dd class="col-sm-9"><a href="@Url.Content(request.SubjectUrl)">@T["Open what this is about"]</a></dd>
+                    <dd class="col-sm-9"><a href="@Url.Content(Model.SubjectUrl)">@T["Open what this is about"]</a></dd>
                 }
             </dl>
         </div>
     </div>
+
+    @if (stages.Count > 1)
+    {
+        <div class="card mb-3">
+            <div class="card-header">@T["Stages"]</div>
+            <ol class="list-group list-group-flush list-group-numbered">
+                @for (var i = 0; i < stages.Count; i++)
+                {
+                    var stage = stages[i];
+                    var approvals = request.Decisions.Count(decision => decision.Stage == i && decision.Kind == ApprovalDecisionKind.Approve);
+                    var state = request.Status == ApprovalStatus.Approved || i < request.CurrentStage
+                        ? T["Approved"]
+                        : i == request.CurrentStage && request.Status == ApprovalStatus.Pending
+                            ? T["{0} of {1} approvals", approvals, stage.RequiredApprovals]
+                            : i == request.CurrentStage ? T["Closed"] : T["Not started"];
+                    <li class="list-group-item @(i == request.CurrentStage && request.Status == ApprovalStatus.Pending ? "fw-semibold" : null)">
+                        @(stage.Title ?? T.GetString("Stage {0}", i + 1).Value) <span class="text-muted small">· @state</span>
+                    </li>
+                }
+            </ol>
+        </div>
+    }
+
+    @if (Model.Display is not null)
+    {
+        @await DisplayAsync(Model.Display)
+    }
 
     @if (request.Decisions.Count > 0)
     {
@@ -74,6 +106,10 @@
                     <li class="list-group-item">
                         <i class="fa-solid @(decision.Kind == ApprovalDecisionKind.Approve ? "fa-circle-check text-success" : "fa-circle-xmark text-danger") me-1" aria-hidden="true"></i>
                         @(decision.Kind == ApprovalDecisionKind.Approve ? T["{0} approved", decision.UserName] : T["{0} rejected", decision.UserName])
+                        @if (stages.Count > 1)
+                        {
+                            <span class="text-muted small">· @(stages[Math.Clamp(decision.Stage, 0, stages.Count - 1)].Title ?? T.GetString("Stage {0}", decision.Stage + 1).Value)</span>
+                        }
                         <span class="text-muted small">· @Model.DecisionTimes[i].ToString("g")</span>
                         @if (!string.IsNullOrEmpty(decision.Note))
                         {

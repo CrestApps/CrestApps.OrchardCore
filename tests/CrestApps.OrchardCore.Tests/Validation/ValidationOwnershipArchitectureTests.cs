@@ -100,8 +100,12 @@ public class ValidationOwnershipArchitectureTests
             "The uploaded audio file is streamed to the telephony provider by the editor; a recipe carries the resulting media reference, never a file."),
         (
             "src/Modules/CrestApps.OrchardCore.Approvals/Drivers/ApprovalPolicyDisplayDriver.cs",
-            "nameof(model.DueAfterHours)",
-            "The hours are typed as text so a culture never changes them; a recipe carries the number, whose range the handler checks."),
+            "Enter a whole number, or leave it empty.",
+            "The hours and the order are typed as text so a culture never changes them; a recipe carries the numbers, whose ranges the handler checks."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Approvals/Drivers/ApprovalPolicyDisplayDriver.cs",
+            "Enter an amount with a dot for decimals, or leave it empty.",
+            "The amount conditions are typed as text with a dot so a decimal comma never changes them; a recipe carries the numbers, whose order the handler checks."),
         (
             "src/Modules/CrestApps.OrchardCore.Banking/Checks/Drivers/CheckLayoutDisplayDriver.cs",
             "nameof(model.SecondSignatureAbove)",

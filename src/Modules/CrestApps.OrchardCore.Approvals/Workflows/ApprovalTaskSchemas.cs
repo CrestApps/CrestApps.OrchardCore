@@ -16,18 +16,20 @@ internal sealed class RequestApprovalTaskSchema : ApprovalTaskSchemaBase
 
     protected override string DisplayText => "Request Approval";
 
-    protected override string Description => "Asks for an approval under a policy. Asking again while a request about the subject is pending gives that request. Writes the request id to the workflow output ApprovalRequestId.";
+    protected override string Description => "Asks for an approval of a type, under the policy named or the first enabled one whose type, amount and scope match. Asking again while a request about the subject is pending gives that request. Writes the request id to the workflow output ApprovalRequestId.";
 
     protected override IEnumerable<string> Outcomes => ["Done", "Failed"];
 
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
-        yield return ("Policy", WorkflowActivitySchemaBuilders.String("The approval policy, by id or technical name." + Liquid));
-        yield return ("SubjectKind", WorkflowActivitySchemaBuilders.String("The kind of the subject, such as PayRun." + Liquid));
+        yield return ("Policy", WorkflowActivitySchemaBuilders.String("The approval policy, by id or technical name; empty to use the first enabled policy whose type, amount and scope match." + Liquid));
+        yield return ("SubjectKind", WorkflowActivitySchemaBuilders.String("The approval type, such as PayRun or Ticket." + Liquid));
         yield return ("SubjectId", WorkflowActivitySchemaBuilders.String("The id of the subject." + Liquid));
         yield return ("AccessScope", WorkflowActivitySchemaBuilders.String("The access scope within the subject kind, such as an employer." + Liquid));
         yield return ("Title", WorkflowActivitySchemaBuilders.String("What is asked." + Liquid));
         yield return ("SubjectUrl", WorkflowActivitySchemaBuilders.String("The subject's page, application-relative such as ~/Admin/..." + Liquid));
+        yield return ("Amount", WorkflowActivitySchemaBuilders.String("The amount, a number with a dot, that policy conditions match." + Liquid));
+        yield return ("Currency", WorkflowActivitySchemaBuilders.String("The currency of the amount." + Liquid));
     }
 }
 

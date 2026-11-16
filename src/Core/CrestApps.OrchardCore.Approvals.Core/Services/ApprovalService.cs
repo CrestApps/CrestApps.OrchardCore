@@ -16,7 +16,8 @@ public sealed class ApprovalService : IApprovalService
     private readonly IApprovalRequestManager _requests;
     private readonly INamedCatalogManager<ApprovalPolicy> _policies;
     private readonly IApproverDirectory _directory;
-    private readonly IEnumerable<IApprovalSubjectHandler> _handlers;
+    private readonly IApprovalPolicyResolver _resolver;
+    private readonly IApprovalTypeCatalog _types;
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(60);
 
@@ -33,7 +34,8 @@ public sealed class ApprovalService : IApprovalService
     /// <param name="requests">The requests.</param>
     /// <param name="policies">The policies.</param>
     /// <param name="directory">Who the approver rules name.</param>
-    /// <param name="handlers">The handlers of each subject kind.</param>
+    /// <param name="resolver">Chooses the policy of a request that names none.</param>
+    /// <param name="types">The approval types and their handlers.</param>
     /// <param name="observers">The observers of changes.</param>
     /// <param name="locks">The locks, one per subject and per request.</param>
     /// <param name="committer">Commits while a lock is held.</param>
@@ -43,7 +45,8 @@ public sealed class ApprovalService : IApprovalService
         IApprovalRequestManager requests,
         INamedCatalogManager<ApprovalPolicy> policies,
         IApproverDirectory directory,
-        IEnumerable<IApprovalSubjectHandler> handlers,
+        IApprovalPolicyResolver resolver,
+        IApprovalTypeCatalog types,
         IEnumerable<IApprovalObserver> observers,
         IDistributedLock locks,
         IApprovalCommitter committer,
@@ -53,7 +56,8 @@ public sealed class ApprovalService : IApprovalService
         _requests = requests;
         _policies = policies;
         _directory = directory;
-        _handlers = handlers;
+        _resolver = resolver;
+        _types = types;
         _observers = observers;
         _locks = locks;
         _committer = committer;
@@ -67,23 +71,18 @@ public sealed class ApprovalService : IApprovalService
         ArgumentNullException.ThrowIfNull(submission);
 
         var errors = new List<string>();
-        var policy = string.IsNullOrWhiteSpace(submission.Policy)
-            ? null
-            : await _policies.FindByIdAsync(submission.Policy.Trim(), cancellationToken) ?? await _policies.FindByNameAsync(submission.Policy.Trim(), cancellationToken);
-
-        if (policy is null)
-        {
-            errors.Add(S["Choose the approval policy."]);
-        }
-
         if (string.IsNullOrWhiteSpace(submission.SubjectKind) || string.IsNullOrWhiteSpace(submission.SubjectId))
         {
             errors.Add(S["Say what the approval is about."]);
         }
 
-        if (string.IsNullOrWhiteSpace(submission.Title))
+        var policy = await _resolver.ResolveAsync(submission, cancellationToken);
+
+        if (policy is null)
         {
-            errors.Add(S["Say what is asked."]);
+            errors.Add(string.IsNullOrWhiteSpace(submission.Policy)
+                ? S["No enabled approval policy serves {0} with this amount, currency and scope. Add one under Approvals > Policies, or name the policy.", submission.SubjectKind?.Trim() ?? string.Empty]
+                : S["The approval policy {0} doesn't exist.", submission.Policy.Trim()]);
         }
 
         if (errors.Count > 0)
@@ -116,6 +115,11 @@ public sealed class ApprovalService : IApprovalService
 
             var result = await CreateRequestAsync(submission, policy, version, requester, cancellationToken);
 
+            if (!result.Succeeded)
+            {
+                return result;
+            }
+
             await _committer.CommitAsync(cancellationToken);
 
             return result;
@@ -133,15 +137,15 @@ public sealed class ApprovalService : IApprovalService
         request.SubjectUrl = string.IsNullOrWhiteSpace(submission.SubjectUrl) ? null : submission.SubjectUrl.Trim();
         request.SubjectUserIds = (submission.SubjectUserIds ?? []).Where(entry => !string.IsNullOrEmpty(entry)).Distinct(StringComparer.Ordinal).ToList();
         request.SubjectStaffMemberId = string.IsNullOrWhiteSpace(submission.SubjectStaffMemberId) ? null : submission.SubjectStaffMemberId.Trim();
-        request.Title = submission.Title.Trim();
+        request.Title = submission.Title?.Trim();
         request.Amount = submission.Amount;
         request.Currency = submission.Currency;
         request.PolicyId = policy.ItemId;
         request.PolicyTitle = string.IsNullOrWhiteSpace(policy.Title) ? policy.Name : policy.Title;
-        request.RequiredApprovals = Math.Max(1, policy.RequiredApprovals);
-
-        // The rules of the policy as they are now: a later change of the policy never changes this request.
-        request.Approvers = policy.Approvers.Select(rule => new ApproverRule { Kind = rule.Kind, Value = rule.Value }).ToList();
+        // The stages of the policy as they are now: a later change of the policy never changes this request.
+        request.Stages = [.. policy.GetStages()];
+        request.CurrentStage = 0;
+        request.RequiredApprovals = Math.Max(1, request.Stages[0].RequiredApprovals);
         request.AllowRequesterToApprove = policy.AllowRequesterToApprove;
         request.AllowSubjectToDecide = policy.AllowSubjectToDecide;
         request.SubjectVersion = version;
@@ -150,6 +154,23 @@ public sealed class ApprovalService : IApprovalService
         request.Status = ApprovalStatus.Pending;
         request.CreatedUtc = _clock.UtcNow;
         request.DueUtc = policy.DueAfterHours is { } hours ? _clock.UtcNow.AddHours(hours) : null;
+
+        // The type's handler fills what the caller left out, adds approvers, or refuses.
+        var context = new ApprovalRequestingContext { Submission = submission, Request = request, Requester = requester };
+
+        await _types.GetHandler(request.SubjectKind).RequestingAsync(context, cancellationToken);
+
+        if (context.Errors.Count == 0 && string.IsNullOrWhiteSpace(request.Title))
+        {
+            context.Refuse(S["Say what is asked."]);
+        }
+
+        if (context.Errors.Count > 0)
+        {
+            return new ApprovalResult { Errors = [.. context.Errors] };
+        }
+
+        request.Title = request.Title.Trim();
 
         await _requests.CreateAsync(request, cancellationToken);
         await NotifyAsync(request, ApprovalChangeKind.Requested, null, name, id, cancellationToken);
@@ -174,6 +195,7 @@ public sealed class ApprovalService : IApprovalService
             return new ApprovalEligibility(false, S["Only a signed-in person can decide."]);
         }
 
+        // One person decides one stage at most: who approved the manager stage doesn't also approve finance.
         if (request.Decisions.Any(decision => decision.UserId == userId))
         {
             return new ApprovalEligibility(false, S["You already decided this request."]);
@@ -244,6 +266,16 @@ public sealed class ApprovalService : IApprovalService
             return new ApprovalResult { Request = request, Errors = [S["Say why you reject it."]] };
         }
 
+        var handler = _types.GetHandler(request.SubjectKind);
+        var deciding = new ApprovalDecidingContext { Request = request, User = user, Kind = kind, Note = note };
+
+        await handler.DecidingAsync(deciding, cancellationToken);
+
+        if (deciding.Errors.Count > 0)
+        {
+            return new ApprovalResult { Request = request, Errors = [.. deciding.Errors] };
+        }
+
         var (name, id) = Actor(user);
         var decision = new ApprovalDecision
         {
@@ -251,6 +283,7 @@ public sealed class ApprovalService : IApprovalService
             UserName = name,
             Kind = kind,
             Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+            Stage = request.CurrentStage,
             DecidedUtc = _clock.UtcNow,
         };
 
@@ -264,18 +297,35 @@ public sealed class ApprovalService : IApprovalService
             request.Status = ApprovalStatus.Rejected;
             request.ClosedUtc = _clock.UtcNow;
         }
-        else if (request.ApprovalCount >= request.RequiredApprovals)
+        else if (request.StageApprovalCount >= Math.Max(1, (await StageOfAsync(request, cancellationToken)).RequiredApprovals))
         {
-            change = ApprovalChangeKind.Approved;
-            request.Status = ApprovalStatus.Approved;
-            request.ClosedUtc = _clock.UtcNow;
+            if (request.CurrentStage < (await StagesOfAsync(request, cancellationToken)).Count - 1)
+            {
+                // The next stage starts: its approvers are told, and its approvals are counted from none.
+                change = ApprovalChangeKind.StageApproved;
+                request.CurrentStage++;
+            }
+            else
+            {
+                change = ApprovalChangeKind.Approved;
+                request.Status = ApprovalStatus.Approved;
+                request.ClosedUtc = _clock.UtcNow;
+            }
         }
 
         await _requests.UpdateAsync(request, cancellationToken: cancellationToken);
 
-        if (request.Status != ApprovalStatus.Pending)
+        switch (change)
         {
-            await CloseSubjectAsync(request, cancellationToken);
+            case ApprovalChangeKind.Approved:
+                await handler.ApprovedAsync(request, cancellationToken);
+                break;
+            case ApprovalChangeKind.Rejected:
+                await handler.RejectedAsync(request, cancellationToken);
+                break;
+            case ApprovalChangeKind.StageApproved:
+                await handler.StageApprovedAsync(request, cancellationToken);
+                break;
         }
 
         await NotifyAsync(request, change, decision, name, id, cancellationToken);
@@ -319,23 +369,48 @@ public sealed class ApprovalService : IApprovalService
         request.ClosedUtc = _clock.UtcNow;
 
         await _requests.UpdateAsync(request, cancellationToken: cancellationToken);
-        await CloseSubjectAsync(request, cancellationToken);
+        await _types.GetHandler(request.SubjectKind).CanceledAsync(request, cancellationToken);
         await NotifyAsync(request, ApprovalChangeKind.Canceled, null, null, null, cancellationToken);
 
         return true;
     }
 
-    // The rules a request is decided by: its own copy, or the policy's for a request made before they were copied.
+    // The stages of a request: its own copy, or its policy's for a request made before rules were copied.
+    private async Task<IReadOnlyList<ApprovalStage>> StagesOfAsync(ApprovalRequest request, CancellationToken cancellationToken)
+    {
+        if (request.Stages is { Count: > 0 } || request.Approvers is { Count: > 0 })
+        {
+            return request.GetStages();
+        }
+
+        return await _policies.FindByIdAsync(request.PolicyId, cancellationToken) is { } policy ? policy.GetStages() : [];
+    }
+
+    private async Task<ApprovalStage> StageOfAsync(ApprovalRequest request, CancellationToken cancellationToken)
+    {
+        var stages = await StagesOfAsync(request, cancellationToken);
+
+        return stages.Count == 0 ? new ApprovalStage() : stages[Math.Clamp(request.CurrentStage, 0, stages.Count - 1)];
+    }
+
+    // The rules the current stage is decided by, and the two built-in rules, which hold at every stage.
     private async Task<(IReadOnlyList<ApproverRule> Approvers, bool AllowRequesterToApprove, bool AllowSubjectToDecide)?> RulesOfAsync(ApprovalRequest request, CancellationToken cancellationToken)
     {
-        if (request.Approvers is { Count: > 0 })
+        if (request.Stages is { Count: > 0 } || request.Approvers is { Count: > 0 })
         {
-            return (request.Approvers, request.AllowRequesterToApprove, request.AllowSubjectToDecide);
+            return (request.GetCurrentStage().Approvers, request.AllowRequesterToApprove, request.AllowSubjectToDecide);
         }
 
         var policy = await _policies.FindByIdAsync(request.PolicyId, cancellationToken);
 
-        return policy is null ? null : (policy.Approvers, policy.AllowRequesterToApprove, policy.AllowSubjectToDecide);
+        if (policy is null)
+        {
+            return null;
+        }
+
+        var stages = policy.GetStages();
+
+        return (stages[Math.Clamp(request.CurrentStage, 0, stages.Count - 1)].Approvers, policy.AllowRequesterToApprove, policy.AllowSubjectToDecide);
     }
 
     private static void CopyState(ApprovalRequest from, ApprovalRequest to)
@@ -347,6 +422,7 @@ public sealed class ApprovalService : IApprovalService
 
         to.Status = from.Status;
         to.Decisions = from.Decisions;
+        to.CurrentStage = from.CurrentStage;
         to.ClosedUtc = from.ClosedUtc;
         to.CancelReason = from.CancelReason;
     }
@@ -381,14 +457,6 @@ public sealed class ApprovalService : IApprovalService
         ids.ExceptWith(request.Decisions.Select(decision => decision.UserId).Where(entry => entry is not null));
 
         return ids.Order(StringComparer.Ordinal).ToList();
-    }
-
-    private async Task CloseSubjectAsync(ApprovalRequest request, CancellationToken cancellationToken)
-    {
-        foreach (var handler in _handlers.Where(handler => string.Equals(handler.SubjectKind, request.SubjectKind, StringComparison.Ordinal)))
-        {
-            await handler.ClosedAsync(request, cancellationToken);
-        }
     }
 
     private async Task NotifyAsync(ApprovalRequest request, ApprovalChangeKind kind, ApprovalDecision decision, string actor, string actorId, CancellationToken cancellationToken)

@@ -1,0 +1,30 @@
+@using OrchardCore.Security.Permissions
+@inject IEnumerable<IPermissionProvider> PermissionProviders
+@{
+    ApproverRuleValueEditorViewModel editor = Model.Editor;
+    var permissions = new List<Permission>();
+
+    foreach (var provider in PermissionProviders)
+    {
+        permissions.AddRange(await provider.GetPermissionsAsync());
+    }
+
+    permissions = permissions.Where(permission => !permission.IsSecurityCritical || permission.Name == editor.Value)
+        .DistinctBy(permission => permission.Name)
+        .OrderBy(permission => permission.Category ?? string.Empty, StringComparer.CurrentCultureIgnoreCase)
+        .ThenBy(permission => permission.Name, StringComparer.Ordinal)
+        .ToList();
+}
+
+<select id="@editor.FieldId" name="@editor.FieldName" class="form-select" aria-label="@T["Permission"]">
+    <option value="">@T["Choose a permission"]</option>
+    @foreach (var group in permissions.GroupBy(permission => permission.Category ?? string.Empty))
+    {
+        <optgroup label="@group.Key">
+            @foreach (var permission in group)
+            {
+                <option value="@permission.Name" selected="@(permission.Name == editor.Value)">@permission.Name</option>
+            }
+        </optgroup>
+    }
+</select>

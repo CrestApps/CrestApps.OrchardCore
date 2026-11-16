@@ -41,8 +41,9 @@ public sealed class PayRunApprovalPolicySeeder
         policy.Name = PayrollConstants.PayRunApprovalPolicy;
         policy.Title = S["Pay run approval"];
         policy.Description = S["A pay run is approved before it is processed. People who approve pay runs, for every employer or for the run's employer, decide."];
-        policy.Approvers = [new ApproverRule { Kind = ApproverKind.Permission, Value = PayrollPermissions.ApprovePayRuns.Name }];
+        policy.Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Permission, Value = PayrollPermissions.ApprovePayRuns.Name }];
         policy.RequiredApprovals = 1;
+        policy.Types = [PayrollConstants.PayRunSubjectKind];
         policy.AllowRequesterToApprove = settings?.AllowPreparerToApprove == true;
         policy.AllowSubjectToDecide = settings?.AllowPreparerToApprove == true;
         policy.DueAfterHours = 48;

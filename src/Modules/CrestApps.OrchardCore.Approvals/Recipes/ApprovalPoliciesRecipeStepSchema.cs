@@ -17,9 +17,18 @@ internal sealed class ApprovalPoliciesRecipeStepSchema : IRecipeStep
         var rule = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("Kind", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Permission", "Role", "Manager", "Staff").Description("Who the rule names: anyone with a permission, anyone in a role, the subject's manager (and the managers above), or named staff members.")),
-                ("Value", Text("The permission's name, the role's name, or the staff member ids separated by commas. Empty for Manager.")))
+                ("Kind", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The approver rule provider: Permission, Role, Users, Manager or Staff (with Staff on), or one a module adds.")),
+                ("Value", Text("The permission's name, the role's name, or user or staff member ids separated by commas. Empty for Manager.")))
             .Required("Kind")
+            .AdditionalProperties(false);
+
+        var stage = new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Title", Text("What people see, such as Manager or Finance.")),
+                ("Approvers", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(rule).Description("Who may decide the stage: a person any rule names may.")),
+                ("RequiredApprovals", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Maximum(10).Description("How many different approvers must approve the stage.")))
+            .Required("Approvers")
             .AdditionalProperties(false);
 
         _cached ??= new JsonSchemaBuilder()
@@ -35,12 +44,20 @@ internal sealed class ApprovalPoliciesRecipeStepSchema : IRecipeStep
                             ("Name", Text("The technical name modules and workflows ask for, such as PayRunApproval.")),
                             ("Title", Text("The name people see.")),
                             ("Description", Text("What the policy is for.")),
-                            ("Approvers", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(rule).Description("Who may decide: a person any rule names may.")),
-                            ("RequiredApprovals", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Maximum(10).Description("How many different approvers must approve.")),
+                            ("Types", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The approval types the policy serves, such as PayRun or Ticket; empty for every type.")),
+                            ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the policy is chosen for requests that name none. On by default.")),
+                            ("Order", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Where the policy comes among those that match; lower first.")),
+                            ("MinimumAmount", new JsonSchemaBuilder().Type(SchemaValueType.Number | SchemaValueType.Null).Description("The least amount a request must have for the policy to be chosen.")),
+                            ("MaximumAmount", new JsonSchemaBuilder().Type(SchemaValueType.Number | SchemaValueType.Null).Description("The most amount a request may have for the policy to be chosen.")),
+                            ("Currency", Text("The currency a request's amount must be in for the policy to be chosen.")),
+                            ("AccessScope", Text("The access scope a request must have for the policy to be chosen, such as an employer's id.")),
+                            ("Stages", new JsonSchemaBuilder().Type(SchemaValueType.Array).MaxItems(10).Items(stage).Description("The stages, decided one after the other. Omit them for one stage made of Approvers and RequiredApprovals.")),
+                            ("Approvers", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(rule).Description("Who may decide a policy without Stages: a person any rule names may.")),
+                            ("RequiredApprovals", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Maximum(10).Description("How many different approvers must approve a policy without Stages.")),
                             ("AllowRequesterToApprove", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the person who asked may approve their own request. Off by default.")),
                             ("AllowSubjectToDecide", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether a person may decide a request about themselves. Off by default.")),
                             ("DueAfterHours", new JsonSchemaBuilder().Type(SchemaValueType.Integer | SchemaValueType.Null).Minimum(1).Description("Hours after which a request is due, for reminders.")))
-                        .Required("Name", "Approvers")
+                        .Required("Name")
                         .AdditionalProperties(true))
                     .Description("The approval policies to create, or update by id or name.")))
             .Required("name", ApprovalPoliciesRecipeStep.EntriesName)

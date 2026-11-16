@@ -146,6 +146,24 @@ public sealed class RequestApprovalTask : ApprovalTaskActivity<RequestApprovalTa
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets the amount, a number with a dot, that a policy's conditions are matched against (Liquid).
+    /// </summary>
+    public string Amount
+    {
+        get => GetProperty<string>();
+        set => SetProperty(value);
+    }
+
+    /// <summary>
+    /// Gets or sets the currency of the amount (Liquid).
+    /// </summary>
+    public string Currency
+    {
+        get => GetProperty<string>();
+        set => SetProperty(value);
+    }
+
     /// <inheritdoc />
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
         => [new Outcome(S["Done"]), new Outcome(S["Failed"])];
@@ -161,6 +179,8 @@ public sealed class RequestApprovalTask : ApprovalTaskActivity<RequestApprovalTa
             AccessScope = await EvaluateAsync(AccessScope, workflowContext),
             Title = await EvaluateAsync(Title, workflowContext),
             SubjectUrl = await EvaluateAsync(SubjectUrl, workflowContext),
+            Amount = decimal.TryParse(await EvaluateAsync(Amount, workflowContext), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var amount) ? amount : null,
+            Currency = await EvaluateAsync(Currency, workflowContext),
         }, _httpContextAccessor.HttpContext?.User);
 
         if (!result.Succeeded)

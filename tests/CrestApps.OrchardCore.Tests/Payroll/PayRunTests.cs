@@ -512,7 +512,7 @@ public sealed class PayRunTests
 
             policy.Name = PayrollConstants.PayRunApprovalPolicy;
             policy.Title = "Pay run approval";
-            policy.Approvers = [new ApproverRule { Kind = ApproverKind.Permission, Value = PayrollPermissions.ApprovePayRuns.Name }];
+            policy.Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Permission, Value = PayrollPermissions.ApprovePayRuns.Name }];
             policy.RequiredApprovals = 1;
             await policies.CreateAsync(policy);
         });
@@ -635,9 +635,12 @@ public sealed class PayRunTests
         }
 
         public async Task<bool> IsNamedAsync(ApproverRule rule, ApprovalRequest request, ClaimsPrincipal user, CancellationToken cancellationToken = default)
-            => rule.Kind == ApproverKind.Permission && user?.Identity?.IsAuthenticated == true && await _authorizationService.AuthorizeAsync(user, new Permission(rule.Value));
+            => rule.Kind == ApproverRuleKinds.Permission && user?.Identity?.IsAuthenticated == true && await _authorizationService.AuthorizeAsync(user, new Permission(rule.Value));
 
         public Task<IReadOnlyList<string>> GetUserIdsAsync(ApproverRule rule, ApprovalRequest request, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<string>>([]);
+
+        public bool DependsOnRequest(ApproverRule rule)
+            => false;
     }
 }

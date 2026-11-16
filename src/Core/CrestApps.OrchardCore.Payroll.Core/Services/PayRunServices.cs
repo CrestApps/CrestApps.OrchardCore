@@ -793,19 +793,6 @@ public sealed partial class DefaultPayRunService : IPayRunService
         // Approvals commits the request, so the session forgot what it read before: read the run and the request again.
         run = await _runs.FindByIdAsync(run.ItemId, cancellationToken) ?? run;
 
-        // The policy names who approves for every employer; the approvers of this employer only may decide too.
-        if (submitted.Request.Status == ApprovalStatus.Pending && _services.GetService<IApprovalRequestManager>() is { } requests
-            && await requests.FindByIdAsync(submitted.Request.ItemId, cancellationToken) is { } request)
-        {
-            var perEmployer = PayrollPermissionTemplates.For(PayrollPermissions.ApprovePayRuns, run.EmployerId).Name;
-
-            if (!request.Approvers.Any(rule => rule.Kind == ApproverKind.Permission && rule.Value == perEmployer))
-            {
-                request.Approvers.Add(new ApproverRule { Kind = ApproverKind.Permission, Value = perEmployer });
-                await requests.UpdateAsync(request, cancellationToken: cancellationToken);
-            }
-        }
-
         run.ApprovalRequestId = submitted.Request.ItemId;
         run.Status = submitted.Request.Status == ApprovalStatus.Approved ? PayRunStatus.Approved : PayRunStatus.PendingApproval;
 
@@ -1087,26 +1074,70 @@ public sealed partial class DefaultPayRunService : IPayRunService
 }
 
 /// <summary>
-/// Takes Approvals' decision on a pay run.
+/// The Pay run approval type: the approvers of the run's employer decide every stage too, a decision about a run that
+/// changed since approval was asked is refused, and the outcome moves the run on.
 /// </summary>
-public sealed class PayRunApprovalSubjectHandler : IApprovalSubjectHandler
+public sealed class PayRunApprovalTypeHandler : ApprovalTypeHandlerBase
 {
     private readonly IServiceProvider _services;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="PayRunApprovalSubjectHandler"/> class.
+    /// Initializes a new instance of the <see cref="PayRunApprovalTypeHandler"/> class.
     /// </summary>
-    /// <param name="services">The services, to reach the pay run service when a decision comes.</param>
-    public PayRunApprovalSubjectHandler(IServiceProvider services)
+    /// <param name="services">The services, to reach the pay runs when a request or a decision comes.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public PayRunApprovalTypeHandler(IServiceProvider services, IStringLocalizer<PayRunApprovalTypeHandler> stringLocalizer)
     {
         _services = services;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc />
-    public string SubjectKind => PayrollConstants.PayRunSubjectKind;
+    public override Task RequestingAsync(ApprovalRequestingContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        // The policy names who approves for every employer; the approvers of this employer only may decide too.
+        if (!string.IsNullOrEmpty(context.Request.AccessScope))
+        {
+            context.AddApprover(new ApproverRule
+            {
+                Kind = ApproverRuleKinds.Permission,
+                Value = PayrollPermissionTemplates.For(PayrollPermissions.ApprovePayRuns, context.Request.AccessScope).Name,
+            });
+        }
+
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc />
-    public Task ClosedAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+    public override async Task DecidingAsync(ApprovalDecidingContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (context.Kind == ApprovalDecisionKind.Approve
+            && await _services.GetRequiredService<PayRunStore>().FindByIdAsync(context.Request.SubjectId, cancellationToken) is { } run
+            && !string.Equals(run.Version, context.Request.SubjectVersion, StringComparison.Ordinal))
+        {
+            context.Refuse(S["The pay run changed after approval was asked. Submit it again."]);
+        }
+    }
+
+    /// <inheritdoc />
+    public override Task ApprovedAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+        => ClosedAsync(request, cancellationToken);
+
+    /// <inheritdoc />
+    public override Task RejectedAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+        => ClosedAsync(request, cancellationToken);
+
+    /// <inheritdoc />
+    public override Task CanceledAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+        => ClosedAsync(request, cancellationToken);
+
+    private Task ClosedAsync(ApprovalRequest request, CancellationToken cancellationToken)
         => _services.GetRequiredService<DefaultPayRunService>().ApprovalClosedAsync(request, cancellationToken);
 }
 

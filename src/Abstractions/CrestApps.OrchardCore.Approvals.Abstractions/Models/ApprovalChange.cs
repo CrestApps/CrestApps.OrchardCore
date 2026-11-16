@@ -16,7 +16,7 @@ public enum ApprovalChangeKind
     PartlyApproved,
 
     /// <summary>
-    /// Enough approvers approved.
+    /// Enough approvers approved the last stage.
     /// </summary>
     Approved,
 
@@ -29,6 +29,11 @@ public enum ApprovalChangeKind
     /// It was withdrawn.
     /// </summary>
     Canceled,
+
+    /// <summary>
+    /// Enough approvers approved a stage that isn't the last, and the next stage starts.
+    /// </summary>
+    StageApproved,
 }
 
 /// <summary>

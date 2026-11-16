@@ -55,8 +55,18 @@ public sealed class ApprovalNotificationObserver : IApprovalObserver
 
         var request = change.Request;
 
-        if (change.Kind == ApprovalChangeKind.Requested)
+        // A new request, or the next stage of one: its approvers are asked, and the last stage's notices go.
+        if (change.Kind is ApprovalChangeKind.Requested or ApprovalChangeKind.StageApproved)
         {
+            if (change.Kind == ApprovalChangeKind.StageApproved && _serviceProvider.GetService<INotificationManager>() is { } stageNotices)
+            {
+                await stageNotices.DeleteAsync(new NotificationFilter
+                {
+                    Type = ApprovalsConstants.ApprovalNotificationType,
+                    ReferenceId = request.ItemId,
+                }, cancellationToken);
+            }
+
             foreach (var userId in await _serviceProvider.GetRequiredService<IApprovalService>().GetApproverUserIdsAsync(request, cancellationToken))
             {
                 if (await userManager.FindByIdAsync(userId) is { } user)
