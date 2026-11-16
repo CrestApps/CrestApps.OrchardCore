@@ -1037,3 +1037,28 @@ The ten new workflow activities are listed in the workflow designer's activity l
 | Cancelling a session tells nobody, although the page says it does | `ClassSessionCancelledObserver` sends each learner whose place went with the cancelled session a **Class session cancelled** notification with the reason; a place given up by the learner or an ending enrollment tells nobody. | `c6803c463` |
 | Class sessions appear on no attendee's calendar | `ClassSessionCalendarEventSource` (a Calendars event source) shows each meeting of a confirmed or attended place on the learner's own calendar, room or no room. | `5de8929ef` |
 | GET/POST route guard | The class session pages say `HttpGet`. | `192b6e824` |
+
+| Cancelling a session tells nobody, although the page says it does | `ClassSessionCancelledObserver` sends each learner whose place went with the cancelled session a **Class session cancelled** notification with the reason; a place given up by the learner or an ending enrollment tells nobody. | `58cc71a47` |
+| Class sessions appear on no attendee's calendar | `ClassSessionCalendarEventSource` (a Calendars event source) shows each meeting of a confirmed or attended place on the learner's own calendar, room or no room. | `32c1238cf` |
+| GET/POST route guard | The class session pages say `HttpGet`. | `9058f9654` |
+
+### Phase 7: Coursework (branch `ma/learning-phase-7`, stacked on `ma/learning-phase-6`)
+
+**Built.**
+
+- **Learning Coursework** (`Learning.Coursework`, with `.Abstractions` and `.Core`): the **Coursework** course item kind (instructions, due date, text and/or files with allowed types, size and count, resubmission, a rubric or points; completion when handed in or when graded); **Rubric** content items (criteria with levels and points) with a pure scorer; `Submission` records in the `LearningSubmissions` collection with files in a protected area (the learner and graders only); `ISubmissionService` submits, grades with rubric choices or points (reported to the course grade through progress), regrades with a reason and history, and returns work for resubmission, under a lock per enrollment and item. Learner panel, submissions list, grading page, workflow events and the return task, the Learning coursework data source, the `LearningSubmissions` recipe and deployment step, personal data.
+- **One grading list**: `IGradingQueueSource` in Learning.Assessments; quiz attempts and submissions are merged oldest first and paged together on the Grading page. `GradingScope` moved to Assessments.Core so Coursework uses the same grader rule.
+- **Gradebook categories and the late policy** (7.6): grade categories with weights and drop-lowest on the course, a category per item, `CourseGradeCalculator.ComputeBreakdown` (items without a known category form one group weighted by their item weights, so a course without categories grades exactly as before), a gradebook column per category with the dropped items marked; a late penalty per day with a cap and a close date on coursework, applied when it is graded (raw score, days late, penalty and final score kept; a regrade keeps the penalty).
+
+**Differences from the plan, and why.**
+
+- Rubrics are part of the single Coursework feature, not a feature of their own.
+- Grades are shown to the learner as soon as work is graded: the gradebook has no hold-and-post setting yet.
+- A stored course grade is recomputed when the learner's progress changes, so after an instructor changes categories or weights the gradebook's category columns (computed live) and the stored course grade can disagree until the next result. A recompute job is not built.
+- Not built: coursework notifications, Audit Trail events and webhooks.
+
+**Checked in the browser.** Learning Coursework enabled; a rubric with two criteria and two levels each (the add buttons index new rows); a coursework item with the rubric in Graded mode added to Forklift Safety; a learner handed in text and a file (the file opened for them and was refused to another learner); the submission was on the Grading page, was graded Complete and Unclear (7 of 10, 70%), and the gradebook showed 70% for the item and the course; the learner saw the grade, the feedback and the levels. Grade categories Practical 60 and Written 40 added to the course and the coursework put in Written; a late penalty of 10% a day up to 50% with a close after 7 days and the due date moved back; the work was returned (the 70% kept in the history), handed in again 4 days late, graded 100% and stored as 60% after the 40% penalty, which the grader and the learner both saw; the gradebook showed Practical "-", Written 60% and a 60% course grade.
+
+**Not checked in the browser.** Drop-lowest with several items, the close date refusing work, a regrade, the data source in a report, the recipe step, erasure of a learner's submissions, and the workflow events on a live workflow (all unit-tested).
+
+**Fixed while verifying.** The rubric editor failed with a 500 because its row partial was outside `Views/Shared`; an integration test now opens the rubric and coursework editors. "(1 points)" now reads "(1 point)". Known and not fixed: the player's browser title repeats the item's name for every item kind (the item's Detail display and the breadcrumb both add it).
