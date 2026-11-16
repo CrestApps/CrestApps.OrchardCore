@@ -88,6 +88,23 @@ public sealed class TicketTimeReportsTests
     }
 
     [Fact]
+    public async Task WorkLoggedBeforeTheTicketWasOpened_CountsInWorkTime_ButTheTouchRatioOnlyCountsItsLife()
+    {
+        // Arrange (Ana also worked on a1 from 1:00 to 1:30, before it was opened at 2:00)
+        await using var harness = await CreateAsync("ana");
+        await SeedAsync(harness, earlyWork: true);
+
+        // Act
+        var document = await RunAsync<TicketResolutionWorkReport>(harness);
+
+        // Assert
+        var metrics = Metrics(document);
+        Assert.Equal(ReportFormat.Duration(120 * 60), metrics["Median work time"]);
+        Assert.Equal(ReportFormat.Duration(150 * 60), metrics["Median effort"]);
+        Assert.Equal(ReportFormat.Percent(90.0 / 480), metrics["Touch ratio"]);
+    }
+
+    [Fact]
     public async Task AReaderWhoMaySeeNoTicket_GetsTimeReportsSayingSo()
     {
         // Arrange
@@ -127,7 +144,7 @@ public sealed class TicketTimeReportsTests
     // a1 (support, team A, Contoso) was opened at 2:00 and solved at 10:00: Ana worked on it 2:00-3:00 (billed) and Ben
     // 2:30-3:30 (not billed). a2 (support, team A, Fabrikam) is open: Ana 8:00-8:30, and Ben from 23:30 the day before
     // to 0:30. a3 is on the HR desk, which Ana can't see.
-    private static async Task SeedAsync(CalendarTestHarness harness)
+    private static async Task SeedAsync(CalendarTestHarness harness, bool earlyWork = false)
     {
         var (billed, notBilled) = await harness.RunAsync<(string, string)>(async services =>
         {
@@ -155,14 +172,21 @@ public sealed class TicketTimeReportsTests
         {
             var tracker = services.GetRequiredService<ITimeTrackerService>();
 
-            foreach (var (user, ticket, stage, from, to) in new[]
+            var entries = new List<(string User, string Ticket, string Stage, double From, double To)>
             {
                 ("ana", "a1", billed, 2.0, 3.0),
                 ("ben", "a1", notBilled, 2.5, 3.5),
                 ("ana", "a2", billed, 8.0, 8.5),
                 ("ben", "a2", billed, -0.5, 0.5),
                 ("ana", "a3", billed, 9.0, 10.0),
-            })
+            };
+
+            if (earlyWork)
+            {
+                entries.Add(("ana", "a1", billed, 1.0, 1.5));
+            }
+
+            foreach (var (user, ticket, stage, from, to) in entries)
             {
                 var result = await tracker.AddAsync(
                     new TimeEntry

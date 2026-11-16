@@ -3,11 +3,16 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tickets;
+using CrestApps.OrchardCore.Tickets.Core.Indexes;
+using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Reports;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
+using YesSql;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Tickets;
 
@@ -58,6 +63,32 @@ public sealed class TicketReportsTests
         Assert.Equal(ReportFormat.Number(1), levelMetrics["Targets ended"]);
         Assert.Equal(ReportFormat.Number(1), levelMetrics["Breached"]);
         Assert.Equal(ReportFormat.Percent(0), levelMetrics["Met"]);
+    }
+
+    [Fact]
+    public async Task ServiceLevels_ByAccount_ShowsEachAccountsTargets()
+    {
+        // Arrange (t2, Contoso's, missed its target; t1 has no account and its target runs)
+        var reader = new ReaderHolder { User = TicketReportDataSourceTests.User("ana") };
+        await using var harness = await CreateAsync(reader);
+        await TicketReportDataSourceTests.SeedAsync(harness);
+        await harness.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<ISession>();
+            var t2 = await session.Query<ContentItem, TicketIndex>(index => index.ContentItemId == "t2").FirstOrDefaultAsync();
+            t2.Alter<TicketPart>(part => part.AccountId = "contoso");
+            await session.SaveAsync(t2);
+
+            return true;
+        });
+
+        // Act
+        var levels = await RunAsync<TicketServiceLevelReport>(harness);
+
+        // Assert
+        var rows = levels.Sections.Single(section => section.Title == "By account").Rows.Select(row => row.Cells).ToList();
+        Assert.Equal(["contoso", "1", "1", "0", "1", ReportFormat.Percent(0), "0"], rows.Single(row => row[0] == "contoso"));
+        Assert.Equal(["No account", "1", "0", "0", "0", "-", "0"], rows.Single(row => row[0] == "No account"));
     }
 
     [Fact]

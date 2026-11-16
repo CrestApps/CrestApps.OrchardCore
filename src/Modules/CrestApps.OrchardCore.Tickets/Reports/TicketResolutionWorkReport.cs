@@ -11,8 +11,8 @@ namespace CrestApps.OrchardCore.Tickets.Reports;
 /// <summary>
 /// For the tickets solved in a period, how long they took against how long people worked on them: resolution time
 /// (calendar time from creation to solved), work time (how long anyone was working, time two people worked at once
-/// counted once) and effort (every person's time added up), the people on each ticket and the touch ratio (work time as
-/// a share of resolution time); by desk, priority, ticket type and assignee, and the tickets that took the most effort.
+/// counted once, including time logged before the ticket was opened) and effort (every person's time added up), the
+/// people on each ticket and the touch ratio (the work between creation and solving as a share of resolution time); by desk, priority, ticket type and assignee, and the tickets that took the most effort.
 /// </summary>
 internal sealed class TicketResolutionWorkReport : IReport
 {
@@ -58,7 +58,7 @@ internal sealed class TicketResolutionWorkReport : IReport
         var solved = await _data.ReadAsync(scope, index => index.SolvedUtc != null && index.SolvedUtc >= from && index.SolvedUtc <= to, index => index.CreatedUtc, cancellationToken);
         var entries = solved.Count == 0
             ? null
-            : await _time.ReadEntriesAsync([.. solved.Select(ticket => ticket.Id)], solved.Min(ticket => ticket.CreatedUtc), cancellationToken);
+            : await _time.ReadEntriesAsync([.. solved.Select(ticket => ticket.Id)], cancellationToken);
         var now = _data.UtcNow;
         var tickets = solved.Select(ticket => Measure(ticket, entries?[ticket.Id], now)).ToList();
         var logged = tickets.Where(ticket => ticket.People > 0).ToList();
@@ -106,7 +106,7 @@ internal sealed class TicketResolutionWorkReport : IReport
                 Time(ticket.WorkMinutes),
                 Time(ticket.EffortMinutes),
                 ReportFormat.Number(ticket.People),
-                ticket.ResolutionMinutes is > 0 ? ReportFormat.Percent(ticket.WorkMinutes / ticket.ResolutionMinutes.Value) : "-",
+                ticket.ResolutionMinutes is > 0 ? ReportFormat.Percent(ticket.LifeWorkMinutes / ticket.ResolutionMinutes.Value) : "-",
             ]));
 
         return document.Add(ReportSection.ForTable(S["Tickets that took the most effort"].Value,
@@ -125,12 +125,17 @@ internal sealed class TicketResolutionWorkReport : IReport
     {
         var spans = (entries ?? []).Select(entry => (Start: entry.StartUtc, End: entry.EndUtc ?? now, entry.UserId)).Where(span => span.End > span.Start).ToList();
 
+        // The touch ratio is about the ticket's life, so it counts only the work between its creation and its solving.
+        var solvedUtc = ticket.SolvedUtc ?? now;
+        var duringLife = spans.Select(span => (Start: span.Start < ticket.CreatedUtc ? ticket.CreatedUtc : span.Start, End: span.End > solvedUtc ? solvedUtc : span.End));
+
         return new SolvedTicket(
             ticket,
             ticket.ResolutionMinutes,
             TicketTimeReportData.WorkMinutes(spans.Select(span => (span.Start, span.End))),
             spans.Sum(span => (span.End - span.Start).TotalMinutes),
-            spans.Select(span => span.UserId).Distinct(StringComparer.Ordinal).Count());
+            spans.Select(span => span.UserId).Distinct(StringComparer.Ordinal).Count(),
+            TicketTimeReportData.WorkMinutes(duringLife));
     }
 
     private ReportSection Table(string title, string label, List<SolvedTicket> tickets, Func<TicketFacts, string> keyOf, Func<string, string> nameOf)
@@ -169,7 +174,7 @@ internal sealed class TicketResolutionWorkReport : IReport
         var measured = tickets.Where(ticket => ticket.ResolutionMinutes is > 0).ToList();
         var resolution = measured.Sum(ticket => ticket.ResolutionMinutes.Value);
 
-        return resolution <= 0 ? "-" : ReportFormat.Percent(measured.Sum(ticket => ticket.WorkMinutes) / resolution);
+        return resolution <= 0 ? "-" : ReportFormat.Percent(measured.Sum(ticket => ticket.LifeWorkMinutes) / resolution);
     }
 
     private static string Average(IEnumerable<double> values)
@@ -182,5 +187,5 @@ internal sealed class TicketResolutionWorkReport : IReport
     private static string Time(double? minutes)
         => minutes is { } value ? ReportFormat.Duration(Math.Round(value) * 60) : "-";
 
-    private sealed record SolvedTicket(TicketFacts Ticket, double? ResolutionMinutes, double WorkMinutes, double EffortMinutes, int People);
+    private sealed record SolvedTicket(TicketFacts Ticket, double? ResolutionMinutes, double WorkMinutes, double EffortMinutes, int People, double LifeWorkMinutes);
 }
