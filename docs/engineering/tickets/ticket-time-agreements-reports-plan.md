@@ -1,6 +1,6 @@
 # Ticket time, support agreements and business reports
 
-Status: slices 1 and 2 built (2026-11-15); the agreements model waits for Mike's decisions in section 9.
+Status: slices 1 and 2 built (2026-11-15). Mike took every recommendation in section 9 (2026-11-15); slices 3 to 7 are being built.
 
 Builds on the Tickets module ([`ticket-support-plan.md`](ticket-support-plan.md), branch `ma/tickets-phase-2`) on Orchard Core 4 preview-19225 and .NET 11. Ticket boards, the intake plan (categories and conditional questions, [`ticket-intake-plan.md`](ticket-intake-plan.md) on `ma/pensive-jackson-c56dcb`) and business hours are planned in other sessions and are only referenced here.
 
@@ -173,15 +173,17 @@ Optional and later: a support plan sold through Carts, Checkout and Subscription
 
 Slice 1: `TicketTimeTests` (logging over clocked-in time splits the work entry; another ticket's time and time another clock keeps are refused; the not-billed stage; the duration parser), `TimeTrackerInsertTests` (cut around, open entries, history kept, observers told). Slice 2: `TicketTimeReportsTests` (clipping to the period, scope, by person and account, union versus sum, touch ratio). Every later slice adds its own tests first.
 
-## 9. Decisions for Mike
+## 9. Decisions (approved 2026-11-15)
 
-| # | Decision | Recommendation |
+Mike took the recommended answer to each decision ("Take recommendations").
+
+| # | Decision | Approved |
 | --- | --- | --- |
-| 1 | Where agreements live (6.3) | A: extract an Agreements building block and move Work Orders' agreements onto it |
-| 2 | Coverage kinds for v1 (6.1) | Block of hours and allowance per month; unlimited later |
-| 3 | Past 100% of an agreement | Keep working, mark the overage as billable, warn the account manager at 80% and 100% |
-| 4 | Which time counts: billable ticket time only, or also work order labor; rounding per entry | Billable ticket time; work order labor through Work Orders' usage provider; rounding per agreement (none, 6, 15 or 30 minutes) |
+| 1 | Where agreements live (6.3) | A: extract an **Agreements** building block and move Work Orders' agreements onto it |
+| 2 | Coverage kinds for v1 (6.1) | A block of hours and an allowance per month; unlimited later |
+| 3 | Past 100% of an agreement | Keep working, mark the overage billable, warn the account manager at 80% and 100% |
+| 4 | Which time counts | Billable ticket time, plus work order labor through Work Orders' usage provider; rounding per agreement: none, 6, 15 or 30 minutes per entry |
 | 5 | The agreement's policy over the account's policy (6.5) | Yes |
-| 6 | Billable by stage (3.3, built) | Keep |
-| 7 | Inserting manual time over clocked-in time (3.2, built) | Keep |
-| 8 | Ticket fields from section 5 to add as Ticket part properties | `SolvedById`, impact and urgency with a priority matrix, estimated start and minutes, billing type; site and owner only on request |
+| 6 | Billable by stage (3.3) | Keep |
+| 7 | Inserting manual time over clocked-in time (3.2) | Keep |
+| 8 | Ticket fields from section 5 | `SolvedById`, impact and urgency with a priority matrix on the desk, estimated start and minutes, billing type; site and owner only on request |
