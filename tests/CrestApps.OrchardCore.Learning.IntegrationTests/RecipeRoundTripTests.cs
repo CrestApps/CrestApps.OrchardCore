@@ -53,9 +53,11 @@ public sealed class RecipeRoundTripTests
         });
 
         var enrollments = recipe["steps"]!.AsArray().OfType<JsonObject>().Single(step => step["name"]?.GetValue<string>() == LearningConstants.EnrollmentsRecipeStep);
-        var row = Assert.Single(enrollments["Enrollments"]!.AsArray().OfType<JsonObject>());
+        // Other tests on the shared site add enrollments of their own, so only the fixture's enrollment is looked for.
+        var rows = enrollments["Enrollments"]!.AsArray().OfType<JsonObject>().ToArray();
+        Assert.All(rows, item => Assert.Null(item["userId"] ?? item["UserId"]));
+        var row = Assert.Single(rows, item => (item["courseId"] ?? item["CourseId"])?.GetValue<string>() == _fixture.CourseId && item["UserName"]?.GetValue<string>() == "learner1");
         Assert.Equal("learner1", row["UserName"]?.GetValue<string>());
-        Assert.Null(row["UserId"]);
 
         var content = recipe["steps"]!.AsArray().OfType<JsonObject>().Single(step => string.Equals(step["name"]?.GetValue<string>(), "content", StringComparison.OrdinalIgnoreCase));
         var exported = content["data"]!.AsArray().OfType<JsonObject>().ToArray();
