@@ -93,6 +93,13 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ValidateAnyCertificate), S["Accepting any server certificate is turned off on this site. Use a server with a trusted certificate."]);
         }
 
+        // A user name and password sent without TLS can be read on the network path, and the FTP client refuses such a
+        // connection unless the host's operator allows it (CrestApps_AI:FileTransfer:AllowUnencryptedFtp).
+        if (!string.IsNullOrWhiteSpace(model.Username) && !_hostOptions.AllowUnencryptedFtp && !IsEncrypted(model.EncryptionMode))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.EncryptionMode), S["Sending a user name without TLS is turned off on this site. Choose Explicit or Implicit encryption."]);
+        }
+
         return new FtpConnectionMetadata
         {
             Host = model.Host?.Trim(),
@@ -107,4 +114,9 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
             RetryAttempts = model.RetryAttempts,
         };
     }
+
+    // The FTP client's own rule: only Explicit and Implicit send the credentials over TLS.
+    private static bool IsEncrypted(string encryptionMode)
+        => string.Equals(encryptionMode?.Trim(), "Explicit", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(encryptionMode?.Trim(), "Implicit", StringComparison.OrdinalIgnoreCase);
 }

@@ -5303,6 +5303,10 @@
                       "type": "string",
                       "description": "Optional passphrase for the private key. Recipe exports may sanitize this value."
                     },
+                    "HostKeyFingerprint": {
+                      "type": "string",
+                      "description": "Required. The server\u0027s SHA-256 host key fingerprint as \u0027ssh-keygen -lf\u0027 prints it (SHA256:...). The connection is refused when it is missing or the server shows another key."
+                    },
                     "ProxyType": {
                       "type": "string",
                       "enum": [

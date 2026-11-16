@@ -104,10 +104,17 @@ Both connectors share the remote folder fields:
 | **Files per listing** | host default | The most files one listing will take on. |
 
 **FTP** adds the host, port (21 when empty), username, password, encryption mode, data connection type, an
-*accept any certificate* switch, connect and read timeouts in milliseconds, and a retry count.
+*accept any certificate* switch, connect and read timeouts in milliseconds, and a retry count. Accepting any
+certificate, and a user name sent without TLS (an encryption mode other than Explicit or Implicit), are refused unless
+the host allows them with `CrestApps_AI:FileTransfer:AllowAnyFtpCertificate` and
+`CrestApps_AI:FileTransfer:AllowUnencryptedFtp` in the tenant's configuration; the FTP client checks the same settings
+when it connects.
 
-**SFTP** adds the host, port, username, and either a password or a private key with an optional passphrase,
-plus optional proxy settings, a connection timeout, and a keep-alive interval.
+**SFTP** adds the host, port, username, the server's **host key fingerprint**, and either a password or a private
+key with an optional passphrase, plus optional proxy settings, a connection timeout, and a keep-alive interval. The
+fingerprint is the server's SHA-256 host key fingerprint as `ssh-keygen -lf` prints it (`SHA256:...`); the connection
+trusts the server only when it shows that key, and a connection without one is refused. An SFTP source saved before
+the fingerprint existed fails to connect until one is added.
 
 A stored password, private key, or passphrase is never sent back to the editor. Leaving the field blank on
 save keeps the stored value; type a new one to replace it.
