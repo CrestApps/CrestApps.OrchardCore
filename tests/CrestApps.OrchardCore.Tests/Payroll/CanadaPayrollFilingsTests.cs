@@ -232,6 +232,117 @@ public sealed class CanadaPayrollFilingsTests
         Assert.Equal([("CA-QC", "1234567890TQ0001", (decimal?)2.31m), ("CA", "123456789RP0001", null)], request.Registrations.Select(registration => (registration.Jurisdiction, registration.AccountId, registration.Rate)));
     }
 
+    [Fact]
+    public async Task ACanadianEmployee_NeedsExactlyOneProvinceOfEmployment_FromTheWorkSite()
+    {
+        var canadian = new Employer { ItemId = "ca", Registrations = [new EmployerTaxRegistration { Jurisdiction = "CA" }] };
+        var american = new Employer { ItemId = "us", Registrations = [new EmployerTaxRegistration { Jurisdiction = "US" }] };
+        var employers = new Moq.Mock<IEmployerManager>();
+
+        employers.Setup(manager => manager.FindByIdAsync("ca", Moq.It.IsAny<CancellationToken>())).Returns(new ValueTask<Employer>(canadian));
+        employers.Setup(manager => manager.FindByIdAsync("us", Moq.It.IsAny<CancellationToken>())).Returns(new ValueTask<Employer>(american));
+
+        var sites = new Dictionary<string, string[]> { ["toronto"] = ["CA-ON"], ["border"] = ["CA-ON", "CA-QC"], ["nowhere"] = [] };
+        var teams = new Moq.Mock<CrestApps.OrchardCore.Teams.Services.ITeamManager>();
+
+        teams.Setup(manager => manager.FindByIdAsync(Moq.It.IsAny<string>(), Moq.It.IsAny<CancellationToken>()))
+            .Returns((string id, CancellationToken _) =>
+            {
+                var team = new CrestApps.OrchardCore.Teams.Models.Team { ItemId = id };
+
+                team.Put(new PayrollTeamSettings { Jurisdictions = [.. sites[id]] });
+
+                return new ValueTask<CrestApps.OrchardCore.Teams.Models.Team>(team);
+            });
+
+        var services = new ServiceCollection().AddSingleton(new PayrollTeamsFeature()).AddSingleton(teams.Object).BuildServiceProvider();
+        var provider = new CanadaProvinceOfEmploymentBlockers(employers.Object, services, new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<CanadaProvinceOfEmploymentBlockers>());
+
+        async Task<string[]> BlockersAsync(string employerId, string siteId, PayWorkerType type = PayWorkerType.Employee)
+        {
+            var blockers = new List<PayBlocker>();
+
+            await provider.AddBlockersAsync(new EmployeePayProfile { EmployerId = employerId, WorkSiteTeamId = siteId, WorkerType = type, HomeAddress = new() { Country = "CA", Region = "ON" } }, blockers, TestContext.Current.CancellationToken);
+
+            return [.. blockers.Select(blocker => blocker.Code)];
+        }
+
+        Assert.Empty(await BlockersAsync("ca", "toronto"));
+
+        // Where they live is no province of employment.
+        Assert.Equal([CanadaProvinceOfEmploymentBlockers.NoProvinceCode], await BlockersAsync("ca", null));
+        Assert.Equal([CanadaProvinceOfEmploymentBlockers.NoProvinceCode], await BlockersAsync("ca", "nowhere"));
+        Assert.Equal([CanadaProvinceOfEmploymentBlockers.SeveralProvincesCode], await BlockersAsync("ca", "border"));
+
+        // A contractor, or an employer not registered with the CRA, needs none.
+        Assert.Empty(await BlockersAsync("ca", null, PayWorkerType.Contractor));
+        Assert.Empty(await BlockersAsync("us", null));
+    }
+
+    [Fact]
+    public void T4Boxes24And26_StayWithinTheYearsMaximums()
+    {
+        var regular = new PayCode { ItemId = "reg", Code = "REG", Class = PayCodeClass.Earning, Kind = PayCodeKinds.Regular };
+        var settings = PayrollPayCodeSettingsExtensions.DefaultsFor(regular);
+
+        settings.TaxTreatment[IncomeTaxCategories.IncomeTax] = PayCodeTaxTreatment.Taxed;
+        settings.TaxTreatment[IncomeTaxCategories.SocialInsurance] = PayCodeTaxTreatment.Taxed;
+        regular.Put(settings);
+
+        // 26 pays of 3,500 (91,000 a year): EI and CPP worked out on each until their maximums, CPP2 above 74,600.
+        var statements = Enumerable.Range(0, 26).Select(index =>
+        {
+            var pay = new DateOnly(2026, 1, 9).AddDays(index * 14);
+            var lines = new List<PayStatementLine>
+            {
+                new() { Type = PayLineType.Earning, PayCodeId = "reg", Amount = 3500 },
+            };
+
+            if (index < 20)
+            {
+                lines.Add(new PayStatementLine { Type = PayLineType.Tax, TaxCode = CanadaIncomeTax.TaxCodes.EmploymentInsurance, Jurisdiction = "CA", TaxableWages = 3500, Amount = 57.05m });
+            }
+
+            if (index < 22)
+            {
+                lines.Add(new PayStatementLine { Type = PayLineType.Tax, TaxCode = CanadaIncomeTax.TaxCodes.Cpp, Jurisdiction = "CA", TaxableWages = 3500, Amount = 200m });
+            }
+
+            return new PayStatement { PayDate = pay, Lines = lines };
+        }).ToList();
+
+        var boxes = FormT4.Boxes(statements, new Dictionary<string, PayCode> { ["reg"] = regular });
+
+        // EI was worked out on 70,000 (the period reaching the maximum on all its pay): box 24 is 68,900. The pensionable
+        // earnings are 91,000: box 26 is the YAMPE, 85,000.
+        Assert.Equal((91000m, 68900m, 85000m), (boxes["14"], boxes["24"], boxes["26"]));
+
+        // A person who paid no CPP or QPP has no pensionable earnings.
+        Assert.Equal(0m, FormT4.Boxes([new PayStatement { PayDate = new DateOnly(2026, 3, 13), Lines = [new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "reg", Amount = 1000 }] }], new Dictionary<string, PayCode> { ["reg"] = regular })["26"]);
+    }
+
+    [Fact]
+    public void PayrollProject_ReferencesTheModulesOfItsFeatureDependencies()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "src", "Modules", "CrestApps.OrchardCore.Payroll", "CrestApps.OrchardCore.Payroll.csproj")))
+        {
+            directory = directory.Parent;
+        }
+
+        Assert.NotNull(directory);
+
+        var project = XDocument.Load(Path.Combine(directory.FullName, "src", "Modules", "CrestApps.OrchardCore.Payroll", "CrestApps.OrchardCore.Payroll.csproj"));
+        var modules = project.Descendants("ProjectReference")
+            .Where(reference => reference.Attribute("PrivateAssets")?.Value == "none")
+            .Select(reference => Path.GetFileNameWithoutExtension(reference.Attribute("Include")!.Value))
+            .ToList();
+
+        // So the packages of the Payroll feature's dependencies come along with Payroll's.
+        Assert.Equal(["CrestApps.OrchardCore.Addresses", "CrestApps.OrchardCore.Approvals", "CrestApps.OrchardCore.Staff", "CrestApps.OrchardCore.Taxation"], modules.Order(StringComparer.Ordinal));
+    }
+
     [Theory]
     [InlineData("046 454 286", true)]
     [InlineData("046-454-286", true)]

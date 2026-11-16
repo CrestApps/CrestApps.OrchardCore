@@ -91,6 +91,21 @@ public static class CanadaFilingSums
             .Select(line => line.Jurisdiction[3..].ToUpperInvariant())
             .LastOrDefault();
 
+    /// <summary>
+    /// Gets a year's maximum insurable earnings for EI (T4 box 24) and its additional maximum pensionable earnings
+    /// (YAMPE, box 26: since 2024 pensionable earnings are reported up to it, CPP2's ceiling). A year after the last
+    /// known takes the last known year's figures; add each new year's here.
+    /// </summary>
+    /// <param name="year">The year.</param>
+    /// <returns>The maximums.</returns>
+    public static (decimal InsurableEarnings, decimal PensionableEarnings) Maximums(int year)
+        => year switch
+        {
+            <= 2024 => (63_200m, 73_200m),
+            2025 => (65_700m, 81_200m),
+            _ => (68_900m, 85_000m),
+        };
+
     /// <summary>Gets the deposits remitted to an agency.</summary>
     /// <param name="deposits">The deposits.</param>
     /// <param name="jurisdiction">The agency's jurisdiction.</param>
@@ -259,6 +274,8 @@ public sealed class FormT4 : IPayrollFilingForm
         ArgumentNullException.ThrowIfNull(codes);
 
         var quebec = statements.Any(statement => statement.Lines.Any(line => line.TaxCode == CanadaIncomeTax.TaxCodes.Qpp));
+        var pensioned = statements.Any(statement => statement.Lines.Any(line => line.TaxCode is CanadaIncomeTax.TaxCodes.Cpp or CanadaIncomeTax.TaxCodes.Qpp));
+        var (insurableMaximum, pensionableMaximum) = CanadaFilingSums.Maximums(statements.Count == 0 ? 0 : statements.Max(statement => statement.PayDate.Year));
 
         return new Dictionary<string, decimal>(StringComparer.Ordinal)
         {
@@ -269,8 +286,13 @@ public sealed class FormT4 : IPayrollFilingForm
             ["17A"] = UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.Qpp2),
             ["18"] = UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.EmploymentInsurance, CanadaIncomeTax.TaxCodes.EmploymentInsuranceQuebec),
             ["22"] = UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.FederalIncomeTax) + CanadaFilingSums.ProvincialIncomeTax(statements),
-            ["24"] = UnitedStatesFilingSums.Taxable(statements, CanadaIncomeTax.TaxCodes.EmploymentInsurance) + UnitedStatesFilingSums.Taxable(statements, CanadaIncomeTax.TaxCodes.EmploymentInsuranceQuebec),
-            ["26"] = UnitedStatesFilingSums.Taxable(statements, quebec ? CanadaIncomeTax.TaxCodes.Qpp : CanadaIncomeTax.TaxCodes.Cpp),
+            // The pay EI was worked out on, within the year's maximum insurable earnings: the period that reaches the
+            // maximum is worked out on all its pay.
+            ["24"] = Math.Min(insurableMaximum, UnitedStatesFilingSums.Taxable(statements, CanadaIncomeTax.TaxCodes.EmploymentInsurance) + UnitedStatesFilingSums.Taxable(statements, CanadaIncomeTax.TaxCodes.EmploymentInsuranceQuebec)),
+
+            // The pensionable earnings before the basic exemption, up to the YAMPE (RC4120), for a person who paid CPP or
+            // QPP: what CPP2 or QPP2 is worked out on above the first ceiling counts too.
+            ["26"] = pensioned ? Math.Min(pensionableMaximum, Math.Max(UnitedStatesFilingSums.Wages(statements, codes, IncomeTaxCategories.SocialInsurance), UnitedStatesFilingSums.Taxable(statements, quebec ? CanadaIncomeTax.TaxCodes.Qpp : CanadaIncomeTax.TaxCodes.Cpp))) : 0m,
             ["55"] = UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.Qpip),
             ["56"] = UnitedStatesFilingSums.Taxable(statements, CanadaIncomeTax.TaxCodes.Qpip),
         };

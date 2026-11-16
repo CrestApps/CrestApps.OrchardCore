@@ -385,11 +385,31 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
             .Where(jurisdiction => !string.IsNullOrEmpty(jurisdiction))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var personal = (request.HomeJurisdictions ?? []).Concat(request.WorkJurisdictions ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var unplaced = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
         var rules = (await _rules.ListAsync(cancellationToken))
             .Where(rule =>
             {
-                // Where the person is, for this rule: where they work alone when the rule goes by it and that is known.
-                var place = rule.ByPlaceOfWork ? PlaceOfWork(request, rule.Jurisdiction) ?? personal : personal;
+                // Where the person is, for this rule: where they work, when the rule goes by it (Canada's province of
+                // employment), never where they live; with no place of work known, a rule below the country applies
+                // nowhere.
+                var place = personal;
+
+                if (rule.ByPlaceOfWork)
+                {
+                    place = PlaceOfWork(request, rule.Jurisdiction);
+
+                    if (place is null && rule.Jurisdiction.Contains('-', StringComparison.Ordinal))
+                    {
+                        if (rule.AppliesOn(request.PayDate) && registered.Contains(rule.CollectedBy ?? rule.Jurisdiction) && rule.AppliesTo(request.IncomeKind))
+                        {
+                            unplaced.Add(rule.Jurisdiction.Split('-')[0]);
+                        }
+
+                        return false;
+                    }
+
+                    place ??= [];
+                }
 
                 return rule.AppliesOn(request.PayDate)
                     && registered.Contains(rule.CollectedBy ?? rule.Jurisdiction)
@@ -401,6 +421,11 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
             .ThenBy(rule => rule.TaxCode, StringComparer.Ordinal)
             .ToList();
         var lines = new List<(int Order, IncomeTaxLine Line)>();
+
+        foreach (var country in unplaced)
+        {
+            result.Warnings.Add(S["No place of work in {0} is known: its taxes that go by the place of work (such as a province of employment) were not worked out.", country]);
+        }
 
         // Contributions and flat taxes, then the methods that give credits for them, then shares of other taxes.
         foreach (var phase in new[] { 0, 1, 2 })

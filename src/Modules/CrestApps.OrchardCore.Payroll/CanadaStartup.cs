@@ -2,7 +2,10 @@ using CrestApps.OrchardCore.Payroll.Core.Canada;
 using CrestApps.OrchardCore.Payroll.DataSources;
 using CrestApps.OrchardCore.Payroll.Drivers;
 using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Taxation;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 
@@ -22,6 +25,21 @@ public sealed class CanadaStartup : StartupBase
         services.AddPayrollFilingForm<FormT4>();
         services.AddPayrollFilingForm<FormRl1>();
         services.AddDisplayDriver<Employer, EmployerCanadaDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// With Taxation's Canada Income Tax on: an employee of an employer registered with the CRA needs exactly one province
+/// of employment.
+/// </summary>
+[Feature(PayrollConstants.Features.Payroll)]
+[RequireFeatures(TaxationConstants.Feature.IncomeTaxCanada)]
+public sealed class CanadaIncomeTaxStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayProfileBlockerProvider, CanadaProvinceOfEmploymentBlockers>());
     }
 }
 

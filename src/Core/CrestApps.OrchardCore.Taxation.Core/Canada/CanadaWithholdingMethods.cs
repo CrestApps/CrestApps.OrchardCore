@@ -134,14 +134,13 @@ internal sealed class CanadaPay
         => request.RegularIncomePerPeriod is not null && request.RegularIncomePerPeriod.TryGetValue(IncomeTaxCategories.IncomeTax, out var income) ? Math.Max(0, income) : 0m;
 
     /// <summary>
-    /// Gets whether the person's province of employment is Quebec: where they work when that is known, else where they
-    /// live.
+    /// Gets whether the person's province of employment is Quebec. It is where they work, never where they live: a
+    /// person living in Quebec and working in Ontario pays CPP, not QPP.
     /// </summary>
     /// <param name="request">The request.</param>
     /// <returns>Whether it is.</returns>
     public static bool WorksInQuebec(IncomeTaxRequest request)
-        => (IncomeTaxRulesProvider.PlaceOfWork(request, CanadaIncomeTax.Quebec) ?? [.. request.HomeJurisdictions ?? []])
-            .Contains(CanadaIncomeTax.Quebec, StringComparer.OrdinalIgnoreCase);
+        => IncomeTaxRulesProvider.PlaceOfWork(request, CanadaIncomeTax.Quebec)?.Contains(CanadaIncomeTax.Quebec) == true;
 
     /// <summary>
     /// Gets a basic personal amount that falls with net income (the federal BPAF, Yukon's BPAYT, Manitoba's BPAMB), or

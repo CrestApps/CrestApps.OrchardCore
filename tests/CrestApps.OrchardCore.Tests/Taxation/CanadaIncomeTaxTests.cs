@@ -161,6 +161,26 @@ public sealed class CanadaIncomeTaxTests
     }
 
     [Fact]
+    public async Task WithNoProvinceOfEmployment_NoProvinceTaxesAPerson_WhereverTheyLive()
+    {
+        await using var harness = await CreateHarnessAsync();
+
+        Assert.Empty(await ImportRecipeAsync(harness));
+
+        // A person living in Quebec whose place of work isn't known: no Quebec tax, QPP or QPIP from where they live.
+        var request = Request("CA-QC", 26, new DateOnly(2026, 3, 13), 2500m, 0m);
+
+        request.WorkJurisdictions = [];
+
+        var result = await harness.RunAsync(services => services.GetServices<IIncomeTaxProvider>().Single().CalculateAsync(request), commit: false);
+        var codes = result.Lines.Where(line => line.Amount != 0).Select(line => line.TaxCode).ToList();
+
+        Assert.DoesNotContain(codes, code => code.StartsWith("CA-QC-", StringComparison.Ordinal));
+        Assert.Contains(CanadaIncomeTax.TaxCodes.Cpp, codes);
+        Assert.Contains("No place of work in CA", Assert.Single(result.Warnings), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task TheMaximums_AreReachedDuringTheYear_AndCpp2StartsAboveTheFirstCeiling()
     {
         await using var harness = await CreateHarnessAsync();
