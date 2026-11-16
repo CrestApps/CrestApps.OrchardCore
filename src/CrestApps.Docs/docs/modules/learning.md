@@ -44,7 +44,7 @@ The migration creates these types. Each lesson type has the **Course item** part
 | --- | --- | --- |
 | `Course` | Title, Autoroute (`courses/{title}`), Html body, `Cover` media field, **Course**, **Course outline**, List (of the lesson types) | |
 | `PageLesson` | Title, Html body, `Attachments` media field | Page |
-| `VideoLesson` | Title, Html body, `Video` (.mp4, .webm) and `Captions` (.vtt) media fields, `YouTube` field, **Video lesson** | Video |
+| `VideoLesson` | Title, Html body, `Video` (MP4 or WebM files) and `Captions` (WebVTT files) media fields, `YouTube` field, **Video lesson** | Video |
 | `FileLesson` | Title, Html body, `Files` media field | File |
 | `LinkLesson` | Title, Html body, `Url` link field | Link |
 | `Acknowledgement` | Title, Html body, **Acknowledgement** (the statement to confirm) | Acknowledgement |

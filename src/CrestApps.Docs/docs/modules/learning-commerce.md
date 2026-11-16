@@ -6,7 +6,7 @@ user_manual:
   - user-manual/learning/selling-courses
 ---
 
-**Learning Commerce** (`CrestApps.OrchardCore.Learning.Commerce`, with `Learning.Commerce.Abstractions` and `Learning.Commerce.Core`) sells [Learning](./learning) through the commerce suite. It builds on [Products](./products), [Orders](./orders), [Carts](./carts) and [Accounts](./accounts) and adds no store of its own: a course is a product, a purchase is an order line, and a business buyer is an account.
+**Learning Commerce** (`CrestApps.OrchardCore.Learning.Commerce`, with `Learning.Commerce.Abstractions` and `Learning.Commerce.Core`) sells [Learning](./learning) through the commerce suite. It builds on [Products](./products), [Orders and Carts](./carts-and-orders) and [Accounts](./accounts) and adds no store of its own: a course is a product, a purchase is an order line, and a business buyer is an account.
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
