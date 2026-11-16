@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Throttling;
 using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Commerce;
@@ -83,6 +84,8 @@ public sealed class Startup : StartupBase
 
         // The Shipping step of an order's checkout, after Contact.
         services.AddScoped<ShippingOrderRateService>();
+        // Signs the rates a shipment's Buy label page quotes, so a label is bought only from them.
+        services.AddSignedLinks();
         services.AddScoped<ICheckoutHandler, ShippingCheckoutHandler>();
         services.AddScoped<ShippingCheckoutStepService>();
         services.AddScoped<ICheckoutFulfillmentStep, ShippingCheckoutFulfillmentStep>();

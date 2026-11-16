@@ -476,6 +476,11 @@ public class ShipmentLabelViewModel
 
     public string QuoteId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the signed token that binds <see cref="QuoteId"/> and its rates to the shipment they were quoted for.
+    /// </summary>
+    public string QuoteToken { get; set; }
+
     public string RateId { get; set; }
 
     [BindNever]

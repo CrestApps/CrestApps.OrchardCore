@@ -66,6 +66,7 @@
             {
                 <form asp-action="Buy" asp-route-shipmentId="@Model.Shipment.ItemId" method="post" class="no-multisubmit">
                     <input type="hidden" asp-for="QuoteId" />
+                    <input type="hidden" asp-for="QuoteToken" />
                     <div class="list-group list-group-flush">
                         @for (var i = 0; i < Model.Rates.Count; i++)
                         {

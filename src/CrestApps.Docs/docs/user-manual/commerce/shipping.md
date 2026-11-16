@@ -195,6 +195,8 @@ Buyers choose among the services quoted for their address and order, such as *US
 
 Your EasyPost account is charged, the shipment is marked shipped with the carrier and tracking number, and the buyer is emailed the tracking number. The shipment's print button opens the label to print. Labels use your **Sending parcels** address and default box; the buyer's address is the order's.
 
+A shipment gets one label. Clicking **Buy label and ship** twice, or two people buying at the same moment, buys one: the second is told the shipment already has its label. Rates can be bought for an hour after you compare them, and only for the shipment they were compared for. If the order's address or your **Sending parcels** address changed in between, or the default carrier provider did, the page says the rates are out of date: click **Compare rates** again.
+
 ### Follow the parcels
 
 Tracking updates set themselves up. When your site's **Base URL**, under **Settings > General**, is its public https address, saving the **EasyPost** tab registers a webhook with EasyPost for you, signed with a secret made for it; the tab then says *Registered with EasyPost at ...*. EasyPost can't reach a site on your own computer, so the tab says so until the Base URL is public. Rates and labels work either way.
