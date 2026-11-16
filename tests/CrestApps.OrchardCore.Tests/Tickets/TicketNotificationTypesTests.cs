@@ -38,6 +38,19 @@ namespace CrestApps.OrchardCore.Tests.Tickets;
 public sealed class TicketNotificationTypesTests
 {
     [Fact]
+    public void Tickets_AlwaysHasNotifications_WithTheEmailMethod()
+    {
+        // A requester who signs in gets their messages through Notifications; without its e-mail method they would get
+        // them only in the notification center, so Tickets brings both along.
+        var feature = typeof(TicketNotificationSender).Assembly
+            .GetCustomAttributes(typeof(global::OrchardCore.Modules.Manifest.FeatureAttribute), inherit: false)
+            .Cast<global::OrchardCore.Modules.Manifest.FeatureAttribute>()
+            .Single(attribute => attribute.Id == TicketsConstants.Features.Tickets && attribute.GetType() == typeof(global::OrchardCore.Modules.Manifest.FeatureAttribute));
+
+        Assert.Contains("OrchardCore.Notifications.Email", feature.Dependencies);
+    }
+
+    [Fact]
     public async Task ATicketNotification_IsHidden_OnceTheUserMayNoLongerSeeTheTicket()
     {
         // Arrange: an agent of the support desk; t1 is on support, t4 on HR, and "gone" was deleted.

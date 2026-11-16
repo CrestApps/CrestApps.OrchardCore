@@ -32,6 +32,10 @@ using OrchardCore.Modules.Manifest;
 
         // Ticket categories and the questions that follow the answers (show-when rules on the type's fields).
         ContentFieldsConstants.Features.ConditionalFields,
+
+        // Agents and signed-in requesters are told through Notifications; its e-mail method (which brings Notifications
+        // along) makes sure they also get them by e-mail, unless they turn a kind off.
+        OrchardCoreFeatureIds.NotificationsEmail,
     ]
 )]
 

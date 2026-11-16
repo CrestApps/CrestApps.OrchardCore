@@ -107,7 +107,7 @@ A desk's service-level policy sets how soon a ticket must first be answered and 
 
 ## Notifications you can get
 
-With Notifications on, what happens on your tickets reaches you in the notification center (the bell at the top of the admin) and by the other ways you chose, such as e-mail. Each notice names the ticket, with its desk, and opens it. You aren't told about your own changes, and a notice about a ticket you may no longer see disappears from your list.
+What happens on your tickets reaches you in the notification center (the bell at the top of the admin) and by e-mail, or the other ways you chose. Each notice names the ticket, with its desk, and opens it. You aren't told about your own changes, and a notice about a ticket you may no longer see disappears from your list.
 
 | Notification | When you get it |
 | --- | --- |
