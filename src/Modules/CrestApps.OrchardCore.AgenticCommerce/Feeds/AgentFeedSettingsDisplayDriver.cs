@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Core.Http;
+using CrestApps.OrchardCore.AI.FileTransfer.Core;
 using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Core.Feeds;
@@ -180,6 +181,11 @@ public sealed class AgentFeedSettingsDisplayDriver : SiteDisplayDriver<AgentFeed
         if (sftp.Enabled && sftp.HostKeyFingerprint is null)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SftpHostKeyFingerprint), S["Enter the SFTP server's host key fingerprint to push the feed."]);
+        }
+        else if (sftp.HostKeyFingerprint is not null && !SftpHostKeyFingerprints.IsValid(sftp.HostKeyFingerprint))
+        {
+            // A fingerprint the push never matches would save and then fail on every push.
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SftpHostKeyFingerprint), S["Enter the server's host key fingerprint, as ssh-keygen -lf prints it (SHA256:... or MD5:...). Separate several with commas."]);
         }
 
         settings.FeedApiTargets = UpdateTargets(settings.FeedApiTargets ?? [], model.FeedApiTargets ?? [], context);

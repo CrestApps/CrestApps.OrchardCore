@@ -164,8 +164,8 @@ Click **Add** on **Media** and fill in the same fields. In the **Path**, the pla
 <YouTube video="ai-mcp-resources" title="Video of adding SFTP and FTP resources" start={172} end={234} />
 
 1. Click **Add** on **SFTP**, then enter a **Display Text**, a **Name** and a **Description**.
-2. Enter the **Host**, the **Port** (22 by default) and the **Username** of the file server, and its **Host key fingerprint**, which your technical team reads from the server (it starts with `SHA256:`). The resource connects only to the server that shows that key.
-3. Sign in with a **Password**, or with a **Private Key** and its **Passphrase**. Both are stored securely and never shown again.
+2. Enter the **Host**, the **Port** (22 by default) and the **Username** of the file server, and its **Host key fingerprint**, which your technical team reads from the server (it starts with `SHA256:`, or `MD5:` for an older one; separate several with commas). The resource connects only to the server that shows that key.
+3. Sign in with a **Password**, or with a **Private Key** and its **Passphrase**. Both are stored securely and never shown again. If you later change the host, the port, the user name or the fingerprint, enter them again: they are cleared so they can't be sent to another server.
 4. **Proxy Settings**, a **Connection Timeout (seconds)** and a **Keep-Alive Interval (seconds)** are optional, and help with firewalls and slow networks.
 5. Click **Save**.
 

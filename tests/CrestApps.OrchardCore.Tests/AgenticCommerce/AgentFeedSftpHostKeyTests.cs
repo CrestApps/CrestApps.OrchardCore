@@ -131,6 +131,35 @@ public sealed class AgentFeedSftpHostKeyTests
         Assert.Equal(kept, settings.Sftp.PrivateKey is not null);
     }
 
+    /// <summary>
+    /// MD7 (fix verification, round 6): the push checks the server with CrestApps.Core's SftpHostKeys, so the settings
+    /// accept every fingerprint form it matches and refuse one it never matches.
+    /// </summary>
+    [Theory]
+    [InlineData("SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU", true)]
+    [InlineData("MD5:16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48", true)]
+    [InlineData("SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU; 1627aca576282d36631b564debdfa648", true)]
+    [InlineData("SHA256:not-a-fingerprint", false)]
+    public async Task Settings_AcceptExactlyTheFingerprintsThePushMatches(string fingerprint, bool accepted)
+    {
+        // Arrange
+        var settings = new AgentFeedSettings();
+        var context = PostedFormUpdateModel.CreateContext(new AgentFeedSettingsViewModel
+        {
+            SftpEnabled = true,
+            SftpHost = "sftp.example.test",
+            SftpUsername = "feeds",
+            SftpPassword = "secret",
+            SftpHostKeyFingerprint = fingerprint,
+        });
+
+        // Act
+        await Driver(new EphemeralDataProtectionProvider()).UpdateAsync(new SiteSettings(), settings, context);
+
+        // Assert
+        Assert.Equal(accepted, !context.Updater.ModelState.Any(entry => entry.Key.EndsWith(nameof(AgentFeedSettingsViewModel.SftpHostKeyFingerprint), StringComparison.Ordinal) && entry.Value.Errors.Count > 0));
+    }
+
     private static AgentFeedSettingsDisplayDriver Driver(IDataProtectionProvider protection)
     {
         var authorization = new Mock<IAuthorizationService>();

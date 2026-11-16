@@ -31,7 +31,7 @@
     <div class="ocat-end">
         <input asp-for="HostKeyFingerprint" class="form-control" placeholder="SHA256:..." autocomplete="off" spellcheck="false" />
         <span asp-validation-for="HostKeyFingerprint" class="text-danger"></span>
-        <span class="hint">@T["The server's SHA-256 host key fingerprint, as <code>ssh-keygen -lf</code> prints it. The connection is refused when the server shows another key."]</span>
+        <span class="hint">@T["The server's host key fingerprint, as <code>ssh-keygen -lf</code> prints it: <code>SHA256:...</code>, or the older <code>MD5:...</code> form. Separate several with commas, such as while a key is being replaced. The connection is refused when the server shows another key."]</span>
     </div>
 </div>
 

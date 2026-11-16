@@ -112,7 +112,8 @@ when it connects.
 
 **SFTP** adds the host, port, username, the server's **host key fingerprint**, and either a password or a private
 key with an optional passphrase, plus optional proxy settings, a connection timeout, and a keep-alive interval. The
-fingerprint is the server's SHA-256 host key fingerprint as `ssh-keygen -lf` prints it (`SHA256:...`); the connection
+fingerprint is the server's host key fingerprint as `ssh-keygen -lf` prints it (`SHA256:...`, or the older `MD5:...`
+form), and several can be given separated by commas, such as while a key is being replaced; the connection
 trusts the server only when it shows that key, and a connection without one is refused. An SFTP source saved before
 the fingerprint existed fails to connect until one is added.
 

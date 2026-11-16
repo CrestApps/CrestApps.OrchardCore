@@ -45,7 +45,7 @@ When creating an SFTP resource in the admin UI, you can configure:
 | **Host** | The SFTP server hostname or IP address |
 | **Port** | The SSH port (default: 22) |
 | **Username** | SSH authentication username |
-| **Host key fingerprint** | Required. The server's SHA-256 host key fingerprint as `ssh-keygen -lf` prints it (`SHA256:...`). The connection is refused when it is missing or the server shows another key. |
+| **Host key fingerprint** | Required. The server's host key fingerprint as `ssh-keygen -lf` prints it: `SHA256:...` (the prefix and the padding are optional), or the older MD5 form (`MD5:16:27:...`, or 32 hexadecimal digits). Separate several with commas, semicolons or spaces, such as while a key is being replaced. The editor accepts exactly the forms the connection matches. The connection is refused when it is missing or the server shows another key. |
 | **Password** | SSH authentication password (encrypted in storage) |
 | **Private Key** | SSH private key for key-based authentication (encrypted in storage) |
 

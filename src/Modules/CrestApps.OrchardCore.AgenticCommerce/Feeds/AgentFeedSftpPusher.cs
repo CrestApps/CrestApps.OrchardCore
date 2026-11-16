@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using CrestApps.Core.AI.Sftp;
 using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
@@ -83,7 +84,8 @@ public sealed partial class AgentFeedSftpPusher
 
             using var client = new SftpClient(CreateConnectionInfo(settings));
 
-            client.HostKeyReceived += (_, e) => e.CanTrust = SshHostKeyFingerprints.Matches(settings.HostKeyFingerprint, e.FingerPrintSHA256);
+            // The same check as every SFTP client of CrestApps.Core: the SHA-256 and MD5 forms, one or several.
+            SftpHostKeys.Require(client, settings.HostKeyFingerprint);
 
             await client.ConnectAsync(cancellationToken);
 

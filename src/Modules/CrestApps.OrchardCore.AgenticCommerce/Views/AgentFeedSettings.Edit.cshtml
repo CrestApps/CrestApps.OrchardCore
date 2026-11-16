@@ -127,7 +127,7 @@
             <label asp-for="SftpHostKeyFingerprint" class="ocat-label ocat-label-required">@T["Host key fingerprint"]</label>
             <div class="ocat-end">
                 <input asp-for="SftpHostKeyFingerprint" class="form-control font-monospace" placeholder="SHA256:..." />
-                <span class="hint">@T["Required to push. The server's SHA-256 fingerprint, such as from ssh-keyscan: the push stops when the server shows another key, and doesn't run without one."]</span>
+                <span class="hint">@T["Required to push. The server's host key fingerprint, such as from ssh-keyscan: SHA256:... or the older MD5:... form, several separated by commas. The push stops when the server shows another key, and doesn't run without one."]</span>
             </div>
         </div>
 

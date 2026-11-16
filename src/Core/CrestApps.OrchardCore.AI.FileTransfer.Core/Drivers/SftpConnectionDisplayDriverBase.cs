@@ -98,21 +98,19 @@ public abstract class SftpConnectionDisplayDriverBase<TModel> : DisplayDriver<TM
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProxyPort), S["The proxy port must be between 1 and 65535."]);
         }
 
-        // The client trusts the server only when it shows this key, and refuses a connection that names none, so a
-        // connection saved without one could never connect.
-        if (!SshHostKeyFingerprints.IsValid(model.HostKeyFingerprint))
+        // The client trusts the server only when it shows one of these keys, and refuses a connection that names none, so
+        // a connection saved without one, or with one the client never matches, could never connect.
+        if (!SftpHostKeyFingerprints.IsValid(model.HostKeyFingerprint))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.HostKeyFingerprint), S["Enter the server's SHA-256 host key fingerprint, as ssh-keygen -lf prints it (SHA256:...)."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.HostKeyFingerprint), S["Enter the server's host key fingerprint, as ssh-keygen -lf prints it (SHA256:... or MD5:...). Separate several with commas."]);
         }
-
-        var fingerprint = SshHostKeyFingerprints.Normalize(model.HostKeyFingerprint);
 
         var connection = new SftpConnectionMetadata
         {
             Host = model.Host?.Trim(),
             Port = model.Port,
             Username = FileTransferFields.Trimmed(model.Username),
-            HostKeyFingerprint = fingerprint is null ? null : "SHA256:" + fingerprint,
+            HostKeyFingerprint = SftpHostKeyFingerprints.Normalize(model.HostKeyFingerprint),
             ProxyType = FileTransferFields.Trimmed(model.ProxyType),
             ProxyHost = FileTransferFields.Trimmed(model.ProxyHost),
             ProxyPort = model.ProxyPort,

@@ -115,7 +115,8 @@ public sealed class FileTransferConnectionEditorTests
 
     [Theory]
     [InlineData("SHA256:not-a-fingerprint")]
-    [InlineData("MD5:16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48")]
+    [InlineData("MD5:16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df")]
+    [InlineData("SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU, typo")]
     public async Task SftpResourceDriver_WithAnInvalidHostKeyFingerprint_ShouldReportIt(string fingerprint)
     {
         // Arrange
@@ -130,9 +131,17 @@ public sealed class FileTransferConnectionEditorTests
         Assert.True(context.Updater.ModelState.ContainsKey(nameof(SftpConnectionFieldsViewModel.HostKeyFingerprint)));
     }
 
+    /// <summary>
+    /// MD7 (fix verification, round 6): the field took only a SHA-256 fingerprint, while the client also trusts an MD5
+    /// fingerprint and several in one field. The editor refused <c>MD5:16:27:...</c>; it now stores every form the client
+    /// matches, as it was entered.
+    /// </summary>
     [Theory]
     [InlineData("SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU")]
     [InlineData(" +DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU= ")]
+    [InlineData("MD5:16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48")]
+    [InlineData("1627aca576282d36631b564debdfa648")]
+    [InlineData("SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8, SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU")]
     public async Task SftpResourceDriver_StoresTheFingerprint_SoThePackagesClientTrustsThatServer(string posted)
     {
         // Arrange
@@ -146,9 +155,9 @@ public sealed class FileTransferConnectionEditorTests
         // Assert: CrestApps.Core's own check trusts the server that shows this key, and no other.
         Assert.True(context.Updater.ModelState.IsValid);
         var stored = resource.GetOrCreate<SftpConnectionMetadata>().HostKeyFingerprint;
-        Assert.Equal(Fingerprint, stored);
-        Assert.True(SftpHostKeys.Matches(stored, "+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU", md5Fingerprint: null));
-        Assert.False(SftpHostKeys.Matches(stored, "nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8", md5Fingerprint: null));
+        Assert.Equal(posted.Trim(), stored);
+        Assert.True(SftpHostKeys.Matches(stored, "+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU", Convert.FromHexString("1627aca576282d36631b564debdfa648")));
+        Assert.False(SftpHostKeys.Matches(stored, "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU", Convert.FromHexString("00112233445566778899aabbccddeeff")));
     }
 
     /// <summary>

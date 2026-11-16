@@ -62,7 +62,7 @@ public static class AIConnectionMetadataSchemaBuilders
                 ("Password", RecipeStepSchemaBuilders.String().Description("Password used for SFTP password authentication. Recipe exports may sanitize this value.")),
                 ("PrivateKey", RecipeStepSchemaBuilders.String().Description("Private key payload used for SFTP key-based authentication. Recipe exports may sanitize this value.")),
                 ("Passphrase", RecipeStepSchemaBuilders.String().Description("Optional passphrase for the private key. Recipe exports may sanitize this value.")),
-                ("HostKeyFingerprint", RecipeStepSchemaBuilders.String().Description("Required. The server's SHA-256 host key fingerprint as 'ssh-keygen -lf' prints it (SHA256:...). The connection is refused when it is missing or the server shows another key.")),
+                ("HostKeyFingerprint", RecipeStepSchemaBuilders.String().Description("Required. The server's host key fingerprint as 'ssh-keygen -lf' prints it: SHA256:... or the older MD5:... form, several separated by commas, semicolons or spaces. The connection is refused when it is missing or the server shows another key.")),
                 ("ProxyType", RecipeStepSchemaBuilders.String()
                     .Enum("None", "Socks4", "Socks5", "Http")
                     .Description("Optional proxy type used when the SFTP server is reached through a proxy.")),
