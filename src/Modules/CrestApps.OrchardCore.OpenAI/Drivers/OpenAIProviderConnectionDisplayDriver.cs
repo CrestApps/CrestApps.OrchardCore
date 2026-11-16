@@ -65,6 +65,9 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
         var metadata = connection.GetOrCreate<OpenAIConnectionMetadata>();
 
+        // The stored key was given for one endpoint; pointing the connection elsewhere drops it.
+        var storedKey = metadata.ApiKey;
+
         if (string.IsNullOrEmpty(model.Endpoint))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Endpoint is a required field"]);
@@ -79,17 +82,18 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
         }
         else
         {
+            storedKey = SecretDestination.Keep(storedKey, SecretDestination.SameOrigin(metadata.Endpoint, endpoint));
             metadata.Endpoint = endpoint;
         }
 
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
 
-        if (string.IsNullOrEmpty(metadata.ApiKey) && !hasNewKey)
+        if (string.IsNullOrEmpty(storedKey) && !hasNewKey)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["API key is required field."]);
         }
 
-        metadata.ApiKey = _dataProtectionProvider.ApplySecret(AIConstants.ConnectionProtectorName, metadata.ApiKey, model.ApiKey);
+        metadata.ApiKey = _dataProtectionProvider.ApplySecret(AIConstants.ConnectionProtectorName, storedKey, model.ApiKey);
 
         connection.Put(metadata);
 

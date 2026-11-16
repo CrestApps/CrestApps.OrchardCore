@@ -20,6 +20,10 @@ const libraries = {
     markers: read('src/Modules/CrestApps.OrchardCore.Resources/wwwroot/vendors/crestapps/chat-markers.js'),
     carousel: read('src/Modules/CrestApps.OrchardCore.Resources/wwwroot/vendors/crestapps/chat-image-carousel.js'),
     aiChat: read('src/Modules/CrestApps.OrchardCore.AI.Chat/wwwroot/scripts/ai-chat.js'),
+    widget: read('src/Modules/CrestApps.OrchardCore.AI.Chat/wwwroot/scripts/ai-chat-widget.js'),
+    // Orchard Core's built admin theme script (TheAdmin 4.0.0-preview-19225, taken from the package's embedded
+    // wwwroot/js/theadmin/TheAdmin.js), whose click listeners act on data-url-af and the element's dataset.
+    theAdmin: read('tests/js/resources/fixtures/TheAdmin-4.0.0-preview-19225.js'),
     chatInteraction: read('src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/wwwroot/scripts/chat-interaction.js'),
     builtGuard: read('src/Modules/CrestApps.OrchardCore.Resources/wwwroot/scripts/chat-output-guard.js'),
 };
@@ -228,6 +232,144 @@ describe('the vendored chat-interaction.js with an answer that carries a chat co
     });
 });
 
+describe('the vendored ai-chat-widget.js with an answer that carries a widget configuration', () => {
+    // The widget script starts a widget from any element added to the page with data-coreai-chat-widget-config, and
+    // writes the configuration's icon markup into the toggle button with innerHTML.
+    function plantedWidget() {
+        const planted = {
+            toggleButtonSelector: '#planted-toggle',
+            widgetContainerSelector: '#planted-toggle',
+            widgetStateName: 'planted',
+            closedIconHtml: '<b class="widget-pwned"></b>',
+            openIconHtml: '<b class="widget-pwned"></b>',
+            chatConfig: { signalRHubUrl: '/hub', appElementSelector: '#planted-toggle', messageTemplate: payloadTemplate, widget: {} },
+        };
+
+        return `Here is the answer.\n\n<button id="planted-toggle"></button><div data-coreai-chat-widget-config='${attribute(planted)}'></div>\n`;
+    }
+
+    it('the planted widget configuration is a working exploit without the guard', async () => {
+        const window = createPage(aiChatPage(plantedWidget()));
+
+        window.eval(libraries.aiChat);
+        window.eval(libraries.widget);
+        await flush(window);
+
+        expect(window.document.querySelector('.widget-pwned')).not.toBeNull();
+    });
+
+    it('with only the watcher, starts no widget from an element added inside the mounted chat', async () => {
+        const window = createPage(aiChatPage(plantedWidget()));
+
+        watchRenderedOutput(window);
+        window.eval(libraries.aiChat);
+        window.eval(libraries.widget);
+        await flush(window);
+
+        expect(window.document.querySelector('#chat-app .message')).not.toBeNull();
+        expect(window.document.querySelector('.widget-pwned')).toBeNull();
+        expect(window.document.querySelector('#chat-app [data-coreai-chat-widget-config]')).toBeNull();
+    });
+
+    it('with the built guard loaded first, starts no widget', async () => {
+        const window = createPage(aiChatPage(plantedWidget()));
+
+        window.eval(libraries.builtGuard);
+        window.eval(libraries.aiChat);
+        window.eval(libraries.widget);
+        await flush(window);
+
+        expect(window.document.querySelector('.widget-pwned')).toBeNull();
+    });
+});
+
+describe('an answer on an admin page that carries TheAdmin action attributes', () => {
+    // HT4: TheAdmin builds and submits a POST form, with the page's antiforgery token, for a click on a link with
+    // data-url-af="UnsafeUrl", and writes data-title into its confirm dialog with innerHTML for data-url-af="RemoveUrl".
+    const adminAnswer = 'Here is the answer.\n\n'
+        + '<a href="/Admin/Users/Delete?id=42&amp;returnUrl=%2F" data-url-af="UnsafeUrl" class="unsafe-link">Delete</a> '
+        + '<a href="#" data-url-af="RemoveUrl" data-title="&lt;img src=x class=injected-title&gt;" data-message="Sure?" class="remove-link">Remove</a> '
+        + '<a href="/Admin/Settings?x=1" itemprop="UnsafeUrl" class="itemprop-link">Settings</a>\n';
+
+    function adminPage(answer) {
+        const window = createPage(`<form><input name="__RequestVerificationToken" type="hidden" value="admin-token"></form>${aiChatPage(answer)}`);
+        const submitted = [];
+
+        window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
+        window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+        window.bootstrap = {
+            Modal: class {
+                constructor(element) { this.element = element; }
+                show() {}
+                hide() {}
+                static getOrCreateInstance(element) { return new this(element); }
+                static getInstance(element) { return new this(element); }
+            },
+        };
+        window.HTMLFormElement.prototype.submit = function () { submitted.push(this); };
+        window.eval(libraries.theAdmin);
+
+        // TheAdmin wires its listeners on DOMContentLoaded, which jsdom fires after the page is built unless it already has.
+        if (window.document.readyState !== 'loading') {
+            window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+        }
+
+        return { window, submitted };
+    }
+
+    function click(window, selector) {
+        const link = window.document.querySelector(`#chat-app .message ${selector}`);
+
+        expect(link).not.toBeNull();
+        link.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    }
+
+    it('the attributes are a working exploit without the guard', async () => {
+        const { window, submitted } = adminPage(adminAnswer);
+
+        window.eval(libraries.aiChat);
+        await flush(window);
+
+        click(window, '.unsafe-link');
+        click(window, '.remove-link');
+
+        expect(submitted).toHaveLength(1);
+        expect(submitted[0].getAttribute('action')).toBe('/Admin/Users/Delete');
+        expect(submitted[0].querySelector('input[name="__RequestVerificationToken"]').value).toBe('admin-token');
+        expect(window.document.querySelector('#confirmRemoveModal .modal-title img.injected-title')).not.toBeNull();
+    });
+
+    it('with the built guard loaded first, the links keep no action attribute and a click does nothing', async () => {
+        const { window, submitted } = adminPage(adminAnswer);
+
+        window.eval(libraries.builtGuard);
+        window.eval(libraries.aiChat);
+        await flush(window);
+
+        click(window, '.unsafe-link');
+        click(window, '.remove-link');
+        click(window, '.itemprop-link');
+
+        expect(submitted).toHaveLength(0);
+        expect(window.document.querySelector('#confirmRemoveModal')).toBeNull();
+        expect(window.document.querySelector('#chat-app .message [data-url-af],#chat-app .message [data-title],#chat-app .message [itemprop]')).toBeNull();
+        expect(window.document.querySelector('#chat-app .message .unsafe-link').getAttribute('href')).toBe('/Admin/Users/Delete?id=42&returnUrl=%2F');
+    });
+
+    it('with only the sanitizer hardened, drops every data attribute the chat markup does not need', async () => {
+        const { window, submitted } = adminPage(adminAnswer.replace('Here is the answer.', '<span data-bs-toggle="modal" data-bs-target="#x" data-anything="1">x</span>'));
+
+        hardenSanitizer(window.DOMPurify);
+        window.eval(libraries.aiChat);
+        await flush(window);
+
+        click(window, '.unsafe-link');
+
+        expect(submitted).toHaveLength(0);
+        expect(window.document.querySelector('#chat-app .message [data-bs-toggle],#chat-app .message [data-bs-target],#chat-app .message [data-anything]')).toBeNull();
+    });
+});
+
 describe('isAllowedAttribute', () => {
     it('refuses every chat configuration attribute and any id but a chart canvas one', () => {
         expect(isAllowedAttribute('DIV', 'data-coreai-chat-config', '{}')).toBe(false);
@@ -239,5 +381,39 @@ describe('isAllowedAttribute', () => {
         expect(isAllowedAttribute('CANVAS', 'id', 'chat_chart_3')).toBe(true);
         expect(isAllowedAttribute('A', 'href', 'https://example.com')).toBe(true);
         expect(isAllowedAttribute('BUTTON', 'data-chart-id', 'chat_chart_3')).toBe(true);
+    });
+
+    it('refuses every data attribute except the few the chat scripts write into their own markup', () => {
+        expect(isAllowedAttribute('A', 'data-url-af', 'UnsafeUrl')).toBe(false);
+        expect(isAllowedAttribute('A', 'data-title', '<img>')).toBe(false);
+        expect(isAllowedAttribute('A', 'data-message', 'x')).toBe(false);
+        expect(isAllowedAttribute('A', 'data-bs-toggle', 'modal')).toBe(false);
+        expect(isAllowedAttribute('DIV', 'data-coreai-chat-widget-config', '{}')).toBe(false);
+        expect(isAllowedAttribute('DIV', 'data-chart-id-extra', 'x')).toBe(false);
+
+        for (const name of ['data-agui-tool-call', 'data-agui-interrupt', 'data-agui-approved', 'data-doc-index', 'data-error-index',
+            'data-carousel-step', 'data-carousel-target', 'data-carousel-size-option', 'data-stack-offset']) {
+            expect(isAllowedAttribute('BUTTON', name, '1')).toBe(true);
+        }
+    });
+});
+
+describe('the chat markup that goes through the sanitizer', () => {
+    it('keeps the attributes the AG-UI approval buttons, the chart download button and the document bar act on', () => {
+        const window = createPage(aiChatPage('Hello.'));
+
+        window.eval(libraries.builtGuard);
+
+        const activity = window.DOMPurify.sanitize('<div data-agui-tool-call="c1"><button data-agui-interrupt="i1" data-agui-approved="true">Allow</button></div>');
+        const chart = window.DOMPurify.sanitize('<canvas id="chat_chart_1"></canvas><button data-chart-id="chat_chart_1">Download</button>', { ADD_TAGS: ['canvas'] });
+        const documents = window.DOMPurify.sanitize('<button data-doc-index="0"></button><button data-error-index="1"></button>');
+
+        expect(activity).toContain('data-agui-tool-call="c1"');
+        expect(activity).toContain('data-agui-interrupt="i1"');
+        expect(activity).toContain('data-agui-approved="true"');
+        expect(chart).toContain('id="chat_chart_1"');
+        expect(chart).toContain('data-chart-id="chat_chart_1"');
+        expect(documents).toContain('data-doc-index="0"');
+        expect(documents).toContain('data-error-index="1"');
     });
 });

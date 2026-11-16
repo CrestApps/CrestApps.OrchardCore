@@ -23,7 +23,8 @@ internal sealed class GuardedStdioClientTransportProvider : IMcpClientTransportP
     private readonly StdioClientTransportProvider _inner = new();
 
     // Environment variables that change which program runs or what it loads before its own code: with them a connection
-    // could make an allowed command run something else. Refused whenever the host lists its allowed commands.
+    // could make an allowed command run something else. Whenever the host lists its allowed commands, a connection sets
+    // only the variables the host lists too; these are allowed only when listed by their full name.
     private static readonly string[] _programChangingVariables =
     [
         "PATH", "PATHEXT", "COMSPEC", "SHELL", "BASH_ENV", "ENV",
@@ -73,11 +74,11 @@ internal sealed class GuardedStdioClientTransportProvider : IMcpClientTransportP
             throw new InvalidOperationException("The command of this local (stdio) MCP connection is not one the host allows.");
         }
 
-        if (_options.AllowedCommands.Length > 0 && FindProgramChangingVariable(metadata?.EnvironmentVariables) is { } variable)
+        if (_options.AllowedCommands.Length > 0 && FindRefusedVariable(metadata?.EnvironmentVariables, _options.AllowedEnvironmentVariables) is { } variable)
         {
-            _logger.LogWarning("The local MCP connection '{ConnectionId}' was not started: it sets an environment variable that changes which program runs.", connection.ItemId);
+            _logger.LogWarning("The local MCP connection '{ConnectionId}' was not started: it sets an environment variable the host does not allow.", connection.ItemId);
 
-            throw new InvalidOperationException($"This local (stdio) MCP connection sets {variable}, which changes which program runs; the host's allowed commands don't permit it.");
+            throw new InvalidOperationException($"This local (stdio) MCP connection sets {variable}, which the host's allowed environment variables don't include.");
         }
 
         return _inner.GetAsync(connection);
@@ -119,10 +120,46 @@ internal sealed class GuardedStdioClientTransportProvider : IMcpClientTransportP
     }
 
     /// <summary>
-    /// Returns the first environment variable that changes which program runs or what it loads (such as <c>PATH</c>,
-    /// <c>NODE_OPTIONS</c> or <c>LD_PRELOAD</c>), or <see langword="null"/>.
+    /// Returns the first environment variable a connection sets that the host does not allow, or <see langword="null"/>.
+    /// A list of names to refuse could never be complete (<c>CORECLR_PROFILER_PATH</c>, <c>HOME</c> for <c>.npmrc</c>,
+    /// <c>GIT_SSH_COMMAND</c> and many more change what runs), so only the names the host lists are allowed.
     /// </summary>
     /// <param name="variables">The connection's environment variables.</param>
-    internal static string FindProgramChangingVariable(IReadOnlyDictionary<string, string> variables)
-        => variables?.Keys.FirstOrDefault(name => _programChangingVariables.Contains(name?.Trim(), StringComparer.OrdinalIgnoreCase));
+    /// <param name="allowedVariables">The variables the host allows: full names, or prefixes ending with <c>*</c>.</param>
+    internal static string FindRefusedVariable(IReadOnlyDictionary<string, string> variables, IReadOnlyCollection<string> allowedVariables)
+        => variables?.Keys.FirstOrDefault(name => !IsAllowedVariable(name?.Trim(), allowedVariables));
+
+    private static bool IsAllowedVariable(string name, IReadOnlyCollection<string> allowedVariables)
+    {
+        if (string.IsNullOrEmpty(name) || allowedVariables is null)
+        {
+            return false;
+        }
+
+        var changesProgram = _programChangingVariables.Contains(name, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var entry in allowedVariables)
+        {
+            var allowed = entry?.Trim();
+
+            if (string.IsNullOrEmpty(allowed))
+            {
+                continue;
+            }
+
+            if (string.Equals(allowed, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (!changesProgram &&
+                allowed.EndsWith('*') &&
+                name.StartsWith(allowed[..^1], StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

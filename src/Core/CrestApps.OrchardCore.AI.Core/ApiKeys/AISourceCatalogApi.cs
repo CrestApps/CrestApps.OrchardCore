@@ -18,6 +18,9 @@ namespace CrestApps.OrchardCore.AI.Core.ApiKeys;
 /// </summary>
 public static class AISourceCatalogApi
 {
+    // A JSON object that matches property names without regard to case, as a bound request body does.
+    private static readonly JsonNodeOptions _caseInsensitiveNodes = new() { PropertyNameCaseInsensitive = true };
+
     /// <summary>
     /// Maps the endpoints under <c>api/ai/v1/{path}</c>.
     /// </summary>
@@ -199,14 +202,16 @@ public static class AISourceCatalogApi
     /// <summary>
     /// Returns a copy of posted changes whose keys, at every depth, are spelled as the record's are, and in which two keys
     /// that differ only in case are one. A request body is bound without regard to case but a record's own JSON is not,
-    /// so without this a check made on the merged record and the update that is saved could read different values.
+    /// so without this a check made on the merged record and the update that is saved could read different values. The
+    /// copy matches keys without regard to case, as the bound body did, so a handler that reads a flat key in its own
+    /// spelling finds one posted in another.
     /// </summary>
     /// <param name="changes">The posted changes.</param>
     /// <param name="reference">The record's current JSON, or <see langword="null"/>.</param>
     /// <returns>The normalized changes, a new object.</returns>
     public static JsonObject NormalizeKeys(JsonObject changes, JsonObject reference)
     {
-        var result = new JsonObject();
+        var result = new JsonObject(_caseInsensitiveNodes);
 
         foreach (var (key, value) in changes ?? [])
         {

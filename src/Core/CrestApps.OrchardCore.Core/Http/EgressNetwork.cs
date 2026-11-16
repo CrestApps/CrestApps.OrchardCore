@@ -39,11 +39,12 @@ public static class EgressNetwork
     public const string UseSystemProxyKey = "CrestApps:Egress:UseSystemProxy";
 
     // Cloud metadata and platform services that answer outside the link-local range, refused even where a private
-    // network is allowed: AWS over IPv6 (fd00:ec2::254), the Azure host (168.63.129.16), Alibaba Cloud
-    // (100.100.100.200) and Oracle Cloud (192.0.0.192).
+    // network is allowed: AWS over IPv6 (fd00:ec2::254), Google Cloud over IPv6 (fd20:ce::254, for IPv6-only VMs), the
+    // Azure host (168.63.129.16), Alibaba Cloud (100.100.100.200) and Oracle Cloud (192.0.0.192).
     private static readonly IPAddress[] _metadataServices =
     [
         IPAddress.Parse("fd00:ec2::254"),
+        IPAddress.Parse("fd20:ce::254"),
         IPAddress.Parse("168.63.129.16"),
         IPAddress.Parse("100.100.100.200"),
         IPAddress.Parse("192.0.0.192"),
@@ -207,6 +208,25 @@ public static class EgressNetwork
     /// <param name="proxy">The proxy to go through, such as <see cref="GetProxy(IServiceProvider)"/>, or
     /// <see langword="null"/> for none.</param>
     public static SocketsHttpHandler CreateHandler(bool allowLoopback, bool allowPrivateNetwork, bool allowRedirects, IWebProxy proxy)
+        => CreateHandler(allowLoopback, allowPrivateNetwork, allowRedirects, proxy, existingConnect: null);
+
+    /// <summary>
+    /// Creates a handler as <see cref="CreateHandler(bool, bool, bool, IWebProxy)"/> does, keeping a connect check that
+    /// another guard already put on the client, such as the tenant hierarchy's. The other guard opens the connection after
+    /// its own checks, and the address it really connected to is then held to this guard's rule too, so neither rule is
+    /// lost when this handler replaces the client's primary handler.
+    /// </summary>
+    /// <param name="allowLoopback">Whether loopback addresses are allowed (development only).</param>
+    /// <param name="allowPrivateNetwork">Whether private and loopback addresses are allowed (never link-local).</param>
+    /// <param name="allowRedirects">Whether redirects are followed. Each hop is checked.</param>
+    /// <param name="proxy">The proxy to go through, or <see langword="null"/> for none.</param>
+    /// <param name="existingConnect">The connect callback the client's handler had, or <see langword="null"/>.</param>
+    public static SocketsHttpHandler CreateHandler(
+        bool allowLoopback,
+        bool allowPrivateNetwork,
+        bool allowRedirects,
+        IWebProxy proxy,
+        Func<SocketsHttpConnectionContext, CancellationToken, ValueTask<Stream>> existingConnect)
     {
         var handler = new SocketsHttpHandler
         {
@@ -216,7 +236,9 @@ public static class EgressNetwork
             Proxy = proxy,
             AllowAutoRedirect = allowRedirects,
             AutomaticDecompression = DecompressionMethods.All,
-            ConnectCallback = (context, cancellationToken) => ConnectAsync(context, allowLoopback, allowPrivateNetwork, proxy, cancellationToken),
+            ConnectCallback = existingConnect is null
+                ? (context, cancellationToken) => ConnectAsync(context, allowLoopback, allowPrivateNetwork, proxy, cancellationToken)
+                : (context, cancellationToken) => ConnectThroughAsync(context, existingConnect, allowLoopback, allowPrivateNetwork, proxy, cancellationToken),
         };
 
         if (proxy is not null)
@@ -265,7 +287,7 @@ public static class EgressNetwork
 
     /// <summary>
     /// Whether the address is a cloud metadata or platform service that answers outside the link-local range
-    /// (<c>fd00:ec2::254</c>, <c>168.63.129.16</c>, <c>100.100.100.200</c>, <c>192.0.0.192</c>), directly or embedded in a
+    /// (<c>fd00:ec2::254</c>, <c>fd20:ce::254</c>, <c>168.63.129.16</c>, <c>100.100.100.200</c>, <c>192.0.0.192</c>), directly or embedded in a
     /// mapped, NAT64 or 6to4 address. Like a link-local address, it is never allowed, even on a private network.
     /// </summary>
     /// <param name="address">The address.</param>
@@ -446,6 +468,36 @@ public static class EgressNetwork
 
     // Where the request goes. An https request through a proxy first asks the proxy for a tunnel, and the connection is
     // made for that CONNECT request: its address is the proxy's, and the destination is only in its Host header.
+    private static async ValueTask<Stream> ConnectThroughAsync(
+        SocketsHttpConnectionContext context,
+        Func<SocketsHttpConnectionContext, CancellationToken, ValueTask<Stream>> existingConnect,
+        bool allowLoopback,
+        bool allowPrivateNetwork,
+        IWebProxy proxy,
+        CancellationToken cancellationToken)
+    {
+        var destination = GetDestination(context.InitialRequestMessage);
+        var throughProxy = proxy is not null && destination is not null && IsProxyConnection(context.DnsEndPoint, destination, proxy);
+
+        // The name is checked first, so a refused host is never connected to at all.
+        await ResolveAllowedAsync(throughProxy ? destination.IdnHost : context.DnsEndPoint.Host, allowLoopback, allowPrivateNetwork, cancellationToken);
+
+        var stream = await existingConnect(context, cancellationToken);
+
+        // The other guard resolved the name again; the address it connected to must pass this rule too, which stops a
+        // name that answers differently the second time.
+        if (!throughProxy &&
+            stream is NetworkStream { Socket.RemoteEndPoint: IPEndPoint remote } &&
+            IsRefused(remote.Address, allowLoopback, allowPrivateNetwork))
+        {
+            await stream.DisposeAsync();
+
+            throw new HttpRequestException($"The host '{context.DnsEndPoint.Host}' {RefusedMessage}.");
+        }
+
+        return stream;
+    }
+
     private static Uri GetDestination(HttpRequestMessage request)
     {
         if (request is null || request.Method != HttpMethod.Connect)

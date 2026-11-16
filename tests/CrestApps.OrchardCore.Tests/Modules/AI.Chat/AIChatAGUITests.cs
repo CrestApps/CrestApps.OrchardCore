@@ -4,6 +4,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Services;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
@@ -169,7 +170,7 @@ public sealed class AIChatAGUITests
 
         using var provider = services.BuildServiceProvider();
 
-        return new AIChatUIConfiguration(provider.GetRequiredService<IOptions<AIToolDefinitionOptions>>(), new PassThroughLocalizer<AIChatUIConfiguration>());
+        return new AIChatUIConfiguration(provider.GetRequiredService<IOptions<AIToolDefinitionOptions>>(), new HttpContextAccessor(), Mock.Of<IAntiforgery>(), new PassThroughLocalizer<AIChatUIConfiguration>());
     }
 
     private sealed class TestTool : AIFunction

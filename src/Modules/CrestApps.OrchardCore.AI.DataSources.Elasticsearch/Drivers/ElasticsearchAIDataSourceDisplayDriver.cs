@@ -131,7 +131,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
 
         var environmentType = NormalizeEnvironmentType(model.EnvironmentType);
         var authenticationType = NormalizeAuthenticationType(model.AuthenticationType);
-        var existingMetadata = dataSource.GetOrCreate<ElasticsearchSourceMetadata>();
+        var existingMetadata = KeptCredentials(dataSource.GetOrCreate<ElasticsearchSourceMetadata>(), environmentType, model.Url, model.CloudId, authenticationType);
 
         if (string.Equals(environmentType, ElasticsearchSourceMetadata.SelfManagedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
             string.IsNullOrWhiteSpace(model.Url))
@@ -227,6 +227,23 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         });
 
         return Edit(dataSource, context);
+    }
+
+    // The stored credentials were given for one cluster and one way of signing in; changing either drops them.
+    private static ElasticsearchSourceMetadata KeptCredentials(ElasticsearchSourceMetadata stored, string environmentType, string url, string cloudId, string authenticationType)
+        => SendsToSamePlace(stored, environmentType, url, cloudId, authenticationType) ? stored : new ElasticsearchSourceMetadata();
+
+    private static bool SendsToSamePlace(ElasticsearchSourceMetadata stored, string environmentType, string url, string cloudId, string authenticationType)
+    {
+        if (!string.Equals(NormalizeEnvironmentType(stored.EnvironmentType), environmentType, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(NormalizeAuthenticationType(stored.AuthenticationType), authenticationType, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return string.Equals(environmentType, ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase)
+            ? string.Equals(stored.CloudId?.Trim(), cloudId?.Trim(), StringComparison.Ordinal)
+            : SecretDestination.SameOrigin(stored.Url, url);
     }
 
     private static bool HasStoredConnection(ElasticsearchSourceMetadata metadata)

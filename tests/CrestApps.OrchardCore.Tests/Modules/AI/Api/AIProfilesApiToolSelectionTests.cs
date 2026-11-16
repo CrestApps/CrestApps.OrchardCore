@@ -128,6 +128,108 @@ public sealed class AIProfilesApiToolSelectionTests
         Assert.Equal("support", profile.Name);
     }
 
+    [Fact]
+    public async Task Create_RefusesToolsSentUnderALowerCaseInnerKey()
+    {
+        // Arrange (MD4): the handler builds Properties as a case-sensitive dictionary, so the check found no tools under
+        // "functioninvocationmetadata"; the store reads the saved document back without regard to case and runs them.
+        var manager = HandlerBackedManager(null);
+        var body = BoundBody("""{ "Name": "support", "Properties": { "functioninvocationmetadata": { "Names": ["enableFeature"] } } }""");
+
+        // Act
+        var result = await AIProfilesApiEndpoints.CreateAsync(body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+
+        // Assert
+        var problem = Assert.IsType<ValidationProblem>(result.Result);
+        Assert.Contains("enableFeature", problem.ProblemDetails.Errors["tools"][0], StringComparison.Ordinal);
+        manager.Verify(m => m.CreateAsync(It.IsAny<AIProfile>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Update_RefusesPostSessionToolsSentUnderALowerCaseInnerKey()
+    {
+        // Arrange (MD4): the profile has no post-session settings yet, so there is no spelling to copy the inner key from.
+        var profile = new AIProfile { ItemId = "profile-1", Name = "support" };
+        var manager = HandlerBackedManager(profile);
+        var body = BoundBody("""{ "settings": { "aiprofilepostsessionsettings": { "EnablePostSessionProcessing": true, "ToolNames": ["enableFeature"] } } }""");
+
+        // Act
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+
+        // Assert: refused, and the profile as the store would read it back has no such tool.
+        var problem = Assert.IsType<ValidationProblem>(result.Result);
+        Assert.Contains("enableFeature", problem.ProblemDetails.Errors["tools"][0], StringComparison.Ordinal);
+        Assert.Empty(Reloaded(profile).GetSettings<AIProfilePostSessionSettings>()?.ToolNames ?? []);
+    }
+
+    [Fact]
+    public async Task Create_SavesAToolTheCallerMayUse_SentUnderALowerCaseInnerKey()
+    {
+        // Arrange
+        var manager = HandlerBackedManager(null);
+        AIProfile created = null;
+        manager.Setup(m => m.CreateAsync(It.IsAny<AIProfile>(), It.IsAny<CancellationToken>()))
+            .Callback((AIProfile profile, CancellationToken _) => created = profile)
+            .Returns(ValueTask.CompletedTask);
+        var body = BoundBody("""{ "Name": "support", "Properties": { "functioninvocationmetadata": { "Names": ["listAIProfiles"] } } }""");
+
+        // Act
+        var result = await AIProfilesApiEndpoints.CreateAsync(body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+
+        // Assert
+        Assert.IsType<Created<AIProfile>>(result.Result);
+        Assert.Equal(["listAIProfiles"], Reloaded(created).GetOrCreate<FunctionInvocationMetadata>().Names);
+    }
+
+    [Fact]
+    public async Task Update_AppliesFlatSettingsSentInCamelCase()
+    {
+        // Arrange (MD4): the bound body matched "systemMessage" to the handler's "SystemMessage"; the normalized changes
+        // must too, or a camel-cased flat setting is dropped silently.
+        var profile = new AIProfile { ItemId = "profile-1", Name = "support" };
+        var manager = HandlerBackedManager(profile);
+        var body = BoundBody("""{ "systemMessage": "Be brief.", "isListable": false }""");
+
+        // Act
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+
+        // Assert
+        Assert.IsType<Ok<AIProfile>>(result.Result);
+        Assert.Equal("Be brief.", profile.GetOrCreate<AIProfileMetadata>().SystemMessage);
+        Assert.False(profile.GetOrCreateSettings<AIProfileSettings>().IsListable);
+    }
+
+    [Theory]
+    [InlineData("""{ "systemMessage": "a", "SystemMessage": "b" }""")]
+    [InlineData("""{ "Settings": { "AIProfilePostSessionSettings": { "ToolNames": ["listAIProfiles"] } }, "settings": { "aiprofilepostsessionsettings": { "toolNames": ["listAIProfiles"] } } }""")]
+    public async Task Update_WithKeysThatDifferOnlyInCase_DoesNotThrow(string json)
+    {
+        // Arrange (MD4): two keys that differ only in case are one key, as the store reads them.
+        var profile = new AIProfile { ItemId = "profile-1", Name = "support" };
+        var manager = HandlerBackedManager(profile);
+        var body = JsonNode.Parse(json)!.AsObject();
+
+        // Act
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+
+        // Assert
+        Assert.IsType<Ok<AIProfile>>(result.Result);
+    }
+
+    [Fact]
+    public void BoundBody_WithKeysThatDifferOnlyInCase_Binds()
+    {
+        // MD4: the minimal API binds the body before the endpoint runs; two keys that differ only in case must not make
+        // that throw, which would answer 500.
+        var body = BoundBody("""{ "systemMessage": "a", "SystemMessage": "b", "Settings": { "A": 1 }, "settings": { "B": 2 } }""");
+
+        Assert.NotNull(body);
+    }
+
+    // The profile as the store reads it back: the document's Properties and Settings are rebuilt without regard to case.
+    private static AIProfile Reloaded(AIProfile profile)
+        => JsonSerializer.Deserialize<AIProfile>(JsonSerializer.Serialize(profile));
+
     // The minimal API binds a JsonObject body with the web defaults, which match property names without regard to case.
     private static JsonObject BoundBody(string json)
         => JsonSerializer.Deserialize<JsonObject>(json, JsonSerializerOptions.Web);
@@ -147,6 +249,8 @@ public sealed class AIProfilesApiToolSelectionTests
 
         var manager = new Mock<IAIProfileManager>();
         manager.Setup(m => m.FindByIdAsync("profile-1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        manager.Setup(m => m.FindByNameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((AIProfile)null);
+        manager.Setup(m => m.CreateAsync(It.IsAny<AIProfile>(), It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
         manager.Setup(m => m.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
             .Returns(async (JsonNode data, CancellationToken cancellationToken) =>
             {

@@ -409,8 +409,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 AIChatUiCdn.DistUrl + "chat-markers.min.js",
                 AIChatUiCdn.DistUrl + "chat-markers.js")
             .SetCdnIntegrity(
-                "sha384-JXI0CEgnKfLvNX6IBmQP5fSEeABpZuzK6xNWqEOvqMI2tzoAZXbv4Ctlcw53z0A4",
-                "sha384-qkbjJ222M8XtPCHtcuKeK5N06UlmuJ0JXRTRtlN+KtvhaaxGIMc+cX0WTUF5LzK6")
+                "sha384-6CdWJ1Ksdeexhr4MO/RPQSdnvRc95DWjHvBaO5Y0hatgDmfXj4P/uj1S9ZtsVrd7",
+                "sha384-Gvi0SPHYw9YYh9pLpSeNnjLNRcBuTTbqTfybENcVUhmD7V1Qjqn1S6JB32VkSNOO")
             .SetDependencies("chart.js")
             .SetVersion("2.0.0");
 

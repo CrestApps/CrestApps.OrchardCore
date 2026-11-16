@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Tooling;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 
@@ -9,11 +11,14 @@ namespace CrestApps.OrchardCore.AI.Chat.Services;
 /// <summary>
 /// Serializes the configuration of a chat surface for <c>ai-chat.js</c> with the AG-UI texts in the user's language: the
 /// approval buttons, the tool states, the page context labels, and a friendly name for every tool, so the tool cards
-/// show "Delete Content Item" rather than <c>deleteContent</c>.
+/// show "Delete Content Item" rather than <c>deleteContent</c>. A chat that uploads or removes session documents also gets
+/// the request's antiforgery token, which the package's document endpoints require.
 /// </summary>
 public sealed class AIChatUIConfiguration
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAntiforgery _antiforgery;
 
     internal readonly IStringLocalizer S;
 
@@ -21,12 +26,18 @@ public sealed class AIChatUIConfiguration
     /// Initializes a new instance of the <see cref="AIChatUIConfiguration"/> class.
     /// </summary>
     /// <param name="toolDefinitions">The registered AI tools.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="antiforgery">The antiforgery service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AIChatUIConfiguration(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
+        IHttpContextAccessor httpContextAccessor,
+        IAntiforgery antiforgery,
         IStringLocalizer<AIChatUIConfiguration> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
+        _httpContextAccessor = httpContextAccessor;
+        _antiforgery = antiforgery;
         S = stringLocalizer;
     }
 
@@ -40,6 +51,7 @@ public sealed class AIChatUIConfiguration
         var config = ToJsonObject(chatConfig);
 
         AddTexts(config);
+        AddAntiforgeryToken(config);
 
         return config.ToJsonString(JOptions.CamelCase);
     }
@@ -57,6 +69,7 @@ public sealed class AIChatUIConfiguration
         if (config["chatConfig"] is JsonObject chatConfig)
         {
             AddTexts(chatConfig);
+            AddAntiforgeryToken(chatConfig);
         }
 
         return config.ToJsonString(JOptions.CamelCase);
@@ -87,6 +100,30 @@ public sealed class AIChatUIConfiguration
         {
             chatConfig["aguiToolLabels"] = GetToolLabels();
         }
+    }
+
+    /// <summary>
+    /// Adds the request's antiforgery token to a chat that posts to the session document endpoints. The scripts send it
+    /// as the <c>RequestVerificationToken</c> header; without it the endpoints answer 400 to a signed-in user or a
+    /// visitor holding the visitor cookie.
+    /// </summary>
+    /// <param name="chatConfig">The chat configuration.</param>
+    private void AddAntiforgeryToken(JsonObject chatConfig)
+    {
+        if (chatConfig["antiforgeryToken"] is not null ||
+            (chatConfig["uploadDocumentUrl"] is null && chatConfig["removeDocumentUrl"] is null))
+        {
+            return;
+        }
+
+        var httpContext = _httpContextAccessor.HttpContext;
+
+        if (httpContext is null)
+        {
+            return;
+        }
+
+        chatConfig["antiforgeryToken"] = _antiforgery.GetAndStoreTokens(httpContext).RequestToken;
     }
 
     private JsonObject GetToolLabels()

@@ -1,8 +1,10 @@
+using System.Net;
 using System.Reflection;
 using CrestApps.Core;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 using Microsoft.AspNetCore.DataProtection;
@@ -170,7 +172,35 @@ public sealed class ElasticsearchDataSourceOptionsConfigurationTests
         return dataSource;
     }
 
-    private static IAIDataSourceSourceHandler CreateHandler(string globalUrl)
+    [Theory]
+    [InlineData("http://10.0.0.5:9200", false)]
+    [InlineData("http://169.254.169.254/", false)]
+    [InlineData("https://search.example.com:9243", true)]
+    public async Task ValidateAsync_RefusesAClusterUrlOnTheSitesOwnNetwork(string url, bool allowed)
+    {
+        // AI Mild: the editor, the AIDataSource recipe step and the data sources API all validate here.
+        var dataSource = new AIDataSource
+        {
+            Source = AIDataSourceSourceTypes.Elasticsearch,
+        };
+
+        dataSource.Put(new ElasticsearchSourceMetadata
+        {
+            Url = url,
+            IndexName = "knowledge-base",
+            EnvironmentType = ElasticsearchSourceMetadata.SelfManagedEnvironmentType,
+            AuthenticationType = ElasticsearchSourceMetadata.NoneAuthenticationType,
+        });
+
+        var result = new ValidationResultDetails();
+        var policy = new AIEndpointPolicy(null, Options.Create(new AIEgressOptions()), _ => [IPAddress.Parse("93.184.215.14")]);
+
+        await CreateHandler(null, policy).ValidateAsync(dataSource, result, TestContext.Current.CancellationToken);
+
+        Assert.Equal(allowed, !result.Errors.Any(error => error.MemberNames.Contains(nameof(ElasticsearchSourceMetadata.Url))));
+    }
+
+    private static IAIDataSourceSourceHandler CreateHandler(string globalUrl, IAIEndpointPolicy endpointPolicy = null)
     {
         var type = typeof(CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Startup).Assembly
             .GetType("CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services.ElasticsearchAIDataSourceSourceHandler", throwOnError: true)!;
@@ -188,6 +218,7 @@ public sealed class ElasticsearchDataSourceOptionsConfigurationTests
             Options.Create(new ElasticsearchDataSourceOptions { Url = globalUrl }),
             logger,
             null,
+            endpointPolicy,
         ]);
     }
 

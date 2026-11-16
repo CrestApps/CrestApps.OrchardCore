@@ -3,6 +3,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.A2A.Models;
 using CrestApps.OrchardCore.AI.A2A.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Drivers;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
@@ -95,12 +96,14 @@ internal sealed class A2AConnectionDisplayDriver : ConnectionAuthDisplayDriverBa
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
 
+        var samePlace = SecretDestination.SameOrigin(connection.Endpoint, model.Endpoint);
+
         connection.DisplayText = model.DisplayText;
         connection.Endpoint = model.Endpoint;
 
         var metadata = connection.GetOrCreate<A2AConnectionMetadata>();
 
-        ApplyAuthFields(context, model, metadata);
+        ApplyAuthFields(context, model, metadata, samePlace);
 
         connection.Put(metadata);
 

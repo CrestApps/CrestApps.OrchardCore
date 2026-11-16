@@ -12,6 +12,7 @@ using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.DataConnectors;
 using CrestApps.OrchardCore.DataConnectors.Http;
 using CrestApps.OrchardCore.DataConnectors.Models;
@@ -25,6 +26,7 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger<AzureAISearchAIDataSourceSourceHandler> _logger;
     private readonly IDataConnectionResolver _dataConnectionResolver;
+    private readonly IAIEndpointPolicy _endpointPolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AzureAISearchAIDataSourceSourceHandler"/> class.
@@ -32,14 +34,17 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="dataConnectionResolver">Resolves the data connection a data source may reference; <see langword="null"/> while the Data Connectors feature is off.</param>
+    /// <param name="endpointPolicy">The policy that keeps the search endpoint off the site's own network; <see langword="null"/> refuses every private address.</param>
     public AzureAISearchAIDataSourceSourceHandler(
         IDataProtectionProvider dataProtectionProvider,
         ILogger<AzureAISearchAIDataSourceSourceHandler> logger,
-        IDataConnectionResolver dataConnectionResolver = null)
+        IDataConnectionResolver dataConnectionResolver = null,
+        IAIEndpointPolicy endpointPolicy = null)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
         _dataConnectionResolver = dataConnectionResolver;
+        _endpointPolicy = endpointPolicy;
     }
 
     public string SourceType => AIDataSourceSourceTypes.AzureAISearch;
@@ -82,6 +87,12 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
         if (string.IsNullOrWhiteSpace(metadata.Endpoint))
         {
             result.Fail(new ValidationResult("Azure AI Search endpoint is required.", [nameof(AzureAISearchSourceMetadata.Endpoint)]));
+        }
+        else if (!(_endpointPolicy?.IsAllowed(metadata.Endpoint) ?? AIEgress.IsAllowedEndpoint(metadata.Endpoint, isDevelopment: false, options: null)))
+        {
+            // The editor, the recipe step and the API all validate here, so none of them can point a data source at the
+            // site's own network.
+            result.Fail(new ValidationResult("This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections.", [nameof(AzureAISearchSourceMetadata.Endpoint)]));
         }
 
         if (string.IsNullOrWhiteSpace(metadata.IndexName))

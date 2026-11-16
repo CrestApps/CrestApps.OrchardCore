@@ -75,6 +75,9 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
         var metadata = connection.GetOrCreate<AzureConnectionMetadata>();
 
+        // The stored key was given for one endpoint and one way of signing in; changing either drops it.
+        var storedKey = SecretDestination.Keep(metadata.ApiKey, metadata.AuthenticationType == model.AuthenticationType);
+
         if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Endpoint is required field."]);
@@ -85,6 +88,7 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
         }
         else
         {
+            storedKey = SecretDestination.Keep(storedKey, SecretDestination.SameOrigin(metadata.Endpoint, uri));
             metadata.Endpoint = uri;
         }
 
@@ -95,12 +99,12 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
 
-        if (model.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey) && !hasNewKey)
+        if (model.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(storedKey) && !hasNewKey)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["API key is required field."]);
         }
 
-        metadata.ApiKey = _dataProtectionProvider.ApplySecret(AIConstants.ConnectionProtectorName, metadata.ApiKey, model.ApiKey);
+        metadata.ApiKey = _dataProtectionProvider.ApplySecret(AIConstants.ConnectionProtectorName, storedKey, model.ApiKey);
 
         connection.Put(metadata);
 

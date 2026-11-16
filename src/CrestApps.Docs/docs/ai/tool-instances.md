@@ -44,6 +44,10 @@ All secrets (API key, token, password, and client secret) are encrypted with ASP
 
 The base URL and the OAuth 2.0 token endpoint may not be on the site's own network (loopback, private, link-local, the cloud metadata services), in the editor, in the `AIToolInstances` recipe step and when a host name resolves to such an address. The request is sent through the AI egress guard, which checks every address it connects to, redirects included. A host that runs internal APIs on purpose sets `CrestApps:AI:Egress:AllowPrivateNetwork` to `true`; the cloud metadata services stay refused.
 
+The check resolves the host name when the instance is saved, and the same rule applies to AI connections, deployments and data sources. An Azure OpenAI, Azure AI Search or other provider endpoint reached through a private endpoint resolves to a private address from inside the network, so it can be saved only when the host sets `CrestApps:AI:Egress:AllowPrivateNetwork`.
+
+A stored API key, password, token or client secret is kept only while the instance, connection, deployment or data source sends it to the same place. Changing the scheme, host or port of the base URL, endpoint or token endpoint, or the authentication type, drops the stored secrets in the editor and in the recipe steps, and they must be entered again. A change of path keeps them.
+
 ## The documentation search sources
 
 The feature also registers four built-in sources that turn a public documentation site into a searchable tool instance, so the AI model can answer questions from product or framework documentation without indexing it into a vector store. Each configured instance binds one site and is exposed to the model as its own function, so you can offer "search the CrestApps docs" and "search the Orchard Core docs" as two distinct tools.

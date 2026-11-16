@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http;
 using CrestApps.OrchardCore.Core.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -100,8 +101,12 @@ public static class AIEgress
                 var isDevelopment = serviceProvider.GetService<IHostEnvironment>()?.IsDevelopment() == true;
                 var allowPrivateNetwork = serviceProvider.GetService<IOptions<AIEgressOptions>>()?.Value.AllowPrivateNetwork == true;
 
+                // A connect check another guard already put on the client (the tenant hierarchy's, in a parent or child
+                // tenant) is kept and chained to, not replaced with the handler.
+                var existingConnect = (builder.PrimaryHandler as SocketsHttpHandler)?.ConnectCallback;
+
                 // Crawled sites commonly redirect (sitemap.xml to sitemap_index.xml); every hop is checked at connect.
-                builder.PrimaryHandler = EgressNetwork.CreateHandler(isDevelopment, allowPrivateNetwork, allowRedirects: true, EgressNetwork.GetProxy(serviceProvider));
+                builder.PrimaryHandler = EgressNetwork.CreateHandler(isDevelopment, allowPrivateNetwork, allowRedirects: true, EgressNetwork.GetProxy(serviceProvider), existingConnect);
             }));
         }
 

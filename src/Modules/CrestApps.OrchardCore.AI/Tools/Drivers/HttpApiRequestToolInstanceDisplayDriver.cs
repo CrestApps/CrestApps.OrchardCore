@@ -112,7 +112,15 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DefaultHeaders), S["The default headers must be a valid JSON object of header names and values."]);
         }
 
-        var existing = instance.GetOrCreate<HttpApiRequestToolSettings>();
+        var stored = instance.GetOrCreate<HttpApiRequestToolSettings>();
+
+        // The stored secrets were given for one base URL, token endpoint and way of signing in; when any of them changes
+        // they are dropped and must be entered again, so an editor cannot send them to a host of their own.
+        var existing = stored.AuthenticationType == model.AuthenticationType &&
+            SecretDestination.SameOrigin(stored.BaseUrl, model.BaseUrl) &&
+            SecretDestination.SameOrigin(stored.TokenEndpoint, model.TokenEndpoint)
+            ? stored
+            : new HttpApiRequestToolSettings();
         var settings = new HttpApiRequestToolSettings
         {
             BaseUrl = model.BaseUrl?.Trim(),
