@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.WebMcp.Services;
 /// </summary>
 internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions<ResourceManagementOptions>
 {
-    private const string CdnBaseUrl = "https://cdn.jsdelivr.net/npm/@crestapps/webmcp@2.0.0-preview.258/dist/";
+    private const string CdnBaseUrl = "https://cdn.jsdelivr.net/npm/@crestapps/webmcp@2.0.0-preview.260/dist/";
 
     private static readonly ResourceManifest _manifest;
 
@@ -43,8 +43,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetUrl("~/CrestApps.OrchardCore.AI.WebMcp/scripts/webmcp-page-tools.min.js", "~/CrestApps.OrchardCore.AI.WebMcp/scripts/webmcp-page-tools.js")
             .SetCdn(CdnBaseUrl + "webmcp-page-tools.min.js", CdnBaseUrl + "webmcp-page-tools.js")
             .SetCdnIntegrity(
-                "sha384-dBVWP+0r9gvrodyKykSDT0owsLuZwywekkpsUghES54LYH04gFfObrkGFS9/iAJO",
-                "sha384-wwlti3h/09H+Ywwxs8bhYs6kTs34pwp8QexQVGQ0kKkBo8VnoDiok4iC4FtmoiO0")
+                "sha384-iEiaeXEk4Wd1iILNqHISIbISKgU0bmDh5KO/SDRwD2zYOUM9V3topigufHVkzDmj",
+                "sha384-3T4uSDZ2ipcDfkd1EXTZJRuhUHsPMk/COI1fyuaqiftbNgxAwKqGh12Wt9oFGRCB")
             .SetDependencies(WebMcpConstants.ResourceNames.Script)
             .SetVersion("2.0.0");
     }
