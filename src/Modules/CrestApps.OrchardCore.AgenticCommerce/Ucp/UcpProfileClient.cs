@@ -161,13 +161,20 @@ public sealed class UcpProfileClient
     }
 
     /// <summary>
-    /// Returns the made-up id an unregistered platform's checkouts are kept under, from its profile's origin: scheme, host
-    /// and port, in lower case. The path and query are left out, so a caller can't be a new platform for each spelling of
-    /// its profile's address.
+    /// Returns the made-up id an unregistered platform's checkouts are kept under. It starts with a hash of its profile's
+    /// origin (scheme, host without a trailing dot, and port, in lower case), which the allowance of one origin is counted
+    /// by, and ends with a hash of the origin and the profile's path, which every ownership check compares: someone who can
+    /// put a file on the same origin as another platform's profile is still another platform. The query is left out.
     /// </summary>
     /// <param name="profileUrl">The profile's address.</param>
     public static string GetUnregisteredPlatformId(string profileUrl)
-        => AgentPlatform.UnregisteredIdPrefix + Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(GetOrigin(profileUrl) ?? profileUrl ?? string.Empty)).AsSpan(0, 11));
+    {
+        var origin = GetOrigin(profileUrl) ?? profileUrl ?? string.Empty;
+        var path = Uri.TryCreate(profileUrl, UriKind.Absolute, out var uri) ? uri.AbsolutePath : string.Empty;
+
+        // The id fits the 26 characters the index keeps: the prefix, 3 bytes of the origin's hash and 8 of the owner's.
+        return AgentPlatform.UnregisteredIdPrefix + Hash(origin, (AgentPlatform.UnregisteredOriginKeyLength - AgentPlatform.UnregisteredIdPrefix.Length) / 2) + Hash(origin + path, 8);
+    }
 
     /// <summary>
     /// Returns an address's origin (scheme, host and port, in lower case, without the trailing dot of a fully qualified
@@ -176,6 +183,9 @@ public sealed class UcpProfileClient
     /// <param name="url">The address.</param>
     public static string GetOrigin(string url)
         => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? $"{uri.Scheme}://{uri.IdnHost.TrimEnd('.')}:{uri.Port}".ToLowerInvariant() : null;
+
+    private static string Hash(string value, int bytes)
+        => Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(value)).AsSpan(0, bytes));
 
     /// <summary>
     /// The storage key of where a UCP platform's order updates go, on an agent checkout.

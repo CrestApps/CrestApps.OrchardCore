@@ -1,4 +1,5 @@
 using System.Net;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -8,6 +9,7 @@ using CrestApps.OrchardCore.AgenticCommerce.Core;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
+using CrestApps.OrchardCore.AgenticCommerce.Endpoints;
 using CrestApps.OrchardCore.AgenticCommerce.Handlers;
 using CrestApps.OrchardCore.AgenticCommerce.Indexes;
 using CrestApps.OrchardCore.AgenticCommerce.Migrations;
@@ -132,18 +134,58 @@ public sealed class UcpUnregisteredPlatformTests : IAsyncLifetime, IDisposable
 
     /// <summary>
     /// M13: the id was a hash of the profile address as written, so one caller with one key was a new platform for each
-    /// spelling (<c>?i=1</c>, <c>?i=2</c>), each with its own allowance of open checkouts.
+    /// spelling (<c>?i=1</c>, <c>?i=2</c>). The query is still left out, and the origin is compared in lower case and
+    /// without a trailing dot.
     /// </summary>
     [Fact]
-    public void AnUnregisteredPlatformsId_IsItsOrigin_NotThePathOrQueryOfItsProfile()
+    public void AnUnregisteredPlatformsId_IsItsProfilesOriginAndPath_NotItsQuery()
     {
         var id = UcpProfileClient.GetUnregisteredPlatformId("https://evil.example/p?i=1");
 
         Assert.Equal(id, UcpProfileClient.GetUnregisteredPlatformId("https://evil.example/p?i=2"));
-        Assert.Equal(id, UcpProfileClient.GetUnregisteredPlatformId("https://EVIL.example:443/other"));
+        Assert.Equal(id, UcpProfileClient.GetUnregisteredPlatformId("https://EVIL.example:443/p"));
+        Assert.Equal(id, UcpProfileClient.GetUnregisteredPlatformId("https://evil.example./p"));
         Assert.NotEqual(id, UcpProfileClient.GetUnregisteredPlatformId("https://evil.example:8443/p"));
         Assert.NotEqual(id, UcpProfileClient.GetUnregisteredPlatformId("https://good.example/p"));
         Assert.StartsWith(AgentPlatform.UnregisteredIdPrefix, id, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The shared-origin Mild (fix verification): the id was a hash of the origin alone, and every ownership check compares
+    /// the id, so someone who could put a file on the same origin as another platform's profile was that platform, and
+    /// could read, change or complete its checkouts.
+    /// </summary>
+    [Fact]
+    public void TwoProfilesOnOneOrigin_AreTwoPlatforms()
+    {
+        Assert.NotEqual(
+            UcpProfileClient.GetUnregisteredPlatformId("https://pages.example/alice/ucp.json"),
+            UcpProfileClient.GetUnregisteredPlatformId("https://pages.example/mallory/ucp.json"));
+    }
+
+    /// <summary>
+    /// MD8 (fix verification): the cap for each platform was replaced by one shared cap, so one caller with one key could
+    /// open the whole allowance, and every other unregistered platform got "too many open". One origin now gets a tenth of
+    /// it, whatever paths its profiles have, in addition to the shared cap.
+    /// </summary>
+    [Fact]
+    public async Task OneUnregisteredOrigin_GetsOnlyAShareOfTheSharedAllowance()
+    {
+        // Twenty open in all, so one origin may have two.
+        await using (var session = _store.CreateSession())
+        {
+            var checkouts = new AgentCheckoutStore(session);
+
+            await checkouts.CreateAsync(Checkout("c1", UcpProfileClient.GetUnregisteredPlatformId("https://evil.example/a")), TestContext.Current.CancellationToken);
+            await checkouts.CreateAsync(Checkout("c2", UcpProfileClient.GetUnregisteredPlatformId("https://evil.example/b")), TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var refused = await CreateCartAsync("https://evil.example/c", maxOpen: 20);
+        var other = await CreateCartAsync("https://good.example/p", maxOpen: 20);
+
+        Assert.Equal(StatusCodes.Status429TooManyRequests, StatusCode(refused));
+        Assert.Equal(StatusCodes.Status201Created, StatusCode(other));
     }
 
     /// <summary>
@@ -239,6 +281,40 @@ public sealed class UcpUnregisteredPlatformTests : IAsyncLifetime, IDisposable
             Status = AgentCheckoutStatus.Incomplete,
             ExpiresUtc = _now.AddHours(6),
         };
+
+    // Creates a cart through the UCP endpoint, as the unregistered platform of a profile address, on the real store.
+    private async Task<object> CreateCartAsync(string profileUrl, int maxOpen)
+    {
+        await using var session = _store.CreateSession();
+        var site = new SiteSettings();
+        var siteService = new Mock<ISiteService>();
+        var checkouts = new Mock<IAgentCheckoutService>();
+        var platformId = UcpProfileClient.GetUnregisteredPlatformId(profileUrl);
+
+        site.Put(new AgenticCommerceSettings { AllowUnregisteredUcpPlatforms = true, MaxOpenCheckoutsPerPlatform = maxOpen });
+        siteService.Setup(service => service.GetSiteSettingsAsync()).ReturnsAsync(site);
+        checkouts
+            .Setup(service => service.PreviewAsync(It.IsAny<AgentCheckoutContext>(), It.IsAny<IList<AgentCheckoutLineInput>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentCheckoutView { Currency = "usd" });
+
+        var httpContext = new DefaultHttpContext();
+
+        new AgentRequest
+        {
+            Platform = new AgentPlatform { ItemId = platformId, ProfileUrl = profileUrl },
+            Version = "2026-08-25",
+            Json = JsonNode.Parse("""{ "line_items": [ { "item": { "id": "mug" }, "quantity": 1 } ] }"""),
+            Context = new AgentCheckoutContext { PlatformId = platformId },
+        }.Set(httpContext);
+
+        var method = typeof(UcpCatalogEndpoints).GetMethod("CreateCartAsync", BindingFlags.NonPublic | BindingFlags.Static);
+        var task = (Task)method.Invoke(null, [httpContext, checkouts.Object, new AgentCheckoutStore(session), siteService.Object, Mock.Of<global::OrchardCore.Modules.IClock>(clock => clock.UtcNow == _now)]);
+
+        await task;
+        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        return task.GetType().GetProperty("Result").GetValue(task);
+    }
 
     // A signed GET, signed in by its signature alone, naming a profile address.
     private async Task<object> InvokeSignedAsync(string profileUrl)

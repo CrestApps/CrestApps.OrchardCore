@@ -134,7 +134,7 @@ public static class UcpCatalogEndpoints
         // Carts count against the platform's cap on open checkouts, so an agent can't keep making them without end.
         var settings = await siteService.GetSettingsAsync<AgenticCommerceSettings>();
 
-        if (await store.CountOpenAsync(request.Platform.ItemId, httpContext.RequestAborted) >= Math.Max(1, settings.MaxOpenCheckoutsPerPlatform))
+        if (await store.IsFullAsync(request.Platform.ItemId, settings, httpContext.RequestAborted))
         {
             return UcpResults.Error(StatusCodes.Status429TooManyRequests, "rate_limited", "Too many carts and checkouts are open. Complete or cancel some first.");
         }
