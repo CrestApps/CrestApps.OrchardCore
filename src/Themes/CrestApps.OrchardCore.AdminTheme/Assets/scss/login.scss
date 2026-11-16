@@ -1,4 +1,6 @@
-// The log in, registration and password pages: the branding above a card, on a navy backdrop.
+// The log in, registration and password pages: the branding above a card, on a plain backdrop in the scheme's ink.
+// No decoration here: the admin theme only dresses these pages when the site is set not to use its front-end theme
+// for them, so they stay plain.
 
 @use "tokens";
 @use "schemes";
@@ -8,11 +10,6 @@
 body.ca-auth {
     min-height: 100%;
     background-color: var(--ca-ink);
-    // The diagonal bands of the menu (_backdrop.scss), over the gradient of a dark menu, whatever the scheme's menu is.
-    background-image:
-        linear-gradient(118deg, transparent 0 26%, rgba(255, 255, 255, 0.035) 26% 44%, transparent 44% 58%, rgba(255, 255, 255, 0.025) 58% 72%, transparent 72%),
-        linear-gradient(180deg, var(--ca-navy) 0%, var(--ca-ink) 100%);
-    background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }

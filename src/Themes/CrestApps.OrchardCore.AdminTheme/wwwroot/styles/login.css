@@ -409,8 +409,6 @@ summary:focus-visible,
 body.ca-auth {
   min-height: 100%;
   background-color: var(--ca-ink);
-  background-image: linear-gradient(118deg, transparent 0 26%, rgba(255, 255, 255, 0.035) 26% 44%, transparent 44% 58%, rgba(255, 255, 255, 0.025) 58% 72%, transparent 72%), linear-gradient(180deg, var(--ca-navy) 0%, var(--ca-ink) 100%);
-  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
