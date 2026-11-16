@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
+using CrestApps.OrchardCore.Timeline;
 using CrestApps.OrchardCore.Timeline.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -211,7 +212,8 @@ internal sealed class TicketNotificationObserver : ITicketObserver
             return false;
         }
 
-        return body.Contains("@" + user.UserName, StringComparison.OrdinalIgnoreCase);
+        // The rule mentions are told by, so a note told as a mention isn't told again, and only then.
+        return TimelineMentions.Mentions(body, user.UserName);
     }
 
     private static bool IsRequester(TicketPart part, TicketActor actor)

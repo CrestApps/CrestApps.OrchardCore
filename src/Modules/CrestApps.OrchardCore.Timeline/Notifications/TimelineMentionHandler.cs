@@ -1,5 +1,4 @@
 using System.Net;
-using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
@@ -16,10 +15,8 @@ namespace CrestApps.OrchardCore.Timeline.Notifications;
 /// Tells the users an entry mentions with <c>@username</c> that they were mentioned, through Orchard Core
 /// notifications. A user who may not read the entry is not told, so a mention never leaks an internal note.
 /// </summary>
-internal sealed partial class TimelineMentionHandler : ITimelineEntryHandler
+internal sealed class TimelineMentionHandler : ITimelineEntryHandler
 {
-    private const int MaxMentions = 20;
-
     private readonly UserManager<IUser> _userManager;
     private readonly IUserClaimsPrincipalFactory<IUser> _principalFactory;
     private readonly ITimelineAccessService _accessService;
@@ -97,24 +94,10 @@ internal sealed partial class TimelineMentionHandler : ITimelineEntryHandler
     }
 
     /// <summary>
-    /// Finds the user names a text mentions with <c>@username</c>, each once. An e-mail address is not a mention.
+    /// Finds the user names a text mentions with <c>@username</c>, each once (<see cref="TimelineMentions.Find"/>).
     /// </summary>
     /// <param name="text">The text.</param>
     /// <returns>The user names.</returns>
     internal static IReadOnlyList<string> FindMentions(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return [];
-        }
-
-        return [.. MentionPattern().Matches(text)
-            .Select(match => match.Groups["name"].Value.TrimEnd('.', '-', '_'))
-            .Where(name => name.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(MaxMentions)];
-    }
-
-    [GeneratedRegex(@"(?<![\w@.])@(?<name>[A-Za-z0-9][A-Za-z0-9._\-]*)", RegexOptions.CultureInvariant)]
-    private static partial Regex MentionPattern();
+        => TimelineMentions.Find(text);
 }

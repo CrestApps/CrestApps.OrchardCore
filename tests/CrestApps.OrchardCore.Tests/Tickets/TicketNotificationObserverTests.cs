@@ -68,11 +68,12 @@ public sealed class TicketNotificationObserverTests
         // Act
         await observer.RepliedAsync(ticket, Note("Called the vendor."), fromRequester: false, TestContext.Current.CancellationToken);
         await observer.RepliedAsync(ticket, Note("@ana can you check?"), fromRequester: false, TestContext.Current.CancellationToken);
+        await observer.RepliedAsync(ticket, Note("@anabel has the logs."), fromRequester: false, TestContext.Current.CancellationToken);
         await byAna.RepliedAsync(ticket, Note("Called the vendor."), fromRequester: false, TestContext.Current.CancellationToken);
 
         // Assert
-        var (to, message) = Assert.Single(sent);
-        Assert.Equal(("ana", TicketsConstants.NotificationTypes.NoteAdded), (to, message.Type));
+        Assert.Equal(2, sent.Count);
+        Assert.All(sent, item => Assert.Equal(("ana", TicketsConstants.NotificationTypes.NoteAdded), (item.To, item.Message.Type)));
         Assert.Empty(anaSent);
     }
 
