@@ -113,17 +113,98 @@ public sealed class DefaultSchedulingSessionService : ISchedulingSessionService
             session.ItemId ??= UniqueId.GenerateId();
             session.CreatedUtc = _clock.UtcNow;
             await _sessions.CreateAsync(session, cancellationToken);
-        }
-        else
-        {
+            await PlaceEventAsync(session, type, actor);
             await _sessions.UpdateAsync(session, cancellationToken);
+            await _session.SaveChangesAsync(cancellationToken);
+
+            return errors;
         }
 
-        await PlaceEventAsync(session, type, actor);
-        await _sessions.UpdateAsync(session, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        // A change to a session with registrations runs under the session lock, on the stored session and fresh counts.
+        var (locker, locked) = await LockAsync(session.ItemId);
+
+        if (!locked)
+        {
+            errors.Add(S["The session is busy. Try again in a moment."]);
+
+            return errors;
+        }
+
+        await using (locker)
+        {
+            var stored = await _sessions.FindFreshByIdAsync(session.ItemId, cancellationToken);
+            var previousStartUtc = stored.StartUtc;
+            var previousMeetings = stored.Meetings.Select(meeting => (meeting.StartUtc, meeting.EndUtc)).ToList();
+            var taken = await _registrations.CountTakenAsync(stored.ItemId, cancellationToken);
+
+            if (session.Capacity < taken)
+            {
+                errors.Add(S["{0} places are taken, so the capacity cannot be lower than that. Cancel registrations first.", taken]);
+
+                return errors;
+            }
+
+            CopyEditableFields(session, stored);
+            await PlaceEventAsync(stored, type, actor);
+            await _sessions.UpdateAsync(stored, cancellationToken);
+
+            // New meeting times move every upcoming registration, and each person is told.
+            var moved = new List<Appointment>();
+
+            if (stored.Status == SchedulingSessionStatus.Scheduled && !previousMeetings.SequenceEqual(stored.Meetings.Select(meeting => (meeting.StartUtc, meeting.EndUtc))))
+            {
+                foreach (var appointment in (await _registrations.ListAsync(stored.ItemId, cancellationToken)).Where(appointment => appointment.Status is AppointmentStatus.Held or AppointmentStatus.Requested or AppointmentStatus.Confirmed))
+                {
+                    appointment.StartUtc = stored.StartUtc;
+                    appointment.EndUtc = stored.EndUtc;
+                    appointment.ModifiedUtc = _clock.UtcNow;
+                    await _appointments.UpdateAsync(appointment, cancellationToken);
+                    moved.Add(appointment);
+                }
+            }
+
+            await _session.SaveChangesAsync(cancellationToken);
+
+            foreach (var appointment in moved)
+            {
+                _changes.Enqueue(new AppointmentChange
+                {
+                    Kind = AppointmentChangeKind.Rescheduled,
+                    Appointment = appointment,
+                    AppointmentType = type,
+                    PreviousStartUtc = previousStartUtc,
+                    Actor = actor,
+                });
+            }
+
+            // A higher capacity offers each freed place to the next person waiting.
+            if (stored.Status == SchedulingSessionStatus.Scheduled)
+            {
+                await OfferFreedPlacesAsync(stored, type, actor, cancellationToken);
+            }
+
+            session.CalendarEventId = stored.CalendarEventId;
+            session.Status = stored.Status;
+        }
 
         return errors;
+    }
+
+    private static void CopyEditableFields(SchedulingSession source, SchedulingSession target)
+    {
+        target.AppointmentTypeId = source.AppointmentTypeId;
+        target.Title = source.Title;
+        target.Meetings = source.Meetings;
+        target.Capacity = source.Capacity;
+        target.Location = source.Location;
+        target.MeetingUrl = source.MeetingUrl;
+        target.ResourceIds = source.ResourceIds ?? [];
+        target.RegistrationOpensUtc = source.RegistrationOpensUtc;
+        target.RegistrationClosesUtc = source.RegistrationClosesUtc;
+        target.WaitlistMode = source.WaitlistMode;
+        target.OfferHours = source.OfferHours;
+        target.Source = source.Source;
+        target.SourceId = source.SourceId;
     }
 
     /// <inheritdoc />
@@ -536,25 +617,40 @@ public sealed class DefaultSchedulingSessionService : ISchedulingSessionService
         return expired;
     }
 
+    // Offers every free place, one person at a time, under the session lock the caller holds, such as after the
+    // capacity was raised.
+    private async Task OfferFreedPlacesAsync(SchedulingSession session, AppointmentType type, string actor, CancellationToken cancellationToken)
+    {
+        var free = session.Capacity - await _registrations.CountTakenAsync(session.ItemId, cancellationToken);
+
+        for (var offered = 0; offered < free; offered++)
+        {
+            if (!await OfferFreedPlaceAsync(session, type, actor, cancellationToken))
+            {
+                return;
+            }
+        }
+    }
+
     // Offers a freed place, under the session lock the caller holds: the next person is held a place for the offer
     // hours, or told a place is free, as the session says. Nothing happens while the session is still full.
-    private async Task OfferFreedPlaceAsync(SchedulingSession session, AppointmentType type, string actor, CancellationToken cancellationToken)
+    private async Task<bool> OfferFreedPlaceAsync(SchedulingSession session, AppointmentType type, string actor, CancellationToken cancellationToken)
     {
         if (session.WaitlistMode == SchedulingWaitlistMode.None || session.StartUtc <= _clock.UtcNow)
         {
-            return;
+            return false;
         }
 
         if (await _registrations.CountTakenAsync(session.ItemId, cancellationToken) >= session.Capacity)
         {
-            return;
+            return false;
         }
 
         var entry = await _registrations.FindFirstWaitingAsync(session.ItemId, cancellationToken);
 
         if (entry is null)
         {
-            return;
+            return false;
         }
 
         entry.Status = WaitlistStatus.Notified;
@@ -588,6 +684,8 @@ public sealed class DefaultSchedulingSessionService : ISchedulingSessionService
             PreviousStartUtc = session.StartUtc,
             Actor = actor,
         });
+
+        return true;
     }
 
     private Appointment NewAppointment(SchedulingSession session, AppointmentType type, string userId, string name, string email, string source, string sourceId, bool held)
