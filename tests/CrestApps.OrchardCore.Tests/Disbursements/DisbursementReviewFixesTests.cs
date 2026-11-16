@@ -1,8 +1,8 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Banking.Models;
-using CrestApps.OrchardCore.Disbursements.Core.Nacha;
-using CrestApps.OrchardCore.Disbursements.Models;
-using CrestApps.OrchardCore.Disbursements.Services;
+using CrestApps.OrchardCore.Banking.DirectDeposit;
+using CrestApps.OrchardCore.Banking.Disbursements.Models;
+using CrestApps.OrchardCore.Banking.Disbursements.Services;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.SourceAccess;
 using CrestApps.OrchardCore.Tests.Doubles;
@@ -301,9 +301,9 @@ public sealed class DisbursementReviewFixesTests
         // Arrange: an account that sends bank files, saved from a form drawn while it had an owner (no card on it).
         var context = new DisbursementsTestContext();
         var origin = await context.OriginAsync();
-        var driver = new CrestApps.OrchardCore.Disbursements.Drivers.NachaOriginSettingsDisplayDriver(RecipeRoundTrip.Localizer<CrestApps.OrchardCore.Disbursements.Drivers.NachaOriginSettingsDisplayDriver>());
+        var driver = new CrestApps.OrchardCore.Banking.Disbursements.Drivers.NachaOriginSettingsDisplayDriver(RecipeRoundTrip.Localizer<CrestApps.OrchardCore.Banking.Disbursements.Drivers.NachaOriginSettingsDisplayDriver>());
 
-        async Task<NachaOriginSettings> SaveAsync(CrestApps.OrchardCore.Disbursements.ViewModels.NachaOriginSettingsViewModel posted)
+        async Task<NachaOriginSettings> SaveAsync(CrestApps.OrchardCore.Banking.Disbursements.ViewModels.NachaOriginSettingsViewModel posted)
         {
             var updater = new CrestApps.OrchardCore.Tests.Taxation.Fakes.FakeUpdateModel(posted);
 
@@ -313,8 +313,8 @@ public sealed class DisbursementReviewFixesTests
         }
 
         // Act
-        var kept = await SaveAsync(new CrestApps.OrchardCore.Disbursements.ViewModels.NachaOriginSettingsViewModel());
-        var turnedOff = await SaveAsync(new CrestApps.OrchardCore.Disbursements.ViewModels.NachaOriginSettingsViewModel { Shown = true });
+        var kept = await SaveAsync(new CrestApps.OrchardCore.Banking.Disbursements.ViewModels.NachaOriginSettingsViewModel());
+        var turnedOff = await SaveAsync(new CrestApps.OrchardCore.Banking.Disbursements.ViewModels.NachaOriginSettingsViewModel { Shown = true });
 
         // Assert
         Assert.Equal((true, "CONTOSO LTD"), (kept.Enabled, kept.CompanyName));

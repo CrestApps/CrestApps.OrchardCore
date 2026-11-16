@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Services;
-using CrestApps.OrchardCore.Disbursements.Models;
-using CrestApps.OrchardCore.Disbursements.Services;
+using CrestApps.OrchardCore.Banking.Disbursements.Models;
+using CrestApps.OrchardCore.Banking.Disbursements.Services;
 using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Staff.Services;
 using Microsoft.AspNetCore.Identity;

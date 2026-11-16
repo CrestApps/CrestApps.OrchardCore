@@ -103,19 +103,19 @@ public class ValidationOwnershipArchitectureTests
             "nameof(model.DueAfterHours)",
             "The hours are typed as text so a culture never changes them; a recipe carries the number, whose range the handler checks."),
         (
-            "src/Modules/CrestApps.OrchardCore.Checks/Drivers/CheckLayoutDisplayDriver.cs",
+            "src/Modules/CrestApps.OrchardCore.Banking/Checks/Drivers/CheckLayoutDisplayDriver.cs",
             "nameof(model.SecondSignatureAbove)",
             "The amount is typed as text with a dot so a decimal comma never changes it; a recipe carries the number."),
         (
-            "src/Modules/CrestApps.OrchardCore.Checks/Drivers/CheckLayoutDisplayDriver.cs",
+            "src/Modules/CrestApps.OrchardCore.Banking/Checks/Drivers/CheckLayoutDisplayDriver.cs",
             "The font file is larger than 2 MB.",
             "The uploaded signature picture or MICR font exists only in the editor; a recipe carries the stored file, never an upload."),
         (
-            "src/Modules/CrestApps.OrchardCore.Checks/Drivers/CheckLayoutDisplayDriver.cs",
+            "src/Modules/CrestApps.OrchardCore.Banking/Checks/Drivers/CheckLayoutDisplayDriver.cs",
             "Upload a TrueType (.ttf) font file.",
             "The uploaded signature picture or MICR font exists only in the editor; a recipe carries the stored file, never an upload."),
         (
-            "src/Modules/CrestApps.OrchardCore.Checks/Drivers/CheckLayoutDisplayDriver.cs",
+            "src/Modules/CrestApps.OrchardCore.Banking/Checks/Drivers/CheckLayoutDisplayDriver.cs",
             "Enter the measure in points",
             "Measures are typed as text with a dot so a decimal comma never changes them; a recipe carries the numbers."),
         (

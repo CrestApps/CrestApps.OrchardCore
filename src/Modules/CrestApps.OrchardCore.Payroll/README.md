@@ -48,8 +48,8 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
   calculates draft statements, submits to Approvals' `PayRunApproval` policy and cancels; `PayRunApprovalSubjectHandler`
   and `PayRunSourceAccess`. **Payroll > Pay Runs**; the **Save pay inputs** pipeline step on `PayRunInputImporter`.
 - Processing: `IPayRunService.ProcessAsync`, `VoidStatementAsync` and `ReissuePaymentAsync`; payment methods
-  (`IPayStatementPaymentMethod`) from **Direct Deposit** (Disbursements) and **Paychecks** (Checks, with
-  `PayStatementCheckVoucherSource`); `PayStatementSourceAccess`; the `PayStatementReady` notification; `PayStubDocument`.
+  (`IPayStatementPaymentMethod`): deposits light up with Banking's **Direct Deposit** feature and checks with Banking's
+  **Checks** feature (`PayStatementCheckVoucherSource`), as startups of the Payroll feature; `PayStatementSourceAccess`; the `PayStatementReady` notification; `PayStubDocument`.
 - Integration: `IPayRunObserver`; workflow events and tasks; the Payroll data sets and six reports with two dashboard
   widgets; webhook events; the pay date calendar source; audit events; notices of returned deposits and changed bank
   accounts; personal data; the opt-in `PayrollPayHistory` step; the scheduled-run workflow recipe.

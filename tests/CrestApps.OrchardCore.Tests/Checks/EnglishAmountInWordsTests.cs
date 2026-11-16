@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Checks.Core.Services;
+using CrestApps.OrchardCore.Banking.Checks.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Checks;
 

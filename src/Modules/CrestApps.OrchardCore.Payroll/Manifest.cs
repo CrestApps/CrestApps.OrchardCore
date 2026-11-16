@@ -3,8 +3,8 @@ using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Approvals;
 using CrestApps.OrchardCore.Banking;
-using CrestApps.OrchardCore.Checks;
-using CrestApps.OrchardCore.Disbursements;
+using CrestApps.OrchardCore.Banking.Checks;
+using CrestApps.OrchardCore.Banking.Disbursements;
 using CrestApps.OrchardCore.Payroll;
 using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Taxation;
@@ -95,30 +95,5 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         PayrollConstants.Features.Payroll,
-    ]
-)]
-
-[assembly: Feature(
-    Id = PayrollConstants.Features.DirectDeposit,
-    Name = "Direct Deposit",
-    Description = "Pays net pay to people's bank accounts: each deposit row of a processed statement becomes an ACH disbursement from the employer's funding account, sent in the bank file of Disbursements.",
-    Category = "Payroll",
-    Dependencies =
-    [
-        PayrollConstants.Features.Payroll,
-        BankingConstants.Features.Banking,
-        DisbursementsConstants.Features.Disbursements,
-    ]
-)]
-
-[assembly: Feature(
-    Id = PayrollConstants.Features.Paychecks,
-    Name = "Paychecks",
-    Description = "Pays net pay by printed checks: each check row of a processed statement, or a deposit with no way to pay it, becomes a check on the employer's funding account with the statement printed as its voucher.",
-    Category = "Payroll",
-    Dependencies =
-    [
-        PayrollConstants.Features.Payroll,
-        ChecksConstants.Features.Checks,
     ]
 )]

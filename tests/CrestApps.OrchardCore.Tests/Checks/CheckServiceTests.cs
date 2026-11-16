@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Banking.Models;
-using CrestApps.OrchardCore.Checks.Core.Services;
-using CrestApps.OrchardCore.Checks.Models;
+using CrestApps.OrchardCore.Banking.Checks.Core.Services;
+using CrestApps.OrchardCore.Banking.Checks.Models;
 
 namespace CrestApps.OrchardCore.Tests.Checks;
 

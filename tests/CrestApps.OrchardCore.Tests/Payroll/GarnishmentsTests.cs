@@ -159,7 +159,7 @@ public sealed class GarnishmentsTests
 
         Assert.Equal((0m, GarnishmentStatus.Active), (after.Withheld, after.Status));
         Assert.True(Assert.Single(after.Remittances).Voided);
-        Assert.Equal(CrestApps.OrchardCore.Checks.Models.CheckStatus.Voided, voidedCheck.Status);
+        Assert.Equal(CrestApps.OrchardCore.Banking.Checks.Models.CheckStatus.Voided, voidedCheck.Status);
     }
 
     [Fact]

@@ -1,11 +1,11 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Core.SourceAccess;
-using CrestApps.OrchardCore.Disbursements;
-using CrestApps.OrchardCore.Disbursements.Controllers;
-using CrestApps.OrchardCore.Disbursements.Deployments;
-using CrestApps.OrchardCore.Disbursements.Models;
-using CrestApps.OrchardCore.Disbursements.Recipes;
-using CrestApps.OrchardCore.Disbursements.ViewModels;
+using CrestApps.OrchardCore.Banking.Disbursements;
+using CrestApps.OrchardCore.Banking.Disbursements.Controllers;
+using CrestApps.OrchardCore.Banking.Disbursements.Deployments;
+using CrestApps.OrchardCore.Banking.Disbursements.Models;
+using CrestApps.OrchardCore.Banking.Disbursements.Recipes;
+using CrestApps.OrchardCore.Banking.Disbursements.ViewModels;
 using CrestApps.OrchardCore.SourceAccess;
 using CrestApps.OrchardCore.Tests.Checks;
 using CrestApps.OrchardCore.Tests.Doubles;
@@ -244,7 +244,7 @@ public sealed class DisbursementsAuthorizationTests
             grant is null ? TestSecurity.Granting(DisbursementsPermissions.ManageDisbursements, DisbursementsPermissions.ViewDisbursements) : TestSecurity.Granting(grant),
             features.Object,
             new RecordingNotifier(),
-            new global::CrestApps.OrchardCore.Disbursements.Services.DisbursementFileRecorder(new ServiceCollection().BuildServiceProvider(), Microsoft.Extensions.Logging.Abstractions.NullLogger<global::CrestApps.OrchardCore.Disbursements.Services.DisbursementFileRecorder>.Instance),
+            new global::CrestApps.OrchardCore.Banking.Disbursements.Services.DisbursementFileRecorder(new ServiceCollection().BuildServiceProvider(), Microsoft.Extensions.Logging.Abstractions.NullLogger<global::CrestApps.OrchardCore.Banking.Disbursements.Services.DisbursementFileRecorder>.Instance),
             new EchoHtmlLocalizer<DisbursementBatchesController>());
 
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = TestSecurity.User(userName) } };

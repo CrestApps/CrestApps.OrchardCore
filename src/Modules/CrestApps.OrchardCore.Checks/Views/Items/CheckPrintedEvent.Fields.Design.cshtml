@@ -1,7 +1,0 @@
-@using CrestApps.OrchardCore.Checks.Workflows
-@using OrchardCore.Workflows.Helpers
-@using OrchardCore.Workflows.ViewModels
-
-@model ActivityViewModel<CheckPrintedEvent>
-
-<header><h4><i class="fa-solid fa-print" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Check Printed"])</h4></header>

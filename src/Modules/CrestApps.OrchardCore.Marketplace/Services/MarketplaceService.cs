@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Disbursements.Models;
-using CrestApps.OrchardCore.Disbursements.Services;
+using CrestApps.OrchardCore.Banking.Disbursements.Models;
+using CrestApps.OrchardCore.Banking.Disbursements.Services;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Marketplace.Telemetry;
 using CrestApps.OrchardCore.Orders.Core.Models;

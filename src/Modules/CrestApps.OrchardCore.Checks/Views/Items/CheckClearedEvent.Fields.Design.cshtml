@@ -1,7 +1,0 @@
-@using CrestApps.OrchardCore.Checks.Workflows
-@using OrchardCore.Workflows.Helpers
-@using OrchardCore.Workflows.ViewModels
-
-@model ActivityViewModel<CheckClearedEvent>
-
-<header><h4><i class="fa-solid fa-circle-check" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Check Cleared"])</h4></header>

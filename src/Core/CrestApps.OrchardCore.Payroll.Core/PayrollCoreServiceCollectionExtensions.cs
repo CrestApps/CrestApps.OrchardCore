@@ -1,7 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Approvals.Services;
-using CrestApps.OrchardCore.Checks;
+using CrestApps.OrchardCore.Banking.Checks;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Payroll.Core.Calculation;
 using CrestApps.OrchardCore.Payroll.Core.Services;

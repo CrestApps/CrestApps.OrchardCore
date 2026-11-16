@@ -1,10 +1,10 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Banking.Models;
-using CrestApps.OrchardCore.Checks.Core.Handlers;
-using CrestApps.OrchardCore.Checks.Core.Services;
-using CrestApps.OrchardCore.Checks.Models;
-using CrestApps.OrchardCore.Checks.Services;
+using CrestApps.OrchardCore.Banking.Checks.Core.Handlers;
+using CrestApps.OrchardCore.Banking.Checks.Core.Services;
+using CrestApps.OrchardCore.Banking.Checks.Models;
+using CrestApps.OrchardCore.Banking.Checks.Services;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.SourceAccess;
 using CrestApps.OrchardCore.Tests.Banking;

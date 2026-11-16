@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Banking;
-using CrestApps.OrchardCore.Disbursements;
+using CrestApps.OrchardCore.Banking.Checks;
+using CrestApps.OrchardCore.Banking.Disbursements;
 using CrestApps.OrchardCore.Payroll.Core;
 using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Services;
@@ -11,9 +12,10 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Payroll;
 
 /// <summary>
-/// Direct Deposit: deposit rows of net pay become ACH disbursements.
+/// With Banking's Direct Deposit on, deposit rows of net pay become ACH disbursements.
 /// </summary>
-[Feature(PayrollConstants.Features.DirectDeposit)]
+[Feature(PayrollConstants.Features.Payroll)]
+[RequireFeatures(DisbursementsConstants.Features.DirectDeposit)]
 public sealed class DirectDepositStartup : StartupBase
 {
     /// <inheritdoc />
@@ -22,9 +24,10 @@ public sealed class DirectDepositStartup : StartupBase
 }
 
 /// <summary>
-/// Paychecks: check rows of net pay become printed checks with the statement as their voucher.
+/// With Banking's Checks on, check rows of net pay become printed checks with the statement as their voucher.
 /// </summary>
-[Feature(PayrollConstants.Features.Paychecks)]
+[Feature(PayrollConstants.Features.Payroll)]
+[RequireFeatures(ChecksConstants.Features.Checks)]
 public sealed class PaychecksStartup : StartupBase
 {
     /// <inheritdoc />
@@ -35,8 +38,8 @@ public sealed class PaychecksStartup : StartupBase
 /// <summary>
 /// Tells a person that the bank returned a deposit of their pay.
 /// </summary>
-[Feature(PayrollConstants.Features.DirectDeposit)]
-[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
+[Feature(PayrollConstants.Features.Payroll)]
+[RequireFeatures(DisbursementsConstants.Features.DirectDeposit, OrchardCoreFeatureIds.Notifications)]
 public sealed class DirectDepositNotificationsStartup : StartupBase
 {
     /// <inheritdoc />

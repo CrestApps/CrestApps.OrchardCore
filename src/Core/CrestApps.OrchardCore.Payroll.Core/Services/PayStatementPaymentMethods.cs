@@ -1,12 +1,12 @@
 using System.Globalization;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Banking.Services;
-using CrestApps.OrchardCore.Checks.Models;
-using CrestApps.OrchardCore.Checks.Services;
+using CrestApps.OrchardCore.Banking.Checks.Models;
+using CrestApps.OrchardCore.Banking.Checks.Services;
 using CrestApps.OrchardCore.Currencies;
-using CrestApps.OrchardCore.Disbursements;
-using CrestApps.OrchardCore.Disbursements.Models;
-using CrestApps.OrchardCore.Disbursements.Services;
+using CrestApps.OrchardCore.Banking.Disbursements;
+using CrestApps.OrchardCore.Banking.Disbursements.Models;
+using CrestApps.OrchardCore.Banking.Disbursements.Services;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;

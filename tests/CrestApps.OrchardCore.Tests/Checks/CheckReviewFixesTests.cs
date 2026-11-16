@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.Banking.Models;
-using CrestApps.OrchardCore.Checks;
-using CrestApps.OrchardCore.Checks.Core.Services;
-using CrestApps.OrchardCore.Checks.Models;
+using CrestApps.OrchardCore.Banking.Checks;
+using CrestApps.OrchardCore.Banking.Checks.Core.Services;
+using CrestApps.OrchardCore.Banking.Checks.Models;
 using CrestApps.OrchardCore.Pdf;
 using UglyToad.PdfPig;
 

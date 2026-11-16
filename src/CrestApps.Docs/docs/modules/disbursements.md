@@ -10,10 +10,10 @@ The **Disbursements** module records the money the business sends out and sends 
 
 | Feature ID | Name | Depends on |
 | --- | --- | --- |
-| `CrestApps.OrchardCore.Disbursements` | Disbursements | [Banking](./banking.md) |
-| `CrestApps.OrchardCore.Disbursements.Nacha` | Disbursements - Bank File (ACH) | Disbursements |
+| `CrestApps.OrchardCore.Banking.Disbursements` | Disbursements | [Banking](./banking.md) |
+| `CrestApps.OrchardCore.Banking.DirectDeposit` | Disbursements - Bank File (ACH) | Disbursements |
 
-Projects: `CrestApps.OrchardCore.Disbursements.Abstractions` (models and contracts), `CrestApps.OrchardCore.Disbursements.Core` (stores, rules, the manual and check providers, the Nacha writer and reader, the prenote verifier, the encrypted file store), `CrestApps.OrchardCore.Disbursements` (the module).
+Projects: `CrestApps.OrchardCore.Banking.Abstractions` (models and contracts), `CrestApps.OrchardCore.Banking.Core` (stores, rules, the manual and check providers, the Nacha writer and reader, the prenote verifier, the encrypted file store), `CrestApps.OrchardCore.Banking.Disbursements` (the module).
 
 ## The disbursement
 

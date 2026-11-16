@@ -1,8 +1,0 @@
-@using CrestApps.OrchardCore.Disbursements.Workflows
-@using OrchardCore.Workflows.Helpers
-@using OrchardCore.Workflows.ViewModels
-
-@model ActivityViewModel<DisbursementSubmittedEvent>
-
-<header><h4><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Disbursement Submitted"])</h4></header>
-<p class="hint">@T["Starts when a disbursement is sent: written to a bank file, paid by an issued check, or handed to a provider. Input: DisbursementId, PayeeName, Amount, Currency, Method, Status, Change, SourceKind, SourceId, BatchId, TraceNumber, FailureCode, FailureReason, IsPrenote and Actor."]</p>

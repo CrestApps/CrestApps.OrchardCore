@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Banking.Disbursements.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<DisbursementFailedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @T["Disbursement Failed"]</h4>
+<p>@T["Starts when a disbursement fails or is cancelled."]</p>

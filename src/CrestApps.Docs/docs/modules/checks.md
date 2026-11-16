@@ -10,9 +10,9 @@ The **Checks** module prints checks for any module that pays by check: paychecks
 
 | Feature ID | Name | Depends on |
 | --- | --- | --- |
-| `CrestApps.OrchardCore.Checks` | Checks | [Banking](./banking.md) |
+| `CrestApps.OrchardCore.Banking.Checks` | Checks | [Banking](./banking.md) |
 
-Projects: `CrestApps.OrchardCore.Checks.Abstractions` (models and contracts), `CrestApps.OrchardCore.Checks.Core` (the register store, the rules, the United States check line, English amounts in words, the encrypted file store and the PDF printer on [`CrestApps.OrchardCore.Pdf.Core`](./reports.md)), `CrestApps.OrchardCore.Checks` (the module).
+Projects: `CrestApps.OrchardCore.Banking.Abstractions` (models and contracts), `CrestApps.OrchardCore.Banking.Core` (the register store, the rules, the United States check line, English amounts in words, the encrypted file store and the PDF printer on [`CrestApps.OrchardCore.Pdf.Core`](./reports.md)), `CrestApps.OrchardCore.Banking.Checks` (the module).
 
 ## Check layouts
 

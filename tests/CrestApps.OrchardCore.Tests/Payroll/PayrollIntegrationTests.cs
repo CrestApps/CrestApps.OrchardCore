@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Banking.Models;
-using CrestApps.OrchardCore.Disbursements.Models;
+using CrestApps.OrchardCore.Banking.Disbursements.Models;
 using CrestApps.OrchardCore.Payroll;
 using CrestApps.OrchardCore.Payroll.AuditTrail;
 using CrestApps.OrchardCore.Payroll.Core.Services;

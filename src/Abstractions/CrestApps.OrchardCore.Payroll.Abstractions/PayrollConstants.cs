@@ -80,7 +80,6 @@ public static class PayrollConstants
     /// </summary>
     public const string PayItemsRecipeStepName = "PayrollPayItems";
 
-
     /// <summary>
     /// The name of the recipe and deployment step of garnishment orders.
     /// </summary>
@@ -180,17 +179,6 @@ public static class PayrollConstants
         /// Payroll: employers, pay profiles, pay runs, the engine and statements.
         /// </summary>
         public const string Payroll = "CrestApps.OrchardCore.Payroll";
-
-
-        /// <summary>
-        /// Direct Deposit: net pay deposited to people's bank accounts through Disbursements.
-        /// </summary>
-        public const string DirectDeposit = "CrestApps.OrchardCore.Payroll.DirectDeposit";
-
-        /// <summary>
-        /// Paychecks: net pay paid by printed checks through Checks.
-        /// </summary>
-        public const string Paychecks = "CrestApps.OrchardCore.Payroll.Checks";
 
         /// <summary>
         /// My Pay: a person's own statements, tax elections and where their pay goes.

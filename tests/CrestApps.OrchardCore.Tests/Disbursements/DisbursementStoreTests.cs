@@ -1,12 +1,12 @@
 using CrestApps.OrchardCore.Core.SourceAccess;
-using CrestApps.OrchardCore.Disbursements;
-using CrestApps.OrchardCore.Disbursements.Core.Indexes;
-using CrestApps.OrchardCore.Disbursements.Core.Services;
-using CrestApps.OrchardCore.Disbursements.Indexes;
-using CrestApps.OrchardCore.Disbursements.Migrations;
-using CrestApps.OrchardCore.Disbursements.Models;
-using CrestApps.OrchardCore.Disbursements.Reports;
-using CrestApps.OrchardCore.Disbursements.Services;
+using CrestApps.OrchardCore.Banking.Disbursements;
+using CrestApps.OrchardCore.Banking.Disbursements.Core.Indexes;
+using CrestApps.OrchardCore.Banking.Disbursements.Core.Services;
+using CrestApps.OrchardCore.Banking.Disbursements.Indexes;
+using CrestApps.OrchardCore.Banking.Disbursements.Migrations;
+using CrestApps.OrchardCore.Banking.Disbursements.Models;
+using CrestApps.OrchardCore.Banking.Disbursements.Reports;
+using CrestApps.OrchardCore.Banking.Disbursements.Services;
 using CrestApps.OrchardCore.SourceAccess;
 using CrestApps.OrchardCore.Tests.Checks;
 using CrestApps.OrchardCore.Tests.Doubles;
@@ -169,9 +169,9 @@ public sealed class DisbursementStoreTests : IAsyncLifetime
 
             clock.SetupGet(entry => entry.UtcNow).Returns(new DateTime(2026, 11, 14, 12, 0, 0, DateTimeKind.Utc));
 
-            var manager = new DisbursementManager(new DisbursementStore(session), [new CrestApps.OrchardCore.Disbursements.Core.Handlers.DisbursementHandler(clock.Object)], Microsoft.Extensions.Logging.Abstractions.NullLogger<CrestApps.Core.Services.CatalogManager<Disbursement>>.Instance);
+            var manager = new DisbursementManager(new DisbursementStore(session), [new CrestApps.OrchardCore.Banking.Disbursements.Core.Handlers.DisbursementHandler(clock.Object)], Microsoft.Extensions.Logging.Abstractions.NullLogger<CrestApps.Core.Services.CatalogManager<Disbursement>>.Instance);
             var batchStore = new DisbursementBatchStore(session);
-            var batches = new DisbursementBatchManager(batchStore, [new CrestApps.OrchardCore.Disbursements.Core.Handlers.DisbursementBatchHandler(clock.Object)], Microsoft.Extensions.Logging.Abstractions.NullLogger<CrestApps.Core.Services.CatalogManager<DisbursementBatch>>.Instance);
+            var batches = new DisbursementBatchManager(batchStore, [new CrestApps.OrchardCore.Banking.Disbursements.Core.Handlers.DisbursementBatchHandler(clock.Object)], Microsoft.Extensions.Logging.Abstractions.NullLogger<CrestApps.Core.Services.CatalogManager<DisbursementBatch>>.Instance);
             var service = new DisbursementService(
                 manager,
                 batches,

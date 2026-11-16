@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.Checks.Core;
-using CrestApps.OrchardCore.Checks.Services;
+using CrestApps.OrchardCore.Banking.Checks.Core;
+using CrestApps.OrchardCore.Banking.Checks.Services;
 using CrestApps.OrchardCore.Numbering;
 using Microsoft.Extensions.DependencyInjection;
 

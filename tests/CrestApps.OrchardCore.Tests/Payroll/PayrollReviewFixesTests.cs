@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Checks.Models;
-using CrestApps.OrchardCore.Checks.Services;
+using CrestApps.OrchardCore.Banking.Checks.Models;
+using CrestApps.OrchardCore.Banking.Checks.Services;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Payroll;
 using CrestApps.OrchardCore.Payroll.Core.Services;

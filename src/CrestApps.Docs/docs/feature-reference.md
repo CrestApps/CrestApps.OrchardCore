@@ -240,9 +240,9 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Taxation.IncomeTax.UnitedStates` | United States Income Tax | [Taxation](./modules/taxation#country-packs) |
 | `CrestApps.OrchardCore.Taxation.IncomeTax.Canada` | Canada Income Tax | [Taxation](./modules/taxation#country-packs) |
 | `CrestApps.OrchardCore.Banking` | Banking | [Banking](./modules/banking) |
-| `CrestApps.OrchardCore.Checks` | Checks | [Checks](./modules/checks) |
-| `CrestApps.OrchardCore.Disbursements` | Disbursements | [Disbursements](./modules/disbursements) |
-| `CrestApps.OrchardCore.Disbursements.Nacha` | Disbursements - Bank File (ACH) | [Disbursements](./modules/disbursements#providers) |
+| `CrestApps.OrchardCore.Banking.Checks` | Checks | [Checks](./modules/checks) |
+| `CrestApps.OrchardCore.Banking.Disbursements` | Disbursements | [Disbursements](./modules/disbursements) |
+| `CrestApps.OrchardCore.Banking.DirectDeposit` | Disbursements - Bank File (ACH) | [Disbursements](./modules/disbursements#providers) |
 
 ## Geo
 

@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Core.SourceAccess;
-using CrestApps.OrchardCore.Disbursements;
-using CrestApps.OrchardCore.Disbursements.DataPipelines;
-using CrestApps.OrchardCore.Disbursements.Services;
+using CrestApps.OrchardCore.Banking.Disbursements;
+using CrestApps.OrchardCore.Banking.Disbursements.DataPipelines;
+using CrestApps.OrchardCore.Banking.Disbursements.Services;
 using CrestApps.OrchardCore.SourceAccess;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.Authorization;

@@ -1,8 +1,8 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Approvals.Core.Handlers;
 using CrestApps.OrchardCore.Approvals.Models;
-using CrestApps.OrchardCore.Checks.Core.Handlers;
-using CrestApps.OrchardCore.Checks.Models;
+using CrestApps.OrchardCore.Banking.Checks.Core.Handlers;
+using CrestApps.OrchardCore.Banking.Checks.Models;
 using CrestApps.OrchardCore.Payroll.Core.Handlers;
 using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Models;

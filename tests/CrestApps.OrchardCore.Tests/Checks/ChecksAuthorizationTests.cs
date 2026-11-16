@@ -1,10 +1,10 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Checks;
-using CrestApps.OrchardCore.Checks.Controllers;
-using CrestApps.OrchardCore.Checks.Core.Services;
-using CrestApps.OrchardCore.Checks.Deployments;
-using CrestApps.OrchardCore.Checks.Models;
-using CrestApps.OrchardCore.Checks.ViewModels;
+using CrestApps.OrchardCore.Banking.Checks;
+using CrestApps.OrchardCore.Banking.Checks.Controllers;
+using CrestApps.OrchardCore.Banking.Checks.Core.Services;
+using CrestApps.OrchardCore.Banking.Checks.Deployments;
+using CrestApps.OrchardCore.Banking.Checks.Models;
+using CrestApps.OrchardCore.Banking.Checks.ViewModels;
 using CrestApps.OrchardCore.Core.SourceAccess;
 using CrestApps.OrchardCore.SourceAccess;
 using CrestApps.OrchardCore.Tests.Doubles;

@@ -1,7 +1,0 @@
-@using CrestApps.OrchardCore.Checks.Workflows
-@using OrchardCore.Workflows.Helpers
-@using OrchardCore.Workflows.ViewModels
-
-@model ActivityViewModel<CheckIssuedEvent>
-
-<header><h4><i class="fa-solid fa-money-check" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Check Issued"])</h4></header>

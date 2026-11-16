@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Checks/Assets/js/check-layout-designer.js';
+import '../../../src/Modules/CrestApps.OrchardCore.Banking/Assets/js/check-layout-designer.js';
 
 const designer = globalThis.CrestAppsCheckDesigner;
 

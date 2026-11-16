@@ -1,8 +1,8 @@
 using System.Text;
 using CrestApps.OrchardCore.Banking.Models;
-using CrestApps.OrchardCore.Checks.Models;
-using CrestApps.OrchardCore.Disbursements.Core.Nacha;
-using CrestApps.OrchardCore.Disbursements.Models;
+using CrestApps.OrchardCore.Banking.Checks.Models;
+using CrestApps.OrchardCore.Banking.DirectDeposit;
+using CrestApps.OrchardCore.Banking.Disbursements.Models;
 
 namespace CrestApps.OrchardCore.Tests.Disbursements;
 
