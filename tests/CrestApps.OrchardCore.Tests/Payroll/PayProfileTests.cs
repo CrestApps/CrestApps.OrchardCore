@@ -122,6 +122,40 @@ public sealed class PayProfileTests
     }
 
     [Fact]
+    public async Task Blockers_AskForTheElectionOfAProvinceOnlyFromWhoLivesOrWorksThere()
+    {
+        await using var harness = await CreateHarnessAsync();
+        var (contoso, _) = await AddEmployersAsync(harness);
+        var lee = await WorkforceTests.AddWorkerAsync(harness, "Lee Park");
+
+        var (ontario, quebec) = await harness.RunAsync(async services =>
+        {
+            var employers = services.GetRequiredService<IEmployerManager>();
+            var employer = await employers.FindByIdAsync(contoso.ItemId);
+
+            // Registered with the CRA and with Revenu Québec, for people in Quebec.
+            employer.Registrations = [new EmployerTaxRegistration { Jurisdiction = "CA" }, new EmployerTaxRegistration { Jurisdiction = "CA-QC" }];
+            await employers.UpdateAsync(employer);
+            await services.GetRequiredService<global::YesSql.ISession>().FlushAsync();
+
+            var service = services.GetRequiredService<IPayProfileService>();
+            var profile = await NewProfileAsync(services.GetRequiredService<IPayProfileManager>(), lee.ItemId, contoso.ItemId);
+
+            profile.Elections = [new TaxElection { Jurisdiction = "CA", EffectiveFrom = new DateOnly(2020, 1, 1) }];
+            profile.HomeAddress = new CrestApps.OrchardCore.Addresses.Models.Address { Country = "CA", Region = "ON" };
+
+            var inOntario = (await service.GetBlockersAsync(profile)).Where(blocker => blocker.Code == "NoElection").Select(blocker => blocker.Message).ToList();
+
+            profile.HomeAddress = new CrestApps.OrchardCore.Addresses.Models.Address { Country = "CA", Region = "QC" };
+
+            return (inOntario, (await service.GetBlockersAsync(profile)).Where(blocker => blocker.Code == "NoElection").Select(blocker => blocker.Message).ToList());
+        });
+
+        Assert.Empty(ontario);
+        Assert.Equal(["Enter the tax election for CA-QC."], quebec);
+    }
+
+    [Fact]
     public async Task Profile_IsOnePerStaffMemberAndEmployer_AndTheSplitMustEndWithWhatIsLeft()
     {
         await using var harness = await CreateHarnessAsync();

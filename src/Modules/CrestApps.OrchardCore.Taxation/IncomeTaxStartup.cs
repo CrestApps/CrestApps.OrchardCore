@@ -33,6 +33,9 @@ public sealed class IncomeTaxStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddIncomeTaxCore();
+
+        // The rules live in their own YesSql collection, created with the tenant's store.
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(TaxationConstants.IncomeTaxCollectionName));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<IncomeTaxRule>, IncomeTaxRuleHandler>());
         services.AddDataMigration<IncomeTaxMigrations>()
             .AddIndexProvider<IncomeTaxRuleIndexProvider>();

@@ -90,6 +90,19 @@ public sealed class IncomeTaxTests
     }
 
     [Fact]
+    public void IncomeTaxFeature_CreatesTheIncomeTaxCollection()
+    {
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+
+        new IncomeTaxStartup().ConfigureServices(services);
+
+        using var provider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(services);
+
+        // Without it, a site's first read of the rules fails: no IncomeTax_Document table.
+        Assert.Contains(TaxationConstants.IncomeTaxCollectionName, Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<Microsoft.Extensions.Options.IOptions<global::OrchardCore.Data.StoreCollectionOptions>>(provider).Value.Collections);
+    }
+
+    [Fact]
     public async Task TheBuiltInProvider_WorksFromANeutralRequest()
     {
         var rules = new[]

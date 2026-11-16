@@ -778,22 +778,36 @@ public sealed class DefaultPayProfileService : IPayProfileService
     private async Task<IReadOnlyList<string>> JurisdictionsAsync(EmployeePayProfile profile, Employer employer, CancellationToken cancellationToken)
     {
         var jurisdictions = new List<string>();
+        var work = new List<string>();
+
+        if (!string.IsNullOrEmpty(profile.WorkSiteTeamId) && _services.GetService<PayrollTeamsFeature>() is not null && _services.GetService<ITeamManager>() is { } teams && await teams.FindByIdAsync(profile.WorkSiteTeamId, cancellationToken) is { } site
+            && site.TryGet<PayrollTeamSettings>(out var settings))
+        {
+            work.AddRange(settings.Jurisdictions);
+        }
+
+        // Where the person lives and works: a registration below a country (with a dash, such as CA-QC) asks for an
+        // election only from the people there.
+        var personal = new HashSet<string>(work, StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrEmpty(profile.HomeAddress?.Country) && !string.IsNullOrEmpty(profile.HomeAddress.Region))
+        {
+            personal.Add($"{profile.HomeAddress.Country}-{profile.HomeAddress.Region}");
+        }
 
         foreach (var registration in employer?.Registrations ?? [])
         {
-            if (!string.IsNullOrEmpty(registration.Jurisdiction) && !jurisdictions.Contains(registration.Jurisdiction, StringComparer.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(registration.Jurisdiction)
+                && !jurisdictions.Contains(registration.Jurisdiction, StringComparer.OrdinalIgnoreCase)
+                && (!registration.Jurisdiction.Contains('-', StringComparison.Ordinal) || personal.Count == 0 || personal.Contains(registration.Jurisdiction)))
             {
                 jurisdictions.Add(registration.Jurisdiction);
             }
         }
 
-        if (!string.IsNullOrEmpty(profile.WorkSiteTeamId) && _services.GetService<PayrollTeamsFeature>() is not null && _services.GetService<ITeamManager>() is { } teams && await teams.FindByIdAsync(profile.WorkSiteTeamId, cancellationToken) is { } site
-            && site.TryGet<PayrollTeamSettings>(out var settings))
+        foreach (var jurisdiction in work.Where(jurisdiction => !jurisdictions.Contains(jurisdiction, StringComparer.OrdinalIgnoreCase)))
         {
-            foreach (var jurisdiction in settings.Jurisdictions.Where(jurisdiction => !jurisdictions.Contains(jurisdiction, StringComparer.OrdinalIgnoreCase)))
-            {
-                jurisdictions.Add(jurisdiction);
-            }
+            jurisdictions.Add(jurisdiction);
         }
 
         return jurisdictions;

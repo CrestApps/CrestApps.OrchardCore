@@ -1,6 +1,6 @@
 ---
 sidebar_label: Canadian payroll
-title: Canadian payroll: source deductions, remittances, T4 and RL-1
+title: "Canadian payroll: source deductions, remittances, T4 and RL-1"
 description: "Pay people in Canada: register the employer with the CRA and Revenu Québec, enter TD1 and TP-1015.3 claims, let payroll work out federal, provincial and Quebec tax, CPP, EI, QPP and QPIP, remit the source deductions, and file T4 and RL-1 slips."
 technical_manual:
   - modules/taxation
