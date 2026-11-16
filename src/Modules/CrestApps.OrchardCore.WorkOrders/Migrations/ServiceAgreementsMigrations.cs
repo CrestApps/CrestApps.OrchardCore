@@ -1,8 +1,6 @@
 using CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 using CrestApps.OrchardCore.YesSql.Core.Upgrades;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
-using OrchardCore.Environment.Shell.Scope;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.WorkOrders.Migrations;
@@ -15,12 +13,18 @@ namespace CrestApps.OrchardCore.WorkOrders.Migrations;
 /// </summary>
 internal sealed class ServiceAgreementsMigrations : DataMigration
 {
+    private readonly ResumableSteps _steps;
+
+    public ServiceAgreementsMigrations(ResumableSteps steps)
+    {
+        _steps = steps;
+    }
+
     /// <summary>
     /// Nothing to create: agreements are the Agreements module's. A site whose migration record was lost still runs the
     /// move, which finds nothing on a new site.
     /// </summary>
     /// <returns>The version.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Orchard Core finds a migration's steps on the instance.")]
     public Task<int> CreateAsync()
         => RequestMoveAsync(3);
 
@@ -44,14 +48,15 @@ internal sealed class ServiceAgreementsMigrations : DataMigration
     /// agreement store is read in a scope that sees the Agreements tables) and again until every one has moved.
     /// </summary>
     /// <returns>The version.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Orchard Core finds a migration's steps on the instance.")]
     public Task<int> UpdateFrom2Async()
         => RequestMoveAsync(3);
 
-    private static Task<int> RequestMoveAsync(int version)
+    // The request is a row written in the migration's own transaction, so it can't be lost after the migration commits;
+    // the step itself runs later, in a scope that sees the Agreements tables.
+    private async Task<int> RequestMoveAsync(int version)
     {
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ResumableSteps>().RequestAsync(ServiceAgreementsMoveStep.StepName));
+        await _steps.RequestAsync(ServiceAgreementsMoveStep.StepName);
 
-        return Task.FromResult(version);
+        return version;
     }
 }

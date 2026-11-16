@@ -25,6 +25,7 @@ internal sealed class TicketsMigrations : DataMigration
     private readonly ICatalogManager<TicketDesk> _desks;
     private readonly ICatalogManager<TicketView> _views;
     private readonly ICatalogManager<TicketBoard> _boards;
+    private readonly ResumableSteps _steps;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TicketsMigrations"/> class.
@@ -35,14 +36,17 @@ internal sealed class TicketsMigrations : DataMigration
     /// <param name="desks">The desks.</param>
     /// <param name="views">The saved views.</param>
     /// <param name="boards">The boards.</param>
+    /// <param name="steps">The resumable steps, which a request adds to in the migration's own transaction.</param>
     public TicketsMigrations(
         IContentDefinitionManager contentDefinitionManager,
         ICatalogManager<TicketStatus> statuses,
         ICatalogManager<TicketPriority> priorities,
         ICatalogManager<TicketDesk> desks,
         ICatalogManager<TicketView> views,
-        ICatalogManager<TicketBoard> boards)
+        ICatalogManager<TicketBoard> boards,
+        ResumableSteps steps)
     {
+        _steps = steps;
         _contentDefinitionManager = contentDefinitionManager;
         _statuses = statuses;
         _priorities = priorities;
@@ -187,7 +191,7 @@ internal sealed class TicketsMigrations : DataMigration
         });
         await TicketIndexSchema.CreateTimeElapsedMarksAsync(SchemaBuilder);
 
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ResumableSteps>().RequestAsync(TicketReindexStep.StepName));
+        await _steps.RequestAsync(TicketReindexStep.StepName);
 
         return 8;
     }
@@ -227,7 +231,7 @@ internal sealed class TicketsMigrations : DataMigration
     {
         await TicketIndexSchema.CreateLinkIndexAsync(SchemaBuilder);
 
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ResumableSteps>().RequestAsync(TicketReindexStep.StepName));
+        await _steps.RequestAsync(TicketReindexStep.StepName);
 
         return 11;
     }

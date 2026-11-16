@@ -1,9 +1,7 @@
 using CrestApps.OrchardCore.Timeline.Core.Indexes;
 using CrestApps.OrchardCore.Timeline.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Upgrades;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
-using OrchardCore.Environment.Shell.Scope;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Timeline.Migrations;
@@ -13,6 +11,13 @@ namespace CrestApps.OrchardCore.Timeline.Migrations;
 /// </summary>
 internal sealed class TimelineMigrations : DataMigration
 {
+    private readonly ResumableSteps _steps;
+
+    public TimelineMigrations(ResumableSteps steps)
+    {
+        _steps = steps;
+    }
+
     /// <summary>
     /// Creates the table.
     /// </summary>
@@ -48,7 +53,7 @@ internal sealed class TimelineMigrations : DataMigration
     {
         await TimelineIndexSchema.CreateAttachmentIndexAsync(SchemaBuilder);
 
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ResumableSteps>().RequestAsync(TimelineFileIndexStep.StepName));
+        await _steps.RequestAsync(TimelineFileIndexStep.StepName);
 
         return 3;
     }

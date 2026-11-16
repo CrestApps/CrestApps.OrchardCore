@@ -1,14 +1,19 @@
 using CrestApps.OrchardCore.TimeTracker.Core.Indexes;
 using CrestApps.OrchardCore.TimeTracker.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Upgrades;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
-using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.TimeTracker.Migrations;
 
 internal sealed class TimeTrackerMigrations : DataMigration
 {
+    private readonly ResumableSteps _steps;
+
+    public TimeTrackerMigrations(ResumableSteps steps)
+    {
+        _steps = steps;
+    }
+
     public async Task<int> CreateAsync()
     {
         await TimeTrackerIndexSchema.CreateAsync(SchemaBuilder);
@@ -24,7 +29,7 @@ internal sealed class TimeTrackerMigrations : DataMigration
     {
         await TimeTrackerIndexSchema.AddChargedToAsync(SchemaBuilder);
 
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ResumableSteps>().RequestAsync(TimeEntryChargeStep.StepName));
+        await _steps.RequestAsync(TimeEntryChargeStep.StepName);
 
         return 2;
     }
