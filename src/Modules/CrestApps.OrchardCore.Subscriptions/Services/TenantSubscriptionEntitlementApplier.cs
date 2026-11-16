@@ -81,19 +81,21 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
             return;
         }
 
-        // The entitlement acts only on a tenant its own provisioning job created. A name typed at checkout, for a site
-        // that was never created because the name was taken, must not reach the tenant that already had it.
-        if (!await WasCreatedForAsync(context, tenantName))
-        {
-            _logger.LogWarning("A tenant entitlement of subscription '{SubscriptionId}' names a tenant its provisioning job did not create. It was ignored.", context.Subscription?.ItemId);
-
-            return;
-        }
-
         if (!_shellHost.TryGetSettings(tenantName, out var settings))
         {
             // The site has not been created yet, or was removed. Neither is an error here: the provisioning
             // job owns creation, and a removed site has nothing to suspend.
+            return;
+        }
+
+        // The entitlement acts only on a tenant its own provisioning job created. A name typed at checkout, for a site
+        // that was never created because the name was taken, must not reach the tenant that already had it. The jobs are
+        // looked up by the name the shell host holds: it finds a tenant without case, and the database may compare the
+        // name exactly, so the entitlement's spelling missed a name sold again in another case.
+        if (!await WasCreatedForAsync(context, settings.Name))
+        {
+            _logger.LogWarning("A tenant entitlement of subscription '{SubscriptionId}' names a tenant its provisioning job did not create. It was ignored.", context.Subscription?.ItemId);
+
             return;
         }
 
@@ -110,12 +112,25 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
 
         // An uninitialized tenant has never been set up, so enabling it would present a setup screen to
         // somebody who bought a finished site.
-        if (settings.IsUninitialized() || settings.State == state)
+        if (settings.IsUninitialized())
         {
             return;
         }
 
         var suspendedByBilling = string.Equals(settings[SubscriptionConstants.SuspendedBySubscriptionSetting], "true", StringComparison.OrdinalIgnoreCase);
+
+        if (settings.State == state)
+        {
+            // A running site whose billing mark stayed was switched back on by hand. The mark is cleared, so a later
+            // disable by the operator isn't taken for billing's and undone by the subscriber.
+            if (state == TenantState.Running && suspendedByBilling)
+            {
+                settings[SubscriptionConstants.SuspendedBySubscriptionSetting] = null;
+                await _shellHost.UpdateShellSettingsAsync(settings);
+            }
+
+            return;
+        }
 
         // Only a site billing took down comes back with billing. One an operator disabled stays disabled, whatever the
         // subscriber does: canceling at period end makes the agreement current, and that used to switch the site back on.

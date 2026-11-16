@@ -98,4 +98,57 @@ public sealed partial class VoiceAgentConversationLoopTests
         Assert.DoesNotContain(harness.Transcript, message => message.Text?.Contains("1228", StringComparison.Ordinal) == true);
         Assert.Equal("8", Assert.Single(harness.CallerKeys.Collected).Digits);
     }
+
+    /// <summary>
+    /// Keypad Mild (fix verification): the keypad commits the turn's session and opens its window in a scope of its own,
+    /// so the activity the turn read before the model answered is a stale copy. When the model also handed off on that
+    /// turn, the loop saved that copy, and the window just opened was gone.
+    /// </summary>
+    [Fact]
+    public async Task ATurnThatAsksForSecureDigitsAndHandsOff_KeepsTheWindowTheKeypadOpened()
+    {
+        // Arrange
+        var harness = new LoopHarness(useRealTurns: true, storesCopies: true);
+        harness.EnableHandoff();
+        harness.Reply = "Let me put you through.";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        harness.DuringCompletion = () =>
+        {
+            harness.SecureKeypadCaptures.StartAsync(harness.Activity.ItemId, SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken).GetAwaiter().GetResult();
+            harness.RealHandoffTurn.RequestHandoff("the caller asked for a person");
+        };
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "I'll pay by card, but can I talk to someone first?", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        var stored = harness.ReadStoredCopy();
+        Assert.True(stored.Has<PendingVoiceHandoff>());
+        Assert.True(stored.Has<SecureCaptureWindow>(), "The turn's own save must not write over the window the keypad opened.");
+    }
+
+    /// <summary>
+    /// Keypad Mild (fix verification): the same turn when the model ends on a voicemail.
+    /// </summary>
+    [Fact]
+    public async Task ATurnThatAsksForSecureDigitsAndEndsOnVoicemail_KeepsTheWindowTheKeypadOpened()
+    {
+        // Arrange
+        var harness = new LoopHarness(useRealTurns: true, storesCopies: true);
+        harness.Reply = "I'll call back later.";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        harness.DuringCompletion = () =>
+        {
+            harness.SecureKeypadCaptures.StartAsync(harness.Activity.ItemId, SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken).GetAwaiter().GetResult();
+            harness.RealEndCallTurn.RequestEndCall("reached voicemail", reachedVoicemail: true);
+        };
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Yes, speaking.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        var stored = harness.ReadStoredCopy();
+        Assert.True(stored.Has<VoicemailReached>());
+        Assert.True(stored.Has<SecureCaptureWindow>(), "The turn's own save must not write over the window the keypad opened.");
+    }
 }

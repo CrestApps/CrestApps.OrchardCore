@@ -9,6 +9,12 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 /// Moves a subscription to past due when its transaction becomes overdue. Without it a subscription bought with a
 /// promise to pay (Pay Later, a bank transfer) stayed active however long the payment was owed.
 /// </summary>
+/// <remarks>
+/// One rule with <see cref="SubscriptionFirstPaymentTransactionHandler"/>: a subscription is past due while any transaction
+/// of the checkout that created it is overdue and unpaid, its sign-up fee or a one-time item bought with it included. So
+/// every subscription of the checkout is marked here, and any paid transaction of the checkout brings them back there once
+/// none of its transactions is overdue and unpaid.
+/// </remarks>
 public sealed class SubscriptionOverdueTransactionHandler : TransactionEventHandlerBase
 {
     private const string SubscriptionReferenceType = "Subscription";

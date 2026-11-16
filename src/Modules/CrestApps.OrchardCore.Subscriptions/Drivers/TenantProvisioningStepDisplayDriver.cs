@@ -126,6 +126,7 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
             Domains = rules.AllowCustomDomains ? SplitDomains(model.Domains) : [],
             RecipeName = planRecipe,
             FeatureProfile = GetStepData(flow, "FeatureProfile"),
+            OwnerId = flow.Session?.OwnerId,
         }, rules);
 
         foreach (var error in await _rulesProvider.ValidateAsync(request, rules, _shellHost.GetAllSettings()))

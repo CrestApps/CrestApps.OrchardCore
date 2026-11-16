@@ -300,6 +300,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
                 Domains = job.Domains ?? [],
                 RecipeName = job.RecipeName,
                 FeatureProfile = job.FeatureProfile,
+                OwnerId = job.OwnerId,
             },
             rules,
             _shellHost.GetAllSettings() ?? [],
@@ -323,9 +324,14 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         // answered for the store's own root URL with the setup wizard, and with no secret the wizard asked for no token.
         await _shellHost.UpdateShellSettingsAsync(shellSettings);
 
+        // Setup marks the settings it is given as initializing, which is what keeps an early request to the new site from
+        // building a shell for it. The shell host reloads the tenant when it is saved, so the copy built here is not the one
+        // it holds; setup runs on the registered one, as the tenant hierarchy's does.
+        var registered = _shellHost.TryGetSettings(job.TenantName, out var held) ? held : shellSettings;
+
         var setupContext = new SetupContext
         {
-            ShellSettings = shellSettings,
+            ShellSettings = registered,
             EnabledFeatures = [],
             Errors = new Dictionary<string, string>(),
             Recipe = recipe,

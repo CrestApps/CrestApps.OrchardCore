@@ -57,8 +57,10 @@ public interface ISubscriptionStore : ICatalog<Subscription>
     /// has ended, so they can be expired instead of keeping what they granted forever.
     /// </summary>
     /// <param name="asOfUtc">The UTC time to evaluate against.</param>
+    /// <param name="skip">How many of them to skip, in the order they were recorded.</param>
+    /// <param name="take">The most to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    Task<IReadOnlyList<Subscription>> GetLapsedAsync(DateTime asOfUtc, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Subscription>> GetLapsedAsync(DateTime asOfUtc, int skip, int take, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns a page of subscriptions for the administration report.

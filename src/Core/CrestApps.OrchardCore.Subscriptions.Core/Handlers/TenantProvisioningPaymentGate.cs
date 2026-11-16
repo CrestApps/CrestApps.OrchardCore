@@ -73,6 +73,7 @@ public sealed class TenantProvisioningPaymentGate : ICheckoutPaymentGate
 
             // The profile always comes from the plan, never from what was saved with the step.
             FeatureProfile = GetData(planStep, "FeatureProfile"),
+            OwnerId = session.OwnerId,
         };
 
         var rules = await _rulesProvider.GetRulesAsync(planRecipe);

@@ -308,7 +308,7 @@ public sealed class TenantProvisioningServiceTests
             CreateSession(),
             new ProvisioningClock(_now),
             NullLogger<TenantProvisioningService>.Instance,
-            new TenantPurchaseRulesProvider(siteService, shellHost.Object, new HttpContextAccessor(), Options.Create(new AdminOptions()), new FixedFeatureProfileCatalog(knownProfiles), CreateSessionStore(planRecipe), StoreRoutes.Create()),
+            new TenantPurchaseRulesProvider(siteService, shellHost.Object, new HttpContextAccessor(), Options.Create(new AdminOptions()), new FixedFeatureProfileCatalog(knownProfiles), CreateSessionStore(planRecipe), StoreRoutes.Create(), new CrestApps.OrchardCore.Tests.Subscriptions.Fakes.InMemoryTenantProvisioningJobStore()),
             CreateSubscriptionManager(subscription));
 
         return (service, setup, store);

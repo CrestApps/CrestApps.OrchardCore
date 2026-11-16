@@ -130,6 +130,12 @@ public static class SubscriptionConstants
     public const string SuspendedBySubscriptionSetting = "SuspendedBySubscription";
 
     /// <summary>
+    /// The source of the expiry of a canceled subscription whose paid period ended long before the sweep found it: the
+    /// backlog recorded before the sweep looked for canceled subscriptions. It is expired without its workflow event.
+    /// </summary>
+    public const string LapsedBacklogSource = "lapsed-backlog";
+
+    /// <summary>
     /// The content type name for the subscription summary dashboard widget.
     /// </summary>
     public const string SubscriptionSummaryWidgetType = "SubscriptionSummaryWidget";

@@ -18,6 +18,7 @@ using OrchardCore.Data;
 using OrchardCore.Environment.Extensions;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Builders;
+using OrchardCore.Environment.Shell.Models;
 using OrchardCore.Locking;
 using OrchardCore.Modules;
 using OrchardCore.Recipes.Models;
@@ -75,13 +76,40 @@ public sealed class TenantProvisioningSetupFailureTests
         Assert.Equal("sold-tenant", saved["FeatureProfile"]);
     }
 
+    /// <summary>
+    /// Selling-sites Mild (fix verification): setup ran on the provisioning service's own copy of the settings, which the
+    /// shell host does not hold. Orchard marks the settings it is given as initializing, so the registered tenant stayed
+    /// uninitialized while setup ran, and an early request to the new site built a setup shell instead of being answered
+    /// "service unavailable". Setup now runs on the settings the shell host holds, as the tenant hierarchy's does.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_RunsSetupOnTheTenantTheShellHostHolds()
+    {
+        var harness = await Harness.CreateAsync();
+
+        // The accessor's context flows by async local, so it is set here, where the setup runs from; without it Orchard's
+        // setup stops before it checks the database.
+        harness.HttpContextAccessor.HttpContext = new DefaultHttpContext();
+
+        await harness.Service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(TenantState.Initializing, harness.RegisteredStateDuringSetup);
+    }
+
     private sealed class Harness
     {
-        public TenantProvisioningService Service { get; private init; }
+        public TenantProvisioningService Service { get; private set; }
 
         public RunningShellTable Table { get; private init; }
 
         public InMemoryShellSettingsManager Settings { get; private init; }
+
+        /// <summary>
+        /// The state of the tenant the shell host holds, read while Orchard's setup checks the database.
+        /// </summary>
+        public TenantState? RegisteredStateDuringSetup { get; private set; }
+
+        public HttpContextAccessor HttpContextAccessor { get; private set; }
 
         public static async Task<Harness> CreateAsync()
         {
@@ -118,6 +146,7 @@ public sealed class TenantProvisioningSetupFailureTests
                 CreatedUtc = _now,
             });
 
+            var harness = new Harness { Table = table, Settings = settingsManager };
             var siteService = SiteServiceFactory.Create(new SubscriptionOnboardingSettings { AllowPrefixOnStoreHost = true });
             var httpContextAccessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
 
@@ -126,22 +155,25 @@ public sealed class TenantProvisioningSetupFailureTests
                 siteService,
                 shellHost,
                 settingsManager,
-                CreateFailingSetupService(shellHost, httpContextAccessor),
+                CreateFailingSetupService(shellHost, httpContextAccessor, () => harness.RegisteredStateDuringSetup = shellHost.TryGetSettings("qasite1", out var registered) ? registered.State : null),
                 _protection,
                 new LocalLock(NullLogger<LocalLock>.Instance),
                 new ServiceCollection().BuildServiceProvider(),
                 Mock.Of<ISession>(),
                 new FixedClock(_now),
                 NullLogger<TenantProvisioningService>.Instance,
-                new TenantPurchaseRulesProvider(siteService, shellHost, httpContextAccessor, Options.Create(new AdminOptions()), new SoldTenantProfiles(), CreateSessionStore(), StoreRoutes.Create()),
+                new TenantPurchaseRulesProvider(siteService, shellHost, httpContextAccessor, Options.Create(new AdminOptions()), new SoldTenantProfiles(), CreateSessionStore(), StoreRoutes.Create(), jobs),
                 Mock.Of<ISubscriptionManager>());
 
-            return new Harness { Service = service, Table = table, Settings = settingsManager };
+            harness.Service = service;
+            harness.HttpContextAccessor = httpContextAccessor;
+
+            return harness;
         }
 
         // Orchard Core's own setup service, failing the way any setup error does: it reports the error and reloads the
         // tenant from storage.
-        private static SetupService CreateFailingSetupService(IShellHost shellHost, IHttpContextAccessor httpContextAccessor)
+        private static SetupService CreateFailingSetupService(IShellHost shellHost, IHttpContextAccessor httpContextAccessor, Action whileValidating)
         {
             var environment = new Mock<IHostEnvironment>();
             environment.SetupGet(e => e.ApplicationName).Returns("CrestApps.OrchardCore.Cms.Web");
@@ -153,7 +185,9 @@ public sealed class TenantProvisioningSetupFailureTests
             harvester.Setup(h => h.HarvestRecipesAsync()).ReturnsAsync([new RecipeDescriptor { Name = "Blog", IsSetupRecipe = true }]);
 
             var validator = new Mock<IDbConnectionValidator>();
-            validator.Setup(v => v.ValidateAsync(It.IsAny<DbConnectionValidatorContext>())).ReturnsAsync(DbConnectionValidatorResult.InvalidConnection);
+            validator.Setup(v => v.ValidateAsync(It.IsAny<DbConnectionValidatorContext>()))
+                .Callback(whileValidating)
+                .ReturnsAsync(DbConnectionValidatorResult.InvalidConnection);
 
             return new SetupService(
                 shellHost,

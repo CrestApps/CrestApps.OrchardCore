@@ -261,6 +261,83 @@ public sealed class TenantPurchaseValidatorTests
         Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.HostTaken);
     }
 
+    /// <summary>
+    /// Selling-sites Mild (fix verification): with the under/above rule, one purchase listing a public suffix blocked every
+    /// later buyer under it. A public suffix is not a domain anybody owns, so it is refused.
+    /// </summary>
+    [Theory]
+    [InlineData("co.uk")]
+    [InlineData("CO.UK")]
+    [InlineData("github.io")]
+    [InlineData("azurewebsites.net")]
+    [InlineData("com.au")]
+    public void Validate_APublicSuffix_IsRefused(string domain)
+    {
+        var errors = TenantPurchaseValidator.Validate(Request(domains: [domain.ToLowerInvariant()]), Rules(allowCustomDomains: true), _tenants);
+
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.InvalidHost);
+    }
+
+    [Theory]
+    [InlineData("myshop.co.uk")]
+    [InlineData("myshop.github.io")]
+    public void Validate_ANameUnderAPublicSuffixBesideAnotherTenants_IsAllowed(string domain)
+    {
+        ShellSettings[] tenants = [.. _tenants, new ShellSettings { Name = "Other", RequestUrlHost = "other.co.uk,other.github.io" }];
+
+        var errors = TenantPurchaseValidator.Validate(Request(domains: [domain]), Rules(allowCustomDomains: true), tenants);
+
+        Assert.Empty(errors);
+    }
+
+    /// <summary>
+    /// Selling-sites Mild (fix verification): the operator's hosts were reserved with every name under them, but not with
+    /// the names above them, so a buyer could take <c>operator.com</c> beside the store's <c>shop.operator.com</c>.
+    /// </summary>
+    [Theory]
+    [InlineData("operator.com")]
+    [InlineData("eu.operator.com")]
+    public void Validate_AParentOfTheOperatorsHost_IsRefused(string domain)
+    {
+        var errors = TenantPurchaseValidator.Validate(
+            Request(domains: [domain]),
+            Rules(allowCustomDomains: true, reservedHosts: ["shop.eu.operator.com"]),
+            _tenants);
+
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.ReservedHost);
+    }
+
+    /// <summary>
+    /// Selling-sites Mild (fix verification): a tenant answering on <c>*.wild.example.com</c> answers every name under it,
+    /// but a buyer could still take <c>a.wild.example.com</c>.
+    /// </summary>
+    [Theory]
+    [InlineData("a.wild.example.com")]
+    [InlineData("b.a.wild.example.com")]
+    [InlineData("wild.example.com")]
+    public void Validate_ANameUnderAnotherTenantsWildcardHost_IsRefused(string domain)
+    {
+        ShellSettings[] tenants = [.. _tenants, new ShellSettings { Name = "Wild", RequestUrlHost = "*.wild.example.com" }];
+
+        var errors = TenantPurchaseValidator.Validate(Request(domains: [domain]), Rules(allowCustomDomains: true), tenants);
+
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.HostTaken);
+    }
+
+    /// <summary>
+    /// Selling-sites Mild (fix verification): the under/above rule held a buyer's own site against them, so the owner of
+    /// <c>acme.example.org</c> could not buy a second site on <c>shop.acme.example.org</c>. The exact host is still taken.
+    /// </summary>
+    [Fact]
+    public void Validate_ANameBesideTheBuyersOwnSite_IsAllowed_ButItsExactHostIsNot()
+    {
+        var beside = TenantPurchaseValidator.Validate(Request(domains: ["shop.acme.example.org"]), Rules(allowCustomDomains: true), _tenants, ownedTenants: ["Acme"]);
+        var exact = TenantPurchaseValidator.Validate(Request(domains: ["acme.example.org"]), Rules(allowCustomDomains: true), _tenants, ownedTenants: ["Acme"]);
+
+        Assert.Empty(beside);
+        Assert.Contains(exact, error => error.Code == TenantPurchaseErrorCode.HostTaken);
+    }
+
     [Fact]
     public void Validate_MoreDomainsThanTheCap_IsRefused()
     {

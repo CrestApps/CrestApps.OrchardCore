@@ -49,6 +49,45 @@ public static class CallerNumbers
         return kept.Length == 0 ? null : kept;
     }
 
+    /// <summary>
+    /// Returns an address of a call as it is stored and shown. On a call between two extensions the provider puts the
+    /// other party's name there on purpose (<c>Front Desk 2</c>), so it is kept as a name (<see cref="SanitizeName"/>);
+    /// any other address is a caller id (<see cref="Sanitize"/>).
+    /// </summary>
+    /// <param name="value">The address as the provider reported it.</param>
+    /// <param name="isExtensionCall">Whether the call is between two extensions.</param>
+    /// <returns>The cleaned address.</returns>
+    public static string SanitizeAddress(string value, bool isExtensionCall)
+        => isExtensionCall ? SanitizeName(value) : Sanitize(value);
+
+    /// <summary>
+    /// Whether a call is between two extensions: it carries the dialed extension in
+    /// <see cref="TelephonyConstants.CallMetadata.ExtensionNumber"/>.
+    /// </summary>
+    /// <param name="call">The call.</param>
+    public static bool IsExtensionCall(Models.TelephonyCall call)
+        => call?.Metadata is not null &&
+            call.Metadata.TryGetValue(TelephonyConstants.CallMetadata.ExtensionNumber, out var extension) &&
+            !string.IsNullOrWhiteSpace(extension?.ToString());
+
+    /// <summary>
+    /// Returns a party's name with control characters and the characters markup is written with (angle brackets,
+    /// quotes and the backtick) removed, or <see langword="null"/> when nothing is left.
+    /// </summary>
+    /// <param name="value">The name.</param>
+    /// <returns>The cleaned name.</returns>
+    public static string SanitizeName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var kept = new string([.. value.Where(character => !char.IsControl(character) && character is not ('<' or '>' or '"' or '\'' or '`'))]).Trim();
+
+        return kept.Length == 0 ? null : kept;
+    }
+
     // Letters, digits and the separators a SIP address is written with; no quote, angle bracket, space or parenthesis.
     private static bool IsSipAddressCharacter(char character)
         => char.IsAsciiLetterOrDigit(character) || character is ':' or '@' or '.' or '-' or '_' or '+' or '*' or '#' or ';' or '=' or '%' or '~' or '!';

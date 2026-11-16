@@ -2,7 +2,10 @@ namespace CrestApps.OrchardCore.Telephony
 {
     public static class CallerNumbers
     {
+        public static bool IsExtensionCall(CrestApps.OrchardCore.Telephony.Models.TelephonyCall call) { }
         public static string Sanitize(string value) { }
+        public static string SanitizeAddress(string value, bool isExtensionCall) { }
+        public static string SanitizeName(string value) { }
     }
     public interface ICallQualityObserver
     {

@@ -23,6 +23,12 @@ public class SftpConnectionFieldsViewModel
     public string Username { get; set; }
 
     /// <summary>
+    /// Gets or sets the server's SHA-256 host key fingerprint, as <c>ssh-keygen -lf</c> prints it. The connection trusts
+    /// the server only when it shows this key.
+    /// </summary>
+    public string HostKeyFingerprint { get; set; }
+
+    /// <summary>
     /// Gets or sets the password.
     /// </summary>
     public string Password { get; set; }

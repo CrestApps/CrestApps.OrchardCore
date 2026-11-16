@@ -110,6 +110,14 @@ public sealed partial class VoiceAgentConversationLoop
             (reply, handoffRequested, handoffReason, endCallRequested) = await CompleteAsync(switched.Profile, switched.Session, activity, ProfileSwitchedTurn, cancellationToken);
         }
 
+        // A tool may have committed this turn's session: the secure keypad does, then opens its window in a scope of its
+        // own. A commit makes the session forget what it read, and saving the copy read before the model answered would
+        // put it back over the window. So the activity is read again before anything below saves it.
+        if (handoffRequested || endCallRequested)
+        {
+            activity = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken) ?? activity;
+        }
+
         // The model recognised a voicemail the greeting check did not, and has left its message on it.
         if (endCallRequested && _endCallTurn.ReachedVoicemail)
         {

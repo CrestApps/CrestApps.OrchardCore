@@ -42,6 +42,19 @@ public sealed class CallerNumbersTests
         Assert.Equal(marker, CallerNumbers.Sanitize(marker));
     }
 
+    // Voice Mild (fix verification): on a call between two extensions the provider puts the other party's name in the
+    // address on purpose, and the caller id cleaning turned "Front Desk 2" into "2".
+    [Theory]
+    [InlineData("Front Desk 2", true, "Front Desk 2")]
+    [InlineData("Front Desk 2", false, "2")]
+    [InlineData("R&D \"Lab\" <b>", true, "R&D Lab b")]
+    [InlineData("<>", true, null)]
+    [InlineData("+1 (702) 499-3350", true, "+1 (702) 499-3350")]
+    public void SanitizeAddress_KeepsTheNameOnAnExtensionCall(string raw, bool isExtensionCall, string expected)
+    {
+        Assert.Equal(expected, CallerNumbers.SanitizeAddress(raw, isExtensionCall));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

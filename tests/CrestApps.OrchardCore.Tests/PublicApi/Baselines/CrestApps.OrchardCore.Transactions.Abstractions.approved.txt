@@ -457,6 +457,7 @@ namespace CrestApps.OrchardCore.Transactions.Services
     public sealed class TransactionQuery
     {
         public TransactionQuery() { }
+        public string CheckoutSessionId { get; set; }
         public bool OutstandingOnly { get; set; }
         public string OwnerId { get; set; }
         public CrestApps.OrchardCore.Customers.Models.CustomerOwnerKind? OwnerKind { get; set; }

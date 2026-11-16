@@ -68,8 +68,8 @@ public sealed class SubscriptionManager : CatalogManager<Subscription>, ISubscri
         => await LoadAllAsync(await _store.GetDueForRenewalAsync(asOfUtc, cancellationToken), cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<Subscription>> GetLapsedAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
-        => await LoadAllAsync(await _store.GetLapsedAsync(asOfUtc, cancellationToken), cancellationToken);
+    public async Task<IReadOnlyList<Subscription>> GetLapsedAsync(DateTime asOfUtc, int skip, int take, CancellationToken cancellationToken = default)
+        => await LoadAllAsync(await _store.GetLapsedAsync(asOfUtc, skip, take, cancellationToken), cancellationToken);
 
     /// <inheritdoc/>
     public async Task<PageResult<Subscription>> PageAsync(int page, int pageSize, SubscriptionQuery query, CancellationToken cancellationToken = default)

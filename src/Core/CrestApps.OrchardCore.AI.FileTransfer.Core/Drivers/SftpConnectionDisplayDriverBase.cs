@@ -51,6 +51,7 @@ public abstract class SftpConnectionDisplayDriverBase<TModel> : DisplayDriver<TM
         model.Host = connection?.Host;
         model.Port = connection?.Port;
         model.Username = connection?.Username;
+        model.HostKeyFingerprint = connection?.HostKeyFingerprint;
         model.HasPassword = ProtectedSettingExtensions.HasSecret(connection?.Password);
         model.HasPrivateKey = ProtectedSettingExtensions.HasSecret(connection?.PrivateKey);
         model.HasPassphrase = ProtectedSettingExtensions.HasSecret(connection?.Passphrase);
@@ -95,11 +96,21 @@ public abstract class SftpConnectionDisplayDriverBase<TModel> : DisplayDriver<TM
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProxyPort), S["The proxy port must be between 1 and 65535."]);
         }
 
+        // The client trusts the server only when it shows this key, and refuses a connection that names none, so a
+        // connection saved without one could never connect.
+        if (!SshHostKeyFingerprints.IsValid(model.HostKeyFingerprint))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.HostKeyFingerprint), S["Enter the server's SHA-256 host key fingerprint, as ssh-keygen -lf prints it (SHA256:...)."]);
+        }
+
+        var fingerprint = SshHostKeyFingerprints.Normalize(model.HostKeyFingerprint);
+
         var connection = new SftpConnectionMetadata
         {
             Host = model.Host?.Trim(),
             Port = model.Port,
             Username = FileTransferFields.Trimmed(model.Username),
+            HostKeyFingerprint = fingerprint is null ? null : "SHA256:" + fingerprint,
             Password = ApplySecret(existing?.Password, model.Password),
             PrivateKey = ApplySecret(existing?.PrivateKey, model.PrivateKey),
             Passphrase = ApplySecret(existing?.Passphrase, model.Passphrase),

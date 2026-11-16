@@ -66,7 +66,7 @@ public sealed class TenantProvisioningStepAdministratorTests
         catalog.Setup(value => value.GetProfileIdsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(["sold"]);
 
         var siteService = SiteServiceFactory.Create(new SubscriptionOnboardingSettings { AllowPrefixOnStoreHost = true });
-        var rules = new TenantPurchaseRulesProvider(siteService, shellHost.Object, new HttpContextAccessor(), Options.Create(new AdminOptions()), catalog.Object, Mock.Of<ICheckoutSessionStore>(), StoreRoutes.Create());
+        var rules = new TenantPurchaseRulesProvider(siteService, shellHost.Object, new HttpContextAccessor(), Options.Create(new AdminOptions()), catalog.Object, Mock.Of<ICheckoutSessionStore>(), StoreRoutes.Create(), new CrestApps.OrchardCore.Tests.Subscriptions.Fakes.InMemoryTenantProvisioningJobStore());
 
         var driver = new TenantProvisioningStepDisplayDriver(
             shellHost.Object,

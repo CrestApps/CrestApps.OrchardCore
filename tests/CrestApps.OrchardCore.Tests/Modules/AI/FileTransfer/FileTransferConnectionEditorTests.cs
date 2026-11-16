@@ -20,6 +20,9 @@ namespace CrestApps.OrchardCore.Tests.Modules.AI.FileTransfer;
 /// </summary>
 public sealed class FileTransferConnectionEditorTests
 {
+    // A SHA-256 host key fingerprint as ssh-keygen -lf prints it.
+    private const string Fingerprint = "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU";
+
     private readonly EphemeralDataProtectionProvider _dataProtectionProvider = new();
 
     [Fact]
@@ -65,7 +68,7 @@ public sealed class FileTransferConnectionEditorTests
         // Arrange
         var resource = new McpResource { Source = SftpResourceConstants.Type };
         var driver = new SftpResourceDisplayDriver(_dataProtectionProvider, new PassThroughLocalizer<SftpResourceDisplayDriver>());
-        var context = CreateContext(new SftpConnectionFieldsViewModel { Host = "sftp.example.com", Username = "deploy", Password = "  s3cret " });
+        var context = CreateContext(new SftpConnectionFieldsViewModel { Host = "sftp.example.com", Username = "deploy", Password = "  s3cret ", HostKeyFingerprint = Fingerprint });
 
         // Act
         await driver.UpdateAsync(resource, context);
@@ -89,6 +92,86 @@ public sealed class FileTransferConnectionEditorTests
 
         // Assert
         Assert.True(context.Updater.ModelState.ContainsKey(nameof(SftpConnectionFieldsViewModel.Password)));
+    }
+
+    /// <summary>
+    /// MD7 (fix verification): since CrestApps.Core preview.375 the SFTP client refuses a connection that names no host
+    /// key fingerprint, and the editors had no field for one, so every SFTP file source and MCP resource was refused.
+    /// </summary>
+    [Fact]
+    public async Task SftpResourceDriver_WithoutAHostKeyFingerprint_ShouldAskForOne()
+    {
+        // Arrange
+        var resource = new McpResource { Source = SftpResourceConstants.Type };
+        var driver = new SftpResourceDisplayDriver(_dataProtectionProvider, new PassThroughLocalizer<SftpResourceDisplayDriver>());
+        var context = CreateContext(new SftpConnectionFieldsViewModel { Host = "sftp.example.com", Username = "deploy", Password = "s3cret" });
+
+        // Act
+        await driver.UpdateAsync(resource, context);
+
+        // Assert
+        Assert.True(context.Updater.ModelState.ContainsKey("HostKeyFingerprint"));
+    }
+
+    [Theory]
+    [InlineData("SHA256:not-a-fingerprint")]
+    [InlineData("MD5:16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48")]
+    public async Task SftpResourceDriver_WithAnInvalidHostKeyFingerprint_ShouldReportIt(string fingerprint)
+    {
+        // Arrange
+        var resource = new McpResource { Source = SftpResourceConstants.Type };
+        var driver = new SftpResourceDisplayDriver(_dataProtectionProvider, new PassThroughLocalizer<SftpResourceDisplayDriver>());
+        var context = CreateContext(new SftpConnectionFieldsViewModel { Host = "sftp.example.com", Username = "deploy", Password = "s3cret", HostKeyFingerprint = fingerprint });
+
+        // Act
+        await driver.UpdateAsync(resource, context);
+
+        // Assert
+        Assert.True(context.Updater.ModelState.ContainsKey(nameof(SftpConnectionFieldsViewModel.HostKeyFingerprint)));
+    }
+
+    [Theory]
+    [InlineData("SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU")]
+    [InlineData(" +DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU= ")]
+    public async Task SftpResourceDriver_StoresTheFingerprint_SoThePackagesClientTrustsThatServer(string posted)
+    {
+        // Arrange
+        var resource = new McpResource { Source = SftpResourceConstants.Type };
+        var driver = new SftpResourceDisplayDriver(_dataProtectionProvider, new PassThroughLocalizer<SftpResourceDisplayDriver>());
+        var context = CreateContext(new SftpConnectionFieldsViewModel { Host = "sftp.example.com", Username = "deploy", Password = "s3cret", HostKeyFingerprint = posted });
+
+        // Act
+        await driver.UpdateAsync(resource, context);
+
+        // Assert: CrestApps.Core's own check trusts the server that shows this key, and no other.
+        Assert.True(context.Updater.ModelState.IsValid);
+        var stored = resource.GetOrCreate<SftpConnectionMetadata>().HostKeyFingerprint;
+        Assert.Equal(Fingerprint, stored);
+        Assert.True(SftpHostKeys.Matches(stored, "+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU", md5Fingerprint: null));
+        Assert.False(SftpHostKeys.Matches(stored, "nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8", md5Fingerprint: null));
+    }
+
+    /// <summary>
+    /// MD7 (fix verification): the FTP client refuses a connection that sends a user name without TLS unless the host
+    /// allows it, so the editor refuses it too instead of saving a connection that can never connect.
+    /// </summary>
+    [Theory]
+    [InlineData("None", false, true)]
+    [InlineData("Auto", false, true)]
+    [InlineData("Explicit", false, false)]
+    [InlineData("None", true, false)]
+    public async Task FtpResourceDriver_AUserNameWithoutTls_IsRefusedUnlessTheHostAllowsIt(string encryptionMode, bool allowUnencrypted, bool refused)
+    {
+        // Arrange
+        var resource = new McpResource { Source = FtpResourceConstants.Type };
+        var driver = new FtpResourceDisplayDriver(_dataProtectionProvider, new PassThroughLocalizer<FtpResourceDisplayDriver>(), Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.AI.FileTransfer.Core.FileTransferHostOptions { AllowUnencryptedFtp = allowUnencrypted }));
+        var context = CreateContext(new FtpConnectionFieldsViewModel { Host = "ftp.example.com", Port = 21, Username = "deploy", EncryptionMode = encryptionMode });
+
+        // Act
+        await driver.UpdateAsync(resource, context);
+
+        // Assert
+        Assert.Equal(refused, context.Updater.ModelState.ContainsKey(nameof(FtpConnectionFieldsViewModel.EncryptionMode)));
     }
 
     private static UpdateEditorContext CreateContext(object submitted)

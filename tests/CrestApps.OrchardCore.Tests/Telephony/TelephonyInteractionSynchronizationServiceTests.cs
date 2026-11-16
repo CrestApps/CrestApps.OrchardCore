@@ -344,6 +344,48 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         Assert.Equal("+15550003000", interaction.To);
     }
 
+    /// <summary>
+    /// Voice Mild (fix verification): on a call between two extensions the provider puts the other party's name in the
+    /// address on purpose, and the cleaning turned "Front Desk 2" into "2". The name is kept, without markup.
+    /// </summary>
+    [Theory]
+    [InlineData("Front Desk 2", "Front Desk 2")]
+    [InlineData("Front Desk <b>2</b>", "Front Desk b2/b")]
+    public async Task ReconcileProviderInteractionsAsync_KeepsTheNameOnAnExtensionCall(string reported, string expected)
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        interaction.IsExtension = true;
+        interaction.ExtensionNumber = "102";
+        interaction.To = "Front Desk 2";
+        var store = new Mock<ITelephonyInteractionStore>();
+        store
+            .Setup(value => value.GetActiveAsync("provider-1", It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([interaction]);
+        store.SetupRetryingUpdates(interaction);
+        var (hubContext, client) = CreateHubContext();
+        client
+            .Setup(value => value.CallStateChanged(It.IsAny<TelephonyCall>()))
+            .Returns(Task.CompletedTask);
+        var service = CreateService(
+            store,
+            hubContext,
+            new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = new TelephonyCall { CallId = "call-1", ProviderName = "provider-1", From = "+15550001000", To = reported, State = CallState.Connected },
+            },
+            lockAcquired: true);
+
+        // Act
+        await service.ReconcileProviderInteractionsAsync("provider-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expected, interaction.To);
+        Assert.Equal("+15550001000", interaction.From);
+    }
+
     [Fact]
     public async Task ReconcileProviderInteractionsAsync_WhenCallIsMissing_NotifiesUserAndDeletesOrphan()
     {

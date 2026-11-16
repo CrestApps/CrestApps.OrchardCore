@@ -1,3 +1,4 @@
+using CrestApps.Core.AI.Ftp;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -22,6 +23,12 @@ public sealed class FileTransferHostOptions
     /// accepting any certificate lets anyone on the network path read the credentials and the files.
     /// </summary>
     public bool AllowAnyFtpCertificate { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an FTP connection may send a user name and password without TLS (an
+    /// encryption mode other than Explicit or Implicit). Off by default: anyone on the network path reads them.
+    /// </summary>
+    public bool AllowUnencryptedFtp { get; set; }
 }
 
 /// <summary>
@@ -30,12 +37,15 @@ public sealed class FileTransferHostOptions
 public static class FileTransferHostOptionsServiceCollectionExtensions
 {
     /// <summary>
-    /// Binds <see cref="FileTransferHostOptions"/> to the tenant's configuration. Safe to call more than once.
+    /// Binds <see cref="FileTransferHostOptions"/> to the tenant's configuration, and CrestApps.Core's
+    /// <see cref="FtpOptions"/>, which its FTP client checks each connection against, to the same settings. Safe to call
+    /// more than once.
     /// </summary>
     /// <param name="services">The services.</param>
     public static IServiceCollection AddFileTransferHostOptions(this IServiceCollection services)
     {
         services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<FileTransferHostOptions>, FileTransferHostOptionsConfiguration>());
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<FtpOptions>, FtpOptionsConfiguration>());
 
         return services;
     }
@@ -51,5 +61,23 @@ public static class FileTransferHostOptionsServiceCollectionExtensions
 
         public void Configure(FileTransferHostOptions options)
             => _shellConfiguration.GetSection(FileTransferHostOptions.SectionName).Bind(options);
+    }
+
+    // The editor refuses what the host doesn't allow, and the package refuses it again when it connects, so both read the
+    // same settings.
+    private sealed class FtpOptionsConfiguration : IConfigureOptions<FtpOptions>
+    {
+        private readonly IOptions<FileTransferHostOptions> _hostOptions;
+
+        public FtpOptionsConfiguration(IOptions<FileTransferHostOptions> hostOptions)
+        {
+            _hostOptions = hostOptions;
+        }
+
+        public void Configure(FtpOptions options)
+        {
+            options.AllowAnyCertificate = _hostOptions.Value.AllowAnyFtpCertificate;
+            options.AllowUnencrypted = _hostOptions.Value.AllowUnencryptedFtp;
+        }
     }
 }

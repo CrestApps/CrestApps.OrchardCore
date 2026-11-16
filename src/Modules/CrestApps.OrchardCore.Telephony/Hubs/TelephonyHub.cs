@@ -1180,8 +1180,8 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
                 ProviderName = call.ProviderName,
                 UserId = userId,
                 UserName = userName,
-                From = CallerNumbers.Sanitize(call.From),
-                To = CallerNumbers.Sanitize(call.To),
+                From = CallerNumbers.SanitizeAddress(call.From, !string.IsNullOrEmpty(extensionNumber)),
+                To = CallerNumbers.SanitizeAddress(call.To, !string.IsNullOrEmpty(extensionNumber)),
                 Direction = call.Direction,
                 IsExtension = !string.IsNullOrEmpty(extensionNumber),
                 ExtensionNumber = extensionNumber,
@@ -1194,12 +1194,12 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
             return;
         }
 
-        if (CallerNumbers.Sanitize(call.To) is { } to)
+        if (CallerNumbers.SanitizeAddress(call.To, existing.IsExtension || CallerNumbers.IsExtensionCall(call)) is { } to)
         {
             existing.To = to;
         }
 
-        if (CallerNumbers.Sanitize(call.From) is { } from)
+        if (CallerNumbers.SanitizeAddress(call.From, existing.IsExtension || CallerNumbers.IsExtensionCall(call)) is { } from)
         {
             existing.From = from;
         }

@@ -446,9 +446,11 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
 
         changed |= SetIfDifferent(interaction.ProviderName, call.ProviderName, value => interaction.ProviderName = value);
         // The addresses are chosen by whoever places the call, and the recent calls list renders them, so they are cleaned
-        // here as they are where the interaction is first stored.
-        changed |= SetIfDifferent(interaction.From, CallerNumbers.Sanitize(call.From), value => interaction.From = value);
-        changed |= SetIfDifferent(interaction.To, CallerNumbers.Sanitize(call.To), value => interaction.To = value);
+        // here as they are where the interaction is first stored. On a call between two extensions an address is the other
+        // party's name, which is kept.
+        var isExtensionCall = interaction.IsExtension || CallerNumbers.IsExtensionCall(call);
+        changed |= SetIfDifferent(interaction.From, CallerNumbers.SanitizeAddress(call.From, isExtensionCall), value => interaction.From = value);
+        changed |= SetIfDifferent(interaction.To, CallerNumbers.SanitizeAddress(call.To, isExtensionCall), value => interaction.To = value);
 
         if (call.State is CallState.Disconnected or CallState.Failed)
         {

@@ -94,6 +94,52 @@ public sealed class SecureKeypadCaptureTurnBasedTests
         }
     }
 
+    /// <summary>
+    /// Keypad Mild (fix verification), on YesSql: asking for an entry commits the turn's session, which forgets the
+    /// activity the turn read before, and the window is written in a scope of its own. Saving the copy read before put it
+    /// back over the window with the current version, with no conflict. The loop now reads the activity again after the
+    /// tools, and that read, through the same session, finds the window.
+    /// </summary>
+    [Fact]
+    public async Task ATurnThatSavesTheActivityAfterAskingForAnEntry_KeepsTheWindow_WhenItReadsTheActivityAgain()
+    {
+        // Arrange
+        var databasePath = OmnichannelActivityStoreTests.DatabasePath("secure-keypad-reload");
+        var connectionString = $"Data Source={databasePath};Pooling=False;Default Timeout=2";
+        var store = await OmnichannelActivityStoreTests.CreateStoreAsync(connectionString);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        try
+        {
+            var activityId = await SeedTurnBasedCallAsync(store, connectionString);
+
+            await using (var turn = store.CreateSession())
+            {
+                var activities = OmnichannelActivityStoreTests.CreateActivityStore(turn, store, connectionString);
+                Assert.NotNull(await activities.FindByIdAsync(activityId, cancellationToken));
+
+                // Act: the model asks for the card number, then hands off on the same turn.
+                await CreateNode(store, connectionString, NewCache(), turn, activities).StartAsync(activityId, SecureCaptureField.CreditCardNumber, cancellationToken);
+
+                var activity = await activities.FindByIdAsync(activityId, cancellationToken);
+                activity.Put(new PendingVoiceHandoff { Reason = "the caller asked for a person" });
+                await activities.UpdateAsync(activity, cancellationToken);
+                await turn.SaveChangesAsync(cancellationToken);
+            }
+
+            // Assert
+            await using var check = store.CreateSession();
+            var saved = await OmnichannelActivityStoreTests.CreateActivityStore(check, store, connectionString).FindByIdAsync(activityId, cancellationToken);
+
+            Assert.True(saved.Has<PendingVoiceHandoff>());
+            Assert.True(saved.Has<SecureCaptureWindow>(), "The turn's save must not write over the window the keypad opened.");
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     [Fact]
     public async Task WhenTheKeypadCantBeMadePrivate_ForAnyReason_TheToolTellsTheModelNotToAsk()
     {

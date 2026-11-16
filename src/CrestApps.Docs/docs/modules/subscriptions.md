@@ -134,7 +134,7 @@ An agreement carries who owns it, what it bills and on what cycle, the gateway's
 
 The status is one of `Active`, `Trialing`, `PastDue`, `Canceled`, `Expired`, `Paused`, or `Incomplete`. Whether a subscriber currently has access is a separate question from the status, and the agreement answers it: a cancelled agreement is still current until the paid period runs out, and a past-due one is current through its grace window.
 
-A subscription bought with a promise to pay ([Pay Later](pay-later), a bank transfer) starts `Incomplete` and grants nothing until a transaction of its checkout is paid (`SubscriptionFirstPaymentTransactionHandler` then resumes it), unless the plan's product ticks **Deliver before payment**. A period of such a subscription left unpaid past its due date marks it `PastDue` (`SubscriptionOverdueTransactionHandler`, which finds the subscription by its checkout first).
+A subscription bought with a promise to pay ([Pay Later](pay-later), a bank transfer) starts `Incomplete` and grants nothing until a transaction of its checkout is paid (`SubscriptionFirstPaymentTransactionHandler` then resumes it), unless the plan's product ticks **Deliver before payment**. A period of such a subscription left unpaid past its due date marks it `PastDue` (`SubscriptionOverdueTransactionHandler`, which finds the subscription by its checkout first). Both handlers hold one rule: a subscription is past due while any transaction of its checkout is overdue and unpaid, a sign-up fee or a one-time item bought with it included, and paying one brings it back once none is.
 
 ### Transitions
 
@@ -283,10 +283,10 @@ Instead the checkout only records a **provisioning job**, and a sweep builds the
 **Subscriptions → Tenant onboarding** decides it, and the step checks it before payment, again before payment begins, and again before the site is set up:
 
 - **On a base domain** (`BaseDomain`): each site gets `{name}.{base domain}`. A separate registrable domain (for example `sites-example.net` for a store on `example.com`) keeps the sites out of the store's cookies entirely.
-- **On the buyer's own domains** (**Buyers may use their own domains**): at most five per site. IP addresses are refused, and so is any name under, or a parent of, a host another site already has (`www.v.com` next to `v.com`). The platform does not prove that the buyer controls the domain, so only turn this on if you check that yourself.
+- **On the buyer's own domains** (**Buyers may use their own domains**): at most five per site. IP addresses and public suffixes (`co.uk`, `github.io`, `azurewebsites.net`, from a short built-in list) are refused, and so is any name under, or a parent of, a host another buyer's site already has (`www.v.com` next to `v.com`), or under another site's wildcard host (`a.v.com` beside `*.v.com`). The names around the buyer's own sites are theirs to take; the exact host never is. The store's own hosts are reserved with every name under them and every name above them. The platform does not prove that the buyer controls the domain, so only turn this on if you check that yourself.
 - **On a prefix of the store's own address** (**Sell sites on a prefix of this site's own address**, `AllowPrefixOnStoreHost`): `store.com/shop1`. Such a site runs in the store's origin: script its owner adds can read the store's pages, the admin included, with the session of anybody who opens it, and it receives the store's cookies. It is off for new stores; with it off and no base domain or own domain, a site on a prefix is refused with *Enter a domain for your site*.
 
-A prefix is refused when it is reserved (**Reserved prefixes**, the admin prefix, and the built-in list, which covers the storefront's own segments such as `account`, `subscription`, `products` and `checkout`), and also whenever the store already answers on it: the first literal segment of any route the store registers, and the first segment of any of its pages' Autoroute paths (`StoreRouteSegments`).
+A prefix is refused when it is reserved (**Reserved prefixes**, the admin prefix, and the built-in list, which covers the storefront's own segments such as `account`, `subscription`, `products` and `checkout`), and also whenever the store already answers on it: the first literal segment of any route the store registers, the first segment of any of its pages' Autoroute paths (compared without case), the id of any module or theme, whose static files are served under `/{id}/` (`TheAdmin`, for instance), and any top-level entry of the host's web root (`StoreRouteSegments`).
 
 ### The database new sites are created on
 
@@ -314,9 +314,9 @@ The recipe is the plan's: the setup recipe recorded on the checkout when the pla
 
 A site sold this way carries a `Tenant` entitlement naming it, so the site runs for as long as the subscription is current and is **disabled** when it is not. Disabled, never deleted: a disabled tenant stops serving immediately but keeps every byte of the customer's data, so somebody who pays a late invoice gets their site back exactly as it was.
 
-- Only a site the subscription itself disabled comes back with it (it is marked `SuspendedBySubscription` in the tenant's settings). A site an operator disabled under **Tenants** stays disabled whatever the subscriber does.
+- Only a site the subscription itself disabled comes back with it (it is marked `SuspendedBySubscription` in the tenant's settings). A site an operator disabled under **Tenants** stays disabled whatever the subscriber does. When the subscription finds its site running with the mark (an operator switched it back on by hand), the mark is cleared.
 - The entitlement names the job that created the site and the site's tenant id, so after a site is removed and its name sold again, the old subscription can't reach the new site.
-- A subscription canceled at period end is expired by the lifecycle sweep once the paid period ends, which disables the site. Canceling a suspended (paused) subscription ends access at once.
+- A subscription canceled at period end is expired by the lifecycle sweep once the paid period ends, which disables the site. Canceling a suspended (paused) subscription ends access at once. The sweep reads the lapsed subscriptions a hundred at a time, up to a thousand per run. One whose paid period ended more than seven days before the sweep found it, such as the backlog from before the sweep looked for canceled subscriptions, is expired without the **Subscription Expired** workflow event (its lifecycle source is `lapsed-backlog`), so an "expired" e-mail doesn't reach everyone who ever canceled.
 
 ## Installment plans
 

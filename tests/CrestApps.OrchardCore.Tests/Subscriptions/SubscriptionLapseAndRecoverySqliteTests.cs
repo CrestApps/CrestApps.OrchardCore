@@ -51,9 +51,38 @@ public sealed class SubscriptionLapseAndRecoverySqliteTests
 
         await using (var session = database.Store.CreateSession())
         {
-            var lapsed = await new SubscriptionStore(session, new TestClock(_now)).GetLapsedAsync(_now, TestContext.Current.CancellationToken);
+            var lapsed = await new SubscriptionStore(session, new TestClock(_now)).GetLapsedAsync(_now, skip: 0, take: 100, TestContext.Current.CancellationToken);
 
             Assert.Equal(["ended"], lapsed.Select(subscription => subscription.ItemId));
+        }
+    }
+
+    /// <summary>
+    /// Selling-sites Mild (fix verification): the lapsed agreements were read in one unpaged query; they are read a page
+    /// at a time, in the order they were recorded.
+    /// </summary>
+    [Fact]
+    public async Task GetLapsedAsync_ReadsOnePageAtATime()
+    {
+        await using var database = await Database.CreateAsync();
+
+        await using (var session = database.Store.CreateSession())
+        {
+            var store = new SubscriptionStore(session, new TestClock(_now));
+
+            foreach (var itemId in new[] { "first", "second", "third" })
+            {
+                await store.CreateAsync(Canceled(itemId, _now.AddDays(-1)), TestContext.Current.CancellationToken);
+                await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+        }
+
+        await using (var session = database.Store.CreateSession())
+        {
+            var store = new SubscriptionStore(session, new TestClock(_now));
+
+            Assert.Equal(["first", "second"], (await store.GetLapsedAsync(_now, skip: 0, take: 2, TestContext.Current.CancellationToken)).Select(subscription => subscription.ItemId));
+            Assert.Equal(["third"], (await store.GetLapsedAsync(_now, skip: 2, take: 2, TestContext.Current.CancellationToken)).Select(subscription => subscription.ItemId));
         }
     }
 
@@ -97,9 +126,54 @@ public sealed class SubscriptionLapseAndRecoverySqliteTests
         Assert.Equal(SubscriptionStatus.PastDue, (await subscriptions.FindByIdAsync("sub-1", TestContext.Current.CancellationToken)).Status);
     }
 
+    /// <summary>
+    /// MD3 (fix verification): the sign-up fee of the checkout fell overdue and made the agreement past due, but paying the
+    /// fee resumed nothing, because only a payment on the agreement's own invoice chain did; the grace window then ran out
+    /// on a customer who owed nothing.
+    /// </summary>
+    [Fact]
+    public async Task PayingTheOverdueSignUpFee_ResumesThePastDueSubscription()
+    {
+        await using var database = await Database.CreateAsync();
+        await using var session = database.Store.CreateSession();
+        var (handler, subscriptions, transactions) = await SeedPastDueAsync(session, overdueRenewals: 0, overdueFee: true);
+
+        var fee = await transactions.GetByObligationAsync("session-1", "fee-ob", TestContext.Current.CancellationToken);
+        fee.Status = TransactionStatus.Paid;
+        await transactions.UpdateAsync(fee, TestContext.Current.CancellationToken);
+
+        await handler.StatusChangedAsync(fee, TransactionStatus.Outstanding, TransactionStatus.Paid, TestContext.Current.CancellationToken);
+
+        var subscription = await subscriptions.FindByIdAsync("sub-1", TestContext.Current.CancellationToken);
+        Assert.Equal(SubscriptionStatus.Active, subscription.Status);
+        Assert.Null(subscription.GraceEndsUtc);
+    }
+
+    /// <summary>
+    /// MD3 (fix verification): with the sign-up fee still overdue, paying the next cycle's invoice resumed the agreement,
+    /// because the walk looked at its own invoice chain only; overdue is raised once per transaction, so the fee never
+    /// marked it again.
+    /// </summary>
+    [Fact]
+    public async Task PayingTheCycleInvoiceWhileTheFeeIsOverdue_LeavesTheSubscriptionPastDue()
+    {
+        await using var database = await Database.CreateAsync();
+        await using var session = database.Store.CreateSession();
+        var (handler, subscriptions, transactions) = await SeedPastDueAsync(session, overdueRenewals: 1, overdueFee: true);
+
+        var invoice = await transactions.GetByObligationAsync("session-1", "plan-ob:cycle-2", TestContext.Current.CancellationToken);
+        invoice.Status = TransactionStatus.Paid;
+        await transactions.UpdateAsync(invoice, TestContext.Current.CancellationToken);
+
+        await handler.StatusChangedAsync(invoice, TransactionStatus.Outstanding, TransactionStatus.Paid, TestContext.Current.CancellationToken);
+
+        Assert.Equal(SubscriptionStatus.PastDue, (await subscriptions.FindByIdAsync("sub-1", TestContext.Current.CancellationToken)).Status);
+    }
+
     private static async Task<(SubscriptionFirstPaymentTransactionHandler Handler, SubscriptionManager Subscriptions, TransactionStore Transactions)> SeedPastDueAsync(
         ISession session,
-        int overdueRenewals)
+        int overdueRenewals,
+        bool overdueFee = false)
     {
         var clock = new TestClock(_now);
         var subscriptionStore = new SubscriptionStore(session, clock);
@@ -136,6 +210,15 @@ public sealed class SubscriptionLapseAndRecoverySqliteTests
         {
             obligation = $"{obligation}:cycle-{cycle}";
             await transactions.CreateAsync(Invoice($"tx-{cycle}", obligation, cycle, TransactionStatus.Outstanding, overdue: true), TestContext.Current.CancellationToken);
+        }
+
+        // A sign-up fee is a one-time obligation of the same checkout, beside the plan's.
+        if (overdueFee)
+        {
+            var fee = Invoice("tx-fee", "fee-ob", 1, TransactionStatus.Outstanding, overdue: true);
+            fee.Title = "Sign-up fee";
+            fee.Recurrence = null;
+            await transactions.CreateAsync(fee, TestContext.Current.CancellationToken);
         }
 
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);
