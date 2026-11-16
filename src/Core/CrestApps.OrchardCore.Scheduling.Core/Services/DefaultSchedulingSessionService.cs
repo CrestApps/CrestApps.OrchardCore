@@ -236,6 +236,16 @@ public sealed class DefaultSchedulingSessionService : ISchedulingSessionService
             {
                 if (waits.FirstOrDefault(entry => entry.Status is WaitlistStatus.Waiting or WaitlistStatus.Notified && IsSamePerson(entry.UserId, entry.CustomerEmail, request)) is { } waiting)
                 {
+                    // A notice of a free place that someone else took first: the person has no place, so they wait
+                    // again, keeping their turn, and are told of the next free place.
+                    if (waiting.Status == WaitlistStatus.Notified)
+                    {
+                        waiting.Status = WaitlistStatus.Waiting;
+                        waiting.NotifiedUtc = null;
+                        await _waitlist.UpdateAsync(waiting, cancellationToken);
+                        await _session.SaveChangesAsync(cancellationToken);
+                    }
+
                     return new SessionRegistrationResult { WaitlistEntry = waiting };
                 }
 
@@ -270,6 +280,15 @@ public sealed class DefaultSchedulingSessionService : ISchedulingSessionService
             var appointment = NewAppointment(session, type, request.UserId, request.CustomerName, request.CustomerEmail, request.Source, request.SourceId, held: false);
 
             await _appointments.CreateAsync(appointment, cancellationToken);
+
+            // Registering directly books the person's wait, such as the one a notice of a free place came from.
+            foreach (var entry in waits.Where(entry => entry.Status is WaitlistStatus.Waiting or WaitlistStatus.Notified && IsSamePerson(entry.UserId, entry.CustomerEmail, request)))
+            {
+                entry.Status = WaitlistStatus.Booked;
+                entry.AppointmentId = appointment.ItemId;
+                await _waitlist.UpdateAsync(entry, cancellationToken);
+            }
+
             await AddAttendeeAsync(session, appointment, request.Actor);
             await _session.SaveChangesAsync(cancellationToken);
             Enqueue(appointment.Status == AppointmentStatus.Requested ? AppointmentChangeKind.Requested : AppointmentChangeKind.Confirmed, appointment, type, request.Actor);
@@ -353,6 +372,14 @@ public sealed class DefaultSchedulingSessionService : ISchedulingSessionService
             appointment.CancelReason = reason;
             appointment.ModifiedUtc = _clock.UtcNow;
             await _appointments.UpdateAsync(appointment, cancellationToken);
+
+            // A declined offer closes the wait it came from, so the person can join the waitlist again.
+            foreach (var entry in (await _registrations.ListWaitlistAsync(session.ItemId, cancellationToken)).Where(entry => entry.AppointmentId == appointment.ItemId && entry.Status == WaitlistStatus.Notified))
+            {
+                entry.Status = WaitlistStatus.Removed;
+                await _waitlist.UpdateAsync(entry, cancellationToken);
+            }
+
             await RemoveAttendeeAsync(session, appointment, actor);
             await _session.SaveChangesAsync(cancellationToken);
             Enqueue(AppointmentChangeKind.Cancelled, appointment, type, actor);

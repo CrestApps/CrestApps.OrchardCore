@@ -111,6 +111,64 @@ public sealed class SchedulingSessionTests
         Assert.Equal(AppointmentStatus.NoShow, registrations["cid"].Status);
     }
 
+    [Fact]
+    public async Task DecliningAnOffer_RemovesTheWait_SoThePersonCanJoinTheWaitlistAgain_AndIsOfferedTheNextPlace()
+    {
+        // Arrange
+        await using var harness = await SchedulingTestSupport.CreateAsync(services => Configure(services, new CrestApps.OrchardCore.Tests.Learning.Assessments.TestClock { UtcNow = CalendarTestHarness.Now }));
+        var resource = await SchedulingTestSupport.AddResourceAsync(harness, "Trainer");
+        var type = await SchedulingTestSupport.AddTypeAsync(harness, [resource.ItemId]);
+        var session = await SaveAsync(harness, type, resource, capacity: 1);
+        var ana = await RegisterAsync(harness, session, "ana");
+        var ben = await RegisterAsync(harness, session, "ben");
+
+        await harness.RunAsync(services => services.GetRequiredService<ISchedulingSessionService>().CancelRegistrationAsync(ana.Appointment.ItemId, "Sick"));
+        var offer = (await RegistrationsAsync(harness, session)).Single(appointment => appointment.UserId == "ben" && appointment.Status == AppointmentStatus.Held);
+
+        // Act: Ben declines, Cid takes the free place, Ben joins the waitlist again and Cid gives the place up.
+        await harness.RunAsync(services => services.GetRequiredService<ISchedulingSessionService>().CancelRegistrationAsync(offer.ItemId, "Declined"));
+        var afterDecline = await harness.RunAsync(services => services.GetRequiredService<ISchedulingSessionService>().ListWaitlistAsync(session.ItemId));
+        var cid = await RegisterAsync(harness, session, "cid");
+        var benAgain = await RegisterAsync(harness, session, "ben");
+        await harness.RunAsync(services => services.GetRequiredService<ISchedulingSessionService>().CancelRegistrationAsync(cid.Appointment.ItemId, "Sick"));
+        var benOffered = (await RegistrationsAsync(harness, session)).Where(appointment => appointment.UserId == "ben" && appointment.Status == AppointmentStatus.Held).ToList();
+
+        // Assert
+        Assert.Equal(WaitlistStatus.Removed, afterDecline.Single(entry => entry.ItemId == ben.WaitlistEntry.ItemId).Status);
+        Assert.True(benAgain.Waitlisted);
+        Assert.NotEqual(ben.WaitlistEntry.ItemId, benAgain.WaitlistEntry.ItemId);
+        Assert.Equal(WaitlistStatus.Waiting, benAgain.WaitlistEntry.Status);
+        Assert.Single(benOffered);
+    }
+
+    [Fact]
+    public async Task InNotifyMode_RegisteringAfterTheNotice_BooksTheWait_AndANoticeThatCameTooLateWaitsAgain()
+    {
+        // Arrange
+        await using var harness = await SchedulingTestSupport.CreateAsync(services => Configure(services, new CrestApps.OrchardCore.Tests.Learning.Assessments.TestClock { UtcNow = CalendarTestHarness.Now }));
+        var resource = await SchedulingTestSupport.AddResourceAsync(harness, "Trainer");
+        var type = await SchedulingTestSupport.AddTypeAsync(harness, [resource.ItemId]);
+        var session = await SaveAsync(harness, type, resource, capacity: 1, waitlist: SchedulingWaitlistMode.Notify);
+        var ana = await RegisterAsync(harness, session, "ana");
+        var ben = await RegisterAsync(harness, session, "ben");
+        var cid = await RegisterAsync(harness, session, "cid");
+
+        // Act: Ana gives up her place and Ben is told; Ben registers. Ben gives it up and Cid is told, but Ana takes it first.
+        await harness.RunAsync(services => services.GetRequiredService<ISchedulingSessionService>().CancelRegistrationAsync(ana.Appointment.ItemId, "Sick"));
+        var benRegistered = await RegisterAsync(harness, session, "ben");
+        var afterBen = await harness.RunAsync(services => services.GetRequiredService<ISchedulingSessionService>().ListWaitlistAsync(session.ItemId));
+        await harness.RunAsync(services => services.GetRequiredService<ISchedulingSessionService>().CancelRegistrationAsync(benRegistered.Appointment.ItemId, "Busy"));
+        await RegisterAsync(harness, session, "ana");
+        var cidTooLate = await RegisterAsync(harness, session, "cid");
+
+        // Assert
+        Assert.NotNull(benRegistered.Appointment);
+        Assert.Equal(WaitlistStatus.Booked, afterBen.Single(entry => entry.ItemId == ben.WaitlistEntry.ItemId).Status);
+        Assert.True(cidTooLate.Waitlisted);
+        Assert.Equal(cid.WaitlistEntry.ItemId, cidTooLate.WaitlistEntry.ItemId);
+        Assert.Equal(WaitlistStatus.Waiting, cidTooLate.WaitlistEntry.Status);
+    }
+
     private static void Configure(IServiceCollection services, CrestApps.OrchardCore.Tests.Learning.Assessments.TestClock clock)
     {
         services.RemoveAll<IDistributedLock>();
