@@ -46,15 +46,18 @@ public sealed class CompleteActivityOwnershipLostTests
         Assert.NotEmpty(harness.Notifier.Invocations);
     }
 
-    // Production, 2026-11-16: the dialer completed a record whose number was not in service, then the agent's screen
-    // submitted it; the agent was told the record went to another agent and a warning was logged for each submit.
-    [Fact]
-    public async Task CompleteAsync_WhenTheDialerAlreadyFinishedTheRecord_SaysItWasAlreadyCompleted()
+    // Production, 2026-11-16: the dialer dispositioned a record that was not answered, busy or not in service (Completed),
+    // or gave up after the last attempt (Failed), then the agent's screen submitted it; the agent was told the record
+    // went to another agent and a warning was logged for each submit.
+    [Theory]
+    [InlineData(ActivityStatus.Completed)]
+    [InlineData(ActivityStatus.Failed)]
+    public async Task CompleteAsync_WhenTheDialerAlreadyFinishedTheRecord_SaysItWasAlreadyCompleted(ActivityStatus status)
     {
         // Arrange
         var harness = new Harness(canCompleteOwn: true);
         var activity = harness.AddActivity(dialerProfileId: "power-profile");
-        activity.Status = ActivityStatus.Completed;
+        activity.Status = status;
 
         // Act
         var result = await harness.Controller.CompleteAsync(activity.ItemId, returnUrl: null, actionScheduleDates: [], actionPreparationNotes: []);

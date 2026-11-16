@@ -1209,9 +1209,10 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        // The record was finished without the agent, most often because the dialer found the number not in service,
-        // so it was not lost to another agent: the agent is told it is done, and nothing went wrong to warn about.
-        if (IsAlreadyFinished(activity))
+        // The record was finished without the agent: the dialer dispositioned a call that was not answered, busy or not
+        // in service, or gave up after the last attempt. It was not lost to another agent, so the agent is told it is
+        // done, and nothing went wrong to warn about.
+        if (activity.Status.IsTerminal())
         {
             return await AlreadyFinishedAsync(returnUrl);
         }
