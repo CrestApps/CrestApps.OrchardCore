@@ -184,6 +184,7 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             try
             {
                 var now = _clock.UtcNow;
+                var dueUtc = coursework.Part.DueUtc is { } published ? DateTime.SpecifyKind(published, DateTimeKind.Utc) : (DateTime?)null;
 
                 if (current is not null)
                 {
@@ -204,7 +205,13 @@ internal sealed class DefaultSubmissionService : ISubmissionService
                     Text = text,
                     Files = stored,
                     SubmittedUtc = now,
-                    Late = coursework.Part.DueUtc is { } due && now > DateTime.SpecifyKind(due, DateTimeKind.Utc),
+
+                    // The due date is kept with the work, and the late flag and the penalty are worked out from it, so
+                    // moving the due date afterwards changes neither. Work a grader returned and the learner hands in
+                    // again after the due date is late by its new hand-in time and takes the full penalty, including the
+                    // days it sat with the grader: that is the policy, not an oversight (plan section 19).
+                    DueUtc = dueUtc,
+                    Late = dueUtc is { } due && now > due,
                     Status = SubmissionStatus.Submitted,
                 };
 

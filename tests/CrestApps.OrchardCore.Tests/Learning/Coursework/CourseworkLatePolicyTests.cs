@@ -214,6 +214,39 @@ public sealed class CourseworkLatePolicyTests
         Assert.Equal(72m, enrollment.Grade);
     }
 
+    [Fact]
+    public async Task Grade_UsesTheDueDateTheWorkWasHandedInAgainst_NotOneMovedAfterwards()
+    {
+        // Arrange: one learner on time, one 25 hours late; then the due date moves before anything is graded.
+        await using var h = await CreateAsync();
+        await h.EnrollAsync("ana", Course);
+        await h.EnrollAsync("ben", Course);
+        h.Clock.UtcNow = _due.AddHours(-1);
+        var onTime = await h.SubmitAsync("ana", Work, "Answer");
+        h.Clock.UtcNow = _due.AddHours(25);
+        var late = await h.SubmitAsync("ben", Work, "Answer");
+
+        // Act: moved earlier, the on-time work would look late; moved later, the late work would look on time.
+        h.Courses.Get(Work).Alter<CourseworkPart>(part => part.DueUtc = _due.AddDays(-2));
+        await h.GradeAsync(onTime.Submission.ItemId, "grader", points: 80);
+        h.Courses.Get(Work).Alter<CourseworkPart>(part => part.DueUtc = _due.AddDays(7));
+        await h.GradeAsync(late.Submission.ItemId, "grader", points: 80);
+        var anaWork = await h.FindAsync(onTime.Submission.ItemId);
+        var benWork = await h.FindAsync(late.Submission.ItemId);
+
+        // Assert
+        Assert.Multiple(
+            () => Assert.False(anaWork.Late),
+            () => Assert.Equal(0, anaWork.DaysLate),
+            () => Assert.Equal(80m, anaWork.Score),
+            () => Assert.True(benWork.Late),
+            () => Assert.Equal(2, benWork.DaysLate),
+            () => Assert.Equal(20m, benWork.LatePenaltyPercent),
+            () => Assert.Equal(64m, benWork.Score),
+            () => Assert.Equal(_due, anaWork.DueUtc),
+            () => Assert.Equal(_due, benWork.DueUtc));
+    }
+
     private static async Task<CourseworkTestHarness> CreateAsync(Action<CourseworkPart> configure = null)
     {
         var h = await CourseworkTestHarness.CreateAsync();

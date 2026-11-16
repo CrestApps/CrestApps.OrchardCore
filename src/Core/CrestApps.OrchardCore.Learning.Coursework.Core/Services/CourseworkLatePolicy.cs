@@ -84,7 +84,8 @@ public static class CourseworkLatePolicy
 
     /// <summary>
     /// Finds the days late and the penalty of a submission: the ones kept when it was graded, or else the ones the
-    /// coursework's policy gives now.
+    /// coursework's penalty policy gives now, counted from the due date the work was handed in against
+    /// (<see cref="Submission.DueUtc"/>), so they agree with the late flag. Work handed in on time takes no penalty.
     /// </summary>
     /// <param name="submission">The submission.</param>
     /// <param name="part">The coursework part, or <see langword="null"/> when the coursework is gone.</param>
@@ -98,12 +99,13 @@ public static class CourseworkLatePolicy
             return (keptDays, keptPenalty);
         }
 
-        if (part is null)
+        if (part is null || !submission.Late)
         {
             return (0, 0);
         }
 
-        var days = GetDaysLate(part.DueUtc, submission.SubmittedUtc);
+        // Work handed in before the due date was kept with it falls back to the published due date, as it always did.
+        var days = GetDaysLate(submission.DueUtc ?? part.DueUtc, submission.SubmittedUtc);
 
         return (days, GetPenaltyPercent(part, days));
     }

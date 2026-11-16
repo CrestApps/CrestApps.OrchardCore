@@ -60,6 +60,13 @@ public sealed class Submission : CatalogItem
     public DateTime SubmittedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the due date of the coursework when the work was handed in, in UTC, or <see langword="null"/> when it
+    /// had none. The late flag and the late penalty are worked out from it, so moving the due date afterwards changes
+    /// neither.
+    /// </summary>
+    public DateTime? DueUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the work came after the due date.
     /// </summary>
     public bool Late { get; set; }

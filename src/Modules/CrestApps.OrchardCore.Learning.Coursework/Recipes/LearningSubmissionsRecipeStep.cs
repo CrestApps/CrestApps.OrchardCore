@@ -146,6 +146,7 @@ internal sealed class LearningSubmissionsRecipeStepSchema : IRecipeStep
                         ("Text", Text("The text the learner typed.")),
                         ("Files", new JsonSchemaBuilder().Type(SchemaValueType.Array).Description("The files: FileId, FileName and Size. The files themselves stay in the protected store of the site they were handed in on.")),
                         ("SubmittedUtc", Text("When the work was handed in, in UTC.")),
+                        ("DueUtc", Text("The due date of the coursework when the work was handed in, in UTC; the late flag and penalty are worked out from it.")),
                         ("Late", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether it came after the due date.")),
                         ("Status", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Submitted", "Graded", "Returned").Description("The state.")),
                         ("Score", new JsonSchemaBuilder().Type(SchemaValueType.Number).Description("The grade as a percentage.")),

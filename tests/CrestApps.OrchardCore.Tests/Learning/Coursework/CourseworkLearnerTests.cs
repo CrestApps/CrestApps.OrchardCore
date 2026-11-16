@@ -107,6 +107,32 @@ public sealed class CourseworkLearnerTests
         Assert.Empty(submissions.Invocations);
     }
 
+    [Fact]
+    public async Task Submit_AfterTheCloseDate_SaysItClosed_WithoutPromisingAnExtension()
+    {
+        // Arrange: there is no per-learner extension, so the message must not send the learner to ask for one.
+        var submissions = new Mock<ISubmissionService>();
+        submissions
+            .Setup(service => service.SubmitAsync(It.IsAny<SubmitCourseworkRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SubmissionResult.Fail(SubmissionErrors.Closed));
+        var notifier = new Mock<INotifier>();
+        var shown = new List<string>();
+        notifier
+            .Setup(service => service.AddAsync(It.IsAny<NotifyType>(), It.IsAny<LocalizedHtmlString>()))
+            .Callback<NotifyType, LocalizedHtmlString>((_, message) => shown.Add(message.Value))
+            .Returns(ValueTask.CompletedTask);
+        var controller = CreateController("ana", [Enrollment("e-ana", "ana", EnrollmentStatus.Active)], submissions, notifier.Object);
+
+        // Act
+        await controller.Submit(WorkId, "My answer", []);
+
+        // Assert
+        var message = Assert.Single(shown);
+        Assert.Contains("closed", message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("instructor", message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("more time", message, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static CourseworkLearnerResolver CreateResolver(IReadOnlyList<Enrollment> enrollmentsOfTheStore, bool courseworkPart = true)
     {
         var item = new ContentItem
@@ -139,7 +165,7 @@ public sealed class CourseworkLearnerTests
         return new CourseworkLearnerResolver(content.Object, courseStructure.Object, enrollments.Object);
     }
 
-    private static CourseworkSubmissionController CreateController(string userId, IReadOnlyList<Enrollment> enrollments, Mock<ISubmissionService> submissions)
+    private static CourseworkSubmissionController CreateController(string userId, IReadOnlyList<Enrollment> enrollments, Mock<ISubmissionService> submissions, INotifier notifier = null)
     {
         var authorization = new Mock<IAuthorizationService>();
         authorization
@@ -163,7 +189,7 @@ public sealed class CourseworkLearnerTests
             ? new ClaimsIdentity()
             : new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId)], "Test");
 
-        return new CourseworkSubmissionController(authorization.Object, CreateResolver(enrollments), submissions.Object, new Mock<INotifier>().Object, localizer.Object)
+        return new CourseworkSubmissionController(authorization.Object, CreateResolver(enrollments), submissions.Object, notifier ?? new Mock<INotifier>().Object, localizer.Object)
         {
             ControllerContext = new ControllerContext
             {
