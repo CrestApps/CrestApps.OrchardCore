@@ -93,6 +93,7 @@ Every Orchard Core module (4.0 preview) and every CrestApps feature was checked 
 | API authentication and documentation, when an API is added | The `Api` scheme with OpenID Connect, Orchard OpenAPI | Token handling or API docs |
 | Personal data export and erasure | PersonalData | A privacy export |
 | Keys for protected data across servers | ASP.NET Data Protection with Orchard's key-ring features (Azure, Redis) | Key management |
+| Taxes on income: income tax withholding at every level, social insurance and unemployment contributions, election forms, a country's formulas | Taxation's **Income Tax** feature and its country packs (United States, Canada) | Tax rules, a tax provider seam, withholding methods or election forms. Payroll keeps only the taxes step that maps a statement to Taxation's request (2026-11-15) |
 
 ## 3. The Workforce pay functions move to Payroll
 
@@ -222,7 +223,7 @@ Approvals is a record of a decision, with the rules about who may make it. It is
 | Feature | Id | Contents | Depends on |
 | --- | --- | --- | --- |
 | Pay Setup | `CrestApps.OrchardCore.Payroll.PaySetup` | Pay schedules, pay codes, the `IPayInputSource` seam and, with Data Pipelines on, the Pay Inputs data set. Turned on by Time Clock or Payroll | None |
-| Payroll | `CrestApps.OrchardCore.Payroll` | Employers, pay profiles, pay items, pay runs, the engine, statements, accumulators, stubs | Pay Setup, Staff, Staff Compensation, Approvals |
+| Payroll | `CrestApps.OrchardCore.Payroll` | Employers, pay profiles, pay items, pay runs, the engine, statements, accumulators, stubs | Pay Setup, Staff, Staff Compensation, Approvals, Taxation's Income Tax |
 | Direct Deposit | `CrestApps.OrchardCore.Payroll.DirectDeposit` | Net pay split across bank accounts and paid through Disbursements | Payroll, Banking, Disbursements |
 | Paychecks | `CrestApps.OrchardCore.Payroll.Checks` | Net pay and agency payments by printed check | Payroll, Checks |
 | My Pay | `CrestApps.OrchardCore.Payroll.SelfService` | Stubs, tax forms, elections and bank accounts for the employee | Payroll |
@@ -231,8 +232,16 @@ Approvals is a record of a decision, with the rules about who may make it. It is
 | Tax Liabilities and Filings | `CrestApps.OrchardCore.Payroll.Compliance` | Liability ledger, deposit due dates, filing records, year-end close | Payroll |
 | Payroll Journal | `CrestApps.OrchardCore.Payroll.Journal` | General ledger entries from statement lines and the account mapping, read through a data set | Payroll |
 | Payroll AI Tools | `CrestApps.OrchardCore.Payroll.AI` | Tools registered with `AddCoreAITool` ("explain my pay statement", "what changed since the last run"). Off unless a site turns it on, because pay data then goes to the site's AI provider | Payroll, AI |
-| Payroll Tax Tables | `CrestApps.OrchardCore.Payroll.TaxTables` | The built-in table-driven tax provider | Payroll, Taxation base feature |
-| United States Payroll | `CrestApps.OrchardCore.Payroll.UnitedStates` | W-4 elections, federal tables, federal forms and files | Payroll Tax Tables, Compliance |
+| United States Payroll Filings | `CrestApps.OrchardCore.Payroll.UnitedStates` | Federal forms and files (941, 940, 945, W-2/W-3, 1099-NEC, 1096, EFW2) and year end | Payroll, Taxation's United States Income Tax |
+| Canada Payroll Filings | `CrestApps.OrchardCore.Payroll.Canada` | CRA and Revenu Québec remittances, T4 and RL-1 slips and summaries, the T4 XML file | Payroll, Taxation's Canada Income Tax |
+
+Taxes on income are Taxation's (2026-11-15, section 13 "Payroll taxes moved to Taxation"):
+
+| Feature | Id | Contents | Depends on |
+| --- | --- | --- | --- |
+| Income Tax | `CrestApps.OrchardCore.Taxation.IncomeTax` | Income tax rules, the built-in provider and its neutral seam, tax categories, election forms, withholding methods | Tax Tables |
+| United States Income Tax | `CrestApps.OrchardCore.Taxation.IncomeTax.UnitedStates` | Form W-4 and its method, backup withholding, the dated federal recipe | Income Tax |
+| Canada Income Tax | `CrestApps.OrchardCore.Taxation.IncomeTax.Canada` | TD1 and TP-1015.3, the CRA and Revenu Québec formulas, CPP, QPP, EI, QPIP, the dated 2026 recipe | Income Tax |
 
 Optional integrations are `[RequireFeatures]` startups in the Payroll module: Recipes, Deployment, the Recipes schemas, Workflows, Data Pipelines, Reports, Audit Trail, Notifications, Teams, Webhooks (pay run and statement events through `IWebhookEventProvider`) and Calendars (pay dates and approval deadlines as a calendar type managed by code, so Calendar Reminders sends the reminders).
 
@@ -280,7 +289,7 @@ The calculation is a pure function of a `PayCalculationContext` (profile, compen
 2. Regular rate and overtime premium (weighted average over several rates; a later bonus re-prices the overtime of the weeks it was earned in).
 3. Deductions taken before tax, with limits from accumulators.
 4. Taxable wages for each tax category, from the pay code matrix.
-5. Taxes, through `IPayrollTaxProvider`.
+5. Taxes, through Taxation's `IIncomeTaxProvider` (section 5.5).
 6. Deductions taken after tax, by priority.
 7. Garnishments on disposable earnings.
 8. Net check: when net is below the minimum, the lowest-priority deductions are cut and go to arrears.
@@ -291,11 +300,12 @@ Gross-up (a target net) repeats the pipeline until it converges. Accumulators ar
 
 ### 5.5 Taxes
 
-`IPayrollTaxProvider.CalculateAsync(PayrollTaxRequest)` is stateless. The request carries the employer's registrations, the home and work jurisdictions, the elections, the pay date and frequency, wages per tax category, the supplemental method and the accumulators. The result is tax lines (tax, jurisdiction, payer, taxable wages, amount). A commercial tax engine, a full-service provider and our own tables all fit behind it. A provider's key is an Orchard secret (`<secret-input>`, read with `GetSecretValueAsync`).
+Moved to Taxation on 2026-11-15 (section 13 "Payroll taxes moved to Taxation"): taxes on income are a Taxation concept, sales tax and income tax side by side, so Commerce uses Sales Tax, Payroll uses Income Tax, and neither builds the other's.
 
-- **Payroll Tax Tables** is the built-in provider. A `PayrollTaxRule` (jurisdiction, tax category, payer, method, table, wage base, dated) is calculated with Taxation's `ITaxCalculationMethod`s over dated `TaxTable`s, and jurisdictions come from `ITaxJurisdictionResolver`. Any jurisdiction in any country can be set up by hand.
-- Taxation is one feature today and depends on Commerce. It gains a base feature (jurisdictions, tables, calculation methods) with no Commerce dependency; the sales tax pipeline stays in the current feature.
-- **United States Payroll** ships the federal rules as dated recipes (income tax by the IRS percentage method, Social Security, Medicare and the additional rate, federal unemployment), the W-4 election field set, and the supplemental flat and aggregate methods.
+- **Income Tax** (`Taxation.IncomeTax`, depending on Tax Tables only) owns `IncomeTaxRule` (any jurisdiction and level; collected by another agency, excepted jurisdictions, by place of work, yearly exemption by pay period, yearly maximum, share of another tax, income kinds, plus the rate, table, wage base, threshold, elections and supplemental rates the payroll rules had), its manager, store, page, `ManageIncomeTaxRules` permission and `IncomeTaxRules` recipe and deployment steps; tax categories (`AddIncomeTaxCategory`); election forms (`AddElectionFieldSet`); `IIncomeTaxWithholdingMethod`; and the built-in provider. It never references Payroll.
+- The seam is `IIncomeTaxProvider.CalculateAsync(IncomeTaxRequest)`. The request is neutral: the payer's registered jurisdictions, an income kind (employment, contractor, pension, other), the home and work jurisdictions, the elections in effect, the periods a year, income per tax category (regular, supplemental, the year's before), the supplemental method, and what each tax came to earlier by tax code. A commercial tax engine, a full-service provider and the built-in rules all fit behind it. A provider's key is an Orchard secret.
+- Payroll keeps what is built from pay records: the taxes step (a statement to the request, the result back to lines), the accumulators, liabilities and deposits (by the agency a tax is remitted to), the employer's returns and slips, and year end. Election values stay on `EmployeePayProfile`.
+- **United States Income Tax** ships Form W-4 and the dated federal recipe; **United States Payroll Filings** the federal forms. **Canada Income Tax** ships the TD1 and TP-1015.3 claims, the CRA's T4127 and Revenu Québec's TP-1015.F formulas and the 2026 recipe; **Canada Payroll Filings** the T4, RL-1, T4 XML and the remittances.
 - State and local taxes: decision 3.
 
 ### 5.6 Payments and documents
@@ -477,8 +487,10 @@ Decided 2026-11-13: the option in bold in every row.
 | 5 | The legal entity | **A Payroll `Employer` record, registered as a party kind.** Or a new shared Legal Entities block now (Commerce's `StoreProfileSettings` would move onto it). Accounts and Teams do not fit: accounts are the business's customers, and a team is a group, with a closed kind list |
 | 6 | New building blocks | **Pdf, Banking, Checks, Disbursements, Approvals as in section 4; Marketplace payouts move onto Disbursements in this plan (F8); the six existing approval copies move in a follow-up plan.** Or fewer blocks, kept private to Payroll |
 | 7 | Pull requests | **One pull request for the whole plan, a commit per slice** (Mike, 2026-11-14; first approved as three: blocks, Payroll, compliance). The planning session pushes and opens it once everything is implemented and validated |
-| 8 | Countries | **United States pack first, neutral core.** |
+| 8 | Countries | **United States pack first, neutral core.** Canada added on 2026-11-15 (Mike: income tax must cover Canada at least) |
 | 9 | The export to an outside payroll system | **A data set and a ready-made Data Pipeline; Workforce's export page, column settings and `IPayrollExportProvider` are removed (section 3).** Or keep the page as a thin screen over the same data set. Or move the export code to Payroll unchanged (it then repeats what Data Pipelines does) |
+
+Note on decision 3 (2026-11-15): the tax rules, the provider seam and the country formulas moved from Payroll to Taxation's Income Tax feature, named for income tax because it covers any tax on income, not only payroll's ("Payroll Taxes" was the first name; Mike chose Income Tax). The decision itself stands: federal rules ship as dated recipes, states and localities come from a tax engine's provider behind `IIncomeTaxProvider` or hand-entered rules.
 
 ## 13. Progress
 
@@ -1022,12 +1034,42 @@ The planning session's detailed review of P2 to C8 listed 14 must-fix and 31 sho
 - **Disk**: the C: drive was full (0 bytes free), so builds failed. The worktree's obsolete `bin` and `obj` `net10.0` folders (11.5 GB, build outputs only, nothing under `App_Data`) were deleted to make room. Only Release was built afterwards. Free space ran out again during one test run (other work on the machine), so the `src/**/bin/Release` copies, which the test exe doesn't load, were deleted for that run and rebuilt afterwards.
 - **Follow-up seen**: the web register's **Close shift** asks only for the counted cash. Tips are declared afterwards on the shift page, or with the API's close (`cardTips`, `cashTips`). Asking for them at the web register's close would match the till apps.
 
+### Payroll taxes moved to Taxation (2026-11-15)
+
+Mike asked for taxes on income to live in the Taxation module, beside sales tax, and to cover any country, Canada at least. Commits on the branch:
+
+- d0840a5c0 **Move payroll taxes into Taxation as the Income Tax feature.** Types, the feature, the permission, the recipe step and the YesSql collection moved without shims or migrations, since nothing was released: `PayrollTaxRule` is `IncomeTaxRule` (collection `IncomeTax`, step `IncomeTaxRules`), `IPayrollTaxProvider`/`PayrollTaxRequest` are `IIncomeTaxProvider`/`IncomeTaxRequest` (neutral: no `Employer`, `PayWorkerType`, `PayFrequency` or `PayAccumulators`), `IPayrollWithholdingMethod` is `IIncomeTaxWithholdingMethod`, `AddPayrollTaxCategory` is `AddIncomeTaxCategory`, the page is **Taxes > Income tax rules** with `ManageIncomeTaxRules` (Taxation's, security critical; editing rules is setup, so no Payroll permission opens it). The Payroll Tax Tables feature is gone; Payroll depends on Income Tax. The Taxation feature keeps its id and is now named Sales Tax. United States Payroll is now United States Payroll Filings; Form W-4, its method and the 2026 recipe are United States Income Tax's.
+- 2b0efc901 **Canada Income Tax**: the TD1, provincial TD1 and TP-1015.3 election forms; `CanadaFederal`, `CanadaProvincial` (each province's items as rule parameters) and `QuebecTP1015` methods with the bonus method; CPP, CPP2, EI, QPP, QPP2 and QPIP as plain rules (yearly exemption cut to cents, threshold for the second tiers, maximums, employer shares 1x or 1.4x); the 2026 recipe for every province and territory with the July 1 changes. The bracket tables carry small fixed amounts so Taxation's progressive method gives exactly R × A − K with the CRA's rounded constants.
+- b0ac11fb1 **Canada Payroll Filings**: T4 and RL-1 slips and summaries, the T4 XML file format and data set, slips in My Pay, remittances by the agency that collects each tax (`IncomeTaxLine.CollectedBy`, `PayStatementLine.RemittedTo`), the insurable earnings category so EI and QPIP are remitted with the other source deductions, and the CRA remitter schedules (`QuarterlyMidMonth`, `TwiceMonthly`, `FourTimesMonthly`).
+- 122f99270 **Province of employment** (`IncomeTaxRule.ByPlaceOfWork`, on every Canada rule) and the **Canada Payroll: T4 slips as a T4 XML file** pipeline recipe. The user manual page rename (payroll-taxes to income-tax) went into this commit by mistake; the docs commit after it completes it.
+- 6a9e37326 **Docs**: this plan, the building-blocks catalog, the Taxation and Payroll module pages, the feature reference, the changelog, the user manual's Income tax page (was Payroll taxes) and a new Canadian payroll page, the Payroll README and skill.
+
+Checked that the model expresses, without code, several levels at once (federal plus a province collected by the CRA, and Quebec collected by Revenu Québec), an employee and a separate employer share with their own maximums (EI's 1.4), a yearly basic exemption by period (CPP's 3,500), a second tier with its own ceiling (CPP2), indexed amounts by year (dated recipes), and a jurisdiction that replaces the federal contribution (QPP excepting CPP, QPIP with Quebec's EI rate). Claim credits (TD1), the K credits and the Quebec abatement are formula steps of the Canadian methods.
+
+Golden tests (`CanadaIncomeTaxTests`) were worked from the published formulas in a separate worksheet, written apart from the code: Ontario (2,500 and 6,000 biweekly, 1,000 weekly, a 5,000 bonus, a TD1 above the basic amount), British Columbia (January and July editions, the tax reduction), Alberta (8,000 and 3,000 monthly, K5P), Quebec (2,500 biweekly, a 3,000 lump sum), the CPP, CPP2 and EI maximums reached in the year, and a person living in Quebec and working in Ontario. Every existing tax test passes unchanged in substance: the golden gross-to-net cases, the W-4 method, the 2026 numbers, filings and EFW2.
+
+- fce9d794d **What the fresh-site smoke found**: the `IncomeTax` collection was not registered (the rules page failed with no `IncomeTax_Document` table), two rule views had stayed in Payroll (the row template and the editor wrapper), and a profile was asked for the election of a registration below a country it isn't in (an Ontario employee of an employer registered with Revenu Québec was asked for CA-QC). Each has a regression test.
+
+A local test site made before this change needs re-creating: the old feature ids, collection and recipe step are gone.
+
+**Validation**
+- `dotnet build CrestApps.OrchardCore.slnx -c Release -warnaserror` on 6a9e37326: 0 warnings, 0 errors.
+- Payroll, Taxation, Architecture and Validation tests pass (the full test project is run on the final tip after the Banking merge, below).
+- Vitest: 92 files, 1,488 tests; ESLint clean. `npm run check:manuals`: 170 User Manual and 191 Technical Manual pages. `docusaurus build` succeeds.
+- **Fresh site** (data folder `App_Data_PayrollE2E6`, Release net11.0, Blank recipe):
+  - Income Tax, United States Income Tax and Canada Income Tax on with Payroll off: **Taxes > Income tax rules** lists the 39 rules of the two recipes (8 United States, 31 Canada), and the Ontario rule's editor shows its method card with the province's parameters, collected by CA, by place of work.
+  - Payroll, both filings packs, Paychecks and My Pay on: the United States run (Lee, 1,600.00 salary) pays federal income tax 108.15, Social Security 99.20 and Medicare 23.20 each side, FUTA 9.60, net 1,369.45, the same as before the move.
+  - The Canadian run of Northwind Canada (CAD, registered CA twice a month and CA-QC): Sam in Ontario, 2,500.00, CPP 140.74 each side, EI 40.75 (employer 57.05), federal 242.58, Ontario 131.46, net 1,944.47; Alex in Quebec, QPP 149.02 each side, EI 32.50 (employer 45.50), QPIP 10.75 (employer 15.05), federal 201.29 (with the abatement), Quebec 253.36, net 1,853.08. The amounts equal the golden cases. Processed and paid by check.
+  - Liabilities: the CRA row (CA, twice a month, 16 to 30 November) owes 1,032.61, which is the T4 Summary's line 80; Revenu Québec's row (CA-QC) owes 577.20, which is the RL-1 Summary's total.
+  - The T4 (boxes 14 5,000.00, 16 140.74, 17 149.02, 18 73.25, 22 575.33 with no Quebec tax, 55 10.75; 19 102.55, 27 140.74) and the RL-1 (A 2,500.00, B.A 149.02, C 32.50, E 253.36, H 10.75) were prepared, their PDFs written and marked filed.
+  - Sales Tax on with Income Tax: its categories, rules and types pages load beside the income tax rules. A sales tax order was not placed on this site: Commerce's checkout tax tests cover it in the full test run.
+
 ### For Mike
 
 What only you can settle before the first live pay:
 
 1. **MICR font**: upload a licensed TrueType MICR E-13B font on the check layout. Until then, checks print without the check line (blank stock needs it, pre-printed stock does not).
-2. **Tax engine vendor**: Payroll Tax Tables with the United States 2026 recipe covers the federal taxes. State and local taxes need either a vendor behind `IPayrollTaxProvider` or more recipes. Each new tax year needs a new dated recipe (Publication 15-T, the SSA wage base, the 1099-NEC threshold). Someone who runs payroll should check the 2026 numbers before the first live pay.
+2. **Tax engine vendor**: Taxation's Income Tax rules with the United States 2026 recipe cover the federal taxes. State and local taxes need either a vendor behind `IIncomeTaxProvider` or more recipes. Each new tax year needs a new dated recipe (Publication 15-T, the SSA wage base, the 1099-NEC threshold). Someone who runs payroll should check the 2026 numbers before the first live pay.
 3. **Stripe payout keys**: the Marketplace payouts on Disbursements (Stripe Connect) have only run against a fake provider. A Stripe test-mode payout and refusal need test keys.
 4. **SFTP server**: bank files, the payroll journal and the EFW2 file go out through Data Pipelines delivery steps. No SFTP server was available, so delivery is untested.
 5. **Bank acceptance**: the bank must accept a test NACHA file with its own immediate origin and destination and company id, and confirm prenotes or micro-deposit verification. Account verification was set by hand here.
@@ -1043,7 +1085,12 @@ What only you can settle before the first live pay:
    - the rounding of the Step 2 tables' brackets in the 2026 recipe, such as 108,938 and 136,163;
    - FUTA credit-reduction states are not modelled: an employer in one owes more Form 940 tax than Payroll shows;
    - the garnishment limits: support 50, 55, 60 or 65% (federal), 25% and 217.50 a week for creditors, 15% for student loans. States can set lower limits or a higher protected amount, which are entered on the order.
-9. **Follow-ups seen, not in this plan**:
+10. **Canada**:
+   - **Figures to confirm**: the T4127 tables came through a summarizing fetch tool (cross-checked several times and recomputed where possible), not a byte copy of the PDF: compare the federal and provincial brackets, constants and basic amounts in `income-tax-canada-2026.recipe.json` against the T4127 PDF (122nd and 123rd editions) once. The TP-1015.F figures were read from the PDF itself.
+   - **Not confirmed**: the T4 box and Summary line names come from the 2025 RC4120 (the 2026 T4 XML spec, 2027V2, uses the same elements plus code 96); the CRA's "15% (10% in Quebec) when the result is 5,000 or less" bonus note is not implemented, since the line naming which amount is tested was not read; the T4 XML schema location attribute and zip name were not captured, so the file is not validated against the XSD.
+   - **Owed**: a CRA PDOC comparison of a few pays, a T4 XML upload to the CRA's test (Internet file transfer validation), and an RL-1 check by someone who files with Revenu Québec.
+   - **Not built** (follow-ups): the Record of Employment; Canadian direct deposit (CPA Standard 005), so Canadian employees are paid by check; the commission (variable pay) methods of T4127 and TP-1015.F; Quebec employer contributions (Health Services Fund, labour standards, workforce skills); the PM proration of the CPP maximums for a person who starts or stops contributing during the year; an employee transferred between Quebec and another province during the year (K2RP and the transfer formulas); and box 10 of the T4 is the person's home province (Quebec when QPP was paid), not their work site's.
+11. **Follow-ups seen, not in this plan**:
    - Disbursements says only "Choose how the money is sent" when a deposit is made with no ACH provider feature on; a clearer setup hint would help.
    - The Staff module's pages also call the team manager without checking that Teams is on; worth the same guard.
    - A batch's arrival date comes from the Disbursements toolbar's **Arrives** field, which defaults to today; the pay date may be the better default for payroll deposits.
