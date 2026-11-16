@@ -41,10 +41,15 @@
                 else if (appointment.Status == AppointmentStatus.Completed)
                 {
                     <p class="mb-0"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@(appointment.Attendance == AppointmentAttendance.Partial ? T["You attended part of {0}.", registration.Session.Title] : T["You attended {0}.", registration.Session.Title])</p>
+                    @if (registration.CanRegisterAgain)
+                    {
+                        <p class="mb-0 small">@T["It was not enough to complete the class. You can register for another session."]</p>
+                    }
                 }
                 else if (appointment.Status == AppointmentStatus.NoShow)
                 {
                     <p class="mb-0"><i class="fa-solid fa-circle-xmark me-1" aria-hidden="true"></i>@T["You were marked absent from {0}.", registration.Session.Title]</p>
+                    <p class="mb-0 small">@T["You can register for another session."]</p>
                 }
                 else if (appointment.Status == AppointmentStatus.Requested)
                 {

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Learning.Classes.Models;
 using CrestApps.OrchardCore.Learning.Classes.Services;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
@@ -5,6 +6,7 @@ using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Services;
 using Microsoft.AspNetCore.Identity;
+using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Users;
 
@@ -16,7 +18,6 @@ namespace CrestApps.OrchardCore.Learning.Classes.Core.Services;
 /// </summary>
 internal sealed class DefaultClassRegistrationService : IClassRegistrationService
 {
-    private static readonly AppointmentStatus[] _taken = [AppointmentStatus.Held, AppointmentStatus.Requested, AppointmentStatus.Confirmed, AppointmentStatus.Completed, AppointmentStatus.NoShow];
     private static readonly AppointmentStatus[] _upcoming = [AppointmentStatus.Held, AppointmentStatus.Requested, AppointmentStatus.Confirmed];
 
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
@@ -96,7 +97,7 @@ internal sealed class DefaultClassRegistrationService : IClassRegistrationServic
             // Read inside the lock, so a registration the other request just committed is seen.
             var existing = await FindAsync(enrollment, classItemId, cancellationToken);
 
-            if (existing is not null)
+            if (existing is not null && !existing.CanRegisterAgain)
             {
                 return existing.Session.ItemId == session.ItemId
                     ? new ClassRegistrationResult { Registration = existing }
@@ -222,6 +223,9 @@ internal sealed class DefaultClassRegistrationService : IClassRegistrationServic
             : ClassRegistrationResult.Fail(ClassRegistrationErrors.NotRegistered);
     }
 
+    // The place that holds the class for the learner: an upcoming or offered place, a wait, or attendance that counted.
+    // Without one, the last session they were absent from (or attended too little of) is returned so the panel can say
+    // so; it does not keep them from registering in another session.
     private async Task<ClassRegistration> FindAsync(Enrollment enrollment, string classItemId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(classItemId))
@@ -230,15 +234,20 @@ internal sealed class DefaultClassRegistrationService : IClassRegistrationServic
         }
 
         var sourceId = ClassesConstants.RegistrationSourceId(enrollment.ItemId, classItemId);
+        var part = await FindPartAsync(enrollment.CourseId, classItemId);
+        ClassRegistration ended = null;
 
         foreach (var session in await _sessions.ListBySourceAsync(ClassesConstants.SessionSource, classItemId, cancellationToken))
         {
-            var appointment = (await _sessions.ListRegistrationsAsync(session.ItemId, cancellationToken))
-                .FirstOrDefault(candidate => candidate.SourceId == sourceId && _taken.Contains(candidate.Status));
+            var registrations = (await _sessions.ListRegistrationsAsync(session.ItemId, cancellationToken))
+                .Where(candidate => candidate.SourceId == sourceId)
+                .ToList();
+            var holding = registrations.FirstOrDefault(candidate => _upcoming.Contains(candidate.Status) ||
+                (candidate.Status == AppointmentStatus.Completed && ClassAttendance.Counts(candidate, part)));
 
-            if (appointment is not null)
+            if (holding is not null)
             {
-                return new ClassRegistration(session, appointment, null);
+                return new ClassRegistration(session, holding, null);
             }
 
             var waiting = (await _sessions.ListWaitlistAsync(session.ItemId, cancellationToken))
@@ -248,9 +257,22 @@ internal sealed class DefaultClassRegistrationService : IClassRegistrationServic
             {
                 return new ClassRegistration(session, null, waiting);
             }
+
+            if (registrations.LastOrDefault(candidate => candidate.Status is AppointmentStatus.NoShow or AppointmentStatus.Completed) is { } past)
+            {
+                ended = new ClassRegistration(session, past, null) { CanRegisterAgain = true };
+            }
         }
 
-        return null;
+        return ended;
+    }
+
+    private async Task<ClassPart> FindPartAsync(string courseId, string classItemId)
+    {
+        var course = await _courses.GetCourseAsync(courseId);
+        var item = course is null ? null : (await _courses.GetOutlineAsync(course)).Find(classItemId)?.Item;
+
+        return item is not null && item.TryGet<ClassPart>(out var part) ? part : null;
     }
 
     private async Task<bool> IsClassOfCourseAsync(string courseId, string classItemId)

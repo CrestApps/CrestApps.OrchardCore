@@ -60,6 +60,12 @@ public sealed record ClassRegistration(SchedulingSession Session, Appointment Ap
     /// Gets whether the learner is waiting for a place.
     /// </summary>
     public bool IsWaiting => Appointment is null && WaitlistEntry is not null;
+
+    /// <summary>
+    /// Gets whether the place is a past session the learner was absent from, or attended too little of for the class
+    /// to count, so they may register in another session.
+    /// </summary>
+    public bool CanRegisterAgain { get; init; }
 }
 
 /// <summary>

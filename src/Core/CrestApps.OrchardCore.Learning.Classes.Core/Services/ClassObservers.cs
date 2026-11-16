@@ -46,10 +46,7 @@ internal sealed class ClassAttendanceObserver : IAppointmentObserver
         var course = await courses.GetCourseAsync(enrollment.CourseId);
         var item = course is null ? null : (await courses.GetOutlineAsync(course)).Find(classItemId)?.Item;
         var part = item is not null && item.TryGet<ClassPart>(out var found) ? found : null;
-        var attended = appointment.Attendance == AppointmentAttendance.Attended ||
-            (appointment.Attendance == AppointmentAttendance.Partial && part?.MinimumMinutes is int minimum && (appointment.MinutesAttended ?? 0) >= minimum);
-
-        if (!attended)
+        if (!ClassAttendance.Counts(appointment, part))
         {
             return;
         }

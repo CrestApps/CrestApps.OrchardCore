@@ -189,6 +189,64 @@ public sealed class ClassRegistrationTests
         Assert.Single(places);
     }
 
+    [Fact]
+    public async Task AnAbsentLearner_OrOneWhoseAttendanceDidNotCount_CanRegisterInAnotherSession_AndGiveItUp()
+    {
+        // Arrange: two hours, of which at least 90 minutes count.
+        var (h, session) = await CreateAsync(minimumMinutes: 90);
+        await using var _ = h;
+        var other = await SaveSessionAsync(h, session.AppointmentTypeId, session.ResourceIds, "class1", capacity: 5);
+        var ana = await EnrollAsync(h, "ana");
+        var ben = await EnrollAsync(h, "ben");
+        var cid = await EnrollAsync(h, "cid");
+        var anaPlace = await RegisterAsync(h, ana, session);
+        var benPlace = await RegisterAsync(h, ben, session);
+        var cidPlace = await RegisterAsync(h, cid, session);
+
+        await MarkAsync(h, session, anaPlace.Registration.Appointment.ItemId, AppointmentAttendance.Absent);
+        await MarkAsync(h, session, benPlace.Registration.Appointment.ItemId, AppointmentAttendance.Partial, 60);
+        await MarkAsync(h, session, cidPlace.Registration.Appointment.ItemId, AppointmentAttendance.Partial, 100);
+
+        // Act
+        var anaAgain = await RegisterAsync(h, ana, other);
+        var benAgain = await RegisterAsync(h, ben, other);
+        var cidAgain = await RegisterAsync(h, cid, other);
+        var anaFound = await h.RunAsync(services => Registrations(services).FindAsync(ana.ItemId, "class1"));
+        var anaGaveUp = await h.RunAsync(services => Registrations(services).CancelAsync(ana.ItemId, "class1", "Busy"));
+
+        // Assert
+        Assert.True(anaAgain.Succeeded, anaAgain.Error);
+        Assert.Equal(other.ItemId, anaAgain.Registration.Session.ItemId);
+        Assert.Equal(AppointmentStatus.Confirmed, anaAgain.Registration.Appointment.Status);
+        Assert.True(benAgain.Succeeded, benAgain.Error);
+        Assert.Equal(other.ItemId, benAgain.Registration.Session.ItemId);
+        Assert.Equal(ClassRegistrationErrors.AlreadyRegistered, cidAgain.Error);
+        Assert.Equal(other.ItemId, anaFound.Session.ItemId);
+        Assert.True(anaGaveUp.Succeeded, anaGaveUp.Error);
+    }
+
+    [Fact]
+    public async Task MarkingAnAbsentLearnerNotMarked_RestoresTheirConfirmedPlace()
+    {
+        // Arrange
+        var (h, session) = await CreateAsync();
+        await using var _ = h;
+        var ana = await EnrollAsync(h, "ana");
+        var place = await RegisterAsync(h, ana, session);
+        var appointmentId = place.Registration.Appointment.ItemId;
+
+        await MarkAsync(h, session, appointmentId, AppointmentAttendance.Absent);
+
+        // Act
+        await h.RunAsync(services => services.GetRequiredService<ISchedulingSessionService>().RecordAttendanceAsync(session.ItemId, [new SessionAttendanceMark(appointmentId, AppointmentAttendance.Unmarked)]));
+        var after = (await h.RunAsync(services => services.GetRequiredService<ISchedulingSessionService>().ListRegistrationsAsync(session.ItemId))).Single(item => item.ItemId == appointmentId);
+
+        // Assert
+        Assert.Equal(AppointmentStatus.Confirmed, after.Status);
+        Assert.Equal(AppointmentAttendance.Unmarked, after.Attendance);
+        Assert.Null(after.MinutesAttended);
+    }
+
     private static IClassRegistrationService Registrations(IServiceProvider services)
         => services.GetRequiredService<IClassRegistrationService>();
 
@@ -281,7 +339,7 @@ public sealed class ClassRegistrationTests
     {
         var users = new Mock<UserManager<IUser>>(new Mock<IUserStore<IUser>>().Object, null, null, null, null, null, null, null, null);
 
-        foreach (var name in new[] { "ana", "ben" })
+        foreach (var name in new[] { "ana", "ben", "cid" })
         {
             var user = Mock.Of<IUser>(value => value.UserName == name);
 

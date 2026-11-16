@@ -426,7 +426,13 @@ public sealed class DefaultSchedulingSessionService : ISchedulingSessionService
                 AppointmentAttendance.Attended => mark.MinutesAttended ?? session.TotalMinutes,
                 _ => Math.Clamp(mark.MinutesAttended ?? 0, 0, session.TotalMinutes),
             };
-            var status = mark.Attendance == AppointmentAttendance.Absent ? AppointmentStatus.NoShow : mark.Attendance == AppointmentAttendance.Unmarked ? appointment.Status : AppointmentStatus.Completed;
+            // Not marked takes a marked registration back to its confirmed place.
+            var status = mark.Attendance switch
+            {
+                AppointmentAttendance.Absent => AppointmentStatus.NoShow,
+                AppointmentAttendance.Unmarked => appointment.Status is AppointmentStatus.NoShow or AppointmentStatus.Completed ? AppointmentStatus.Confirmed : appointment.Status,
+                _ => AppointmentStatus.Completed,
+            };
 
             // Marking the same again, such as a roster saved twice, changes nothing and tells nobody again.
             if (appointment.Attendance == mark.Attendance && appointment.MinutesAttended == minutes && appointment.Status == status)

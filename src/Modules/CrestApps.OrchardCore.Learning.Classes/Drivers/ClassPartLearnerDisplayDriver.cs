@@ -74,7 +74,7 @@ internal sealed class ClassPartLearnerDisplayDriver : ContentPartDisplayDriver<C
                     PlacesLeft = placesLeft,
                     Window = window,
                     CanRegister = model.EnrollmentActive &&
-                        model.Registration is null &&
+                        (model.Registration is null || (model.Registration.CanRegisterAgain && model.Registration.Session?.ItemId != session.ItemId)) &&
                         window == ClassRegistrationWindow.Open &&
                         (placesLeft > 0 || session.WaitlistMode != SchedulingWaitlistMode.None),
                 });
