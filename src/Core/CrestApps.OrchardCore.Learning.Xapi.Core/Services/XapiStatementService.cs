@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.FileStorage;
 using CrestApps.OrchardCore.Learning.Xapi.Core.Http;
 using CrestApps.OrchardCore.Learning.Xapi.Core.Validation;
 using CrestApps.OrchardCore.Learning.Xapi.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Locking.Distributed;
@@ -30,7 +31,7 @@ public sealed class XapiStatementService
     private readonly XapiActivityStore _activities;
     private readonly ISession _session;
     private readonly IProtectedFileStore<XapiAttachmentFiles> _files;
-    private readonly IEnumerable<IXapiStatementFilter> _filters;
+    private readonly IServiceProvider _services;
     private readonly IEnumerable<IXapiStatementObserver> _observers;
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
@@ -45,7 +46,7 @@ public sealed class XapiStatementService
         XapiActivityStore activities,
         ISession session,
         IProtectedFileStore<XapiAttachmentFiles> files,
-        IEnumerable<IXapiStatementFilter> filters,
+        IServiceProvider services,
         IEnumerable<IXapiStatementObserver> observers,
         IDistributedLock distributedLock,
         IClock clock,
@@ -56,7 +57,7 @@ public sealed class XapiStatementService
         _activities = activities;
         _session = session;
         _files = files;
-        _filters = filters;
+        _services = services;
         _observers = observers;
         _distributedLock = distributedLock;
         _clock = clock;
@@ -112,7 +113,8 @@ public sealed class XapiStatementService
             context.Stored = stored.Records;
         };
 
-        foreach (var filter in _filters.Reverse())
+        // Resolved when a client writes, not when the service is built: a filter may itself write through this service.
+        foreach (var filter in _services.GetServices<IXapiStatementFilter>().Reverse())
         {
             var next = pipeline;
             var current = filter;

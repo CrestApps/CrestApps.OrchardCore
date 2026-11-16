@@ -855,7 +855,13 @@ public static partial class XapiStatementValidator
         return node is JsonValue value && value.GetValueKind() == JsonValueKind.String && value.TryGetValue(out text);
     }
 
-    internal static bool TryGetNumber(JsonNode node, out decimal number)
+    /// <summary>
+    /// Reads a JSON number as a decimal, whatever the node holds.
+    /// </summary>
+    /// <param name="node">The value.</param>
+    /// <param name="number">The number.</param>
+    /// <returns><see langword="true"/> when the value is a number.</returns>
+    public static bool TryGetNumber(JsonNode node, out decimal number)
     {
         number = 0;
 

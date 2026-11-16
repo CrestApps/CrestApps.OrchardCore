@@ -10,6 +10,8 @@ description: "The xAPI 1.0.3 Learning Record Store of Learning: statements, docu
 | --- | --- | --- |
 | Learning Record Store | `CrestApps.OrchardCore.Learning.Xapi` | Learning, OpenID Core Components (`OrchardCore.OpenId`), OpenID Management Interface (`OrchardCore.OpenId.Management`) |
 
+[Learning cmi5 Packages](./learning-packages#cmi5) launches cmi5 courses against this LRS and enforces the cmi5 statement rules in it.
+
 ## The endpoint
 
 The LRS is at `/learning/xapi/` on the tenant (for example `https://example.com/learning/xapi/`). Its resources:

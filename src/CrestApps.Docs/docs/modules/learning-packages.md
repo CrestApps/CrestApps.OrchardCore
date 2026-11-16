@@ -1,19 +1,21 @@
 ---
 sidebar_label: Learning Packages
 title: Learning Packages
-description: "The learning package course item of Learning: SCORM 1.2 and SCORM 2004 packages imported by authors and run by learners in a sandboxed frame, with the run-time data checked and kept on the server."
+description: "The learning package course item of Learning: SCORM 1.2, SCORM 2004 and cmi5 packages imported by authors and run by learners in a sandboxed frame, with the run-time data checked and kept on the server."
 ---
 
 **Learning Packages** (`CrestApps.OrchardCore.Learning.Packages`, with `Learning.Packages.Abstractions` and `Learning.Packages.Core`) adds the **Learning package** course item to [Learning](./learning). Its **Learning SCORM Packages** feature lets an author import a package, learners run it in the course player, and what the package reports count in the learner's progress. It implements:
 
 - SCORM 1.2 (ADL SCORM 1.2, the Run-Time Environment and Content Aggregation Model);
-- SCORM 2004 3rd and 4th Edition (Content Aggregation Model and Run-Time Environment; Sequencing and Navigation not implemented: a package runs its first SCO, without sequencing rules, rollup or navigation requests).
+- SCORM 2004 3rd and 4th Edition (Content Aggregation Model and Run-Time Environment; Sequencing and Navigation not implemented: a package runs its first SCO, without sequencing rules, rollup or navigation requests);
+- with the **Learning cmi5 Packages** feature, cmi5 (Quartz), on the [Learning Record Store](./learning-xapi) (see [cmi5](#cmi5); `waived`, the Browse launch mode and sequencing between AUs not implemented).
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
 | Learning SCORM Packages | `CrestApps.OrchardCore.Learning.Packages.Scorm` | Learning |
+| Learning cmi5 Packages | `CrestApps.OrchardCore.Learning.Packages.Cmi5` | Learning SCORM Packages, Learning Record Store |
 
-One feature imports both versions; the version of a package is read from its manifest. cmi5 and xAPI packages are not supported yet; importing one is refused with a message.
+One feature imports both SCORM versions; the version of a package is read from its manifest. A cmi5 package needs Learning cmi5 Packages; without it, importing one is refused with a message that names the feature.
 
 ## The learning package item
 
@@ -156,6 +158,55 @@ When the package commits or finishes, the result goes to Learning (`ILearnerProg
 
 A course item a learner completes through a package is therefore recorded as reported by the browser. Because a learner can change what the browser sends, such a completion does not count toward a certification by default: the **Course completed** requirement of a certification path skips a completed enrollment in which a required item's result was reported by the browser. Tick **Let a result reported by the browser count toward a certification** on the item to allow it. A completed enrollment opens the package for review (`lesson_mode` review in SCORM 1.2, `cmi.mode` review in SCORM 2004, and `credit` no-credit), and nothing it sends is kept.
 
+## cmi5
+
+The **Learning cmi5 Packages** feature (`CrestApps.OrchardCore.Learning.Packages.Cmi5`) implements cmi5 (Quartz), the xAPI profile for content an LMS launches. It depends on Learning SCORM Packages, which owns the learning package item, the import page and the sandbox, and on the [Learning Record Store](./learning-xapi), which receives the statements. It reaches the Learning Record Store only through `Learning.Xapi.Abstractions` and `Learning.Xapi.Core`.
+
+### Import
+
+With the feature on, the import page also takes a .zip file with `cmi5.xml` at its root (a package with `imsmanifest.xml` is still read as SCORM). The course structure is read as cmi5 section 13 describes it: the course with its id and title, the blocks and the assignable units (AUs) in order, each AU with its id, title, `url`, `moveOn` (Passed, Completed, CompletedAndPassed, CompletedOrPassed or NotApplicable, the default), `masteryScore` (0 to 1), `launchMethod` (AnyWindow, the default, or OwnWindow), `launchParameters`, `entitlementKey` and `activityType`. An AU's URL is a file of the package, which must be there, or an absolute `https` URL; any other absolute URL is refused. DTDs are refused, and the archive passes the same safe extraction as a SCORM package. The editor shows the course id and the AUs.
+
+### Launch
+
+The learner panel lists the AUs, each with its status and a **Launch** button. A launch checks the learner's own enrollment, access window and the item's release rules, as for SCORM, and then:
+
+- gives the enrollment a registration on the course (a new course in the item starts a new registration);
+- writes `abandoned` for a session of the registration that was left open, with its duration;
+- starts a session, writes `LMS.LaunchData` to the state API (the context template with the publisher's AU id and the session id, the launch mode, `launchParameters`, `masteryScore`, `moveOn`, `returnURL` and the entitlement key) and the `cmi5LearnerPreferences` agent profile when the learner has none (the learner's language, audio on);
+- writes the `launched` statement;
+- returns the launch URL with `endpoint` (the Learning Record Store), `fetch`, `registration`, `activityId` and `actor`. The actor is an agent with an account: the site's home page and the user id, never the e-mail address. The activity id of an AU is the LMS's own, `<home page>/learning/cmi5/<item>/au/<hash of the publisher's id>`; the publisher's id goes into the grouping.
+
+A completed enrollment launches in the Review launch mode. An AU that is a file of the package (AnyWindow) runs in the same sandboxed frame as a SCORM package, on an opaque origin with no cookie and the launch token in the path; the page is served as it is, without the SCORM run-time script. An `https` AU, and an AU with OwnWindow, opens in a new window (`noopener`); only `https` absolute AUs are imported. The AU returns to `/learning/cmi5/return`, which tells the player page to reload in the frame and closes its window otherwise.
+
+The fetch URL (`POST /learning/cmi5/fetch/<token>`) answers any origin. The first call returns `{"auth-token": "..."}`; the AU sends it as `Authorization: Basic <auth-token>`. A second call returns `{"error-code": "1", ...}`, an expired or ended session `"2"`, and an unknown token `"3"`; these answers have the HTTP status 200. The auth token opens the Learning Record Store only for the learner's actor and the registration: statements of that actor in that registration, the states of the AU's activity in the registration (`LMS.LaunchData` read-only), the learner's agent profiles, and the AU's activity profiles to read. It expires with the session, after 8 hours.
+
+### Statement rules
+
+The Learning Record Store checks every statement sent with a cmi5 auth token, and every statement with the cmi5 category in a cmi5 registration whoever sends it, against the cmi5 rules of section 9; a statement that breaks one refuses the whole request with 403:
+
+- every AU statement carries the session id and the publisher's AU id of the context template, and its session must be open: not terminated, not abandoned, not expired;
+- `initialized` comes first in a session, and once; nothing comes after `terminated`;
+- a cmi5 statement (with the cmi5 category) uses `initialized`, `completed`, `passed`, `failed` or `terminated`; `launched`, `satisfied`, `abandoned` and `waived` are the LMS's; its object is the AU's activity id;
+- `completed` needs `result.completion` true, `passed` `result.success` true and `failed` `result.success` false; all three need the Normal launch mode and the moveOn category; `completed` and `passed` come once per registration and `failed` never after `passed`;
+- with a mastery score, `passed` needs a `result.score.scaled` of at least the mastery score and `failed` one below it.
+
+A cmi5 allowed statement (without the cmi5 category) only has to follow the context template and the session's order.
+
+### Satisfied and progress
+
+When an AU's moveOn is met (NotApplicable at once), the LMS writes `satisfied` for the AU; when all AUs of a block are satisfied, for the block; when all AUs are, for the course. The item's result goes to Learning on the learner path, marked as reported by the browser, so the certificate rule for self-reported results applies: the item is reported complete when the course is satisfied; passed when every AU whose moveOn needs a pass passed, failed when one of them failed and has not passed; the score is the average of the AUs' last `passed` or `failed` scaled score, times 100.
+
+### Not built
+
+- `waived` and the Browse launch mode.
+- Abandoning a session is written at the next launch of the registration, not when a session times out.
+- `duration` is not required in `completed`, `passed`, `failed` and `terminated`.
+- A course of several AUs is launched AU by AU from the panel; there is no sequencing between them.
+
+### cmi5 conformance
+
+Conformance suite / certification: not run. The suite is ADL's cmi5 test suite (CATAPULT, the cmi5 LMS test suite and its test course packages), and running it needs a download, which this work did not allow. To run it, a person downloads CATAPULT's LMS test packages from ADL's repository, enables Learning cmi5 Packages and the Learning Record Store on a test site, imports each test package into a learning package item, launches each AU as an enrolled learner, and keeps the results the test AUs report. The feature implements cmi5 (Quartz) and makes no conformance claim.
+
 ## Data portability and personal data
 
 The **LearningPackageRuntimeStates** recipe and deployment steps move the runtime states of both versions (a SCORM 2004 state with its `Standard`, `Attempts` and `Cmi2004`), naming learners by user name. The deployment step is opt-in, needs **Export learner records** and is recorded. The package content item exports with its part, but **the package file itself does not travel** with a recipe or a deployment, as for coursework files: import the package again on the target site.
@@ -192,7 +243,7 @@ This module is not certified by ADL and makes no conformance claim.
 
 ## Not supported yet
 
-- cmi5, xAPI and AICC packages.
+- AICC packages, and xAPI packages that are not cmi5.
 - SCORM 2004 Sequencing and Navigation: sequencing rules, rollup across SCOs, navigation requests (`adl.nav.request` is stored and not acted on) and the delivery controls. In particular, a SCO that ends without reporting `cmi.completion_status` does not complete the item (a sequencing implementation would mark it complete when `completionSetByContent` is false); choose **Marked done** for such a package.
 - SCORM 2004 shared data stores (`adl.data`, declared with `adlcp:data` in a 4th Edition manifest): `adl.data._count` is 0.
 - SCORM 2004 global objectives shared between SCOs or packages.

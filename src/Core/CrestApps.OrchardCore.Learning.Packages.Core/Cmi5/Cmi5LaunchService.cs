@@ -128,6 +128,7 @@ public sealed class Cmi5LaunchService
     private readonly XapiStatementService _statements;
     private readonly XapiDocumentStore _documents;
     private readonly XapiHomePage _homePage;
+    private readonly Cmi5Progress _progress;
     private readonly EnrollmentWriteGate _writeGate;
     private readonly IDataProtector _fetchProtector;
     private readonly IClock _clock;
@@ -143,6 +144,7 @@ public sealed class Cmi5LaunchService
         XapiStatementService statements,
         XapiDocumentStore documents,
         XapiHomePage homePage,
+        Cmi5Progress progress,
         EnrollmentWriteGate writeGate,
         IDataProtectionProvider dataProtectionProvider,
         IClock clock)
@@ -154,6 +156,7 @@ public sealed class Cmi5LaunchService
         _statements = statements;
         _documents = documents;
         _homePage = homePage;
+        _progress = progress;
         _writeGate = writeGate;
         _fetchProtector = dataProtectionProvider.CreateProtector(FetchPurpose);
         _clock = clock;
@@ -303,7 +306,18 @@ public sealed class Cmi5LaunchService
 
             var written = await _statements.WriteTrustedAsync(statements, Authority(homePage), AuthorityKey, cancellationToken);
 
-            return written.Succeeded ? null : written.Message;
+            if (!written.Succeeded)
+            {
+                return written.Message;
+            }
+
+            // An AU that asks for nothing (NotApplicable) is satisfied once it is launched. Writing the statements
+            // committed the session, so the state is read again before it changes.
+            var fresh = await _store.FindFreshAsync(enrollment.ItemId, itemId, cancellationToken);
+
+            await _progress.EvaluateAsync(fresh, part, enrollment, actor, homePage, now, recordProgress: !target.Review, cancellationToken);
+
+            return (string)null;
         }, () => PackageRuntimeErrors.Busy, cancellationToken);
 
         if (error is not null)
@@ -552,7 +566,7 @@ public sealed class Cmi5LaunchService
     }
 
     internal static JsonObject Statement(JsonObject actor, string verb, string verbDisplay, JsonObject value, string registration, string publisherId, JsonObject extensions, DateTime timestamp)
-        => new()
+        => new JsonObject
         {
             ["id"] = Guid.NewGuid().ToString(),
             ["actor"] = actor.DeepClone(),
@@ -570,10 +584,9 @@ public sealed class Cmi5LaunchService
                     ["category"] = new JsonArray(new JsonObject { ["objectType"] = "Activity", ["id"] = Cmi5Vocabulary.Categories.Cmi5 }),
                     ["grouping"] = new JsonArray(new JsonObject { ["objectType"] = "Activity", ["id"] = publisherId }),
                 },
-                ["extensions"] = extensions,
             },
             ["timestamp"] = XapiFormats.FormatTimestamp(timestamp),
-        };
+        }.WithExtensions(extensions);
 
     internal static JsonObject Activity(string id, string title)
     {
@@ -596,6 +609,22 @@ public sealed class Cmi5LaunchService
         var value = span < TimeSpan.Zero ? TimeSpan.Zero : span;
 
         return string.Create(CultureInfo.InvariantCulture, $"PT{(long)value.TotalHours}H{value.Minutes}M{value.Seconds}.{value.Milliseconds / 10:00}S");
+    }
+}
+
+/// <summary>
+/// Adds the context extensions of a cmi5 statement, when there are any.
+/// </summary>
+internal static class Cmi5StatementExtensions
+{
+    public static JsonObject WithExtensions(this JsonObject statement, JsonObject extensions)
+    {
+        if (extensions is { Count: > 0 })
+        {
+            statement["context"]["extensions"] = extensions;
+        }
+
+        return statement;
     }
 }
 

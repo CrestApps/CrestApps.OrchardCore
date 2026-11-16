@@ -262,6 +262,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Learning.Commerce` | Learning Commerce | [Learning Commerce](./modules/learning-commerce) |
 | `CrestApps.OrchardCore.Learning.Coursework` | Learning Coursework | [Learning Coursework](./modules/learning-coursework) |
 | `CrestApps.OrchardCore.Learning.Packages.Scorm` | Learning SCORM Packages | [Learning Packages](./modules/learning-packages) |
+| `CrestApps.OrchardCore.Learning.Packages.Cmi5` | Learning cmi5 Packages | [Learning Packages](./modules/learning-packages#cmi5) |
 | `CrestApps.OrchardCore.Learning.Xapi` | Learning Record Store | [Learning Record Store](./modules/learning-xapi) |
 | `CrestApps.OrchardCore.Learning.Programs` | Learning Paths | [Learning Programs](./modules/learning-programs) |
 | `CrestApps.OrchardCore.Learning.Programs.RequiredLearning` | Required Learning | [Learning Programs](./modules/learning-programs#required-learning) |
