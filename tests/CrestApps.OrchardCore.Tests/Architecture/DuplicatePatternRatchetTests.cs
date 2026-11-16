@@ -59,7 +59,6 @@ public sealed class DuplicatePatternRatchetTests
     {
         ["GetTimeZones() in a select list"] = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["src/Modules/CrestApps.OrchardCore.ContactCenter/Drivers/BusinessHoursCalendarDisplayDriver.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.TimeZones/Drivers/TimeZoneMapDisplayDriver.cs"] = 1,
         },
         ["TimeZoneInfo.ConvertTimeToUtc"] = new(StringComparer.OrdinalIgnoreCase)

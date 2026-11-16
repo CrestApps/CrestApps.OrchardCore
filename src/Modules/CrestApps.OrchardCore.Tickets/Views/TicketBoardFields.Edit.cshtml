@@ -1,0 +1,179 @@
+@model TicketBoardViewModel
+
+@{
+    var columnsName = Html.NameFor(m => m.Columns).ToString();
+    var columnsId = Html.IdFor(m => m.Columns).ToString();
+    var teamFieldId = Html.IdFor(m => m.SharedWithTeamId).ToString();
+}
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<style asp-name="@CrestApps.OrchardCore.Tickets.Services.TicketsResourceConfiguration.BoardStyle"></style>
+<script asp-name="@CrestApps.OrchardCore.Tickets.Services.TicketsResourceConfiguration.BoardEditorScript" at="Foot"></script>
+
+<div class="row">
+    <div class="mb-3 col-md-6">
+        <label asp-for="Name" class="form-label ocat-label-required">@T["Name"]</label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="mb-3 col-md-6">
+        <label asp-for="Order" class="form-label">@T["Order"]</label>
+        <input asp-for="Order" class="form-control" type="number" />
+        <span class="hint">@T["Where the board is listed; lower comes first."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Description" class="form-label">@T["Description"]</label>
+    <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    <span class="hint">@T["What the board is for, shown in the list of boards."]</span>
+</div>
+
+<fieldset class="mb-3" data-board-sharing>
+    <legend class="form-label fs-6">@T["Who it is for"]</legend>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" asp-for="Sharing" value="@TicketBoardSharing.Personal" id="board-sharing-personal" />
+        <label class="form-check-label" for="board-sharing-personal">@T["Only me"]</label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" asp-for="Sharing" value="@TicketBoardSharing.Team" id="board-sharing-team" disabled="@(!Model.CanShare)" />
+        <label class="form-check-label" for="board-sharing-team">@T["A team"]</label>
+    </div>
+    <div class="ms-4 mb-2 col-md-6" data-board-team>
+        <label class="visually-hidden" for="@teamFieldId">@T["Team"]</label>
+        @await Component.InvokeAsync("TeamPicker", new { name = Html.NameFor(m => m.SharedWithTeamId).ToString(), selectedValues = string.IsNullOrEmpty(Model.SharedWithTeamId) ? Array.Empty<string>() : new[] { Model.SharedWithTeamId } })
+        <span asp-validation-for="SharedWithTeamId" class="text-danger"></span>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" asp-for="Sharing" value="@TicketBoardSharing.Everybody" id="board-sharing-everybody" disabled="@(!Model.CanShare)" />
+        <label class="form-check-label" for="board-sharing-everybody">@T["Everybody who works on tickets"]</label>
+    </div>
+    <span asp-validation-for="Sharing" class="text-danger"></span>
+    <span class="hint">
+        @if (Model.CanShare)
+        {
+            @T["Everyone who opens the board sees only the tickets they may already see."]
+        }
+        else
+        {
+            @T["You may keep boards for yourself; sharing a board takes the Manage shared ticket boards permission."]
+        }
+    </span>
+</fieldset>
+
+<fieldset class="mb-3">
+    <legend class="form-label fs-6">@T["Which tickets it shows"]</legend>
+    <div class="row">
+        <div class="mb-3 col-md-6">
+            <label asp-for="DeskIds" class="form-label">@T["Desks"]</label>
+            <select asp-for="DeskIds" asp-items="Model.Desks" class="selectpicker show-tick" multiple data-width="100%" title="@T["Every desk"]"></select>
+            <span class="hint">@T["Leave empty to show every desk the viewer may see."]</span>
+        </div>
+        <div class="mb-3 col-md-6">
+            <label class="form-label">@T["Teams"]</label>
+            @await Component.InvokeAsync("TeamPicker", new { name = Html.NameFor(m => m.TeamIds).ToString(), selectedValues = Model.TeamIds, multiple = true, buttonText = T["Every team"].Value })
+            <span class="hint">@T["Leave empty to show the tickets of every team."]</span>
+        </div>
+        <div class="mb-3 col-md-6">
+            <label asp-for="ContentTypes" class="form-label">@T["Ticket types"]</label>
+            <select asp-for="ContentTypes" asp-items="Model.Types" class="selectpicker show-tick" multiple data-width="100%" title="@T["Every ticket type"]"></select>
+        </div>
+        <div class="mb-3 col-md-3">
+            <label asp-for="Assignee" class="form-label">@T["Assigned to"]</label>
+            <select asp-for="Assignee" class="form-select">
+                <option value="">@T["Anybody"]</option>
+                <option value="@TicketAssignees.Me">@T["The user looking"]</option>
+                <option value="@TicketAssignees.Unassigned">@T["Nobody"]</option>
+            </select>
+        </div>
+        <div class="mb-3 col-md-3">
+            <label asp-for="Sort" class="form-label">@T["Cards in order of"]</label>
+            <select asp-for="Sort" class="form-select">
+                <option value="@TicketSort.Updated">@T["Recently updated first"]</option>
+                <option value="@TicketSort.Created">@T["Newest first"]</option>
+                <option value="@TicketSort.Due">@T["Soonest due first"]</option>
+                <option value="@TicketSort.Priority">@T["Most urgent first"]</option>
+            </select>
+        </div>
+    </div>
+</fieldset>
+
+<fieldset class="mb-3">
+    <legend class="form-label fs-6 ocat-label-required">@T["Columns"]</legend>
+    <p class="hint mt-0">@T["Columns run from left to right. Give each column one or more statuses; a status can be in one column only. When a column has several statuses, a card dropped on it gets the status chosen below, or the agent is asked which one. Tickets in a status that is in no column don't show on the board."]</p>
+    <span asp-validation-for="Columns" class="text-danger"></span>
+
+    <ol class="list-unstyled mb-2 ticket-board-editor" data-board-editor-columns data-columns-name="@columnsName" data-columns-id="@columnsId" aria-label="@T["Columns"]">
+        @for (var i = 0; i < Model.Columns.Count; i++)
+        {
+            await Column(i.ToString(System.Globalization.CultureInfo.InvariantCulture), Model.Columns[i]);
+        }
+    </ol>
+
+    <button type="button" class="btn btn-sm btn-secondary" data-board-add-column><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add column"]</button>
+
+    <template data-board-column-template>
+        @{ await Column("__index__", new TicketBoardColumnViewModel()); }
+    </template>
+</fieldset>
+
+@{
+    async Task Column(string index, TicketBoardColumnViewModel column)
+    {
+        var name = $"{columnsName}[{index}]";
+        var id = $"{columnsId}_{index}";
+
+        <li class="card mb-2 ticket-board-editor-column" data-board-column>
+            <div class="card-body p-2">
+                <input type="hidden" name="@(name).Id" value="@column.Id" />
+                <div class="row g-2 align-items-end">
+                    <div class="col-auto">
+                        <span class="btn btn-sm btn-link text-muted ticket-board-editor-handle" data-board-handle title="@T["Drag to move the column"]" aria-hidden="true"><i class="fa-solid fa-grip-vertical"></i></span>
+                    </div>
+                    <div class="col">
+                        <label class="form-label small mb-1" for="@(id)_Name">@T["Name"]</label>
+                        <input class="form-control form-control-sm" id="@(id)_Name" name="@(name).Name" value="@column.Name" data-board-column-name />
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <label class="form-label small mb-1" for="@(id)_Limit">@T["Limit"]</label>
+                        <input class="form-control form-control-sm" type="number" min="1" id="@(id)_Limit" name="@(name).Limit" value="@column.Limit" title="@T["The most tickets the column should hold; the header shows when it holds more. Moves are never refused."]" />
+                    </div>
+                    <div class="col-auto">
+                        <div class="btn-group btn-group-sm" role="group" aria-label="@T["Column actions"]">
+                            <button type="button" class="btn btn-outline-secondary" data-board-move="-1" title="@T["Move up, one column to the left"]" aria-label="@T["Move up, one column to the left"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" data-board-move="1" title="@T["Move down, one column to the right"]" aria-label="@T["Move down, one column to the right"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
+                            <button type="button" class="btn btn-outline-danger" data-board-remove title="@T["Remove the column"]" aria-label="@T["Remove the column"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-2" role="group" aria-label="@T["Statuses"]">
+                    <span class="form-label small d-block mb-1">@T["Statuses"]</span>
+                    @foreach (var status in Model.Statuses)
+                    {
+                        <div class="form-check form-check-inline" data-board-status-option>
+                            <input class="form-check-input" type="checkbox" id="@(id)_Status_@status.ItemId" name="@(name).StatusIds" value="@status.ItemId" checked="@column.StatusIds.Contains(status.ItemId)" data-board-status data-status-name="@status.Name" />
+                            <label class="form-check-label" for="@(id)_Status_@status.ItemId">
+                                @if (!string.IsNullOrEmpty(status.Color))
+                                {
+                                    <i class="fa-solid fa-circle me-1" style="color: @status.Color" aria-hidden="true"></i>
+                                }
+                                @status.Name
+                            </label>
+                        </div>
+                    }
+                </div>
+                <div class="mt-2 col-md-6" data-board-default-row>
+                    <label class="form-label small mb-1" for="@(id)_DefaultStatusId">@T["A card dropped here gets"]</label>
+                    <select class="form-select form-select-sm" id="@(id)_DefaultStatusId" name="@(name).DefaultStatusId" data-board-default>
+                        <option value="">@T["Ask which status"]</option>
+                        @foreach (var status in Model.Statuses)
+                        {
+                            <option value="@status.ItemId" selected="@(column.DefaultStatusId == status.ItemId)">@status.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </li>
+    }
+}

@@ -58,6 +58,11 @@ internal sealed class TicketsAdminMenu : AdminNavigationProvider
                     .Id("ticketList")
                     .Action("Index", "Tickets", TicketsConstants.Features.Tickets)
                     .LocalNav());
+
+                tickets.Add(S["Boards"], S["Boards"].PrefixPosition("1.5"), boards => boards
+                    .Id("ticketBoards")
+                    .Action("Index", "TicketBoards", TicketsConstants.Features.Tickets)
+                    .LocalNav());
             }
 
             tickets

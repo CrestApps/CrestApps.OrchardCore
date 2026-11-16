@@ -41,4 +41,21 @@ public sealed class TicketPartSettings
     /// Gets or sets what the portal says about the type.
     /// </summary>
     public string PortalDescription { get; set; }
+
+    /// <summary>
+    /// Gets or sets the taxonomy the type's tickets take their category from; empty when the type has no categories.
+    /// The taxonomy's terms may carry a <see cref="TicketCategoryPart"/> with the routing of their tickets.
+    /// </summary>
+    public string CategoryTaxonomyId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a ticket of the type needs a category when it is opened from a form (the agents' page, the
+    /// portal, the web form). Tickets opened through the API, workflows or e-mail may have none.
+    /// </summary>
+    public bool CategoryRequired { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether only a category without sub-categories may be chosen (the most specific one).
+    /// </summary>
+    public bool CategoryLeavesOnly { get; set; }
 }

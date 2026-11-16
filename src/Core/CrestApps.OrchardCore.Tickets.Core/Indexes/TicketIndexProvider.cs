@@ -18,6 +18,11 @@ public sealed class TicketIndexProvider : IndexProvider<ContentItem>
     public const int EmailLength = 254;
 
     /// <summary>
+    /// The longest category path the index keeps.
+    /// </summary>
+    public const int CategoryPathLength = 255;
+
+    /// <summary>
     /// The due time kept for a ticket with nothing due, so it sorts after every ticket that has one.
     /// </summary>
     public static readonly DateTime NoDueUtc = new(9999, 12, 31, 0, 0, 0, DateTimeKind.Utc);
@@ -66,6 +71,10 @@ public sealed class TicketIndexProvider : IndexProvider<ContentItem>
                     EscalationLevel = part.EscalationLevel,
                     SatisfactionScore = part.Satisfaction?.Score,
                     RatingRequestedUtc = part.RatingRequestedUtc,
+                    CategoryId = part.CategoryId,
+                    // A path deeper than the column (nine levels) is left out rather than cut, so a filter never matches a
+                    // cut path by mistake.
+                    CategoryPath = part.CategoryPath?.Length > CategoryPathLength ? null : part.CategoryPath,
                 };
             });
 

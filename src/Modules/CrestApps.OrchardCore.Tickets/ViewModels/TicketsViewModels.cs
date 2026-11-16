@@ -76,6 +76,11 @@ public sealed class TicketsListViewModel
     public string ContentType { get; set; }
 
     /// <summary>
+    /// Gets or sets the category picker: a category and those below it.
+    /// </summary>
+    public string CategoryId { get; set; }
+
+    /// <summary>
     /// Gets or sets the service-level picker: breached or soon.
     /// </summary>
     public string Due { get; set; }
@@ -138,6 +143,11 @@ public sealed class TicketsListOptions
     /// Gets or sets the ticket types.
     /// </summary>
     public List<SelectListItem> Types { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the categories of every ticket type, indented under the category above.
+    /// </summary>
+    public List<SelectListItem> Categories { get; set; } = [];
 }
 
 /// <summary>
@@ -201,6 +211,23 @@ public sealed class TicketRow
 /// </summary>
 public sealed class TicketCreateViewModel
 {
+    /// <summary>
+    /// Gets or sets the category.
+    /// </summary>
+    public string CategoryId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the categories of the ticket type, for the picker; none when it has no categories.
+    /// </summary>
+    [BindNever]
+    public List<CrestApps.OrchardCore.ContentFields.Taxonomies.CascadingPickerItem> Categories { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether a category must be chosen.
+    /// </summary>
+    [BindNever]
+    public bool CategoryRequired { get; set; }
+
     /// <summary>
     /// Gets or sets the messaging conversation the ticket follows up, if any; the ticket links to it.
     /// </summary>
@@ -408,6 +435,21 @@ public sealed class TicketPageViewModel
 /// </summary>
 public class TicketPropertiesViewModel
 {
+    /// <summary>
+    /// Gets or sets the categories of the ticket type, for the picker; none when it has no categories.
+    /// </summary>
+    public List<CrestApps.OrchardCore.ContentFields.Taxonomies.CascadingPickerItem> Categories { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the ticket's category as names from the top, or <see langword="null"/>.
+    /// </summary>
+    public string CategoryText { get; set; }
+
+    /// <summary>
+    /// Gets or sets what applying the category's routing would change (desk, team, priority), empty when nothing.
+    /// </summary>
+    public List<string> CategoryRoutingChanges { get; set; } = [];
+
     /// <summary>
     /// Gets or sets the ticket.
     /// </summary>

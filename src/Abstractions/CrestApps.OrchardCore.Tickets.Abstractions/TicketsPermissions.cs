@@ -21,6 +21,23 @@ public static class TicketsPermissions
         isSecurityCritical: true);
 
     /// <summary>
+    /// Create, arrange and delete ticket boards shared with everybody or a team. A board only ever shows the tickets its
+    /// viewer may see.
+    /// </summary>
+    public static readonly Permission ManageTicketBoards = new(
+        "ManageTicketBoards",
+        LocalizationSource.Create("Manage shared ticket boards", typeof(TicketsPermissions)),
+        [ManageTicketSettings]);
+
+    /// <summary>
+    /// Create, arrange and delete the user's own, personal ticket boards.
+    /// </summary>
+    public static readonly Permission ManageOwnTicketBoards = new(
+        "ManageOwnTicketBoards",
+        LocalizationSource.Create("Manage my own ticket boards", typeof(TicketsPermissions)),
+        [ManageTicketBoards]);
+
+    /// <summary>
     /// View every ticket.
     /// </summary>
     public static readonly Permission ViewAllTickets = new(

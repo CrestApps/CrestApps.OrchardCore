@@ -149,10 +149,29 @@ public sealed partial class DefaultTicketService : ITicketService
 
         var settings = partDefinition.GetSettings<TicketPartSettings>();
         var desks = await _desks.GetAllAsync(cancellationToken);
-        var deskId = FirstNonEmpty(request.DeskId, settings.DefaultDeskId);
+        TicketCategory category = null;
+
+        if (!string.IsNullOrWhiteSpace(request.CategoryId))
+        {
+            category = await CategoryAsync(contentType, request.CategoryId.Trim(), cancellationToken);
+
+            if (category is null)
+            {
+                errors.Add(S["The category isn't one of this ticket type's."]);
+            }
+            else if (settings.CategoryLeavesOnly && category.HasChildren)
+            {
+                errors.Add(S["Choose a more specific category than {0}.", category.Name]);
+            }
+        }
+
+        var deskId = ChooseDesk(request, category, settings, desks, contentType);
         var desk = string.IsNullOrEmpty(deskId)
             ? desks.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault()
             : desks.FirstOrDefault(item => item.ItemId == deskId);
+
+        // The category's team goes with its desk: it isn't used when the ticket lands on another desk.
+        var categoryRoutes = category is not null && (string.IsNullOrEmpty(category.DeskId) || category.DeskId == desk?.ItemId);
 
         if (desk is null)
         {
@@ -182,7 +201,9 @@ public sealed partial class DefaultTicketService : ITicketService
             errors.Add(S["Add a ticket status in the New category first."]);
         }
 
-        var priority = await ResolvePriorityAsync(FirstNonEmpty(request.PriorityId, desk?.PriorityFor(request.Impact, request.Urgency), settings.DefaultPriorityId), cancellationToken);
+        // What the request says (its priority, or the desk's matrix for its impact and urgency), then its category, then
+        // the ticket type.
+        var priority = await ResolvePriorityAsync(FirstNonEmpty(request.PriorityId, desk?.PriorityFor(request.Impact, request.Urgency), category?.PriorityId, settings.DefaultPriorityId), cancellationToken);
 
         if (priority is null)
         {
@@ -212,7 +233,9 @@ public sealed partial class DefaultTicketService : ITicketService
         // An address only typed in (a guest's) never files the ticket under an account: anyone could type a customer's.
         part.RequesterUnverified = request.RequesterUnverified;
         part.AccountId = !string.IsNullOrEmpty(request.AccountId) ? request.AccountId : request.RequesterUnverified ? null : await AccountByEmailAsync(part, cancellationToken);
-        part.TeamId = FirstNonEmpty(request.TeamId, settings.DefaultTeamId, desk.DefaultTeamId);
+        part.TeamId = FirstNonEmpty(request.TeamId, categoryRoutes ? category.TeamId : null, settings.DefaultTeamId, desk.DefaultTeamId);
+        part.CategoryId = category?.Id;
+        part.CategoryPath = category?.Path;
         part.AssigneeId = string.IsNullOrEmpty(request.AssigneeId) ? null : request.AssigneeId;
         part.AssignedUtc = part.AssigneeId is null ? null : now;
         part.Channel = request.Channel;
@@ -271,8 +294,8 @@ public sealed partial class DefaultTicketService : ITicketService
             await AddEventAsync(ticket.ContentItemId, TicketActor.Site, S["Follow-up of a closed ticket."], [], cancellationToken);
         }
 
-        // The account's entitlement first, then the ticket type's, then the desk's.
-        var policyId = FirstNonEmpty(await AccountPolicyAsync(part.AccountId), settings.ServiceLevelPolicyId, desk.ServiceLevelPolicyId);
+        // The account's entitlement first, then the category's, the ticket type's and the desk's.
+        var policyId = FirstNonEmpty(await AccountPolicyAsync(part.AccountId), category?.ServiceLevelPolicyId, settings.ServiceLevelPolicyId, desk.ServiceLevelPolicyId);
 
         if (!string.IsNullOrEmpty(policyId))
         {
@@ -802,6 +825,13 @@ public sealed partial class DefaultTicketService : ITicketService
             tickets = tickets.Where(index => index.AccountId == accountId);
         }
 
+        // A category and the categories below it: their paths hold its id.
+        if (!string.IsNullOrEmpty(filter.CategoryId))
+        {
+            var segment = $"/{filter.CategoryId}/";
+            tickets = tickets.Where(index => index.CategoryPath.Contains(segment));
+        }
+
         if (filter.SolvedBeforeUtc is { } solvedBefore)
         {
             tickets = tickets.Where(index => index.SolvedUtc != null && index.SolvedUtc < solvedBefore);
@@ -861,6 +891,20 @@ public sealed partial class DefaultTicketService : ITicketService
         if (!string.IsNullOrEmpty(update.PriorityId) && update.PriorityId != part.PriorityId && await _priorities.FindByIdAsync(update.PriorityId, cancellationToken) is null)
         {
             errors.Add(S["The priority no longer exists."]);
+        }
+
+        if (update.CategoryId is not null && NullIfEmpty(update.CategoryId) is { } newCategory && newCategory != part.CategoryId)
+        {
+            var category = await CategoryAsync(ticket.ContentType, newCategory, cancellationToken);
+
+            if (category is null)
+            {
+                errors.Add(S["The category isn't one of this ticket type's."]);
+            }
+            else if (category.HasChildren && (await GetSettingsAsync(ticket.ContentType)).CategoryLeavesOnly)
+            {
+                errors.Add(S["Choose a more specific category than {0}.", category.Name]);
+            }
         }
 
         if (update.TeamId is not null && NullIfEmpty(update.TeamId) is { } newTeam && newTeam != part.TeamId
@@ -930,6 +974,25 @@ public sealed partial class DefaultTicketService : ITicketService
             changes.Add(new TimelineFieldChange { Field = S["Subject"], Key = TicketChangeKeys.Subject, From = ticket.DisplayText, To = title.Trim() });
             ticket.DisplayText = title.Trim();
             SetTitle(ticket, ticket.DisplayText);
+        }
+
+        // Only the category changes; its routing is offered to the agent separately (or applied by a workflow).
+        if (update.CategoryId is not null && NullIfEmpty(update.CategoryId) != part.CategoryId)
+        {
+            var to = await CategoryAsync(ticket.ContentType, NullIfEmpty(update.CategoryId), cancellationToken);
+            var from = await CategoryAsync(ticket.ContentType, part.CategoryId, cancellationToken);
+
+            changes.Add(new TimelineFieldChange
+            {
+                Field = S["Category"],
+                Key = TicketChangeKeys.Category,
+                From = from?.PathText ?? part.CategoryId,
+                To = to?.PathText,
+                FromValue = part.CategoryId,
+                ToValue = to?.Id,
+            });
+            part.CategoryId = to?.Id;
+            part.CategoryPath = to?.Path;
         }
 
         if (!string.IsNullOrEmpty(update.DeskId) && update.DeskId != part.DeskId)
@@ -1789,6 +1852,36 @@ public sealed partial class DefaultTicketService : ITicketService
         var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentType);
 
         return typeDefinition?.Parts.FirstOrDefault(part => part.PartDefinition.Name == TicketsConstants.PartName)?.GetSettings<TicketPartSettings>() ?? new TicketPartSettings();
+    }
+
+    private Task<TicketCategory> CategoryAsync(string contentType, string categoryId, CancellationToken cancellationToken)
+        => string.IsNullOrEmpty(categoryId) || _serviceProvider.GetService<ITicketCategoryService>() is not { } categories
+            ? Task.FromResult<TicketCategory>(null)
+            : categories.FindAsync(contentType, categoryId, cancellationToken);
+
+    /// <summary>
+    /// The desk of a new ticket: the one the request names, then the category's, then the ticket type's. A desk the
+    /// request only suggests (a portal catalog entry, a web form) gives way to the category's when that desk serves the
+    /// same audience, so a customer's choice never moves their request to an internal desk.
+    /// </summary>
+    internal static string ChooseDesk(TicketCreateRequest request, TicketCategory category, TicketPartSettings settings, IReadOnlyCollection<TicketDesk> desks, string contentType)
+    {
+        if (!string.IsNullOrEmpty(request.DeskId) && !request.DeskIsSuggestion)
+        {
+            return request.DeskId;
+        }
+
+        var suggested = string.IsNullOrEmpty(request.DeskId) ? null : desks.FirstOrDefault(item => item.ItemId == request.DeskId);
+
+        if (!string.IsNullOrEmpty(category?.DeskId)
+            && desks.FirstOrDefault(item => item.ItemId == category.DeskId) is { } categoryDesk
+            && (categoryDesk.TicketTypes.Count == 0 || categoryDesk.TicketTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase))
+            && (suggested is null || suggested.Audience == categoryDesk.Audience))
+        {
+            return categoryDesk.ItemId;
+        }
+
+        return FirstNonEmpty(request.DeskId, settings.DefaultDeskId);
     }
 
     private async Task<string> TeamNameAsync(string teamId, CancellationToken cancellationToken)

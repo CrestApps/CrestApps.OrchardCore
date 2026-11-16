@@ -63,7 +63,7 @@ public sealed class ActivityQueue : CatalogItem, INameAwareModel, IModifiedUtcAw
     public UnansweredOfferAction UnansweredOfferAction { get; set; } = UnansweredOfferAction.Requeue;
 
     /// <summary>
-    /// Gets or sets the identifier of the business-hours calendar that gates when the queue routes work.
+    /// Gets or sets the identifier of the Business Hours schedule that gates when the queue routes work.
     /// When empty, the queue routes around the clock.
     /// </summary>
     public string BusinessHoursCalendarId { get; set; }

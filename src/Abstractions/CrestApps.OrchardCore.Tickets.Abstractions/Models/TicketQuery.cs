@@ -57,6 +57,11 @@ public sealed class TicketQuery
     public string AccountId { get; set; }
 
     /// <summary>
+    /// Gets or sets a category: the tickets filed under it or a category below it.
+    /// </summary>
+    public string CategoryId { get; set; }
+
+    /// <summary>
     /// Gets or sets a span: only tickets with a service-level timer due within it, or overdue, are listed.
     /// </summary>
     public TimeSpan? DueWithin { get; set; }

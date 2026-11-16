@@ -25,6 +25,8 @@ internal sealed class TicketReportAccess
     private readonly ICatalog<TicketDesk> _desks;
     private readonly ICatalog<TicketStatus> _statuses;
     private readonly ICatalog<TicketPriority> _priorities;
+    private readonly ITicketCategoryService _categories;
+    private readonly global::OrchardCore.ContentManagement.Metadata.IContentDefinitionManager _contentDefinitionManager;
 
     private ClaimsPrincipal _user;
     private TicketScopedQuery _scope;
@@ -35,13 +37,17 @@ internal sealed class TicketReportAccess
         ISession session,
         ICatalog<TicketDesk> desks,
         ICatalog<TicketStatus> statuses,
-        ICatalog<TicketPriority> priorities)
+        ICatalog<TicketPriority> priorities,
+        ITicketCategoryService categories,
+        global::OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager)
     {
         _access = access;
         _session = session;
         _desks = desks;
         _statuses = statuses;
         _priorities = priorities;
+        _categories = categories;
+        _contentDefinitionManager = contentDefinitionManager;
     }
 
     /// <summary>
@@ -64,13 +70,33 @@ internal sealed class TicketReportAccess
     }
 
     /// <summary>
-    /// Gets the names of the desks, statuses and priorities.
+    /// Gets the names of the desks, statuses, priorities and categories.
     /// </summary>
     public async Task<TicketReportNames> GetNamesAsync(CancellationToken cancellationToken)
         => _names ??= new TicketReportNames(
             (await _desks.GetAllAsync(cancellationToken)).ToDictionary(desk => desk.ItemId, desk => desk.Name, StringComparer.Ordinal),
             (await _statuses.GetAllAsync(cancellationToken)).ToDictionary(status => status.ItemId, status => status.Name, StringComparer.Ordinal),
-            (await _priorities.GetAllAsync(cancellationToken)).ToDictionary(priority => priority.ItemId, priority => priority.Name, StringComparer.Ordinal));
+            (await _priorities.GetAllAsync(cancellationToken)).ToDictionary(priority => priority.ItemId, priority => priority.Name, StringComparer.Ordinal),
+            await CategoriesAsync(cancellationToken));
+
+    // The categories of every ticket type, by id; types sharing a taxonomy list each category once.
+    private async Task<Dictionary<string, TicketCategory>> CategoriesAsync(CancellationToken cancellationToken)
+    {
+        var categories = new Dictionary<string, TicketCategory>(StringComparer.Ordinal);
+
+        foreach (var type in await _contentDefinitionManager.ListTypeDefinitionsAsync())
+        {
+            if (type.Parts.Any(part => part.PartDefinition.Name == TicketsConstants.PartName))
+            {
+                foreach (var category in await _categories.ListAsync(type.Name, cancellationToken: cancellationToken))
+                {
+                    categories.TryAdd(category.Id, category);
+                }
+            }
+        }
+
+        return categories;
+    }
 
     /// <summary>
     /// Keeps the rows of tickets in the scope, checking them against the tickets a batch at a time.
@@ -137,13 +163,20 @@ internal sealed class TicketReportNames
     private readonly IReadOnlyDictionary<string, string> _desks;
     private readonly IReadOnlyDictionary<string, string> _statuses;
     private readonly IReadOnlyDictionary<string, string> _priorities;
+    private readonly IReadOnlyDictionary<string, TicketCategory> _categories;
 
-    public TicketReportNames(IReadOnlyDictionary<string, string> desks, IReadOnlyDictionary<string, string> statuses, IReadOnlyDictionary<string, string> priorities)
+    public TicketReportNames(IReadOnlyDictionary<string, string> desks, IReadOnlyDictionary<string, string> statuses, IReadOnlyDictionary<string, string> priorities, IReadOnlyDictionary<string, TicketCategory> categories = null)
     {
         _desks = desks;
         _statuses = statuses;
         _priorities = priorities;
+        _categories = categories ?? new Dictionary<string, TicketCategory>(StringComparer.Ordinal);
     }
+
+    /// <summary>
+    /// Gets a category by id, or <see langword="null"/> for none or one that was removed.
+    /// </summary>
+    public TicketCategory Category(string id) => string.IsNullOrEmpty(id) ? null : _categories.GetValueOrDefault(id);
 
     public string Desk(string id) => Name(_desks, id);
 

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.ContentFields;
 using CrestApps.OrchardCore.Resources;
 using CrestApps.OrchardCore.ServiceLevels;
 using CrestApps.OrchardCore.Teams;
@@ -28,6 +29,9 @@ using OrchardCore.Modules.Manifest;
         UsersConstants.Feature.Area,
         OrchardCoreFeatureIds.Contents,
         OrchardCoreFeatureIds.Title,
+
+        // Ticket categories and the questions that follow the answers (show-when rules on the type's fields).
+        ContentFieldsConstants.Features.ConditionalFields,
     ]
 )]
 

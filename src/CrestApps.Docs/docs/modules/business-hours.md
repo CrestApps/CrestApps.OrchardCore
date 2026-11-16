@@ -15,7 +15,7 @@ It is three projects:
 | `CrestApps.OrchardCore.BusinessHours.Core` | `DefaultOpenHoursService`, `AddOpenHours()`, `AddBusinessHoursSchedules()`, the schedule rules (`BusinessHoursScheduleHandler`) and source (`BusinessHoursScheduleSource`), and the editor helpers `WeeklyHoursRows` and `HoursDateExceptionText` |
 | `CrestApps.OrchardCore.BusinessHours` (module) | The **Business Hours** feature: the admin pages, the `HoursSchedulePicker` view component, the recipe and deployment steps and the **Check Business Hours** workflow task |
 
-Schedules come from every registered source. The Business Hours feature keeps its own schedules; the Contact Center **Business Hours** feature (`CrestApps.OrchardCore.ContactCenter.BusinessHours`) keeps business-hours calendars, which are another source. See [Contact Center configuration](../contact-center/configuration-deployment.md).
+Schedules come from every registered source. The Business Hours feature keeps the schedules every module uses: the Contact Center **Business Hours** feature (`CrestApps.OrchardCore.ContactCenter.BusinessHours`) depends on it, and a queue's, entry point's, dialer profile's or activity load's calendar id is a schedule id. Before version 3.0 the Contact Center kept its own calendars; an upgrade copies each one to a schedule with the same id. See [Contact Center configuration](../contact-center/configuration-deployment.md).
 
 ## The Business Hours feature
 

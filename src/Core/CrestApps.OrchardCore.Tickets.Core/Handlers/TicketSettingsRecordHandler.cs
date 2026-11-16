@@ -16,7 +16,7 @@ using OrchardCore.Users;
 namespace CrestApps.OrchardCore.Tickets.Core.Handlers;
 
 /// <summary>
-/// Keeps a ticket settings record (a status, a priority, a desk or a saved view) tidy: a recipe's JSON is applied, the
+/// Keeps a ticket settings record (a status, a priority, a desk, a saved view or a board) tidy: a recipe's JSON is applied, the
 /// time stamps are set, and the name is required and unique.
 /// </summary>
 /// <typeparam name="T">The record.</typeparam>
@@ -27,8 +27,8 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
     private readonly IClock _clock;
     private readonly IServiceProvider _services;
 
-    // The owner names of views being imported that match no user here, until the view is validated.
-    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<TicketView, string> _unknownOwners = new();
+    // The owner names of views and boards being imported that match no user here, until the record is validated.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ITicketSharedRecord, string> _unknownOwners = new();
 
     internal readonly IStringLocalizer S;
 
@@ -76,13 +76,14 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
         context.Model.ModifiedUtc = _clock.UtcNow;
     }
 
-    // A personal view travels with its owner's user name (a user id differs from site to site), which is turned into the
-    // user of this site here; a name with no user here is kept aside so validation refuses the view with that name.
+    // A personal view or board travels with its owner's user name (a user id differs from site to site), which is turned
+    // into the user of this site here; a name with no user here is kept aside so validation refuses the record with that
+    // name.
     private async Task ResolveOwnerAsync(T model, System.Text.Json.Nodes.JsonNode data)
     {
-        if (model is not TicketView view
+        if (model is not ITicketSharedRecord shared
             || data is not System.Text.Json.Nodes.JsonObject json
-            || json[TicketView.OwnerUserNameProperty] is not System.Text.Json.Nodes.JsonValue value
+            || json[ITicketSharedRecord.OwnerUserNameProperty] is not System.Text.Json.Nodes.JsonValue value
             || !value.TryGetValue<string>(out var userName)
             || string.IsNullOrWhiteSpace(userName))
         {
@@ -93,12 +94,12 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
 
         if (user is not null && _services.GetService<UserManager<IUser>>() is { } manager)
         {
-            view.OwnerId = await manager.GetUserIdAsync(user);
-            _unknownOwners.Remove(view);
+            shared.OwnerId = await manager.GetUserIdAsync(user);
+            _unknownOwners.Remove(shared);
         }
         else
         {
-            _unknownOwners.AddOrUpdate(view, userName.Trim());
+            _unknownOwners.AddOrUpdate(shared, userName.Trim());
         }
     }
 
@@ -174,20 +175,20 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
             context.Result.Fail(new ValidationResult(S["The color {0} isn't a hex color (such as #1f6feb) or a color name (such as teal).", color], [nameof(TicketStatus.Color)]));
         }
 
-        // Saved views are per owner, so two people may each have one called "My open tickets".
-        if (context.Model is TicketView view)
+        // Saved views and boards are per owner, so two people may each have one called "My open tickets".
+        if (context.Model is ITicketSharedRecord shared)
         {
-            // A user id differs from site to site, so a view imported with an owner who isn't a user here is refused
-            // rather than kept as a view nobody can see.
-            if (_unknownOwners.TryGetValue(view, out var unknownName))
+            // A user id differs from site to site, so a record imported with an owner who isn't a user here is refused
+            // rather than kept as one nobody can see.
+            if (_unknownOwners.TryGetValue(shared, out var unknownName))
             {
-                context.Result.Fail(new ValidationResult(S["The view {0} belongs to the user {1}, who isn't a user of this site. Add the user first, or remove its owner to bring it in as a shared view.", name, unknownName], [nameof(TicketView.OwnerId)]));
+                context.Result.Fail(OwnerNotFound(shared, name, unknownName));
             }
-            else if (!string.IsNullOrEmpty(view.OwnerId)
+            else if (!string.IsNullOrEmpty(shared.OwnerId)
                 && _services.GetService<UserManager<IUser>>() is { } users
-                && await users.FindByIdAsync(view.OwnerId) is null)
+                && await users.FindByIdAsync(shared.OwnerId) is null)
             {
-                context.Result.Fail(new ValidationResult(S["The view {0} belongs to the user {1}, who isn't a user of this site. Add the user first, or remove its owner to bring it in as a shared view.", name, view.OwnerId], [nameof(TicketView.OwnerId)]));
+                context.Result.Fail(OwnerNotFound(shared, name, shared.OwnerId));
             }
 
             return;
@@ -203,4 +204,10 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
             }
         }
     }
+
+    private ValidationResult OwnerNotFound(ITicketSharedRecord record, string name, string owner)
+        => new(record is TicketBoard
+            ? S["The board {0} belongs to the user {1}, who isn't a user of this site. Add the user first, or remove its owner to bring it in as a shared board.", name, owner]
+            : S["The view {0} belongs to the user {1}, who isn't a user of this site. Add the user first, or remove its owner to bring it in as a shared view.", name, owner],
+            [nameof(ITicketSharedRecord.OwnerId)]);
 }

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Addresses;
+using CrestApps.OrchardCore.ContentFields;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
@@ -24,6 +25,18 @@ using OrchardCore.Modules.Manifest;
         ResourcesConstants.Feature.Area,
         PhoneNumberVerificationsConstants.Features.PhoneNumbers,
         OrchardCoreFeatureIds.ContentFields,
+        OrchardCoreFeatureIds.ContentTypes,
+    ]
+)]
+
+[assembly: Feature(
+    Name = "Conditional Fields",
+    Id = ContentFieldsConstants.Features.ConditionalFields,
+    Category = "Content",
+    Description = "Shows a content field only when other answers say so, such as a model question only for laptops. The rules are checked again when the form is sent: what a hidden field holds is dropped.",
+    Dependencies =
+    [
+        OrchardCoreFeatureIds.Contents,
         OrchardCoreFeatureIds.ContentTypes,
     ]
 )]

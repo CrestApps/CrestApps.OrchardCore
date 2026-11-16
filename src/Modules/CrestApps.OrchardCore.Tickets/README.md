@@ -10,11 +10,12 @@ A help desk for Orchard Core. Tickets are content items of any ticket type (a co
 What it adds:
 
 - **Tickets** list on the admin list (saved views, search, filters, bulk actions), the ticket page with its thread and composer, **New ticket** on behalf of a requester, merge and links.
+- **Boards**: tickets as cards in columns of one or more statuses; dragging a card sets the ticket's status through the ticket service. Boards are limited to desks, teams or ticket types, shared with everybody or a team or kept personal, and show only the tickets the viewer may see.
 - **Configuration > Tickets**: desks, statuses, priorities, shared views and the requester e-mails.
 - Permissions over all desks and for each desk, with a view scope of all tickets, my teams' tickets or my assigned tickets.
 - Team assignment by the fewest open tickets or in turn, service-level timers, auto-close of solved tickets and a daily backlog snapshot.
 - With Time Tracker: start and stop work on a ticket, log time spent after the fact (billable or not), and the Ticket Time and Ticket Resolution and Work Time reports.
 - With other features on: workflow events and tasks, webhooks, audit trail events, the **Tickets** data source and five reports, a **Tickets** tab on accounts, personal data export and erasure, AI tools and the `api/tickets/v1` JSON API.
-- Recipe and deployment steps for statuses, priorities, desks and views, and the **Help desk starter** recipe.
+- Recipe and deployment steps for statuses, priorities, desks, views and boards, and the **Help desk starter** recipe.
 
 Documentation: [Tickets](https://orchardcore.crestapps.com/docs/modules/tickets) (technical) and [Tickets](https://orchardcore.crestapps.com/docs/user-manual/administration/tickets) (user manual).

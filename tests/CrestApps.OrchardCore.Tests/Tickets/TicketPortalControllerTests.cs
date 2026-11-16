@@ -305,6 +305,7 @@ public sealed class TicketPortalControllerTests
                 Array.Empty<IAttachmentService>(),
                 localClock.Object,
                 Mock.Of<INotifier>(),
+                Mock.Of<ITicketCategoryService>(),
                 html.Object);
 
             var httpContext = new DefaultHttpContext

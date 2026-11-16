@@ -1,0 +1,70 @@
+/* The ticket board: columns side by side that scroll sideways, cards stacked in each. */
+.ticket-board {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: 1rem;
+}
+
+.ticket-board-column {
+    flex: 0 0 18rem;
+    max-width: 18rem;
+    background-color: var(--bs-tertiary-bg);
+}
+
+.ticket-board-column.is-over-limit {
+    border-color: var(--bs-danger-border-subtle);
+}
+
+.ticket-board-column.is-blocked .ticket-board-cards {
+    opacity: 0.45;
+}
+
+.ticket-board-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-height: 5rem;
+    padding: 0.5rem;
+}
+
+.ticket-board-card {
+    background-color: var(--bs-body-bg);
+}
+
+.ticket-board-card[data-can-move="true"] {
+    cursor: grab;
+}
+
+.ticket-board-card-title {
+    overflow-wrap: anywhere;
+    text-decoration: none;
+}
+
+.ticket-board-card-tags,
+.ticket-board-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+}
+
+.ticket-board-card-meta .badge {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ticket-board-ghost {
+    opacity: 0.4;
+}
+
+.ticket-board-chosen {
+    box-shadow: var(--bs-box-shadow);
+}
+
+/* The board editor's columns. */
+.ticket-board-editor-handle {
+    cursor: grab;
+}

@@ -31,7 +31,6 @@ public sealed class ContactCenterRetentionCoverageTests
         ["AgentQueueMembershipIndex"] = "Reference data. One row per agent and queue pairing.",
         ["AgentAllowedQueueIndex"] = "Reference data. One row per agent and allowed-queue pairing, bounded by configuration rather than traffic.",
         ["AgentStateReasonCodeIndex"] = "Configuration. One row per configured reason code.",
-        ["BusinessHoursCalendarIndex"] = "Configuration. One row per configured calendar.",
         ["ContactCenterEntryPointIndex"] = "Configuration. One row per configured entry point.",
         ["ContactCenterSkillIndex"] = "Configuration. One row per configured skill.",
         ["DialerProfileIndex"] = "Configuration. One row per configured dialer profile.",

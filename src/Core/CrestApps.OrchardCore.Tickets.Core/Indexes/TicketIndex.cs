@@ -157,4 +157,15 @@ public sealed class TicketIndex : MapIndex
     /// Gets or sets when the requester was asked to rate the ticket.
     /// </summary>
     public DateTime? RatingRequestedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the category.
+    /// </summary>
+    public string CategoryId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the category and those above it (<c>/top/child/category/</c>), so a filter on a category finds the
+    /// tickets of its sub-categories.
+    /// </summary>
+    public string CategoryPath { get; set; }
 }

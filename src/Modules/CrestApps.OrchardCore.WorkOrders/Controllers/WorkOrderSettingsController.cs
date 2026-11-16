@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Skills.Models;
 using System.Globalization;
+using CrestApps.OrchardCore.Conditions;
 using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
@@ -300,8 +301,8 @@ public sealed class WorkOrderSettingsController : Controller
                 Max = question.Max,
                 Unit = question.Unit ?? question.Meter,
                 Help = question.Help,
-                ShowWhenQuestionId = question.ShowWhen?.QuestionId,
-                ShowWhenEquals = question.ShowWhen?.EqualsValue,
+                ShowWhenQuestionId = question.GetRule()?.Conditions.FirstOrDefault()?.Source,
+                ShowWhenEquals = question.GetRule()?.Conditions.FirstOrDefault()?.Values.FirstOrDefault(),
             })],
         };
 
@@ -349,15 +350,15 @@ public sealed class WorkOrderSettingsController : Controller
             Unit = row.Kind == ChecklistQuestionKind.Number && !string.IsNullOrWhiteSpace(row.Unit) ? row.Unit.Trim() : null,
             Meter = row.Kind == ChecklistQuestionKind.MeterReading && !string.IsNullOrWhiteSpace(row.Unit) ? row.Unit.Trim() : null,
             Help = string.IsNullOrWhiteSpace(row.Help) ? null : row.Help.Trim(),
-            ShowWhen = ShowWhen(row, previous),
+            Rule = ShowWhen(row, previous),
         })];
 
         // A question shows only after the one it depends on, so it can't depend on itself or on one asked later.
         var positions = item.Questions.Select((question, index) => (question.Id, index)).ToDictionary(entry => entry.Id, entry => entry.index, StringComparer.Ordinal);
 
-        foreach (var question in item.Questions.Where(question => question.ShowWhen is not null))
+        foreach (var question in item.Questions.Where(question => question.Rule is not null))
         {
-            if (!positions.TryGetValue(question.ShowWhen.QuestionId, out var at) || at >= positions[question.Id])
+            if (ConditionalVisibility.Sources(question.Rule).Any(source => !positions.TryGetValue(source, out var at) || at >= positions[question.Id]))
             {
                 ModelState.AddModelError(string.Empty, S["\"{0}\" can only depend on a question asked before it.", question.Text]);
             }
@@ -684,8 +685,11 @@ public sealed class WorkOrderSettingsController : Controller
     private static List<string> Present(params LocalizedString[] badges) => [.. badges.Where(badge => badge is not null).Select(badge => badge.Value)];
 
     // The condition a question row asks for: a saved question and the answer that shows it, or none.
-    private static ChecklistCondition ShowWhen(QuestionEditModel row, Dictionary<string, ChecklistQuestion> previous)
+    private static ConditionRule ShowWhen(QuestionEditModel row, Dictionary<string, ChecklistQuestion> previous)
         => string.IsNullOrWhiteSpace(row.ShowWhenQuestionId) || row.ShowWhenQuestionId == row.Id || !previous.ContainsKey(row.ShowWhenQuestionId) || string.IsNullOrWhiteSpace(row.ShowWhenEquals)
             ? null
-            : new ChecklistCondition { QuestionId = row.ShowWhenQuestionId, EqualsValue = row.ShowWhenEquals.Trim() };
+            : new ConditionRule
+            {
+                Conditions = [new Condition { Source = row.ShowWhenQuestionId, Operator = ConditionOperator.Is, Values = [row.ShowWhenEquals.Trim()] }],
+            };
 }

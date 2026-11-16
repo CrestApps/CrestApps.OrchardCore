@@ -1,0 +1,58 @@
+@model TicketCategoryPartViewModel
+
+<p class="text-body-secondary">@T["What a new ticket of this category starts with. Leave a value empty to take it from the category above, then from the ticket type."]</p>
+
+<div class="ocat-wrapper">
+    <label asp-for="DeskId" class="ocat-label">@T["Desk"]</label>
+    <div class="ocat-end">
+        <select asp-for="DeskId" asp-items="Model.Desks" class="form-select">
+            <option value="">@T["From the category above or the ticket type"]</option>
+        </select>
+        <span class="hint">@T["A ticket a customer opens goes to this desk only when it serves customers like the desk they opened it on."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Team"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("TeamPicker", new { name = Html.NameFor(m => m.TeamId).ToString(), selectedValues = string.IsNullOrEmpty(Model.TeamId) ? Array.Empty<string>() : new[] { Model.TeamId } })
+        <span class="hint">@T["Used when the ticket goes to this category's desk (or the category names none)."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="PriorityId" class="ocat-label">@T["Priority"]</label>
+    <div class="ocat-end">
+        <select asp-for="PriorityId" asp-items="Model.Priorities" class="form-select">
+            <option value="">@T["From the category above or the ticket type"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ServiceLevelPolicyId" class="ocat-label">@T["Service-level policy"]</label>
+    <div class="ocat-end">
+        <select asp-for="ServiceLevelPolicyId" asp-items="Model.Policies" class="form-select">
+            <option value="">@T["From the category above, the ticket type or the desk"]</option>
+        </select>
+        <span class="hint">@T["Used after the policy of the requester's account."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="HiddenFromCustomers" class="form-check-input" type="checkbox" />
+            <label asp-for="HiddenFromCustomers" class="form-check-label">@T["Only agents can choose it"]</label>
+            <span class="hint dashed">@T["Customers don't see this category, or those under it, in the portal and the web form."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="CustomerDescription" class="ocat-label">@T["Description for customers"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="CustomerDescription" class="form-control" rows="2" maxlength="500"></textarea>
+        <span class="hint">@T["Shown under the picker when someone chooses this category, such as what to have ready."]</span>
+    </div>
+</div>

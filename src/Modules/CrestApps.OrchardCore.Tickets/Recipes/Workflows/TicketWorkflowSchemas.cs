@@ -241,7 +241,7 @@ internal sealed class UpdateTicketTaskSchema : TicketTaskSchemaBase
 
     protected override string DisplayText => "Update Ticket";
 
-    protected override string Description => "Changes a ticket's status, priority, desk, team, assignee or subject";
+    protected override string Description => "Changes a ticket's status, priority, desk, team, assignee, subject or category";
 
     protected override IEnumerable<(string Name, string Description)> Fields =>
     [
@@ -251,6 +251,7 @@ internal sealed class UpdateTicketTaskSchema : TicketTaskSchemaBase
         ("TeamId", "Liquid giving a team id; empty keeps it."),
         ("AssigneeId", "Liquid giving a user id; empty keeps it."),
         ("Subject", "Liquid giving the subject; empty keeps it."),
+        ("CategoryId", "Liquid giving a category's term id; empty keeps it. Only the category changes."),
     ];
 }
 

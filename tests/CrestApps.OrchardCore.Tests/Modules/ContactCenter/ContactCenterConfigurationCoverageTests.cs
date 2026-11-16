@@ -58,7 +58,6 @@ public sealed class ContactCenterConfigurationCoverageTests
         [nameof(ActivityQueue)] = ContactCenterDeploymentSteps.Queue,
         [nameof(ActivityQueueGroup)] = ContactCenterDeploymentSteps.QueueGroup,
         [nameof(AgentStateReasonCode)] = ContactCenterDeploymentSteps.AgentStateReasonCode,
-        [nameof(BusinessHoursCalendar)] = ContactCenterDeploymentSteps.BusinessHoursCalendar,
         [nameof(ContactCenterEntryPoint)] = ContactCenterDeploymentSteps.EntryPoint,
         [nameof(ContactCenterSkill)] = ContactCenterDeploymentSteps.Skill,
         [nameof(DialerProfile)] = ContactCenterDeploymentSteps.DialerProfile,

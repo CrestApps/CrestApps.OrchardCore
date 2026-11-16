@@ -1,7 +1,7 @@
 ---
 sidebar_label: Tickets
 title: Tickets
-description: "Answer requests from customers and employees as tickets: desks, statuses and priorities, replies and internal notes, assignment, service-level targets, saved views, merge and links, reports and the account tab."
+description: "Answer requests from customers and employees as tickets: desks, statuses and priorities, replies and internal notes, assignment, service-level targets, saved views, boards, merge and links, reports and the account tab."
 technical_manual:
   - modules/tickets
 ---
@@ -10,8 +10,8 @@ A **ticket** is a request someone made: a customer who can't sign in, an employe
 
 | | |
 | --- | --- |
-| **Menu** | **Service Desk**: Tickets, and for those who manage the service desk, Desks, Statuses, Priorities, Views and E-mails |
-| **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support**; **Manage ticket settings** for the settings; **View ticket reports** for the reports |
+| **Menu** | **Service Desk**: Tickets and Boards, and for those who manage the service desk, Desks, Statuses, Priorities, Views and E-mails |
+| **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support**; **Manage ticket settings** for the settings; **Manage shared ticket boards** or **Manage my own ticket boards** to make boards; **View ticket reports** for the reports |
 | **Feature** | Tickets |
 
 <AskYourAdmin />
@@ -24,6 +24,29 @@ Go to **Tickets**. The list shows the tickets you may see, latest change first.
 - Search by ticket number or words of the subject.
 - Narrow the list by state, status, priority, assignee, team, desk, ticket type or service level (**Past a target**, **Due within 4 hours**), and sort it.
 - Select tickets to **Assign to me**, set a status, **Merge** them into the oldest one, or delete them. Each ticket is checked on its own: one you may not change is left as it was, with a message.
+
+## Work tickets on a board
+
+A board shows tickets as cards in columns, one column for each stage of the work, such as **New**, **Open**, **Pending** and **Solved**. Go to **Service Desk → Boards** and open a board.
+
+- **Drag a card** to another column to change the ticket's status. When the column holds several statuses and has no default, you're asked which one.
+- To move a card without dragging (with the keyboard, or on a phone), select **⋮** on the card and choose the status.
+- If the move isn't allowed, for example because the ticket is closed or waiting for approval, the card goes back and the board says why.
+- Search by number or subject, or show only **My tickets** or **Unassigned tickets**. The board keeps up by itself: when someone changes a ticket's status elsewhere, its card moves within half a minute.
+- A column's count turns red when it holds more tickets than its limit. A column shows at most 50 cards, with how many there are in all.
+
+A board shows only the tickets you may already see, whoever made it.
+
+### Make a board
+
+1. Go to **Service Desk → Boards** and select **Add board**.
+2. Enter a **Name** and, if you want, a **Description**.
+3. Choose **Who it is for**: **Only me**, **A team**, or **Everybody who works on tickets**. Sharing a board needs **Manage shared ticket boards**; with **Manage my own ticket boards** you can keep boards for yourself.
+4. Under **Which tickets it shows**, choose desks, teams and ticket types to keep the board to, say, IT; leave them empty to show everything you may see. Choose whose tickets and the order of the cards.
+5. Shape the **Columns**. A new board starts with a column per status category. Rename columns, tick the statuses each one holds (a status can be in one column only), choose what a card dropped on a column with several statuses gets (**Ask which status**, or one of them), and set a limit if you want. Add columns with **Add column**, remove them with the bin, and drag the handle or use the arrows to put them in order.
+6. Select **Save**.
+
+To change a board later, open it and select **Edit board**. A board you share can be changed by anyone with **Manage shared ticket boards**; a personal board only by you.
 
 ## Open a ticket for someone
 
@@ -96,6 +119,26 @@ The permissions to view and work tickets exist for each desk, so HR tickets can 
 
 An account's page has a **Tickets** tab: its latest tickets you may see, how many are open, **New ticket** for the account, and **View all in the ticket list**, which opens the ticket list showing only that account's tickets, in every state. Remove the **Account** filter there to see every ticket again.
 
+## Sort tickets into categories
+
+Categories say what a ticket is about, such as Hardware > Laptop or Software > Access request. People choose one when they open a ticket, one level at a time, and the category can send the ticket to the right desk and team with the right priority and service level. Categories come from a taxonomy, so you edit them like any other list of terms.
+
+1. Turn on **Taxonomies**, open **Content > Content Items**, choose **New** and **Taxonomy**, and create one, such as *IT categories*, with **Ticket category** as its term type. Add its categories, and sub-categories under them.
+2. Edit a category to set what its new tickets start with: **Desk**, **Team**, **Priority** and **Service-level policy**. Leave a value empty to take it from the category above. Tick **Only agents can choose it** for categories customers shouldn't see, and write a **Description for customers** to tell them what to have ready. Changes to categories take effect once you **Publish** the taxonomy.
+3. Open **Content Definition > Content Types**, edit the ticket type and, on its **Ticket** part, choose the taxonomy under **Categories**. Tick **A category is required** to make people choose one, and **Only the most specific category** so they pick Hardware > Laptop rather than Hardware.
+
+What a ticket starts with comes first from what the agent chose on the form, then from its category, then from the ticket type. A customer's request moves to the category's desk only when that desk serves customers too.
+
+When an agent changes a ticket's category later, only the category changes. If the new category sends tickets elsewhere, the ticket's panel shows **Apply the category's routing**, with what it would change; click it to move the ticket.
+
+## Ask the questions that apply
+
+A ticket type's fields can show only when they apply: "Laptop model" only for laptop problems, "Who else is affected?" only when someone ticks "Is this an outage?". Edit the field in the ticket type and fill in **Show this field when**, with a condition on the category (**is or is under** covers its sub-categories) or on another field. See [Show a field only when it applies](./content-fields#show-a-field-only-when-it-applies).
+
+The questions appear as people choose the category and answer, on the agents' **New ticket** page, in the portal and on the web form. When the ticket is sent, the site checks the conditions again and keeps nothing a hidden question received.
+
+The **Help desk starter** recipe sets up an example: an **IT categories** taxonomy and an **IT request** type that asks for the laptop model for laptop problems, which system for access requests, and who else is affected for an outage.
+
 ## Let customers open requests on the site
 
 Turn on **Tickets Portal** under **Configuration > Features**. Then:
@@ -127,7 +170,7 @@ A new ticket of that type then waits. Each approver of the current step is told 
 
 ## Put a request form on a page
 
-Turn on **Ticket Web Form**, then add a **Ticket Form** widget where visitors should find it (a layer, or a page's flow). Choose the ticket type and the desk its tickets go to, and, if you like, what visitors read after sending. Visitors give a subject and their request, and their name and e-mail when they aren't signed in. Turn on **ReCaptcha** and set its keys under **Settings > Security** so guests have to pass a challenge; the widget warns you until you do. Turn on **Rate Limits** too, to cap how many requests one visitor can send. A guest's e-mail address isn't confirmed, so the e-mails they get only give the request's number, never what they wrote.
+Turn on **Ticket Web Form**, then add a **Ticket Form** widget where visitors should find it (a layer, or a page's flow). Choose the ticket type and the desk its tickets go to, and, if you like, what visitors read after sending. Visitors give their request, choose a category when the ticket type has them, answer the questions customers fill (the same ones as in the portal, appearing as they answer), give a subject unless the type has its own title, and give their name and e-mail when they aren't signed in. A category's desk can take over from the widget's desk. Turn on **ReCaptcha** and set its keys under **Settings > Security** so guests have to pass a challenge; the widget warns you until you do. Turn on **Rate Limits** too, to cap how many requests one visitor can send. A guest's e-mail address isn't confirmed, so the e-mails they get only give the request's number, never what they wrote.
 
 ## Reports
 
@@ -147,4 +190,4 @@ Each report counts only the tickets you may see. To build your own, use the **Ti
 
 ## Start from the help desk recipe
 
-Run the **Help desk starter** recipe (**Configuration > Recipes**) to set up weekday business hours, a standard service level, the Support desk and an IT desk, and two example workflows that start turned off: one escalates a ticket that misses a target, the other adds a note when a requester reopens a solved ticket.
+Run the **Help desk starter** recipe (**Configuration > Recipes**) to set up weekday business hours, a standard service level, the Support desk and an IT desk, an **IT request** type with **IT categories** and questions that follow them, and two example workflows that start turned off: one escalates a ticket that misses a target, the other adds a note when a requester reopens a solved ticket.

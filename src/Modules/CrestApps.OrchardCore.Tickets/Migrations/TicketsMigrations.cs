@@ -15,7 +15,7 @@ namespace CrestApps.OrchardCore.Tickets.Migrations;
 
 /// <summary>
 /// Creates the ticket part, the default ticket type and the ticket index, and seeds the statuses, priorities, a desk and
-/// the saved views a help desk starts with.
+/// the saved views and the board a help desk starts with.
 /// </summary>
 internal sealed class TicketsMigrations : DataMigration
 {
@@ -24,6 +24,7 @@ internal sealed class TicketsMigrations : DataMigration
     private readonly ICatalogManager<TicketPriority> _priorities;
     private readonly ICatalogManager<TicketDesk> _desks;
     private readonly ICatalogManager<TicketView> _views;
+    private readonly ICatalogManager<TicketBoard> _boards;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TicketsMigrations"/> class.
@@ -33,18 +34,21 @@ internal sealed class TicketsMigrations : DataMigration
     /// <param name="priorities">The priorities.</param>
     /// <param name="desks">The desks.</param>
     /// <param name="views">The saved views.</param>
+    /// <param name="boards">The boards.</param>
     public TicketsMigrations(
         IContentDefinitionManager contentDefinitionManager,
         ICatalogManager<TicketStatus> statuses,
         ICatalogManager<TicketPriority> priorities,
         ICatalogManager<TicketDesk> desks,
-        ICatalogManager<TicketView> views)
+        ICatalogManager<TicketView> views,
+        ICatalogManager<TicketBoard> boards)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _statuses = statuses;
         _priorities = priorities;
         _desks = desks;
         _views = views;
+        _boards = boards;
     }
 
     /// <summary>
@@ -74,9 +78,10 @@ internal sealed class TicketsMigrations : DataMigration
 
         await TicketIndexSchema.CreateAsync(SchemaBuilder);
         await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
+        await DefineCategoriesAsync();
         await SeedAsync();
 
-        return 12;
+        return 14;
     }
 
     /// <summary>
@@ -228,18 +233,72 @@ internal sealed class TicketsMigrations : DataMigration
     }
 
     /// <summary>
-    /// Adds who solved a ticket to the ticket index.
+    /// Adds a board shared with everybody, with a column per status category, when the site has no board yet.
     /// </summary>
     /// <returns>The version.</returns>
     public async Task<int> UpdateFrom11Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table.AddColumn<string>("SolvedById", column => column.Nullable().WithLength(26)));
+        await SeedBoardAsync();
 
         return 12;
     }
 
+    /// <summary>
+    /// Adds the category to the ticket index, and the ticket category part and term type. Tickets saved before have no
+    /// category, so nothing is reindexed.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom12Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table =>
+        {
+            table.AddColumn<string>("CategoryId", column => column.Nullable().WithLength(26));
+            table.AddColumn<string>("CategoryPath", column => column.Nullable().WithLength(TicketIndexProvider.CategoryPathLength));
+        });
+        await TicketIndexSchema.CreateCategoryIndexAsync(SchemaBuilder);
+        await DefineCategoriesAsync();
+
+        return 13;
+    }
+
+    /// <summary>
+    /// Adds who solved a ticket to the ticket index.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom13Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table.AddColumn<string>("SolvedById", column => column.Nullable().WithLength(26)));
+
+        return 14;
+    }
+
+    // The part a ticket category's term carries, and a term type with it for taxonomies of ticket categories.
+    private async Task DefineCategoriesAsync()
+    {
+        await _contentDefinitionManager.AlterPartDefinitionAsync(TicketsConstants.CategoryPartName, part => part
+            .Attachable()
+            .WithDisplayName("Ticket category")
+            .WithDescription("Makes a taxonomy term a ticket category: the desk, team, priority and service level its tickets start with, and whether customers can choose it."));
+
+        if (await _contentDefinitionManager.GetTypeDefinitionAsync(TicketsConstants.CategoryTermType) is null)
+        {
+            await _contentDefinitionManager.AlterTypeDefinitionAsync(TicketsConstants.CategoryTermType, type => type
+                .WithDisplayName("Ticket category")
+                .Listable(false)
+                .Creatable(false)
+                .WithPart<TitlePart>(part => part
+                    .WithPosition("1")
+                    .WithSettings(new TitlePartSettings { Options = TitlePartOptions.EditableRequired }))
+                .WithPart(TicketsConstants.CategoryPartName, part => part.WithPosition("2")));
+        }
+    }
+
     private async Task SeedAsync()
     {
+        // The catalog reads its cached copy, which doesn't show records made earlier in this scope, so the board is
+        // made from the statuses created here.
+        var created = new List<TicketStatus>();
+
         if (!(await _statuses.GetAllAsync()).Any())
         {
             (string Name, TicketStatusCategory Category, string CustomerLabel, bool Pauses, string Color, int Order)[] statuses =
@@ -262,6 +321,7 @@ internal sealed class TicketsMigrations : DataMigration
                 status.Color = color;
                 status.Order = order;
                 await _statuses.CreateAsync(status);
+                created.Add(status);
             }
         }
 
@@ -317,5 +377,30 @@ internal sealed class TicketsMigrations : DataMigration
                 await _views.CreateAsync(view);
             }
         }
+
+        await SeedBoardAsync(created);
     }
+
+    private async Task SeedBoardAsync(IReadOnlyList<TicketStatus> created = null)
+    {
+        if ((await _boards.GetAllAsync()).Any())
+        {
+            return;
+        }
+
+        IEnumerable<TicketStatus> statuses = created is { Count: > 0 } ? created : await _statuses.GetAllAsync();
+        var columns = TicketBoardDefaults.Columns(statuses, TicketBoardDefaults.EnglishName);
+
+        if (columns.Count == 0)
+        {
+            return;
+        }
+
+        var board = await _boards.NewAsync();
+        board.Name = "Service desk";
+        board.Description = "Tickets by status. Drag a card to another column to change its status.";
+        board.Columns = columns;
+        await _boards.CreateAsync(board);
+    }
+
 }

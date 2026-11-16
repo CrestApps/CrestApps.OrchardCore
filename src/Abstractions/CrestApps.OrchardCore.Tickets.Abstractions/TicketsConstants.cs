@@ -36,6 +36,21 @@ public static class TicketsConstants
     public const string DefaultContentType = "Ticket";
 
     /// <summary>
+    /// The part a ticket category's taxonomy term carries (<see cref="Models.TicketCategoryPart"/>).
+    /// </summary>
+    public const string CategoryPartName = "TicketCategoryPart";
+
+    /// <summary>
+    /// The term type of ticket categories.
+    /// </summary>
+    public const string CategoryTermType = "TicketCategory";
+
+    /// <summary>
+    /// The name ticket field rules read the category by (Conditional Fields).
+    /// </summary>
+    public const string CategoryConditionSource = "TicketCategory";
+
+    /// <summary>
     /// The group of the tickets' kinds of e-mail and their templates.
     /// </summary>
     public const string EmailGroup = "Tickets";
@@ -90,6 +105,11 @@ public static class TicketsConstants
         /// The saved views.
         /// </summary>
         public const string Views = "TicketViews";
+
+        /// <summary>
+        /// The boards.
+        /// </summary>
+        public const string Boards = "TicketBoards";
     }
 
     /// <summary>

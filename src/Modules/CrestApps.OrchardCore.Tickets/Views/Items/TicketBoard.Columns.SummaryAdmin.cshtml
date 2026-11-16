@@ -1,0 +1,3 @@
+@model ShapeViewModel<TicketBoard>
+
+<span class="badge ta-badge fw-normal" title="@string.Join(", ", Model.Value.Columns.Select(column => column.Name))"><i class="fa-solid fa-table-columns me-1" aria-hidden="true"></i>@T.Plural(Model.Value.Columns.Count, "1 column", "{0} columns")</span>

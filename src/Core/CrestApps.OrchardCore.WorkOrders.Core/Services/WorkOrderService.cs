@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Skills.Models;
 using System.Globalization;
+using CrestApps.OrchardCore.Conditions;
 using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Timeline;
@@ -526,7 +527,9 @@ public sealed class WorkOrderService
 
         foreach (var checklist in workOrder.Checklists)
         {
-            foreach (var question in checklist.Questions.Where(question => question.Required && IsShown(checklist, question)))
+            var hidden = GetHiddenQuestions(checklist);
+
+            foreach (var question in checklist.Questions.Where(question => question.Required && !hidden.Contains(question.Id ?? string.Empty)))
             {
                 if (!checklist.Answers.Any(answer => answer.QuestionId == question.Id))
                 {
@@ -683,17 +686,53 @@ public sealed class WorkOrderService
     /// <returns><see langword="true"/> when it shows.</returns>
     public static bool IsShown(WorkOrderChecklist checklist, ChecklistQuestion question)
     {
-        ArgumentNullException.ThrowIfNull(checklist);
         ArgumentNullException.ThrowIfNull(question);
 
-        if (question.ShowWhen is null || string.IsNullOrEmpty(question.ShowWhen.QuestionId))
+        return !GetHiddenQuestions(checklist).Contains(question.Id ?? string.Empty);
+    }
+
+    /// <summary>
+    /// Gets the questions of a checklist that don't show, given the answers so far: a question shows when its rule is
+    /// met, and a question that depends on a hidden one is hidden too. Pure.
+    /// </summary>
+    /// <param name="checklist">The checklist.</param>
+    /// <returns>The ids of the hidden questions.</returns>
+    public static IReadOnlySet<string> GetHiddenQuestions(WorkOrderChecklist checklist)
+    {
+        ArgumentNullException.ThrowIfNull(checklist);
+
+        var rules = new Dictionary<string, ConditionRule>(StringComparer.Ordinal);
+        var kinds = new Dictionary<string, ChecklistQuestionKind>(StringComparer.Ordinal);
+
+        foreach (var item in checklist.Questions.Where(item => !string.IsNullOrEmpty(item.Id)))
         {
-            return true;
+            kinds[item.Id] = item.Kind;
+
+            if (item.GetRule() is { } rule)
+            {
+                rules[item.Id] = rule;
+            }
         }
 
-        var answer = checklist.Answers.FirstOrDefault(item => item.QuestionId == question.ShowWhen.QuestionId)?.Value;
+        return ConditionalVisibility.GetHidden(rules, source =>
+        {
+            if (!kinds.TryGetValue(source, out var kind))
+            {
+                return null;
+            }
 
-        return string.Equals(answer, question.ShowWhen.EqualsValue, StringComparison.OrdinalIgnoreCase);
+            var answer = checklist.Answers.FirstOrDefault(item => item.QuestionId == source)?.Value;
+
+            if (answer is null)
+            {
+                return ConditionValue.Empty;
+            }
+
+            // A multiple-choice answer keeps its choices one per line.
+            return kind == ChecklistQuestionKind.MultiChoice
+                ? new ConditionValue(answer.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                : ConditionValue.Of(answer);
+        });
     }
 
     private string Check(ChecklistQuestion question, string value)

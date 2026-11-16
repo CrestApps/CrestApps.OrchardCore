@@ -184,6 +184,18 @@ public sealed class TicketPart : ContentPart
     public DateTime? AssignedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the category: a term of the taxonomy the ticket type names
+    /// (<see cref="TicketPartSettings.CategoryTaxonomyId"/>), or none.
+    /// </summary>
+    public string CategoryId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the category and the categories above it as ids, top first, written <c>/top/child/category/</c>, so
+    /// a filter on a category finds its sub-categories too. Kept with <see cref="CategoryId"/>.
+    /// </summary>
+    public string CategoryPath { get; set; }
+
+    /// <summary>
     /// Gets or sets the user who last solved the ticket, when a person did.
     /// </summary>
     public string SolvedById { get; set; }

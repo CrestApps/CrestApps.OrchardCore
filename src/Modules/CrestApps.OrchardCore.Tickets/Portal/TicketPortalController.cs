@@ -5,6 +5,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Attachments.Services;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Tickets.Categories;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.Timeline;
@@ -74,6 +75,7 @@ public sealed class TicketPortalController : Controller
     private readonly IEnumerable<IAttachmentService> _attachments;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
+    private readonly ITicketCategoryService _categories;
 
     internal readonly IHtmlLocalizer H;
 
@@ -91,6 +93,7 @@ public sealed class TicketPortalController : Controller
         IEnumerable<IAttachmentService> attachments,
         ILocalClock localClock,
         INotifier notifier,
+        ITicketCategoryService categories,
         IHtmlLocalizer<TicketPortalController> htmlLocalizer)
     {
         _access = access;
@@ -106,6 +109,7 @@ public sealed class TicketPortalController : Controller
         _attachments = attachments;
         _localClock = localClock;
         _notifier = notifier;
+        _categories = categories;
         H = htmlLocalizer;
     }
 
@@ -228,6 +232,15 @@ public sealed class TicketPortalController : Controller
         }
 
         var ticket = await _contentManager.NewAsync(model.ContentType);
+
+        // Only a category customers can choose; it goes on the item before the editor is read, for the field rules.
+        var category = await TicketCategoryForm.ApplyAsync(_categories, ticket, model.CategoryId, customersOnly: true);
+
+        if (category is null && (model.CategoryRequired || !string.IsNullOrWhiteSpace(model.CategoryId)))
+        {
+            ModelState.AddModelError(nameof(model.CategoryId), H["Choose what your request is about."].Value);
+        }
+
         TicketCustomerEditor.Begin(HttpContext);
         model.Editor = await _contentItemDisplayManager.UpdateEditorAsync(ticket, _updateModelAccessor.ModelUpdater, isNew: true);
 
@@ -260,6 +273,10 @@ public sealed class TicketPortalController : Controller
             EntryId = entryId,
             AttachmentIds = attached,
             DeskId = model.DeskId,
+
+            // The desk the requester chose gives way to the category's when that serves the same requesters.
+            DeskIsSuggestion = true,
+            CategoryId = category?.Id,
             Requester = viewer.Party,
 
             // Filed under the requester's account (on a desk that serves customers), so its administrators follow it.
@@ -738,6 +755,16 @@ public sealed class TicketPortalController : Controller
         if (model.Desks.Count == 1)
         {
             model.DeskId ??= model.Desks[0].Value;
+        }
+
+        // The categories customers can choose; the type's field rules on the category follow the choice.
+        if (!string.IsNullOrEmpty(model.ContentType))
+        {
+            var settings = (await _contentDefinitionManager.GetTypeDefinitionAsync(model.ContentType))?.Parts
+                .FirstOrDefault(part => part.PartDefinition.Name == TicketsConstants.PartName)?.GetSettings<TicketPartSettings>() ?? new TicketPartSettings();
+
+            model.Categories = TicketCategoryForm.Items(await _categories.ListAsync(model.ContentType, customersOnly: true), settings.CategoryLeavesOnly);
+            model.CategoryRequired = settings.CategoryRequired && model.Categories.Count > 0;
         }
 
         model.CanAttach = _uploads.CanAttach;

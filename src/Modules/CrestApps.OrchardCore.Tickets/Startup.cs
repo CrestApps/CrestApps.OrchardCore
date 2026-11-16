@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.ContentFields.Conditions;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
@@ -8,6 +9,7 @@ using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.Tickets.BackgroundTasks;
+using CrestApps.OrchardCore.Tickets.Categories;
 using CrestApps.OrchardCore.Tickets.Core;
 using CrestApps.OrchardCore.Tickets.Core.Handlers;
 using CrestApps.OrchardCore.Tickets.Core.Indexes;
@@ -18,12 +20,14 @@ using CrestApps.OrchardCore.Tickets.Drivers;
 using CrestApps.OrchardCore.Tickets.Migrations;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Navigation;
+using CrestApps.OrchardCore.Tickets.Portal;
 using CrestApps.OrchardCore.Tickets.Recipes;
 using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.Tickets.ViewModels;
 using CrestApps.OrchardCore.Timeline;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -38,6 +42,7 @@ using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
+using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 
@@ -71,6 +76,12 @@ public sealed class Startup : StartupBase
         services.AddContentPart<TicketPart>()
             .UseDisplayDriver<TicketPartDisplayDriver>()
             .UseDisplayDriver<TicketPlanningDisplayDriver>();
+        services.AddContentPart<TicketCategoryPart>()
+            .UseDisplayDriver<TicketCategoryPartDisplayDriver>();
+
+        // The category as a source of the type's field rules, and the fields customers don't fill in as hidden fields.
+        services.AddScoped<IContentConditionSource, TicketCategoryConditionSource>();
+        services.AddScoped<IContentFieldVisibilityProvider, TicketCustomerFieldsVisibility>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, TicketPartSettingsDisplayDriver>();
         services.AddScoped<TicketUploads>();
         services.AddScoped<TicketPresence>();
@@ -93,12 +104,16 @@ public sealed class Startup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketPriority>, TicketSettingsRecordHandler<TicketPriority>>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketDesk>, TicketSettingsRecordHandler<TicketDesk>>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketView>, TicketSettingsRecordHandler<TicketView>>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketBoard>, TicketSettingsRecordHandler<TicketBoard>>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketBoard>, TicketBoardHandler>());
 
         services.AddDisplayDriver<TicketStatus, TicketStatusDisplayDriver>();
         services.AddDisplayDriver<TicketPriority, TicketPriorityDisplayDriver>();
         services.AddDisplayDriver<TicketDesk, TicketDeskDisplayDriver>();
         services.AddDisplayDriver<TicketDesk, TicketDeskPriorityMatrixDisplayDriver>();
         services.AddDisplayDriver<TicketView, TicketViewDisplayDriver>();
+        services.AddDisplayDriver<TicketBoard, TicketBoardDisplayDriver>();
+        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, TicketsResourceConfiguration>();
 
         services.AddPermissionProvider<TicketsPermissionsProvider>();
         services.AddScoped<IAuthorizationHandler, TicketContentAuthorizationHandler>();
@@ -148,6 +163,7 @@ public sealed class RecipesStartup : StartupBase
         services.AddRecipeExecutionStep<TicketPrioritiesRecipeStep>();
         services.AddRecipeExecutionStep<TicketDesksRecipeStep>();
         services.AddRecipeExecutionStep<TicketViewsRecipeStep>();
+        services.AddRecipeExecutionStep<TicketBoardsRecipeStep>();
     }
 }
 
@@ -164,6 +180,7 @@ public sealed class DeploymentStartup : StartupBase
         services.AddDeployment<TicketPrioritiesDeploymentSource, TicketPrioritiesDeploymentStep, TicketPrioritiesDeploymentStepDisplayDriver>();
         services.AddDeployment<TicketDesksDeploymentSource, TicketDesksDeploymentStep, TicketDesksDeploymentStepDisplayDriver>();
         services.AddDeployment<TicketViewsDeploymentSource, TicketViewsDeploymentStep, TicketViewsDeploymentStepDisplayDriver>();
+        services.AddDeployment<TicketBoardsDeploymentSource, TicketBoardsDeploymentStep, TicketBoardsDeploymentStepDisplayDriver>();
     }
 }
 
@@ -180,9 +197,11 @@ public sealed class RecipesSchemaStartup : StartupBase
         services.AddScoped<IRecipeStep, TicketPrioritiesRecipeStepSchema>();
         services.AddScoped<IRecipeStep, TicketDesksRecipeStepSchema>();
         services.AddScoped<IRecipeStep, TicketViewsRecipeStepSchema>();
+        services.AddScoped<IRecipeStep, TicketBoardsRecipeStepSchema>();
         services.AddDeploymentStepSchema<TicketStatusesDeploymentStepSchema>();
         services.AddDeploymentStepSchema<TicketPrioritiesDeploymentStepSchema>();
         services.AddDeploymentStepSchema<TicketDesksDeploymentStepSchema>();
         services.AddDeploymentStepSchema<TicketViewsDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<TicketBoardsDeploymentStepSchema>();
     }
 }

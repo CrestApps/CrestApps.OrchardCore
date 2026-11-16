@@ -62,6 +62,25 @@ public static class TicketCustomerEditor
     }
 
     /// <summary>
+    /// The fields of a ticket type customers don't fill in, as <c>{TypePartName}.{FieldName}</c>.
+    /// </summary>
+    /// <param name="type">The ticket type.</param>
+    /// <returns>The fields.</returns>
+    public static IEnumerable<string> HiddenFields(ContentTypeDefinition type)
+    {
+        foreach (var part in type?.Parts ?? [])
+        {
+            foreach (var field in part.PartDefinition.Fields)
+            {
+                if (!field.GetSettings<TicketFieldCustomerSettings>().CustomerEditable)
+                {
+                    yield return $"{part.Name}.{field.Name}";
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// Puts back, from a new item, every part and field customers don't fill in.
     /// </summary>
     /// <param name="edited">The item the customer's form was read into.</param>

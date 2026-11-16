@@ -251,12 +251,12 @@ These tools act for the signed-in person using the AI, within the tickets they m
 
 | Function | Description |
 | --- | --- |
-| `listTicketOptions` | Lists the desks the user may open tickets in, every status with its category, and the priorities, with the ids the other ticket tools take. |
+| `listTicketOptions` | Lists the desks the user may open tickets in, every status with its category, the priorities and the ticket categories, with the ids the other ticket tools take. |
 | `searchTickets` | Finds the tickets the user may view by number or subject words, status category, desk and assignee (`take` up to 25). |
 | `getTicket` | Reads a ticket by id or number with its latest 20 replies, internal notes and events. |
-| `createTicket` | Opens a ticket on a desk the user may reply in, for a requester named by name and e-mail. |
+| `createTicket` | Opens a ticket on a desk the user may reply in, for a requester named by name and e-mail, with a category from `listTicketOptions`. |
 | `addTicketReply` | Sends a public reply (e-mailed to the requester) or adds an internal note, and can set a status with a reply. |
-| `updateTicket` | Changes a ticket's status or priority (edit permission) or its team or assignee (assign permission). |
+| `updateTicket` | Changes a ticket's status, priority or category (edit permission) or its team or assignee (assign permission). |
 
 ### Commerce tools
 
