@@ -206,6 +206,66 @@ public sealed class ProjectReferenceRulesTests
         }
     }
 
+    /// <summary>
+    /// A module references another module only to carry a feature dependency to the site that installs its package.
+    /// A module package tells the host it is a module through its <c>build\&lt;package&gt;.props</c>, and NuGet drops a
+    /// dependency's build assets unless the reference sets <c>PrivateAssets="none"</c>. Without it the dependency's
+    /// assembly is copied but never loaded as a module, so its feature is missing and every service it registers fails
+    /// to resolve (production, 2026-11-16: Messaging broadcasts could not resolve <c>IOutreachEngine</c>).
+    /// </summary>
+    [Fact]
+    public void ModuleReferences_ToOtherModules_FlowToTheHost()
+    {
+        var root = FindRepositoryRoot();
+        var moduleRoots = new[]
+        {
+            Path.Combine(root, "src", "Modules") + Path.DirectorySeparatorChar,
+            Path.Combine(root, "src", "Themes") + Path.DirectorySeparatorChar,
+        };
+        var offenders = new List<string>();
+
+        foreach (var moduleRoot in moduleRoots.Where(Directory.Exists))
+        {
+            foreach (var project in Directory.EnumerateFiles(moduleRoot, "*.csproj", SearchOption.AllDirectories))
+            {
+                var document = XDocument.Load(project);
+
+                foreach (var element in document.Descendants("ProjectReference"))
+                {
+                    var include = element.Attribute("Include")?.Value;
+
+                    // A path built from an MSBuild property points outside this repository (a local Orchard Core
+                    // checkout, for example), never at one of its modules.
+                    if (string.IsNullOrEmpty(include) || include.Contains("$(", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    var target = Path.GetFullPath(Path.Combine(
+                        Path.GetDirectoryName(project)!,
+                        include.Replace('\\', Path.DirectorySeparatorChar)));
+
+                    if (!moduleRoots.Any(moduleRootPath => target.StartsWith(moduleRootPath, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        continue;
+                    }
+
+                    var privateAssets = element.Attribute("PrivateAssets")?.Value ?? element.Element("PrivateAssets")?.Value;
+
+                    if (!string.Equals(privateAssets, "none", StringComparison.OrdinalIgnoreCase))
+                    {
+                        offenders.Add($"{Path.GetFileNameWithoutExtension(project)} -> {Path.GetFileNameWithoutExtension(target)}");
+                    }
+                }
+            }
+        }
+
+        Assert.True(offenders.Count == 0,
+            "A reference from one module to another must set PrivateAssets=\"none\", or the site that installs the " +
+            "package gets the referenced module's assembly without loading it as a module. Offending references: " +
+            string.Join(", ", offenders) + ".");
+    }
+
     private static bool IsSharedLibrary(string projectName)
         => projectName.EndsWith(".Abstractions", StringComparison.Ordinal) ||
             projectName.EndsWith(".Core", StringComparison.Ordinal);

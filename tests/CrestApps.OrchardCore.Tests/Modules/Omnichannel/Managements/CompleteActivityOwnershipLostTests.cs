@@ -46,6 +46,28 @@ public sealed class CompleteActivityOwnershipLostTests
         Assert.NotEmpty(harness.Notifier.Invocations);
     }
 
+    // Production, 2026-11-16: the dialer completed a record whose number was not in service, then the agent's screen
+    // submitted it; the agent was told the record went to another agent and a warning was logged for each submit.
+    [Fact]
+    public async Task CompleteAsync_WhenTheDialerAlreadyFinishedTheRecord_SaysItWasAlreadyCompleted()
+    {
+        // Arrange
+        var harness = new Harness(canCompleteOwn: true);
+        var activity = harness.AddActivity(dialerProfileId: "power-profile");
+        activity.Status = ActivityStatus.Completed;
+
+        // Act
+        var result = await harness.Controller.CompleteAsync(activity.ItemId, returnUrl: null, actionScheduleDates: [], actionPreparationNotes: []);
+
+        // Assert
+        Assert.IsType<RedirectToActionResult>(result);
+        harness.Notifier.Verify(
+            notifier => notifier.AddAsync(
+                It.IsAny<NotifyType>(),
+                It.Is<LocalizedHtmlString>(message => message.Name.Contains("already completed", StringComparison.Ordinal))),
+            Times.Once);
+    }
+
     [Fact]
     public async Task Complete_WhenTheUserCannotCompleteTheirOwnActivities_StillForbids()
     {
