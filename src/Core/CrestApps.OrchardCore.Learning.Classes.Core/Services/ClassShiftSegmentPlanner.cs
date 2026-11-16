@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Services;
 using CrestApps.OrchardCore.Staff.Services;
@@ -57,7 +58,16 @@ internal sealed class ClassShiftSegmentPlanner
 
         if (remove ?? appointment.Status is AppointmentStatus.Cancelled or AppointmentStatus.Expired)
         {
-            await shifts.RemoveSegmentsAsync(worker.ItemId, ClassesConstants.RegistrationSource, appointment.ItemId, meetings.Min(meeting => meeting.StartUtc), meetings.Max(meeting => meeting.EndUtc), actor, cancellationToken);
+            var fromUtc = meetings.Min(meeting => meeting.StartUtc);
+            var toUtc = meetings.Max(meeting => meeting.EndUtc);
+
+            // The segment of each meeting, then one placed before meetings had sources of their own.
+            for (var index = 0; index < meetings.Length; index++)
+            {
+                await shifts.RemoveSegmentsAsync(worker.ItemId, ClassesConstants.RegistrationSource, SegmentSourceId(appointment.ItemId, index), fromUtc, toUtc, actor, cancellationToken);
+            }
+
+            await shifts.RemoveSegmentsAsync(worker.ItemId, ClassesConstants.RegistrationSource, appointment.ItemId, fromUtc, toUtc, actor, cancellationToken);
 
             return ClassFollowUpOutcome.Done;
         }
@@ -67,8 +77,11 @@ internal sealed class ClassShiftSegmentPlanner
             return ClassFollowUpOutcome.Done;
         }
 
-        foreach (var (startUtc, endUtc) in meetings)
+        // Each meeting has a source of its own: placing a source replaces its earlier segments on the shift, so two
+        // meetings on one shift would otherwise keep only the last.
+        for (var index = 0; index < meetings.Length; index++)
         {
+            var (startUtc, endUtc) = meetings[index];
             var placed = await shifts.PlaceSegmentAsync(new ShiftSegmentPlacement
             {
                 WorkerId = worker.ItemId,
@@ -76,7 +89,7 @@ internal sealed class ClassShiftSegmentPlanner
                 StartUtc = startUtc,
                 EndUtc = endUtc,
                 Source = ClassesConstants.RegistrationSource,
-                SourceId = appointment.ItemId,
+                SourceId = SegmentSourceId(appointment.ItemId, index),
                 Reason = $"Class: {session?.Title}",
                 Actor = actor,
             }, cancellationToken);
@@ -89,4 +102,7 @@ internal sealed class ClassShiftSegmentPlanner
 
         return ClassFollowUpOutcome.Done;
     }
+
+    private static string SegmentSourceId(string appointmentId, int meetingIndex)
+        => appointmentId + ":" + meetingIndex.ToString(CultureInfo.InvariantCulture);
 }

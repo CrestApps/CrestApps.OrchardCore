@@ -46,10 +46,40 @@ public sealed class ClassShiftSegmentObserverTests
         Assert.Equal(2, placements.Count);
         Assert.All(placements, placement =>
         {
-            Assert.Equal(("staff-ana", ActivityKind.Training, ClassesConstants.RegistrationSource, "appointment-1"), (placement.WorkerId, placement.Kind, placement.Source, placement.SourceId));
+            Assert.Equal(("staff-ana", ActivityKind.Training, ClassesConstants.RegistrationSource), (placement.WorkerId, placement.Kind, placement.Source));
             Assert.Equal("Class: First aid", placement.Reason);
         });
         Assert.Equal([(_firstStart, _firstStart.AddHours(2)), (_secondStart, _secondStart.AddHours(2))], placements.Select(placement => (placement.StartUtc, placement.EndUtc)));
+
+        // Each meeting has a source of its own, so two meetings on one shift do not replace each other.
+        Assert.Equal(["appointment-1:0", "appointment-1:1"], placements.Select(placement => placement.SourceId));
+    }
+
+    [Fact]
+    public async Task TwoMeetingsOnOneShift_BothStayOnIt()
+    {
+        // Arrange: a morning and an afternoon meeting on the same day; the shift service replaces a source's segments.
+        var kit = new Kit(meetings:
+        [
+            new SchedulingSessionMeeting { StartUtc = _firstStart, EndUtc = _firstStart.AddHours(2) },
+            new SchedulingSessionMeeting { StartUtc = _firstStart.AddHours(4), EndUtc = _firstStart.AddHours(6) },
+        ]);
+        var onShift = new List<ShiftSegmentPlacement>();
+
+        kit.Shifts
+            .Setup(service => service.PlaceSegmentAsync(It.IsAny<ShiftSegmentPlacement>(), It.IsAny<CancellationToken>()))
+            .Callback<ShiftSegmentPlacement, CancellationToken>((placement, _) =>
+            {
+                onShift.RemoveAll(segment => segment.Source == placement.Source && segment.SourceId == placement.SourceId);
+                onShift.Add(placement);
+            })
+            .ReturnsAsync(new PlanningResult<IReadOnlyList<CalendarEvent>>());
+
+        // Act
+        await kit.Observer.OnChangedAsync(Change(AppointmentChangeKind.Confirmed, Registration("user-ana")), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, onShift.Count);
     }
 
     [Fact]
@@ -102,8 +132,12 @@ public sealed class ClassShiftSegmentObserverTests
         // Act
         await kit.Observer.OnChangedAsync(Change(AppointmentChangeKind.Cancelled, Registration("user-ana")), TestContext.Current.CancellationToken);
 
-        // Assert
-        kit.Shifts.Verify(service => service.RemoveSegmentsAsync("staff-ana", ClassesConstants.RegistrationSource, "appointment-1", _firstStart, _secondStart.AddHours(2), "tester", It.IsAny<CancellationToken>()), Times.Once);
+        // Assert: the segment of each meeting, and one placed before meetings had sources of their own.
+        foreach (var sourceId in new[] { "appointment-1:0", "appointment-1:1", "appointment-1" })
+        {
+            kit.Shifts.Verify(service => service.RemoveSegmentsAsync("staff-ana", ClassesConstants.RegistrationSource, sourceId, _firstStart, _secondStart.AddHours(2), "tester", It.IsAny<CancellationToken>()), Times.Once);
+        }
+
         kit.Shifts.VerifyNoOtherCalls();
     }
 
@@ -151,7 +185,7 @@ public sealed class ClassShiftSegmentObserverTests
 
     private sealed class Kit
     {
-        public Kit()
+        public Kit(List<SchedulingSessionMeeting> meetings = null)
         {
             var staff = new Mock<IStaffDirectory>();
             var sessions = new Mock<ISchedulingSessionService>();
@@ -161,7 +195,7 @@ public sealed class ClassShiftSegmentObserverTests
             {
                 ItemId = "session-1",
                 Title = "First aid",
-                Meetings =
+                Meetings = meetings ??
                 [
                     new SchedulingSessionMeeting { StartUtc = _firstStart, EndUtc = _firstStart.AddHours(2) },
                     new SchedulingSessionMeeting { StartUtc = _secondStart, EndUtc = _secondStart.AddHours(2) },
