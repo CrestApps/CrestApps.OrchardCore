@@ -95,6 +95,9 @@ public sealed class CanadaPayrollFilingsTests
         Assert.Equal((5000m, 298.04m, 65.00m, 500m, 5000m, 21.50m, 5000m), (slip.Boxes["A"], slip.Boxes["B.A"], slip.Boxes["C"], slip.Boxes["E"], slip.Boxes["G"], slip.Boxes["H"], slip.Boxes["I"]));
         Assert.Equal((298.04m, 30.10m), (rl1.Boxes["QPP.Employer"], rl1.Boxes["QPIP.Employer"]));
 
+        // The employer's health services fund contribution is on the RL-1 Summary and owed to Revenu Québec.
+        Assert.Equal((82.50m, 500m + 298.04m + 21.50m + 298.04m + 30.10m + 82.50m), (rl1.Boxes["HSF"], rl1.Boxes["Owed"]));
+
         // The T4 has the QPP in box 17 and the federal tax only (never Quebec's) in box 22.
         var t4Slip = Assert.Single(t4.People);
 
@@ -105,7 +108,7 @@ public sealed class CanadaPayrollFilingsTests
         var quebec = Assert.Single(liabilities, item => item.Jurisdiction == "CA-QC");
 
         Assert.Equal(400m + 65.00m + 91.00m, cra.Owed);
-        Assert.Equal((500m + 298.04m + 298.04m + 21.50m + 30.10m, new DateOnly(2026, 12, 15)), (quebec.Owed, quebec.DueDate));
+        Assert.Equal((500m + 298.04m + 298.04m + 21.50m + 30.10m + 82.50m, new DateOnly(2026, 12, 15)), (quebec.Owed, quebec.DueDate));
     }
 
     [Theory]
@@ -196,6 +199,37 @@ public sealed class CanadaPayrollFilingsTests
 
         // The first statement has none before it: the first province after it.
         Assert.Equal([("ON", 2), ("AB", 2)], groups.Select(group => (group.Province, group.Statements.Count)));
+    }
+
+    [Fact]
+    public void TheTaxProvider_IsTheOneNamed_ElseTheOnlyOne_ElseTheOnlyOneBesidesTheBuiltInRules()
+    {
+        var builtIn = new NamedProvider(CrestApps.OrchardCore.Taxation.Core.Services.IncomeTaxRulesProvider.ProviderName);
+        var engine = new NamedProvider("Engine");
+        var other = new NamedProvider("Other");
+
+        Assert.Same(builtIn, TaxesPayCalculationStep.ChooseProvider([builtIn], null));
+        Assert.Same(engine, TaxesPayCalculationStep.ChooseProvider([builtIn, engine], null));
+        Assert.Same(builtIn, TaxesPayCalculationStep.ChooseProvider([builtIn, engine], builtIn.Name));
+        Assert.Null(TaxesPayCalculationStep.ChooseProvider([builtIn, engine, other], null));
+        Assert.Null(TaxesPayCalculationStep.ChooseProvider([builtIn, engine], "Gone"));
+    }
+
+    [Fact]
+    public void TheTaxRequest_CarriesTheEmployersRegistrations_WithTheirRateOnThePayDate()
+    {
+        var employer = new Employer
+        {
+            Registrations =
+            [
+                new EmployerTaxRegistration { Jurisdiction = "CA-QC", AccountId = "1234567890TQ0001", Rates = [new DatedRate { EffectiveFrom = new DateOnly(2026, 1, 1), Rate = 2.31m }, new DatedRate { EffectiveFrom = new DateOnly(2026, 12, 1), Rate = 2.5m }] },
+                new EmployerTaxRegistration { Jurisdiction = "CA", AccountId = "123456789RP0001" },
+            ],
+        };
+        var step = new TaxesPayCalculationStep([], Options.Create(new IncomeTaxCategoryOptions()), new ServiceCollection().BuildServiceProvider(), new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<TaxesPayCalculationStep>());
+        var request = step.Request(new PayCalculationContext { Employer = employer, PayDate = new DateOnly(2026, 11, 20) });
+
+        Assert.Equal([("CA-QC", "1234567890TQ0001", (decimal?)2.31m), ("CA", "123456789RP0001", null)], request.Registrations.Select(registration => (registration.Jurisdiction, registration.AccountId, registration.Rate)));
     }
 
     [Theory]
@@ -397,6 +431,7 @@ public sealed class CanadaPayrollFilingsTests
                     Tax(CanadaIncomeTax.TaxCodes.EmploymentInsuranceQuebec + "-ER", "CA-QC", CanadaIncomeTax.Categories.InsurableEarnings, PayLinePayer.Employer, 5000, 91.00m, remittedTo: "CA"),
                     Tax(CanadaIncomeTax.TaxCodes.Qpip, "CA-QC", CanadaIncomeTax.Categories.InsurableEarnings, PayLinePayer.Employee, 5000, 21.50m),
                     Tax(CanadaIncomeTax.TaxCodes.Qpip + "-ER", "CA-QC", CanadaIncomeTax.Categories.InsurableEarnings, PayLinePayer.Employer, 5000, 30.10m),
+                    Tax(CanadaIncomeTax.TaxCodes.HealthServicesFund, "CA-QC", IncomeTaxCategories.IncomeTax, PayLinePayer.Employer, 5000, 82.50m),
                 ]
                 :
                 [
@@ -440,6 +475,21 @@ public sealed class CanadaPayrollFilingsTests
             services.AddPayrollFilingForm<FormT4>();
             services.AddPayrollFilingForm<FormRl1>();
         });
+
+    private sealed class NamedProvider : IIncomeTaxProvider
+    {
+        public NamedProvider(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; }
+
+        public LocalizationSource DisplayName { get; } = LocalizationSource.Create<NamedProvider>("Named");
+
+        public Task<IncomeTaxResult> CalculateAsync(IncomeTaxRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(new IncomeTaxResult());
+    }
 
     private sealed class FixedProvider : IIncomeTaxProvider
     {

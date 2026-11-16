@@ -62,4 +62,12 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
   </ItemGroup>
 
+  <!-- The modules of the Payroll feature's dependencies, so their packages come along. Module code never uses their types. -->
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Addresses\CrestApps.OrchardCore.Addresses.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Approvals\CrestApps.OrchardCore.Approvals.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Staff\CrestApps.OrchardCore.Staff.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Taxation\CrestApps.OrchardCore.Taxation.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
 </Project>

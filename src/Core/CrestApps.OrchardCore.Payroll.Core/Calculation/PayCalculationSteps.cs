@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Taxation.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.Localization;
@@ -559,7 +560,7 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
 
         if (provider is null)
         {
-            context.Warnings.Add(S["No tax provider is set up: no taxes were withheld."]);
+            context.Warnings.Add(S["No tax provider is set up, or several are on and Payroll's settings name none: no taxes were withheld."]);
 
             return;
         }
@@ -616,6 +617,14 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
                 .Select(registration => registration.Jurisdiction)
                 .Where(jurisdiction => !string.IsNullOrEmpty(jurisdiction))
                 .Distinct(StringComparer.OrdinalIgnoreCase)],
+            Registrations = [.. (context.Employer?.Registrations ?? [])
+                .Where(registration => !string.IsNullOrEmpty(registration.Jurisdiction))
+                .Select(registration => new IncomeTaxRegistration
+                {
+                    Jurisdiction = registration.Jurisdiction,
+                    AccountId = registration.AccountId,
+                    Rate = registration.RateOn(context.PayDate),
+                })],
             EarnerId = context.Profile?.StaffMemberId,
             IncomeKind = context.Profile?.WorkerType == PayWorkerType.Contractor ? IncomeKind.Contractor : IncomeKind.Employment,
             ContractorWithholding = context.Profile is { WorkerType: PayWorkerType.Contractor } profile && WithholdsOnContractor(profile),
@@ -741,9 +750,36 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
             ? (await site.GetSettingsAsync<PayrollSettings>())?.TaxProvider
             : null;
 
-        return string.IsNullOrEmpty(name)
-            ? (_providers.Count() == 1 ? _providers.First() : null)
-            : _providers.FirstOrDefault(provider => provider.Name == name);
+        return ChooseProvider(_providers, name);
+    }
+
+    /// <summary>
+    /// Chooses the tax provider: the one the settings name; with none named, the only provider, or else the only one
+    /// besides the built-in income tax rules (a tax engine someone turned on is the one meant); otherwise none, and the
+    /// settings must name one.
+    /// </summary>
+    /// <param name="providers">The providers.</param>
+    /// <param name="name">The name in the settings, or <see langword="null"/>.</param>
+    /// <returns>The provider, or <see langword="null"/>.</returns>
+    public static IIncomeTaxProvider ChooseProvider(IEnumerable<IIncomeTaxProvider> providers, string name)
+    {
+        ArgumentNullException.ThrowIfNull(providers);
+
+        var all = providers.ToList();
+
+        if (!string.IsNullOrEmpty(name))
+        {
+            return all.FirstOrDefault(provider => provider.Name == name);
+        }
+
+        if (all.Count == 1)
+        {
+            return all[0];
+        }
+
+        var others = all.Where(provider => provider.Name != IncomeTaxRulesProvider.ProviderName).ToList();
+
+        return others.Count == 1 ? others[0] : null;
     }
 }
 

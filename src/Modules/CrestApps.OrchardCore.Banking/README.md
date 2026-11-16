@@ -90,7 +90,7 @@ Register an `ICheckVoucherSource` for the source kind to print the stub.
 
 ### Documentation
 
-- Technical: `src/CrestApps.Docs/docs/modules/checks.md`
+- Technical: `src/CrestApps.Docs/docs/modules/banking.md` (the Checks section)
 - User manual: `src/CrestApps.Docs/docs/user-manual/finance/checks.md`
 
 ## Disbursements and Direct Deposit
@@ -125,4 +125,4 @@ var result = await disbursementService.CreateAsync(new DisbursementRequest
 });
 ```
 
-See the [Disbursements documentation](https://orchardcore.crestapps.com/docs/modules/disbursements).
+See the [Disbursements and Direct Deposit documentation](https://orchardcore.crestapps.com/docs/modules/banking#disbursements-and-direct-deposit).

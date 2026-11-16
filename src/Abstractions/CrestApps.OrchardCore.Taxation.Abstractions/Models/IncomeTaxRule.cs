@@ -76,6 +76,13 @@ public sealed class IncomeTaxRule : CatalogItem, INameAwareModel, IModifiedUtcAw
     public decimal? Rate { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the payer's own rate replaces <see cref="Rate"/>: the rate its registration
+    /// with the jurisdiction (the collecting one, when another collects the tax) has on the pay date, such as an
+    /// unemployment insurance rate or Quebec's health services fund rate. <see cref="Rate"/> applies when it has none.
+    /// </summary>
+    public bool RateFromRegistration { get; set; }
+
+    /// <summary>
     /// Gets or sets the fixed amount, for a method that takes one.
     /// </summary>
     public decimal? FixedAmount { get; set; }
@@ -189,6 +196,20 @@ public sealed class IncomeTaxRule : CatalogItem, INameAwareModel, IModifiedUtcAw
 
     /// <inheritdoc />
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets a copy of the rule with another rate, for one calculation.
+    /// </summary>
+    /// <param name="rate">The rate, as a percent.</param>
+    /// <returns>The copy.</returns>
+    public IncomeTaxRule WithRate(decimal rate)
+    {
+        var copy = (IncomeTaxRule)MemberwiseClone();
+
+        copy.Rate = rate;
+
+        return copy;
+    }
 
     /// <summary>
     /// Gets whether the rule applies on a pay date.

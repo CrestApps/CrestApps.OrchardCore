@@ -1,7 +1,7 @@
 {
   "name": "IncomeTaxCanada2026",
   "displayName": "Canada Income Tax: 2026 rules",
-  "description": "Adds Canadian source deductions for pay dates in 2026, from the CRA payroll deductions formulas (T4127, 122nd edition effective January 1, 2026, and 123rd edition effective July 1, 2026, for British Columbia, Newfoundland and Labrador and Prince Edward Island) and Revenu Québec's formulas (TP-1015.F, 2026-01): federal tax with TD1 claims and the K credits; provincial and territorial tax for every province and territory, with the Ontario surtax, Ontario Health Premium and Ontario tax reduction, the British Columbia tax reduction, Alberta's supplemental credit and the falling basic amounts of Manitoba and Yukon; Quebec tax and the federal abatement; CPP (5.95% over the 3,500 basic exemption, up to 4,230.45) and CPP2 (4% from 74,600 to 85,000, up to 416), each matched by the employer; EI (1.63%, up to 1,123.07; employer 1.4 times); and in Quebec QPP (6.30%, up to 4,479.30), QPP2, QPIP (0.43%, employer 0.602%) and EI at 1.30%. Federal and provincial taxes apply to employers registered in CA, and the Quebec ones to employers registered in CA-QC. Check the amounts against the CRA's and Revenu Québec's current publications before paying people with them.",
+  "description": "Adds Canadian source deductions for pay dates in 2026, from the CRA payroll deductions formulas (T4127, 122nd edition effective January 1, 2026, and 123rd edition effective July 1, 2026, for British Columbia, Newfoundland and Labrador and Prince Edward Island) and Revenu Québec's formulas (TP-1015.F, 2026-01): federal tax with TD1 claims and the K credits; provincial and territorial tax for every province and territory, with the Ontario surtax, Ontario Health Premium and Ontario tax reduction, the British Columbia tax reduction, Alberta's supplemental credit and the falling basic amounts of Manitoba and Yukon; Quebec tax and the federal abatement; CPP (5.95% over the 3,500 basic exemption, up to 4,230.45) and CPP2 (4% from 74,600 to 85,000, up to 416), each matched by the employer; EI (1.63%, up to 1,123.07; employer 1.4 times); and in Quebec QPP (6.30%, up to 4,479.30), QPP2, QPIP (0.43%, employer 0.602%) and EI at 1.30%; and the employer's contribution to the Quebec health services fund, at the rate on the employer's CA-QC registration (1.65% when it has none, the lowest rate, for a total payroll of 1 million dollars or less). Federal and provincial taxes apply to employers registered in CA, and the Quebec ones to employers registered in CA-QC. Check the amounts against the CRA's and Revenu Québec's current publications before paying people with them.",
   "author": "CrestApps",
   "website": "https://crestapps.com",
   "version": "1.0.0",
@@ -1089,6 +1089,21 @@
           "ShareOfTaxCode": "CA-QC-QPIP",
           "ShareMultiplier": 1.4,
           "YearlyMaximum": 620.06
+        },
+        {
+          "ItemId": "4zf442netc4sn8dk2jde86fnd3",
+          "TaxCode": "CA-QC-HSF",
+          "Name": "Quebec health services fund (employer)",
+          "Jurisdiction": "CA-QC",
+          "Category": "IncomeTax",
+          "Payer": "Employer",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "Rate": 1.65,
+          "RateFromRegistration": true
         },
         {
           "ItemId": "4j6re50cd15r43w8tcd6caqxxw",

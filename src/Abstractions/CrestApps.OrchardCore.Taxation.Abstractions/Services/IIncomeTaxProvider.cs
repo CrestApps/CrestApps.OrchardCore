@@ -41,6 +41,13 @@ public sealed class IncomeTaxRequest
     /// <summary>Gets or sets the jurisdictions the payer is registered in for taxes on income.</summary>
     public IList<string> RegisteredJurisdictions { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the payer's registrations: its account with each jurisdiction's agency and the rate the agency
+    /// assigned it on the pay date (an unemployment insurance rate, Quebec's health services fund rate). A jurisdiction
+    /// here counts as registered too.
+    /// </summary>
+    public IList<IncomeTaxRegistration> Registrations { get; set; } = [];
+
     /// <summary>Gets or sets the earner, for providers that keep their own records.</summary>
     public string EarnerId { get; set; }
 
@@ -111,6 +118,21 @@ public sealed class IncomeTaxRequest
     /// <returns>The totals.</returns>
     public IncomeTaxToDate ToDate(string taxCode)
         => taxCode is not null && TaxesToDate.TryGetValue(taxCode, out var totals) && totals is not null ? totals : new IncomeTaxToDate();
+}
+
+/// <summary>
+/// A payer's registration with a jurisdiction's agency for taxes on income.
+/// </summary>
+public sealed class IncomeTaxRegistration
+{
+    /// <summary>Gets or sets the jurisdiction, such as US-CA or CA-QC.</summary>
+    public string Jurisdiction { get; set; }
+
+    /// <summary>Gets or sets the payer's account id with the agency.</summary>
+    public string AccountId { get; set; }
+
+    /// <summary>Gets or sets the rate the agency assigned the payer, in effect on the pay date, as a percent; or <see langword="null"/>.</summary>
+    public decimal? Rate { get; set; }
 }
 
 /// <summary>

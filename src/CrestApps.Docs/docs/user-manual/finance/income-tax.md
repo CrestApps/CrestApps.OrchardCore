@@ -12,7 +12,7 @@ Taxes on income are set up in **Taxation**, not in Payroll: income tax withheld 
 | | |
 | --- | --- |
 | **Menu** | Taxes > Income tax rules, Taxes > Tables, Settings > Payroll, and **Preview the next pay** on a pay profile |
-| **Permission** | Manage income tax rules for the rules; See pay profiles for the preview |
+| **Permission** | Manage income tax rules for the rules (only Administrators have it until it is given to another role); See pay profiles for the preview |
 | **Feature** | Income Tax (turns on Tax Tables); a country pack such as United States Income Tax or Canada Income Tax |
 
 <AskYourAdmin />

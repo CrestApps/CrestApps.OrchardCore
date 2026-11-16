@@ -1,7 +1,8 @@
 # CrestApps OrchardCore Taxation
 
 The Taxation module works out what tax applies to a sale, line by line, and captures the answer as an
-immutable snapshot on the transaction.
+immutable snapshot on the transaction. Its Income Tax features work out the taxes on a payment of income (income
+tax withholding and the contributions on earnings) for payroll or any other module that pays income.
 
 ## Why this module exists
 
@@ -24,6 +25,14 @@ snapshot rather than re-rating with today's rules.
 
 - **Taxation** (`CrestApps.OrchardCore.Taxation`) — the determination engine, the jurisdiction, rule, table,
   exemption, and nexus catalogs, the `TaxationPart`, and the reports.
+- **Income Tax** (`CrestApps.OrchardCore.Taxation.IncomeTax`) — income tax rules for any jurisdiction of any
+  country (a rate, a fixed amount, a table, progressive brackets or a country's withholding method, paid by the
+  earner or the payer, with wage bases, yearly exemptions and maximums, and the payer's own registration rate), the
+  built-in `IIncomeTaxProvider`, and **Taxes > Income tax rules**, behind the Administrator-only
+  `ManageIncomeTaxRules` permission (security critical: the rules decide every payer's withholding).
+- **United States Income Tax** — Form W-4 withholding (Publication 15-T) and the 2026 federal rules as a recipe.
+- **Canada Income Tax** — the CRA's T4127 federal and provincial formulas and Revenu Québec's TP-1015.F, with
+  CPP, CPP2, EI, QPP, QPP2, QPIP and the Quebec health services fund, and the 2026 rules as a recipe.
 
 ## Assemblies
 
@@ -39,9 +48,16 @@ Any content type or module becomes taxable by supplying an `ITaxableItem`. Ask `
 determination, then persist the resulting `TaxSnapshot` alongside whatever recorded the money. Refunds go
 through `ITaxRefundCalculator`, which allocates back from that snapshot rather than recalculating.
 
+A module that pays income builds an `IncomeTaxRequest` (the payer's registrations, the earner's jurisdictions and
+elections, the income of each tax category, what was taxed earlier in the year) and asks the `IIncomeTaxProvider`
+for the tax lines. The request names no module's records. A tax engine plugs in as another `IIncomeTaxProvider`; a
+country adds its withholding formulas as `IIncomeTaxWithholdingMethod`s and its election forms through
+`IncomeTaxElectionOptions`.
+
 ## Documentation
 
-Full documentation: <https://docs.crestapps.com/docs/modules/taxation>
+Full documentation: <https://docs.crestapps.com/docs/modules/taxation>, and for people setting up the rules, the
+Income Tax page of the user manual (`src/CrestApps.Docs/docs/user-manual/finance/income-tax.md`).
 
 ## License
 

@@ -64,6 +64,9 @@ public static class CanadaIncomeTax
 
         /// <summary>Quebec income tax.</summary>
         public const string QuebecIncomeTax = "CA-QC-PIT";
+
+        /// <summary>The employer's contribution to the Quebec health services fund, at the employer's own rate.</summary>
+        public const string HealthServicesFund = "CA-QC-HSF";
     }
 
     /// <summary>The election fields of the TD1 forms and of Quebec's TP-1015.3.</summary>

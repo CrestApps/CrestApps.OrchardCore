@@ -30,6 +30,8 @@ public class IncomeTaxRuleViewModel
 
     public string Rate { get; set; }
 
+    public bool RateFromRegistration { get; set; }
+
     public string FixedAmount { get; set; }
 
     public string TaxTableId { get; set; }

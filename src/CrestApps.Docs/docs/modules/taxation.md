@@ -476,7 +476,7 @@ Each line has the tax code, name, jurisdiction, the jurisdiction that collects i
 
 ### Income tax rules
 
-The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s in effect on the pay date, managed under **Taxes > Income tax rules** with the **Manage income tax rules** permission. A rule applies when the payer is registered in the jurisdiction that collects it, it is for the kind of income, the person is in its jurisdiction (for one below a country), and the person is in none of its excepted jurisdictions. Its fields express each country's taxes without code:
+The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s in effect on the pay date, managed under **Taxes > Income tax rules** with the **Manage income tax rules** permission. The permission is security critical (the rules decide every payer's withholding), so only the Administrator role has it by default; give it to another role on purpose. A rule applies when the payer is registered in the jurisdiction that collects it, it is for the kind of income, the person is in its jurisdiction (for one below a country), and the person is in none of its excepted jurisdictions. Its fields express each country's taxes without code:
 
 | Field | Use |
 | --- | --- |

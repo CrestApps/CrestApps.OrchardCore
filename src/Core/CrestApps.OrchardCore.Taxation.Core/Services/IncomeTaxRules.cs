@@ -300,7 +300,7 @@ public sealed class IncomeTaxRuleHandler : CatalogEntryHandlerBase<IncomeTaxRule
             return;
         }
 
-        if (method.Inputs.HasFlag(TaxCalculationMethodInputs.Rate) && rule.Rate is null)
+        if (method.Inputs.HasFlag(TaxCalculationMethodInputs.Rate) && rule.Rate is null && !rule.RateFromRegistration)
         {
             context.Result.Fail(new ValidationResult(S["The method needs a rate."], [nameof(IncomeTaxRule.Rate)]));
         }
@@ -331,6 +331,8 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
     /// <summary>
     /// The provider's stored name.
     /// </summary>
+    // The stored name of the provider from before income tax rules moved to Taxation: kept so the tax provider
+    // settings sites already saved still name this provider.
     public const string ProviderName = "TaxTables";
 
     private static readonly LocalizationSource _displayName = LocalizationSource.Create<IncomeTaxRulesProvider>("Income tax rules");
@@ -379,6 +381,7 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
         }
 
         var registered = (request.RegisteredJurisdictions ?? [])
+            .Concat((request.Registrations ?? []).Select(registration => registration?.Jurisdiction))
             .Where(jurisdiction => !string.IsNullOrEmpty(jurisdiction))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var personal = (request.HomeJurisdictions ?? []).Concat(request.WorkJurisdictions ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -495,6 +498,24 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
             if (table is null || (table.EffectiveFromUtc is { } from && from.Date > day) || (table.EffectiveToUtc is { } to && to.Date < day))
             {
                 result.Warnings.Add(S["{0} was not worked out: its tax table is missing or not in effect on the pay date.", rule.Name]);
+
+                return null;
+            }
+        }
+
+        // The payer's own rate, from its registration with the jurisdiction that collects the tax.
+        if (rule.RateFromRegistration)
+        {
+            var collector = rule.CollectedBy ?? rule.Jurisdiction;
+            var payerRate = (request.Registrations ?? []).FirstOrDefault(registration => string.Equals(registration?.Jurisdiction, collector, StringComparison.OrdinalIgnoreCase))?.Rate;
+
+            if (payerRate is { } rate)
+            {
+                rule = rule.WithRate(rate);
+            }
+            else if (rule.Rate is null)
+            {
+                result.Warnings.Add(S["{0} was not worked out: the payer has no rate on its {1} registration.", rule.Name, collector]);
 
                 return null;
             }

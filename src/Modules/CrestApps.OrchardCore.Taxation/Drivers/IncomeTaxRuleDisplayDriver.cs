@@ -82,6 +82,7 @@ internal sealed class IncomeTaxRuleDisplayDriver : DisplayDriver<IncomeTaxRule>
             model.Payer = rule.Payer.ToString();
             model.Method = rule.Method;
             model.Rate = Text(rule.Rate);
+            model.RateFromRegistration = rule.RateFromRegistration;
             model.FixedAmount = Text(rule.FixedAmount);
             model.TaxTableId = rule.TaxTableId;
             model.WageBase = Text(rule.WageBase);
@@ -131,6 +132,7 @@ internal sealed class IncomeTaxRuleDisplayDriver : DisplayDriver<IncomeTaxRule>
         rule.Payer = Enum.TryParse<IncomeTaxPayer>(model.Payer, out var payer) ? payer : IncomeTaxPayer.Employee;
         rule.Method = model.Method;
         rule.Rate = Number(model.Rate, nameof(model.Rate), context);
+        rule.RateFromRegistration = model.RateFromRegistration;
         rule.FixedAmount = Number(model.FixedAmount, nameof(model.FixedAmount), context);
         rule.TaxTableId = string.IsNullOrEmpty(model.TaxTableId) ? null : model.TaxTableId;
         rule.WageBase = Number(model.WageBase, nameof(model.WageBase), context);

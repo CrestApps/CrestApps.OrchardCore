@@ -280,8 +280,8 @@ public sealed class FormT4 : IPayrollFilingForm
 /// <summary>
 /// The RL-1 slips (employment and other income) of each employee paid Quebec source deductions in a year, and the
 /// RL-1 Summary: box A employment income, B.A QPP, B.B QPP2, C EI, E Quebec income tax withheld, G QPP pensionable
-/// salary, H QPIP and I QPIP insurable salary; the Summary adds the employer's QPP, QPP2 and QPIP, the remittances to
-/// Revenu Québec and the balance.
+/// salary, H QPIP and I QPIP insurable salary; the Summary adds the employer's QPP, QPP2 and QPIP and its health
+/// services fund contribution (HSF), the remittances to Revenu Québec and the balance.
 /// </summary>
 public sealed class FormRl1 : IPayrollFilingForm
 {
@@ -318,6 +318,7 @@ public sealed class FormRl1 : IPayrollFilingForm
         var employerQpp = 0m;
         var employerQpp2 = 0m;
         var employerQpip = 0m;
+        var healthServicesFund = 0m;
 
         foreach (var person in CanadaFilingSums.People(context, CanadaIncomeTax.Quebec))
         {
@@ -339,6 +340,7 @@ public sealed class FormRl1 : IPayrollFilingForm
             employerQpp += UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.Qpp + CanadaFilingSums.EmployerSuffix);
             employerQpp2 += UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.Qpp2 + CanadaFilingSums.EmployerSuffix);
             employerQpip += UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.Qpip + CanadaFilingSums.EmployerSuffix);
+            healthServicesFund += UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.HealthServicesFund);
 
             context.Filing.People.Add(new PayrollFilingPerson
             {
@@ -359,8 +361,9 @@ public sealed class FormRl1 : IPayrollFilingForm
         context.Filing.Boxes["QPP.Employer"] = employerQpp;
         context.Filing.Boxes["QPP2.Employer"] = employerQpp2;
         context.Filing.Boxes["QPIP.Employer"] = employerQpip;
+        context.Filing.Boxes["HSF"] = healthServicesFund;
 
-        var owed = context.Filing.Boxes["B.A"] + context.Filing.Boxes["B.B"] + context.Filing.Boxes["E"] + context.Filing.Boxes["H"] + employerQpp + employerQpp2 + employerQpip;
+        var owed = context.Filing.Boxes["B.A"] + context.Filing.Boxes["B.B"] + context.Filing.Boxes["E"] + context.Filing.Boxes["H"] + employerQpp + employerQpp2 + employerQpip + healthServicesFund;
         var remitted = CanadaFilingSums.Remitted(context.Deposits, CanadaIncomeTax.Quebec);
 
         context.Filing.Boxes["Owed"] = owed;

@@ -74,18 +74,41 @@ public sealed class CanadaIncomeTaxTests
 
         var amounts = await AmountsAsync(harness, Request("CA-QC", 26, new DateOnly(2026, 3, 13), 2500m, 0m));
 
-        // QPP 6.30% × (2,500 − 134.61); EI 1.30%; QPIP 0.43%, the employer's 1.4 times; no CPP, no Ontario.
+        // QPP 6.30% × (2,500 − 134.61); EI 1.30%; QPIP 0.43%, the employer's 1.4 times; the employer's health services
+        // fund at the lowest rate, 1.65%, with no rate on its registration; no CPP, no Ontario.
         Assert.Equal(new Dictionary<string, decimal>
         {
             ["CA-EI-QC"] = 32.50m,
             ["CA-EI-QC-ER"] = 45.50m,
             ["CA-FIT"] = 201.29m,
+            ["CA-QC-HSF"] = 41.25m,
             ["CA-QC-PIT"] = 253.36m,
             ["CA-QC-QPIP"] = 10.75m,
             ["CA-QC-QPIP-ER"] = 15.05m,
             ["CA-QC-QPP"] = 149.02m,
             ["CA-QC-QPP-ER"] = 149.02m,
         }, amounts);
+    }
+
+    [Fact]
+    public async Task Quebec_TheHealthServicesFund_IsAtTheEmployersOwnRate()
+    {
+        await using var harness = await CreateHarnessAsync();
+
+        Assert.Empty(await ImportRecipeAsync(harness));
+
+        var request = Request("CA-QC", 26, new DateOnly(2026, 3, 13), 2500m, 1000m);
+
+        // The rate Revenu Québec gave the employer for its total payroll, on its CA-QC registration: 2,500 + 1,000 at 2.31%.
+        request.Registrations = [new IncomeTaxRegistration { Jurisdiction = "CA-QC", AccountId = "1234567890TQ0001", Rate = 2.31m }];
+
+        Assert.Equal(80.85m, (await AmountsAsync(harness, request))["CA-QC-HSF"]);
+
+        // An employer with no Quebec registration has none.
+        request.Registrations = [];
+        request.RegisteredJurisdictions = ["CA"];
+
+        Assert.False((await AmountsAsync(harness, request)).ContainsKey("CA-QC-HSF"));
     }
 
     [Fact]

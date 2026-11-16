@@ -91,6 +91,11 @@
             <div class="ocat-end">
                 <input asp-for="Rate" class="form-control" inputmode="decimal" style="max-width: 8rem" placeholder="6.2" />
                 <span asp-validation-for="Rate" class="text-danger"></span>
+                <div class="form-check mt-2">
+                    <input asp-for="RateFromRegistration" type="checkbox" class="form-check-input" />
+                    <label asp-for="RateFromRegistration" class="form-check-label">@T["Use the payer's own rate"]</label>
+                    <span class="hint dashed">@T["The rate on the payer's registration with the jurisdiction on the pay date, such as an unemployment insurance rate; the rate above applies when it has none."]</span>
+                </div>
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="FixedAmount">

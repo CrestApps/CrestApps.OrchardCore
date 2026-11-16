@@ -140,6 +140,45 @@ public sealed class IncomeTaxTests
         Assert.Empty((await provider.CalculateAsync(request, TestContext.Current.CancellationToken)).Lines);
     }
 
+    [Fact]
+    public async Task ARuleOnThePayersOwnRate_TakesItFromTheRegistration_AndNeedsOne()
+    {
+        var unemployment = new IncomeTaxRule { ItemId = "sui", TaxCode = "US-TX-SUI", Name = "Texas unemployment", Jurisdiction = "US-TX", Category = IncomeTaxCategories.Unemployment, Payer = IncomeTaxPayer.Employer, Method = "Percentage", RateFromRegistration = true, EffectiveFrom = new DateOnly(2026, 1, 1) };
+        var manager = new Mock<IIncomeTaxRuleManager>();
+
+        manager.Setup(candidate => candidate.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([unemployment]);
+
+        var provider = new IncomeTaxRulesProvider(manager.Object, new DefaultTaxCalculationMethodProvider([new PercentageTaxCalculationMethod()]), new InMemoryNamedCatalog<TaxTable>(), [], new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<IncomeTaxRulesProvider>());
+        var request = new IncomeTaxRequest
+        {
+            Registrations = [new IncomeTaxRegistration { Jurisdiction = "US-TX", AccountId = "99-999999-9", Rate = 2.7m }],
+            HomeJurisdictions = ["US-TX"],
+            IncomeKind = IncomeKind.Employment,
+            PayDate = new DateOnly(2026, 11, 20),
+            PeriodsPerYear = 26,
+            Income = new Dictionary<string, decimal> { [IncomeTaxCategories.Unemployment] = 1000 },
+        };
+
+        // The registration alone makes the employer registered there, and its rate applies: 2.7% of 1000.
+        var line = Assert.Single((await provider.CalculateAsync(request, TestContext.Current.CancellationToken)).Lines);
+
+        Assert.Equal(27m, line.Amount);
+        Assert.Null(unemployment.Rate);
+
+        // No rate on the registration and none on the rule: not worked out, and said so.
+        request.Registrations[0].Rate = null;
+
+        var result = await provider.CalculateAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result.Lines);
+        Assert.Contains("no rate on its US-TX registration", Assert.Single(result.Warnings), StringComparison.Ordinal);
+
+        // A rate on the rule is the fallback.
+        unemployment.Rate = 3.1m;
+
+        Assert.Equal(31m, Assert.Single((await provider.CalculateAsync(request, TestContext.Current.CancellationToken)).Lines).Amount);
+    }
+
     private static Dictionary<string, FeatureAttribute> Features(Assembly assembly)
         => assembly.GetCustomAttributes<FeatureAttribute>().Where(feature => feature.GetType() == typeof(FeatureAttribute)).ToDictionary(feature => feature.Id, StringComparer.Ordinal);
 }
