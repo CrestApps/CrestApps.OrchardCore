@@ -229,9 +229,9 @@ Some things only the buyer can do in a browser: approve a payment their bank ask
 
 Every checkout that isn't completed, canceled or expired carries a `continue_url`. It is the hand-off link, `agentic-commerce/continue/{token}`, unless the payment provider gave a page of its own for the bank's check. The token is signed with `SignedTokenService` and lasts two days. When the buyer opens it:
 
-- a completed checkout opens its confirmation page;
-- a guest's checkout is given to that browser (a new guest token), and a linked buyer's checkout stays theirs;
-- the browser is sent to the checkout's next step.
+- a guest's checkout that no browser has yet is given to that browser (a new guest token), and a linked buyer's checkout stays theirs. It is given once: opened again, the link hands the checkout to nobody else;
+- in the browser that has the checkout (or the linked buyer, signed in), a completed checkout opens its confirmation page, and an open one its next step;
+- in any other browser, such as the buyer's phone after they paid on their laptop, the link shows a page with none of the order's details. When the order was placed, it says so and points to **Sign in** (or **My orders**) and **Find your order**, which e-mails the order's link to the address given at checkout. Otherwise it says the checkout was opened elsewhere and can only be continued there, with **Sign in** for a buyer who checked out with an account.
 
 The agent's request runs as the platform, and a store checkout would otherwise take the request's user as its owner. So the store checkout belongs to the linked buyer, or to nobody until the hand-off link gives it to a browser.
 

@@ -1,0 +1,44 @@
+@using CrestApps.OrchardCore.Orders.Core
+@model AgentHandoffElsewhereViewModel
+
+@* A hand-off link opened in a browser the checkout wasn't given to, such as the buyer's phone after they paid on their
+   laptop. Anyone could be holding the link, so the page shows nothing of the order: only where it stands and how the
+   buyer sees it. *@
+
+<zone Name="Title">
+    <breadcrumb name="AgentCheckoutElsewhere" title="@(Model.Placed ? T["Order placed"] : T["Checkout opened elsewhere"])" />
+</zone>
+
+<div class="container my-4" style="max-width: 640px;">
+    @if (Model.Placed)
+    {
+        <h1 class="h3 mb-3">@T["Your order has been placed"]</h1>
+        <p>@T["It was finished in another browser or on another device, so its details aren't shown here. The confirmation went to the e-mail address given at checkout."]</p>
+        <p>@T["To see the order, sign in to your account if you checked out with one, or have a link to the order sent to that e-mail address."]</p>
+
+        <div class="d-flex flex-wrap gap-2">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a class="btn btn-primary" asp-route="AccountOrders">@T["My orders"]</a>
+            }
+            else
+            {
+                <a class="btn btn-primary" href="@Url.Action("Login", "Account", new { area = "OrchardCore.Users", returnUrl = Url.RouteUrl("AccountOrders") })">@T["Sign in"]</a>
+            }
+            <a class="btn btn-outline-secondary" asp-route="@OrderConstants.RouteNames.Find">@T["Find your order"]</a>
+        </div>
+    }
+    else
+    {
+        <h1 class="h3 mb-3">@T["This checkout can't be opened here"]</h1>
+        <p>@T["It was opened in another browser or on another device, and only that one can continue it. Go back to it there, or ask for a new checkout. If you checked out with an account, sign in to continue."]</p>
+
+        <div class="d-flex flex-wrap gap-2">
+            @if (User.Identity?.IsAuthenticated != true)
+            {
+                <a class="btn btn-primary" href="@Url.Action("Login", "Account", new { area = "OrchardCore.Users", returnUrl = (Context.Request.PathBase + Context.Request.Path).Value })">@T["Sign in"]</a>
+            }
+            <a class="btn btn-outline-secondary" href="@Url.Content("~/")">@T["Back to the home page"]</a>
+        </div>
+    }
+</div>
