@@ -58,7 +58,7 @@ The **External tool** course item (`ExternalToolItem`, with `ExternalToolItemPar
 
 Roles: a learner gets `Learner`; course staff get `Instructor` and, for assistants and graders, `TeachingAssistant` or `Grader`; observers get `Mentor`; a person who manages every course gets `Administrator` and `Instructor`.
 
-The sign-in cookie is `SameSite=Lax`, so the tool's authentication request must reach the platform as a top-level navigation (a redirect or a form in the window). A request posted from a frame of another site arrives without the cookie and is refused.
+The sign-in cookie is `SameSite=Lax`, so a browser leaves it off a login request a tool posts from its own site. The authorization endpoint answers such a post, when it arrives without a signed-in user, with `303 See Other` to the same request as a GET (only the authentication request's own parameters are kept), a top-level navigation that carries the cookie. A request made inside a frame of another site still arrives without the cookie and is refused, which is why launches open in a window.
 
 Substitution variables: `$Context.id`, `$Context.title`, `$ResourceLink.id`, `$ResourceLink.title`, `$User.id`, `$Person.name.full`, `$Person.name.given`, `$Person.name.family`, `$Person.email.primary` and `$Membership.role`. A variable the privacy level withholds, or one the platform does not support, is sent as written.
 

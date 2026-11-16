@@ -180,6 +180,31 @@ public sealed partial class LtiLaunchTests
     }
 
     [Fact]
+    public async Task Authorize_ALoginRequestPostedWithoutTheCookie_IsSentBackAsAGetThatCarriesIt()
+    {
+        // Arrange: the sign-in cookie is SameSite=Lax, so a browser leaves it off a login request a tool posts from its
+        // own site. The platform answers such a post with a redirect to the same request as a GET, which carries it.
+        var itemId = await EnsureToolItemAsync();
+        using var learner = await _fixture.CreateClientAsync("learner1");
+        using var browserWithoutCookie = await _fixture.CreateClientAsync();
+        var login = await StartLoginAsync(learner, itemId);
+        var query = QueryHelpers.ParseQuery(AuthorizationQuery(login, "nonce-" + Guid.NewGuid().ToString("n"), RedirectUri))
+            .ToDictionary(pair => pair.Key, pair => pair.Value.ToString(), StringComparer.Ordinal);
+
+        // Act
+        var posted = await browserWithoutCookie.PostAsync("learning/lti/authorize", new FormUrlEncodedContent(query), TestContext.Current.CancellationToken);
+        var location = posted.Headers.Location;
+        var followed = location is null ? null : await learner.GetStringAsync(location.ToString().TrimStart('/'), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.SeeOther, posted.StatusCode);
+        Assert.NotNull(location);
+        Assert.Equal(query, QueryHelpers.ParseQuery(location.IsAbsoluteUri ? location.Query : location.OriginalString[location.OriginalString.IndexOf('?')..])
+            .ToDictionary(pair => pair.Key, pair => pair.Value.ToString(), StringComparer.Ordinal));
+        Assert.False(string.IsNullOrEmpty(Field(followed, "id_token")));
+    }
+
+    [Fact]
     public async Task Jwks_PublishesThePublicKeyOnly()
     {
         // Arrange

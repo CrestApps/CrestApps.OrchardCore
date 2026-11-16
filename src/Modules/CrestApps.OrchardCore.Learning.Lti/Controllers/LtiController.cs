@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 
@@ -19,6 +20,11 @@ namespace CrestApps.OrchardCore.Learning.Lti.Controllers;
 /// </summary>
 public sealed class LtiController : Controller
 {
+    private static readonly string[] AuthorizationParameters =
+    [
+        "scope", "response_type", "response_mode", "prompt", "client_id", "redirect_uri", "login_hint", "lti_message_hint", "state", "nonce",
+    ];
+
     private readonly IContentManager _contentManager;
     private readonly IExternalToolStore _tools;
     private readonly ICourseAccessService _courseAccess;
@@ -127,6 +133,26 @@ public sealed class LtiController : Controller
     {
         var parameters = Request.HasFormContentType ? (IEnumerable<KeyValuePair<string, Microsoft.Extensions.Primitives.StringValues>>)Request.Form : Request.Query;
         var values = parameters.ToDictionary(pair => pair.Key, pair => pair.Value.ToString(), StringComparer.Ordinal);
+
+        // The sign-in cookie is SameSite=Lax, so a browser leaves it off a login request a tool posts from its own site.
+        // Such a post is sent back as the same request with GET, a top-level navigation that carries the cookie. Only the
+        // authentication request's own parameters are kept, so the address stays bounded.
+        if (HttpMethods.IsPost(Request.Method) && User.Identity?.IsAuthenticated != true)
+        {
+            var query = AuthorizationParameters
+                .Where(name => values.TryGetValue(name, out var value) && !string.IsNullOrEmpty(value))
+                .ToDictionary(name => name, name => (string)values[name], StringComparer.Ordinal);
+
+            if (query.Values.Sum(value => value.Length) <= 6000)
+            {
+                NoStore();
+
+                // 303 See Other: the browser follows with GET.
+                Response.Headers.Location = QueryHelpers.AddQueryString(Url.RouteUrl("LearningLtiAuthorize"), query);
+
+                return StatusCode(StatusCodes.Status303SeeOther);
+            }
+        }
 
         var result = await _authorization.AuthorizeAsync(new LtiAuthorizationRequest
         {
