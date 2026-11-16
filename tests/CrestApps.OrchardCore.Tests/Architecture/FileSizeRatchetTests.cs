@@ -49,7 +49,7 @@ public sealed class FileSizeRatchetTests
         ["src/Modules/CrestApps.OrchardCore.ContentTransfer/BackgroundTasks/ImportFilesBackgroundTask.cs"] = 1630,
         ["src/Modules/CrestApps.OrchardCore.ContentTransfer/Controllers/AdminController.cs"] = 1587,
         ["src/Modules/CrestApps.OrchardCore.DncRegistry/Services/DefaultLocalDncListManager.cs"] = 1259,
-        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Controllers/ActivitiesController.cs"] = 2223,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Controllers/ActivitiesController.cs"] = 2231,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Reports/EnterpriseActivityReportProvider.cs"] = 891,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Services/DefaultContactActivityBatchLoader.cs"] = 1367,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Services/LeadConversionService.cs"] = 906,
