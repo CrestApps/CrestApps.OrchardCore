@@ -43,6 +43,16 @@ public static class CourseworkConstants
     /// <summary>
     /// The content types Learning coursework adds.
     /// </summary>
+    /// <summary>
+    /// The longest feedback a grader can give, on the page and on the server.
+    /// </summary>
+    public const int MaxFeedbackLength = 10_000;
+
+    /// <summary>
+    /// The longest reason for grading graded work again, on the page and on the server.
+    /// </summary>
+    public const int MaxReasonLength = 500;
+
     public static class ContentTypes
     {
         /// <summary>

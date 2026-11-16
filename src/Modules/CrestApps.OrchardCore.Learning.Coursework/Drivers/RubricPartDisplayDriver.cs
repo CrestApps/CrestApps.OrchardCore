@@ -84,6 +84,13 @@ internal sealed class RubricPartDisplayDriver : ContentPartDisplayDriver<RubricP
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.Criteria), S["Add at least one criterion with a title."]);
         }
 
+        // The ids come back from the form; grades keep the level chosen for each criterion by its id, so two criteria
+        // with one id could not be told apart.
+        if (criteria.GroupBy(criterion => criterion.Id, StringComparer.Ordinal).Any(group => group.Count() > 1))
+        {
+            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.Criteria), S["Two criteria have the same id. Reload the editor and add the criterion again."]);
+        }
+
         part.Criteria = criteria;
 
         return Edit(part, context);

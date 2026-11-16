@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Assessments.ViewModels;
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -190,8 +191,8 @@ public sealed class GradingController : Controller
                 continue;
             }
 
-            if (!decimal.TryParse(raw, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var points)
-                && !decimal.TryParse(raw, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out points))
+            // "7,5" and "7.5" both mean seven and a half, in any language (the invariant read took "7,5" as 75).
+            if (!GradePoints.TryParse(raw, out var parsed) || parsed is not { } points)
             {
                 await _notifier.ErrorAsync(H["The score of question {0} is not a number.", item.Index + 1]);
 

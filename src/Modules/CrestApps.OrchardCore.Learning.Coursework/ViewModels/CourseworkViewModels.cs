@@ -238,8 +238,11 @@ public class SubmissionGradingViewModel
     /// <summary>Gets or sets the level chosen for each criterion, by criterion id.</summary>
     public Dictionary<string, string> Choices { get; set; } = new(StringComparer.Ordinal);
 
-    /// <summary>Gets or sets the points without a rubric.</summary>
-    public decimal? Points { get; set; }
+    /// <summary>
+    /// Gets or sets the points without a rubric, as typed: read with <c>GradePoints</c> so "7,5" and "7.5" mean the same
+    /// in every language, and written back invariantly so a number field keeps the value.
+    /// </summary>
+    public string Points { get; set; }
 
     /// <summary>Gets or sets the feedback.</summary>
     public string Feedback { get; set; }

@@ -115,7 +115,7 @@
                 <div class="ocat-wrapper" asp-validation-class-for="Feedback">
                     <label asp-for="Feedback" class="ocat-label">@T["Feedback"]</label>
                     <div class="ocat-end">
-                        <textarea asp-for="Feedback" rows="5" class="form-control" maxlength="10000"></textarea>
+                        <textarea asp-for="Feedback" rows="5" class="form-control" maxlength="@CourseworkConstants.MaxFeedbackLength"></textarea>
                         <span class="hint">@T["The learner sees it with the grade, or with the work when you return it."]</span>
                     </div>
                 </div>
@@ -125,7 +125,7 @@
                     <div class="ocat-wrapper" asp-validation-class-for="Reason">
                         <label asp-for="Reason" class="ocat-label">@T["Why grade again"]</label>
                         <div class="ocat-end">
-                            <input asp-for="Reason" class="form-control" maxlength="500" />
+                            <input asp-for="Reason" class="form-control" maxlength="@CourseworkConstants.MaxReasonLength" />
                             <span class="hint">@T["Needed to change a grade. The earlier grade is kept with it."]</span>
                         </div>
                     </div>

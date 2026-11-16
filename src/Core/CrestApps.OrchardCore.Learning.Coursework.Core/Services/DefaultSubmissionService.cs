@@ -259,6 +259,17 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             return SubmissionResult.Fail(SubmissionErrors.OwnSubmission, existing);
         }
 
+        // The page limits these too, but a post does not have to come from the page.
+        if (request.Feedback?.Trim().Length > CourseworkConstants.MaxFeedbackLength)
+        {
+            return SubmissionResult.Fail(SubmissionErrors.FeedbackTooLong, existing);
+        }
+
+        if (request.Reason?.Trim().Length > CourseworkConstants.MaxReasonLength)
+        {
+            return SubmissionResult.Fail(SubmissionErrors.ReasonTooLong, existing);
+        }
+
         Submission graded = null;
         SubmissionGrade previous = null;
 
@@ -277,6 +288,12 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             }
 
             var regrade = submission.Status == SubmissionStatus.Graded;
+
+            // Decided on this fresh read: the caller read the work before the lock, and another grader may have graded it since.
+            if (regrade && !request.CanOverrideGrades)
+            {
+                return SubmissionResult.Fail(SubmissionErrors.OverrideRequired, submission);
+            }
 
             if (regrade && string.IsNullOrWhiteSpace(request.Reason))
             {
@@ -354,7 +371,7 @@ internal sealed class DefaultSubmissionService : ISubmissionService
         return result;
     }
 
-    public async Task<SubmissionResult> ReturnAsync(string submissionId, string feedback, string actor, CancellationToken cancellationToken = default)
+    public async Task<SubmissionResult> ReturnAsync(string submissionId, string feedback, string actor, bool canOverrideGrades = true, CancellationToken cancellationToken = default)
     {
         var existing = string.IsNullOrEmpty(submissionId) ? null : await _store.FindByIdAsync(submissionId, cancellationToken);
 
@@ -366,6 +383,11 @@ internal sealed class DefaultSubmissionService : ISubmissionService
         if (IsOwn(existing, actor))
         {
             return SubmissionResult.Fail(SubmissionErrors.OwnSubmission, existing);
+        }
+
+        if (feedback?.Trim().Length > CourseworkConstants.MaxFeedbackLength)
+        {
+            return SubmissionResult.Fail(SubmissionErrors.FeedbackTooLong, existing);
         }
 
         Submission returned = null;
@@ -382,6 +404,12 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             if (!submission.Current || submission.Status == SubmissionStatus.Returned)
             {
                 return SubmissionResult.Fail(SubmissionErrors.NotGradable, submission);
+            }
+
+            // Returning graded work takes its grade away, which changes a grade: decided on this fresh read.
+            if (submission.Status == SubmissionStatus.Graded && !canOverrideGrades)
+            {
+                return SubmissionResult.Fail(SubmissionErrors.OverrideRequired, submission);
             }
 
             // As for a grade, Learning hears of the return first, so a return it refuses changes nothing.
@@ -571,10 +599,14 @@ internal sealed class DefaultSubmissionService : ISubmissionService
                 return null;
             }
 
-            // Only the choices of the rubric's own criteria are kept.
-            var kept = rubric.Criteria
-                .Where(criterion => criterion.Id is not null && choices.ContainsKey(criterion.Id))
-                .ToDictionary(criterion => criterion.Id, criterion => choices[criterion.Id], StringComparer.Ordinal);
+            // Only the choices of the rubric's own criteria are kept. The editor refuses two criteria with one id, but a
+            // rubric saved another way (a recipe, the content API) may repeat one: it is kept once, not thrown on.
+            var kept = new Dictionary<string, string>(StringComparer.Ordinal);
+
+            foreach (var criterion in rubric.Criteria.Where(criterion => criterion.Id is not null && choices.ContainsKey(criterion.Id)))
+            {
+                kept.TryAdd(criterion.Id, choices[criterion.Id]);
+            }
 
             return new GradeScore(rubricScore.Points, rubricScore.MaxPoints, rubricScore.Percent, rubricId, kept);
         }

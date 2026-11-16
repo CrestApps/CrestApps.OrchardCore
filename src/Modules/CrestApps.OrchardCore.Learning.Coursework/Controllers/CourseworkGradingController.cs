@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Coursework.Core.Services;
 using CrestApps.OrchardCore.Learning.Coursework.Models;
 using CrestApps.OrchardCore.Learning.Coursework.Services;
@@ -146,9 +148,20 @@ public sealed class CourseworkGradingController : Controller
             return NotFound();
         }
 
-        if (submission.Status == SubmissionStatus.Graded && !await _authorizationService.AuthorizeAsync(User, AssessmentPermissions.OverrideGrades))
+        // The read above is from before the lock; the service checks the permission again on its fresh read, so work
+        // another grader graded meanwhile is not graded again without Override grades.
+        var canOverride = await _authorizationService.AuthorizeAsync(User, AssessmentPermissions.OverrideGrades);
+
+        if (submission.Status == SubmissionStatus.Graded && !canOverride)
         {
             return Forbid();
+        }
+
+        if (!GradePoints.TryParse(model.Points, out var points))
+        {
+            ModelState.AddModelError(nameof(model.Points), H["The points must be a number, such as 7.5 or 7,5."].Value);
+
+            return View(nameof(Submission), await BuildAsync(model, submission, fill: false));
         }
 
         var result = await _submissions.GradeAsync(new GradeSubmissionRequest
@@ -156,10 +169,16 @@ public sealed class CourseworkGradingController : Controller
             SubmissionId = submission.ItemId,
             Actor = User.FindFirstValue(ClaimTypes.NameIdentifier),
             RubricChoices = model.Choices ?? [],
-            Points = model.Points,
+            Points = points,
             Feedback = model.Feedback,
             Reason = model.Reason,
+            CanOverrideGrades = canOverride,
         }, HttpContext.RequestAborted);
+
+        if (result.Error == SubmissionErrors.OverrideRequired)
+        {
+            return Forbid();
+        }
 
         if (result.Succeeded)
         {
@@ -191,12 +210,19 @@ public sealed class CourseworkGradingController : Controller
             return NotFound();
         }
 
-        if (submission.Status == SubmissionStatus.Graded && !await _authorizationService.AuthorizeAsync(User, AssessmentPermissions.OverrideGrades))
+        var canOverride = await _authorizationService.AuthorizeAsync(User, AssessmentPermissions.OverrideGrades);
+
+        if (submission.Status == SubmissionStatus.Graded && !canOverride)
         {
             return Forbid();
         }
 
-        var result = await _submissions.ReturnAsync(submission.ItemId, model.Feedback, User.FindFirstValue(ClaimTypes.NameIdentifier), HttpContext.RequestAborted);
+        var result = await _submissions.ReturnAsync(submission.ItemId, model.Feedback, User.FindFirstValue(ClaimTypes.NameIdentifier), canOverride, HttpContext.RequestAborted);
+
+        if (result.Error == SubmissionErrors.OverrideRequired)
+        {
+            return Forbid();
+        }
 
         if (result.Succeeded)
         {
@@ -238,7 +264,7 @@ public sealed class CourseworkGradingController : Controller
         if (fill)
         {
             model.Feedback = submission.Feedback;
-            model.Points = submission.Points;
+            model.Points = submission.Points?.ToString(CultureInfo.InvariantCulture);
             model.Choices = new Dictionary<string, string>(submission.RubricChoices ?? [], StringComparer.Ordinal);
         }
 
@@ -269,6 +295,8 @@ public sealed class CourseworkGradingController : Controller
             SubmissionErrors.NotGradable => H["This submission cannot be graded: the learner handed in a newer one, or it is with the learner to hand in again."],
             SubmissionErrors.OwnSubmission => H["Nobody grades their own work."],
             SubmissionErrors.Busy => H["The submission or the learner's enrollment is being changed. Try again in a moment."],
+            SubmissionErrors.FeedbackTooLong => H["The feedback is too long: it can be up to {0} characters.", CourseworkConstants.MaxFeedbackLength],
+            SubmissionErrors.ReasonTooLong => H["The reason is too long: it can be up to {0} characters.", CourseworkConstants.MaxReasonLength],
             SubmissionErrors.EnrollmentNotActive => H["The learner's enrollment is not active (suspended, ended or withdrawn), so the grade cannot count in the course grade. Nothing was changed. Make the enrollment active, then grade again."],
             SubmissionErrors.NotRecorded => H["The grade could not be recorded in the learner's progress, for instance because the item is no longer in the course. Nothing was changed."],
             _ => H["The submission could not be changed."],

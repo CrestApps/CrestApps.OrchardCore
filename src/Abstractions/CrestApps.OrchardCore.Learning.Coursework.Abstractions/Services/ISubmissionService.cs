@@ -39,9 +39,10 @@ public interface ISubmissionService
     /// <param name="submissionId">The submission.</param>
     /// <param name="feedback">What the learner should change.</param>
     /// <param name="actor">The grader.</param>
+    /// <param name="canOverrideGrades">Whether the grader may change a grade (Override grades), which returning graded work does; checked on the fresh read under the lock.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The returned submission, or why it was refused.</returns>
-    Task<SubmissionResult> ReturnAsync(string submissionId, string feedback, string actor, CancellationToken cancellationToken = default);
+    Task<SubmissionResult> ReturnAsync(string submissionId, string feedback, string actor, bool canOverrideGrades = true, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds a submission.
@@ -149,6 +150,13 @@ public sealed class GradeSubmissionRequest
     /// Gets or sets why graded work is graded again.
     /// </summary>
     public string Reason { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the grader may change a grade (Override grades). It is checked on the fresh read under the
+    /// lock, so work another grader graded meanwhile is not graded again without it. <see langword="true"/> by default,
+    /// for callers that check no permission, such as a workflow.
+    /// </summary>
+    public bool CanOverrideGrades { get; set; } = true;
 }
 
 /// <summary>
@@ -260,4 +268,13 @@ public static class SubmissionErrors
 
     /// <summary>The coursework is not open to the learner yet: a release rule, such as an earlier item or a date, keeps it locked.</summary>
     public const string NotAvailableYet = "NotAvailableYet";
+
+    /// <summary>The work is graded, and changing its grade (grading it again or returning it) needs Override grades.</summary>
+    public const string OverrideRequired = "OverrideRequired";
+
+    /// <summary>The feedback is longer than <c>CourseworkConstants.MaxFeedbackLength</c>.</summary>
+    public const string FeedbackTooLong = "FeedbackTooLong";
+
+    /// <summary>The reason is longer than <c>CourseworkConstants.MaxReasonLength</c>.</summary>
+    public const string ReasonTooLong = "ReasonTooLong";
 }
