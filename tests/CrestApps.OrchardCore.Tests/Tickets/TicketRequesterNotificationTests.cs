@@ -104,18 +104,18 @@ public sealed class TicketRequesterNotificationTests
     }
 
     [Theory]
-    [InlineData(TicketsConstants.EmailKinds.Received, TicketsConstants.NotificationTypes.RequestReceived)]
-    [InlineData(TicketsConstants.EmailKinds.Reply, TicketsConstants.NotificationTypes.Replied)]
-    [InlineData(TicketsConstants.EmailKinds.Solved, TicketsConstants.NotificationTypes.RequestSolved)]
-    [InlineData(TicketsConstants.EmailKinds.Rating, TicketsConstants.NotificationTypes.RatingRequested)]
-    public async Task EachKindOfMessage_HasItsOwnNotificationType_AndOpensTheRequest(string kind, string type)
+    [InlineData(TicketsConstants.EmailKinds.Received, TicketsConstants.NotificationTypes.RequestReceived, "~/account/requests/T-1")]
+    [InlineData(TicketsConstants.EmailKinds.Reply, TicketsConstants.NotificationTypes.Replied, "~/account/requests/T-1")]
+    [InlineData(TicketsConstants.EmailKinds.Solved, TicketsConstants.NotificationTypes.RequestSolved, "~/account/requests/T-1")]
+    [InlineData(TicketsConstants.EmailKinds.Rating, TicketsConstants.NotificationTypes.RatingRequested, "https://example.com/account/requests/T-1/rate")]
+    public async Task EachKindOfMessage_HasItsOwnNotificationType_AndOpensTheRequestOnThisSite(string kind, string type, string url)
     {
         // Arrange
         var (sender, sent) = TicketNotificationTypesTests.Sender();
         var notifier = new TicketRequesterNotifier(sender, new PassThroughStringLocalizer<TicketRequesterNotifier>());
         var item = Item(userId: "u-dana", to: null);
         item.Kind = kind;
-        item.TicketLink = "https://example.com/account/requests/T-1";
+        item.TicketLink = kind == TicketsConstants.EmailKinds.Rating ? "https://example.com/account/requests/T-1/rate" : "https://example.com/account/requests/T-1";
 
         // Act
         var notified = await notifier.NotifyAsync("u-dana", item, new TemplatedEmailMessage("Subject", "Text", "<p>Html</p>"), TestContext.Current.CancellationToken);
@@ -123,7 +123,9 @@ public sealed class TicketRequesterNotificationTests
         // Assert
         Assert.True(notified);
         var (to, message) = Assert.Single(sent);
-        Assert.Equal(("u-dana", type, "t1", "https://example.com/account/requests/T-1"), (to, message.Type, message.ReferenceId, message.Url));
+        // The signed-in requester opens their request on the site they are on (the e-mail's link names the site's address);
+        // a rating request opens its rating page.
+        Assert.Equal(("u-dana", type, "t1", url), (to, message.Type, message.ReferenceId, message.Url));
         Assert.Equal(("Subject", "Text", "<p>Html</p>", true), (message.Subject, message.TextBody, message.HtmlBody, message.IsHtmlPreferred));
         Assert.False(string.IsNullOrEmpty(message.Summary));
         Assert.Equal("T-1", ((NotificationMessage)message).GetOrCreate<TicketNotificationInfo>().Number);

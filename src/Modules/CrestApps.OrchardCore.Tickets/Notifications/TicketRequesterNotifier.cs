@@ -57,8 +57,11 @@ internal sealed class TicketRequesterNotifier : ITicketRequesterNotifier
             HtmlBody = message.Html,
             IsHtmlPreferred = !string.IsNullOrEmpty(message.Html),
 
-            // The request in the requester's account (or, for a rating request, its rating page).
-            Url = string.IsNullOrEmpty(item.TicketLink) ? "~/account/requests/" + Uri.EscapeDataString(item.TicketNumber ?? string.Empty) : item.TicketLink,
+            // The request in the requester's account on the site they are on (the e-mail's link names the site's address),
+            // or, for a rating request, its rating page.
+            Url = item.Kind == TicketsConstants.EmailKinds.Rating && !string.IsNullOrEmpty(item.TicketLink)
+                ? item.TicketLink
+                : "~/account/requests/" + Uri.EscapeDataString(item.TicketNumber ?? string.Empty),
             Type = TypeOf(item.Kind) ?? TicketsConstants.NotificationTypes.Replied,
             ReferenceId = item.TicketId,
         };
