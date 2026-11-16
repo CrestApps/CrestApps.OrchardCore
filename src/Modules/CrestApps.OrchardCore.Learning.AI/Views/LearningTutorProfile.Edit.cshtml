@@ -1,0 +1,11 @@
+@model CrestApps.OrchardCore.Learning.AI.ViewModels.LearningTutorProfileViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IsTutor" />
+            <label class="form-check-label" asp-for="IsTutor">@T["Learning tutor: answer only from the learner's own courses"]</label>
+            <span class="hint dashed">@T["The data source search keeps only lessons of the courses the signed-in learner is actively enrolled in, whose learning assistant is on. Questions, quizzes, question banks and answer keys never reach this profile, whoever asks."]</span>
+        </div>
+    </div>
+</div>

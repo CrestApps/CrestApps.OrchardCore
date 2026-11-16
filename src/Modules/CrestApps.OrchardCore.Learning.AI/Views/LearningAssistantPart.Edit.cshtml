@@ -1,0 +1,11 @@
+@model CrestApps.OrchardCore.Learning.AI.ViewModels.LearningAssistantPartViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" />
+            <label class="form-check-label" asp-for="Enabled">@T["Let the learning tutor answer this course's learners"]</label>
+            <span class="hint dashed">@T["Off by default. When on, an AI profile marked as a learning tutor may answer learners who are actively enrolled in this course from its page, video and file lessons that are released to them. It never answers from questions, quizzes or answer keys."]</span>
+        </div>
+    </div>
+</div>
