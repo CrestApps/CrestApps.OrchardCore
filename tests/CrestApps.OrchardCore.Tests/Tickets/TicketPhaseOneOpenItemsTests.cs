@@ -81,6 +81,38 @@ public sealed class TicketPhaseOneOpenItemsTests
     }
 
     [Fact]
+    public async Task NoFileIsRemoved_WhileTheOlderEntriesFilesAreStillBeingIndexed()
+    {
+        // Arrange: after an upgrade, the entries made before the file index existed are indexed by a step; until it is
+        // done, their files are missing from the index and would look like files no entry kept.
+        var attachments = new Mock<IAttachmentService>();
+        attachments.Setup(service => service.ListUploadedBeforeAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<DateTime>(), It.IsAny<DateTime?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Attachment("older")]);
+        attachments.Setup(service => service.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        var provider = new Mock<ITimelineAccessProvider>();
+        provider.SetupGet(value => value.SubjectKind).Returns(TicketsConstants.RecordKind);
+        await using var harness = await TicketReportDataSourceTests.CreateAsync(services =>
+        {
+            services.AddTimelineCore();
+            services.AddSingleton(attachments.Object);
+            services.AddSingleton(provider.Object);
+        });
+        await harness.RunAsync(async services =>
+        {
+            await services.GetRequiredService<ResumableSteps>().RequestAsync(TimelineFileIndexStep.StepName);
+
+            return true;
+        });
+
+        // Act
+        var removed = await harness.RunAsync(services => services.GetRequiredService<TimelineOrphanFileSweeper>().SweepAsync());
+
+        // Assert
+        Assert.Equal(0, removed);
+        attachments.Verify(service => service.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never());
+    }
+
+    [Fact]
     public async Task ARemovedRecordsTimeline_IsDeletedByTheStep_WhichRunsAgainWhenItFails()
     {
         // Arrange
