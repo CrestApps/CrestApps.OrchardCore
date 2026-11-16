@@ -1,6 +1,6 @@
 # Ticket time, support agreements and business reports
 
-Status: slices 1 to 7 built (2026-11-15). Mike took every recommendation in section 9 (2026-11-15). Open: section 6.5's past usage when a ticket's agreement changes.
+Status: slices 1 to 7 built (2026-11-15). Mike took every recommendation in section 9 (2026-11-15). Section 6.5's past usage when a ticket's agreement changes is built too (2026-11-15).
 
 Builds on the Tickets module ([`ticket-support-plan.md`](ticket-support-plan.md), branch `ma/tickets-phase-2`) on Orchard Core 4 preview-19225 and .NET 11. Ticket boards, the intake plan (categories and conditional questions, [`ticket-intake-plan.md`](ticket-intake-plan.md) on `ma/pensive-jackson-c56dcb`) and business hours are planned in other sessions and are only referenced here.
 
@@ -159,7 +159,15 @@ Optional and later: a support plan sold through Carts, Checkout and Subscription
 - Time logged on the ticket counts against the ticket's agreement when its stage counts as billable and the agreement covers it; the entry remembers the agreement in its `Properties` so a later change of the ticket's agreement doesn't move past usage (decision 4).
 - The account page's Agreements tab shows hours used and left; the ticket's Time panel shows the agreement's balance.
 
-Built in slice 6, with one difference: the time counts against the ticket's current agreement (`TicketAgreementUsageProvider` reads the agreement's tickets from the index, then their entries), and entries don't remember the agreement yet, so changing a ticket's agreement moves its past time with it. The change is on the timeline. Keeping past usage needs the entry to carry the agreement in a form the provider can query, which Time Tracker's index doesn't offer without naming agreements; it waits for a decision. The ticket's balance shows on an **Agreement** card beside the ticket rather than in the Time panel, since it is there with Time Tracker off too.
+Built in slice 6, and past usage kept since (Mike: "Keep it", 2026-11-15) through a Time Tracker extension point that never names agreements:
+
+- `TimeEntry.ChargedTo` (a `RecordRef`, indexed as `TimeEntryIndex.ChargedTo` with `IDX_TimeEntryIndex_ChargedTo`; `TimeEntryQuery.ChargedTo`) is the record the time counts against.
+- Time Tracker asks each `ITimeEntryChargeResolver` while it creates an entry with a source ref, inside the same per-person lock and save, and never again. Pieces of an entry cut around other time keep it.
+- Tickets' `TicketTimeChargeResolver` (with Agreements and Time Tracker on) answers `Agreement:{id}` for ticket time when the ticket has an agreement.
+- `TicketAgreementUsageProvider` reads the entries charged to the agreement, then their tickets for the billing type; the not-billed stage still counts for nothing. Balances, the hours warnings, the Agreements tab, the ticket's Agreement card and the agreement reports all read the provider, so a change of a ticket's agreement moves only the time logged after it.
+- Time Tracker's migration step 2 adds the column and requests the paged, resumable `TimeTracker.ChargeEntries` step, which charges the entries logged before (each to the agreement its ticket has at the upgrade, the same numbers as before). The provider has no fallback for uncharged entries: after the step an uncharged entry is time logged while its ticket had no agreement, and a fallback would move it onto an agreement set later.
+
+The ticket's balance shows on an **Agreement** card beside the ticket rather than in the Time panel, since it is there with Time Tracker off too.
 
 ## 7. Order of work
 

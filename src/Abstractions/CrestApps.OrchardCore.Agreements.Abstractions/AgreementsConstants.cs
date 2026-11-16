@@ -6,6 +6,11 @@ namespace CrestApps.OrchardCore.Agreements;
 public static class AgreementsConstants
 {
     /// <summary>
+    /// The record kind of an agreement, for references to one (such as the agreement time is charged to).
+    /// </summary>
+    public const string RecordKind = "Agreement";
+
+    /// <summary>
     /// The YesSql collection agreements are kept in.
     /// </summary>
     public const string CollectionName = "Agreements";

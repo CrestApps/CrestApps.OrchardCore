@@ -27,7 +27,7 @@ Only a draft agreement can be deleted; cancel one that was in force instead. **C
 
 The agreement's page shows how its hours stand in the current period: used, left, and anything past what it covers, which is billable (work goes on). What counts:
 
-- The billable time logged on the tickets that work under it: time in the desk's ticket stage, not in its stage for time not billed, and not on a ticket whose billing type is not billable or no charge.
+- The billable time logged on the tickets that work under it: time in the desk's ticket stage, not in its stage for time not billed, and not on a ticket whose billing type is not billable or no charge. Time counts against the agreement the ticket worked under when the time was logged: if you move a ticket to another agreement, the time logged before stays on the first one.
 - The billable labor of the work orders done under it.
 
 Each entry is rounded up as the agreement says. The account's page lists its agreements with the hours used, and a ticket's page shows its agreement with the hours left.

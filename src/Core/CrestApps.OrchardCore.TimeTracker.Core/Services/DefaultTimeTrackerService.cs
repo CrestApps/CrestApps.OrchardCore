@@ -27,6 +27,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
     private readonly ISession _session;
     private readonly IDistributedLock _distributedLock;
     private readonly IEnumerable<ITimeEntryObserver> _observers;
+    private readonly IEnumerable<ITimeEntryChargeResolver> _chargeResolvers;
     private readonly IEnumerable<IExternalTimeClock> _externalClocks;
     private readonly IEnumerable<global::OrchardCore.Modules.ILocalClock> _localClocks;
     private readonly IClock _clock;
@@ -44,6 +45,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         ISession session,
         IDistributedLock distributedLock,
         IEnumerable<ITimeEntryObserver> observers,
+        IEnumerable<ITimeEntryChargeResolver> chargeResolvers,
         IEnumerable<IExternalTimeClock> externalClocks,
         IEnumerable<global::OrchardCore.Modules.ILocalClock> localClocks,
         IClock clock,
@@ -56,6 +58,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         _session = session;
         _distributedLock = distributedLock;
         _observers = observers;
+        _chargeResolvers = chargeResolvers;
         _externalClocks = externalClocks;
         _localClocks = localClocks;
         _clock = clock;
@@ -122,6 +125,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
             CreatedUtc = now,
         };
 
+        await ChargeAsync(entry, cancellationToken);
         await _entries.CreateAsync(entry, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
 
@@ -208,6 +212,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
             entry.Note ??= reason.Trim();
         }
 
+        await ChargeAsync(entry, cancellationToken);
         await _entries.CreateAsync(entry, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
         await NotifyAsync(TimeEntryChangeKind.Created, entry, null, actor, reason, cancellationToken);
@@ -325,6 +330,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
                     EndUtc = pieces[1].End == open ? null : pieces[1].End,
                     Source = other.Source,
                     SourceRef = other.SourceRef,
+                    ChargedTo = other.ChargedTo,
                     Note = other.Note,
                     CreatedBy = actor,
                     CreatedUtc = now,
@@ -335,6 +341,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
             }
         }
 
+        await ChargeAsync(entry, cancellationToken);
         await _entries.CreateAsync(entry, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
 
@@ -479,6 +486,13 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
             var refs = sourceRefs.ToArray();
 
             search = search.Where(index => index.SourceRef.IsIn(refs));
+        }
+
+        if (query.ChargedTo is { } chargedTo)
+        {
+            var charged = chargedTo.ToString();
+
+            search = search.Where(index => index.ChargedTo == charged);
         }
 
         if (query.FromUtc is { } from)
@@ -643,7 +657,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
                     continue;
                 }
 
-                await _entries.CreateAsync(new TimeEntry
+                var synced = new TimeEntry
                 {
                     ItemId = CrestApps.Core.UniqueId.GenerateId(),
                     UserId = sync.UserId,
@@ -653,11 +667,15 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
                     EndUtc = pieceEndUtc,
                     Source = entry.Source ?? sync.Source ?? TimeTrackerConstants.Sources.Api,
                     SourceRef = entry.SourceRef,
+                    ChargedTo = entry.ChargedTo,
                     Note = entry.Note,
                     ManagedBy = sync.ManagedBy,
                     CreatedBy = entry.CreatedBy ?? sync.ManagedBy,
                     CreatedUtc = now,
-                }, cancellationToken);
+                };
+
+                await ChargeAsync(synced, cancellationToken);
+                await _entries.CreateAsync(synced, cancellationToken);
             }
         }
 
@@ -701,6 +719,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
                     EndUtc = pieceEnd == open ? null : pieceEnd,
                     Source = other.Source,
                     SourceRef = other.SourceRef,
+                    ChargedTo = other.ChargedTo,
                     Note = other.Note,
                     ManagedBy = other.ManagedBy,
                     CreatedBy = other.CreatedBy,
@@ -747,6 +766,33 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         if (cursor < end)
         {
             yield return (cursor, end);
+        }
+    }
+
+    /// <summary>
+    /// Asks the charge resolvers what a new entry counts against, unless it already says. Called inside the lock and
+    /// before the save that creates the entry, so the charge is the one in force when the time was logged.
+    /// </summary>
+    /// <param name="entry">The entry being created.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    internal async Task ChargeAsync(TimeEntry entry, CancellationToken cancellationToken)
+    {
+        if (!entry.ChargedTo.IsEmpty || string.IsNullOrEmpty(entry.SourceRef))
+        {
+            return;
+        }
+
+        foreach (var resolver in _chargeResolvers)
+        {
+            var chargedTo = await resolver.ResolveAsync(entry, cancellationToken);
+
+            if (!chargedTo.IsEmpty)
+            {
+                entry.ChargedTo = chargedTo;
+
+                return;
+            }
         }
     }
 

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Agreements.Services;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.TimeTracker;
+using CrestApps.OrchardCore.TimeTracker.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentManagement;
@@ -32,12 +33,16 @@ public sealed class TicketAgreementsStartup : StartupBase
 }
 
 /// <summary>
-/// With Time Tracker on too, the billable time logged on an agreement's tickets counts against its hours.
+/// With Time Tracker on too, the billable time logged on an agreement's tickets counts against its hours: each entry
+/// is charged to the agreement its ticket worked under when the time was logged.
 /// </summary>
 [RequireFeatures(AgreementsConstants.Features.Agreements, TimeTrackerConstants.Features.TimeTracker)]
 public sealed class TicketAgreementUsageStartup : StartupBase
 {
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
-        => services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgreementUsageProvider, TicketAgreementUsageProvider>());
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgreementUsageProvider, TicketAgreementUsageProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITimeEntryChargeResolver, TicketTimeChargeResolver>());
+    }
 }

@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.TimeTracker.Models;
 
 namespace CrestApps.OrchardCore.TimeTracker.Services;
@@ -145,6 +146,24 @@ public interface IExternalTimeClock
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The clock, or <see langword="null"/> when it isn't this one.</returns>
     Task<ExternalTimeClockInfo> FindByIdAsync(string id, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Says what record new time counts against, such as the support agreement of the ticket it was logged on. The time
+/// tracker asks while it creates an entry that has a source, inside the same lock and save, and never again: time
+/// already logged stays where it was charged when the source record changes later.
+/// </summary>
+public interface ITimeEntryChargeResolver
+{
+    /// <summary>
+    /// Finds what an entry counts against.
+    /// </summary>
+    /// <param name="entry">The entry being created, with its <see cref="TimeEntry.Source"/> and
+    /// <see cref="TimeEntry.SourceRef"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The record, or an empty reference when this resolver doesn't know the entry's source or it counts
+    /// against nothing.</returns>
+    Task<RecordRef> ResolveAsync(TimeEntry entry, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

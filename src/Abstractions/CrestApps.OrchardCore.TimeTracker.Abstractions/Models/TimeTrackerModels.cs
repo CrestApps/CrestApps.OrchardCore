@@ -1,4 +1,5 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Records;
 
 namespace CrestApps.OrchardCore.TimeTracker.Models;
 
@@ -166,6 +167,14 @@ public sealed class TimeEntry : CatalogItem
     public string SourceRef { get; set; }
 
     /// <summary>
+    /// Gets or sets the record the time counts against, such as the support agreement a ticket worked under when the
+    /// time was logged; empty when it counts against nothing. It is set once, when the entry is created (see
+    /// <see cref="Services.ITimeEntryChargeResolver"/>), so a later change to the source record never moves time already
+    /// logged. Pieces of an entry that is cut around other time keep it.
+    /// </summary>
+    public RecordRef ChargedTo { get; set; }
+
+    /// <summary>
     /// Gets or sets a note.
     /// </summary>
     public string Note { get; set; }
@@ -295,6 +304,12 @@ public sealed class TimeEntryQuery
     /// for any.
     /// </summary>
     public IReadOnlyCollection<string> SourceRefs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the record the entries count against (<see cref="TimeEntry.ChargedTo"/>), or <see langword="null"/>
+    /// for any.
+    /// </summary>
+    public RecordRef? ChargedTo { get; set; }
 }
 
 /// <summary>
