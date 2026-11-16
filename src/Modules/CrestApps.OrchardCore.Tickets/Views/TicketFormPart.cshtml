@@ -32,10 +32,28 @@
                 </div>
             }
 
-            <div class="mb-3">
-                <label for="ticket-form-subject-@Model.WidgetId" class="form-label">@T["Subject"]</label>
-                <input id="ticket-form-subject-@Model.WidgetId" name="subject" class="form-control" maxlength="200" required />
-            </div>
+            @if (Model.Categories.Count > 0)
+            {
+                <div class="mb-3">
+                    <label for="CategoryId" class="form-label">@T["What is it about?"]</label>
+                    @await DisplayAsync(await New.TaxonomyCascadingPicker(InputName: "CategoryId", InputId: "CategoryId", Choices: Model.Categories, Required: Model.CategoryRequired, EmptyText: T["Choose one"].Value))
+                </div>
+            }
+
+            @if (Model.AsksForSubject)
+            {
+                <div class="mb-3">
+                    <label for="ticket-form-subject-@Model.WidgetId" class="form-label">@T["Subject"]</label>
+                    <input id="ticket-form-subject-@Model.WidgetId" name="subject" class="form-control" maxlength="200" required />
+                </div>
+            }
+
+            @* The ticket type's own form: its title (the subject) and the fields customers fill in, with their rules. *@
+            @if (Model.Editor is not null)
+            {
+                Model.Editor.Properties.Remove("Actions");
+                @await DisplayAsync(Model.Editor)
+            }
 
             <div class="mb-3">
                 <label for="ticket-form-body-@Model.WidgetId" class="form-label">@T["How can we help?"]</label>

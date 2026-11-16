@@ -1,12 +1,19 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Tickets.Categories;
 using CrestApps.OrchardCore.Tickets.Models;
+using CrestApps.OrchardCore.Tickets.Portal;
+using CrestApps.OrchardCore.Tickets.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Title.Models;
 
 namespace CrestApps.OrchardCore.Tickets.WebForm;
 
@@ -20,6 +27,10 @@ internal sealed class TicketFormPartDisplayDriver : ContentPartDisplayDriver<Tic
     private readonly ICatalog<TicketDesk> _desks;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IEnumerable<ITicketFormChallenge> _challenges;
+    private readonly IContentManager _contentManager;
+    private readonly IContentItemDisplayManager _contentItemDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly ITicketCategoryService _categories;
 
     internal readonly IStringLocalizer S;
 
@@ -28,17 +39,25 @@ internal sealed class TicketFormPartDisplayDriver : ContentPartDisplayDriver<Tic
         ICatalog<TicketDesk> desks,
         IHttpContextAccessor httpContextAccessor,
         IEnumerable<ITicketFormChallenge> challenges,
+        IContentManager contentManager,
+        IContentItemDisplayManager contentItemDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
+        ITicketCategoryService categories,
         IStringLocalizer<TicketFormPartDisplayDriver> stringLocalizer)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _desks = desks;
         _httpContextAccessor = httpContextAccessor;
         _challenges = challenges;
+        _contentManager = contentManager;
+        _contentItemDisplayManager = contentItemDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
+        _categories = categories;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Display(TicketFormPart part, BuildPartDisplayContext context)
-        => Initialize<TicketFormViewModel>("TicketFormPart", model =>
+        => Initialize<TicketFormViewModel>("TicketFormPart", async model =>
         {
             var request = _httpContextAccessor.HttpContext?.Request;
             var forThisForm = string.Equals(request?.Query[TicketFormController.FormQueryName], part.ContentItem.ContentItemId, StringComparison.Ordinal);
@@ -54,6 +73,20 @@ internal sealed class TicketFormPartDisplayDriver : ContentPartDisplayDriver<Tic
                     ? S["Thank you. We received your request {0} and will get back to you.", model.SentNumber].Value
                     : S["Thank you. We received your request and will get back to you."].Value;
             model.Error = forThisForm ? TicketFormController.Describe(request.Query[TicketFormController.ErrorQueryName].ToString(), S) : null;
+
+            if (model.Ready && string.IsNullOrEmpty(model.SentNumber)
+                && await _contentDefinitionManager.GetTypeDefinitionAsync(part.TicketType) is { } type
+                && type.Parts.FirstOrDefault(item => item.PartDefinition.Name == TicketsConstants.PartName) is { } ticketPart)
+            {
+                var settings = ticketPart.GetSettings<TicketPartSettings>();
+
+                // The type's own form as customers fill it in: the subject (its title) and the fields customers fill in.
+                TicketCustomerEditor.Begin(_httpContextAccessor.HttpContext);
+                model.Editor = await _contentItemDisplayManager.BuildEditorAsync(await _contentManager.NewAsync(part.TicketType), _updateModelAccessor.ModelUpdater, isNew: true);
+                model.AsksForSubject = !type.Parts.Any(item => item.PartDefinition.Name == nameof(TitlePart));
+                model.Categories = TicketCategoryForm.Items(await _categories.ListAsync(part.TicketType, customersOnly: true), settings.CategoryLeavesOnly);
+                model.CategoryRequired = settings.CategoryRequired && model.Categories.Count > 0;
+            }
         }).Location("Detail", "Content:5");
 
     public override IDisplayResult Edit(TicketFormPart part, BuildPartEditorContext context)

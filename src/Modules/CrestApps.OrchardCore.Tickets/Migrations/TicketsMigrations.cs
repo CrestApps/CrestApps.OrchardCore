@@ -258,7 +258,6 @@ internal sealed class TicketsMigrations : DataMigration
         {
             await _contentDefinitionManager.AlterTypeDefinitionAsync(TicketsConstants.CategoryTermType, type => type
                 .WithDisplayName("Ticket category")
-                .Stereotype("Term")
                 .Listable(false)
                 .Creatable(false)
                 .WithPart<TitlePart>(part => part

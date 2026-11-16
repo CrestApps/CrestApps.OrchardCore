@@ -157,7 +157,7 @@ On an edit, a field hidden by a new answer keeps its stored value: nothing is lo
 
 ### In the browser
 
-An editor whose type has rules carries them as JSON (`ConditionalFields_Edit` shape, in `Content:after`) and the `crestapps-conditional-fields` script, which shows and hides each field's `.field-wrapper` as people answer and disables the controls of a hidden field, so they don't post and their browser validation can't block the form. It reads Orchard Core's field editors (text, predefined lists, booleans, numbers, dates, taxonomies, pickers, multi-text) and falls back to the value the server read when the form has no control for a source. Without script, every field shows and the server keeps only what applies.
+An editor whose type has rules carries them as JSON (`ConditionalFields_Edit` shape, in `Content:after`) and the `crestapps-conditional-fields` script, which shows and hides each field's `.field-wrapper` as people answer and disables the controls of a hidden field, so they don't post and their browser validation can't block the form. It reads Orchard Core's field editors (text, predefined lists, booleans, numbers, dates, taxonomies, pickers, multi-text) and falls back to the value the server read when the form has no control for a source. Without script, every field shows and the server keeps only what applies. Field editors shown on the site's own theme (a portal or widget form) get a plain fallback for Orchard Core's `Hint_Admin` shape, which only the admin theme defines.
 
 ### Extending
 
@@ -166,6 +166,7 @@ An editor whose type has rules carries them as JSON (`ConditionalFields_Edit` sh
 | Let rules read a value of the item that isn't a field (a ticket's category) | `IContentConditionSource`: `DescribeAsync` returns `ContentConditionSourceDescriptor`s for a type (name, display name, kind, the input the browser reads, options for the settings editor, ancestors for a tree); `ReadAsync` returns a `ConditionValue` |
 | Let rules read your own field type | `IContentFieldValueReader` (`FieldType`, `ReadAsync` over the field's stored JSON, `DescribeAsync` for options) |
 | Hide fields for a reason of your own (fields customers don't fill in) | `IContentFieldVisibilityProvider`: its fields are treated as hidden, with the same restore and error removal |
+| Let people pick a term one level at a time (Category, then Sub-category) | The `TaxonomyCascadingPicker` shape: `InputName`, `InputId`, `Choices` (`CascadingPickerItem`s: id, parent id, text, whether it may be chosen, description), `SelectedId`, `Required`, `EmptyText`, `LevelLabels`. It posts one value; without script it is one indented list (`crestapps-cascading-picker`) |
 | Walk a taxonomy without the Taxonomies module | `TaxonomyTermTree.From(taxonomy)` (`CrestApps.OrchardCore.ContentFields.Taxonomies`): terms in tree order with parent, level, ancestors and `GetPathText` |
 
 Readers ship for `TextField` (with a predefined list's options), `BooleanField`, `NumericField`, `DateField`, `DateTimeField`, `TimeField`, `MultiTextField`, `ContentPickerField`, `UserPickerField`, `LocalizationSetContentPickerField`, `LinkField`, `HtmlField`, `MarkdownField`, `TaxonomyField` (with the terms above a chosen term, for `IsOrUnder`), `PhoneField` and `AddressField` (its country code).

@@ -1,7 +1,7 @@
 @using CrestApps.OrchardCore.ContentFields.Taxonomies
 @{
     // A choice made one level at a time: Category, then Sub-category... Without script it is one list, indented.
-    var items = ((IEnumerable<CascadingPickerItem>)Model.Items ?? []).ToList();
+    var items = ((IEnumerable<CascadingPickerItem>)Model.Choices ?? []).ToList();
     var inputName = (string)Model.InputName;
     var inputId = (string)Model.InputId ?? inputName?.Replace('.', '_');
     var selectedId = (string)Model.SelectedId;

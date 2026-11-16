@@ -1,14 +1,19 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.Tickets.Categories;
 using CrestApps.OrchardCore.Tickets.Models;
+using CrestApps.OrchardCore.Tickets.Portal;
 using CrestApps.OrchardCore.Tickets.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display;
+using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Contents;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tickets.WebForm;
@@ -37,9 +42,17 @@ public sealed class TicketFormController : Controller
     private readonly TicketFormGuard _guard;
     private readonly IEnumerable<ITicketFormChallenge> _challenges;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IContentItemDisplayManager _contentItemDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly ITicketCategoryService _categories;
 
-    public TicketFormController(IContentManager contentManager, ITicketService tickets, ICatalog<TicketDesk> desks, TicketFormGuard guard, IEnumerable<ITicketFormChallenge> challenges, IAuthorizationService authorizationService)
+    public TicketFormController(IContentManager contentManager, ITicketService tickets, ICatalog<TicketDesk> desks, TicketFormGuard guard, IEnumerable<ITicketFormChallenge> challenges, IAuthorizationService authorizationService, IContentDefinitionManager contentDefinitionManager, IContentItemDisplayManager contentItemDisplayManager, IUpdateModelAccessor updateModelAccessor, ITicketCategoryService categories)
     {
+        _contentDefinitionManager = contentDefinitionManager;
+        _contentItemDisplayManager = contentItemDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
+        _categories = categories;
         _authorizationService = authorizationService;
         _contentManager = contentManager;
         _tickets = tickets;
@@ -57,12 +70,13 @@ public sealed class TicketFormController : Controller
     /// <param name="subject">The subject.</param>
     /// <param name="body">The request.</param>
     /// <param name="returnUrl">The page to go back to.</param>
+    /// <param name="categoryId">The category, when the ticket type has categories.</param>
     /// <returns>A redirect back to the page.</returns>
     [AllowAnonymous]
     [HttpPost("tickets/forms/{widgetId}", Name = "TicketFormSubmit")]
     [RequestSizeLimit(MaxRequestBytes)]
     [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.WebForm)]
-    public async Task<IActionResult> Submit(string widgetId, string name, string email, string subject, string body, string returnUrl)
+    public async Task<IActionResult> Submit(string widgetId, string name, string email, string subject, string body, string returnUrl, string categoryId = null)
     {
         var back = Url.IsLocalUrl(returnUrl) ? returnUrl : "~/";
 
@@ -95,14 +109,28 @@ public sealed class TicketFormController : Controller
         }
 
         var signedIn = User.Identity?.IsAuthenticated == true ? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value : null;
+        var ticket = await _contentManager.NewAsync(part.TicketType);
+        var type = await _contentDefinitionManager.GetTypeDefinitionAsync(part.TicketType);
+        var settings = type?.Parts.FirstOrDefault(item => item.PartDefinition.Name == TicketsConstants.PartName)?.GetSettings<TicketPartSettings>() ?? new TicketPartSettings();
 
-        if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(body)
+        // Only a category customers can choose; it goes on the item before the form is read, for the type's field rules.
+        var category = await TicketCategoryForm.ApplyAsync(_categories, ticket, categoryId, customersOnly: true);
+        var categoryMissing = category is null
+            && (!string.IsNullOrWhiteSpace(categoryId) || (settings.CategoryRequired && (await _categories.ListAsync(part.TicketType, customersOnly: true)).Count > 0));
+
+        // The type's own form as customers fill it in; whatever was posted for anything else is dropped.
+        TicketCustomerEditor.Begin(HttpContext);
+        await _contentItemDisplayManager.UpdateEditorAsync(ticket, _updateModelAccessor.ModelUpdater, isNew: true);
+        TicketCustomerEditor.KeepOnlyCustomerValues(ticket, await _contentManager.NewAsync(part.TicketType), type);
+
+        subject = string.IsNullOrWhiteSpace(subject) ? ticket.DisplayText : subject;
+
+        if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(body) || categoryMissing || !ModelState.IsValid
             || (signedIn is null && (!LooksLikeEmail(email) || string.IsNullOrWhiteSpace(name) || name.Trim().Length > MaxNameLength)))
         {
             return Back(back, widgetId, ErrorQueryName, "missing");
         }
 
-        var ticket = await _contentManager.NewAsync(part.TicketType);
         var result = await _tickets.CreateAsync(new TicketCreateRequest
         {
             Ticket = ticket,
@@ -110,6 +138,10 @@ public sealed class TicketFormController : Controller
             Subject = Cut(subject, MaxSubjectLength),
             Body = Cut(body, MaxBodyLength),
             DeskId = desk.ItemId,
+
+            // The widget's desk gives way to the category's when that serves the same requesters.
+            DeskIsSuggestion = true,
+            CategoryId = category?.Id,
             Requester = signedIn is null ? default : new PartyRef(PartyKinds.User, signedIn),
             RequesterContact = signedIn is null ? new ContactInfo { Name = name.Trim(), Email = email.Trim() } : null,
             Channel = TicketsConstants.Channels.WebForm,
@@ -134,7 +166,7 @@ public sealed class TicketFormController : Controller
         {
             "busy" => S["You sent several requests in a short time. Please wait a few minutes and try again."],
             "challenge" => S["Please confirm you're not a robot and send it again."],
-            "missing" => S["Please give your name, a subject, your request and your e-mail address."],
+            "missing" => S["Please give your name, a subject, your request, your e-mail address and every answer the form asks for."],
             "failed" => S["Your request couldn't be sent. Please try again later."],
             _ => null,
         };

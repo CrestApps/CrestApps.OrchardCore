@@ -23,7 +23,7 @@
                     <label for="ticket-category" class="form-label small mb-1">@T["Category"]</label>
                     @if (Model.CanEdit && Model.Categories.Count > 0)
                     {
-                        @await DisplayAsync(await New.TaxonomyCascadingPicker(InputName: "CategoryId", InputId: "ticket-category", Items: Model.Categories, SelectedId: part.CategoryId, EmptyText: T["No category"].Value))
+                        @await DisplayAsync(await New.TaxonomyCascadingPicker(InputName: "CategoryId", InputId: "ticket-category", Choices: Model.Categories, SelectedId: part.CategoryId, EmptyText: T["No category"].Value))
                     }
                     else
                     {
@@ -75,7 +75,7 @@
             <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="ApplyCategoryRouting" asp-route-id="@ticketId" method="post" class="mt-2">
                 <input type="hidden" name="categoryId" value="@part.CategoryId" />
                 <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Apply the category's routing"]</button>
-                <span class="hint d-block">@T["Changes the {0}.", string.Join(", ", Model.CategoryRoutingChanges)]</span>
+                <span class="hint d-block">@T["Changes {0}.", string.Join(", ", Model.CategoryRoutingChanges)]</span>
             </form>
         }
         @if (Model.CanAssign && part.AssigneeId != Context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value)

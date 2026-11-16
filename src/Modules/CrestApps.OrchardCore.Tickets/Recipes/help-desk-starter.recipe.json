@@ -22,6 +22,7 @@
         "CrestApps.OrchardCore.BusinessHours",
         "CrestApps.OrchardCore.ServiceLevels",
         "CrestApps.OrchardCore.Tickets",
+        "OrchardCore.ContentFields",
         "OrchardCore.Taxonomies",
         "OrchardCore.Workflows"
       ]
