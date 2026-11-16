@@ -269,8 +269,8 @@ public sealed class ServiceAgreementTests
         var moved = await setup.Harness.RunAsync(async services => await services.GetRequiredService<IAgreementManager>().FindByIdAsync("4legacyagreement0000000001"), commit: false);
 
         // Assert
-        Assert.Equal(1, first);
-        Assert.Equal(0, again);
+        Assert.Equal((1, 1, 0), first);
+        Assert.Equal((0, 1, 0), again);
         Assert.Equal("SA-00007", moved.Number);
         Assert.Equal(AgreementStatus.Active, moved.Status);
         Assert.Equal("contoso", moved.AccountId);
@@ -279,6 +279,18 @@ public sealed class ServiceAgreementTests
         Assert.Equal("Pat", terms.Contact.Name);
         Assert.Equal(120, terms.PricePerVisit);
         Assert.Equal("yearly", Assert.Single(terms.Schedules).Id);
+    }
+
+    [Fact]
+    public void TheMigrationsSteps_AreInstanceMethods_AsOrchardCoreFindsThem()
+    {
+        var steps = typeof(CrestApps.OrchardCore.WorkOrders.Migrations.ServiceAgreementsMigrations)
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly)
+            .Where(method => method.Name.StartsWith("Create", StringComparison.Ordinal) || method.Name.StartsWith("UpdateFrom", StringComparison.Ordinal))
+            .ToList();
+
+        Assert.Equal(["CreateAsync", "UpdateFrom1Async", "UpdateFrom2Async"], steps.Select(method => method.Name).Order());
+        Assert.All(steps, method => Assert.False(method.IsStatic, method.Name + " is static."));
     }
 
     private static async Task<string> CreateAgreementAsync(IServiceProvider services, string typeId, Action<Agreement, WorkOrderAgreementTerms> configure)

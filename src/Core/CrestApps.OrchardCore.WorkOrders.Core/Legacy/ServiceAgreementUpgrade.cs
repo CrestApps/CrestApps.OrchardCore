@@ -4,6 +4,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Agreements.Models;
 using CrestApps.OrchardCore.Agreements.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
+using Microsoft.Extensions.Logging;
 using YesSql;
 
 namespace CrestApps.OrchardCore.WorkOrders.Core.Legacy;
@@ -20,35 +21,49 @@ public sealed class ServiceAgreementUpgrade
 
     private readonly ISession _session;
     private readonly IAgreementManager _agreements;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ServiceAgreementUpgrade"/> class.
     /// </summary>
-    public ServiceAgreementUpgrade(ISession session, IAgreementManager agreements)
+    public ServiceAgreementUpgrade(ISession session, IAgreementManager agreements, ILogger<ServiceAgreementUpgrade> logger)
     {
         _session = session;
         _agreements = agreements;
+        _logger = logger;
     }
 
     /// <summary>
-    /// Copies every service agreement that hasn't moved yet. Running it again does nothing more.
+    /// Copies every service agreement that hasn't moved yet, as it was stored: the move doesn't check it again, since a
+    /// rule added since it was saved must not lose it. Running it again does nothing more. An agreement whose copy fails
+    /// is logged and left for the next run.
     /// </summary>
     /// <param name="cancellationToken">A token to cancel the work.</param>
-    /// <returns>How many moved.</returns>
-    public async Task<int> RunAsync(CancellationToken cancellationToken = default)
+    /// <returns>How many moved now, how many there were to move, and how many failed.</returns>
+    public async Task<(int Moved, int Total, int Failed)> RunAsync(CancellationToken cancellationToken = default)
     {
+        var legacies = await ListLegacyAsync(cancellationToken);
         var moved = 0;
+        var failed = 0;
 
-        foreach (var legacy in await ListLegacyAsync(cancellationToken))
+        foreach (var legacy in legacies)
         {
-            if (await _agreements.FindByIdAsync(legacy.ItemId, cancellationToken) is null)
+            try
             {
-                await _agreements.CreateAsync(await ToAgreementAsync(legacy, cancellationToken), cancellationToken);
-                moved++;
+                if (await _agreements.FindByIdAsync(legacy.ItemId, cancellationToken) is null)
+                {
+                    await _agreements.CreateAsync(await ToAgreementAsync(legacy, cancellationToken), cancellationToken);
+                    moved++;
+                }
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                failed++;
+                _logger.LogError(exception, "The service agreement {AgreementId} couldn't move to the Agreements module; it is tried again on the next run.", legacy.ItemId);
             }
         }
 
-        return moved;
+        return (moved, legacies.Count, failed);
     }
 
     /// <summary>
@@ -117,31 +132,13 @@ public sealed class ServiceAgreementUpgrade
 
     private async Task<IReadOnlyList<LegacyServiceAgreement>> ListLegacyAsync(CancellationToken cancellationToken)
     {
-        IEnumerable<ServiceAgreementIndex> rows;
-
-        try
-        {
-            rows = await _session.QueryIndex<ServiceAgreementIndex>(collection: WorkOrdersConstants.CollectionName).ListAsync(cancellationToken);
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            // A tenant that never had service agreements has no table to read.
-            return [];
-        }
-
-        var documentIds = rows.Select(row => row.DocumentId).Distinct().ToArray();
-
-        if (documentIds.Length == 0)
-        {
-            return [];
-        }
-
-        // The agreements were stored under the old class name, which no longer exists: read that name as the legacy
-        // model. Only the reading is mapped; the stored rows are left as they are.
+        // The agreements are documents of the Work Orders collection stored under the old class name, which no longer
+        // exists: that name is mapped to the legacy model, which only this upgrade reads, and the documents are read by
+        // it. The stored rows are left as they are.
         _session.Store.TypeNames[typeof(LegacyServiceAgreement)] = StoredTypeName;
 
-        var agreements = await _session.GetAsync<LegacyServiceAgreement>(documentIds, WorkOrdersConstants.CollectionName, cancellationToken);
+        var agreements = await _session.Query<LegacyServiceAgreement>(WorkOrdersConstants.CollectionName).ListAsync(cancellationToken);
 
-        return [.. agreements.Where(agreement => agreement is not null)];
+        return [.. agreements.Where(agreement => agreement is not null && !string.IsNullOrEmpty(agreement.ItemId))];
     }
 }

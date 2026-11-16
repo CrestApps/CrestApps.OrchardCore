@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Agreements.Services;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.WorkOrders.Agreements.Drivers;
 using CrestApps.OrchardCore.WorkOrders.Migrations;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
@@ -27,6 +28,7 @@ public sealed class AgreementsStartup : StartupBase
     {
         services.AddServiceAgreementsCore();
         services.AddDataMigration<ServiceAgreementsMigrations>();
+        services.AddResumableStep<ServiceAgreementsMoveStep>();
         services.AddDisplayDriver<Agreement, WorkOrderAgreementTermsDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ServiceAgreementBackgroundTask>());
         services.AddNavigationProvider<AgreementsAdminMenu>();
