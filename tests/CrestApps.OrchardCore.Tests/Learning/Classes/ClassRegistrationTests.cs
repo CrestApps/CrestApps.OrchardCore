@@ -151,6 +151,44 @@ public sealed class ClassRegistrationTests
         Assert.True(benAfter.IsOffered);
     }
 
+    [Fact]
+    public async Task TwoRegistrationsAtOnce_ForTwoSessionsOfOneClass_HoldOnePlaceOnly()
+    {
+        // Arrange: both requests pass the one-place check before either registers, unless a lock keeps them apart.
+        var bothArrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var arrived = 0;
+        var users = Users(async () =>
+        {
+            if (Interlocked.Increment(ref arrived) == 2)
+            {
+                bothArrived.TrySetResult();
+            }
+
+            await Task.WhenAny(bothArrived.Task, Task.Delay(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken));
+        });
+        var (h, session) = await CreateAsync(users: users);
+        await using var _ = h;
+        var other = await SaveSessionAsync(h, session.AppointmentTypeId, session.ResourceIds, "class1", capacity: 5);
+        var ana = await EnrollAsync(h, "ana");
+
+        // Act
+        var results = await Task.WhenAll(
+            Task.Run(() => h.RunAsync(services => Registrations(services).RegisterAsync(ana.ItemId, "class1", session.ItemId))),
+            Task.Run(() => h.RunAsync(services => Registrations(services).RegisterAsync(ana.ItemId, "class1", other.ItemId))));
+        var places = new List<Appointment>();
+
+        foreach (var sessionId in new[] { session.ItemId, other.ItemId })
+        {
+            places.AddRange((await h.RunAsync(services => services.GetRequiredService<ISchedulingSessionService>().ListRegistrationsAsync(sessionId)))
+                .Where(appointment => appointment.Status != AppointmentStatus.Cancelled));
+        }
+
+        // Assert
+        Assert.Single(results, result => result.Succeeded);
+        Assert.Single(results, result => result.Error == ClassRegistrationErrors.AlreadyRegistered);
+        Assert.Single(places);
+    }
+
     private static IClassRegistrationService Registrations(IServiceProvider services)
         => services.GetRequiredService<IClassRegistrationService>();
 
@@ -184,7 +222,7 @@ public sealed class ClassRegistrationTests
         return result.Enrollment;
     }
 
-    private static async Task<(CalendarTestHarness Harness, SchedulingSession Session)> CreateAsync(int capacity = 5, int? minimumMinutes = null)
+    private static async Task<(CalendarTestHarness Harness, SchedulingSession Session)> CreateAsync(int capacity = 5, int? minimumMinutes = null, UserManager<IUser> users = null)
     {
         var clock = new TestClock { UtcNow = CalendarTestHarness.Now };
         var (harness, courses, _) = await LearningTestHarness.CreateAsync(
@@ -196,7 +234,7 @@ public sealed class ClassRegistrationTests
                 services.AddSingleton<IDistributedLock, CrestApps.OrchardCore.Tests.Workforce.TimeOffKit.KeyedLock>();
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(clock);
-                services.AddSingleton(Users());
+                services.AddSingleton(users ?? Users());
             },
             async schemaBuilder =>
             {
@@ -238,7 +276,8 @@ public sealed class ClassRegistrationTests
         return session;
     }
 
-    private static UserManager<IUser> Users()
+    // The user lookup sits between the one-place check and the registration, so a race test can hold requests there.
+    private static UserManager<IUser> Users(Func<Task> onLookup = null)
     {
         var users = new Mock<UserManager<IUser>>(new Mock<IUserStore<IUser>>().Object, null, null, null, null, null, null, null, null);
 
@@ -246,7 +285,15 @@ public sealed class ClassRegistrationTests
         {
             var user = Mock.Of<IUser>(value => value.UserName == name);
 
-            users.Setup(manager => manager.FindByIdAsync(name)).ReturnsAsync(user);
+            users.Setup(manager => manager.FindByIdAsync(name)).Returns(async () =>
+            {
+                if (onLookup is not null)
+                {
+                    await onLookup();
+                }
+
+                return user;
+            });
             users.Setup(manager => manager.GetEmailAsync(user)).ReturnsAsync(name + "@example.com");
             users.Setup(manager => manager.GetUserNameAsync(user)).ReturnsAsync(name);
         }

@@ -143,6 +143,7 @@ public sealed class ClassRegistrationController : Controller
             ClassRegistrationErrors.AlreadyRegistered => H["You already have a place in another session of this class. Give it up first."],
             ClassRegistrationErrors.NotRegistered => H["You have no place in this class."],
             ClassRegistrationErrors.NoOffer => H["You have no offered place to accept. The offer may have run out."],
+            ClassRegistrationErrors.Busy => H["Your place in this class is being changed. Try again in a moment."],
             _ => H["{0}", error ?? string.Empty],
         };
 

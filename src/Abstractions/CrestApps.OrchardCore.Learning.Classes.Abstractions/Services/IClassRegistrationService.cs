@@ -106,4 +106,6 @@ public static class ClassRegistrationErrors
     public const string NotRegistered = "NotRegistered";
 
     public const string NoOffer = "NoOffer";
+
+    public const string Busy = "Busy";
 }
