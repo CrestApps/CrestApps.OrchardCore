@@ -43,6 +43,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Calendars.Abstractions\CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Classes.Abstractions\CrestApps.OrchardCore.Learning.Classes.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Scheduling.Abstractions\CrestApps.OrchardCore.Scheduling.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Workforce.Abstractions\CrestApps.OrchardCore.Workforce.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Classes.Core\CrestApps.OrchardCore.Learning.Classes.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Scheduling.Core\CrestApps.OrchardCore.Scheduling.Core.csproj" />

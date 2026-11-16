@@ -24,4 +24,15 @@ public sealed class DraftShiftSegment
     /// </summary>
     [JsonConverter(typeof(WallClockDateTimeJsonConverter))]
     public DateTime End { get; set; }
+
+    /// <summary>
+    /// Gets or sets what placed the segment, such as another module, so it can take it back; empty for a segment a
+    /// planner added.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the record of <see cref="Source"/> that placed the segment, so it can take it back.
+    /// </summary>
+    public string SourceId { get; set; }
 }

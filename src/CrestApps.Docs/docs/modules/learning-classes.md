@@ -43,6 +43,14 @@ The panel's forms post to `/learning/classes/{classItemId}/register`, `/accept` 
 
 The **Roster** page of a session lists the registered learners with their status, and the waitlist below. Staff mark each learner **Attended**, **Partly attended** with the minutes, **Absent** or **Not marked**, and save; `ISchedulingSessionService.RecordAttendanceAsync` records it, and saving the same roster again changes nothing. After the change is saved, an attendance that counts (attended, or partly attended for at least the class's minimum minutes) completes the class item for the learner through `IAppointmentObserver`.
 
+## Staff classes on the shift plan
+
+When [Workforce](./workforce.md) is enabled, a class shows on the shift plan of a learner who is a staff member. Once their place in a session is confirmed (at registration, or when they accept an offer), each meeting of the session becomes a **Training** segment on their published shift that covers it, clipped to the shift and marked with the source `Learning.Class` and the registration's id; the schedule's draft gets it too, so a republish keeps it, and the change is logged on the schedule. When the place is cancelled, by the learner, by staff, by the session being cancelled or by the enrollment ending, those segments are taken off again.
+
+Only staff members are affected (`IStaffDirectory.FindByUserIdAsync`). A meeting that no published shift covers is skipped, because the staff member isn't working then; nothing is added to the schedule for it. The Training segment uses the first enabled activity code of the Training kind. Changing a session's meetings after places are confirmed does not yet move the segments already placed.
+
+The bridge is `ClassShiftSegmentObserver`, an `IAppointmentObserver` registered by a startup that requires the Workforce feature; it calls `IShiftService.PlaceSegmentAsync` and `RemoveSegmentsAsync` from `Workforce.Abstractions`.
+
 ## Permissions
 
 | Permission | Meaning |
@@ -63,5 +71,5 @@ The instructors and assistants on the staff of a class's course manage the sessi
 ## Not in this version
 
 - **Course offerings** (`CourseOffering`, a dated run of a course with its own staff and enrollment window) are not built yet.
-- **Workforce shift segments** for staff classes and **Time Tracker** entries for attendance come in a later slice.
+- **Time Tracker** entries for attendance come in a later slice.
 - Nothing creates online meeting links; paste one on the class or the session.

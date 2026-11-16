@@ -386,7 +386,8 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
                 End = shift.End.AddDays(offset),
                 TimeZoneId = timeZoneId,
                 TemplateId = shift.TemplateId,
-                Segments = shift.Segments.Select(segment => new DraftShiftSegment
+                // A segment another module placed, such as a class, belongs to its own date, so it isn't copied.
+                Segments = shift.Segments.Where(segment => string.IsNullOrEmpty(segment.Source)).Select(segment => new DraftShiftSegment
                 {
                     ActivityCodeId = segment.ActivityCodeId,
                     Start = segment.Start.AddDays(offset),
@@ -787,7 +788,9 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
 
         return before.Segments.Zip(after.Segments).All(pair => pair.First.ActivityCodeId == pair.Second.ActivityCodeId
             && pair.First.StartUtc == pair.Second.StartUtc
-            && pair.First.EndUtc == pair.Second.EndUtc);
+            && pair.First.EndUtc == pair.Second.EndUtc
+            && pair.First.Source == pair.Second.Source
+            && pair.First.SourceId == pair.Second.SourceId);
     }
 
     private static ScheduleChange Change(SchedulePeriod period, DraftShift draft, ScheduleChangeKind kind, DateTime? beforeStart, DateTime? beforeEnd, DateTime afterStart, DateTime afterEnd, string previousWorkerId, int version, string actor, DateTime now)

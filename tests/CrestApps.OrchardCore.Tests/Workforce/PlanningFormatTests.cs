@@ -66,6 +66,27 @@ public sealed class PlanningFormatTests
     }
 
     [Fact]
+    public void Segments_EditedInTheDraftEditor_KeepTheSourceOfAnUnchangedPlacedSegment()
+    {
+        // Arrange
+        var day = new DateTime(2026, 11, 9, 9, 0, 0);
+        DraftShiftSegment[] before =
+        [
+            new DraftShiftSegment { ActivityCodeId = "training", Start = day.AddHours(1), End = day.AddHours(2), Source = "Tests.Class", SourceId = "class-1" },
+            new DraftShiftSegment { ActivityCodeId = "training", Start = day.AddHours(5), End = day.AddHours(6), Source = "Tests.Class", SourceId = "class-2" },
+        ];
+        var errors = new List<string>();
+        var segments = SegmentFormat.Read("10:00-11:00 Team training\n14:30-15:00 Team training\n13:00-13:30 Meal", _codes, errors);
+
+        // Act
+        var draft = SegmentFormat.KeepSources(SegmentFormat.ToDraft(segments, day), before);
+
+        // Assert (the moved one is now the planner's)
+        Assert.Equal(["class-1", null, null], draft.Select(segment => segment.SourceId));
+        Assert.Equal("Tests.Class", draft[0].Source);
+    }
+
+    [Fact]
     public void CoverageRows_ReadWeekdaysAndDates_WithAnOptionalMaximum()
     {
         // Arrange

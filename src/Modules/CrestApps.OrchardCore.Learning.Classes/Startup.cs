@@ -1,9 +1,13 @@
+using CrestApps.OrchardCore.Learning.Classes.Core.Services;
 using CrestApps.OrchardCore.Learning.Classes.Drivers;
 using CrestApps.OrchardCore.Learning.Classes.Migrations;
 using CrestApps.OrchardCore.Learning.Classes.Models;
 using CrestApps.OrchardCore.Learning.Classes.Services;
 using CrestApps.OrchardCore.Learning.Classes.ViewModels;
+using CrestApps.OrchardCore.Scheduling.Services;
+using CrestApps.OrchardCore.Workforce;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data.Migration;
@@ -34,5 +38,19 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<ClassSessionRow, ClassSessionRowDisplayDriver>();
         services.AddDisplayDriver<ClassRosterRow, ClassRosterRowDisplayDriver>();
         services.AddDisplayDriver<ClassWaitlistRow, ClassWaitlistRowDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Puts a staff member's confirmed class meetings on their published shifts as Training segments, and takes them off
+/// when the place is cancelled, when Workforce is enabled.
+/// </summary>
+[RequireFeatures(WorkforceConstants.Features.Workforce)]
+public sealed class WorkforceStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAppointmentObserver, ClassShiftSegmentObserver>());
     }
 }

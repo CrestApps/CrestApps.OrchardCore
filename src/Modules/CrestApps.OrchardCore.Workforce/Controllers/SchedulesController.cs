@@ -539,7 +539,7 @@ public sealed class SchedulesController : Controller
             shift.Start = from;
             shift.End = to;
             shift.TemplateId = template?.ItemId;
-            shift.Segments = SegmentFormat.ToDraft(segments, from);
+            shift.Segments = SegmentFormat.KeepSources(SegmentFormat.ToDraft(segments, from), shift.Segments);
             shift.Notes = string.IsNullOrWhiteSpace(model.Notes) ? null : model.Notes.Trim();
 
             var result = await _planningService.SaveDraftShiftAsync(shift, User.Identity?.Name, HttpContext.RequestAborted);
