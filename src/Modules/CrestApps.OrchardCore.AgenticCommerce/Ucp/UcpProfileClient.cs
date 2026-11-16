@@ -170,11 +170,12 @@ public sealed class UcpProfileClient
         => AgentPlatform.UnregisteredIdPrefix + Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(GetOrigin(profileUrl) ?? profileUrl ?? string.Empty)).AsSpan(0, 11));
 
     /// <summary>
-    /// Returns an address's origin (scheme, host and port, in lower case), or <see langword="null"/> when it isn't one.
+    /// Returns an address's origin (scheme, host and port, in lower case, without the trailing dot of a fully qualified
+    /// name), or <see langword="null"/> when it isn't one.
     /// </summary>
     /// <param name="url">The address.</param>
     public static string GetOrigin(string url)
-        => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? $"{uri.Scheme}://{uri.IdnHost}:{uri.Port}".ToLowerInvariant() : null;
+        => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? $"{uri.Scheme}://{uri.IdnHost.TrimEnd('.')}:{uri.Port}".ToLowerInvariant() : null;
 
     /// <summary>
     /// The storage key of where a UCP platform's order updates go, on an agent checkout.

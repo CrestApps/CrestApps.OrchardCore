@@ -97,7 +97,29 @@ public sealed class UcpUnregisteredPlatformTests : IAsyncLifetime, IDisposable
     }
 
     /// <summary>
-    /// The control for the test above: a profile on a host no platform has still gets past its signature (and stops at the
+    /// The registered-host Mild (fix verification): <c>Uri.IdnHost</c> keeps the trailing dot of a fully qualified name,
+    /// which HttpClient fetches like the name without it, so the host check found no platform and a disabled platform came
+    /// back as an unregistered one.
+    /// </summary>
+    [Fact]
+    public async Task AProfileOnTheHostOfARegisteredPlatform_WrittenWithATrailingDot_IsNotLetInAsAnUnregisteredPlatform()
+    {
+        await AddPlatformAsync(new AgentPlatform
+        {
+            ItemId = "platform-1",
+            Name = "Agent",
+            Enabled = false,
+            Protocols = [AgenticCommerceConstants.Protocols.Ucp],
+            ProfileUrl = RegisteredProfileUrl,
+        });
+
+        var result = await InvokeSignedAsync("https://agent.example./.well-known/ucp");
+
+        Assert.Equal(StatusCodes.Status403Forbidden, StatusCode(result));
+    }
+
+    /// <summary>
+    /// The control for the tests above: a profile on a host no platform has still gets past its signature (and stops at the
     /// profile's unsupported version).
     /// </summary>
     [Fact]
