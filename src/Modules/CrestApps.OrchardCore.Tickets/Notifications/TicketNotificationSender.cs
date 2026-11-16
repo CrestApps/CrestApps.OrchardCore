@@ -89,18 +89,6 @@ internal sealed class TicketNotificationSender
         => $"~/{_adminOptions.AdminUrlPrefix}/ticket/{ticketId}";
 
     /// <summary>
-    /// Tells users about a ticket, each once, skipping who made the change and users that no longer exist.
-    /// </summary>
-    /// <param name="userIds">The users.</param>
-    /// <param name="ticket">The ticket.</param>
-    /// <param name="type">The notification type, one of <see cref="TicketsConstants.NotificationTypes"/>.</param>
-    /// <param name="subject">The subject, plain text, with <c>{0}</c> where the ticket's number and subject go.</param>
-    /// <param name="url">The page it opens; the ticket's admin page when <see langword="null"/>.</param>
-    /// <param name="info">Extra details, such as the service-level metric.</param>
-    /// <param name="skip">Tells whether a user already has this notification (unread), so it isn't sent twice.</param>
-    /// <param name="cancellationToken">A token to cancel the work.</param>
-    /// <returns>How many were sent.</returns>
-    /// <summary>
     /// Sends a notification already written to one user.
     /// </summary>
     /// <param name="userId">The user.</param>
@@ -121,6 +109,18 @@ internal sealed class TicketNotificationSender
         return true;
     }
 
+    /// <summary>
+    /// Tells users about a ticket, each once, skipping who made the change and users that no longer exist.
+    /// </summary>
+    /// <param name="userIds">The users.</param>
+    /// <param name="ticket">The ticket.</param>
+    /// <param name="type">The notification type, one of <see cref="TicketsConstants.NotificationTypes"/>.</param>
+    /// <param name="subject">The subject, plain text, with <c>{0}</c> where the ticket's number and subject go.</param>
+    /// <param name="url">The page it opens; the ticket's admin page when <see langword="null"/>.</param>
+    /// <param name="info">Extra details, such as the service-level metric.</param>
+    /// <param name="skip">Tells whether a user already has this notification (unread), so it isn't sent twice.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>How many were sent.</returns>
     public async Task<int> SendAsync(
         IEnumerable<string> userIds,
         ContentItem ticket,
