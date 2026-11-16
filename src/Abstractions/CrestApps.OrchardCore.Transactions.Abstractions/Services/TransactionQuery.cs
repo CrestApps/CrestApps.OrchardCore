@@ -47,6 +47,11 @@ public sealed class TransactionQuery
     public string ReferenceId { get; set; }
 
     /// <summary>
+    /// Gets or sets the checkout whose transactions to list.
+    /// </summary>
+    public string CheckoutSessionId { get; set; }
+
+    /// <summary>
     /// Gets or sets a case-insensitive title search term.
     /// </summary>
     public string Search { get; set; }

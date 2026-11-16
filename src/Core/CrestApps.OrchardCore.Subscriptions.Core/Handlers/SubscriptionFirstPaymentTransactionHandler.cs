@@ -7,15 +7,19 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
 /// <summary>
 /// Starts a subscription that was bought with a promise to pay (Pay Later, a bank transfer) once its first transaction
-/// is paid, and brings one that fell past due back once its overdue invoices are paid. Until its first payment it waits
-/// as <see cref="SubscriptionStatus.Incomplete"/> and grants nothing.
+/// is paid, and brings one that fell past due back once nothing of its checkout is overdue. Until its first payment it
+/// waits as <see cref="SubscriptionStatus.Incomplete"/> and grants nothing.
 /// </summary>
+/// <remarks>
+/// One rule with <see cref="SubscriptionOverdueTransactionHandler"/>: a subscription is past due while any transaction of
+/// the checkout that created it is overdue and unpaid. That handler marks every subscription of the checkout when one of
+/// its transactions falls overdue, a sign-up fee or a one-time item included, so any paid transaction of the checkout may
+/// bring them back, once none of its transactions is overdue and unpaid.
+/// </remarks>
 public sealed class SubscriptionFirstPaymentTransactionHandler : TransactionEventHandlerBase
 {
-    private const string CycleSeparator = ":cycle-";
-
-    // A monthly agreement invoices twelve cycles a year; the walk below stops long before this.
-    private const int MaxCycles = 1000;
+    // A checkout holds a handful of transactions; the pages are only there so one with years of renewals is still read.
+    private const int PageSize = 100;
 
     private readonly ISubscriptionLifecycleService _lifecycleService;
     private readonly ISubscriptionManager _subscriptionManager;
@@ -26,7 +30,7 @@ public sealed class SubscriptionFirstPaymentTransactionHandler : TransactionEven
     /// </summary>
     /// <param name="lifecycleService">The lifecycle service, which starts and resumes subscriptions.</param>
     /// <param name="subscriptionManager">The subscriptions.</param>
-    /// <param name="transactionStore">The transactions, read to find invoices of the agreement that are still overdue.</param>
+    /// <param name="transactionStore">The transactions, read to find transactions of the checkout that are still overdue.</param>
     public SubscriptionFirstPaymentTransactionHandler(
         ISubscriptionLifecycleService lifecycleService,
         ISubscriptionManager subscriptionManager,
@@ -45,6 +49,8 @@ public sealed class SubscriptionFirstPaymentTransactionHandler : TransactionEven
             return;
         }
 
+        bool? othersOverdue = null;
+
         foreach (var subscription in await _subscriptionManager.GetByCheckoutSessionAsync(transaction.CheckoutSessionId, cancellationToken))
         {
             // Pay Later records one transaction per obligation of the checkout, so a plan with a sign-up fee, or a cart with a
@@ -57,11 +63,11 @@ public sealed class SubscriptionFirstPaymentTransactionHandler : TransactionEven
                 continue;
             }
 
-            // An overdue invoice made the agreement past due. Paying it brings the agreement back, as long as no other
-            // invoice of it is still overdue; otherwise the grace window ran out on a customer who had paid.
+            // An overdue transaction of the checkout made the agreement past due: an invoice of the agreement, its sign-up fee
+            // or a one-time item bought with it. Paying one brings the agreement back once nothing of the checkout is overdue;
+            // otherwise the grace window ran out on a customer who had paid, or a cycle paid over an unpaid fee cleared it.
             if (subscription.Status == SubscriptionStatus.PastDue &&
-                Bills(transaction, subscription) &&
-                !await HasOtherOverdueAsync(subscription, transaction, cancellationToken))
+                !(othersOverdue ??= await HasOtherOverdueAsync(transaction, cancellationToken)))
             {
                 await _lifecycleService.ResumeAsync(subscription.ItemId, cancellationToken);
             }
@@ -78,38 +84,28 @@ public sealed class SubscriptionFirstPaymentTransactionHandler : TransactionEven
         => !string.IsNullOrEmpty(subscription?.ObligationId) &&
             string.Equals(transaction?.ObligationId, subscription.ObligationId, StringComparison.Ordinal);
 
-    // The first cycle carries the subscription's own obligation; each renewal appends ":cycle-<n>" to the one before it.
-    private static bool Bills(Transaction transaction, Subscription subscription)
-        => PaysFor(transaction, subscription) ||
-            (!string.IsNullOrEmpty(subscription.ObligationId) &&
-                transaction.ObligationId?.StartsWith(subscription.ObligationId + CycleSeparator, StringComparison.Ordinal) == true);
-
-    // Walks the agreement's invoices the way Pay Later chains them, from the first cycle to the newest.
-    private async Task<bool> HasOtherOverdueAsync(Subscription subscription, Transaction paid, CancellationToken cancellationToken)
+    // Whether any other transaction of the checkout is overdue and unpaid.
+    private async Task<bool> HasOtherOverdueAsync(Transaction paid, CancellationToken cancellationToken)
     {
-        var obligationId = subscription.ObligationId;
+        var query = new TransactionQuery { CheckoutSessionId = paid.CheckoutSessionId, OutstandingOnly = true };
 
-        for (var cycle = 0; cycle < MaxCycles && !string.IsNullOrEmpty(obligationId); cycle++)
+        for (var page = 1; ; page++)
         {
-            var invoice = await _transactionStore.GetByObligationAsync(subscription.CheckoutSessionId, obligationId, cancellationToken);
+            var result = await _transactionStore.PageAsync(page, PageSize, query, cancellationToken);
+            var entries = result?.Entries ?? [];
 
-            if (invoice is null)
-            {
-                return false;
-            }
-
-            if (!string.Equals(invoice.ItemId, paid.ItemId, StringComparison.Ordinal) &&
-                invoice.BecameOverdueUtc is not null &&
-                invoice.Status is TransactionStatus.Outstanding or TransactionStatus.PartiallyPaid)
+            if (entries.Any(candidate =>
+                !string.Equals(candidate.ItemId, paid.ItemId, StringComparison.Ordinal) &&
+                candidate.BecameOverdueUtc is not null &&
+                candidate.Status is TransactionStatus.Outstanding or TransactionStatus.PartiallyPaid))
             {
                 return true;
             }
 
-            obligationId = invoice.Recurrence is { } recurrence
-                ? $"{invoice.ObligationId}{CycleSeparator}{recurrence.CycleNumber + 1}"
-                : null;
+            if (entries.Count < PageSize)
+            {
+                return false;
+            }
         }
-
-        return false;
     }
 }

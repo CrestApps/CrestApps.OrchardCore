@@ -151,6 +151,11 @@ internal sealed class FakeTransactionStore : ITransactionStore
             return false;
         }
 
+        if (!string.IsNullOrEmpty(query.CheckoutSessionId) && !string.Equals(transaction.CheckoutSessionId, query.CheckoutSessionId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
         if (query.OutstandingOnly)
         {
             if (transaction.OutstandingAmount <= 0m)
