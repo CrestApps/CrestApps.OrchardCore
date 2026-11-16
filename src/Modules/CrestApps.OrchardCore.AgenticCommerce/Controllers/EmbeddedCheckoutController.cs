@@ -1,6 +1,7 @@
-using System.Text.Json;
+using System.Text;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
+using CrestApps.OrchardCore.AgenticCommerce.Endpoints;
 using CrestApps.OrchardCore.AgenticCommerce.Ucp;
 using CrestApps.OrchardCore.Core.Http;
 using Microsoft.AspNetCore.Authorization;
@@ -83,6 +84,7 @@ public sealed class EmbeddedCheckoutController : Controller
         return Content(new JsonObject { ["valid"] = true, ["expires_in"] = expiresIn }.ToJsonString(), "application/json");
     }
 
+    // Parsed as strictly as an agent's request body, so a property named twice is no credential rather than a 500.
     private static string ReadCredential(string body)
     {
         if (string.IsNullOrWhiteSpace(body))
@@ -90,13 +92,6 @@ public sealed class EmbeddedCheckoutController : Controller
             return null;
         }
 
-        try
-        {
-            return JsonNode.Parse(body) is JsonObject json && json["credential"] is JsonValue value && value.TryGetValue<string>(out var credential) ? credential : null;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        return AgentRequestBody.Parse(Encoding.UTF8.GetBytes(body)) is JsonObject json && json["credential"] is JsonValue value && value.TryGetValue<string>(out var credential) ? credential : null;
     }
 }

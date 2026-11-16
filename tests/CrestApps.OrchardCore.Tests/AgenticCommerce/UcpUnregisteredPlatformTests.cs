@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AgenticCommerce;
 using CrestApps.OrchardCore.AgenticCommerce.Acp;
+using CrestApps.OrchardCore.AgenticCommerce.Controllers;
 using CrestApps.OrchardCore.AgenticCommerce.Core;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Security;
@@ -263,6 +264,19 @@ public sealed class UcpUnregisteredPlatformTests : IAsyncLifetime, IDisposable
         var result = await new UcpRequestFilter().InvokeAsync(new DefaultEndpointFilterInvocationContext(httpContext), _ => ValueTask.FromResult<object>(null));
 
         Assert.Equal(StatusCodes.Status400BadRequest, StatusCode(result));
+    }
+
+    /// <summary>
+    /// The duplicate-property Mild (fix verification): the embedded checkout's credential check parsed its body with the
+    /// default options, so a body with <c>credential</c> named twice threw past its JsonException handler, a 500.
+    /// </summary>
+    [Fact]
+    public void EmbeddedCheckout_ACredentialNamedTwice_IsNoCredential()
+    {
+        var readCredential = typeof(EmbeddedCheckoutController).GetMethod("ReadCredential", BindingFlags.NonPublic | BindingFlags.Static);
+
+        Assert.Null(readCredential.Invoke(null, ["""{"credential":"a","credential":"b"}"""]));
+        Assert.Equal("a", readCredential.Invoke(null, ["""{"credential":"a"}"""]));
     }
 
     private async Task AddPlatformAsync(AgentPlatform platform)

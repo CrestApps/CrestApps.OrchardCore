@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
+using CrestApps.OrchardCore.AgenticCommerce.Endpoints;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
@@ -84,10 +85,12 @@ public sealed class UcpProfileClient
                 return Fail(uri, "profile_malformed");
             }
 
-            // A chunked body has no length to check first, so the read itself stops past the limit.
+            // A chunked body has no length to check first, so the read itself stops past the limit. It is parsed as strictly
+            // as a request body: a property named twice made the first read of the object throw past the JsonException
+            // handler, a 500 that was never remembered as a failure.
             var body = await ReadBoundedAsync(response.Content, timeout.Token);
 
-            if (body is null || JsonNode.Parse(body) is not JsonObject profile || profile["ucp"] is not JsonObject)
+            if (body is null || AgentRequestBody.Parse(body) is not JsonObject profile || profile["ucp"] is not JsonObject)
             {
                 return Fail(uri, "profile_malformed");
             }
