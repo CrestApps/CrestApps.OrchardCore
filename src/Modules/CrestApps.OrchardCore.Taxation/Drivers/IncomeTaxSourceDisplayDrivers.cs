@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Taxation.Core.Drivers;
 using CrestApps.OrchardCore.Taxation.Core.Models;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
@@ -228,6 +229,8 @@ internal sealed class IncomeTaxWithholdingDisplayDriver : IncomeTaxRuleSourceDis
     public override bool CanHandleModel(IncomeTaxRule rule)
         => GetMethod(rule) is not null;
 
+    // A source whose pack edits it with its own driver isn't edited here too.
+
     public override IDisplayResult Edit(IncomeTaxRule rule, BuildEditorContext context)
         => Initialize<IncomeTaxWithholdingViewModel>("IncomeTaxWithholding_Edit", async model =>
         {
@@ -256,21 +259,15 @@ internal sealed class IncomeTaxWithholdingDisplayDriver : IncomeTaxRuleSourceDis
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        // Every amount is cleared first: a wage base or a yearly maximum left from another kind of rule would still cap
+        // the withholding, unseen.
+        ClearAmounts(rule);
         rule.Method = method.Name;
-        rule.Rate = null;
-        rule.RateFromRegistration = false;
-        rule.FixedAmount = null;
-        rule.TaxTableId = null;
-        rule.ShareOfTaxCode = null;
-        rule.ShareMultiplier = null;
         rule.UsesElections = model.UsesElections;
         rule.AllowanceAmount = Number(model.AllowanceAmount, nameof(model.AllowanceAmount), context);
         rule.SupplementalRate = method.HandlesSupplementalIncome ? null : Number(model.SupplementalRate, nameof(model.SupplementalRate), context);
         rule.SupplementalExcessRate = method.HandlesSupplementalIncome ? null : Number(model.SupplementalExcessRate, nameof(model.SupplementalExcessRate), context);
         rule.SupplementalExcessThreshold = method.HandlesSupplementalIncome ? null : Number(model.SupplementalExcessThreshold, nameof(model.SupplementalExcessThreshold), context);
-        rule.Tables = new Dictionary<string, string>(StringComparer.Ordinal);
-        rule.Parameters = new Dictionary<string, decimal>(StringComparer.Ordinal);
-
         foreach (var table in method.Tables)
         {
             if (model.Tables?.GetValueOrDefault(table.Key) is { Length: > 0 } tableId)
@@ -292,7 +289,7 @@ internal sealed class IncomeTaxWithholdingDisplayDriver : IncomeTaxRuleSourceDis
 
     // The withholding method of the rule's source, when its source names one that is on.
     private IIncomeTaxWithholdingMethod GetMethod(IncomeTaxRule rule)
-        => rule?.Source is { } name && _sources.Sources.TryGetValue(name, out var source) && source.Method is { } methodName
+        => rule?.Source is { } name && _sources.Sources.TryGetValue(name, out var source) && source.UsesWithholdingEditor && source.Method is { } methodName
             ? _methods.FirstOrDefault(method => string.Equals(method.Name, methodName, StringComparison.OrdinalIgnoreCase))
             : null;
 }

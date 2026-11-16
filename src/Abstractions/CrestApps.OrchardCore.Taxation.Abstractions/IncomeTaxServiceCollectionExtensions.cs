@@ -63,6 +63,10 @@ public static class IncomeTaxServiceCollectionExtensions
     /// <param name="description">What the kind of rule is for, with examples.</param>
     /// <param name="method">The method its rules always use, or <see langword="null"/> when the editor chooses it.</param>
     /// <param name="position">Where it is listed; lower first.</param>
+    /// <param name="fields">The amount fields its rules hold; <see langword="null"/> for a withholding method's
+    /// (<see cref="CrestApps.OrchardCore.Taxation.Models.IncomeTaxRuleSources.WithholdingFields"/>).</param>
+    /// <param name="usesWithholdingEditor">Whether Taxation's withholding editor edits it; <see langword="false"/> when the
+    /// pack's own driver does.</param>
     /// <returns>The services.</returns>
     public static IServiceCollection AddIncomeTaxRuleSource(
         this IServiceCollection services,
@@ -70,7 +74,9 @@ public static class IncomeTaxServiceCollectionExtensions
         LocalizationSource displayName,
         LocalizationSource description,
         string method = null,
-        int position = 100)
+        int position = 100,
+        IReadOnlyList<string> fields = null,
+        bool usesWithholdingEditor = true)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrEmpty(name);
@@ -82,6 +88,8 @@ public static class IncomeTaxServiceCollectionExtensions
             Description = description,
             Method = method,
             Position = position,
+            Fields = fields ?? CrestApps.OrchardCore.Taxation.Models.IncomeTaxRuleSources.WithholdingFields,
+            UsesWithholdingEditor = usesWithholdingEditor,
         });
     }
 

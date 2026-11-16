@@ -350,6 +350,56 @@ public sealed class CanadaIncomeTaxTests
         Assert.Equal((IncomeTaxRuleSources.FlatRate, TaxCalculationMethodNames.Percentage), stored["CA-QC-HSF"]);
     }
 
+    [Fact]
+    public async Task RecipeRules_KeepOnlyTheirSourcesFields_AndAShareOutsideItsSourceIsRefused()
+    {
+        await using var harness = await CreateHarnessAsync();
+
+        // A federal withholding rule with a yearly maximum it doesn't show, and a flat rate that names a share.
+        var errors = await ImportRecipeAsync(harness, rules =>
+        {
+            foreach (var rule in rules.Select(node => node!.AsObject()))
+            {
+                switch (rule["TaxCode"]!.GetValue<string>())
+                {
+                    case "CA-FIT":
+                        rule["YearlyMaximum"] = 1;
+                        break;
+                    case "CA-QC-HSF":
+                        rule["ShareOfTaxCode"] = "CA-EI";
+                        rule["ShareMultiplier"] = 1;
+                        break;
+                }
+            }
+        });
+
+        var stored = await harness.RunAsync(async services => (await services.GetRequiredService<IIncomeTaxRuleManager>().ListAsync())
+            .Where(rule => rule.TaxCode is "CA-FIT" or "CA-QC-HSF")
+            .ToList(), commit: false);
+
+        // The hidden maximum is gone, so it can't cap the withholding; the share is refused, not silently dropped.
+        Assert.Null(Assert.Single(stored, rule => rule.TaxCode == "CA-FIT").YearlyMaximum);
+        Assert.DoesNotContain(stored, rule => rule.TaxCode == "CA-QC-HSF");
+        Assert.Contains(errors, error => error.Contains("Only a share of another tax", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AShareWithoutItsTaxCode_IsRefusedForThatField()
+    {
+        await using var harness = await CreateHarnessAsync();
+
+        var errors = await ImportRecipeAsync(harness, rules =>
+        {
+            foreach (var rule in rules.Select(node => node!.AsObject()).Where(rule => rule["TaxCode"]!.GetValue<string>() == "CA-EI-ER"))
+            {
+                rule.Remove("ShareOfTaxCode");
+            }
+        });
+
+        Assert.Contains(errors, error => error.Contains("Enter the code of the tax this is a share of.", StringComparison.Ordinal));
+        Assert.DoesNotContain(errors, error => error.Contains("rate", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static async Task<Dictionary<string, decimal>> AmountsAsync(CalendarTestHarness harness, IncomeTaxRequest request)
         => await harness.RunAsync(async services =>
         {

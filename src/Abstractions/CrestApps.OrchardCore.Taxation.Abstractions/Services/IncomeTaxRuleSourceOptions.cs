@@ -47,4 +47,18 @@ public sealed class IncomeTaxRuleSource
     /// Gets or sets where the source is listed among the others; lower first.
     /// </summary>
     public int Position { get; set; }
+
+    /// <summary>
+    /// Gets or sets the amount fields a rule of this source holds, by <see cref="IncomeTaxRule"/> property name. The
+    /// handler clears the others when a rule is saved or imported, because the calculation reads every field whatever
+    /// the source; a share of another tax outside <see cref="IncomeTaxRuleSources.ShareOfTax"/> is refused.
+    /// </summary>
+    public IReadOnlyList<string> Fields { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a source with a withholding <see cref="Method"/> gets Taxation's
+    /// withholding editor (the method's tables and amounts). A pack whose own driver edits its source sets it to
+    /// <see langword="false"/>, so the two cards never render or save together.
+    /// </summary>
+    public bool UsesWithholdingEditor { get; set; } = true;
 }

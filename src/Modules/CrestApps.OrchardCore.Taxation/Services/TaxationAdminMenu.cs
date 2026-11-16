@@ -18,25 +18,22 @@ internal sealed class TaxationAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Commerce"], commerce => commerce
-                .Add(S["Taxation"], S["Taxation"].PrefixPosition(), taxation => taxation
-                    .Id("taxation")
-                    .Add(S["Categories"], S["Categories"].PrefixPosition(), categories => categories
-                        .Id("taxationCategories")
-                        .Action("Index", "TaxCategories", "CrestApps.OrchardCore.Taxation")
-                        .Permission(TaxationPermissions.ManageTaxation)
-                        .LocalNav())
-                    .Add(S["Types"], S["Types"].PrefixPosition(), types => types
-                        .Id("taxationTypes")
-                        .Action("Index", "TaxTypes", "CrestApps.OrchardCore.Taxation")
-                        .Permission(TaxationPermissions.ManageTaxation)
-                        .LocalNav())
-                    .Add(S["Rules"], S["Rules"].PrefixPosition(), rules => rules
-                        .Id("taxationRules")
-                        .Action("Index", "TaxRules", "CrestApps.OrchardCore.Taxation")
-                        .Permission(TaxationPermissions.ManageTaxation)
-                        .LocalNav())
-))
+            .AddTaxation(S, taxation => taxation
+                .Add(S["Categories"], S["Categories"].PrefixPosition(), categories => categories
+                    .Id("taxationCategories")
+                    .Action("Index", "TaxCategories", "CrestApps.OrchardCore.Taxation")
+                    .Permission(TaxationPermissions.ManageTaxation)
+                    .LocalNav())
+                .Add(S["Types"], S["Types"].PrefixPosition(), types => types
+                    .Id("taxationTypes")
+                    .Action("Index", "TaxTypes", "CrestApps.OrchardCore.Taxation")
+                    .Permission(TaxationPermissions.ManageTaxation)
+                    .LocalNav())
+                .Add(S["Sales tax rules"], S["Sales tax rules"].PrefixPosition(), rules => rules
+                    .Id("taxationRules")
+                    .Action("Index", "TaxRules", "CrestApps.OrchardCore.Taxation")
+                    .Permission(TaxationPermissions.ManageTaxation)
+                    .LocalNav()))
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["Tax origin"], S["Tax origin"].PrefixPosition(), origin => origin

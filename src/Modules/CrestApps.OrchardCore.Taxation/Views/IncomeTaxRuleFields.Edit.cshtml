@@ -1,5 +1,9 @@
 @model IncomeTaxRuleViewModel
 
+@if (Model.DroppedOnSave.Count > 0)
+{
+    <div class="alert alert-warning">@T["This rule holds values its kind of rule doesn't use, which saving removes: {0}. They may have changed the tax until now.", string.Join(", ", Model.DroppedOnSave)]</div>
+}
 <div class="card mb-3">
     <div class="card-header">@T["The tax"]</div>
     <div class="card-body">

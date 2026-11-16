@@ -192,16 +192,37 @@ public sealed class IncomeTaxRuleHandler : CatalogEntryHandlerBase<IncomeTaxRule
     {
         if (string.IsNullOrWhiteSpace(rule.Source))
         {
-            var withholding = _services.GetServices<IIncomeTaxWithholdingMethod>().Select(method => method.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            rule.Source = IncomeTaxRuleSources.Infer(rule, withholding.Contains);
+            rule.Source = IncomeTaxRuleSources.Infer(rule);
         }
 
-        if (_services.GetService<IOptions<IncomeTaxRuleSourceOptions>>()?.Value.Sources.GetValueOrDefault(rule.Source) is { Method: { } method } source)
+        if (_services.GetService<IOptions<IncomeTaxRuleSourceOptions>>()?.Value.Sources.GetValueOrDefault(rule.Source) is not { } source)
         {
-            rule.Source = source.Name;
+            // A source whose feature is off: its fields are unknown here, so the rule is kept as it is.
+            return;
+        }
+
+        rule.Source = source.Name;
+
+        if (source.Method is { } method)
+        {
             rule.Method = method;
         }
+
+        // The calculation reads every field whatever the source, so a field the source doesn't own is cleared; a share
+        // of another tax is kept for validation to refuse, since dropping it would change the tax without a word.
+        IncomeTaxRuleSources.ClearNotOwned(rule, source.Fields, nameof(IncomeTaxRule.ShareOfTaxCode));
+    }
+
+    /// <inheritdoc />
+    public override Task LoadedAsync(LoadedContext<IncomeTaxRule> context, CancellationToken cancellationToken = default)
+    {
+        // A rule stored before rules had a source is read with one, for every editor and list.
+        if (string.IsNullOrWhiteSpace(context.Model.Source))
+        {
+            context.Model.Source = IncomeTaxRuleSources.Infer(context.Model);
+        }
+
+        return Task.CompletedTask;
     }
 
     // Trims and upper-cases what a page, a recipe or a deployment plan typed.
@@ -246,9 +267,18 @@ public sealed class IncomeTaxRuleHandler : CatalogEntryHandlerBase<IncomeTaxRule
             context.Result.Fail(new ValidationResult(S["Choose the tax category whose income is taxed."], [nameof(IncomeTaxRule.Category)]));
         }
 
-        if (rule.ShareOfTaxCode is not null)
+        if (rule.ShareOfTaxCode is not null && !string.Equals(rule.Source, IncomeTaxRuleSources.ShareOfTax, StringComparison.OrdinalIgnoreCase))
+        {
+            context.Result.Fail(new ValidationResult(S["Only a share of another tax names another tax's code. Add it as a share of another tax."], [nameof(IncomeTaxRule.ShareOfTaxCode)]));
+        }
+        else if (string.Equals(rule.Source, IncomeTaxRuleSources.ShareOfTax, StringComparison.OrdinalIgnoreCase))
         {
             // A share takes another tax's amount; it needs no method of its own.
+            if (rule.ShareOfTaxCode is null)
+            {
+                context.Result.Fail(new ValidationResult(S["Enter the code of the tax this is a share of."], [nameof(IncomeTaxRule.ShareOfTaxCode)]));
+            }
+
             if (rule.ShareMultiplier is not > 0)
             {
                 context.Result.Fail(new ValidationResult(S["A share of another tax needs a multiplier above zero."], [nameof(IncomeTaxRule.ShareMultiplier)]));
@@ -323,17 +353,17 @@ public sealed class IncomeTaxRuleHandler : CatalogEntryHandlerBase<IncomeTaxRule
 
         if (method.Inputs.HasFlag(TaxCalculationMethodInputs.Rate) && rule.Rate is null && !rule.RateFromRegistration)
         {
-            context.Result.Fail(new ValidationResult(S["The method needs a rate."], [nameof(IncomeTaxRule.Rate)]));
+            context.Result.Fail(new ValidationResult(S["Enter the rate, or use the payer's own rate."], [nameof(IncomeTaxRule.Rate)]));
         }
 
         if (method.Inputs.HasFlag(TaxCalculationMethodInputs.FixedAmount) && rule.FixedAmount is null)
         {
-            context.Result.Fail(new ValidationResult(S["The method needs a fixed amount."], [nameof(IncomeTaxRule.FixedAmount)]));
+            context.Result.Fail(new ValidationResult(S["Enter the amount each pay."], [nameof(IncomeTaxRule.FixedAmount)]));
         }
 
         if (method.Inputs.HasFlag(TaxCalculationMethodInputs.TaxTable) && string.IsNullOrEmpty(rule.TaxTableId))
         {
-            context.Result.Fail(new ValidationResult(S["The method needs a tax table."], [nameof(IncomeTaxRule.TaxTableId)]));
+            context.Result.Fail(new ValidationResult(S["Choose the tax table."], [nameof(IncomeTaxRule.TaxTableId)]));
         }
     }
 }

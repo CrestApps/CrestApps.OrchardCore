@@ -50,24 +50,28 @@ public sealed class IncomeTaxStartup : StartupBase
             global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("Flat rate"),
             global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("A rate on pay, with an optional yearly wage base, threshold, exemption and maximum, or the payer's own rate: Social Security, Medicare, unemployment insurance, CPP, EI."),
             TaxCalculationMethodNames.Percentage,
-            position: 10);
+            position: 10,
+            fields: IncomeTaxRuleSources.FlatRateFields);
         services.AddIncomeTaxRuleSource(
             IncomeTaxRuleSources.ShareOfTax,
             global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("Share of another tax"),
             global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("A multiple of another tax of the same pay, such as the employer's share of a contribution (1.4 times EI, once CPP)."),
             TaxCalculationMethodNames.Percentage,
-            position: 20);
+            position: 20,
+            fields: IncomeTaxRuleSources.ShareOfTaxFields);
         services.AddIncomeTaxRuleSource(
             IncomeTaxRuleSources.TaxTable,
             global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("Tax table or brackets"),
             global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("A tax table or progressive brackets, optionally on a year's income with the person's election, such as a state or local income tax."),
-            position: 30);
+            position: 30,
+            fields: IncomeTaxRuleSources.TaxTableFields);
         services.AddIncomeTaxRuleSource(
             IncomeTaxRuleSources.FixedAmount,
             global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("Fixed amount"),
             global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("The same amount each pay, such as a local head tax."),
             TaxCalculationMethodNames.FixedAmount,
-            position: 40);
+            position: 40,
+            fields: IncomeTaxRuleSources.FixedAmountFields);
         services.AddNavigationProvider<IncomeTaxAdminMenu>();
         services.AddPermissionProvider<IncomeTaxPermissionsProvider>();
     }
@@ -160,15 +164,12 @@ internal sealed class IncomeTaxAdminMenu : AdminNavigationProvider
 
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        builder
-            .Add(S["Commerce"], commerce => commerce
-                .Add(S["Taxation"], S["Taxation"].PrefixPosition(), taxation => taxation
-                .Id("taxation")
-                .Add(S["Income tax rules"], S["Income tax rules"].PrefixPosition(), rules => rules
-                    .Id("taxationIncomeTaxRules")
-                    .Action("Index", "IncomeTaxRules", "CrestApps.OrchardCore.Taxation")
-                    .Permission(global::CrestApps.OrchardCore.Taxation.Core.TaxationPermissions.ManageIncomeTaxRules)
-                    .LocalNav())));
+        builder.AddTaxation(S, taxation => taxation
+            .Add(S["Income tax rules"], S["Income tax rules"].PrefixPosition(), rules => rules
+                .Id("taxationIncomeTaxRules")
+                .Action("Index", "IncomeTaxRules", "CrestApps.OrchardCore.Taxation")
+                .Permission(global::CrestApps.OrchardCore.Taxation.Core.TaxationPermissions.ManageIncomeTaxRules)
+                .LocalNav()));
 
         return ValueTask.CompletedTask;
     }

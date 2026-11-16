@@ -81,9 +81,21 @@ public sealed class IncomeTaxRulesController : CatalogAdminController<IncomeTaxR
         return Task.FromResult(true);
     }
 
+    /// <summary>
+    /// The view data key of the kinds of rule "Add income tax rule" offers, in order.
+    /// </summary>
+    public const string SourcesViewDataKey = "IncomeTaxRuleSources";
+
     [Admin("taxation/income-tax-rules", "IncomeTaxRulesIndex")]
     public Task<IActionResult> Index()
-        => IndexAllAsync();
+    {
+        ViewData[SourcesViewDataKey] = ((IEnumerable<IncomeTaxRuleSource>)HttpContext.RequestServices.GetService<IOptions<IncomeTaxRuleSourceOptions>>()?.Value.Sources.Values ?? [])
+            .OrderBy(source => source.Position)
+            .ThenBy(source => source.Name, StringComparer.Ordinal)
+            .ToList();
+
+        return IndexAllAsync();
+    }
 
     [Admin("taxation/income-tax-rules/create", "IncomeTaxRulesCreate")]
     public Task<IActionResult> Create()

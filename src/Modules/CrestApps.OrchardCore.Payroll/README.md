@@ -70,7 +70,7 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
 - `IPayCalculator` runs the `IPayCalculationStep`s (`PayCalculationOrder`) over a `PayCalculationContext` built by
   `PayCalculationContextFactory`; gross-ups repeat them. `PayStatement` and its lines; accumulators from
   `PayStatementLineIndex` (`IPayAccumulatorService`). **Preview the next pay** on a profile.
-- Taxes come from Taxation's Income Tax feature (`IIncomeTaxProvider`, income tax rules under **Taxes > Income tax
+- Taxes come from Taxation's Income Tax feature (`IIncomeTaxProvider`, income tax rules under **Commerce > Taxation > Income tax
   rules**): the taxes step maps a statement to `IncomeTaxRequest` and the result back to tax lines.
 
 ## Pay code rules

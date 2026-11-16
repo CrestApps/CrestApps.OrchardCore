@@ -89,7 +89,7 @@ Ranges cannot overlap, and only one row can be open-ended. A table that a rule u
 
 A **rule** is one tax: what it applies to, and how it is worked out. Several rules can apply to the same item; for example a general sales tax and an extra tobacco tax.
 
-1. Open **Commerce > Taxation > Rules** and click **Add Tax Rule**.
+1. Open **Commerce > Taxation > Sales tax rules** and click **Add Tax Rule**.
 2. In **Select a calculation method**, click **Add** on the method you want. The method cannot be changed later.
 3. Fill in the fields and click **Save**.
 
@@ -213,7 +213,7 @@ The **EU VAT standard rates** recipe sets up VAT for the European Union in one s
 
 1. Open **Configuration > Recipes**.
 2. Find **EU VAT standard rates** and click **Run**.
-3. Open **Commerce > Taxation > Rules** to see the rules, named after their countries, such as *Germany VAT*.
+3. Open **Commerce > Taxation > Sales tax rules** to see the rules, named after their countries, such as *Germany VAT*.
 
 :::caution[Check the rates]
 VAT rates change. Check each country's rate before you sell there, and add reduced rates for the products they apply to, such as books or food, as rules for those [categories](#1-create-tax-categories).

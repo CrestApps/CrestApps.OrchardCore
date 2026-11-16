@@ -39,6 +39,9 @@ public class IncomeTaxRuleViewModel
     public string SourceDescription { get; set; }
 
     [BindNever]
+    public IList<string> DroppedOnSave { get; set; } = [];
+
+    [BindNever]
     public IList<SelectListItem> Categories { get; set; } = [];
 
     [BindNever]

@@ -1,13 +1,11 @@
+@using CrestApps.OrchardCore.Taxation.Controllers
 @using CrestApps.OrchardCore.Taxation.Services
-@using Microsoft.Extensions.Options
 @using OrchardCore.DisplayManagement
 
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<IncomeTaxRule>>
 
-@inject IOptions<IncomeTaxRuleSourceOptions> SourceOptions
-
 @{
-    var sources = SourceOptions.Value.Sources.Values.OrderBy(source => source.Position).ThenBy(source => source.Name, StringComparer.Ordinal).ToList();
+    var sources = ViewData[IncomeTaxRulesController.SourcesViewDataKey] as IReadOnlyList<IncomeTaxRuleSource> ?? [];
 }
 
 <zone Name="Title">

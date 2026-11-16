@@ -19,7 +19,6 @@ internal sealed class IncomeTaxRuleDisplayDriver : DisplayDriver<IncomeTaxRule>
 {
     private readonly IncomeTaxCategoryOptions _categories;
     private readonly IncomeTaxRuleSourceOptions _sources;
-    private readonly IEnumerable<IIncomeTaxWithholdingMethod> _withholdingMethods;
     private readonly IStringLocalizerFactory _localizerFactory;
 
     internal readonly IStringLocalizer S;
@@ -27,13 +26,11 @@ internal sealed class IncomeTaxRuleDisplayDriver : DisplayDriver<IncomeTaxRule>
     public IncomeTaxRuleDisplayDriver(
         IOptions<IncomeTaxCategoryOptions> categories,
         IOptions<IncomeTaxRuleSourceOptions> sources,
-        IEnumerable<IIncomeTaxWithholdingMethod> withholdingMethods,
         IStringLocalizerFactory localizerFactory,
         IStringLocalizer<IncomeTaxRuleDisplayDriver> stringLocalizer)
     {
         _categories = categories.Value;
         _sources = sources.Value;
-        _withholdingMethods = withholdingMethods;
         _localizerFactory = localizerFactory;
         S = stringLocalizer;
     }
@@ -64,8 +61,6 @@ internal sealed class IncomeTaxRuleDisplayDriver : DisplayDriver<IncomeTaxRule>
 
     public override IDisplayResult Edit(IncomeTaxRule rule, BuildEditorContext context)
     {
-        EnsureSource(rule);
-
         return Combine(
             Initialize<IncomeTaxRuleViewModel>("IncomeTaxRuleFields_Edit", model => Fill(model, rule, context)).Location("Content:1"),
             Initialize<IncomeTaxRuleViewModel>("IncomeTaxRuleWhen_Edit", model => Fill(model, rule, context)).Location("Content:20"));
@@ -73,8 +68,6 @@ internal sealed class IncomeTaxRuleDisplayDriver : DisplayDriver<IncomeTaxRule>
 
     public override async Task<IDisplayResult> UpdateAsync(IncomeTaxRule rule, UpdateEditorContext context)
     {
-        EnsureSource(rule);
-
         var model = new IncomeTaxRuleViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
@@ -97,16 +90,6 @@ internal sealed class IncomeTaxRuleDisplayDriver : DisplayDriver<IncomeTaxRule>
         return Edit(rule, context);
     }
 
-    // A rule stored before rules had a source gets one here, before the source drivers decide whether they handle it:
-    // this driver is registered first, and the display manager asks the drivers in order.
-    private void EnsureSource(IncomeTaxRule rule)
-    {
-        if (string.IsNullOrWhiteSpace(rule.Source))
-        {
-            rule.Source = IncomeTaxRuleSources.Infer(rule, name => _withholdingMethods.Any(method => string.Equals(method.Name, name, StringComparison.OrdinalIgnoreCase)));
-        }
-    }
-
     private void Fill(IncomeTaxRuleViewModel model, IncomeTaxRule rule, BuildEditorContext context)
     {
         model.Name = rule.Name;
@@ -126,6 +109,9 @@ internal sealed class IncomeTaxRuleDisplayDriver : DisplayDriver<IncomeTaxRule>
         {
             model.SourceDisplayName = _localizerFactory.Localize(source.DisplayName).Value;
             model.SourceDescription = source.Description is null ? null : _localizerFactory.Localize(source.Description).Value;
+
+            // Values a rule of an older layout holds that its kind doesn't: saving drops them, so the page says which.
+            model.DroppedOnSave = context.IsNew ? [] : [.. IncomeTaxRuleSources.ValuesNotOwned(rule, source.Fields)];
         }
         else
         {

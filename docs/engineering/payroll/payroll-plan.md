@@ -1148,6 +1148,25 @@ Mike: "make the approvals as a fully reusable module that can be used for other 
 
 Follow-ups (out of scope): moving the six hand-written approval copies (Workforce time sheet, time off, shift trade, punch correction, predictability pay, B2B order approval) onto Approvals stays the follow-up plan of decision 6; delegation and out-of-office approvers.
 
+### Review fixes for reusable Approvals and income tax rule sources (2026-11-16)
+
+The planning session's review of a4c2a24bb..847c62ac1. The full run before the fixes, on da2e6433e: 16,336 tests, 0 failed, 1 skipped. Each fix has a regression test.
+
+- c565fe995 **Approvals**:
+  - A1: two approvers deciding at once overwrote each other (the lock re-read the session's cached copy). A decision now reads the request as stored inside its lock (`IApprovalRequestManager.FindCommittedAsync` detaches the copy loaded earlier), `ApprovalRequestStore.CheckConcurrency` is on, and a conflict tells the approver to reload. Decide, Cancel and the workflow tasks share the path. Test: two sessions on a real SQLite store; the second decision is refused and the close hook runs once.
+  - A2: being named by a rule now also needs the type's source access at the Manage level and the handler's new `CanAccessAsync`, in eligibility, so the page, Waiting for me and the workflow tasks agree. Test: a named approver of another employer is refused and not listed.
+  - A3: Waiting for me applies the access filter in the query and reads every pending request in batches of 500 (no 1,000 cap, an exact count); the permission provider finds permissions once and keeps each person's answer for the unit of work.
+  - A4: `ApproverRuleValueEditorViewModel` moved to Approvals.Abstractions.
+  - A5: Payroll's migration step 9 makes the seeded `PayRunApproval` policy serve the PayRun type only; a named policy is refused for a type it doesn't serve.
+  - Nits: the policies schema accepts the old numbered kinds; the requests recipe imports stages, the current stage and each decision's stage; a policy option **Let one person decide more than one stage** (`AllowSamePersonAcrossStages`, off by default).
+- **Income tax rule sources** (the next commit):
+  - T1: a rule without a source took `TaxTable` when its pack's feature was off, and saving it wiped its tables. `IncomeTaxRuleSources.Infer` keeps the method's name for anything that isn't Taxation's own method, and the handler sets the source when a rule is loaded (`LoadedAsync`), not the editor.
+  - T2: each source declares the fields it owns (`IncomeTaxRuleSource.Fields`); the handler clears the rest on save and import, refuses `ShareOfTaxCode` outside a share of another tax, and the withholding editor clears every amount first. Tests: a hidden yearly maximum on CA-FIT is gone after import; a flat rate naming a share is refused.
+  - T3: editing a rule of an older layout warns which values saving drops. T4: validation by source (a share without its code says so, never "needs a rate").
+  - T5: every Commerce node of Taxation and Commerce has the id `commerce`, position 15 and the store icon, so a Payroll site without a store gets a proper top-level Commerce > Taxation (Commerce had no icon either; it now has the same one).
+  - T6: `IncomeTaxRuleSourceDisplayDriver` is public in Taxation.Core (which now references OrchardCore.DisplayManagement), and a source registered with `usesWithholdingEditor: false` keeps the generic card off.
+  - T7 and nits: the stale "Taxes >" paths, **Sales tax rules** beside **Income tax rules**, the rule list's sources from its controller, and the menu's indentation.
+
 ### For Mike
 
 What only you can settle before the first live pay:
