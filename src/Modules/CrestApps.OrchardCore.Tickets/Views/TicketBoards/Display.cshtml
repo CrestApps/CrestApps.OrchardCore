@@ -77,6 +77,14 @@
                     </div>
                 </div>
             }
+            <div class="col-auto">
+                <form asp-action="Pin" asp-route-id="@Model.Board.ItemId" method="post">
+                    <input type="hidden" name="pinned" value="@(Model.IsPinned ? "false" : "true")" />
+                    <button type="submit" class="btn btn-outline-secondary" aria-pressed="@(Model.IsPinned ? "true" : "false")" title="@(Model.IsPinned ? T["Remove this board from your menu"] : T["Show this board in your menu, under Service Desk"])">
+                        <i class="fa-solid fa-thumbtack me-1" aria-hidden="true"></i>@(Model.IsPinned ? T["Unpin"] : T["Pin to menu"])
+                    </button>
+                </form>
+            </div>
             @if (Model.CanManage)
             {
                 <div class="col-auto">

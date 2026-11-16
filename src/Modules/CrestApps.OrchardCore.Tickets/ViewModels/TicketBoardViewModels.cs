@@ -184,6 +184,11 @@ public class TicketBoardPageViewModel
     /// Gets or sets the address of the hub that pings the board when tickets change, when SignalR is on.
     /// </summary>
     public string HubUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the user pinned the board to their admin menu.
+    /// </summary>
+    public bool IsPinned { get; set; }
 }
 
 /// <summary>
@@ -200,4 +205,9 @@ public class TicketBoardRowViewModel
     /// Gets or sets whether the user may arrange or delete it.
     /// </summary>
     public bool CanManage { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the user pinned it to their admin menu.
+    /// </summary>
+    public bool IsPinned { get; set; }
 }

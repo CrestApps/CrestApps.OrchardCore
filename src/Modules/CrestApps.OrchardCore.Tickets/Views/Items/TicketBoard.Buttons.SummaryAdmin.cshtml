@@ -2,6 +2,14 @@
 
 <a asp-controller="TicketBoards" asp-action="Display" asp-route-id="@Model.Board.ItemId" class="btn btn-primary btn-sm">@T["Open"]</a>
 
+<form asp-controller="TicketBoards" asp-action="Pin" asp-route-id="@Model.Board.ItemId" method="post" class="d-inline">
+    <input type="hidden" name="pinned" value="@(Model.IsPinned ? "false" : "true")" />
+    <input type="hidden" name="returnUrl" value="@(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString)" />
+    <button type="submit" class="btn btn-outline-secondary btn-sm" aria-pressed="@(Model.IsPinned ? "true" : "false")" title="@(Model.IsPinned ? T["Remove it from your menu"] : T["Show it in your menu, under Service Desk"])">
+        <i class="fa-solid fa-thumbtack me-1" aria-hidden="true"></i>@(Model.IsPinned ? T["Unpin"] : T["Pin to menu"])
+    </button>
+</form>
+
 @if (Model.CanManage)
 {
     <a asp-controller="TicketBoards" asp-action="Edit" asp-route-id="@Model.Board.ItemId" class="btn btn-secondary btn-sm">@T["Edit"]</a>

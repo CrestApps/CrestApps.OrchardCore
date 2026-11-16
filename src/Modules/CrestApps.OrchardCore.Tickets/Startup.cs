@@ -123,6 +123,7 @@ public sealed class Startup : StartupBase
 
         services.AddPermissionProvider<TicketsPermissionsProvider>();
         services.AddScoped<IAuthorizationHandler, TicketContentAuthorizationHandler>();
+        services.TryAddScoped<ITicketBoardPins, UserTicketBoardPins>();
         services.AddNavigationProvider<TicketsAdminMenu>();
     }
 }

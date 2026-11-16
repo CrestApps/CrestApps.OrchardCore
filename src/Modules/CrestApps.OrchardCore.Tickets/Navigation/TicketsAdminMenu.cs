@@ -18,6 +18,8 @@ internal sealed class TicketsAdminMenu : AdminNavigationProvider
     };
 
     private readonly ITicketAccessService _access;
+    private readonly ITicketBoardPins _pins;
+    private readonly ITicketBoardService _boards;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
@@ -26,11 +28,15 @@ internal sealed class TicketsAdminMenu : AdminNavigationProvider
     /// Initializes a new instance of the <see cref="TicketsAdminMenu"/> class.
     /// </summary>
     /// <param name="access">The ticket access service.</param>
+    /// <param name="pins">The boards each user pinned to the menu.</param>
+    /// <param name="boards">The board service.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public TicketsAdminMenu(ITicketAccessService access, IHttpContextAccessor httpContextAccessor, IStringLocalizer<TicketsAdminMenu> stringLocalizer)
+    public TicketsAdminMenu(ITicketAccessService access, ITicketBoardPins pins, ITicketBoardService boards, IHttpContextAccessor httpContextAccessor, IStringLocalizer<TicketsAdminMenu> stringLocalizer)
     {
         _access = access;
+        _pins = pins;
+        _boards = boards;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
@@ -43,6 +49,7 @@ internal sealed class TicketsAdminMenu : AdminNavigationProvider
         // with neither sees no Service Desk menu.
         var httpContext = _httpContextAccessor.HttpContext;
         var canViewTickets = httpContext is not null && (await _access.GetViewScopesAsync(httpContext.User, httpContext.RequestAborted)).Count > 0;
+        var pinned = canViewTickets ? await PinnedBoardsAsync(httpContext) : [];
 
         builder.Add(S["Service Desk"], S["Service Desk"].PrefixPosition("6"), tickets =>
         {
@@ -63,6 +70,22 @@ internal sealed class TicketsAdminMenu : AdminNavigationProvider
                     .Id("ticketBoards")
                     .Action("Index", "TicketBoards", TicketsConstants.Features.Tickets)
                     .LocalNav());
+
+                // The boards the user pinned, right after Boards, in the order pinned.
+                for (var index = 0; index < pinned.Count; index++)
+                {
+                    var board = pinned[index];
+                    var name = new LocalizedString(board.Name, board.Name);
+
+                    tickets.Add(name, $"1.5.{index + 1:D2}", item => item
+                        .Id("ticketBoard-" + board.ItemId)
+                        .Action("Display", "TicketBoards", new RouteValueDictionary
+                        {
+                            { "area", TicketsConstants.Features.Tickets },
+                            { "id", board.ItemId },
+                        })
+                        .LocalNav());
+                }
             }
 
             tickets
@@ -93,5 +116,20 @@ internal sealed class TicketsAdminMenu : AdminNavigationProvider
                     .LocalNav());
         });
 
+    }
+
+    // The boards the user pinned and may still see; a board they may no longer see, or one removed, is left out.
+    private async Task<List<Models.TicketBoard>> PinnedBoardsAsync(HttpContext httpContext)
+    {
+        var pinned = await _pins.GetAsync(httpContext.User, httpContext.RequestAborted);
+
+        if (pinned is not { Count: > 0 })
+        {
+            return [];
+        }
+
+        var visible = (await _boards.ListVisibleAsync(httpContext.User, httpContext.RequestAborted)).ToDictionary(board => board.ItemId, StringComparer.Ordinal);
+
+        return [.. pinned.Select(id => visible.GetValueOrDefault(id)).Where(board => board is not null).DistinctBy(board => board.ItemId)];
     }
 }

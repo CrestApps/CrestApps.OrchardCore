@@ -25,6 +25,7 @@ internal sealed class TicketBoardDisplayDriver : DisplayDriver<TicketBoard>
     private readonly ICatalog<TicketStatus> _statuses;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ITicketBoardService _boards;
+    private readonly ITicketBoardPins _pins;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
@@ -37,6 +38,7 @@ internal sealed class TicketBoardDisplayDriver : DisplayDriver<TicketBoard>
         ICatalog<TicketStatus> statuses,
         IContentDefinitionManager contentDefinitionManager,
         ITicketBoardService boards,
+        ITicketBoardPins pins,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<TicketBoardDisplayDriver> stringLocalizer)
     {
@@ -44,6 +46,7 @@ internal sealed class TicketBoardDisplayDriver : DisplayDriver<TicketBoard>
         _statuses = statuses;
         _contentDefinitionManager = contentDefinitionManager;
         _boards = boards;
+        _pins = pins;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
@@ -64,6 +67,7 @@ internal sealed class TicketBoardDisplayDriver : DisplayDriver<TicketBoard>
         }
 
         var canManage = User is { } user && await _boards.CanManageAsync(user, board);
+        var isPinned = User is { } viewer && (await _pins.GetAsync(viewer)).Contains(board.ItemId, StringComparer.Ordinal);
 
         var results = new List<IDisplayResult>
         {
@@ -80,6 +84,7 @@ internal sealed class TicketBoardDisplayDriver : DisplayDriver<TicketBoard>
             {
                 model.Board = board;
                 model.CanManage = canManage;
+                model.IsPinned = isPinned;
             }).Location("Actions:5"),
         };
 

@@ -257,8 +257,35 @@ public sealed class TicketBoardsController : Controller
             Board = board,
             Boards = [.. boards],
             CanManage = await _boards.CanManageAsync(User, board),
+            IsPinned = (await HttpContext.RequestServices.GetRequiredService<ITicketBoardPins>().GetAsync(User, HttpContext.RequestAborted)).Contains(board.ItemId, StringComparer.Ordinal),
             HubUrl = HttpContext.RequestServices.GetService(typeof(RealTime.TicketBoardNotifier)) is null ? null : CrestApps.OrchardCore.SignalRHubRoutes.GetTenantAwareHubUrl<RealTime.TicketBoardHub>(HttpContext),
         });
+    }
+
+    /// <summary>
+    /// Pins a board to the user's admin menu, under Service Desk, or unpins it.
+    /// </summary>
+    /// <param name="id">The board.</param>
+    /// <param name="pinned">Whether to pin it.</param>
+    /// <param name="returnUrl">The page to go back to.</param>
+    /// <returns>The page the user came from.</returns>
+    [HttpPost]
+    [Admin("tickets/board/{id}/pin", "TicketBoardsPin")]
+    public async Task<IActionResult> Pin(string id, bool pinned, string returnUrl = null)
+    {
+        if (await _boards.FindVisibleAsync(User, id, HttpContext.RequestAborted) is not { } board)
+        {
+            return NotFound();
+        }
+
+        if (await HttpContext.RequestServices.GetRequiredService<ITicketBoardPins>().SetAsync(User, board.ItemId, pinned, HttpContext.RequestAborted))
+        {
+            await _notifier.SuccessAsync(pinned
+                ? H["{0} is pinned to your menu, under Service Desk.", board.Name]
+                : H["{0} is no longer in your menu.", board.Name]);
+        }
+
+        return Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl) : RedirectToAction(nameof(Display), new { id = board.ItemId });
     }
 
     /// <summary>

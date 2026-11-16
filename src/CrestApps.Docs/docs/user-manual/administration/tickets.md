@@ -37,6 +37,8 @@ A board shows tickets as cards in columns, one column for each stage of the work
 
 A board shows only the tickets you may already see, whoever made it.
 
+To open a board you use often straight from the menu, select **Pin to menu** on the board, or in the **Boards** list. It then shows under **Service Desk**, after **Boards**, in your menu only, in the order you pinned your boards. Select **Unpin** to take it off.
+
 ### Make a board
 
 1. Go to **Service Desk → Boards** and select **Add board**.
