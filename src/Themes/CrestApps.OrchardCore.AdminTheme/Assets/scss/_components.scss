@@ -128,16 +128,24 @@
     background-color: var(--bs-list-group-action-hover-bg);
 }
 
-// Links inside the records of a list are underlined, lightly, so they do not tell themselves apart from the text
-// around them by color alone (WCAG 1.4.1); the underline firms up on hover, like the breadcrumb's.
+// Links inside the records of a list are not underlined (each stands in a cell or badge of its own, not in a run of
+// text); they underline on hover and on keyboard focus.
 .ca-admin .admin-list a:not(.btn):not(.dropdown-item):not(.page-link):not(.badge) {
-    text-decoration: underline;
-    text-decoration-color: rgba(var(--ca-link-rgb), 0.35);
-    text-decoration-thickness: 1px;
+    text-decoration: none;
     text-underline-offset: 0.2em;
 
-    &:hover {
-        text-decoration-color: currentColor;
+    &:hover,
+    &:focus-visible {
+        text-decoration: underline;
+    }
+}
+
+// Once a narrow list folds each record into one wrapped line (TheAdmin's $oc-admin-list-stack-width), the title sits
+// in the same run as the type, status and dates, so it keeps an underline and does not stand out by color alone
+// (WCAG 1.4.1).
+@container admin-list (max-width: 48rem) {
+    .ca-admin .admin-list .admin-list-grid-row .admin-list-column-title a:not(.btn):not(.dropdown-item):not(.page-link):not(.badge) {
+        text-decoration: underline;
     }
 }
 

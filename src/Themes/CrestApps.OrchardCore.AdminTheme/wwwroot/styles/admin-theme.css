@@ -1140,15 +1140,18 @@ body.ca-admin {
 }
 
 .ca-admin .admin-list a:not(.btn):not(.dropdown-item):not(.page-link):not(.badge) {
-  text-decoration: underline;
-  text-decoration-color: rgba(var(--ca-link-rgb), 0.35);
-  text-decoration-thickness: 1px;
+  text-decoration: none;
   text-underline-offset: 0.2em;
 }
-.ca-admin .admin-list a:not(.btn):not(.dropdown-item):not(.page-link):not(.badge):hover {
-  text-decoration-color: currentColor;
+.ca-admin .admin-list a:not(.btn):not(.dropdown-item):not(.page-link):not(.badge):hover, .ca-admin .admin-list a:not(.btn):not(.dropdown-item):not(.page-link):not(.badge):focus-visible {
+  text-decoration: underline;
 }
 
+@container admin-list (max-width: 48rem) {
+  .ca-admin .admin-list .admin-list-grid-row .admin-list-column-title a:not(.btn):not(.dropdown-item):not(.page-link):not(.badge) {
+    text-decoration: underline;
+  }
+}
 .ca-admin .admin-list-grid {
   --oc-admin-list-cell-padding-y: 0.75rem;
   --oc-admin-list-cell-padding-x: 1rem;
