@@ -13,6 +13,12 @@
   },
   {
     "action": "vite",
+    "name": "ticket-list.css",
+    "source": "Assets/css/ticket-list.css",
+    "dest": "wwwroot/styles/ticket-list.css"
+  },
+  {
+    "action": "vite",
     "name": "ticket-board.css",
     "source": "Assets/css/ticket-board.css",
     "dest": "wwwroot/styles/ticket-board.css"

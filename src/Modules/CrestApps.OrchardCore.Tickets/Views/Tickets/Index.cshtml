@@ -55,7 +55,8 @@
 }
 
 @* The pickers submit the search form above (their form attribute); this form only carries the bulk actions. *@
-<form asp-action="Bulk" method="post" class="no-multisubmit" data-list-management data-client-side-search="false"
+<style asp-name="@CrestApps.OrchardCore.Tickets.Services.TicketsResourceConfiguration.ListStyle"></style>
+<form asp-action="Bulk" method="post" class="no-multisubmit tickets-list" data-list-management data-client-side-search="false"
       data-bulk-action-input-name="bulkAction" data-filter-submit-selector="[data-tickets-none]" data-selected-label="@T["selected"]">
     <input type="hidden" name="bulkAction" />
     <input type="hidden" name="returnUrl" value="@(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString)" />
@@ -68,9 +69,10 @@
         <admin-list-grid>
             <admin-list-column type="Select" />
             <admin-list-column name="Name" position="20" title="@T["Ticket"]" />
-            <admin-list-column name="State" position="30" title="@T["Status"]" width="auto" />
-            <admin-list-column name="People" position="40" title="@T["People"]" width="auto" />
-            <admin-list-column name="Due" position="50" title="@T["Due"]" width="auto" />
+            @* The badges wrap in columns of a set width, so on a narrower screen the ticket's subject keeps its room. *@
+            <admin-list-column name="State" position="30" title="@T["Status"]" width="9rem" no-wrap="false" />
+            <admin-list-column name="People" position="40" title="@T["People"]" width="11rem" no-wrap="false" />
+            <admin-list-column name="Due" position="50" title="@T["Due"]" width="9rem" no-wrap="false" />
             <admin-list-column type="Actions" title="@T["Actions"]" />
         </admin-list-grid>
     </admin-list>

@@ -23,6 +23,11 @@ internal sealed class TicketsResourceConfiguration : IConfigureOptions<ResourceM
     /// </summary>
     public const string BoardEditorScript = "CrestApps.OrchardCore.Tickets.BoardEditor";
 
+    /// <summary>
+    /// The ticket list's style.
+    /// </summary>
+    public const string ListStyle = "CrestApps.OrchardCore.Tickets.List";
+
     private static readonly ResourceManifest _manifest;
 
     static TicketsResourceConfiguration()
@@ -42,6 +47,13 @@ internal sealed class TicketsResourceConfiguration : IConfigureOptions<ResourceM
             .SetUrl(
                 "~/CrestApps.OrchardCore.Tickets/styles/ticket-board.min.css",
                 "~/CrestApps.OrchardCore.Tickets/styles/ticket-board.css")
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineStyle(ListStyle)
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Tickets/styles/ticket-list.min.css",
+                "~/CrestApps.OrchardCore.Tickets/styles/ticket-list.css")
             .SetVersion("1.0.0");
 
         _manifest
