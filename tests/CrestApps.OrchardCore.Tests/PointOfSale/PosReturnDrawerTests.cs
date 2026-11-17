@@ -98,6 +98,9 @@ public sealed class PosReturnDrawerTests : IAsyncLifetime
         var ok = Assert.IsType<Ok<ApiPosReturn>>(result);
         Assert.Equal(20m, ok.Value.CashBack.Amount);
         Assert.Contains(ok.Value.Messages, message => message.Contains("closed", StringComparison.Ordinal));
+
+        // G15 (fix verification): the cash that isn't in any count was told only as text, with incomplete false.
+        Assert.True(ok.Value.Incomplete);
     }
 
     [Fact]

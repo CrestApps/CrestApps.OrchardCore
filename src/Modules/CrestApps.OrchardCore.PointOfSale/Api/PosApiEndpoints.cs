@@ -429,6 +429,7 @@ internal static class PosApiEndpoints
         var cashBack = result.ReturnedToBalances.GetValueOrDefault(PosConstants.CashTenderKey);
 
         List<string> messages = [.. result.Errors, .. result.Messages];
+        var incomplete = !result.Succeeded;
 
         // The drawer movement is recorded whenever cash went back, even when another part of the refund failed, and not
         // with the request's token: the refund doesn't stop for an aborted request, so neither does the record of its cash.
@@ -437,7 +438,9 @@ internal static class PosApiEndpoints
         // register's open shift, whichever that is.
         if (cashBack > 0m && !await shifts.MoveCashAsync(await shiftStore.FindOpenAsync(shift.RegisterId, CancellationToken.None), -cashBack, $"Refund of order {order.OrderNumber}", httpContext.User, CancellationToken.None))
         {
+            // Cash that left the drawer but isn't in any count is a part of the return that failed, so it is flagged too.
             messages.Add($"The register's shift was closed while the refund ran, so the {CurrencyScale.Format(cashBack, order.Currency)} {order.Currency} paid out isn't in its count.");
+            incomplete = true;
         }
 
         if (!result.Succeeded && cashBack <= 0m)
@@ -447,7 +450,7 @@ internal static class PosApiEndpoints
 
         // A return that gave cash back is answered with it, so the clerk pays it out, and what failed besides is told first
         // and flagged.
-        return TypedResults.Ok(new ApiPosReturn(order.ItemId, order.OrderNumber, ApiMoney.From(result.Refunded, order.Currency), ApiMoney.From(cashBack, order.Currency), messages, Incomplete: !result.Succeeded));
+        return TypedResults.Ok(new ApiPosReturn(order.ItemId, order.OrderNumber, ApiMoney.From(result.Refunded, order.Currency), ApiMoney.From(cashBack, order.Currency), messages, incomplete));
     }
 
     // A counter sale belongs to the store its register is in.
