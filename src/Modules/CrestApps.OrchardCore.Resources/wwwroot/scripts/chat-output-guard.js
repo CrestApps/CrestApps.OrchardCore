@@ -5,7 +5,7 @@
 (function() {
 	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/chat-output-guard/guard.js
 	var chatAttributePattern = /^data-(?:coreai-chat|chat-interaction)(?:-|$)/i;
-	var allowedDataAttributePattern = /^data-(?:chart-id|agui-(?:tool-call|interrupt|approved)|doc-index|error-index|carousel-(?:key|size|size-option|step|target)|stack-offset|active-index|image-count)$/i;
+	var allowedDataAttributePattern = /^data-(?:chart-id|doc-index|error-index|carousel-(?:key|size|size-option|step|target)|stack-offset|active-index|image-count)$/i;
 	var chartCanvasIdPattern = /^chat_chart_\d+$/;
 	var formElementNames = [
 		"form",
@@ -33,22 +33,27 @@
 		"popovertargetaction"
 	]);
 	var settingsClassPattern = /^(?:prompt-template-[\w-]+|remove-prompt-template-btn|capability-checkbox|setting-input|group-toggle|ci-agent-global-toggle)$/i;
+	var toolCallAttributePattern = /^data-agui-tool-call$/i;
 	var approvalAttributePattern = /^data-agui-(?:interrupt|approved)$/i;
 	var sanitizerMarker = "__crestAppsChatOutputGuard";
+	var ownMarkupMarker = "__crestAppsChatOutputGuardOwnMarkup";
 	var watcherMarker = "__crestAppsChatOutputWatcher";
 	/**
 	* Returns whether an answer may keep an attribute: no data attribute but the chat's own, no id except a chart's canvas,
 	* nothing that ties an element to another control of the page, checked only on a disabled checkbox (a task list), and
-	* the approval attributes only on a button of the chat's own approval box.
+	* the AG-UI attributes only in the chat's own markup, the approval ones only on a button of its approval box.
 	* @param {string} elementName The element's tag name.
 	* @param {string} attributeName The attribute's name.
 	* @param {string} attributeValue The attribute's value.
 	* @param {Element} [element] The element, for the rules that look at it; without it those attributes are refused.
+	* @param {boolean} [ownMarkup] Whether the call sanitizes the chat's own markup (made without a config); otherwise the
+	* AG-UI attributes are refused.
 	* @returns {boolean} Whether the attribute is kept.
 	*/
-	function isAllowedAttribute(elementName, attributeName, attributeValue, element) {
+	function isAllowedAttribute(elementName, attributeName, attributeValue, element, ownMarkup) {
 		const name = String(attributeName || "").toLowerCase();
-		if (approvalAttributePattern.test(name)) return isApprovalButton(element);
+		if (approvalAttributePattern.test(name)) return ownMarkup === true && isApprovalButton(element);
+		if (toolCallAttributePattern.test(name)) return ownMarkup === true;
 		if (name.startsWith("data-")) return allowedDataAttributePattern.test(name);
 		if (name === "id") return String(elementName || "").toUpperCase() === "CANVAS" && chartCanvasIdPattern.test(String(attributeValue || ""));
 		if (name === "checked") return isTaskListCheckbox(element);
@@ -80,8 +85,18 @@
 		purify.addHook("uponSanitizeElement", (node, data) => {
 			if (data && data.allowedTags) for (const name of formElementNames) delete data.allowedTags[name];
 		});
+		const sanitize = purify.sanitize;
+		purify.sanitize = function(dirty, config) {
+			const previous = purify[ownMarkupMarker];
+			purify[ownMarkupMarker] = config === void 0;
+			try {
+				return sanitize.apply(this, arguments);
+			} finally {
+				purify[ownMarkupMarker] = previous;
+			}
+		};
 		purify.addHook("uponSanitizeAttribute", (node, data) => {
-			if (!isAllowedAttribute(node && node.nodeName, data.attrName, data.attrValue, node)) {
+			if (!isAllowedAttribute(node && node.nodeName, data.attrName, data.attrValue, node, purify[ownMarkupMarker] === true)) {
 				data.keepAttr = false;
 				return;
 			}

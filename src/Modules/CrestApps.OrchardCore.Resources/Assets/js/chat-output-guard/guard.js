@@ -11,15 +11,19 @@
 // answer's own can post off-site. On Chat Interactions the settings script collects prompt templates and tool
 // checkboxes from the whole document, by class and by name, so markup in an answer was saved as the user's settings.
 // The guard removes those elements and attributes from every call; none of the chat's own markup uses them.
+//
+// The AG-UI tool cards and approval buttons carry the call's and the approval's ids, and a click on a button in that
+// shape answers the approval. The chat sanitizes its own tool cards with no config and every answer with one (through
+// CoreAIImages.sanitize), so the guard keeps the AG-UI attributes only in a call made without a config: an answer that
+// writes the whole box itself, ids included, keeps none of them.
 
 // The attributes that configure or start a chat or a chat widget. The watcher removes them from anything rendered.
 const chatAttributePattern = /^data-(?:coreai-chat|chat-interaction)(?:-|$)/i;
 
 // The only data attributes an answer keeps: the ones the chat scripts write into the markup they pass through DOMPurify
-// themselves, and act on afterwards. The chart download button (data-chart-id), the AG-UI tool cards and approval
-// buttons (data-agui-*), the document bar's remove and dismiss buttons (data-doc-index, data-error-index), and the image
+// themselves, and act on afterwards. The chart download button (data-chart-id), the document bar's remove and dismiss buttons (data-doc-index, data-error-index), and the image
 // carousel's controls (data-carousel-*, data-stack-offset, data-active-index, data-image-count).
-const allowedDataAttributePattern = /^data-(?:chart-id|agui-(?:tool-call|interrupt|approved)|doc-index|error-index|carousel-(?:key|size|size-option|step|target)|stack-offset|active-index|image-count)$/i;
+const allowedDataAttributePattern = /^data-(?:chart-id|doc-index|error-index|carousel-(?:key|size|size-option|step|target)|stack-offset|active-index|image-count)$/i;
 
 // The chart renderer gives each chart's canvas an id, which the chart is drawn into; every other id is refused.
 const chartCanvasIdPattern = /^chat_chart_\d+$/;
@@ -35,27 +39,36 @@ const linkingAttributeNames = new Set(['for', 'name', 'list', 'form', 'formactio
 // The classes Chat Interactions' settings script selects on, anywhere in the document, to collect and save settings.
 const settingsClassPattern = /^(?:prompt-template-[\w-]+|remove-prompt-template-btn|capability-checkbox|setting-input|group-toggle|ci-agent-global-toggle)$/i;
 
-// The approval buttons' attributes, which the chat answers a pending tool approval from.
+// The AG-UI attributes: the tool card's call id, and the approval buttons' attributes, which the chat answers a pending
+// tool approval from. Kept only in the chat's own markup.
+const toolCallAttributePattern = /^data-agui-tool-call$/i;
 const approvalAttributePattern = /^data-agui-(?:interrupt|approved)$/i;
 
 const sanitizerMarker = '__crestAppsChatOutputGuard';
+const ownMarkupMarker = '__crestAppsChatOutputGuardOwnMarkup';
 const watcherMarker = '__crestAppsChatOutputWatcher';
 
 /**
  * Returns whether an answer may keep an attribute: no data attribute but the chat's own, no id except a chart's canvas,
  * nothing that ties an element to another control of the page, checked only on a disabled checkbox (a task list), and
- * the approval attributes only on a button of the chat's own approval box.
+ * the AG-UI attributes only in the chat's own markup, the approval ones only on a button of its approval box.
  * @param {string} elementName The element's tag name.
  * @param {string} attributeName The attribute's name.
  * @param {string} attributeValue The attribute's value.
  * @param {Element} [element] The element, for the rules that look at it; without it those attributes are refused.
+ * @param {boolean} [ownMarkup] Whether the call sanitizes the chat's own markup (made without a config); otherwise the
+ * AG-UI attributes are refused.
  * @returns {boolean} Whether the attribute is kept.
  */
-export function isAllowedAttribute(elementName, attributeName, attributeValue, element) {
+export function isAllowedAttribute(elementName, attributeName, attributeValue, element, ownMarkup) {
     const name = String(attributeName || '').toLowerCase();
 
     if (approvalAttributePattern.test(name)) {
-        return isApprovalButton(element);
+        return ownMarkup === true && isApprovalButton(element);
+    }
+
+    if (toolCallAttributePattern.test(name)) {
+        return ownMarkup === true;
     }
 
     if (name.startsWith('data-')) {
@@ -118,8 +131,24 @@ export function hardenSanitizer(purify) {
         }
     });
 
+    // The chat passes its own tool cards to DOMPurify with no config, and every answer with one: the call is marked so
+    // the attribute hook can tell them apart.
+    const sanitize = purify.sanitize;
+
+    purify.sanitize = function (dirty, config) {
+        const previous = purify[ownMarkupMarker];
+
+        purify[ownMarkupMarker] = config === undefined;
+
+        try {
+            return sanitize.apply(this, arguments);
+        } finally {
+            purify[ownMarkupMarker] = previous;
+        }
+    };
+
     purify.addHook('uponSanitizeAttribute', (node, data) => {
-        if (!isAllowedAttribute(node && node.nodeName, data.attrName, data.attrValue, node)) {
+        if (!isAllowedAttribute(node && node.nodeName, data.attrName, data.attrValue, node, purify[ownMarkupMarker] === true)) {
             data.keepAttr = false;
 
             return;
