@@ -187,6 +187,11 @@ public sealed class VendorPayout : CatalogItem
 
     public string TransferId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the disbursement that sent the payout.
+    /// </summary>
+    public string DisbursementId { get; set; }
+
     public string Failure { get; set; }
 
     public DateTime CreatedUtc { get; set; }

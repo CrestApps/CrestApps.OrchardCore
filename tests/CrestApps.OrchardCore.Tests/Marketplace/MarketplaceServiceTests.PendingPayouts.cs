@@ -2,13 +2,16 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Web;
+using CrestApps.OrchardCore.Banking.Disbursements.Models;
 using CrestApps.OrchardCore.Marketplace;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Marketplace.Services;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Tests.Checkout;
 using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Stripe;
 
 namespace CrestApps.OrchardCore.Tests.Marketplace;
@@ -117,36 +120,132 @@ public sealed partial class MarketplaceServiceTests
     }
 
     /// <summary>
-    /// Only Stripe saying no to the request proves no transfer exists. A key reused with other parameters, a server error
-    /// or a rate limit leave the payout pending with its key; a refusal lets the next try use a new one.
+    /// Only Stripe saying no to the request proves no transfer exists. A rate limit or a server error leave the
+    /// disbursement submitted (its outcome unknown), a refusal fails it, and a transfer Stripe already has for the
+    /// disbursement's key is found before anything is sent.
     /// </summary>
     [Fact]
-    public async Task TheStripeProvider_ReportsAReusedKeyOrATemporaryError_AsUnsettled_AndARefusalAsRefused()
+    public async Task TheStripeProvider_ReportsATemporaryErrorAsSubmitted_ARefusalAsFailed_AndFindsATransferItAlreadyMade()
     {
         // Arrange
         var stripe = new FakeStripe();
         var provider = CreateStripeProvider(stripe);
 
-        await provider.PayAsync(_vendor, null, 10m, "EUR", "key-1", TestContext.Current.CancellationToken);
+        var made = await provider.SubmitAsync(new(), [StripeDisbursement("d1", "key-1")], TestContext.Current.CancellationToken);
 
         // Act
-        var reused = await provider.PayAsync(_vendor, null, 11m, "EUR", "key-1", TestContext.Current.CancellationToken);
+        var again = await provider.SubmitAsync(new(), [StripeDisbursement("d1", "key-1")], TestContext.Current.CancellationToken);
 
         stripe.TransferStatus = HttpStatusCode.TooManyRequests;
-        var limited = await provider.PayAsync(_vendor, null, 10m, "EUR", "key-2", TestContext.Current.CancellationToken);
+        var limited = await provider.SubmitAsync(new(), [StripeDisbursement("d2", "key-2")], TestContext.Current.CancellationToken);
 
         stripe.TransferStatus = HttpStatusCode.BadRequest;
-        var refused = await provider.PayAsync(_vendor, null, 10m, "EUR", "key-3", TestContext.Current.CancellationToken);
+        var refused = await provider.SubmitAsync(new(), [StripeDisbursement("d3", "key-3")], TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(reused.RetryLater);
-        Assert.True(limited.RetryLater);
-        Assert.False(refused.RetryLater);
-        Assert.Null(refused.TransferId);
-        Assert.Single(stripe.Transfers);
+        Assert.Equal(DisbursementStatus.Settled, made.Statuses["d1"]);
+        Assert.Equal(DisbursementStatus.Settled, again.Statuses["d1"]);
+        Assert.Equal(made.TraceNumbers["d1"], again.TraceNumbers["d1"]);
+        Assert.Equal(DisbursementStatus.Submitted, limited.Statuses["d2"]);
+        Assert.Equal(DisbursementStatus.Failed, refused.Statuses["d3"]);
+        Assert.False(string.IsNullOrEmpty(refused.FailureReasons["d3"]));
+
+        var transfer = Assert.Single(stripe.Transfers);
+        Assert.Equal("key-1", transfer.Metadata[StripeConnectPayoutProvider.PayoutKeyMetadata]);
+        Assert.Equal("d1", transfer.Metadata["disbursementId"]);
     }
 
-    private static StripeConnectPayoutProvider CreateStripeProvider(FakeStripe stripe)
+    /// <summary>
+    /// SEC-C11 on disbursements: when the order's charge can't be read from Stripe, the transfer isn't sent without it.
+    /// The batch is answered as not sent and stays open, the payout stays pending with its key, and the next run sends the
+    /// same disbursement funded by the charge.
+    /// </summary>
+    [Fact]
+    public async Task APayout_WhoseChargeCantBeRead_IsNotSent_AndIsSentFromTheChargeByTheNextRun()
+    {
+        // Arrange
+        var stripe = new FakeStripe { FailPaymentIntentReads = true };
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false, PayoutProvider = MarketplaceConstants.StripeConnectPayoutProvider }, CreateStripeProvider(stripe));
+
+        _order.CheckoutSessionId = "session-1";
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        var (firstPaid, firstFailures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0m, firstPaid);
+        Assert.Single(firstFailures);
+        Assert.Empty(stripe.Transfers);
+        Assert.Equal(VendorPayoutStatus.Pending, Assert.Single(_payouts).Status);
+        Assert.Equal(DisbursementStatus.Batched, Assert.Single(_disbursements.Store.Entries).Status);
+
+        stripe.FailPaymentIntentReads = false;
+
+        // Act
+        var (paid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(failures);
+        Assert.Equal(48.6m, paid);
+
+        var transfer = Assert.Single(stripe.Transfers);
+        var payout = Assert.Single(_payouts);
+
+        Assert.Equal("ch_1", transfer.SourceTransaction);
+        Assert.Equal(VendorPayoutStatus.Paid, payout.Status);
+        Assert.Equal(transfer.Id, payout.TransferId);
+        Assert.Equal(DisbursementStatus.Settled, Assert.Single(_disbursements.Store.Entries).Status);
+    }
+
+    /// <summary>
+    /// Stripe made the transfer but its answer was lost (a server error): the disbursement is submitted, and a run more
+    /// than 24 hours later, when Stripe no longer holds the key, finds the transfer by the key in its metadata instead of
+    /// giving up on it and paying again.
+    /// </summary>
+    [Fact]
+    public async Task APayout_WhoseAnswerWasLost_IsFoundAtStripe_AfterItsKeyExpired()
+    {
+        // Arrange
+        var stripe = new FakeStripe { LoseNextTransferAnswer = true };
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false, PayoutProvider = MarketplaceConstants.StripeConnectPayoutProvider }, CreateStripeProvider(stripe));
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        Assert.Single(stripe.Transfers);
+        Assert.Equal(VendorPayoutStatus.Pending, Assert.Single(_payouts).Status);
+        Assert.Equal(DisbursementStatus.Submitted, Assert.Single(_disbursements.Store.Entries).Status);
+
+        stripe.Now = stripe.Now.AddHours(25);
+
+        // Act: two more runs.
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        var transfer = Assert.Single(stripe.Transfers);
+        var payout = Assert.Single(_payouts);
+
+        Assert.Equal(VendorPayoutStatus.Paid, payout.Status);
+        Assert.Equal(transfer.Id, payout.TransferId);
+        Assert.Equal(DisbursementStatus.Settled, Assert.Single(_disbursements.Store.Entries).Status);
+    }
+
+    private Disbursement StripeDisbursement(string id, string key)
+        => new()
+        {
+            ItemId = id,
+            IdempotencyKey = key,
+            Payee = new(MarketplaceConstants.VendorPartyKind, _vendor.ItemId),
+            Amount = 10m,
+            Currency = "EUR",
+            CreatedUtc = _now,
+        };
+
+    private StripeConnectPayoutProvider CreateStripeProvider(FakeStripe stripe)
     {
         var client = new StripeClient("sk_test_payouts", httpClient: new SystemNetHttpClient(new HttpClient(stripe), maxNetworkRetries: 0));
         var attempts = new InMemoryPaymentAttemptStore(new PaymentAttempt
@@ -158,7 +257,14 @@ public sealed partial class MarketplaceServiceTests
             State = PaymentAttemptState.Succeeded,
         });
 
-        return new StripeConnectPayoutProvider(client, attempts, NullLogger<StripeConnectPayoutProvider>.Instance);
+        // The vendor and the order the payouts are for, read when they are sent.
+        var vendors = new Mock<IVendorStore>();
+        vendors.Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string id, CancellationToken _) => id == _vendor.ItemId ? _vendor : null);
+
+        var orders = new Mock<IOrderStore>();
+        orders.Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string id, CancellationToken _) => id == _order?.ItemId ? _order : null);
+
+        return new StripeConnectPayoutProvider(client, attempts, vendors.Object, orders.Object, NullLogger<StripeConnectPayoutProvider>.Instance, new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<StripeConnectPayoutProvider>());
     }
 
     /// <summary>
@@ -173,6 +279,9 @@ public sealed partial class MarketplaceServiceTests
         public DateTime Now { get; set; } = _now;
 
         public bool FailPaymentIntentReads { get; set; }
+
+        // Makes the next transfer, then answers with a server error, as when Stripe's answer is lost.
+        public bool LoseNextTransferAnswer { get; set; }
 
         // Anything but OK refuses new transfers with this status: 400 as Stripe's invalid_request_error, 429 as a rate limit.
         public HttpStatusCode TransferStatus { get; set; } = HttpStatusCode.OK;
@@ -249,6 +358,13 @@ public sealed partial class MarketplaceServiceTests
             if (key is not null)
             {
                 _keys[key] = (body, Now, json);
+            }
+
+            if (LoseNextTransferAnswer)
+            {
+                LoseNextTransferAnswer = false;
+
+                return Json(HttpStatusCode.InternalServerError, """{"error":{"type":"api_error","message":"An unknown error occurred."}}""");
             }
 
             return Json(HttpStatusCode.OK, json);

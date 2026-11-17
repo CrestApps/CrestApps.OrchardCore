@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using System.Net;
 using CrestApps.OrchardCore.Diagnostics;
-using Microsoft.AspNetCore.Authorization;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Designer.Workflows;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Reports.Services;
 using CrestApps.OrchardCore.Reports.Subscriptions.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Email;
@@ -194,26 +194,39 @@ public sealed class ReportSubscriptionService
             return (S["The report {0} isn't available; its feature may be off.", subscription.ReportName], "report_unavailable");
         }
 
-        // The report goes out with the access of the person who last saved the subscription, so that person must still
-        // exist, be enabled, and hold both the report's permission and the subscription permission. Otherwise the
-        // subscription is turned off and says why, rather than keep mailing a report its author can no longer see.
+        // The report goes out with the access of the person who last saved the subscription, and runs as them, so that
+        // person must still exist, be enabled, and hold both the report's permission and the subscription permission.
+        // Otherwise the subscription is turned off and says why, rather than keep mailing a report its author can no
+        // longer see.
         var author = subscription.ModifiedBy ?? subscription.CreatedBy;
-        var authorPrincipal = await _owners.ResolveByUserNameAsync(author);
+        var owner = await _owners.ResolveByUserNameAsync(author);
+        string denied = null;
 
-        if (authorPrincipal is null ||
-            (descriptor.Permission is not null && !await _authorizationService.AuthorizeAsync(authorPrincipal, descriptor.Permission)) ||
-            !await _authorizationService.AuthorizeAsync(authorPrincipal, ReportSubscriptionPermissions.ManageReportSubscriptions))
+        if (owner is null)
+        {
+            denied = S["The subscription was turned off because {0}, who last saved it, no longer exists or is disabled. Save it again as someone who may view this report, then turn it back on.", author ?? "-"];
+        }
+        else if (descriptor.Permission is not null && !await _authorizationService.AuthorizeAsync(owner, descriptor.Permission))
+        {
+            denied = S["The report can't be sent, because {0} may no longer view it. The subscription was turned off: save it again as someone who may, then turn it back on.", author];
+        }
+        else if (!await _authorizationService.AuthorizeAsync(owner, ReportSubscriptionPermissions.ManageReportSubscriptions))
+        {
+            denied = S["The subscription was turned off because {0}, who last saved it, may no longer manage report subscriptions. Save it again as someone who may, then turn it back on.", author];
+        }
+
+        if (denied is not null)
         {
             subscription.IsEnabled = false;
             subscription.NextRunUtc = null;
 
-            return (S["The subscription was turned off because {0}, who last saved it, no longer exists, is disabled, or may no longer view this report or manage report subscriptions. Save it again as someone who may, then turn it back on.", author ?? "-"], "author_denied");
+            return (denied, "view_denied");
         }
 
         var format = string.IsNullOrWhiteSpace(subscription.AttachmentFormat) ? null : _exports.GetDescriptor(subscription.AttachmentFormat);
 
         // A report that needs a permission to export is attached only while the person who saved the subscription has it.
-        if (format is not null && descriptor.ExportPermission is not null && !await CanExportAsync(subscription, descriptor))
+        if (format is not null && descriptor.ExportPermission is not null && !await _authorizationService.AuthorizeAsync(owner, descriptor.ExportPermission))
         {
             return (S["The file can't be attached, because {0} may not export this report. Choose no file format, or give them the permission to export it.", subscription.ModifiedBy ?? subscription.CreatedBy], "export_denied");
         }
@@ -223,8 +236,8 @@ public sealed class ReportSubscriptionService
 
         // The email shows the report as it looks on screen; an attachment gets the document made for an export, which
         // can be shaped differently, such as a row per record.
-        var document = await RunAsync(descriptor, fromUtc, toUtc, ReportRunMode.Display, title, cancellationToken);
-        var exportDocument = format is null ? null : await RunAsync(descriptor, fromUtc, toUtc, ReportRunMode.Export, title, cancellationToken);
+        var document = await RunAsync(descriptor, fromUtc, toUtc, ReportRunMode.Display, title, owner, cancellationToken);
+        var exportDocument = format is null ? null : await RunAsync(descriptor, fromUtc, toUtc, ReportRunMode.Export, title, owner, cancellationToken);
 
         var fromLocal = TimeZoneInfo.ConvertTimeFromUtc(fromUtc, timeZone);
         var toLocal = TimeZoneInfo.ConvertTimeFromUtc(toUtc, timeZone).AddDays(-1);
@@ -270,13 +283,13 @@ public sealed class ReportSubscriptionService
         }
     }
 
-    private async Task<ReportDocument> RunAsync(ReportDescriptor descriptor, DateTime fromUtc, DateTime toUtc, ReportRunMode mode, string title, CancellationToken cancellationToken)
+    private async Task<ReportDocument> RunAsync(ReportDescriptor descriptor, DateTime fromUtc, DateTime toUtc, ReportRunMode mode, string title, System.Security.Claims.ClaimsPrincipal owner, CancellationToken cancellationToken)
     {
         var filter = new ReportFilter { ReportName = descriptor.Name };
 
         filter.SetDateRange(new ReportDateRange { FromUtc = fromUtc, ToUtc = toUtc });
 
-        var document = await ReportTelemetry.RunCodedReportAsync(_reports.GetReport(descriptor.Name), descriptor, new ReportContext(filter, mode), cancellationToken);
+        var document = await ReportTelemetry.RunCodedReportAsync(_reports.GetReport(descriptor.Name), descriptor, new ReportContext(filter, mode) { User = owner }, cancellationToken);
 
         document.Title = title;
         await _displayValues.ResolveAsync(document);
@@ -284,10 +297,4 @@ public sealed class ReportSubscriptionService
         return document;
     }
 
-    private async Task<bool> CanExportAsync(ReportSubscription subscription, ReportDescriptor descriptor)
-    {
-        var owner = await _owners.ResolveByUserNameAsync(subscription.ModifiedBy ?? subscription.CreatedBy);
-
-        return owner is not null && await _authorizationService.AuthorizeAsync(owner, descriptor.ExportPermission);
-    }
 }

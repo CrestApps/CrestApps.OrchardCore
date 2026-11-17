@@ -128,14 +128,9 @@ public static class WorkforcePermissions
     public static readonly Permission EditPunches = new("EditPunches", LocalizationSource.Create("Edit punches", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
 
     /// <summary>
-    /// Export locked timesheets for payroll.
+    /// Lock a period's approved timesheets, ready for payroll. Exporting them is Payroll's Export payroll data.
     /// </summary>
-    public static readonly Permission ExportPayroll = new("ExportPayroll", LocalizationSource.Create("Export payroll", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
-
-    /// <summary>
-    /// See and change workers' pay rates.
-    /// </summary>
-    public static readonly Permission ViewPayRates = new("ViewPayRates", LocalizationSource.Create("View pay rates", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+    public static readonly Permission LockTimesheets = new("LockTimesheets", LocalizationSource.Create("Lock timesheets for payroll", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
 
     /// <summary>
     /// Manage planning groups, forecast events and forecasts, and make a forecast the team's coverage.

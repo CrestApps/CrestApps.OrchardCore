@@ -1,0 +1,4 @@
+@model ShapeViewModel<EmployeePayProfile>
+
+<a asp-action="Edit" asp-controller="PayProfiles" asp-route-id="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+<a asp-action="Index" asp-controller="PayItems" asp-route-profileId="@Model.Value.ItemId" class="btn btn-secondary btn-sm">@T["Pay items"]</a>

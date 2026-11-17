@@ -25,6 +25,18 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Adds the password confirmation sensitive pages ask for (<see cref="IPasswordConfirmation"/>).
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddPasswordConfirmation(this IServiceCollection services)
+    {
+        services.AddHttpContextAccessor();
+        services.TryAddScoped<IPasswordConfirmation, PasswordConfirmation>();
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds the display name provider.
     /// </summary>
     /// <param name="services">The services.</param>

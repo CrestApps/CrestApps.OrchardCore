@@ -1,0 +1,135 @@
+@model PayStatementViewModel
+@using System.Globalization
+@using CrestApps.OrchardCore.Currencies
+
+@{
+    var statement = Model.Statement;
+    string Money(decimal value) => string.IsNullOrEmpty(statement.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.FormatForDisplay(value, statement.Currency) + " " + statement.Currency;
+    string StatusName(PayStatement value) => value.VoidOf is not null ? T["Reversal"].Value : value.Status switch
+    {
+        PayStatementStatus.Draft => T["Draft"].Value,
+        PayStatementStatus.Final => T["Final, not fully paid"].Value,
+        PayStatementStatus.Paid => T["Paid"].Value,
+        _ => T["Voided"].Value,
+    };
+    var final = statement.VoidOf is null && statement.Status is PayStatementStatus.Final or PayStatementStatus.Paid;
+}
+
+<zone Name="Title">
+    <breadcrumb name="PayrollPayRunsStatement" title="@T["{0}", statement.Snapshot?.EmployeeName ?? statement.StaffMemberId]">
+        <breadcrumb-item id="PayrollPayRuns" action="Index" controller="PayRuns" area="CrestApps.OrchardCore.Payroll">@T["Pay runs"]</breadcrumb-item>
+        @if (Model.Run is { } run)
+        {
+            <breadcrumb-item id="PayrollPayRunsDetails" action="Details" controller="PayRuns" area="CrestApps.OrchardCore.Payroll" route-id="@run.ItemId">@T["Pay run {0}", run.Number]</breadcrumb-item>
+        }
+    </breadcrumb>
+</zone>
+
+<div class="card mb-3">
+    <div class="card-header d-flex">
+        <span class="me-auto">@T["{0} · paid {1}", statement.Snapshot?.EmployerName ?? string.Empty, statement.PayDate.ToString("d", CultureInfo.CurrentCulture)]</span>
+        <span class="badge ta-badge fw-normal">@StatusName(statement)</span>
+    </div>
+    <div class="card-body">
+        @if (!string.IsNullOrEmpty(statement.Number))
+        {
+            <p class="mb-1">@T["Statement {0}", statement.Number]</p>
+        }
+        <p class="text-muted mb-0">@T["Period {0} to {1}.", statement.PeriodStart.ToString("d", CultureInfo.CurrentCulture), statement.PeriodEnd.ToString("d", CultureInfo.CurrentCulture)]</p>
+        @if (statement.VoidOf is not null)
+        {
+            <p class="mb-0 mt-2"><a asp-action="Statement" asp-route-id="@statement.VoidOf">@T["Reverses statement {0}", Model.LinkedNumber ?? statement.VoidOf]</a></p>
+        }
+        else if (statement.VoidedBy is not null)
+        {
+            <p class="mb-0 mt-2"><a asp-action="Statement" asp-route-id="@statement.VoidedBy">@T["Voided by statement {0}", Model.LinkedNumber ?? statement.VoidedBy]</a></p>
+        }
+    </div>
+</div>
+
+@if (statement.Warnings.Count > 0)
+{
+    <div class="alert alert-warning">
+        <ul class="mb-0">
+            @foreach (var warning in statement.Warnings)
+            {
+                <li>@warning</li>
+            }
+        </ul>
+    </div>
+}
+
+<partial name="PayStatementLines" model="Model" />
+
+@if (statement.Payments.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Net pay is paid"]</div>
+        <ul class="list-group list-group-flush">
+            @for (var index = 0; index < statement.Payments.Count; index++)
+            {
+                var payment = statement.Payments[index];
+                <li class="list-group-item">
+                    <div class="d-flex">
+                        <span class="me-auto">
+                            @(payment.Method == NetPayMethod.BankAccount ? T["By deposit"] : T["By check"])
+                            @if (!string.IsNullOrEmpty(payment.Reference))
+                            {
+                                <span class="text-muted ms-1">@payment.Reference</span>
+                            }
+                        </span>
+                        <span>@Money(payment.Amount)</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(payment.Problem))
+                    {
+                        <div class="text-danger small mt-1">@payment.Problem</div>
+                    }
+                    @if (final && Model.CanVoid && !string.IsNullOrEmpty(payment.ReferenceId))
+                    {
+                        <form asp-action="ReissuePayment" asp-route-id="@statement.ItemId" asp-route-index="@index" method="post" class="row g-2 mt-1">
+                            <div class="col-12 col-md-6">
+                                <input name="reason" class="form-control form-control-sm" placeholder="@T["Why it is paid again, such as a lost check"]" aria-label="@T["Why it is paid again"]" required />
+                            </div>
+                            @if (payment.Method == NetPayMethod.BankAccount)
+                            {
+                                <div class="col-12 col-md-auto">
+                                    <div class="form-check mt-1">
+                                        <input class="form-check-input" type="checkbox" name="byCheck" value="true" id="byCheck-@index" />
+                                        <label class="form-check-label small" for="byCheck-@index">@T["Pay it by check"]</label>
+                                    </div>
+                                </div>
+                            }
+                            <div class="col-12 col-md-auto">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Reissue"]</button>
+                            </div>
+                        </form>
+                    }
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+@if (final && Model.CanVoid)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Void this statement"]</div>
+        <div class="card-body">
+            <p class="text-muted">@T["A reversing statement cancels it in the year's totals, its pay items go back and its inputs can be paid again. Checks not cashed and deposits not sent to the bank are stopped."]</p>
+            <form asp-action="VoidStatement" asp-route-id="@statement.ItemId" method="post" class="row g-2">
+                <div class="col-12 col-md-6">
+                    <input name="reason" class="form-control" placeholder="@T["Why it is voided"]" aria-label="@T["Why it is voided"]" required />
+                </div>
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="btn btn-danger" data-confirm-title="@T["Void the statement"]" data-confirm="@T["Void this pay statement? This can't be undone."]">@T["Void"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="mb-3">
+    <a class="btn btn-secondary" asp-action="StatementPdf" asp-route-id="@statement.ItemId"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Download the stub"]</a>
+</div>
+
+<script asp-name="crestapps-browser" at="Foot"></script>

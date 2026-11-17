@@ -16,6 +16,9 @@ import { describe, expect, it } from 'vitest';
 // The update only lowers numbers and drops views that reached zero; it never raises one.
 const repositoryRoot = join(__dirname, '..', '..', '..');
 const sourceRoot = join(repositoryRoot, 'src');
+// Existing debt from main's #1332 (Payroll, Banking, Approvals, Plaid), baselined when PR #1319 merged main; lower or
+// remove these as the scripts move to Assets/js: Approvals ApprovalPolicyStages.Edit, Banking ChecksRegisterFilters,
+// DisbursementsFilters and NachaOriginSettings.Edit, Payroll MyPay/Statement, and Plaid BankAccountLink_Plaid.
 const baselinePath = join(__dirname, 'inline-scripts-ratchet.baseline.json');
 
 // A <script> element with its attributes and body. Razor writes these as plain HTML, so a regular expression is enough.

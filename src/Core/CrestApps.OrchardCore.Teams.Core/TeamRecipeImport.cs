@@ -145,6 +145,7 @@ public static class TeamRecipeImport
         target.Description = incoming.Description;
         target.LinkedRoleName = incoming.LinkedRoleName;
         target.TimeZoneId = incoming.TimeZoneId;
+        target.Address = incoming.Address;
         target.Enabled = incoming.Enabled;
 
         configure?.Invoke(node, target);

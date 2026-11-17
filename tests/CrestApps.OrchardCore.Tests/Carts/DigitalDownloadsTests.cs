@@ -201,6 +201,7 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
         var localClock = new Mock<ILocalClock>();
         localClock.Setup(clock => clock.ConvertToLocalAsync(It.IsAny<DateTimeOffset>())).Returns<DateTimeOffset>(Task.FromResult);
 
+        // The email is written on the day of the grant: the real clock would pass the 30 days and drop the link.
         var section = await InSessionAsync(service => new DownloadEmailSectionProvider(service, new PassThroughLocalizer<DownloadEmailSectionProvider>(), new TestClock(_now), localClock.Object).GetSectionAsync(order, TestContext.Current.CancellationToken));
 
         var link = Assert.Single(section.Links);

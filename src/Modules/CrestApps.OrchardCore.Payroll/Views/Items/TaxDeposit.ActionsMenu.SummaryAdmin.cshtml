@@ -1,0 +1,3 @@
+@model ShapeViewModel<TaxDeposit>
+
+<a asp-action="DeleteDeposit" asp-controller="PayrollFilings" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete the deposit record? A deposit counted in a filed return is kept."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

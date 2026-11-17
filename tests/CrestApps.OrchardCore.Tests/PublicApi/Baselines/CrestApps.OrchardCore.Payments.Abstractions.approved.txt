@@ -44,6 +44,7 @@ namespace CrestApps.OrchardCore.Payments
     }
     public static class Money
     {
+        public static decimal[] Allocate(decimal total, System.Collections.Generic.IReadOnlyList<decimal> weights, string currency = null) { }
         public static bool AreEqual(decimal left, decimal right, string currency = null) { }
         public static bool AreEqual(decimal? left, decimal? right, string currency = null) { }
         public static bool IsGreaterThan(decimal amount, decimal threshold, string currency = null) { }

@@ -1,0 +1,71 @@
+{
+  "name": "PayrollSampleRoles",
+  "displayName": "Payroll: sample roles",
+  "description": "Adds three sample roles for payroll: Payroll administrator (everything), Payroll clerk (prepares pay runs and keeps pay profiles, never approves) and Payroll approver (approves pay runs). Each covers every employer; for a clerk of one employer, give a role the per-employer permissions, such as Prepare pay runs for an employer, instead.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "payroll"
+  ],
+  "tags": [
+    "payroll",
+    "roles"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Payroll"
+      ]
+    },
+    {
+      "name": "Roles",
+      "Roles": [
+        {
+          "Name": "Payroll administrator",
+          "Description": "Sets up and runs payroll for every employer.",
+          "Permissions": [
+            "AccessAdminPanel",
+            "ManagePaySetup",
+            "ManagePayrollSettings",
+            "ManagePayProfiles",
+            "ViewPayProfiles",
+            "ManageGarnishments",
+            "PreparePayRuns",
+            "ApprovePayRuns",
+            "ProcessPayRuns",
+            "VoidPayStatements",
+            "ViewPayRuns",
+            "ViewPayrollReports",
+            "ExportPayrollData",
+            "ManagePayrollFilings"
+          ]
+        },
+        {
+          "Name": "Payroll clerk",
+          "Description": "Keeps pay profiles and prepares pay runs. Never approves them.",
+          "Permissions": [
+            "AccessAdminPanel",
+            "ViewPayProfiles",
+            "ManagePayProfiles",
+            "PreparePayRuns",
+            "ViewPayRuns",
+            "ViewPayrollReports"
+          ]
+        },
+        {
+          "Name": "Payroll approver",
+          "Description": "Approves pay runs others prepared.",
+          "Permissions": [
+            "AccessAdminPanel",
+            "ApprovePayRuns",
+            "ViewPayRuns",
+            "ViewPayrollReports"
+          ]
+        }
+      ]
+    }
+  ]
+}

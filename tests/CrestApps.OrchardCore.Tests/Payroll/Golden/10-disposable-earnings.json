@@ -1,0 +1,78 @@
+{
+  "Frequency": "Biweekly",
+  "PeriodStart": "2026-11-01",
+  "PeriodEnd": "2026-11-14",
+  "PayDate": "2026-11-20",
+  "Description": "A deduction of 25% of disposable earnings: gross 1000 less 100 of income tax.",
+  "Pay": {
+    "PayBasis": "Hourly",
+    "Rates": [
+      {
+        "EffectiveFrom": "2020-01-01",
+        "HourlyRate": 20
+      }
+    ]
+  },
+  "Distribution": [
+    {
+      "Method": "Check",
+      "Split": "Remainder"
+    }
+  ],
+  "Codes": [
+    {
+      "Code": "REG",
+      "Class": "Earning",
+      "Kind": "Regular"
+    },
+    {
+      "Code": "GARN",
+      "Class": "Deduction",
+      "Kind": "Loan",
+      "Settings": {
+        "Calculation": "PercentOfDisposableEarnings"
+      }
+    }
+  ],
+  "Inputs": [
+    {
+      "PayCode": "REG",
+      "Hours": 50
+    }
+  ],
+  "Items": [
+    {
+      "PayCode": "GARN",
+      "Percent": 25
+    }
+  ],
+  "TaxRules": [
+    {
+      "rule": {
+        "TaxCode": "US-FIT",
+        "Name": "Income tax",
+        "Jurisdiction": "US",
+        "Category": "IncomeTax",
+        "Payer": "Employee",
+        "Method": "Percentage",
+        "EffectiveFrom": "2026-01-01",
+        "Rate": 10
+      }
+    }
+  ],
+  "Expected": {
+    "Lines": [
+      "Earning REG 1000.00 for 50h",
+      "Tax US-FIT Employee 100.00 on 1000.00",
+      "Deduction GARN 225.00"
+    ],
+    "Gross": 1000.0,
+    "Net": 675.0,
+    "Payments": [
+      {
+        "Method": "Check",
+        "Amount": 675.0
+      }
+    ]
+  }
+}

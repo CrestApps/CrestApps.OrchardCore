@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<PayrollYearReopenedEvent>
+
+<header><h4><i class="fa-solid fa-lock-open" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Payroll Year Reopened"])</h4></header>
+<p class="hint">@T["Starts when an employer's closed payroll year is reopened. Input: EmployerId, Year, Change and Actor."]</p>

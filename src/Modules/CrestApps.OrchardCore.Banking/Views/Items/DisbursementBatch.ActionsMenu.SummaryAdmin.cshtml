@@ -1,0 +1,25 @@
+@model ShapeViewModel<DisbursementBatch>
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@{
+    var batch = Model.Value;
+}
+
+<a asp-controller="Disbursements" asp-action="Index" asp-route-BatchId="@batch.ItemId" class="dropdown-item">@T["Show its disbursements"]</a>
+@if (batch.Status == DisbursementBatchStatus.Open)
+{
+    <a asp-action="Release" asp-route-id="@batch.ItemId" class="dropdown-item" data-title="@T["Release"]" data-message="@T.Plural(batch.Count, "Release the batch of 1 disbursement? A bank file is written, checks are issued, or the payments are recorded.", "Release the batch of {0} disbursements? A bank file is written, checks are issued, or the payments are recorded.")" data-url-af="RemoveUrl UnsafeUrl">@T["Release"]</a>
+    <a asp-action="Cancel" asp-route-id="@batch.ItemId" class="dropdown-item text-danger" data-title="@T["Cancel"]" data-message="@T["Cancel the batch? Its disbursements become pending again."]" data-url-af="RemoveUrl UnsafeUrl">@T["Cancel"]</a>
+}
+@if (batch.Status == DisbursementBatchStatus.Releasing)
+{
+    <a asp-action="Reopen" asp-route-id="@batch.ItemId" class="dropdown-item text-danger" data-title="@T["Reopen"]" data-message="@T["Reopen the batch? Do it only once you checked with the provider or the bank that nothing of it was sent: the next release sends it again."]" data-url-af="RemoveUrl UnsafeUrl">@T["Reopen after checking"]</a>
+}
+@if (batch.HasFile)
+{
+    <a asp-action="Download" asp-route-id="@batch.ItemId" class="dropdown-item">@T["Download the bank file"]</a>
+}
+@if (batch.Status == DisbursementBatchStatus.Released)
+{
+    <a asp-action="Settle" asp-route-id="@batch.ItemId" class="dropdown-item" data-title="@T["Mark paid"]" data-message="@T["Record that the bank paid every disbursement of the batch that wasn't returned?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Mark paid"]</a>
+}

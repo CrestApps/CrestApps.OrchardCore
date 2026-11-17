@@ -1,0 +1,15 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+
+@model PayrollTaskViewModel
+
+<p class="hint">@T["Rejects a pay run's pending approval as the person the workflow runs for, under the policy. The note is required."]</p>
+<div class="mb-3">
+    <label asp-for="PayRunId" class="form-label">@T["Pay run id"]</label>
+    <input asp-for="PayRunId" class="form-control code" />
+    <span class="hint">@T["The run's id or number. Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="Note" class="form-label">@T["Note"]</label>
+    <input asp-for="Note" class="form-control code" />
+    <span class="hint">@T["Why it is rejected. Liquid."]</span>
+</div>

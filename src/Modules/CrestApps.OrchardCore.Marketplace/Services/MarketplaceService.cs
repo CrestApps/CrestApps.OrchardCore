@@ -1,45 +1,39 @@
 using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Banking.Disbursements.Models;
+using CrestApps.OrchardCore.Banking.Disbursements.Services;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Marketplace.Telemetry;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Models;
-using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Marketplace.Services;
 
 /// <summary>
-/// Pays out to a vendor what it earned on one order.
+/// A Disbursements provider that can pay a vendor: the disbursement's payee is the vendor
+/// (<see cref="MarketplaceConstants.VendorPartyKind"/>) and its source the order whose earnings it pays
+/// (<see cref="MarketplaceConstants.PayoutSourceKind"/>). Vendor payouts are disbursements, so they are batched,
+/// released, listed and reported by the Disbursements building block.
 /// </summary>
-public interface IVendorPayoutProvider
+public interface IVendorPayoutProvider : IDisbursementProvider
 {
     /// <summary>
-    /// Gets the provider's unique name, which <see cref="MarketplaceSettings.PayoutProvider"/> chooses it by.
+    /// Looks for the transfer an earlier submission of a payout's <paramref name="disbursement"/> made, when that
+    /// submission's outcome isn't known (the disbursement is still submitted). It is asked before the payout is given up
+    /// on, because the provider may no longer hold its idempotency key (Stripe keeps one for 24 hours).
     /// </summary>
-    string Name { get; }
-
-    /// <summary>
-    /// Sends <paramref name="amount"/> to the vendor for an order, from that order's payment when it can. Returns the
-    /// provider's reference for the transfer, a refusal, or <see cref="VendorPayoutResult.Unsettled"/> when the provider
-    /// couldn't be reached, answered with a temporary error, or said the key was used for another request: only a refusal
-    /// is proof that no transfer exists.
-    /// </summary>
-    Task<VendorPayoutResult> PayAsync(Vendor vendor, Order order, decimal amount, string currency, string idempotencyKey, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Looks for the transfer an earlier request of a pending <paramref name="payout"/> made. It is asked before the payout
-    /// is sent again, because the provider may no longer hold its idempotency key (Stripe keeps one for 24 hours).
-    /// </summary>
+    /// <param name="disbursement">The payout's disbursement.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The transfer when one exists, <see cref="VendorPayoutResult.Unsettled"/> when the provider can't be asked
     /// now, or <see langword="null"/> when no transfer exists.</returns>
-    Task<VendorPayoutResult> FindTransferAsync(Vendor vendor, Order order, VendorPayout payout, CancellationToken cancellationToken = default);
+    Task<VendorPayoutResult> FindTransferAsync(Disbursement disbursement, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -51,8 +45,6 @@ public sealed class MarketplaceService
     // How many of a vendor's latest payouts are looked through for one still pending.
     private const int PendingPayoutLookback = 100;
 
-    private static readonly TimeSpan _payoutLockExpiration = TimeSpan.FromMinutes(10);
-
     private readonly IVendorStore _vendors;
     private readonly IVendorEarningStore _earnings;
     private readonly IVendorPayoutStore _payouts;
@@ -60,8 +52,8 @@ public sealed class MarketplaceService
     private readonly IOrderStore _orders;
     private readonly ISiteService _siteService;
     private readonly IEnumerable<IVendorPayoutProvider> _payoutProviders;
-    private readonly IDistributedLock _distributedLock;
-    private readonly global::YesSql.ISession _session;
+    private readonly MarketplacePayoutServices _payoutServices;
+    private readonly ILocalClock _localClock;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -75,8 +67,8 @@ public sealed class MarketplaceService
         IOrderStore orders,
         ISiteService siteService,
         IEnumerable<IVendorPayoutProvider> payoutProviders,
-        IDistributedLock distributedLock,
-        global::YesSql.ISession session,
+        MarketplacePayoutServices payoutServices,
+        ILocalClock localClock,
         IClock clock,
         ILogger<MarketplaceService> logger,
         IStringLocalizer<MarketplaceService> stringLocalizer)
@@ -88,15 +80,15 @@ public sealed class MarketplaceService
         _orders = orders;
         _siteService = siteService;
         _payoutProviders = payoutProviders;
-        _distributedLock = distributedLock;
-        _session = session;
+        _payoutServices = payoutServices;
+        _localClock = localClock;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
     }
 
     public bool CanPayOut
-        => _payoutProviders.Any();
+        => _payoutProviders.Any() && _payoutServices.CanDisburse;
 
     /// <summary>
     /// Records what each vendor earns on a paid order. Recording an order twice records nothing more.
@@ -264,8 +256,9 @@ public sealed class MarketplaceService
     }
 
     /// <summary>
-    /// Pays a vendor what's released, one transfer per order, from that order's payment. What a refund took back after
-    /// the order was paid out comes off the vendor's next transfers. Returns how much was paid and why anything wasn't.
+    /// Pays a vendor what's released, one transfer per order, from that order's payment, each as a disbursement. What a
+    /// refund took back after the order was paid out comes off the vendor's next transfers. Returns how much was paid and
+    /// why anything wasn't.
     /// </summary>
     public async Task<(decimal Paid, IReadOnlyList<string> Failures)> PayOutAsync(Vendor vendor, CancellationToken cancellationToken = default)
     {
@@ -285,33 +278,46 @@ public sealed class MarketplaceService
             return (0m, ["The vendor can't be paid out yet: it's suspended, or its payout account isn't set up."]);
         }
 
-        // One payout run per vendor at a time, on every node: two runs reading the same released earnings would pay
-        // them twice.
-        var (locker, locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync($"MARKETPLACE_PAYOUT_{vendor.ItemId}", _payoutLockExpiration);
+        if (!_payoutServices.CanDisburse)
+        {
+            return (0m, [S["Turn on Disbursements: vendor payouts are sent as disbursements."].Value]);
+        }
+
+        // One payout of a vendor at a time, on every node, committed before the next one reads the earnings, so two
+        // payouts started together never send the same earnings twice.
+        var (locker, locked) = await _payoutServices.DistributedLock.TryAcquireLockAsync($"Marketplace:Payout:{vendor.ItemId}", TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(10));
 
         if (!locked)
         {
-            return (0m, [S["A payout of this vendor is already running. Try again when it's done."].Value]);
+            return (0m, [S["A payout of this vendor is already running. Try again in a moment."].Value]);
         }
 
-        await using (locker)
+        try
         {
-            return await PayOutLockedAsync(vendor, provider, cancellationToken);
+            return await PayOutLockedAsync(vendor, provider, _payoutServices.Disbursements, cancellationToken);
+        }
+        finally
+        {
+            if (locker is not null)
+            {
+                await locker.DisposeAsync();
+            }
         }
     }
 
-    private async Task<(decimal Paid, IReadOnlyList<string> Failures)> PayOutLockedAsync(Vendor vendor, IVendorPayoutProvider provider, CancellationToken cancellationToken)
+    private async Task<(decimal Paid, IReadOnlyList<string> Failures)> PayOutLockedAsync(Vendor vendor, IVendorPayoutProvider provider, IDisbursementService disbursements, CancellationToken cancellationToken)
     {
         var failures = new List<string>();
         var paid = 0m;
         var now = _clock.UtcNow;
+        var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
         var available = await _earnings.ListAvailableAsync(vendor.ItemId, cancellationToken);
         var settled = new HashSet<string>(StringComparer.Ordinal);
 
         // A payout recorded before its transfer and never marked paid (the run stopped in between) is finished first, sent
-        // again as it was recorded (amount, earnings and key), so the provider answers with the transfer it already made.
-        // Planning around it instead would put its earnings in a new transfer with a new key whenever anything changed
-        // meanwhile, such as a refund of the same order, and pay them twice.
+        // again as it was recorded (amount, earnings and key), so its disbursement answers with the transfer it already
+        // made. Planning around it instead would put its earnings in a new transfer with a new key whenever anything
+        // changed meanwhile, such as a refund of the same order, and pay them twice.
         foreach (var payout in await ListPendingAsync(vendor, available, cancellationToken))
         {
             settled.UnionWith(payout.EarningIds ?? []);
@@ -324,9 +330,7 @@ public sealed class MarketplaceService
                 continue;
             }
 
-            var order = await _orders.FindByIdAsync(payout.OrderId, cancellationToken);
-
-            paid += await SendAsync(vendor, recorded, payout, order, resend: true, failures, cancellationToken);
+            paid += await SendAsync(disbursements, vendor, recorded, payout, today, resend: true, failures, cancellationToken);
         }
 
         foreach (var batch in PlanPayouts(available.Where(earning => !settled.Contains(earning.ItemId))))
@@ -347,7 +351,8 @@ public sealed class MarketplaceService
                 Status = VendorPayoutStatus.Pending,
                 CreatedUtc = now,
 
-                // Stable for the same vendor, order and earnings, so a retry is answered with the same transfer.
+                // Stable for the same vendor, order and earnings, and the disbursement's key: a retry is answered with the
+                // same disbursement and the same transfer.
                 IdempotencyKey = MarketplaceLedger.GetPayoutKey(vendor.ItemId, batch.OrderId, earningIds, batch.Earnings.Max(earning => earning.RefusedPayouts)),
             };
 
@@ -364,14 +369,19 @@ public sealed class MarketplaceService
                 }
             }
 
-            // Committed before the transfer is asked for, so the key is on record whatever happens next.
-            await _session.SaveChangesAsync(cancellationToken);
+            // Committed before the disbursement is sent, so the key is on record whatever happens next.
+            await CommitAsync(cancellationToken);
 
-            paid += await SendAsync(vendor, provider, payout, order, resend: false, failures, cancellationToken);
+            paid += await SendAsync(disbursements, vendor, provider, payout, today, resend: false, failures, cancellationToken);
         }
+
+        await CommitAsync(cancellationToken);
 
         return (paid, failures);
     }
+
+    private Task CommitAsync(CancellationToken cancellationToken)
+        => _payoutServices.Session.SaveChangesAsync(cancellationToken);
 
     // The provider a pending payout was recorded with, or null when it isn't enabled now.
     private IVendorPayoutProvider GetRecordedProvider(VendorPayout payout, IVendorPayoutProvider selected)
@@ -404,20 +414,23 @@ public sealed class MarketplaceService
         return pending;
     }
 
-    // Asks the provider for one payout's transfer and records the answer. A payout sent before (pending) is looked up at the
-    // provider first: its key may have expired there, and a resend would then make a second transfer. Returns what was paid.
-    private async Task<decimal> SendAsync(Vendor vendor, IVendorPayoutProvider provider, VendorPayout payout, Order order, bool resend, List<string> failures, CancellationToken cancellationToken)
+    // Sends one payout's disbursement and records the answer. Returns what was paid.
+    private async Task<decimal> SendAsync(
+        IDisbursementService disbursements,
+        Vendor vendor,
+        IVendorPayoutProvider provider,
+        VendorPayout payout,
+        DateOnly today,
+        bool resend,
+        List<string> failures,
+        CancellationToken cancellationToken)
     {
-        VendorPayoutResult result = null;
+        VendorPayoutResult result;
+        string disbursementId;
 
         try
         {
-            if (resend)
-            {
-                result = await provider.FindTransferAsync(vendor, order, payout, cancellationToken);
-            }
-
-            result ??= await provider.PayAsync(vendor, order, payout.Amount, payout.Currency, payout.IdempotencyKey, cancellationToken);
+            (result, disbursementId) = await DisburseAsync(disbursements, provider, vendor, payout, today, resend, cancellationToken);
         }
         catch (Exception exception)
         {
@@ -426,27 +439,27 @@ public sealed class MarketplaceService
             throw;
         }
 
-        var transferId = result?.TransferId;
-        var failure = transferId is null ? result?.Failure ?? S["The payout provider gave no answer."].Value : null;
-
-        if (transferId is null && result?.RetryLater != false)
+        if (result.RetryLater)
         {
             // Whether a transfer exists isn't known, so nothing is marked failed and the key is kept: the payout stays
-            // pending, and the next run asks the provider about it first.
+            // pending, and the next run asks its disbursement, and the provider, about it first.
             MarketplaceTelemetry.RecordPayout(provider.Name, MarketplaceTelemetry.OutcomeUnsettled);
-            failures.Add(failure);
-            _logger.LogWarning("The payout of order '{OrderNumber}' to vendor '{VendorId}' stays pending: {Failure}", payout.OrderNumber, vendor.ItemId, failure);
+            failures.Add(result.Failure);
+            _logger.LogWarning("The payout of order '{OrderNumber}' to vendor '{VendorId}' stays pending: {Failure}", payout.OrderNumber, vendor.ItemId, result.Failure);
 
             return 0m;
         }
 
+        var failure = result.Failure;
+
         MarketplaceTelemetry.RecordPayout(provider.Name, failure is null ? MarketplaceTelemetry.OutcomePaid : MarketplaceTelemetry.OutcomeFailed);
 
-        // Read again: the commit above detached what was read before it, and saving a detached copy would add a row.
+        // Read again: a commit since detached what was read before it, and saving a detached copy would add a row.
         var stored = await _payouts.FindByIdAsync(payout.ItemId, cancellationToken) ?? payout;
 
-        stored.TransferId = transferId;
+        stored.TransferId = result.TransferId;
         stored.Failure = failure;
+        stored.DisbursementId = disbursementId ?? stored.DisbursementId;
         stored.Status = failure is null ? VendorPayoutStatus.Paid : VendorPayoutStatus.Failed;
 
         await _payouts.UpdateAsync(stored, cancellationToken);
@@ -465,7 +478,7 @@ public sealed class MarketplaceService
             }
             else
             {
-                // The provider keeps its answer for a key, so the next try of these earnings needs a new key.
+                // A disbursement that failed keeps its key, so the next try of these earnings needs a new key.
                 earning.RefusedPayouts++;
                 earning.PayoutId = null;
             }
@@ -584,6 +597,132 @@ public sealed class MarketplaceService
         var enabled = providers.Take(2).ToList();
 
         return enabled.Count == 1 ? enabled[0] : null;
+    }
+
+    // Sends the payout as a disbursement and says what became of it. The payout's key is the disbursement's, so a payout
+    // sent again finds the disbursement it made: settled, it is answered with that transfer and nothing is sent. Only a
+    // disbursement that failed (the provider refused it), or one that was never sent, is proof that no transfer exists;
+    // anything else leaves the payout pending with its key.
+    private async Task<(VendorPayoutResult Result, string DisbursementId)> DisburseAsync(
+        IDisbursementService disbursements,
+        IVendorPayoutProvider provider,
+        Vendor vendor,
+        VendorPayout payout,
+        DateOnly today,
+        bool resend,
+        CancellationToken cancellationToken)
+    {
+        var manager = _payoutServices.DisbursementManager;
+        var disbursement = await manager.FindByIdempotencyKeyAsync(payout.IdempotencyKey, cancellationToken);
+
+        if (disbursement is null)
+        {
+            var created = await disbursements.CreateAsync(new DisbursementRequest
+            {
+                Payee = new PartyRef(MarketplaceConstants.VendorPartyKind, vendor.ItemId),
+                PayeeName = vendor.Name,
+                IsBusinessPayee = true,
+                Amount = payout.Amount,
+                Currency = payout.Currency,
+                Method = provider.Method,
+                SourceKind = MarketplaceConstants.PayoutSourceKind,
+                SourceId = payout.OrderId,
+                AccessScope = vendor.ItemId,
+                Memo = string.IsNullOrEmpty(payout.OrderNumber) ? null : S["Order {0}", payout.OrderNumber].Value,
+                EffectiveDate = today,
+                IdempotencyKey = payout.IdempotencyKey,
+            }, cancellationToken);
+
+            if (created.Disbursement is null)
+            {
+                // Nothing was recorded, so nothing was sent.
+                return created.Succeeded
+                    ? (VendorPayoutResult.Unsettled(S["The payout was not recorded as a disbursement."].Value), null)
+                    : (VendorPayoutResult.Refused(string.Join(" ", created.Errors)), null);
+            }
+
+            disbursement = created.Disbursement;
+        }
+
+        if (disbursement.Status == DisbursementStatus.Pending)
+        {
+            var (batch, problems) = await disbursements.CreateBatchAsync(provider.Name, [disbursement.ItemId], today, cancellationToken);
+
+            if (batch is null)
+            {
+                // Never sent: cancelled, so no one can send it later beside the payout that replaces it.
+                return await disbursements.CancelAsync(disbursement, string.Join(" ", problems), cancellationToken)
+                    ? (VendorPayoutResult.Refused(string.Join(" ", problems)), disbursement.ItemId)
+                    : (VendorPayoutResult.Unsettled(string.Join(" ", problems)), disbursement.ItemId);
+            }
+
+            var errors = await disbursements.ReleaseBatchAsync(batch, cancellationToken);
+
+            disbursement = await manager.FindByIdAsync(disbursement.ItemId, cancellationToken) ?? disbursement;
+
+            if (errors.Count > 0 && disbursement.Status == DisbursementStatus.Batched)
+            {
+                // The provider sent nothing (such as a charge it couldn't read) or may have sent it: the batch is sent again,
+                // or checked and reopened, before the payout is.
+                return (VendorPayoutResult.Unsettled(string.Join(" ", errors)), disbursement.ItemId);
+            }
+        }
+        else if (disbursement.Status == DisbursementStatus.Batched &&
+            !string.IsNullOrEmpty(disbursement.BatchId) &&
+            await _payoutServices.BatchManager.FindByIdAsync(disbursement.BatchId, cancellationToken) is { Status: DisbursementBatchStatus.Open } openBatch)
+        {
+            // The provider sent nothing the last time (it answered that the whole batch failed): the same batch is sent again.
+            var errors = await disbursements.ReleaseBatchAsync(openBatch, cancellationToken);
+
+            disbursement = await manager.FindByIdAsync(disbursement.ItemId, cancellationToken) ?? disbursement;
+
+            if (errors.Count > 0 && disbursement.Status == DisbursementStatus.Batched)
+            {
+                return (VendorPayoutResult.Unsettled(string.Join(" ", errors)), disbursement.ItemId);
+            }
+        }
+
+        switch (disbursement.Status)
+        {
+            case DisbursementStatus.Settled:
+                return (VendorPayoutResult.Paid(disbursement.TraceNumber), disbursement.ItemId);
+
+            case DisbursementStatus.Failed or DisbursementStatus.Canceled or DisbursementStatus.Returned or DisbursementStatus.Reversed:
+                return (VendorPayoutResult.Refused(disbursement.FailureReason ?? S["The payout was not sent."].Value), disbursement.ItemId);
+
+            case DisbursementStatus.Submitted when resend:
+            {
+                // Sent before without a known outcome: the provider says whether the transfer was made, since its key may
+                // have expired there and sending again could make a second one.
+                var found = await provider.FindTransferAsync(disbursement, cancellationToken);
+
+                if (found is null)
+                {
+                    var reason = S["No transfer was made for the payout of order {0}.", payout.OrderNumber].Value;
+
+                    return await disbursements.MarkClosedAsync(disbursement, DisbursementStatus.Failed, null, reason, cancellationToken)
+                        ? (VendorPayoutResult.Refused(reason), disbursement.ItemId)
+                        : (VendorPayoutResult.Unsettled(reason), disbursement.ItemId);
+                }
+
+                if (found.RetryLater || found.Failure is not null)
+                {
+                    return (found with { RetryLater = true }, disbursement.ItemId);
+                }
+
+                disbursement.TraceNumber = found.TransferId ?? disbursement.TraceNumber;
+
+                return await disbursements.MarkSettledAsync(disbursement, cancellationToken)
+                    ? (VendorPayoutResult.Paid(disbursement.TraceNumber), disbursement.ItemId)
+                    : (VendorPayoutResult.Unsettled(S["The payout of order {0} was made but couldn't be recorded as settled.", payout.OrderNumber].Value), disbursement.ItemId);
+            }
+
+            case DisbursementStatus.Submitted:
+                return (VendorPayoutResult.Unsettled(S["The payout of order {0} was sent, and whether it went through isn't known yet. The next payout run asks again.", payout.OrderNumber].Value), disbursement.ItemId);
+
+            default:
+                return (VendorPayoutResult.Unsettled(S["The payout of order {0} is in a batch that wasn't released. It stays pending until it is.", payout.OrderNumber].Value), disbursement.ItemId);
+        }
     }
 
     private async Task ReleaseAsync(VendorEarning earning, DateTime now, CancellationToken cancellationToken)

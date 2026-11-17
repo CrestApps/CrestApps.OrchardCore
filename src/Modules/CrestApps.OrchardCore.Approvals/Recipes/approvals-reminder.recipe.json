@@ -1,0 +1,139 @@
+{
+  "name": "ApprovalsReminder",
+  "displayName": "Automation: remind approvers",
+  "description": "Adds a workflow that reminds the approvers of a request every morning while it waits, through the notification center. It's added turned off: open Workflows > Remind approvers of pending requests, set the time, and turn it on.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "approvals"
+  ],
+  "tags": [
+    "approvals",
+    "automation",
+    "workflow",
+    "reminder"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "OrchardCore.Workflows",
+        "OrchardCore.Workflows.Timers",
+        "OrchardCore.Notifications",
+        "CrestApps.OrchardCore.Approvals"
+      ]
+    },
+    {
+      "name": "WorkflowType",
+      "data": [
+        {
+          "WorkflowTypeId": "4apprvreminderworkflow0001",
+          "Name": "Remind approvers of pending requests",
+          "IsEnabled": false,
+          "IsSingleton": false,
+          "LockTimeout": 0,
+          "LockExpiration": 0,
+          "DeleteFinishedWorkflows": true,
+          "Activities": [
+            {
+              "ActivityId": "4apprvreminderrequested001",
+              "Name": "ApprovalRequestedEvent",
+              "X": 20,
+              "Y": 40,
+              "IsStart": true,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Approval requested"
+                }
+              }
+            },
+            {
+              "ActivityId": "4apprvremindertimer0000001",
+              "Name": "TimerEvent",
+              "X": 320,
+              "Y": 40,
+              "IsStart": false,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Every morning at 9"
+                },
+                "CronExpression": "0 9 * * 1-5",
+                "UseLocalTime": true
+              }
+            },
+            {
+              "ActivityId": "4apprvreminderstatus000001",
+              "Name": "GetApprovalRequestTask",
+              "X": 620,
+              "Y": 40,
+              "IsStart": false,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Still waiting?"
+                },
+                "RequestId": "{{ Workflow.Input.RequestId }}"
+              }
+            },
+            {
+              "ActivityId": "4apprvremindernotify000001",
+              "Name": "NotifyUserTask",
+              "X": 620,
+              "Y": 260,
+              "IsStart": false,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Remind the approvers"
+                },
+                "UserNames": {
+                  "Expression": "{{ Workflow.Input.ApproverUserNames }}"
+                },
+                "Subject": {
+                  "Expression": "Waiting for your approval: {{ Workflow.Input.Title }}"
+                },
+                "Summary": {
+                  "Expression": "{{ Workflow.Input.RequesterName }} asked under {{ Workflow.Input.PolicyTitle }}."
+                },
+                "TextBody": {
+                  "Expression": "{{ Workflow.Input.RequesterName }} asked for your approval: {{ Workflow.Input.Title }}. Open the request to approve or reject it."
+                },
+                "Url": {
+                  "Expression": "~/Admin/approvals/decide/{{ Workflow.Input.RequestId }}"
+                },
+                "NotificationType": "Approval"
+              }
+            }
+          ],
+          "Transitions": [
+            {
+              "Id": 0,
+              "SourceActivityId": "4apprvreminderrequested001",
+              "SourceOutcomeName": "Done",
+              "DestinationActivityId": "4apprvremindertimer0000001"
+            },
+            {
+              "Id": 0,
+              "SourceActivityId": "4apprvremindertimer0000001",
+              "SourceOutcomeName": "Done",
+              "DestinationActivityId": "4apprvreminderstatus000001"
+            },
+            {
+              "Id": 0,
+              "SourceActivityId": "4apprvreminderstatus000001",
+              "SourceOutcomeName": "Pending",
+              "DestinationActivityId": "4apprvremindernotify000001"
+            },
+            {
+              "Id": 0,
+              "SourceActivityId": "4apprvremindernotify000001",
+              "SourceOutcomeName": "Done",
+              "DestinationActivityId": "4apprvremindertimer0000001"
+            }
+          ],
+          "Properties": {}
+        }
+      ]
+    }
+  ]
+}

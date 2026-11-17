@@ -23,6 +23,8 @@ public sealed record ApiRegister(string Id, string Name, string LocationId, stri
 /// <param name="Difference">The counted cash less the expected; negative when the drawer is short.</param>
 /// <param name="Tax">The tax collected on the shift's sales.</param>
 /// <param name="Departments">What was rung up in each department, before tax, largest first.</param>
+/// <param name="CardTips">The card tips the cashier declared at the close, or none.</param>
+/// <param name="CashTips">The cash tips the cashier declared at the close, or none.</param>
 public sealed record ApiShift(
     string Id,
     string RegisterId,
@@ -44,7 +46,9 @@ public sealed record ApiShift(
     string ClosedBy,
     DateTime? ClosedUtc,
     ApiMoney Tax,
-    IReadOnlyList<ApiShiftDepartment> Departments);
+    IReadOnlyList<ApiShiftDepartment> Departments,
+    ApiMoney CardTips = null,
+    ApiMoney CashTips = null);
 
 /// <summary>
 /// What a shift rang up in one department.
@@ -139,6 +143,16 @@ public sealed class ApiCloseShiftRequest
     public decimal? CountedCash { get; set; }
 
     public string Note { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tips customers added on card, which the cashier is paid through payroll.
+    /// </summary>
+    public decimal? CardTips { get; set; }
+
+    /// <summary>
+    /// Gets or sets the cash tips the cashier kept, reported to payroll.
+    /// </summary>
+    public decimal? CashTips { get; set; }
 }
 
 public sealed class ApiPosSaleRequest

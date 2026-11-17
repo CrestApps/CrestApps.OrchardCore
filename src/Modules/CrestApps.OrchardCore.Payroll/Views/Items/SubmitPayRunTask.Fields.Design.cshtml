@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SubmitPayRunTask>
+
+<header><h4><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Submit Pay Run for Approval"])</h4></header>

@@ -1,0 +1,6 @@
+@model ShapeViewModel<MyPayProfileRow>
+
+@if (Model.Value.CanManageDetails)
+{
+    <a asp-action="Details" asp-controller="MyPay" asp-area="CrestApps.OrchardCore.Payroll" asp-route-id="@Model.Value.Profile.ItemId" class="btn btn-secondary btn-sm">@T["Tax elections and where your pay goes"]</a>
+}

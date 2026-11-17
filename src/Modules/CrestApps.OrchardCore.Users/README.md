@@ -31,6 +31,7 @@ Enabling a feature of this module enables the features it depends on:
 - `IRoleGrantSource` (CrestApps.OrchardCore.Users.Abstractions): A kind of thing that grants roles through `IRoleGrantService`, such as memberships or subscriptions.
 - `IUserSearchService` (CrestApps.OrchardCore.Users.Abstractions): Finds users for user pickers and other lookups, so every module searches users the same way.
 - `IUserCacheService` (CrestApps.OrchardCore.Users.Core): Defines the contract for user cache service.
+- `IPasswordConfirmation` (CrestApps.OrchardCore.Users.Abstractions) and `[ConfirmPassword]` (CrestApps.OrchardCore.Users.Core): ask the signed-in person for their password before a page shows private data, such as pay; a confirmation holds 10 minutes.
 
 ## Documentation
 

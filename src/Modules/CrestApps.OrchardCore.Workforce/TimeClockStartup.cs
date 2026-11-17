@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.BackgroundTasks;
@@ -11,6 +12,7 @@ using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Navigation;
 using CrestApps.OrchardCore.Workforce.PersonalData;
 using CrestApps.OrchardCore.Workforce.Portal;
+using CrestApps.OrchardCore.Workforce.Recipes;
 using CrestApps.OrchardCore.Workforce.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -43,8 +45,6 @@ public sealed class TimeClockStartup : StartupBase
         services.AddScoped<TimesheetViews>();
         services.AddDataMigration<TimeClockMigrations>()
             .AddIndexProvider<TimeClockPolicyIndexProvider>()
-            .AddIndexProvider<PayPeriodCalendarIndexProvider>()
-            .AddIndexProvider<PayCodeIndexProvider>()
             .AddIndexProvider<TimeClockKioskIndexProvider>()
             .AddIndexProvider<TimePunchIndexProvider>()
             .AddIndexProvider<TimesheetIndexProvider>()
@@ -53,13 +53,14 @@ public sealed class TimeClockStartup : StartupBase
             .AddIndexProvider<PayrollExportBatchIndexProvider>();
 
         services.AddDisplayDriver<TimeClockPolicy, TimeClockPolicyRowDisplayDriver>();
-        services.AddDisplayDriver<PayPeriodCalendar, PayPeriodCalendarRowDisplayDriver>();
-        services.AddDisplayDriver<PayCode, PayCodeRowDisplayDriver>();
         services.AddDisplayDriver<TimeClockKiosk, TimeClockKioskRowDisplayDriver>();
         services.AddDisplayDriver<TimesheetRowViewModel, TimesheetRowDisplayDriver>();
         services.AddDisplayDriver<AttendanceRowViewModel, AttendanceRowDisplayDriver>();
         services.AddDisplayDriver<PayrollExportBatch, PayrollExportBatchRowDisplayDriver>();
         services.AddDisplayDriver<StaffMember, WorkerTimeClockRowDisplayDriver>();
+        services.AddDisplayDriver<PayCode, WorkforcePayCodeDisplayDriver>();
+        services.AddScoped<PayrollCsvPipelineImporter>();
+        services.AddScoped<IModularTenantEvents, PayrollCsvColumnsRetry>();
         services.AddSingleton<IBackgroundTask, TimesheetRefreshBackgroundTask>();
         services.AddSingleton<IBackgroundTask, TimeClockTrackerBackfillBackgroundTask>();
         services.AddPermissionProvider<TimeClockPermissionsProvider>();

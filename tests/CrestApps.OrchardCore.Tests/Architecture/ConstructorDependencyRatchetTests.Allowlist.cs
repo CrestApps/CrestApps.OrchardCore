@@ -78,5 +78,16 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/SchedulesController.cs: SchedulesController"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/TimeOffController.cs: TimeOffController"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/TimesheetsController.cs: TimesheetsController"] = 14,
+
+        // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Banking.Core/Disbursements/Services/DisbursementService.cs: DisbursementService"] = 15,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayProfileServices.cs: DefaultPayProfileService"] = 13,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayRunServices.cs: DefaultPayRunService"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.Approvals/Controllers/ApprovalRequestsController.cs: ApprovalRequestsController"] = 14,
+        ["src/Modules/CrestApps.OrchardCore.Banking/Checks/Controllers/ChecksController.cs: ChecksController"] = 14,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Controllers/MyPayController.cs: MyPayController"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Controllers/PayRunsController.cs: PayRunsController"] = 16,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Drivers/PayProfileDisplayDriver.cs: PayProfileDisplayDriver"] = 14,
     };
 }

@@ -1,0 +1,4 @@
+@model PayrollFilingRowViewModel
+
+<a asp-action="Details" asp-controller="PayrollFilings" asp-route-id="@Model.Filing.ItemId">@Model.Filing.Form @Model.Filing.Period</a>
+<span class="text-muted small ms-1">@Model.EmployerName</span>

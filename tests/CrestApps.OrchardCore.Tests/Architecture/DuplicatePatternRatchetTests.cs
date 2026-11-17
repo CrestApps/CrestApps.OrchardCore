@@ -185,6 +185,19 @@ public sealed class DuplicatePatternRatchetTests
             ["src/Modules/CrestApps.OrchardCore.Telnyx/Endpoints/TelnyxWebhookEndpoint.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.Telnyx/Services/TelnyxOptionsConfigurations.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.Wizard/Services/WizardResumeCookieManager.cs"] = 1,
+
+            // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
+            // remove as it is paid down.
+            ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayProfileServices.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Users.Core/Services/PasswordConfirmation.cs"] = 2,
+            ["src/Modules/CrestApps.OrchardCore.Payroll/DataSources/FileTaxIds.cs"] = 2,
+        },
+        ["time-limited protector by hand"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
+            // remove as it is paid down.
+            ["src/Core/CrestApps.OrchardCore.Users.Core/Services/PasswordConfirmation.cs"] = 2,
+            ["src/Modules/CrestApps.OrchardCore.Payroll/DataSources/FileTaxIds.cs"] = 2,
         },
         ["secret token made and hashed by hand"] = new(StringComparer.OrdinalIgnoreCase)
         {

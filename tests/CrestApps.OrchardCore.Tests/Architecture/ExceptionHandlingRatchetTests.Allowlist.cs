@@ -25,7 +25,7 @@ public sealed partial class ExceptionHandlingRatchetTests
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/HealthChecks/ContactCenterBackplaneHealthCheck.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.ContentFields/Drivers/PhoneFieldSettingsDriver.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.EventGrid/Endpoints/AzureEventGridEndpoint.cs"] = 1,
-        ["src/Modules/CrestApps.OrchardCore.Reports.Pdf/Services/ReportPdfFontResolver.cs"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Pdf.Core/PdfFontResolver.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Telephony/Services/DefaultTelephonyInteractionStore.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Wizard/Services/WizardResumeCookieManager.cs"] = 1,
         ["src/Startup/CrestApps.OrchardCore.Samples.A2AClient/Pages/Agents.cshtml.cs"] = 1,

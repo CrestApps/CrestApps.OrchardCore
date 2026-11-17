@@ -26,8 +26,8 @@ describe('secret fields', () => {
         expect(fields.length).toBeGreaterThan(20);
     });
 
-    // The one exception is the account's own password where its owner types it to prove it is theirs, marked
-    // data-account-password with autocomplete="current-password": there the browser should fill it.
+    // The one exception is the user's own sign-in password typed again to confirm who they are (marked
+    // data-account-password), where "current-password" lets the browser fill exactly the password it asks for.
     it('are never filled in by the browser', () => {
         const filled = fields
             .filter(({ tag }) => !/\bautocomplete="new-password"/.test(tag))

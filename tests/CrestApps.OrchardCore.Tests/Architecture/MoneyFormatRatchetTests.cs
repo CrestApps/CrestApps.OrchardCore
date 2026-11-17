@@ -69,6 +69,10 @@ public sealed partial class MoneyFormatRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Shipping/Services/ShippingSetupStep.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Shipping/Views/ShippingZones/Rates.cshtml"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Taxation/Views/Items/TaxRule.DefaultTags.SummaryAdmin.cshtml"] = 1,
+
+        // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Modules/CrestApps.OrchardCore.PointOfSale/Views/RegistersAdmin/Shift.cshtml"] = 4,
     };
 
     [Fact]

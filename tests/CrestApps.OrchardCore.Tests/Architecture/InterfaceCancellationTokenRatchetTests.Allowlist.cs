@@ -199,5 +199,12 @@ public sealed partial class InterfaceCancellationTokenRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Telephony/Services/ITelephonyUserAccessor.cs: ITelephonyUserAccessor.GetCurrentUserAsync"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Telephony/Services/ITelephonyUserAccessor.cs: ITelephonyUserAccessor.PersistCurrentUserAsync"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Telephony/Services/ITelephonyUserAccessor.cs: ITelephonyUserAccessor.ReloadCurrentUserAsync"] = 1,
+
+        // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Abstractions/CrestApps.OrchardCore.Banking.Abstractions/Checks/Services/ICheckFileStore.cs: ICheckFileStore.DeleteAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Banking.Abstractions/Checks/Services/ICheckFileStore.cs: ICheckFileStore.WriteAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Banking.Abstractions/Disbursements/Services/IDisbursementFileStore.cs: IDisbursementFileStore.WriteAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Services/IEmployerManager.cs: IPayrollScopeService.AuthorizeAsync"] = 1,
     };
 }

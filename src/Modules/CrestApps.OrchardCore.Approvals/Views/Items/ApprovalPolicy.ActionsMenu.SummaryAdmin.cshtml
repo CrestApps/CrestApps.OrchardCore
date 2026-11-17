@@ -1,0 +1,3 @@
+@model ShapeViewModel<ApprovalPolicy>
+
+<a asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this approval policy? Requests already made keep their decisions; new requests can't use it."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

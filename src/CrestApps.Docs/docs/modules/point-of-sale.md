@@ -96,7 +96,7 @@ It commits that, then starts the order's checkout with `ICheckoutEngine.StartAsy
 | `POST` | `pos/registers/{registerId}/shifts` | Opens a shift (`openingFloat`); `409 shift-open` when one is open. Idempotent. |
 | `GET` | `pos/shifts/{shiftId}` | The shift (`ApiShift`), with its summary, the `tax` collected, what each department rang up (`departments`) and its expected cash. |
 | `POST` | `pos/shifts/{shiftId}/cash` | A cash movement (`amount`, `reason`); `409 shift-closed`. Idempotent. |
-| `POST` | `pos/shifts/{shiftId}/close` | Closes it with `countedCash` and `note`. |
+| `POST` | `pos/shifts/{shiftId}/close` | Closes it with `countedCash` and `note`, and the tips the cashier declares: `cardTips` (added to card payments) and `cashTips` (cash kept); `ApiShift` returns them. |
 | `POST` | `pos/sales` | Rings up `lines` (`PosSaleLine`: `productId`, `variantId`, `priceId`, `quantity`, `addOns`; or `departmentId`, `amount` and `quantity` for an amount in a department) for a `customerId`, or a `customerEmail` and `customerName`; `201` with `orderId`, `orderNumber` and the `checkout` (`ApiCheckout`); `400` on `customerId` when it isn't a customer, `409 shift-closed` without an open shift. Idempotent. |
 | `POST` | `pos/sales/{checkoutId}/pay` | `cash`, then `card` (`approvalCode`) or `reader` (`readerId`); answers `ApiPosPayment` with `status` `completed`, `due` or `pending`, `amountDue`, `change` and, once completed, `receipt`; `{}` asks whether a reader's payment is done. `409 shift-closed` once the sale's shift has closed; `409 not-available` for a declined reader payment. Idempotent. |
 | `GET` | `pos/sales/{orderId}/receipt` | The receipt's HTML; `409 unsupported` without Receipts. |
@@ -335,6 +335,10 @@ Content-Type: application/json
 ```
 
 `GET pos/shifts/9s4m2k7x` gives the same at any time while it's open, so the till can show how the day is going.
+
+## Tips and payroll
+
+A closed shift keeps the declared tips (`RegisterShift.CardTips`, `CashTips`); `PosShiftService.DeclareTipsAsync` corrects them from the shift page until payroll took them. With Pay Setup and Staff on, `PosTipsPayInputSource` (source kind `RegisterShift`) gives them to payroll for the staff member who opened the shift, card tips on `TIPS` and cash tips on `CTIPS`, and stamps the shift (`RegisterShiftPayroll`) when a run takes them.
 
 ## Web register
 

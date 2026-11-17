@@ -1,0 +1,48 @@
+@model StaffPayrollCardViewModel
+
+<div class="card mb-3">
+    <div class="card-header d-flex align-items-center">
+        <span class="me-auto">@T["Payroll"]</span>
+        @if (Model.CanAdd)
+        {
+            <a class="btn btn-sm btn-secondary" asp-area="CrestApps.OrchardCore.Payroll" asp-controller="PayProfiles" asp-action="Create" asp-route-staffMemberId="@Model.StaffMemberId">@T["Add pay profile"]</a>
+        }
+    </div>
+    <div class="card-body">
+        @if (Model.Profiles.Count == 0)
+        {
+            <p class="text-muted mb-0">@T["Not paid through payroll yet."]</p>
+        }
+        @foreach (var row in Model.Profiles)
+        {
+            <div class="border rounded p-2 mb-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <strong>@row.EmployerName</strong>
+                    @if (!string.IsNullOrEmpty(row.ScheduleName))
+                    {
+                        <span class="badge ta-badge fw-normal">@row.ScheduleName</span>
+                    }
+                    <span class="badge ta-badge fw-normal">@(row.Profile.WorkerType == PayWorkerType.Contractor ? T["Contractor"] : T["Employee"])</span>
+                    @if (row.Profile.TaxId is { HasValue: true })
+                    {
+                        <span class="badge ta-badge fw-normal font-monospace" title="@T["Tax id"]">@row.Profile.TaxId</span>
+                    }
+                    <a class="ms-auto btn btn-sm btn-primary" asp-area="CrestApps.OrchardCore.Payroll" asp-controller="PayProfiles" asp-action="Edit" asp-route-id="@row.Profile.ItemId">@T["Open"]</a>
+                </div>
+                @if (row.Blockers.Count > 0)
+                {
+                    <ul class="small text-warning-emphasis mb-0 mt-2">
+                        @foreach (var blocker in row.Blockers)
+                        {
+                            <li>@blocker.Message</li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div class="small text-success mt-2"><i class="fa-solid fa-check me-1" aria-hidden="true"></i>@T["Ready to pay."]</div>
+                }
+            </div>
+        }
+    </div>
+</div>

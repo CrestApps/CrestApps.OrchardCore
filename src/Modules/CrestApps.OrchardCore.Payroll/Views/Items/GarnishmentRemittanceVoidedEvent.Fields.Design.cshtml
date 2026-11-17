@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<GarnishmentRemittanceVoidedEvent>
+
+<header><h4><i class="fa-solid fa-ban" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Garnishment Remittance Voided"])</h4></header>
+<p class="hint">@T["Starts when a garnishment remittance is voided with its pay statement and the payee's payment is stopped. Input: OrderId, EmployerId, StaffMemberId, Type, CaseNumber, Agency, PayeeName, Status, Withheld, TotalOwed, Remaining, StatementId, StatementNumber, PayDate, Amount, Currency, Method, ReferenceId, Reference, Problem and Change."]</p>

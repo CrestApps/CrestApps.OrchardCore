@@ -125,5 +125,10 @@ public sealed partial class TestConventionTests
         ["tests/CrestApps.OrchardCore.Tests/Telephony/TelephonyInteractionStoreDatabaseBusyTests.cs"] = 1,
         ["tests/CrestApps.OrchardCore.Tests/Telephony/TelnyxContactCenterVoiceMediaSessionTests.cs"] = 2,
         ["tests/CrestApps.OrchardCore.Tests/Telephony/TelnyxMediaStreamReconnectTests.cs"] = 2,
+
+        // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["tests/CrestApps.OrchardCore.Tests/Disbursements/DisbursementReviewFixesTests.cs"] = 1,
+        ["tests/CrestApps.OrchardCore.Tests/Disbursements/DisbursementsTestContext.cs"] = 1,
     };
 }

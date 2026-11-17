@@ -9,6 +9,9 @@ namespace CrestApps.OrchardCore.Tests.Architecture;
 /// "{0}". This guard fails when a view under <c>src/Modules</c> reads <c>.Value</c> from a localized string that has
 /// format placeholders and arguments. Write the <c>LocalizedHtmlString</c> itself where it is content, or use
 /// <c>T.GetString("text {0}", arg).Value</c> where a plain string is needed (an attribute or a C# variable).
+/// The reverse fails too: <c>T["No match for {0}"]</c> written as HTML, with no arguments, throws a
+/// <c>FormatException</c> while the page renders. A placeholder meant for a script, such as bootstrap-select's
+/// <c>{0}</c>, is passed as its own argument (<c>T["No match for {0}", "{0}"]</c>) or read with <c>.Value</c>.
 /// </summary>
 public sealed class ViewLocalizerFormatArgumentsArchitectureTests
 {
@@ -52,6 +55,54 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
             $"{string.Join(", ", violations)}.");
     }
 
+    [Fact]
+    public void Views_DoNotWriteALocalizedStringWithPlaceholdersButNoArguments()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var violations = new List<string>();
+
+        // Act
+        foreach (var fullPath in Directory.EnumerateFiles(Path.Combine(repositoryRoot, "src", "Modules"), "*.cshtml", SearchOption.AllDirectories))
+        {
+            if (IsBuildOutput(fullPath))
+            {
+                continue;
+            }
+
+            var relativePath = Path.GetRelativePath(repositoryRoot, fullPath).Replace(Path.DirectorySeparatorChar, '/');
+
+            foreach (var line in FindPlaceholdersWithoutArguments(File.ReadAllText(fullPath)))
+            {
+                violations.Add($"{relativePath}:{line}");
+            }
+        }
+
+        // Assert
+        Assert.True(
+            violations.Count == 0,
+            "These views write T[\"...{0}...\"] with no arguments, which throws a FormatException while the page " +
+            "renders. Pass the placeholder as an argument (T[\"...{0}...\", \"{0}\"]) or read .Value for a script: " +
+            $"{string.Join(", ", violations)}.");
+    }
+
+    [Theory]
+    [InlineData("""data-none-results-text="@T["No permission matches {0}"]" """, 1)]
+    [InlineData("""@T["Stage {0}"]""", 1)]
+    [InlineData("""data-none-results-text="@T["No permission matches {0}", "{0}"]" """, 0)]
+    [InlineData("""@Json.Serialize(T["Stage {0}"].Value)""", 0)]
+    [InlineData("""@T["No placeholder"]""", 0)]
+    [InlineData("""@(T["Stage {0}"])""", 1)]
+    [InlineData("""notes.Add(Format(T["after {0}"], row.DependsOn));""", 0)]
+    public void FindPlaceholdersWithoutArguments_FlagsOnlyWrittenStringsWithoutArguments(string source, int expectedCount)
+    {
+        // Act
+        var lines = FindPlaceholdersWithoutArguments(source);
+
+        // Assert
+        Assert.Equal(expectedCount, lines.Count);
+    }
+
     [Theory]
     [InlineData("""@(T["Discount ({0})", name].Value)""", 1)]
     [InlineData("""var x = T["Item {0} of {1}", a, b ].Value;""", 1)]
@@ -79,6 +130,16 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
     /// inside the arguments neither end the indexer early nor count on their own.
     /// </summary>
     private static List<int> FindFormattedValueReads(string source)
+        => FindIndexers(source, (hasArguments, readsValue, _) => hasArguments && readsValue);
+
+    /// <summary>
+    /// Returns the 1-based line of every <c>@T["...{N}..."]</c> or <c>@(T["...{N}..."])</c> with no arguments: written
+    /// to the page as it is. One handed to a helper, which may read its <c>.Value</c>, is left alone.
+    /// </summary>
+    private static List<int> FindPlaceholdersWithoutArguments(string source)
+        => FindIndexers(source, (hasArguments, readsValue, written) => !hasArguments && !readsValue && written);
+
+    private static List<int> FindIndexers(string source, Func<bool, bool, bool, bool> matches)
     {
         var lines = new List<int>();
 
@@ -96,15 +157,18 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
                 continue;
             }
 
-            if (!TryFindIndexerEnd(source, position, out var closingBracket, out var hasArguments) || !hasArguments)
+            if (!TryFindIndexerEnd(source, position, out var closingBracket, out var hasArguments))
             {
                 continue;
             }
 
             var afterIndexer = SkipWhitespace(source, closingBracket + 1);
+            var readsValue = string.CompareOrdinal(source, afterIndexer, ".Value", 0, 6) == 0
+                && (afterIndexer + 6 >= source.Length || !char.IsLetterOrDigit(source[afterIndexer + 6]));
 
-            if (string.CompareOrdinal(source, afterIndexer, ".Value", 0, 6) == 0
-                && (afterIndexer + 6 >= source.Length || !char.IsLetterOrDigit(source[afterIndexer + 6])))
+            var written = index > 0 && (source[index - 1] == '@' || index > 1 && source[index - 1] == '(' && source[index - 2] == '@');
+
+            if (matches(hasArguments, readsValue, written))
             {
                 lines.Add(CountLine(source, index));
             }

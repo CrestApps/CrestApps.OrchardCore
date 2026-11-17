@@ -109,10 +109,18 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Products/Services/ProductListingService.cs: BuildAsync"] = 169,
         ["src/Modules/CrestApps.OrchardCore.Reports/Designer/Services/ReportDesignRunner.cs: RunCoreAsync"] = 178,
         ["src/Modules/CrestApps.OrchardCore.Reports/Designer/ViewModels/ReportDesignerTexts.cs: Build"] = 433,
-        ["src/Modules/CrestApps.OrchardCore.Staff/Recipes/StaffRecipeStep.cs: HandleAsync"] = 163,
+        ["src/Modules/CrestApps.OrchardCore.Staff/Recipes/StaffRecipeStep.cs: HandleAsync"] = 179, // raised for main's #1332 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Stripe/Endpoints/CreateWebhookEndpoint.cs: DispatchCoreAsync"] = 365,
         ["src/Modules/CrestApps.OrchardCore.Telephony/Hubs/TelephonyHub.CallQuality.cs: ReportCallQuality"] = 156,
         ["src/Modules/CrestApps.OrchardCore.Telephony/Services/TelephonyInteractionSynchronizationService.cs: RefreshInteractionAsync"] = 195,
         ["src/Modules/CrestApps.OrchardCore.Telnyx/Endpoints/TelnyxWebhookEndpoint.cs: HandleCoreAsync"] = 252,
+
+        // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Banking.Core/Checks/Services/CheckPrinter.cs: PrintAsync"] = 164,
+        ["src/Core/CrestApps.OrchardCore.Banking.Core/DirectDeposit/NachaDisbursementProvider.cs: SubmitAsync"] = 164,
+        ["src/Core/CrestApps.OrchardCore.Banking.Core/DirectDeposit/NachaFileWriter.cs: Write"] = 151,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayRunProcessing.cs: ProcessAsync"] = 167,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayStubDocument.cs: Write"] = 181,
     };
 }

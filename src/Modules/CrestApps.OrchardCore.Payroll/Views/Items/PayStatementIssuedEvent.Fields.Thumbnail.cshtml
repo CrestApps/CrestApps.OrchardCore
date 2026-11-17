@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<PayStatementIssuedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-file-lines" aria-hidden="true"></i> @T["Pay Statement Issued"]</h4>
+<p>@T["Starts when a pay statement becomes final and its payments are made."]</p>

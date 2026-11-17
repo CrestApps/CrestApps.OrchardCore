@@ -1,11 +1,13 @@
+using CrestApps.OrchardCore.Banking.Disbursements.Models;
+using CrestApps.OrchardCore.Marketplace;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Marketplace.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Models;
-using Microsoft.Extensions.DependencyInjection;
+using CrestApps.OrchardCore.Tests.Disbursements;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.ContentManagement;
@@ -16,7 +18,7 @@ namespace CrestApps.OrchardCore.Tests.Marketplace;
 
 /// <summary>
 /// A vendor's sale is recorded once, less the commission, held until released; a refund takes back its share; and a
-/// payout sends what's released, order by order.
+/// payout sends what's released, order by order, as a disbursement through the Disbursements building block.
 /// </summary>
 public sealed partial class MarketplaceServiceTests
 {
@@ -26,6 +28,7 @@ public sealed partial class MarketplaceServiceTests
     private readonly List<VendorPayout> _payouts = [];
     private readonly Vendor _vendor = new() { ItemId = "v1", Name = "Northwind Pottery", PayoutsEnabled = true, StripeAccountId = "acct_1" };
     private readonly FakePayoutProvider _provider = new("Test");
+    private DisbursementsTestContext _disbursements;
     private Order _order;
     private bool _failNextPayoutSave;
     private bool _failNextPayoutUpdate;
@@ -74,7 +77,17 @@ public sealed partial class MarketplaceServiceTests
         Assert.Equal(24.3m, paid);
         Assert.Equal((24.3m, "EUR"), (_provider.Amount, _provider.Currency));
         Assert.All(_earnings, earning => Assert.Equal(VendorEarningStatus.PaidOut, earning.Status));
-        Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
+
+        // The payout is a settled disbursement to the vendor for the order, and the transfer is its trace.
+        var payout = Assert.Single(_payouts);
+        var disbursement = Assert.Single(_disbursements.Store.Entries);
+        Assert.Equal(VendorPayoutStatus.Paid, payout.Status);
+        Assert.Equal(disbursement.ItemId, payout.DisbursementId);
+        Assert.Equal("tr_1", payout.TransferId);
+        Assert.Equal(DisbursementStatus.Settled, disbursement.Status);
+        Assert.Equal((MarketplaceConstants.VendorPartyKind, "v1"), (disbursement.Payee.Kind, disbursement.Payee.Id));
+        Assert.Equal((MarketplaceConstants.PayoutSourceKind, "o1", "v1"), (disbursement.SourceKind, disbursement.SourceId, disbursement.AccessScope));
+        Assert.Equal(24.3m, disbursement.Amount);
     }
 
     [Fact]
@@ -94,9 +107,12 @@ public sealed partial class MarketplaceServiceTests
 
         await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
 
+        // The same key gives the same settled disbursement, so the vendor is never sent the money twice.
         Assert.False(string.IsNullOrEmpty(firstKey));
-        Assert.Equal(firstKey, _provider.IdempotencyKey);
+        Assert.Equal(1, _provider.Calls);
+        Assert.Single(_disbursements.Store.Entries);
         Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
+        Assert.Equal("tr_1", _payouts[0].TransferId);
     }
 
     [Fact]
@@ -268,19 +284,24 @@ public sealed partial class MarketplaceServiceTests
             }
         };
 
-        // Act
+        // Act: the second starts while the first is in the middle of its transfer.
         var first = service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
 
         await transferStarted.Task;
 
-        var second = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+        var second = Task.Run(() => service.PayOutAsync(_vendor, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken);
 
         finishTransfer.SetResult();
-        await first;
 
-        // Assert
-        Assert.Equal(0m, second.Paid);
+        var results = await Task.WhenAll(first, second);
+
+        // Assert: the second waited for the first, then found nothing left to pay.
+        Assert.Equal(48.6m, results[0].Paid);
+        Assert.Equal(0m, results[1].Paid);
+        Assert.All(results, result => Assert.Empty(result.Failures));
         Assert.Equal(1, _provider.Calls);
+        Assert.Single(_disbursements.Store.Entries);
+        Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
     }
 
     [Fact]
@@ -304,6 +325,82 @@ public sealed partial class MarketplaceServiceTests
         // The provider keeps a refused request's answer for its key, so the next try must not reuse it.
         Assert.NotEqual(refusedKey, _provider.IdempotencyKey);
         Assert.Equal([VendorPayoutStatus.Failed, VendorPayoutStatus.Paid], _payouts.Select(payout => payout.Status));
+        Assert.Equal("Insufficient funds.", _payouts[0].Failure);
+        Assert.Equal([DisbursementStatus.Failed, DisbursementStatus.Settled], _disbursements.Store.Entries.Select(entry => entry.Status));
+    }
+
+    /// <summary>
+    /// SEC-C11 on disbursements: a transfer whose outcome the provider didn't say leaves its disbursement submitted and the
+    /// payout pending with its key. The next run asks the provider before giving up on it, and finds the transfer it made.
+    /// </summary>
+    [Fact]
+    public async Task APayoutWhoseOutcomeIsUnknown_StaysPending_AndIsFoundAtTheProvider_NotSentAgain()
+    {
+        // Arrange
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        _provider.OutcomeUnknown = true;
+        _provider.MadeWhenUnknown = true;
+
+        var (firstPaid, firstFailures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0m, firstPaid);
+        Assert.Single(firstFailures);
+        Assert.Equal(VendorPayoutStatus.Pending, Assert.Single(_payouts).Status);
+        Assert.Equal(DisbursementStatus.Submitted, Assert.Single(_disbursements.Store.Entries).Status);
+        Assert.All(_earnings, earning => Assert.Equal(VendorEarningStatus.Available, earning.Status));
+
+        _provider.OutcomeUnknown = false;
+
+        // Act
+        var (paid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(failures);
+        Assert.Equal(48.6m, paid);
+        Assert.Equal(1, _provider.Calls);
+        Assert.Equal(1, _provider.FindCalls);
+        Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
+        Assert.Equal(DisbursementStatus.Settled, Assert.Single(_disbursements.Store.Entries).Status);
+        Assert.All(_earnings, earning => Assert.Equal(VendorEarningStatus.PaidOut, earning.Status));
+    }
+
+    /// <summary>
+    /// When the provider has no transfer for a payout whose outcome was unknown, only then is the disbursement failed and
+    /// the next try made under a new key.
+    /// </summary>
+    [Fact]
+    public async Task APayoutWhoseOutcomeIsUnknown_AndThatTheProviderNeverMade_FailsAndIsSentAgainWithANewKey()
+    {
+        // Arrange
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        _provider.OutcomeUnknown = true;
+
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        var firstKey = _provider.IdempotencyKey;
+
+        _provider.OutcomeUnknown = false;
+
+        // Act: the next run finds no transfer and fails the payout; the one after sends it again.
+        var (secondPaid, _) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+        var (thirdPaid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0m, secondPaid);
+        Assert.Empty(failures);
+        Assert.Equal(48.6m, thirdPaid);
+        Assert.NotEqual(firstKey, _provider.IdempotencyKey);
+        Assert.Equal(2, _provider.Calls);
+        Assert.Equal([VendorPayoutStatus.Failed, VendorPayoutStatus.Paid], _payouts.Select(payout => payout.Status));
+        Assert.Equal([DisbursementStatus.Failed, DisbursementStatus.Settled], _disbursements.Store.Entries.Select(entry => entry.Status));
     }
 
     [Fact]
@@ -341,6 +438,22 @@ public sealed partial class MarketplaceServiceTests
     }
 
     [Fact]
+    public async Task APayout_WithoutDisbursements_IsntSent_AndSaysWhy()
+    {
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false }, withDisbursements: false);
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        var (paid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0m, paid);
+        Assert.Contains("Disbursements", Assert.Single(failures), StringComparison.Ordinal);
+        Assert.False(service.CanPayOut);
+        Assert.Null(_provider.Currency);
+    }
+
+    [Fact]
     public async Task AVendorWithoutAPayoutAccount_IsntPaidOut()
     {
         var service = Create(new MarketplaceSettings());
@@ -355,7 +468,13 @@ public sealed partial class MarketplaceServiceTests
     }
 
     private MarketplaceService Create(MarketplaceSettings settings, params IVendorPayoutProvider[] otherProviders)
+        => Create(settings, true, otherProviders);
+
+    private MarketplaceService Create(MarketplaceSettings settings, bool withDisbursements, params IVendorPayoutProvider[] otherProviders)
     {
+        _disbursements = new DisbursementsTestContext([_provider, .. otherProviders]);
+        _disbursements.Banking.Now = _now;
+
         var mug = new ContentItem { ContentItemId = "mug" };
 
         mug.Weld(new VendorPart { VendorId = _vendor.ItemId });
@@ -455,22 +574,24 @@ public sealed partial class MarketplaceServiceTests
                 return Task.CompletedTask;
             });
 
-        var services = new ServiceCollection()
-            .AddSingleton(vendors.Object)
-            .AddSingleton(earnings.Object)
-            .AddSingleton(payouts.Object)
-            .AddSingleton(content.Object)
-            .AddSingleton(orders.Object)
-            .AddSingleton(site.Object)
-            .AddSingleton<IEnumerable<IVendorPayoutProvider>>([_provider, .. otherProviders])
-            .AddSingleton(clock.Object)
-            .AddSingleton(session.Object)
-            .AddSingleton<global::OrchardCore.Locking.Distributed.IDistributedLock>(new global::OrchardCore.Locking.LocalLock(NullLogger<global::OrchardCore.Locking.LocalLock>.Instance))
-            .AddSingleton<ILogger<MarketplaceService>>(NullLogger<MarketplaceService>.Instance)
-            .AddSingleton<IStringLocalizer<MarketplaceService>>(new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<MarketplaceService>())
-            .BuildServiceProvider();
-
-        return _service = ActivatorUtilities.CreateInstance<MarketplaceService>(services);
+        return _service = new MarketplaceService(
+            vendors.Object,
+            earnings.Object,
+            payouts.Object,
+            content.Object,
+            orders.Object,
+            site.Object,
+            [_provider, .. otherProviders],
+            new MarketplacePayoutServices(
+                withDisbursements ? [_disbursements.Service] : [],
+                withDisbursements ? [_disbursements.Manager] : [],
+                withDisbursements ? [_disbursements.Batches] : [],
+                _disbursements.Locks,
+                session.Object),
+            new FixedOffsetLocalClock(() => _now, TimeSpan.Zero),
+            clock.Object,
+            NullLogger<MarketplaceService>.Instance,
+            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<MarketplaceService>());
     }
 
     private int _commits;
@@ -485,46 +606,83 @@ public sealed partial class MarketplaceServiceTests
 
         public string Name { get; }
 
+        public LocalizedString DisplayName
+            => new(Name, Name);
+
+        public string Method
+            => "Transfer" + Name;
+
         public decimal Amount { get; private set; }
 
         public string Currency { get; private set; }
 
         public string IdempotencyKey { get; private set; }
 
-        public string Failure { get; set; }
-
         public int Calls { get; private set; }
+
+        public string Failure { get; set; }
 
         public Action<string> OnPay { get; set; }
 
         public Func<Task> Gate { get; set; }
 
-        public async Task<VendorPayoutResult> PayAsync(Vendor vendor, Order order, decimal amount, string currency, string idempotencyKey, CancellationToken cancellationToken = default)
+        // Answers that whether the transfer was made isn't known, as a provider does on a timeout or a server error.
+        public bool OutcomeUnknown { get; set; }
+
+        // With OutcomeUnknown: the transfer was made all the same, and only the answer was lost.
+        public bool MadeWhenUnknown { get; set; }
+
+        public async Task<DisbursementSubmitResult> SubmitAsync(DisbursementBatch batch, IReadOnlyList<Disbursement> disbursements, CancellationToken cancellationToken = default)
         {
-            Calls++;
-            Amount = amount;
-            Currency = currency;
-            IdempotencyKey = idempotencyKey;
-            OnPay?.Invoke(idempotencyKey);
+            var result = new DisbursementSubmitResult { Succeeded = true };
 
-            if (Gate is not null)
+            foreach (var disbursement in disbursements)
             {
-                await Gate();
+                Calls++;
+                Amount = disbursement.Amount;
+                Currency = disbursement.Currency;
+                IdempotencyKey = disbursement.IdempotencyKey;
+                OnPay?.Invoke(disbursement.IdempotencyKey);
+
+                if (Gate is not null)
+                {
+                    await Gate();
+                }
+
+                if (OutcomeUnknown)
+                {
+                    if (MadeWhenUnknown)
+                    {
+                        _transferred.Add(disbursement.IdempotencyKey);
+                    }
+
+                    result.Statuses[disbursement.ItemId] = DisbursementStatus.Submitted;
+                }
+                else if (Failure is null)
+                {
+                    _transferred.Add(disbursement.IdempotencyKey);
+                    result.Statuses[disbursement.ItemId] = DisbursementStatus.Settled;
+                    result.TraceNumbers[disbursement.ItemId] = "tr_1";
+                }
+                else
+                {
+                    result.Statuses[disbursement.ItemId] = DisbursementStatus.Failed;
+                    result.FailureReasons[disbursement.ItemId] = Failure;
+                }
             }
 
-            if (Failure is not null)
-            {
-                return VendorPayoutResult.Refused(Failure);
-            }
-
-            _transferred.Add(idempotencyKey);
-
-            return VendorPayoutResult.Paid("tr_1");
+            return result;
         }
 
         // Like a provider's own records: the transfers made, by the key that asked for them.
-        public Task<VendorPayoutResult> FindTransferAsync(Vendor vendor, Order order, VendorPayout payout, CancellationToken cancellationToken = default)
-            => Task.FromResult(_transferred.Contains(payout.IdempotencyKey) ? VendorPayoutResult.Paid("tr_1") : null);
+        public Task<VendorPayoutResult> FindTransferAsync(Disbursement disbursement, CancellationToken cancellationToken = default)
+        {
+            FindCalls++;
+
+            return Task.FromResult(_transferred.Contains(disbursement.IdempotencyKey) ? VendorPayoutResult.Paid("tr_1") : null);
+        }
+
+        public int FindCalls { get; private set; }
 
         private readonly HashSet<string> _transferred = new(StringComparer.Ordinal);
     }

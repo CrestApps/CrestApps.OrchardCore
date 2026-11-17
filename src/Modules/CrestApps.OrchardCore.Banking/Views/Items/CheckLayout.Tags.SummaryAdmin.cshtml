@@ -1,0 +1,15 @@
+@model ShapeViewModel<CheckLayout>
+
+@{
+    var layout = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Paper"]"><i class="fa-solid fa-file text-secondary me-1" aria-hidden="true"></i>@(layout.Stock == CheckStock.Blank ? T["Blank paper"] : T["Pre-printed"])</span>
+@if (layout.PrintMicr)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Check line"]"><i class="fa-solid @(layout.HasMicrFont ? "fa-barcode text-secondary" : "fa-triangle-exclamation text-warning") me-1" aria-hidden="true"></i>@(layout.HasMicrFont ? T["Prints the check line"] : T["Check line font missing"])</span>
+}
+@if (layout.HasSignature)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Signature"]"><i class="fa-solid fa-signature text-secondary me-1" aria-hidden="true"></i>@T["Signature"]</span>
+}

@@ -128,6 +128,66 @@ public sealed class NumberSequenceTests : IAsyncLifetime
         Assert.Equal("V-000001", number);
     }
 
+    [Fact]
+    public async Task SetNextAsync_OnASeriesInUse_MakesTheNextNumberTheOneGiven()
+    {
+        // Arrange
+        await NextAsync("Checks");
+
+        // Act
+        await SetNextAsync("Checks", 5001);
+
+        // Assert
+        Assert.Equal(5001, await NextAsync("Checks"));
+        Assert.Equal(5002, await NextAsync("Checks"));
+    }
+
+    [Fact]
+    public async Task SetNextAsync_OnANewSeries_StartsItThere_WhateverItsOptionsSay()
+    {
+        // Act
+        await SetNextAsync("NewStock", 300);
+
+        // Assert
+        Assert.Equal(300, await NextAsync("NewStock", new NumberSequenceOptions { FirstNumber = 1001 }));
+    }
+
+    [Fact]
+    public async Task SetNextAsync_BelowOne_Throws()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => SetNextAsync("Checks", 0));
+    }
+
+    [Fact]
+    public async Task GetLastAsync_ReturnsTheLastNumberIssued_AndNothingForANewSeries()
+    {
+        // Arrange
+        await NextAsync("Stubs", new NumberSequenceOptions { FirstNumber = 10 });
+        await NextAsync("Stubs");
+
+        await using var session = _store.CreateSession();
+        await using var sequence = new DocumentNumberSequence(session, _locks);
+
+        // Act
+        var last = await sequence.GetLastAsync("Stubs", TestContext.Current.CancellationToken);
+        var none = await sequence.GetLastAsync("Unused", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(11, last);
+        Assert.Null(none);
+    }
+
+    private async Task SetNextAsync(string series, long next)
+    {
+        await using var session = _store.CreateSession();
+        await using var sequence = new DocumentNumberSequence(session, _locks);
+
+        await sequence.SetNextAsync(series, next, TestContext.Current.CancellationToken);
+
+        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
     private async Task<long> NextAsync(string series, NumberSequenceOptions options = null)
     {
         // Each number is issued by its own unit of work, as each order is: the session is saved, then the scope that

@@ -3,9 +3,11 @@ using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Geo;
 using CrestApps.OrchardCore.Geo.Services;
 using CrestApps.OrchardCore.PageSections;
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Staff.Controllers;
@@ -40,7 +42,6 @@ using OrchardCore.Settings;
 using OrchardCore.Users.Handlers;
 using OrchardCore.Users.Models;
 using OrchardCore.Workflows.Helpers;
-using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 
 namespace CrestApps.OrchardCore.Staff;
 
@@ -69,6 +70,8 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<User, UserStaffDisplayDriver>();
         services.AddScoped<IUserEventHandler, StaffUserEventHandler>();
         services.AddPermissionProvider<StaffPermissionsProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, StaffAdminAccessAuthorizationHandler>());
+        services.TryAddScoped(provider => new Lazy<Microsoft.AspNetCore.Authorization.IAuthorizationService>(provider.GetRequiredService<Microsoft.AspNetCore.Authorization.IAuthorizationService>));
         services.AddNavigationProvider<StaffAdminMenu>();
         services.AddPersonalDataContributor<StaffPersonalDataContributor>();
         services.AddSingleton<IBackgroundTask, StaffTerminationBackgroundTask>();
@@ -148,6 +151,7 @@ public sealed class PartiesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPartySource, StaffPartySource>());
+        services.AddUserPartySource<StaffUserPartySource>();
     }
 }
 

@@ -1,0 +1,52 @@
+{
+  "Frequency": "Biweekly",
+  "PeriodStart": "2026-11-01",
+  "PeriodEnd": "2026-11-14",
+  "PayDate": "2026-11-20",
+  "Description": "With no tax provider set up, nothing is withheld and the statement says so.",
+  "NoTaxProvider": true,
+  "Pay": {
+    "PayBasis": "Hourly",
+    "Rates": [
+      {
+        "EffectiveFrom": "2020-01-01",
+        "HourlyRate": 20
+      }
+    ]
+  },
+  "Codes": [
+    {
+      "Code": "REG",
+      "Class": "Earning",
+      "Kind": "Regular"
+    }
+  ],
+  "Distribution": [
+    {
+      "Method": "Check",
+      "Split": "Remainder"
+    }
+  ],
+  "Inputs": [
+    {
+      "PayCode": "REG",
+      "Hours": 10
+    }
+  ],
+  "Expected": {
+    "Lines": [
+      "Earning REG 200.00 for 10h"
+    ],
+    "Gross": 200.0,
+    "Net": 200.0,
+    "Payments": [
+      {
+        "Method": "Check",
+        "Amount": 200.0
+      }
+    ],
+    "WarningsContaining": [
+      "No tax provider"
+    ]
+  }
+}

@@ -1,10 +1,13 @@
 using System.Net;
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Banking.Disbursements.Models;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Settings;
 using Stripe;
@@ -124,49 +127,139 @@ public sealed class StripeConnectVendorService
 }
 
 /// <summary>
-/// Pays a vendor's earnings on an order to its Stripe account: a transfer funded by that order's charge, so it doesn't
-/// wait for the store's own balance.
+/// Sends vendor payouts as Stripe Connect transfers to the vendors' own accounts, each from its order's payment, as a
+/// Disbursements provider. A transfer goes through (the disbursement is settled), is refused (failed with Stripe's
+/// reason), or has an outcome Stripe didn't say (submitted, and looked up at Stripe before the payout is given up on);
+/// the disbursement's key is the transfer's idempotency key, and is written on the transfer so it is found again.
 /// </summary>
 internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
 {
-    // Ties a transfer to the payout that asked for it, so a pending payout is found at Stripe after its key has expired.
+    // Ties a transfer to the payout that asked for it, so it is found at Stripe after its idempotency key has expired.
     internal const string PayoutKeyMetadata = "payoutKey";
+
+    private const string DisbursementIdMetadata = "disbursementId";
 
     private readonly StripeClient _stripeClient;
     private readonly IPaymentAttemptStore _attempts;
+    private readonly IVendorStore _vendors;
+    private readonly IOrderStore _orders;
     private readonly ILogger _logger;
 
-    public StripeConnectPayoutProvider(StripeClient stripeClient, IPaymentAttemptStore attempts, ILogger<StripeConnectPayoutProvider> logger)
+    internal readonly IStringLocalizer S;
+
+    public StripeConnectPayoutProvider(
+        StripeClient stripeClient,
+        IPaymentAttemptStore attempts,
+        IVendorStore vendors,
+        IOrderStore orders,
+        ILogger<StripeConnectPayoutProvider> logger,
+        IStringLocalizer<StripeConnectPayoutProvider> stringLocalizer)
     {
         _stripeClient = stripeClient;
         _attempts = attempts;
+        _vendors = vendors;
+        _orders = orders;
         _logger = logger;
+        S = stringLocalizer;
     }
 
     public string Name
         => MarketplaceConstants.StripeConnectPayoutProvider;
 
-    public async Task<VendorPayoutResult> PayAsync(Vendor vendor, Order order, decimal amount, string currency, string idempotencyKey, CancellationToken cancellationToken = default)
+    public LocalizedString DisplayName
+        => S["Stripe Connect transfer"];
+
+    public string Method
+        => MarketplaceConstants.StripeConnectPayoutProvider;
+
+    public async Task<DisbursementSubmitResult> SubmitAsync(DisbursementBatch batch, IReadOnlyList<Disbursement> disbursements, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(disbursements);
+
+        var transfers = new List<(Disbursement Disbursement, Vendor Vendor, Order Order, string ChargeId)>();
+
+        // Every order's charge is read before anything is transferred. Sending without a charge that couldn't be read
+        // would be another request under the same key (Stripe refuses it, or makes a second transfer once it forgot the
+        // key), so the whole batch is answered as not sent: it stays open and is sent again by the next payout run.
+        foreach (var disbursement in disbursements)
+        {
+            var (vendor, order) = await GetPartiesAsync(disbursement, cancellationToken);
+            var (chargeId, chargeUnknown) = await GetChargeIdAsync(order, cancellationToken);
+
+            if (chargeUnknown)
+            {
+                return DisbursementSubmitResult.Failed(S["The payment of order {0} couldn't be read from Stripe, so its payout waits for the next run.", order?.OrderNumber].Value);
+            }
+
+            transfers.Add((disbursement, vendor, order, chargeId));
+        }
+
+        var result = new DisbursementSubmitResult { Succeeded = true };
+
+        foreach (var (disbursement, vendor, order, chargeId) in transfers)
+        {
+            var answer = await TransferAsync(vendor, order, chargeId, disbursement, cancellationToken);
+
+            if (answer.TransferId is not null)
+            {
+                result.Statuses[disbursement.ItemId] = DisbursementStatus.Settled;
+                result.TraceNumbers[disbursement.ItemId] = answer.TransferId;
+            }
+            else if (answer.RetryLater)
+            {
+                // Whether Stripe made the transfer isn't known: submitted, so it is never sent again on its own, and the
+                // payout looks it up at Stripe before giving up on it.
+                result.Statuses[disbursement.ItemId] = DisbursementStatus.Submitted;
+            }
+            else
+            {
+                result.Statuses[disbursement.ItemId] = DisbursementStatus.Failed;
+                result.FailureReasons[disbursement.ItemId] = answer.Failure;
+            }
+        }
+
+        return result;
+    }
+
+    public async Task<VendorPayoutResult> FindTransferAsync(Disbursement disbursement, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(disbursement);
+
+        var (vendor, order) = await GetPartiesAsync(disbursement, cancellationToken);
+
+        return await FindTransferAsync(vendor, order, disbursement, cancellationToken);
+    }
+
+    private async Task<(Vendor Vendor, Order Order)> GetPartiesAsync(Disbursement disbursement, CancellationToken cancellationToken)
+    {
+        var vendor = disbursement.Payee.Kind == MarketplaceConstants.VendorPartyKind ? await _vendors.FindByIdAsync(disbursement.Payee.Id, cancellationToken) : null;
+        var order = disbursement.SourceKind == MarketplaceConstants.PayoutSourceKind && !string.IsNullOrEmpty(disbursement.SourceId)
+            ? await _orders.FindByIdAsync(disbursement.SourceId, cancellationToken)
+            : null;
+
+        return (vendor, order);
+    }
+
+    private async Task<VendorPayoutResult> TransferAsync(Vendor vendor, Order order, string chargeId, Disbursement disbursement, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(vendor?.StripeAccountId))
         {
-            return VendorPayoutResult.Refused("The vendor has no Stripe account.");
+            return VendorPayoutResult.Refused(S["The vendor has no Stripe account."].Value);
         }
 
-        var (chargeId, chargeUnknown) = await GetChargeIdAsync(order, cancellationToken);
-
-        if (chargeUnknown)
+        // A disbursement sent again (its batch was checked and reopened) may have been transferred already, and Stripe
+        // keeps a key for 24 hours only: what Stripe has is asked first, and nothing is sent when it can't be asked.
+        if (await FindTransferAsync(vendor, order, disbursement, cancellationToken) is { } existing)
         {
-            // Sending without the charge would be a different request under the same key.
-            return VendorPayoutResult.Unsettled($"The payment of order {order?.OrderNumber} couldn't be read from Stripe, so its payout waits for the next run.");
+            return existing;
         }
 
         try
         {
             var options = new TransferCreateOptions
             {
-                Amount = StripeCurrency.ToMinorUnits(amount, currency),
-                Currency = currency.ToLowerInvariant(),
+                Amount = StripeCurrency.ToMinorUnits(disbursement.Amount, disbursement.Currency),
+                Currency = disbursement.Currency.ToLowerInvariant(),
                 Destination = vendor.StripeAccountId,
                 TransferGroup = order?.OrderNumber,
                 Description = order is null ? null : $"Order {order.OrderNumber}",
@@ -174,7 +267,8 @@ internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
                 {
                     ["vendorId"] = vendor.ItemId,
                     ["orderId"] = order?.ItemId ?? string.Empty,
-                    [PayoutKeyMetadata] = idempotencyKey,
+                    [DisbursementIdMetadata] = disbursement.ItemId,
+                    [PayoutKeyMetadata] = disbursement.IdempotencyKey,
                 },
             };
 
@@ -184,7 +278,7 @@ internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
                 options.SourceTransaction = chargeId;
             }
 
-            var transfer = await new TransferService(_stripeClient).CreateAsync(options, new RequestOptions { IdempotencyKey = "vendor-payout-" + idempotencyKey }, cancellationToken);
+            var transfer = await new TransferService(_stripeClient).CreateAsync(options, new RequestOptions { IdempotencyKey = "vendor-payout-" + disbursement.IdempotencyKey }, cancellationToken);
 
             return VendorPayoutResult.Paid(transfer.Id);
         }
@@ -198,10 +292,9 @@ internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
         }
     }
 
-    public async Task<VendorPayoutResult> FindTransferAsync(Vendor vendor, Order order, VendorPayout payout, CancellationToken cancellationToken = default)
+    // The transfer an earlier request of the disbursement made, Unsettled when Stripe can't be asked, or null when none.
+    private async Task<VendorPayoutResult> FindTransferAsync(Vendor vendor, Order order, Disbursement disbursement, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(payout);
-
         if (string.IsNullOrEmpty(vendor?.StripeAccountId))
         {
             return null;
@@ -211,7 +304,7 @@ internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
         {
             Destination = vendor.StripeAccountId,
             TransferGroup = string.IsNullOrEmpty(order?.OrderNumber) ? null : order.OrderNumber,
-            Created = new DateRangeOptions { GreaterThanOrEqual = payout.CreatedUtc.AddDays(-1) },
+            Created = new DateRangeOptions { GreaterThanOrEqual = disbursement.CreatedUtc.AddDays(-1) },
             Limit = 100,
         };
 
@@ -219,7 +312,7 @@ internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
         {
             await foreach (var transfer in new TransferService(_stripeClient).ListAutoPagingAsync(options, cancellationToken: cancellationToken))
             {
-                if (IsTransferOf(transfer, vendor, payout))
+                if (IsTransferOf(transfer, vendor, disbursement))
                 {
                     return VendorPayoutResult.Paid(transfer.Id);
                 }
@@ -229,26 +322,32 @@ internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
         }
         catch (StripeException ex)
         {
-            _logger.LogWarning(ex, "Stripe couldn't be asked whether the payout of order '{OrderNumber}' was made.", payout.OrderNumber);
+            _logger.LogWarning(ex, "Stripe couldn't be asked whether the payout of order '{OrderNumber}' was made.", order?.OrderNumber);
 
-            return VendorPayoutResult.Unsettled($"Stripe couldn't be asked whether the payout of order {payout.OrderNumber} was made, so it waits for the next run.");
+            return VendorPayoutResult.Unsettled(S["Stripe couldn't be asked whether the payout of order {0} was made, so it waits for the next run.", order?.OrderNumber].Value);
         }
     }
 
-    // A transfer names the payout's key; one made before transfers carried it is matched on what it was for.
-    private static bool IsTransferOf(Transfer transfer, Vendor vendor, VendorPayout payout)
+    // A transfer names the payout's key, or its disbursement; one made before transfers carried either is matched on what
+    // it was for.
+    private static bool IsTransferOf(Transfer transfer, Vendor vendor, Disbursement disbursement)
     {
         var metadata = transfer.Metadata ?? [];
 
         if (metadata.TryGetValue(PayoutKeyMetadata, out var key))
         {
-            return string.Equals(key, payout.IdempotencyKey, StringComparison.Ordinal);
+            return string.Equals(key, disbursement.IdempotencyKey, StringComparison.Ordinal);
+        }
+
+        if (metadata.TryGetValue(DisbursementIdMetadata, out var disbursementId))
+        {
+            return string.Equals(disbursementId, disbursement.ItemId, StringComparison.Ordinal);
         }
 
         return metadata.TryGetValue("vendorId", out var vendorId) && string.Equals(vendorId, vendor.ItemId, StringComparison.Ordinal) &&
-            metadata.TryGetValue("orderId", out var orderId) && string.Equals(orderId, payout.OrderId, StringComparison.Ordinal) &&
-            transfer.Amount == StripeCurrency.ToMinorUnits(payout.Amount, payout.Currency) &&
-            string.Equals(transfer.Currency, payout.Currency, StringComparison.OrdinalIgnoreCase);
+            metadata.TryGetValue("orderId", out var orderId) && string.Equals(orderId, disbursement.SourceId, StringComparison.Ordinal) &&
+            transfer.Amount == StripeCurrency.ToMinorUnits(disbursement.Amount, disbursement.Currency) &&
+            string.Equals(transfer.Currency, disbursement.Currency, StringComparison.OrdinalIgnoreCase);
     }
 
     // Only Stripe saying no to the request (its parameters, the account, the balance) proves no transfer was made. A reused

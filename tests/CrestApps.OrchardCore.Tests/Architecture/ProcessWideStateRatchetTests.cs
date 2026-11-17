@@ -30,6 +30,11 @@ public sealed partial class ProcessWideStateRatchetTests
         ["src/Core/CrestApps.OrchardCore.Telnyx.Core/Services/TelnyxRecordingIngestService.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskAriApplicationOwnershipRegistry.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskPendingCallerTerminationRegistry.cs"] = 2,
+
+        // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/PayrollPermissionTemplates.cs"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Pdf.Core/PdfFontSet.cs"] = 1,
     };
 
     [Fact]

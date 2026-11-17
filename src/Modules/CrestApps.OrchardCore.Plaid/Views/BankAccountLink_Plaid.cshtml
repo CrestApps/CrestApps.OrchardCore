@@ -1,0 +1,91 @@
+@*
+    Runs Plaid Link inside Banking's link form. The form has a hidden clientResult field and a
+    [data-bank-account-link-open] button: the button opens Plaid Link (after the form's own checks pass), and when the
+    person has chosen an account the script writes the public token and the account id into clientResult and submits
+    the form. The link token lives four hours and works once; it is never stored.
+*@
+@{
+    string linkToken = Model.ClientPayload;
+}
+
+<script asp-name="plaid-link" at="Foot"></script>
+<div class="d-none" data-plaid-link-token="@linkToken"
+     data-plaid-exit-message="@T["The bank was not linked. You can try again or enter the numbers yourself."]"
+     data-plaid-load-message="@T["Plaid could not be loaded. Check that nothing blocks cdn.plaid.com and try again."]"></div>
+
+<script at="Foot" depends-on="plaid-link">
+    (function () {
+        const holder = document.querySelector('[data-plaid-link-token]');
+
+        if (!holder) {
+            return;
+        }
+
+        const form = holder.closest('form');
+
+        if (!form) {
+            return;
+        }
+
+        const button = form.querySelector('[data-bank-account-link-open]');
+        const result = form.querySelector('input[name="clientResult"]');
+        const error = form.querySelector('[data-bank-account-link-error]');
+        let handler = null;
+
+        const showError = (message) => {
+            if (!error) {
+                return;
+            }
+
+            error.textContent = message;
+            error.classList.remove('d-none');
+        };
+
+        const open = () => {
+            if (error) {
+                error.classList.add('d-none');
+            }
+
+            if (!form.reportValidity()) {
+                return;
+            }
+
+            if (!window.Plaid || typeof window.Plaid.create !== 'function') {
+                showError(holder.dataset.plaidLoadMessage);
+                return;
+            }
+
+            if (!handler) {
+                handler = window.Plaid.create({
+                    token: holder.dataset.plaidLinkToken,
+                    onSuccess: (publicToken, metadata) => {
+                        const account = (metadata && metadata.accounts && metadata.accounts[0]) || (metadata && metadata.account) || {};
+
+                        result.value = JSON.stringify({
+                            publicToken: publicToken,
+                            accountId: account.id || (metadata && metadata.account_id) || '',
+                            institutionName: (metadata && metadata.institution && metadata.institution.name) || '',
+                        });
+
+                        if (button) {
+                            button.disabled = true;
+                        }
+
+                        form.submit();
+                    },
+                    onExit: (err) => {
+                        if (err) {
+                            showError(err.display_message || holder.dataset.plaidExitMessage);
+                        }
+                    },
+                });
+            }
+
+            handler.open();
+        };
+
+        if (button) {
+            button.addEventListener('click', open);
+        }
+    })();
+</script>

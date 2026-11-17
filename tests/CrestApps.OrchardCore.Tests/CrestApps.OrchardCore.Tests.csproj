@@ -28,6 +28,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Staff\CrestApps.OrchardCore.Staff.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Approvals.Abstractions/CrestApps.OrchardCore.Approvals.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Banking.Abstractions/CrestApps.OrchardCore.Banking.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/CrestApps.OrchardCore.Payroll.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Approvals.Core/CrestApps.OrchardCore.Approvals.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Banking.Core/CrestApps.OrchardCore.Banking.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Payroll.Core/CrestApps.OrchardCore.Payroll.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Staff.Core/CrestApps.OrchardCore.Staff.Core.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Staff.Abstractions/CrestApps.OrchardCore.Staff.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
@@ -72,7 +78,11 @@
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Commerce.Abstractions/CrestApps.OrchardCore.Commerce.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Consent.Abstractions/CrestApps.OrchardCore.Consent.Abstractions.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Consent.Core/CrestApps.OrchardCore.Consent.Core.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Approvals/CrestApps.OrchardCore.Approvals.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Banking/CrestApps.OrchardCore.Banking.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.PayLater/CrestApps.OrchardCore.PayLater.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Payroll/CrestApps.OrchardCore.Payroll.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Plaid/CrestApps.OrchardCore.Plaid.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Transactions/CrestApps.OrchardCore.Transactions.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Commerce/CrestApps.OrchardCore.Commerce.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.PhoneNumbers.Core/CrestApps.OrchardCore.PhoneNumbers.Core.csproj" />
@@ -121,6 +131,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Receipts/CrestApps.OrchardCore.Receipts.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Reports.OpenXml/CrestApps.OrchardCore.Reports.OpenXml.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Reports.Pdf/CrestApps.OrchardCore.Reports.Pdf.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Pdf.Core/CrestApps.OrchardCore.Pdf.Core.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Reports/CrestApps.OrchardCore.Reports.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContentFields/CrestApps.OrchardCore.ContentFields.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.OpenAI/CrestApps.OrchardCore.OpenAI.csproj" PrivateAssets="none" />
@@ -129,8 +140,6 @@
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContactCenter/CrestApps.OrchardCore.ContactCenter.csproj" PrivateAssets="none" />
-    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Reports.Core/CrestApps.OrchardCore.Reports.Core.csproj" />
-    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Reports.OpenXml/CrestApps.OrchardCore.Reports.OpenXml.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.TenantHierarchy.Abstractions/CrestApps.OrchardCore.TenantHierarchy.Abstractions.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.TenantHierarchy.Core/CrestApps.OrchardCore.TenantHierarchy.Core.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.TenantHierarchy/CrestApps.OrchardCore.TenantHierarchy.csproj" PrivateAssets="none" />

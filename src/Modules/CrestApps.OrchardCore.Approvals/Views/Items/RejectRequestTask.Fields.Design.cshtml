@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Approvals.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<RejectRequestTask>
+
+<header><h4><i class="fa-solid fa-circle-xmark" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Reject Request"])</h4></header>
+<p class="hint">@T["Rejects a request as the person the workflow runs for; the note is required."]</p>

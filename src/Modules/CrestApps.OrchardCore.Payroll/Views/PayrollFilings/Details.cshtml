@@ -1,0 +1,131 @@
+@model PayrollFilingDetailsViewModel
+@using System.Globalization
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@{
+    var filing = Model.Filing;
+}
+
+<zone Name="Title">
+    <breadcrumb name="PayrollFilingsDetails" title="@T["{0} {1}", Model.FormName, filing.Period]">
+        <breadcrumb-item id="PayrollFilings" action="Index" controller="PayrollFilings" area="CrestApps.OrchardCore.Payroll">@T["Filings"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between">
+        <span>@Model.EmployerName · @filing.Period</span>
+        <span class="badge ta-badge fw-normal">@(filing.Status switch { PayrollFilingStatus.Filed => T["Filed"], PayrollFilingStatus.Amended => T["Amended"], _ => T["Draft"] })</span>
+    </div>
+    <div class="card-body">
+        @if (filing.PreparedUtc is { } prepared)
+        {
+            <p class="mb-1">@T["Prepared {0} by {1}.", (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(prepared, DateTimeKind.Utc))).DateTime.ToString("g", CultureInfo.CurrentCulture), filing.PreparedBy ?? string.Empty]</p>
+        }
+        @if (filing.FiledOn is { } filedOn)
+        {
+            <p class="mb-1">@T["Filed on {0}", filedOn.ToString("d", CultureInfo.CurrentCulture)]@(string.IsNullOrEmpty(filing.Reference) ? string.Empty : " · " + filing.Reference)</p>
+        }
+        @if (Model.Amends is { } amends)
+        {
+            <p class="mb-1">@T["Corrects the filing of {0}.", amends.Period] <a asp-action="Details" asp-route-id="@amends.ItemId">@T["Open it"]</a></p>
+        }
+        @foreach (var note in filing.Notes)
+        {
+            <div class="alert alert-warning py-1 my-1">@note</div>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Boxes"]</div>
+    <div class="card-body">
+        <table class="table table-sm mb-0">
+            <thead><tr><th>@T["Box"]</th><th class="text-end">@T["Amount"]</th></tr></thead>
+            <tbody>
+                @foreach (var (box, amount) in filing.Boxes)
+                {
+                    <tr><td>@box</td><td class="text-end">@amount.ToString("N2", CultureInfo.CurrentCulture)</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (filing.People.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Statements of each person"]</div>
+        <div class="card-body">
+            <table class="table table-sm mb-0">
+                @{
+                    var columns = filing.People.SelectMany(person => person.Boxes.Keys).Distinct(StringComparer.Ordinal).Take(6).ToList();
+                }
+                <thead>
+                    <tr>
+                        <th>@T["Person"]</th>
+                        @foreach (var column in columns)
+                        {
+                            <th class="text-end">@column</th>
+                        }
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var person in filing.People)
+                    {
+                        <tr>
+                            <td>@person.Name <span class="text-muted small">@(string.IsNullOrEmpty(person.TaxIdHint) ? string.Empty : "· " + person.TaxIdHint)</span></td>
+                            @foreach (var column in columns)
+                            {
+                                <td class="text-end">@person.Boxes.GetValueOrDefault(column).ToString("N2", CultureInfo.CurrentCulture)</td>
+                            }
+                            <td class="text-end"><a asp-action="PersonPdf" asp-route-id="@filing.ItemId" asp-route-profileId="@person.ProfileId" class="btn btn-sm btn-secondary">@T["PDF"]</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@if (filing.Status == PayrollFilingStatus.Draft)
+{
+    <form asp-action="MarkFiled" asp-route-id="@filing.ItemId" method="post" class="no-multisubmit">
+        <div class="card mb-3">
+            <div class="card-header">@T["Mark as filed"]</div>
+            <div class="card-body">
+                <div class="ocat-wrapper">
+                    <label for="filedOn" class="ocat-label">@T["Filed on"]</label>
+                    <div class="ocat-end"><input id="filedOn" name="filedOn" type="date" value="@Model.FiledOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" class="form-control" style="max-width: 12rem" /></div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label for="reference" class="ocat-label">@T["Confirmation number"]</label>
+                    <div class="ocat-end">
+                        <input id="reference" name="reference" class="form-control" style="max-width: 20rem" />
+                        <span class="hint">@T["Once marked as filed, the filing never changes; people with a statement in it are told it is ready in My pay."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="action-bar-bottom">
+            <button type="submit" class="btn btn-primary">@T["Mark as filed"]</button>
+            <button type="submit" class="btn btn-secondary action-bar-secondary" formaction="@Url.Action("PrepareAgain", new { id = filing.ItemId })">@T["Prepare again"]</button>
+            <button type="submit" class="btn btn-danger action-bar-secondary" formaction="@Url.Action("Delete", new { id = filing.ItemId })" data-confirm-title="@T["Delete"]" data-confirm="@T["Delete the draft?"]">@T["Delete"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-employerId="@filing.EmployerId">@T["Back"]</a>
+        </div>
+    </form>
+}
+else
+{
+    <form asp-action="Amend" asp-route-id="@filing.ItemId" method="post" class="no-multisubmit">
+        <div class="action-bar-bottom">
+            @if (filing.Status == PayrollFilingStatus.Filed)
+            {
+                <button type="submit" class="btn btn-primary">@T["Amend"]</button>
+            }
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-employerId="@filing.EmployerId">@T["Back"]</a>
+        </div>
+    </form>
+}
+<script asp-name="crestapps-browser" at="Foot"></script>

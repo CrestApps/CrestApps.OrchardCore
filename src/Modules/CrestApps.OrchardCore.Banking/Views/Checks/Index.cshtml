@@ -1,0 +1,52 @@
+@model ChecksIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="Checks" title="@T["Checks"]" />
+</zone>
+
+<form asp-action="Index" method="post" class="no-multisubmit" id="checks-filter" data-list-management data-minimum-selection="1" data-selected-label="@T["selected"]" data-client-side-search="false">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+    <input type="hidden" asp-for="BankAccountId" />
+    <input type="hidden" asp-for="Status" />
+    <input asp-for="Options.BulkAction" type="hidden" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" aria-label="@T["Search by payee or check number"]" asp-for="Search" class="form-control" placeholder="@T["Search by payee or check number"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                @if (Model.CanManage)
+                {
+                    <div class="col-auto">
+                        <a class="btn btn-outline-secondary" role="button" asp-action="NextNumber">@T["Next numbers"]</a>
+                        <a class="btn btn-secondary create" role="button" asp-action="Issue">@T["Write a check"]</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="CheckRegister" context="Model.List"
+                show-select-all="@Model.CanManage"
+                bulk-actions="Model.Options.BulkActions"
+                empty-message="@T["<strong>Nothing here!</strong> No check matches."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            @if (Model.CanManage)
+            {
+                <admin-list-column type="Select" />
+            }
+            <admin-list-column name="Number" position="20" title="@T["Check"]" />
+            <admin-list-column name="Payee" position="30" title="@T["Payee"]" />
+            <admin-list-column name="Status" position="40" title="@T["Status"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<script asp-name="list-management-ui" at="Foot"></script>

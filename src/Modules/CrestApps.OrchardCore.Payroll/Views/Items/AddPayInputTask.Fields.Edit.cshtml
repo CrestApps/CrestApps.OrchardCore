@@ -1,0 +1,35 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+
+@model PayrollTaskViewModel
+
+<p class="hint">@T["Adds hours or an amount to an open pay run for one person, by employee number and pay code, as a file row would. The run is calculated again for that person when it was calculated."]</p>
+<div class="mb-3">
+    <label asp-for="PayRunId" class="form-label">@T["Pay run id"]</label>
+    <input asp-for="PayRunId" class="form-control code" />
+    <span class="hint">@T["The run's id or number. Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="EmployeeNumber" class="form-label">@T["Employee number"]</label>
+    <input asp-for="EmployeeNumber" class="form-control code" />
+    <span class="hint">@T["The person's employee number. Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="PayCode" class="form-label">@T["Pay code"]</label>
+    <input asp-for="PayCode" class="form-control code" />
+    <span class="hint">@T["The pay code, such as BONUS. Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="Hours" class="form-label">@T["Hours"]</label>
+    <input asp-for="Hours" class="form-control code" />
+    <span class="hint">@T["Hours, with a dot for decimals. Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="Amount" class="form-label">@T["Amount"]</label>
+    <input asp-for="Amount" class="form-control code" />
+    <span class="hint">@T["An amount, with a dot for decimals. Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="Note" class="form-label">@T["Note"]</label>
+    <input asp-for="Note" class="form-control code" />
+    <span class="hint">@T["Why. Liquid."]</span>
+</div>
