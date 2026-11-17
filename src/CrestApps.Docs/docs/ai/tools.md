@@ -783,6 +783,30 @@ The tool needs **Execute workflows**. It does what a signal URL does: only the S
 
 The tool needs **Edit content** on the item, as the action buttons are in its editor, and offers only the actions of the User Task events whose roles the user has (every action when the event names no role). Unlike the buttons, it does not save or publish the item.
 
+### Data pipeline tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.DataPipelines`
+
+| Function | Description |
+| --- | --- |
+| `listDataPipelineStepTypes` | Lists the step types of the pipeline designer by category (source, transform, file, destination), with their input and output ports: records or files, required, and whether a port accepts many connections. |
+| `listDataSets` | Lists the data sets the user may read from every data source (content types, users, saved queries and the data of other modules), with the `Source::DataSet` value a **Read a data source** step uses, the name, description, data source and group. Filter by text or by data source. |
+| `getDataSetSchema` | Returns the fields of one data set: name, label, type, group, the field that identifies a row, the fields that can filter by key and what they refer to, and the default date field. It returns no rows. |
+
+`listDataPipelineStepTypes` needs **View data pipelines**; `listDataSets` and `getDataSetSchema` need **Manage data pipelines**, as the designer's **Add a data source** dialog does. The data sources are asked with the user, so they leave out what the user may not read, and `getDataSetSchema` answers the same way for a data set that does not exist and one the user may not read. The step settings schemas are not offered. The pipelines themselves (list, design, preview, publish, run and run history) are not reachable by tools yet: their documents and services live in the Data Pipelines module, which this module does not reference. Use the designer, or the `DataPipelines` recipe step through `importOrchardCoreRecipe`.
+
+### Shared link tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.DataPipelines.Core`
+
+| Function | Description |
+| --- | --- |
+| `listSharedLinks` | Lists the shared links of every module, the most recent first: title, kind, what shared them, recipients, when they were created and expire, uses, and whether they still work (Active, Expired, UsedUp or Revoked). Filter by title or by what shared them. |
+| `revokeSharedLink` | Stops a link from working for all its recipients; the shared file or resource is kept until the link is deleted. Asks for approval. |
+| `deleteSharedLink` | Deletes a link together with the resource it shared, such as the stored copy of an exported file. Asks for approval. |
+
+The tools need **Manage shared links**. A link's URL holds a token that is only emailed to its recipients and never stored, so no tool returns it; the tools also never return the token hash, the resource ID or the recipients' user IDs. Times are in the user's or the site's time zone.
+
 ### Analytics tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Chat.Analytics`
