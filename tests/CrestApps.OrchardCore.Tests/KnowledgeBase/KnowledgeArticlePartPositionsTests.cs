@@ -1,6 +1,11 @@
 using System.Globalization;
 using CrestApps.OrchardCore.KnowledgeBase;
 using CrestApps.OrchardCore.KnowledgeBase.Migrations;
+using CrestApps.OrchardCore.Tests.Modules.Accounts;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Builders;
+using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.ContentManagement.Metadata.Settings;
 
 namespace CrestApps.OrchardCore.Tests.KnowledgeBase;
 
@@ -61,4 +66,108 @@ public sealed class KnowledgeArticlePartPositionsTests
     [Fact]
     public void WholeDistinctPositions_AreLeftAsTheyAre()
         => Assert.Empty(KnowledgeArticlePartPositions.Renumber([("TitlePart", "5"), (KnowledgeBaseConstants.PartName, "1"), ("MarkdownBodyPart", "10")]));
+
+    // On a site at version 1 the steps to 2 and 3 ran in one start; step 3 read the cached type, from before step 2
+    // added the category's part, so the category stayed at 3 with the body and showed after it.
+    [Fact]
+    public async Task AVersion1Site_UpgradedInOneStart_PutsTheCategoryBeforeTheBody()
+    {
+        // Arrange
+        var definitions = new CachingDefinitions();
+        await definitions.StoreTypeDefinitionAsync(new ContentTypeDefinitionBuilder()
+            .WithName(KnowledgeBaseConstants.ArticleType)
+            .WithPart("TitlePart", part => part.WithPosition("1"))
+            .WithPart(KnowledgeBaseConstants.PartName, part => part.WithPosition("2"))
+            .WithPart("MarkdownBodyPart", part => part.WithPosition("3"))
+            .WithPart("AutoroutePart", part => part.WithPosition("4"))
+            .Build());
+        var migrations = new KnowledgeBaseMigrations(definitions);
+
+        // Act: what steps 1 to 2, 2 to 3 and 3 to 4 change in the content definitions, in one go.
+        await definitions.GetTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType);
+        await migrations.DefineCategoriesAsync();
+        await migrations.UpdateFrom2Async();
+        await migrations.UpdateFrom3Async();
+
+        // Assert
+        var type = await definitions.LoadTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType);
+        Assert.Equal(["TitlePart", KnowledgeBaseConstants.PartName, KnowledgeBaseConstants.ArticleType, "MarkdownBodyPart", "AutoroutePart"], Ordered(type));
+        Assert.Equal(["1", "2", "3", "4", "5"], type.Parts.Select(Position).Order());
+        var body = type.Parts.Single(part => part.Name == "MarkdownBodyPart");
+        Assert.Equal("Wysiwyg", body.Editor());
+        Assert.Equal("Body", body.GetSettings<ContentTypePartSettings>().DisplayName);
+    }
+
+    // A site already at version 3 with the category and the body both at 3.
+    [Fact]
+    public async Task AVersion3SiteWithTheCategoryAndTheBodyTogether_IsRenumbered_AndTheBodyIsNamed()
+    {
+        // Arrange
+        var definitions = new CachingDefinitions();
+        await definitions.StoreTypeDefinitionAsync(new ContentTypeDefinitionBuilder()
+            .WithName(KnowledgeBaseConstants.ArticleType)
+            .WithPart("TitlePart", part => part.WithPosition("1"))
+            .WithPart(KnowledgeBaseConstants.PartName, part => part.WithPosition("2"))
+            .WithPart("MarkdownBodyPart", part => part.WithPosition("3").WithEditor("Wysiwyg"))
+            .WithPart("AutoroutePart", part => part.WithPosition("4"))
+            .WithPart(KnowledgeBaseConstants.ArticleType, part => part.WithPosition("3"))
+            .Build());
+
+        // Act
+        Assert.Equal(4, await new KnowledgeBaseMigrations(definitions).UpdateFrom3Async());
+
+        // Assert
+        var type = await definitions.LoadTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType);
+        Assert.Equal(["TitlePart", KnowledgeBaseConstants.PartName, KnowledgeBaseConstants.ArticleType, "MarkdownBodyPart", "AutoroutePart"], Ordered(type));
+        Assert.Equal("Body", type.Parts.Single(part => part.Name == "MarkdownBodyPart").GetSettings<ContentTypePartSettings>().DisplayName);
+    }
+
+    private static string Position(ContentTypePartDefinition part)
+        => part.GetSettings<ContentTypePartSettings>().Position;
+
+    private static IEnumerable<string> Ordered(ContentTypeDefinition type)
+        => type.Parts.OrderBy(part => int.Parse(Position(part), CultureInfo.InvariantCulture)).Select(part => part.Name);
+
+    // As Orchard Core's: a read for display keeps returning the copy it first read in the scope; the load before a
+    // change is the stored one.
+    private sealed class CachingDefinitions : IContentDefinitionManager
+    {
+        private readonly InMemoryContentDefinitionManager _store = new();
+        private readonly Dictionary<string, ContentTypeDefinition> _cached = new(StringComparer.Ordinal);
+
+        public async Task<ContentTypeDefinition> GetTypeDefinitionAsync(string name)
+        {
+            if (!_cached.TryGetValue(name, out var type))
+            {
+                type = await _store.LoadTypeDefinitionAsync(name);
+                _cached[name] = type;
+            }
+
+            return type;
+        }
+
+        public Task<ContentTypeDefinition> LoadTypeDefinitionAsync(string name) => _store.LoadTypeDefinitionAsync(name);
+
+        public Task<IEnumerable<ContentTypeDefinition>> LoadTypeDefinitionsAsync() => _store.LoadTypeDefinitionsAsync();
+
+        public Task<IEnumerable<ContentTypeDefinition>> ListTypeDefinitionsAsync() => _store.ListTypeDefinitionsAsync();
+
+        public Task<IEnumerable<ContentPartDefinition>> LoadPartDefinitionsAsync() => _store.LoadPartDefinitionsAsync();
+
+        public Task<IEnumerable<ContentPartDefinition>> ListPartDefinitionsAsync() => _store.ListPartDefinitionsAsync();
+
+        public Task<ContentPartDefinition> LoadPartDefinitionAsync(string name) => _store.LoadPartDefinitionAsync(name);
+
+        public Task<ContentPartDefinition> GetPartDefinitionAsync(string name) => _store.GetPartDefinitionAsync(name);
+
+        public Task DeleteTypeDefinitionAsync(string name) => _store.DeleteTypeDefinitionAsync(name);
+
+        public Task DeletePartDefinitionAsync(string name) => _store.DeletePartDefinitionAsync(name);
+
+        public Task StoreTypeDefinitionAsync(ContentTypeDefinition contentTypeDefinition) => _store.StoreTypeDefinitionAsync(contentTypeDefinition);
+
+        public Task StorePartDefinitionAsync(ContentPartDefinition contentPartDefinition) => _store.StorePartDefinitionAsync(contentPartDefinition);
+
+        public Task<string> GetIdentifierAsync() => _store.GetIdentifierAsync();
+    }
 }

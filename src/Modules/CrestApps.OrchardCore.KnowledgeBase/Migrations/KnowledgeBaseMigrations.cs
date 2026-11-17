@@ -22,6 +22,9 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
     // Orchard Core's Wysiwyg editor of a Markdown body, instead of its plain one.
     private const string WysiwygEditor = "Wysiwyg";
 
+    // The label of the article's body on its editor, instead of the part's name.
+    private const string BodyDisplayName = "Body";
+
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
     public KnowledgeBaseMigrations(IContentDefinitionManager contentDefinitionManager)
@@ -50,6 +53,7 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
                     .WithSettings(new TitlePartSettings { Options = TitlePartOptions.EditableRequired }))
                 .WithPart(KnowledgeBaseConstants.PartName, part => part.WithPosition(KnowledgeArticlePartPositions.Of(KnowledgeBaseConstants.PartName)))
                 .WithPart<MarkdownBodyPart>(part => part
+                    .WithDisplayName(BodyDisplayName)
                     .WithPosition(KnowledgeArticlePartPositions.Of(nameof(MarkdownBodyPart)))
                     .WithEditor(WysiwygEditor))
                 .WithPart<AutoroutePart>(part => part
@@ -76,9 +80,9 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
             table.CreateIndex("IDX_KnowledgeArticleIndex_ContentItemId", "ContentItemId");
         });
 
-        await DefineCategoriesAsync();
+        ConvertCategoriesOnceCommitted(await DefineCategoriesAsync());
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -95,7 +99,7 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
             table.CreateIndex("IDX_KnowledgeArticleIndex_CategoryId", "Audience", "CategoryId", "DocumentId");
         });
 
-        await DefineCategoriesAsync();
+        ConvertCategoriesOnceCommitted(await DefineCategoriesAsync());
 
         return 2;
     }
@@ -108,7 +112,8 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
     /// <returns>The version.</returns>
     public async Task<int> UpdateFrom2Async()
     {
-        var type = await _contentDefinitionManager.GetTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType);
+        // The stored definition, not the cached copy, which doesn't show what version 2 changed when both ran together.
+        var type = await _contentDefinitionManager.LoadTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType);
 
         if (type is null)
         {
@@ -138,10 +143,51 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
         return 3;
     }
 
+    /// <summary>
+    /// Puts the category's part before the body where version 2 left them in the same place (a site that went from
+    /// version 1 to 3 in one start, whose step 3 read the type as it was before step 2), and names the body's part Body
+    /// on the article editor, unless an administrator named it.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        var type = await _contentDefinitionManager.LoadTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType);
+
+        if (type is null)
+        {
+            return 4;
+        }
+
+        var positions = KnowledgeArticlePartPositions.Renumber([.. type.Parts.Select(part => (part.Name, part.GetSettings<ContentTypePartSettings>().Position))]);
+        var body = type.Parts.FirstOrDefault(part => part.PartDefinition.Name == nameof(MarkdownBodyPart));
+        var nameBody = body is not null && string.IsNullOrEmpty(body.GetSettings<ContentTypePartSettings>().DisplayName);
+
+        if (positions.Count > 0 || nameBody)
+        {
+            await _contentDefinitionManager.AlterTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType, builder =>
+            {
+                foreach (var (name, position) in positions)
+                {
+                    builder.WithPart(name, part => part.WithPosition(position));
+                }
+
+                if (nameBody)
+                {
+                    builder.WithPart(body.Name, part => part.WithDisplayName(BodyDisplayName));
+                }
+            });
+        }
+
+        return 4;
+    }
+
+    private static void ConvertCategoriesOnceCommitted(string taxonomyId)
+        => ShellScope.AddDeferredTask(scope => KnowledgeCategoryTerms.CreateAndConvertAsync(scope.ServiceProvider, taxonomyId));
+
     // The term type, and the Category taxonomy field of the Knowledge Article type with the taxonomy it uses (kept when an
     // administrator already chose one). The taxonomy itself, and the terms of the old text categories, are made after
     // the migration is committed, through the content manager.
-    private async Task DefineCategoriesAsync()
+    internal async Task<string> DefineCategoriesAsync()
     {
         if (await _contentDefinitionManager.GetTypeDefinitionAsync(KnowledgeBaseConstants.CategoryTermType) is null)
         {
@@ -154,7 +200,7 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
                     .WithSettings(new TitlePartSettings { Options = TitlePartOptions.EditableRequired })));
         }
 
-        var article = await _contentDefinitionManager.GetTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType);
+        var article = await _contentDefinitionManager.LoadTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType);
         var taxonomyId = article?.Parts
             .FirstOrDefault(part => part.Name == KnowledgeBaseConstants.ArticleType)?
             .PartDefinition.Fields
@@ -177,10 +223,29 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
                         Hint = "The help center lists the articles of a category together, and on the category's own page.",
                     })));
 
-            await _contentDefinitionManager.AlterTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType, type => type
-                .WithPart(KnowledgeBaseConstants.ArticleType, part => part.WithPosition(KnowledgeArticlePartPositions.Of(KnowledgeBaseConstants.ArticleType))));
+            // The category's part and every part's final position in one change, so it never shares a place with the body
+            // (version 1 put the body where the category's part goes).
+            List<(string Name, string Position)> parts = [.. (article?.Parts ?? [])
+                .Where(part => part.Name != KnowledgeBaseConstants.ArticleType)
+                .Select(part => (part.Name, part.GetSettings<ContentTypePartSettings>().Position))];
+            parts.Add((KnowledgeBaseConstants.ArticleType, KnowledgeArticlePartPositions.Of(KnowledgeBaseConstants.ArticleType)));
+
+            var positions = KnowledgeArticlePartPositions.Renumber(parts);
+
+            if (positions.Count == 0)
+            {
+                positions = new Dictionary<string, string> { [KnowledgeBaseConstants.ArticleType] = KnowledgeArticlePartPositions.Of(KnowledgeBaseConstants.ArticleType) };
+            }
+
+            await _contentDefinitionManager.AlterTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType, type =>
+            {
+                foreach (var (name, position) in positions)
+                {
+                    type.WithPart(name, part => part.WithPosition(position));
+                }
+            });
         }
 
-        ShellScope.AddDeferredTask(scope => KnowledgeCategoryTerms.CreateAndConvertAsync(scope.ServiceProvider, taxonomyId));
+        return taxonomyId;
     }
 }
