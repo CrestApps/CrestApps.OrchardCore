@@ -50,26 +50,32 @@ internal static class CustomerMerge
     // A user whose address isn't proved gets nothing bought with it (owner decision 17). When guest orders with it are
     // waiting, the user is told so, with a link to the page where a code proves it, so "register with the same email, and
     // your orders appear in your account" stays true. The page is there whenever this feature is on, which depends on it.
-    public static async Task OfferConfirmationAsync(IServiceProvider serviceProvider, IUser user, ILogger logger)
+    public static async Task OfferConfirmationAsync(
+        ICustomerStore store,
+        IEmailOwnershipConfirmationPage confirmationPage,
+        INotifier notifier,
+        IHtmlLocalizer htmlLocalizer,
+        IUser user,
+        ILogger logger)
     {
         if (user is not User { Email: { Length: > 0 } email } account ||
             UserEmailOwnership.IsVerified(account.Properties, email) ||
-            serviceProvider.GetService<IEmailOwnershipConfirmationPage>() is not { } confirmationPage)
+            confirmationPage is null)
         {
             return;
         }
 
         try
         {
-            if ((await serviceProvider.GetRequiredService<ICustomerStore>().ListGuestsByEmailAsync(email)).Count == 0 ||
+            if ((await store.ListGuestsByEmailAsync(email)).Count == 0 ||
                 await confirmationPage.GetUrlAsync(account) is not { } url)
             {
                 return;
             }
 
-            var H = serviceProvider.GetRequiredService<IHtmlLocalizer<CustomerMergeLoginFormEvent>>();
+            var H = htmlLocalizer;
 
-            await serviceProvider.GetRequiredService<INotifier>().InformationAsync(H["Orders placed as a guest with {0} are waiting for your account. <a href=\"{1}\">Confirm it's you</a> to add them.", email, url]);
+            await notifier.InformationAsync(H["Orders placed as a guest with {0} are waiting for your account. <a href=\"{1}\">Confirm it's you</a> to add them.", email, url]);
         }
         catch (Exception exception)
         {
@@ -92,7 +98,13 @@ public sealed class CustomerMergeLoginFormEvent : LoginFormEventBase
     public override async Task LoggedInAsync(IUser user)
     {
         await CustomerMerge.RunAsync(_serviceProvider, user, _logger);
-        await CustomerMerge.OfferConfirmationAsync(_serviceProvider, user, _logger);
+        await CustomerMerge.OfferConfirmationAsync(
+            _serviceProvider.GetRequiredService<ICustomerStore>(),
+            _serviceProvider.GetService<IEmailOwnershipConfirmationPage>(),
+            _serviceProvider.GetRequiredService<INotifier>(),
+            _serviceProvider.GetRequiredService<IHtmlLocalizer<CustomerMergeLoginFormEvent>>(),
+            user,
+            _logger);
     }
 }
 
