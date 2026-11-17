@@ -43,7 +43,7 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.ServiceLevels.Core\CrestApps.OrchardCore.ServiceLevels.Core.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.BusinessHours\CrestApps.OrchardCore.BusinessHours.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.BusinessHours\CrestApps.OrchardCore.BusinessHours.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

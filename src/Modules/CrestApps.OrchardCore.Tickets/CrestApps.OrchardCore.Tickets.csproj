@@ -73,13 +73,13 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Omnichannel.Messaging.Core\CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions\CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions.csproj" />
     <!-- Carries the Conditional Fields feature the Tickets feature depends on. -->
-    <ProjectReference Include="..\CrestApps.OrchardCore.ContentFields\CrestApps.OrchardCore.ContentFields.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.ServiceLevels\CrestApps.OrchardCore.ServiceLevels.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.ContentFields\CrestApps.OrchardCore.ContentFields.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.ServiceLevels\CrestApps.OrchardCore.ServiceLevels.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.SignalR.Core\CrestApps.OrchardCore.SignalR.Core.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Teams\CrestApps.OrchardCore.Teams.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Timeline\CrestApps.OrchardCore.Timeline.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Teams\CrestApps.OrchardCore.Teams.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Timeline\CrestApps.OrchardCore.Timeline.csproj" PrivateAssets="none" />
     <!-- Carries the My Account feature the Tickets Portal feature depends on. -->
-    <ProjectReference Include="..\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

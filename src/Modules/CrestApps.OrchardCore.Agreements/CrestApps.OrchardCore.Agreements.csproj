@@ -50,7 +50,7 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Agreements.Core\CrestApps.OrchardCore.Agreements.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Accounts\CrestApps.OrchardCore.Accounts.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Accounts\CrestApps.OrchardCore.Accounts.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

@@ -57,12 +57,12 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.BusinessHours.Core\CrestApps.OrchardCore.BusinessHours.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.WorkOrders.Core\CrestApps.OrchardCore.WorkOrders.Core.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.ServiceLevels.Abstractions\CrestApps.OrchardCore.ServiceLevels.Abstractions.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.ServiceLevels\CrestApps.OrchardCore.ServiceLevels.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.ServiceLevels\CrestApps.OrchardCore.ServiceLevels.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Agreements.Abstractions\CrestApps.OrchardCore.Agreements.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Agreements.Core\CrestApps.OrchardCore.Agreements.Core.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Agreements\CrestApps.OrchardCore.Agreements.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Agreements\CrestApps.OrchardCore.Agreements.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Timeline.Abstractions\CrestApps.OrchardCore.Timeline.Abstractions.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Timeline\CrestApps.OrchardCore.Timeline.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Timeline\CrestApps.OrchardCore.Timeline.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

@@ -35,7 +35,7 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Tickets.Core\CrestApps.OrchardCore.Tickets.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.ContactCenter.Core\CrestApps.OrchardCore.ContactCenter.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Tickets\CrestApps.OrchardCore.Tickets.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Tickets\CrestApps.OrchardCore.Tickets.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>
