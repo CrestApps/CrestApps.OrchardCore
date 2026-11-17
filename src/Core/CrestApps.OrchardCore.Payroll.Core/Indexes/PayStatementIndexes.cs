@@ -107,6 +107,8 @@ public sealed class PayStatementIndexProvider : IndexProvider<PayStatement>
     {
         context
             .For<PayStatementIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(statement => new PayStatementIndex
             {
                 ItemId = statement.ItemId,
@@ -139,6 +141,7 @@ public sealed class PayStatementLineIndexProvider : IndexProvider<PayStatement>
     {
         context
             .For<PayStatementLineIndex>()
+            .ExclusiveToDocumentType()
             .Map(statement => statement.Status == PayStatementStatus.Draft
                 ? []
                 : statement.Lines.Select(line => new PayStatementLineIndex

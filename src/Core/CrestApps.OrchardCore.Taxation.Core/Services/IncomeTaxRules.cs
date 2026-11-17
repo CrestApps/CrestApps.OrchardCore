@@ -54,6 +54,8 @@ public sealed class IncomeTaxRuleIndexProvider : IndexProvider<IncomeTaxRule>
     {
         context
             .For<IncomeTaxRuleIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(rule => new IncomeTaxRuleIndex
             {
                 ItemId = rule.ItemId,
