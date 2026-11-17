@@ -30,6 +30,7 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     private readonly ILogger<ElasticsearchAIDataSourceSourceHandler> _logger;
     private readonly IDataConnectionResolver _dataConnectionResolver;
     private readonly IAIEndpointPolicy _endpointPolicy;
+    private readonly AIDataSourceStoredSettings _storedSettings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ElasticsearchAIDataSourceSourceHandler"/> class.
@@ -39,24 +40,34 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     /// <param name="logger">The logger.</param>
     /// <param name="dataConnectionResolver">Resolves the data connection a data source may reference; <see langword="null"/> while the Data Connectors feature is off.</param>
     /// <param name="endpointPolicy">The policy that keeps the cluster's URL off the site's own network; <see langword="null"/> refuses every private address.</param>
+    /// <param name="storedSettings">The data sources as they were stored, read in this request, so a URL a save keeps is not checked again.</param>
     public ElasticsearchAIDataSourceSourceHandler(
         IDataProtectionProvider dataProtectionProvider,
         IOptions<ElasticsearchDataSourceOptions> options,
         ILogger<ElasticsearchAIDataSourceSourceHandler> logger,
         IDataConnectionResolver dataConnectionResolver = null,
-        IAIEndpointPolicy endpointPolicy = null)
+        IAIEndpointPolicy endpointPolicy = null,
+        AIDataSourceStoredSettings storedSettings = null)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _options = options.Value;
         _logger = logger;
         _dataConnectionResolver = dataConnectionResolver;
         _endpointPolicy = endpointPolicy;
+        _storedSettings = storedSettings;
     }
 
     public string SourceType => AIDataSourceSourceTypes.Elasticsearch;
 
     private bool IsAllowed(string url)
         => _endpointPolicy?.IsAllowed(url) ?? AIEgress.IsAllowedEndpoint(url, isDevelopment: false, options: null);
+
+    // A URL the save keeps as it was stored is not checked again (review 8, G7): a cluster on a private network saved
+    // before the check keeps syncing, and refusing every other change would only stop it being edited.
+    private bool KeepsStoredUrl(AIDataSource dataSource, string url)
+        => _storedSettings?.Find(dataSource.ItemId) is { } stored &&
+            stored.TryGet<ElasticsearchSourceMetadata>(out var storedMetadata) &&
+            string.Equals(storedMetadata.Url?.Trim(), url?.Trim(), StringComparison.Ordinal);
 
     public async ValueTask ValidateAsync(
         AIDataSource dataSource,
@@ -118,7 +129,8 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
             result.Fail(new ValidationResult("Elasticsearch URL is required for self-managed environments.", [nameof(ElasticsearchSourceMetadata.Url)]));
         }
         else if (string.Equals(environmentType, ElasticsearchSourceMetadata.SelfManagedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
-            !IsAllowed(metadata.Url))
+            !IsAllowed(metadata.Url) &&
+            !KeepsStoredUrl(dataSource, metadata.Url))
         {
             // The editor, the recipe step and the API all validate here, so none of them can point a data source at the
             // site's own network.

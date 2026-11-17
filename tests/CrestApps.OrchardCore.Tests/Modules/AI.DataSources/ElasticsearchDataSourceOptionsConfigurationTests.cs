@@ -219,6 +219,7 @@ public sealed class ElasticsearchDataSourceOptionsConfigurationTests
             logger,
             null,
             endpointPolicy,
+            null,
         ]);
     }
 

@@ -136,9 +136,10 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
 
         var environmentType = NormalizeEnvironmentType(model.EnvironmentType);
         var authenticationType = NormalizeAuthenticationType(model.AuthenticationType);
-        var existingMetadata = KeptCredentials(dataSource.GetOrCreate<ElasticsearchSourceMetadata>(), environmentType, model.Url, model.CloudId, authenticationType);
+        var stored = dataSource.GetOrCreate<ElasticsearchSourceMetadata>();
+        var existingMetadata = KeptCredentials(stored, environmentType, model.Url, model.CloudId, authenticationType);
 
-        ValidateUrl(context, environmentType, model.Url);
+        ValidateUrl(context, environmentType, model.Url, stored.Url);
 
         if (string.Equals(environmentType, ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
             string.IsNullOrWhiteSpace(model.CloudId))
@@ -230,8 +231,9 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         return Edit(dataSource, context);
     }
 
-    // A self-managed cluster's URL is required, and must not be on the site's own network.
-    private void ValidateUrl(UpdateEditorContext context, string environmentType, string url)
+    // A self-managed cluster's URL is required, and a new one must not be on the site's own network. The stored URL is
+    // not checked again (review 8, G7), so a cluster on a private network saved before the check can still be edited.
+    private void ValidateUrl(UpdateEditorContext context, string environmentType, string url, string storedUrl)
     {
         if (!string.Equals(environmentType, ElasticsearchSourceMetadata.SelfManagedEnvironmentType, StringComparison.OrdinalIgnoreCase))
         {
@@ -242,7 +244,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(EditElasticsearchAIDataSourceViewModel.Url), S["Elasticsearch URL is required."]);
         }
-        else if (!_endpointPolicy.IsAllowed(url.Trim()))
+        else if (!string.Equals(url.Trim(), storedUrl?.Trim(), StringComparison.Ordinal) && !_endpointPolicy.IsAllowed(url.Trim()))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(EditElasticsearchAIDataSourceViewModel.Url), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }

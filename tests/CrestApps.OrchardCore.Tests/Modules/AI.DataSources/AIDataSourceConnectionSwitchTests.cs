@@ -173,6 +173,37 @@ public sealed class AIDataSourceConnectionSwitchTests
         Assert.Contains(context.Updater.ModelState.Keys, key => key.EndsWith(nameof(EditElasticsearchAIDataSourceViewModel.Url), StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("http://10.0.0.5:9200", true)]
+    [InlineData("http://10.0.0.6:9200", false)]
+    public async Task Elasticsearch_ChecksTheUrl_OnlyWhenItChanges(string url, bool isValid)
+    {
+        // Arrange (review 8, G7): a cluster on a private network, saved before the check, could not be edited any more.
+        var connection = new DataConnection { ItemId = ConnectionId, Name = "search", Connector = DataConnectorConstants.Connectors.Elasticsearch };
+        var driver = new ElasticsearchAIDataSourceDisplayDriver(_protection, Options.Create(new ElasticsearchDataSourceOptions()), CreatePicker(connection), EndpointPolicy(), new PassThroughStringLocalizer<ElasticsearchAIDataSourceDisplayDriver>());
+        var dataSource = new AIDataSource { ItemId = "ds-2", Source = AIDataSourceSourceTypes.Elasticsearch };
+        dataSource.Put(new ElasticsearchSourceMetadata
+        {
+            EnvironmentType = ElasticsearchSourceMetadata.SelfManagedEnvironmentType,
+            Url = "http://10.0.0.5:9200",
+            AuthenticationType = ElasticsearchSourceMetadata.NoneAuthenticationType,
+            IndexName = "articles",
+        });
+        var context = Context(new EditElasticsearchAIDataSourceViewModel
+        {
+            EnvironmentType = ElasticsearchSourceMetadata.SelfManagedEnvironmentType,
+            Url = url,
+            AuthenticationType = ElasticsearchSourceMetadata.NoneAuthenticationType,
+            IndexName = "articles-v2",
+        });
+
+        // Act
+        await driver.UpdateAsync(dataSource, context);
+
+        // Assert
+        Assert.Equal(isValid, context.Updater.ModelState.IsValid);
+    }
+
     private static CrestApps.OrchardCore.AI.Core.AIEndpointPolicy EndpointPolicy()
         => new(Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(), Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions()));
 

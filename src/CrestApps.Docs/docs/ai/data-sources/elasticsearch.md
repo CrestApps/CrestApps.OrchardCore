@@ -46,9 +46,13 @@ The data source editor is described in the User Manual under [Data sources](../.
 
 When the **Data Connectors** feature is on, the source editor also offers **Data connection**: pick an **Elasticsearch** connection from **Data Connectors** and the data source reads everything but the index name from the connection. Its own URL and credentials stay stored, unused, so switching back to its own settings loses nothing; a deployment plan leaves its own password and keys out while the connection is used. The URL, the authentication (none, Basic, an API key in a header, or a bearer token), the extra headers and the timeout are the connection's, so one set of credentials serves the AI data sources, the connected data sets and the Report Builder. The connection's secrets stay protected in the connection and are never written to the data source or to a deployment plan.
 
-- Only people who may **Manage data connections and their credentials** see the picker. For anyone else, a data source that uses a connection keeps it when they save.
+- Only people who may **Manage data connections and their credentials** see the picker. For anyone else, a data source that uses a connection keeps it when they save. The data sources API asks for the same permission to bind a connection or change it.
 - A data source without a connection keeps its own settings, or the global connection below; existing data sources are unchanged.
 - OAuth 2.0, OpenID Connect and query-string API keys are refused, because the Elasticsearch client can't send them.
+
+## A cluster on a private network
+
+A self-managed URL may not be on the site's own network (loopback, private or link-local addresses, or a host name that resolves to one, such as `http://elasticsearch:9200` inside Docker), in the editor, the API and the **AIDataSource** recipe step. A host that runs Elasticsearch on a private network sets `CrestApps:AI:Egress:AllowPrivateNetwork` to `true`. The URL is checked only when it is new or changed, so a data source saved before the check keeps working and can still be edited; changing its URL to another private address needs the setting.
 
 ## Global connection
 

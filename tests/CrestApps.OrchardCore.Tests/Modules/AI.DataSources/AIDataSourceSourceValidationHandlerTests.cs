@@ -1,16 +1,20 @@
 using System.Text.Json.Nodes;
+using CrestApps.Core;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 using CrestApps.OrchardCore.AI.DataSources.Handlers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.DataSources;
 
@@ -74,6 +78,44 @@ public sealed class AIDataSourceSourceValidationHandlerTests
     }
 
     [Fact]
+    public async Task Saving_AStoredElasticsearchSourceOnAPrivateNetwork_ThatKeepsItsUrl_Succeeds()
+    {
+        // Arrange (review 8, G7): a self-managed cluster on a private network, saved before the check, could no longer be
+        // edited by the API or a recipe, while it kept syncing. The recipe step changes the record it read, then validates.
+        await using var services = Services();
+        await using var scope = services.CreateAsyncScope();
+        var store = Store(ElasticsearchSource("http://172.18.0.3:9200/"));
+        var manager = Manager(scope, store);
+
+        // Act
+        var entry = await manager.FindByIdAsync("ds-2", TestContext.Current.CancellationToken);
+        entry.Put(Metadata(entry.GetOrCreate<ElasticsearchSourceMetadata>().Url, indexName: "logs-v2"));
+        var result = await manager.ValidateAsync(entry, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors.Select(error => error.ErrorMessage)));
+    }
+
+    [Theory]
+    [InlineData("http://172.18.0.3:9200/")]
+    [InlineData("http://10.0.0.5:9200/")]
+    public async Task Saving_AnElasticsearchSource_ChecksAUrlOnlyWhenItChanges(string url)
+    {
+        // Arrange (review 8, G7): the API validates a copy of the record it read, with the record's id.
+        await using var services = Services();
+        await using var scope = services.CreateAsyncScope();
+        var manager = Manager(scope, Store(ElasticsearchSource("http://172.18.0.3:9200/")));
+        await manager.FindByIdAsync("ds-2", TestContext.Current.CancellationToken);
+        var copy = ElasticsearchSource(url);
+
+        // Act
+        var result = await manager.ValidateAsync(copy, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(url == "http://172.18.0.3:9200/", result.Succeeded);
+    }
+
+    [Fact]
     public async Task Validating_APublicAzureAISearchSource_Succeeds_AndASourceWithoutAHandlerIsLeftAlone()
     {
         // Arrange
@@ -130,6 +172,37 @@ public sealed class AIDataSourceSourceValidationHandlerTests
 
         return context.Result;
     }
+
+    // The data source manager the site uses, over a store that returns the instance it keeps, as a session does.
+    private static DefaultAIDataSourceManager Manager(AsyncServiceScope scope, IAIDataSourceStore store)
+        => new(store, scope.ServiceProvider.GetServices<ICatalogEntryHandler<AIDataSource>>(), NullLogger<DefaultAIDataSourceManager>.Instance);
+
+    private static IAIDataSourceStore Store(AIDataSource stored)
+    {
+        var store = new Mock<IAIDataSourceStore>();
+        store
+            .Setup(x => x.FindByIdAsync(stored.ItemId, It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(stored));
+
+        return store.Object;
+    }
+
+    private static AIDataSource ElasticsearchSource(string url)
+    {
+        var dataSource = new AIDataSource { ItemId = "ds-2", Source = AIDataSourceSourceTypes.Elasticsearch, DisplayText = "Logs" };
+        dataSource.Put(Metadata(url, indexName: "logs"));
+
+        return dataSource;
+    }
+
+    private static ElasticsearchSourceMetadata Metadata(string url, string indexName)
+        => new()
+        {
+            EnvironmentType = ElasticsearchSourceMetadata.SelfManagedEnvironmentType,
+            Url = url,
+            AuthenticationType = ElasticsearchSourceMetadata.NoneAuthenticationType,
+            IndexName = indexName,
+        };
 
     private static AIDataSource AzureSource(string endpoint, string apiKey)
     {
