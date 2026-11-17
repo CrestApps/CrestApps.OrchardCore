@@ -123,6 +123,30 @@ internal static class OrchardCorePermissions
     /// </summary>
     public static readonly Permission ManageBackgroundTasks = new("ManageBackgroundTasks", LocalizationSource.Create("Manage background tasks", typeof(OrchardCorePermissions)));
 
+    /// <summary>
+    /// Gets the security-critical permission to create, design, publish and delete data pipelines. The Data Pipelines
+    /// module declares it in its module assembly; a published pipeline runs with the access of the user who published it.
+    /// </summary>
+    public static readonly Permission ManageDataPipelines = new("ManageDataPipelines", LocalizationSource.Create("Manage data pipelines", typeof(OrchardCorePermissions)), isSecurityCritical: true);
+
+    /// <summary>
+    /// Gets the permission to run published data pipelines and cancel their runs. As in the Data Pipelines module, the
+    /// permission to manage data pipelines implies it.
+    /// </summary>
+    public static readonly Permission RunDataPipelines = new("RunDataPipelines", LocalizationSource.Create("Run data pipelines", typeof(OrchardCorePermissions)), [ManageDataPipelines]);
+
+    /// <summary>
+    /// Gets the permission to view data pipelines and their runs. As in the Data Pipelines module, the permissions to
+    /// manage and to run data pipelines imply it.
+    /// </summary>
+    public static readonly Permission ViewDataPipelines = new("ViewDataPipelines", LocalizationSource.Create("View data pipelines and their runs", typeof(OrchardCorePermissions)), [ManageDataPipelines, RunDataPipelines]);
+
+    /// <summary>
+    /// Gets the permission to list, revoke and delete the shared links of every module. The Data Pipelines Core feature
+    /// declares it in the Data Pipelines module assembly.
+    /// </summary>
+    public static readonly Permission ManageSharedLinks = new("ManageSharedLinks", LocalizationSource.Create("Manage shared links", typeof(OrchardCorePermissions)));
+
     // The Users module declares this template in its module assembly. As there, the permission to manage users implies it.
     private static readonly PermissionTemplate _manageOwnCustomUserSettings = new(
         "ManageOwnCustomUserSettings_{0}",

@@ -28,6 +28,8 @@
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.Contents.Core" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
+    <PackageReference Include="OrchardCore.DataPipelines.Abstractions" />
+    <PackageReference Include="OrchardCore.DataSources.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Setup.Core" />
     <PackageReference Include="OrchardCore.Seo.Abstractions" />
