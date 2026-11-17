@@ -1,11 +1,11 @@
 using OrchardCore.RateLimits;
-using System.Globalization;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Api;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Api;
 using CrestApps.OrchardCore.Commerce.Emails;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Orders;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -437,7 +437,7 @@ internal static class PosApiEndpoints
         // register's open shift, whichever that is.
         if (cashBack > 0m && !await shifts.MoveCashAsync(await shiftStore.FindOpenAsync(shift.RegisterId, CancellationToken.None), -cashBack, $"Refund of order {order.OrderNumber}", httpContext.User, CancellationToken.None))
         {
-            messages.Add($"The register's shift was closed while the refund ran, so the {cashBack.ToString("0.00", CultureInfo.InvariantCulture)} {order.Currency} paid out isn't in its count.");
+            messages.Add($"The register's shift was closed while the refund ran, so the {CurrencyScale.Format(cashBack, order.Currency)} {order.Currency} paid out isn't in its count.");
         }
 
         if (!result.Succeeded && cashBack <= 0m)
