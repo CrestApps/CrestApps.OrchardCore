@@ -15,7 +15,7 @@
                 <div class="ocat-wrapper" asp-validation-class-for="Password">
                     <label asp-for="Password" class="ocat-label ocat-label-required">@T["Your password"]</label>
                     <div class="ocat-end ocat-limited-wrapper">
-                        <input asp-for="Password" type="password" class="form-control" autocomplete="current-password" autofocus />
+                        <input asp-for="Password" type="password" class="form-control" autocomplete="current-password" data-account-password autofocus />
                         <span asp-validation-for="Password" class="text-danger"></span>
                     </div>
                 </div>
