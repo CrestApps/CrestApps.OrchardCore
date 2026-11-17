@@ -27,7 +27,7 @@ The restriction uses the **Role Picker** part from [Roles and Permissions](roles
 - A person can view the item only if they hold at least one of the roles picked on it.
 - An item with no roles picked is not restricted. Everyone who can normally view content can view it.
 - Pick **Authenticated** to open an item to everyone who is signed in, whatever their other roles. Pick **Anonymous** to show it to visitors who are not signed in (signed-in people then need another picked role). Pick both to show it to everyone.
-- Only viewing is limited. Who can edit, publish or delete the item still follows the normal permissions.
+- Only reading is limited: viewing, previewing and listing the item, including through a content type's own permissions when it has **Securable** ticked. Who can edit, publish or delete the item still follows the normal permissions.
 - People in the **Administrator** role can always view every item, restricted or not.
 - A person who does not hold a picked role is refused: the page shows *You do not have access to this resource.*
 

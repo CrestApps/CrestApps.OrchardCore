@@ -31,12 +31,15 @@ User Manual: [Restrict Content by Role](../user-manual/administration/content-ac
 The feature registers `RoleBasedContentItemAuthorizationHandler`, an `IAuthorizationHandler` for
 `PermissionRequirement`:
 
-- It only acts on the `ViewContent` permission checked against a `ContentItem` resource. Edit, publish and delete
+- It acts on every permission that reads a `ContentItem` resource: view, view own, preview, preview own and list,
+  in general or for a securable type (such as `ViewContent_Handbook`), matched by name. A securable type is checked
+  with its own permissions, so without this a restricted item would leak through them. Edit, publish and delete
   checks are not affected.
 - It collects the role names from every `RolePickerPart` on the content type (named or unnamed) whose settings have
   `IsContentRestricted` set to `true`.
-- If the user is in any of those roles, the requirement succeeds. If roles were collected and the user is in none
-  of them, the handler fails the requirement. If no roles were picked, the item is not restricted.
+- If the user is in any of those roles, a view permission (`ViewContent` or the type's `ViewContent_{Type}`)
+  succeeds; listing and previewing still need their own permission. If roles were collected and the user is in none
+  of them, the handler fails every reading permission. If no roles were picked, the item is not restricted.
 - **Authenticated** stands for anyone signed in and **Anonymous** for a visitor, though Orchard Core never puts
   either role in a user's claims: an item restricted to Authenticated opens for every signed-in user, one restricted
   to Anonymous only for visitors, and one restricted to both for everyone. `ContentAccessRoles` (in

@@ -103,6 +103,92 @@ public sealed class RoleBasedContentItemAuthorizationHandlerTests
         Assert.True(context.HasFailed);
     }
 
+    [Theory]
+    [InlineData("ViewContent_Handbook")]
+    [InlineData("ViewOwnContent_Handbook")]
+    [InlineData("PreviewContent_Handbook")]
+    [InlineData("PreviewOwnContent")]
+    [InlineData("ListContent")]
+    public async Task ARestrictedItem_OnASecurableType_StaysRestricted_ForEveryPermissionThatReadsIt(string permission)
+    {
+        // Arrange: a securable type is also checked with its own view permission, which a visitor may hold through the type.
+        var item = Item("Member");
+
+        // Act
+        var visitor = await AuthorizeAsync(Visitor(), item, succeededBefore: true, permission: Permission(permission));
+        var signedIn = await AuthorizeAsync(SignedIn(), item, succeededBefore: true, permission: Permission(permission));
+
+        // Assert
+        Assert.True(visitor.HasFailed);
+        Assert.True(signedIn.HasFailed);
+    }
+
+    [Fact]
+    public async Task AMember_OpensARestrictedItem_ThroughTheTypesOwnViewPermission()
+    {
+        // Arrange
+        var item = Item("Member");
+
+        // Act
+        var context = await AuthorizeAsync(SignedIn("Member"), item, permission: Permission("ViewContent_Handbook"));
+
+        // Assert
+        Assert.True(context.HasSucceeded);
+        Assert.False(context.HasFailed);
+    }
+
+    [Theory]
+    [InlineData("ListContent")]
+    [InlineData("PreviewContent_Handbook")]
+    [InlineData("ViewOwnContent_Handbook")]
+    public async Task BeingInAPickedRole_DoesNotGrantListingOrPreviewing(string permission)
+    {
+        // Arrange: a picked role only lets its people view the item; listing and previewing still need their permission.
+        var item = Item("Authenticated");
+
+        // Act
+        var context = await AuthorizeAsync(SignedIn(), item, permission: Permission(permission));
+
+        // Assert
+        Assert.False(context.HasSucceeded);
+        Assert.False(context.HasFailed);
+    }
+
+    [Theory]
+    [InlineData("EditContent")]
+    [InlineData("EditContent_Handbook")]
+    [InlineData("PublishContent_Handbook")]
+    [InlineData("DeleteOwnContent")]
+    public async Task ARestriction_LeavesPermissionsThatDoNotReadTheItemAlone(string permission)
+    {
+        // Arrange
+        var item = Item("Member");
+
+        // Act
+        var context = await AuthorizeAsync(SignedIn(), item, permission: Permission(permission));
+
+        // Assert
+        Assert.False(context.HasFailed);
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory]
+    [InlineData("ViewContent", true)]
+    [InlineData("ViewContent_KnowledgeArticle", true)]
+    [InlineData("ViewOwnContent_KnowledgeArticle", true)]
+    [InlineData("PreviewContent", true)]
+    [InlineData("PreviewOwnContent_KnowledgeArticle", true)]
+    [InlineData("ListContent", true)]
+    [InlineData("EditContent", false)]
+    [InlineData("PublishContent_KnowledgeArticle", false)]
+    [InlineData("ViewContentTypes", false)]
+    [InlineData(null, false)]
+    public void ReadingPermissions_AreMatchedByName_InGeneralOrForAType(string permission, bool reading)
+        => Assert.Equal(reading, RoleBasedContentItemAuthorizationHandler.IsReading(permission));
+
+    private static global::OrchardCore.Security.Permissions.Permission Permission(string name)
+        => new(name, global::OrchardCore.Localization.LocalizationSource.Create<RoleBasedContentItemAuthorizationHandlerTests>(name));
+
     internal static ClaimsPrincipal Visitor()
         => new(new ClaimsIdentity());
 
