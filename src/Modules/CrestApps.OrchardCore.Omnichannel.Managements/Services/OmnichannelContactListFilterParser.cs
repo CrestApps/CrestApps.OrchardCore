@@ -57,7 +57,23 @@ internal sealed class OmnichannelContactListFilterParser : IContentsAdminListFil
     /// <param name="text">The text of the search box.</param>
     internal static string ToPhraseSearch(string text)
     {
-        if (string.IsNullOrWhiteSpace(text) || text.AsSpan().IndexOfAny("\"()") >= 0)
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return text;
+        }
+
+        // A number written the way people write one, such as "(702) 555-0104", is one number. Its parentheses are not
+        // the search syntax's grouping, which would split it into "702" or "555-0104" and find every record that
+        // holds either.
+        var trimmed = text.Trim();
+
+        if (trimmed.AsSpan().IndexOfAny(" ()") >= 0 &&
+            OmnichannelContactPhoneContentsAdminListFilterProvider.TryParsePhoneLikeTerm(trimmed, out _))
+        {
+            return $"\"{trimmed}\"";
+        }
+
+        if (text.AsSpan().IndexOfAny("\"()") >= 0)
         {
             return text;
         }

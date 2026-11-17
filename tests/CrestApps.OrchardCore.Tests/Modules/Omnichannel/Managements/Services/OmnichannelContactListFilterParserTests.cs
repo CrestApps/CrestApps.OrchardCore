@@ -18,6 +18,9 @@ public sealed class OmnichannelContactListFilterParserTests
     [InlineData("converted:false John Smith", "converted:false \"John Smith\"")]
     [InlineData("John converted:false Smith", "converted:false \"John Smith\"")]
     [InlineData("250 818 3760", "\"250 818 3760\"")]
+    [InlineData("(702) 555-0104", "\"(702) 555-0104\"")]
+    [InlineData("  (702)555-0104 ", "\"(702)555-0104\"")]
+    [InlineData("+1 (702) 555 0104", "\"+1 (702) 555 0104\"")]
     public void ToPhraseSearch_JoinsTheFreeWordsIntoOnePhraseAfterTheNamedTerms(string text, string expected)
         => Assert.Equal(expected, OmnichannelContactListFilterParser.ToPhraseSearch(text));
 
@@ -33,12 +36,29 @@ public sealed class OmnichannelContactListFilterParserTests
     [InlineData("John NOT Smith")]
     [InlineData("John -Smith")]
     [InlineData("(John Smith)")]
+    [InlineData("702")]
+    [InlineData("702-555-0104")]
+    [InlineData("(702) OR (310)")]
     public void ToPhraseSearch_LeavesASearchWithFewerThanTwoFreeWordsOrItsOwnSyntaxAsTyped(string text)
         => Assert.Equal(text, OmnichannelContactListFilterParser.ToPhraseSearch(text));
 
     [Fact]
     public void ToPhraseSearch_LeavesANullSearchAsItIs()
         => Assert.Null(OmnichannelContactListFilterParser.ToPhraseSearch(null));
+
+    [Fact]
+    public void ANumberWithParentheses_IsParsedAsOneFreeTextTermHoldingTheWholeNumber()
+    {
+        // Unquoted, the parentheses are the search syntax's grouping, and "(702) 555-0104" became "702" or "555-0104".
+        var builder = new QueryEngineBuilder<ContentItem>();
+        builder.WithDefaultTerm("text", term => term.ManyCondition((value, query) => query, (value, query) => query));
+        var parser = builder.Build();
+
+        var term = Assert.Single(parser.Parse(OmnichannelContactListFilterParser.ToPhraseSearch("(702) 555-0104")));
+
+        var operation = Assert.IsType<UnaryNode>(Assert.IsAssignableFrom<TermOperationNode>(term).Operation);
+        Assert.Equal("(702) 555-0104", operation.Value);
+    }
 
     [Fact]
     public void QuotedPhrase_IsParsedAsOneFreeTextTermHoldingTheWholePhrase()
