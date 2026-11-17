@@ -359,7 +359,7 @@ public sealed class CanadaPayrollFilingsTests
         var project = XDocument.Load(Path.Combine(directory.FullName, "src", "Modules", "CrestApps.OrchardCore.Payroll", "CrestApps.OrchardCore.Payroll.csproj"));
         var modules = project.Descendants("ProjectReference")
             .Where(reference => reference.Attribute("PrivateAssets")?.Value == "none")
-            .Select(reference => Path.GetFileNameWithoutExtension(reference.Attribute("Include")!.Value))
+            .Select(reference => Path.GetFileNameWithoutExtension(reference.Attribute("Include")!.Value.Replace('\\', Path.DirectorySeparatorChar)))
             .ToList();
 
         // So the packages of the Payroll feature's dependencies come along with Payroll's.
