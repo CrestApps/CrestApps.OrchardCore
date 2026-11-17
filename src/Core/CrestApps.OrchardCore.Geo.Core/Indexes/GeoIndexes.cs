@@ -64,6 +64,8 @@ public sealed class ServiceTerritoryIndexProvider : IndexProvider<ServiceTerrito
     public override void Describe(DescribeContext<ServiceTerritory> context)
     {
         context.For<ServiceTerritoryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new ServiceTerritoryIndex { ItemId = item.ItemId, Name = item.Name, ParentId = item.ParentId });
     }
 }
@@ -85,6 +87,8 @@ public sealed class GeocodeRequestIndexProvider : IndexProvider<GeocodeRequest>
     public override void Describe(DescribeContext<GeocodeRequest> context)
     {
         context.For<GeocodeRequestIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new GeocodeRequestIndex
             {
                 ItemId = item.ItemId,

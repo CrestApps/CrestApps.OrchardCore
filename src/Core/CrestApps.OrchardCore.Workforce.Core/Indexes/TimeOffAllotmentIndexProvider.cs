@@ -20,6 +20,8 @@ public sealed class TimeOffAllotmentIndexProvider : IndexProvider<TimeOffAllotme
     public override void Describe(DescribeContext<TimeOffAllotment> context)
     {
         context.For<TimeOffAllotmentIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new TimeOffAllotmentIndex
             {
                 ItemId = item.ItemId,

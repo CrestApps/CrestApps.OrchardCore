@@ -41,6 +41,8 @@ public sealed class AIQACohortIndexProvider : IndexProvider<AIQACohort>
     public override void Describe(DescribeContext<AIQACohort> context)
     {
         context.For<AIQACohortIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(cohort => new AIQACohortIndex
             {
                 ItemId = cohort.ItemId,
@@ -112,6 +114,8 @@ public sealed class AIAlertRuleIndexProvider : IndexProvider<AIAlertRule>
     public override void Describe(DescribeContext<AIAlertRule> context)
     {
         context.For<AIAlertRuleIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(rule => new AIAlertRuleIndex
             {
                 ItemId = rule.ItemId,

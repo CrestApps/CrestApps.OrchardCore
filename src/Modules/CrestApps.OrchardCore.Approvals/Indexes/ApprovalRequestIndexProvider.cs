@@ -16,6 +16,8 @@ internal sealed class ApprovalRequestIndexProvider : IndexProvider<ApprovalReque
     {
         context
             .For<ApprovalRequestIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(request => new ApprovalRequestIndex
             {
                 ItemId = request.ItemId,

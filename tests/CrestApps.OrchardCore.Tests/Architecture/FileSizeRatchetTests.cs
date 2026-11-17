@@ -67,15 +67,15 @@ public sealed class FileSizeRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/SchedulesController.cs"] = 979,
 
         // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
-        // remove as it is paid down.
+        // remove as it is paid down. Sizes as of main's #1336, which added index declarations to four of them.
         ["src/Core/CrestApps.OrchardCore.Banking.Core/Disbursements/Services/DisbursementService.cs"] = 876,
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Calculation/PayCalculationSteps.cs"] = 1121,
-        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/Garnishments.cs"] = 1067,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/Garnishments.cs"] = 1069,
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayProfileServices.cs"] = 890,
-        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayRunServices.cs"] = 1191,
-        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollFilings.cs"] = 911,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayRunServices.cs"] = 1199,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollFilings.cs"] = 919,
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/UnitedStates/UnitedStatesFilings.cs"] = 939,
-        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/IncomeTaxRules.cs"] = 921,
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/IncomeTaxRules.cs"] = 923,
     };
 
     [Fact]

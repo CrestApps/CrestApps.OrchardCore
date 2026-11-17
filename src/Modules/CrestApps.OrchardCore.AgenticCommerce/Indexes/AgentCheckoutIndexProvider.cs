@@ -17,6 +17,8 @@ internal sealed class AgentCheckoutIndexProvider : IndexProvider<AgentCheckout>
     {
         context
             .For<AgentCheckoutIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(checkout => new AgentCheckoutIndex
             {
                 ItemId = checkout.ItemId,

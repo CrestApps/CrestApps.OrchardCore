@@ -17,6 +17,8 @@ internal sealed class AgentPlatformIndexProvider : IndexProvider<AgentPlatform>
     {
         context
             .For<AgentPlatformIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(platform => new AgentPlatformIndex
             {
                 ItemId = platform.ItemId,

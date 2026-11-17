@@ -20,6 +20,8 @@ public sealed class CalendarIndexProvider : IndexProvider<Calendar>
     public override void Describe(DescribeContext<Calendar> context)
     {
         context.For<CalendarIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(calendar => new CalendarIndex
             {
                 ItemId = calendar.ItemId,
@@ -36,6 +38,7 @@ public sealed class CalendarIndexProvider : IndexProvider<Calendar>
             });
 
         context.For<CalendarShareIndex>()
+            .ExclusiveToDocumentType()
             .Map(calendar => calendar.Shares
                 .Where(share => !string.IsNullOrEmpty(share.PrincipalId) && share.Access > CalendarAccessLevel.None)
                 .Select(share => new CalendarShareIndex

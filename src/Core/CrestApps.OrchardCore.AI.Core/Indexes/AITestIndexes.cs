@@ -67,6 +67,8 @@ public sealed class AITestIndexProvider : IndexProvider<AITestCase>
     public override void Describe(DescribeContext<AITestCase> context)
     {
         context.For<AITestCaseIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(testCase => new AITestCaseIndex
             {
                 ItemId = testCase.ItemId,
@@ -94,6 +96,8 @@ public sealed class AITestRunIndexProvider : IndexProvider<AITestRun>
     public override void Describe(DescribeContext<AITestRun> context)
     {
         context.For<AITestRunIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(run => new AITestRunIndex
             {
                 ItemId = run.ItemId,

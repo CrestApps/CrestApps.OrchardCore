@@ -22,6 +22,8 @@ public sealed class InteractionIndexProvider : IndexProvider<Interaction>
     {
         context
             .For<InteractionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(ToIndex);
     }
 

@@ -27,6 +27,8 @@ public sealed class UserFullNameIndexProvider : IndexProvider<User>
     public override void Describe(DescribeContext<User> context)
     {
         context.For<UserFullNameIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(user =>
             {
                 if (user.TryGet<UserFullNamePart>(out var part))

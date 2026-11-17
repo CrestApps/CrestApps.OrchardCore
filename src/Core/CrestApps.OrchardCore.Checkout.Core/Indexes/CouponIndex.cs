@@ -53,6 +53,8 @@ public sealed class CouponIndexProvider : IndexProvider<Coupon>
     public override void Describe(DescribeContext<Coupon> context)
     {
         context.For<CouponIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(coupon => new CouponIndex
             {
                 ItemId = coupon.ItemId,

@@ -12,6 +12,7 @@ internal sealed class LeadImportIndexProvider : IndexProvider<ContentItem>
     {
         context
             .For<LeadImportIndex>()
+            .ExclusiveToDocumentType()
             .Map(CreateIndexes);
     }
 

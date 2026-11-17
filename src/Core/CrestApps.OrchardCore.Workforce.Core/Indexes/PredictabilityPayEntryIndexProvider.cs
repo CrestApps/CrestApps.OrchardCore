@@ -20,6 +20,8 @@ public sealed class PredictabilityPayEntryIndexProvider : IndexProvider<Predicta
     public override void Describe(DescribeContext<PredictabilityPayEntry> context)
     {
         context.For<PredictabilityPayEntryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new PredictabilityPayEntryIndex
             {
                 ItemId = item.ItemId,

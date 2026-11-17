@@ -22,6 +22,8 @@ public sealed class SecureCaptureSessionIndexProvider : IndexProvider<SecureCapt
     {
         context
             .For<SecureCaptureSessionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(session => new SecureCaptureSessionIndex
             {
                 ItemId = session.ItemId,

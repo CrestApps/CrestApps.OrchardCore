@@ -22,6 +22,8 @@ public sealed class ContactCenterEventMetricIndexProvider : IndexProvider<Contac
     {
         context
             .For<ContactCenterEventMetricIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(metric => new ContactCenterEventMetricIndex
             {
                 ItemId = metric.ItemId,

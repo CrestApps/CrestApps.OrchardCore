@@ -28,6 +28,8 @@ public sealed class DonationIndexProvider : IndexProvider<Donation>
 
     public override void Describe(DescribeContext<Donation> context)
         => context.For<DonationIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(donation => new DonationIndex
             {
                 ItemId = donation.ItemId,

@@ -22,6 +22,8 @@ public sealed class ContactCenterWorkStateIndexProvider : IndexProvider<ContactC
     {
         context
             .For<ContactCenterWorkStateIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(workState => new ContactCenterWorkStateIndex
             {
                 ItemId = workState.ItemId,

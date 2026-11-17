@@ -21,6 +21,8 @@ public sealed class PayScheduleIndexProvider : IndexProvider<PaySchedule>
     {
         context
             .For<PayScheduleIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new PayScheduleIndex
             {
                 ItemId = item.ItemId,
@@ -48,6 +50,8 @@ public sealed class PayCodeIndexProvider : IndexProvider<PayCode>
     {
         context
             .For<PayCodeIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new PayCodeIndex
             {
                 ItemId = item.ItemId,

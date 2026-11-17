@@ -24,6 +24,8 @@ public sealed class WorkforceInboxIndexProvider : IndexProvider<WorkforceInboxIt
     public override void Describe(DescribeContext<WorkforceInboxItem> context)
     {
         context.For<WorkforceInboxIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new WorkforceInboxIndex
             {
                 ItemId = item.ItemId,
@@ -51,6 +53,8 @@ public sealed class WebPushSubscriptionIndexProvider : IndexProvider<WebPushSubs
     public override void Describe(DescribeContext<WebPushSubscription> context)
     {
         context.For<WebPushSubscriptionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new WebPushSubscriptionIndex
             {
                 ItemId = item.ItemId,
@@ -78,6 +82,8 @@ public sealed class WorkerFeedIndexProvider : IndexProvider<StaffMember>
     public override void Describe(DescribeContext<StaffMember> context)
     {
         context.For<WorkerFeedIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(worker => worker.TryGet<WorkerPortalSettings>(out var settings) && DefaultWorkerFeedService.GetHash(settings) is { } hash
                 ? new WorkerFeedIndex { WorkerId = worker.ItemId, TokenHash = hash }
                 : null);

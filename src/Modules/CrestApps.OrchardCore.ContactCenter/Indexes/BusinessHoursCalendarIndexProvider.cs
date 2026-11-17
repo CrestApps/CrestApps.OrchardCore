@@ -22,6 +22,8 @@ public sealed class BusinessHoursCalendarIndexProvider : IndexProvider<BusinessH
     {
         context
             .For<BusinessHoursCalendarIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(calendar => new BusinessHoursCalendarIndex
             {
                 ItemId = calendar.ItemId,

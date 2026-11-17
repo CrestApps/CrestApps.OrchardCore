@@ -37,6 +37,8 @@ public sealed class PlaidItemIndexProvider : IndexProvider<PlaidItem>
     {
         context
             .For<PlaidItemIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new PlaidItemIndex
             {
                 ItemId = item.ItemId,

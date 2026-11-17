@@ -112,6 +112,8 @@ public sealed class SubscriptionRecordIndexProvider : IndexProvider<Subscription
     public override void Describe(DescribeContext<Subscription> context)
     {
         context.For<SubscriptionRecordIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(subscription => new SubscriptionRecordIndex
             {
                 ItemId = subscription.ItemId,

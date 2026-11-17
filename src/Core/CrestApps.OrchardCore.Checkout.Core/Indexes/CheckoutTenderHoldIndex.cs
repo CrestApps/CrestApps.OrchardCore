@@ -27,6 +27,8 @@ public sealed class CheckoutTenderHoldIndexProvider : IndexProvider<CheckoutTend
     public override void Describe(DescribeContext<CheckoutTenderHold> context)
     {
         context.For<CheckoutTenderHoldIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(hold => new CheckoutTenderHoldIndex
             {
                 ItemId = hold.ItemId,

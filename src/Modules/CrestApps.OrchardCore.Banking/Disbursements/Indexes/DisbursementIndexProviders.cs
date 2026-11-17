@@ -16,6 +16,8 @@ internal sealed class DisbursementIndexProvider : IndexProvider<Disbursement>
     {
         context
             .For<DisbursementIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(disbursement => new DisbursementIndex
             {
                 ItemId = disbursement.ItemId,
@@ -50,6 +52,8 @@ internal sealed class DisbursementBatchIndexProvider : IndexProvider<Disbursemen
     {
         context
             .For<DisbursementBatchIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(batch => new DisbursementBatchIndex
             {
                 ItemId = batch.ItemId,

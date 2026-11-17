@@ -29,6 +29,8 @@ public sealed class CustomerPaymentMethodIndexProvider : IndexProvider<CustomerP
     public override void Describe(DescribeContext<CustomerPaymentMethod> context)
     {
         context.For<CustomerPaymentMethodIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(method => new CustomerPaymentMethodIndex
             {
                 ItemId = method.ItemId,

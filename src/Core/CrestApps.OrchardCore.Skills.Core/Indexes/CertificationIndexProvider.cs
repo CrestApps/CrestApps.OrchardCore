@@ -20,6 +20,8 @@ public sealed class CertificationIndexProvider : IndexProvider<Certification>
     public override void Describe(DescribeContext<Certification> context)
     {
         context.For<CertificationIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(certification => new CertificationIndex
             {
                 ItemId = certification.ItemId,

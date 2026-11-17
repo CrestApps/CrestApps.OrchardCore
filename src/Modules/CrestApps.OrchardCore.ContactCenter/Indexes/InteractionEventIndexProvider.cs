@@ -23,6 +23,8 @@ public sealed class InteractionEventIndexProvider : IndexProvider<InteractionEve
     {
         context
             .For<InteractionEventIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(interactionEvent => new InteractionEventIndex
             {
                 ItemId = interactionEvent.ItemId,
