@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Ingestion;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Recipes;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 
@@ -32,8 +33,10 @@ internal sealed class FileSourcesStep : IngestionSourceRecipeStep<FileSource>
     public FileSourcesStep(
         ISourceCatalogManager<FileSource> manager,
         IOptions<IngestionConnectorOptions> connectorOptions,
+        IDataProtectionProvider dataProtectionProvider,
+        IOptions<IngestionSourceSecretOptions> secretOptions,
         IStringLocalizer<FileSourcesStep> stringLocalizer)
-        : base(StepKey, EntriesName, manager)
+        : base(StepKey, EntriesName, manager, dataProtectionProvider, secretOptions)
     {
         _connectorOptions = connectorOptions.Value;
         S = stringLocalizer;
