@@ -83,6 +83,9 @@ public sealed class SubscriptionSignupLinkTests
     }
 
     private static SubscriptionsController CreateController(Action started, AttemptLimitResult? limit = null)
+        => CreateController(_ => started(), limit);
+
+    internal static SubscriptionsController CreateController(Action<StartCheckoutRequest> started, AttemptLimitResult? limit = null)
     {
         var plan = new ContentItem { ContentType = "Plan", ContentItemId = "plan-1", ContentItemVersionId = "plan-1-v1", DisplayText = "Starter plan" };
         plan.Apply(nameof(SubscriptionPart), new SubscriptionPart { BillingDuration = 1, DurationType = DurationType.Month });
@@ -96,9 +99,9 @@ public sealed class SubscriptionSignupLinkTests
 
         var engine = new Mock<ICheckoutEngine>();
         engine.Setup(value => value.StartAsync(It.IsAny<StartCheckoutRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() =>
+            .ReturnsAsync((StartCheckoutRequest request, CancellationToken _) =>
             {
-                started();
+                started(request);
 
                 return new CheckoutSession { SessionId = "session-1", Status = CheckoutSessionStatus.Pending };
             });
