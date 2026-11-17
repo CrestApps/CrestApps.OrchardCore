@@ -125,6 +125,8 @@ Session uploads require the **AI Documents for Chat Sessions** feature (`CrestAp
 
 If a profile allows session document uploads or session image uploads, the chat UI keeps restored widget sessions aligned with the current profile before uploading files. This avoids sending attachment requests through a different profile.
 
+Session uploads are not offered in a chat embedded in a frame on another site. The upload and remove routes need Orchard Core's antiforgery cookie, which is `SameSite=Strict`, and a browser never stores such a cookie in a cross-site frame. So a page the browser loads into a frame of another site (its `Sec-Fetch-Site` is `cross-site` and its `Sec-Fetch-Dest` is `iframe`) gets a chat with no attachment bar, and no antiforgery cookie is issued there, which would also add `X-Frame-Options: SAMEORIGIN` to the page. The same chat served on the site itself, or framed by a page of the same site, keeps its uploads.
+
 The admin and frontend chat widgets restore their saved toggle and panel positions before the chat app finishes initializing.
 
 The admin session chat and both widgets show a compact **Supported formats** note above the input attachment bar. Document extensions follow the profile's **Allow session document uploads** setting, and image extensions only appear when **Allow session image uploads** is enabled and a vision deployment is available.

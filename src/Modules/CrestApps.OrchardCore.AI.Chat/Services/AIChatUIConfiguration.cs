@@ -12,7 +12,8 @@ namespace CrestApps.OrchardCore.AI.Chat.Services;
 /// Serializes the configuration of a chat surface for <c>ai-chat.js</c> with the AG-UI texts in the user's language: the
 /// approval buttons, the tool states, the page context labels, and a friendly name for every tool, so the tool cards
 /// show "Delete Content Item" rather than <c>deleteContent</c>. A chat that uploads or removes session documents also gets
-/// the request's antiforgery token, which the package's document endpoints require.
+/// the request's antiforgery token, which the package's document endpoints require, except in a frame on another site,
+/// where it offers no session documents.
 /// </summary>
 public sealed class AIChatUIConfiguration
 {
@@ -107,6 +108,11 @@ public sealed class AIChatUIConfiguration
     /// as the <c>RequestVerificationToken</c> header; without it the endpoints answer 400 to a signed-in user or a
     /// visitor holding the visitor cookie.
     /// </summary>
+    /// <remarks>
+    /// A page loaded in a frame on another site gets no token, and its chat offers no session documents. The browser
+    /// never stores the antiforgery cookie there, because it is <c>SameSite=Strict</c>, so every upload would be refused;
+    /// and issuing the token adds <c>X-Frame-Options: SAMEORIGIN</c> to the page, which keeps the frame from showing it.
+    /// </remarks>
     /// <param name="chatConfig">The chat configuration.</param>
     private void AddAntiforgeryToken(JsonObject chatConfig)
     {
@@ -123,8 +129,23 @@ public sealed class AIChatUIConfiguration
             return;
         }
 
+        if (IsCrossSiteFrame(httpContext.Request))
+        {
+            chatConfig["sessionDocumentsEnabled"] = false;
+            chatConfig.Remove("uploadDocumentUrl");
+            chatConfig.Remove("removeDocumentUrl");
+
+            return;
+        }
+
         chatConfig["antiforgeryToken"] = _antiforgery.GetAndStoreTokens(httpContext).RequestToken;
     }
+
+    // The fetch metadata a browser sends with a page it loads into a frame of a page on another site.
+    private static bool IsCrossSiteFrame(HttpRequest request)
+        => string.Equals(request.Headers["Sec-Fetch-Site"], "cross-site", StringComparison.OrdinalIgnoreCase) &&
+            (string.Equals(request.Headers["Sec-Fetch-Dest"], "iframe", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(request.Headers["Sec-Fetch-Dest"], "frame", StringComparison.OrdinalIgnoreCase));
 
     private JsonObject GetToolLabels()
     {

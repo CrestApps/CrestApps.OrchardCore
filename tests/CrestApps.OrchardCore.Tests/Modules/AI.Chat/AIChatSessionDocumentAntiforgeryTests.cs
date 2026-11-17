@@ -97,6 +97,62 @@ public sealed class AIChatSessionDocumentAntiforgeryTests
         Assert.False(string.IsNullOrEmpty(widget["chatConfig"]!["antiforgeryToken"]?.GetValue<string>()));
     }
 
+    /// <summary>
+    /// Fix verification Mild: in a frame on another site the browser never stores the antiforgery cookie, which is
+    /// <c>SameSite=Strict</c>, so every upload was refused; and issuing the token added <c>X-Frame-Options: SAMEORIGIN</c>
+    /// to the page, which keeps a cross-site frame from showing it. There the chat gets no token and offers no session
+    /// documents.
+    /// </summary>
+    [Fact]
+    public void ChatInACrossSiteFrame_GetsNoTokenAndNoDocumentUploads()
+    {
+        using var services = CreateServices();
+        var page = NewContext(services, new ClaimsPrincipal(new ClaimsIdentity()), HttpMethods.Get);
+        page.Request.Headers["Sec-Fetch-Site"] = "cross-site";
+        page.Request.Headers["Sec-Fetch-Dest"] = "iframe";
+
+        var widget = JsonNode.Parse(CreateConfiguration(services, page).SerializeWidgetConfig(new
+        {
+            chatConfig = new
+            {
+                sessionDocumentsEnabled = true,
+                uploadDocumentUrl = "/ai/chat-sessions/upload-document",
+                removeDocumentUrl = "/ai/chat-sessions/remove-document",
+            },
+        }))!.AsObject();
+
+        var chatConfig = widget["chatConfig"]!.AsObject();
+
+        Assert.Null(chatConfig["antiforgeryToken"]);
+        Assert.False(chatConfig["sessionDocumentsEnabled"]!.GetValue<bool>());
+        Assert.Null(chatConfig["uploadDocumentUrl"]);
+        Assert.Null(chatConfig["removeDocumentUrl"]);
+        Assert.False(page.Response.Headers.ContainsKey("Set-Cookie"));
+        Assert.False(page.Response.Headers.ContainsKey("X-Frame-Options"));
+    }
+
+    [Theory]
+    [InlineData("same-origin", "iframe")]
+    [InlineData("same-site", "iframe")]
+    [InlineData("cross-site", "document")]
+    public void ChatInAFrameOfTheSameSite_OrOpenedFromAnotherSite_KeepsItsDocumentUploads(string fetchSite, string fetchDestination)
+    {
+        using var services = CreateServices();
+        var page = NewContext(services, SignedInUser(), HttpMethods.Get);
+        page.Request.Headers["Sec-Fetch-Site"] = fetchSite;
+        page.Request.Headers["Sec-Fetch-Dest"] = fetchDestination;
+
+        var config = JsonNode.Parse(CreateConfiguration(services, page).SerializeChatConfig(new
+        {
+            sessionDocumentsEnabled = true,
+            uploadDocumentUrl = "/ai/chat-sessions/upload-document",
+        }))!.AsObject();
+
+        Assert.False(string.IsNullOrEmpty(config["antiforgeryToken"]?.GetValue<string>()));
+        Assert.True(config["sessionDocumentsEnabled"]!.GetValue<bool>());
+        Assert.Equal("/ai/chat-sessions/upload-document", config["uploadDocumentUrl"]?.GetValue<string>());
+    }
+
     private static ValueTask<object> InvokeFilterAsync(DefaultHttpContext context)
         => new CookieAuthenticationAntiforgeryEndpointFilter()
             .InvokeAsync(new DefaultEndpointFilterInvocationContext(context), _ => ValueTask.FromResult(_passed));
