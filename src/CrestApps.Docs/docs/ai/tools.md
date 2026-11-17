@@ -732,6 +732,57 @@ The tool needs **Access admin panel**. It returns what the health endpoint shows
 | `createOrUpdateWorkflow` | `OrchardCore.Workflows` + `OrchardCore.Recipes.Core` | Creates or updates a workflow. |
 | `listWorkflowActivities` | `OrchardCore.Workflows` + `OrchardCore.Recipes.Core` | Lists all available tasks and activities for workflows. |
 
+### Workflow design tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Workflows`
+
+| Function | Description |
+| --- | --- |
+| `getWorkflowActivity` | For up to 10 activity names, returns the JSON schema of the activity's `Properties`, its outcomes and whether they depend on its settings, its outputs and the values it provides to later activities. |
+| `saveWorkflowType` | Creates a workflow from a full definition: settings, variables, activities named by aliases and the transitions between them. It generates the IDs, checks the definition first and saves nothing when there are errors; `validateOnly` only checks. The workflow is disabled unless `isEnabled` is set. |
+| `listWorkflowTypeVersions` | Lists a workflow's published versions, the most recent first, with who published each and when, and marks the version that runs now. |
+| `cloneWorkflowType` | Copies a workflow's published activities, transitions, variables and settings under a new name. The copy is always disabled. |
+| `enableWorkflowType` | Turns a workflow on at once, without publishing. |
+| `disableWorkflowType` | Turns a workflow off at once: its events no longer start instances; instances that already wait are kept. |
+| `deleteWorkflowType` | Deletes one or more workflows with their versions, draft, instances and journals. Asks for approval. |
+
+All seven tools need **Manage workflows**. `saveWorkflowType` checks that each activity exists on the site, that only events start the workflow, that each activity's properties match the schema `getWorkflowActivity` returns, that transitions connect activities of the call with an outcome the activity produces, and that variables have a known type; these checks are not the designer's own validation. It does not change an existing workflow: the designer keeps changes in a draft that only the Workflows module can write, so existing workflows are changed in the designer or with `createOrUpdateWorkflow`. The URL of an HTTP Request event is signed for its workflow, so `saveWorkflowType` and `cloneWorkflowType` leave it empty and say to generate it in the designer. Enabling or disabling changes the live workflow and creates no version; a draft someone left open in the designer still holds the earlier state and would bring it back when published.
+
+### Workflow instance tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Workflows`
+
+| Function | Description |
+| --- | --- |
+| `listWorkflowInstances` | Lists the instances of one workflow or of all, the most recent first, with paging. Each row has the instance ID, workflow, version, status, creation date, fault message, what it waits on and when a retry is due. |
+| `getWorkflowInstance` | Returns one instance: status, version, the activities it waits on, its variable values, its fault and the activity that faulted, the pending retry, parent and child instances, and the last 50 journal records. `sequence` returns the data one activity run recorded; `includeState` adds the state as JSON. |
+| `runWorkflowType` | Starts an enabled workflow that starts with **Started by Workflow**, with values for its input variables, and returns the instance, status, fault and output variables. For a workflow that starts with an HTTP Request event it returns the URL and method instead. Asks for approval. |
+| `rerunWorkflowInstances` | `retry` runs faulted instances again from the activity that faulted, or from a given activity; `restart` starts a new instance with the original input on the published version. Asks for approval. |
+| `cancelWorkflowInstances` | Cancels instances that have not ended: they become Aborted, stop waiting and drop a pending retry. Asks for approval. |
+| `deleteWorkflowInstances` | Deletes instances and their journals. Asks for approval. |
+
+`runWorkflowType` needs **Execute workflows**; the other tools need **Manage workflows**, and `retry` also needs **Execute workflows**, as on the instances page. The run, retry, restart, cancel and delete follow the admin pages: the same locks and the same check of workflows that run one instance at a time, and the instance that runs a cancelled or deleted one as an activity is resumed. The instance tools take at most 50 instance IDs. Running an instance again runs its activities again, so emails, HTTP calls and content changes can repeat. The status and date filters of the instances page are not offered, because they query an index of the Workflows module; each row returns its status. Times are in the user's or the site's time zone. Variable values and the recorded data of an activity can hold personal data and are cut to 2,000 characters each; the state is returned only when asked for.
+
+### Workflow signal tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Workflows.Http`
+
+| Function | Description |
+| --- | --- |
+| `triggerWorkflowSignal` | Sends a named signal to one instance, or to the instances waiting on a Signal event for a correlation ID, which also starts the enabled workflows that start with a Signal event. Asks for approval. |
+
+The tool needs **Execute workflows**. It does what a signal URL does: only the Signal events whose name matches the signal go on.
+
+### Workflow user task tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Workflows` + `OrchardCore.Contents` + `OrchardCore.Roles`
+
+| Function | Description |
+| --- | --- |
+| `completeWorkflowUserTask` | Chooses a user task action, such as Approve, for a content item a workflow waits on, which resumes the workflow on that outcome. Without an action, or with one the user may not choose, it returns the actions the user may choose. Asks for approval. |
+
+The tool needs **Edit content** on the item, as the action buttons are in its editor, and offers only the actions of the User Task events whose roles the user has (every action when the event names no role). Unlike the buttons, it does not save or publish the item.
+
 ### Analytics tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Chat.Analytics`
