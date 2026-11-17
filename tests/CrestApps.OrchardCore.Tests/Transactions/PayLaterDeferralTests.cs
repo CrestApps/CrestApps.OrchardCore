@@ -159,10 +159,15 @@ public sealed class PayLaterDeferralTests
             new PassThroughStringLocalizer<PayLaterTransactionCheckoutHandler>());
 
     private static PayLaterCheckoutPaymentProvider PayLaterProvider(int netTermDays)
-        => new(
-            SiteServiceFactory.Create(new PayLaterSettings { NetTermDays = netTermDays }),
+    {
+        var siteService = SiteServiceFactory.Create(new PayLaterSettings { NetTermDays = netTermDays });
+
+        return new(
+            siteService,
+            new PayLaterDueDateResolver(siteService, Mock.Of<IServiceProvider>()),
             Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(environment => environment.EnvironmentName == "Development"),
             new PassThroughStringLocalizer<PayLaterCheckoutPaymentProvider>());
+    }
 
     private static (PayLaterRenewalBackgroundTask Task, IServiceProvider Services) CreateRenewalTask(FakeTransactionStore store, DateTime now)
     {

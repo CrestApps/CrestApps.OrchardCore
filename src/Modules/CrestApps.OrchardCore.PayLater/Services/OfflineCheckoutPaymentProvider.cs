@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Payments;
 using Microsoft.Extensions.Hosting;
 using OrchardCore;
@@ -57,6 +58,16 @@ public abstract class OfflineCheckoutPaymentProvider : ICheckoutPaymentProvider,
     /// </summary>
     /// <param name="now">The time the checkout completed.</param>
     public abstract Task<DateTime?> GetDueUtcAsync(DateTime now);
+
+    /// <summary>
+    /// Returns when the balance a checkout leaves for <paramref name="payer"/> is due, or <see langword="null"/> for no
+    /// due date. A method whose due date follows the payer's agreed terms overrides it; the others ignore the payer.
+    /// </summary>
+    /// <param name="now">The time the checkout completed.</param>
+    /// <param name="payer">The party that owes the balance, or an empty reference.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public virtual Task<DateTime?> GetDueUtcAsync(DateTime now, PartyRef payer, CancellationToken cancellationToken = default)
+        => GetDueUtcAsync(now);
 
     /// <inheritdoc/>
     public abstract Task<bool> IsAvailableAsync(ICheckoutFlowSession session, CancellationToken cancellationToken = default);
