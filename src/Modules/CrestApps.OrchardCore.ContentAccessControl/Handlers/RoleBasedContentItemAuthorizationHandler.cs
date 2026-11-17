@@ -1,10 +1,9 @@
+using CrestApps.OrchardCore.ContentAccessControl.Services;
 using CrestApps.OrchardCore.Roles.Core;
-using CrestApps.OrchardCore.Roles.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Contents;
 using OrchardCore.Security;
 
@@ -65,45 +64,7 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
             return;
         }
 
-        var roleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        // RolePickerPart is reusable by default. Look in the content type definition for the part.
-        foreach (var partDefinition in definition.Parts)
-        {
-            var settings = partDefinition.GetSettings<RolePickerPartContentAccessControlSettings>();
-
-            if (!settings.IsContentRestricted)
-            {
-                continue;
-            }
-
-            if (partDefinition.IsNamedPart())
-            {
-                var rolePickerPart = contentItem.Get<RolePickerPart>(partDefinition.Name);
-
-                if (rolePickerPart?.RoleNames is null)
-                {
-                    continue;
-                }
-
-                foreach (var roleName in rolePickerPart.RoleNames)
-                {
-                    roleNames.Add(roleName);
-                }
-            }
-            else
-            {
-                if (!contentItem.TryGet<RolePickerPart>(out var rolePickerPart) || rolePickerPart.RoleNames is null)
-                {
-                    continue;
-                }
-
-                foreach (var roleName in rolePickerPart.RoleNames)
-                {
-                    roleNames.Add(roleName);
-                }
-            }
-        }
+        var roleNames = ContentAccessRestriction.GetRoleNames(definition, contentItem);
 
         if (roleNames.Count == 0)
         {

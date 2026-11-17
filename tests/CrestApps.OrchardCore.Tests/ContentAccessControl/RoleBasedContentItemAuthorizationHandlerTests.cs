@@ -187,7 +187,7 @@ public sealed class RoleBasedContentItemAuthorizationHandlerTests
         => Assert.Equal(reading, RoleBasedContentItemAuthorizationHandler.IsReading(permission));
 
     private static global::OrchardCore.Security.Permissions.Permission Permission(string name)
-        => new(name, global::OrchardCore.Localization.LocalizationSource.Create<RoleBasedContentItemAuthorizationHandlerTests>(name));
+        => new(name, global::OrchardCore.Localization.LocalizationSource.Create<RoleBasedContentItemAuthorizationHandlerTests>("Test permission"));
 
     internal static ClaimsPrincipal Visitor()
         => new(new ClaimsIdentity());
