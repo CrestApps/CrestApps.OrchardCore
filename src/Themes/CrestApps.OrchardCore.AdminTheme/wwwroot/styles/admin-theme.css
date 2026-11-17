@@ -1364,6 +1364,21 @@ body.ca-admin {
   color: var(--ca-muted);
 }
 
+html .ca-admin .input-group:not(.has-validation) > :not(:last-child):not(.dropdown-menu):has(+ [data-valmsg-for]:last-child) {
+  border-start-end-radius: var(--bs-border-radius);
+  border-end-end-radius: var(--bs-border-radius);
+}
+
+html .ca-admin .input-group-sm:not(.has-validation) > :not(:last-child):not(.dropdown-menu):has(+ [data-valmsg-for]:last-child) {
+  border-start-end-radius: var(--bs-border-radius-sm);
+  border-end-end-radius: var(--bs-border-radius-sm);
+}
+
+html .ca-admin .input-group-lg:not(.has-validation) > :not(:last-child):not(.dropdown-menu):has(+ [data-valmsg-for]:last-child) {
+  border-start-end-radius: var(--bs-border-radius-lg);
+  border-end-end-radius: var(--bs-border-radius-lg);
+}
+
 .ca-admin .form-text {
   color: var(--ca-muted);
 }
