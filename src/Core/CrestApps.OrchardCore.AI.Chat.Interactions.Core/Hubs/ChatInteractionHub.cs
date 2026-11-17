@@ -127,6 +127,9 @@ public sealed class ChatInteractionHub : ChatInteractionHubBase
     protected override string GetSpeechSynthesisErrorMessage(Exception ex = null)
         => S["An error occurred while synthesizing speech. Please try again."].Value;
 
+    protected override string GetSpeechTextTooLongMessage()
+        => S["This message is too long to read aloud."].Value;
+
     protected override string GetSettingsValidationMessage(string propertyName) => propertyName switch
     {
         "strictness" => S["Strictness must be between 1 and 5."].Value,
