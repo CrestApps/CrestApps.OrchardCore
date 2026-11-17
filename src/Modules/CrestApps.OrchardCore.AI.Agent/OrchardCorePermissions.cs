@@ -94,6 +94,29 @@ internal static class OrchardCorePermissions
         [ViewUserAuditTrailEvents],
         isSecurityCritical: true);
 
+    /// <summary>
+    /// Gets the permission to arrange the widgets of the admin dashboard. The Admin Dashboard module declares it in its
+    /// module assembly.
+    /// </summary>
+    public static readonly Permission ManageAdminDashboard = new("ManageAdminDashboard", LocalizationSource.Create("Manage the Admin Dashboard", typeof(OrchardCorePermissions)));
+
+    /// <summary>
+    /// Gets the permission to see the admin dashboard. As in the Admin Dashboard module, the permission to manage the
+    /// dashboard implies it.
+    /// </summary>
+    public static readonly Permission AccessAdminDashboard = new("AccessAdminDashboard", LocalizationSource.Create("Access the Admin Dashboard", typeof(OrchardCorePermissions)), [ManageAdminDashboard]);
+
+    /// <summary>
+    /// Gets the permission to manage the custom admin menus. Orchard Core declares it in
+    /// OrchardCore.AdminMenu.Abstractions, a package this repository does not reference.
+    /// </summary>
+    public static readonly Permission ManageAdminMenu = new("ManageAdminMenu", LocalizationSource.Create("Manage the admin menu", typeof(OrchardCorePermissions)));
+
+    /// <summary>
+    /// Gets the permission to manage the tenant feature profiles. The Tenants module declares it in its module assembly.
+    /// </summary>
+    public static readonly Permission ManageTenantFeatureProfiles = new("ManageTenantFeatureProfiles", LocalizationSource.Create("Manage tenant feature profiles", typeof(OrchardCorePermissions)));
+
     // The Users module declares this template in its module assembly. As there, the permission to manage users implies it.
     private static readonly PermissionTemplate _manageOwnCustomUserSettings = new(
         "ManageOwnCustomUserSettings_{0}",
