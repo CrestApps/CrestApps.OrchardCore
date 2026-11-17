@@ -213,7 +213,7 @@ public sealed class TicketsControllerTests
         Assert.IsType<ForbidResult>(result);
         Assert.False(page.CanViewProtected);
         Assert.Null(page.ProtectedValues);
-        information.Verify(service => service.ReadValuesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never());
+        information.Verify(service => service.ReadValuesAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never());
     }
 
     [Theory]
@@ -233,7 +233,7 @@ public sealed class TicketsControllerTests
         // this site is refused with a message and nothing is noted.
         Assert.False(await reveals.IsGrantedAsync("ben", "t1", TestContext.Current.CancellationToken));
         Assert.Null(page.ProtectedValues);
-        information.Verify(service => service.RecordRevealAsync("t1", It.IsAny<TicketActor>(), false, It.IsAny<CancellationToken>()), noted ? Times.Once() : Times.Never());
+        information.Verify(service => service.RecordRevealAsync("t1", It.IsAny<TicketActor>(), false, false, It.IsAny<CancellationToken>()), noted ? Times.Once() : Times.Never());
     }
 
     [Fact]
@@ -249,7 +249,7 @@ public sealed class TicketsControllerTests
         var hidden = Assert.IsType<TicketPageViewModel>(Assert.IsType<ViewResult>(await kit.Controller.Display("t1")).Model);
 
         // Assert
-        information.Verify(service => service.RecordRevealAsync("t1", It.IsAny<TicketActor>(), true, It.IsAny<CancellationToken>()), Times.Once());
+        information.Verify(service => service.RecordRevealAsync("t1", It.IsAny<TicketActor>(), true, false, It.IsAny<CancellationToken>()), Times.Once());
         Assert.Equal("S3cret!", Assert.Single(shown.ProtectedValues).Value);
         Assert.Null(hidden.ProtectedValues);
         Assert.False(await reveals.IsGrantedAsync("ben", "t2", TestContext.Current.CancellationToken));
@@ -261,7 +261,7 @@ public sealed class TicketsControllerTests
         var information = new Mock<ITicketProtectedInformation>();
         information.Setup(service => service.ListAsync("t1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([new TicketProtectedItem("p1", "t1", "VPN login", CalendarTestHarness.Now, "Dana", true)]);
-        information.Setup(service => service.ReadValuesAsync("t1", It.IsAny<CancellationToken>()))
+        information.Setup(service => service.ReadValuesAsync("t1", It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([new TicketProtectedValue("p1", "VPN login", "S3cret!")]);
         var password = new Mock<ITicketPasswordConfirmation>();
         password.Setup(service => service.CheckAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<string>())).ReturnsAsync(check);

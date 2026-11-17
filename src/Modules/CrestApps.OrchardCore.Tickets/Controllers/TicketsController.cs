@@ -603,7 +603,10 @@ public sealed class TicketsController : Controller
                 && _serviceProvider.GetService<TicketProtectedReveals>() is { } reveals
                 && await reveals.IsGrantedAsync(UserId(), id, cancellationToken))
             {
-                model.ProtectedValues = await protectedInformation.ReadValuesAsync(id, cancellationToken);
+                model.ProtectedValues = await protectedInformation.ReadValuesAsync(id, cancellationToken: cancellationToken);
+
+                // A page that shows the values is never kept: not by the browser (Back after Hide) nor by a proxy.
+                TicketProtectedReveals.PreventCaching(HttpContext.Response);
             }
         }
 
@@ -1130,18 +1133,18 @@ public sealed class TicketsController : Controller
         switch (await _serviceProvider.GetRequiredService<ITicketPasswordConfirmation>().CheckAsync(User, password))
         {
             case TicketPasswordCheck.Confirmed:
-                await protectedInformation.RecordRevealAsync(id, Actor(), succeeded: true, cancellationToken);
+                await protectedInformation.RecordRevealAsync(id, Actor(), succeeded: true, cancellationToken: cancellationToken);
                 await _serviceProvider.GetRequiredService<TicketProtectedReveals>().GrantAsync(UserId(), id, cancellationToken);
                 break;
             case TicketPasswordCheck.LockedOut:
-                await protectedInformation.RecordRevealAsync(id, Actor(), succeeded: false, cancellationToken);
+                await protectedInformation.RecordRevealAsync(id, Actor(), succeeded: false, cancellationToken: cancellationToken);
                 await _notifier.ErrorAsync(H["Too many wrong passwords: your account is locked for a while."]);
                 break;
             case TicketPasswordCheck.NoLocalPassword:
                 await _notifier.ErrorAsync(H["You sign in to this site without a password, so it can't be confirmed and the protected information can't be shown to you. Ask an administrator to set a password on your account."]);
                 break;
             default:
-                await protectedInformation.RecordRevealAsync(id, Actor(), succeeded: false, cancellationToken);
+                await protectedInformation.RecordRevealAsync(id, Actor(), succeeded: false, cancellationToken: cancellationToken);
                 await _notifier.ErrorAsync(H["That password isn't right."]);
                 break;
         }
@@ -1185,7 +1188,7 @@ public sealed class TicketsController : Controller
             return Forbid();
         }
 
-        await protectedInformation.RemoveAsync(id, itemId, Actor(), cancellationToken);
+        await protectedInformation.RemoveAsync(id, itemId, Actor(), cancellationToken: cancellationToken);
 
         return ProtectedSection(id);
     }
@@ -1566,7 +1569,7 @@ public sealed class TicketsController : Controller
 
         // One query for the page's lock badges.
         var withProtected = _serviceProvider.GetService<ITicketProtectedInformation>() is { } protectedInformation
-            ? await protectedInformation.FindTicketsWithItemsAsync(tickets.Select(ticket => ticket.ContentItemId), cancellationToken)
+            ? await protectedInformation.FindTicketsWithItemsAsync(tickets.Select(ticket => ticket.ContentItemId), cancellationToken: cancellationToken)
             : new HashSet<string>(StringComparer.Ordinal);
 
         var editableDesks = new HashSet<string>(StringComparer.Ordinal);

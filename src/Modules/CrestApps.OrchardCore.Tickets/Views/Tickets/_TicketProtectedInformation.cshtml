@@ -62,7 +62,7 @@
                     <form asp-action="ShowProtected" asp-route-id="@ticketId" method="post" class="mb-3">
                         <label for="ticket-protected-password" class="form-label small">@T["Your password, to show it"]</label>
                         <div class="input-group input-group-sm">
-                            <input id="ticket-protected-password" name="password" type="password" class="form-control" autocomplete="current-password" required />
+                            <input id="ticket-protected-password" name="password" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" required />
                             <button type="submit" class="btn btn-secondary"><i class="fa-solid fa-eye me-1" aria-hidden="true"></i>@T["Show"]</button>
                         </div>
                         <span class="hint">@T["It shows for {0} minutes. Showing it, and each wrong password, is noted on the ticket's history.", (int)CrestApps.OrchardCore.Tickets.Services.TicketProtectedReveals.Window.TotalMinutes]</span>
@@ -85,7 +85,7 @@
                         </div>
                         <div class="mb-2">
                             <label for="ticket-protected-value" class="form-label small">@T["Value"]</label>
-                            <input id="ticket-protected-value" name="value" type="password" class="form-control form-control-sm" maxlength="@CrestApps.OrchardCore.Tickets.Services.ITicketProtectedInformation.MaxValueLength" autocomplete="new-password" required />
+                            <input id="ticket-protected-value" name="value" type="password" class="form-control form-control-sm" maxlength="@CrestApps.OrchardCore.Tickets.Services.ITicketProtectedInformation.MaxValueLength" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" required />
                         </div>
                         <button type="submit" class="btn btn-sm btn-primary">@T["Add"]</button>
                     </form>

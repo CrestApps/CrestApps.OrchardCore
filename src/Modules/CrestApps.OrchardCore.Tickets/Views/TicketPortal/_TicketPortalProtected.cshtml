@@ -50,7 +50,7 @@
                 <form method="post" asp-route="TicketPortalShowProtected" asp-route-number="@Model.Number" class="mt-3">
                     <label for="request-protected-password" class="form-label">@T["Your password, to show it"]</label>
                     <div class="input-group">
-                        <input id="request-protected-password" name="password" type="password" class="form-control" autocomplete="current-password" required />
+                        <input id="request-protected-password" name="password" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" required />
                         <button type="submit" class="btn btn-secondary">@T["Show"]</button>
                     </div>
                 </form>

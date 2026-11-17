@@ -165,7 +165,7 @@ public sealed class TicketPortalController : Controller
         };
 
         var withProtected = HttpContext.RequestServices.GetService<ITicketProtectedInformation>() is { } protectedList
-            ? await protectedList.FindTicketsWithItemsAsync(tickets.Select(ticket => ticket.ContentItemId), HttpContext.RequestAborted)
+            ? await protectedList.FindTicketsWithItemsAsync(tickets.Select(ticket => ticket.ContentItemId), requesterSharedOnly: true, HttpContext.RequestAborted)
             : new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var ticket in tickets)
@@ -660,7 +660,7 @@ public sealed class TicketPortalController : Controller
 
         if (check == TicketPasswordCheck.Confirmed)
         {
-            await protectedInformation.RecordRevealAsync(ticket.ContentItemId, actor, succeeded: true, HttpContext.RequestAborted);
+            await protectedInformation.RecordRevealAsync(ticket.ContentItemId, actor, succeeded: true, requesterSharedOnly: true, HttpContext.RequestAborted);
             await HttpContext.RequestServices.GetRequiredService<TicketProtectedReveals>().GrantAsync(viewer.UserId, ticket.ContentItemId, HttpContext.RequestAborted);
 
             return Redirect(Url.RouteUrl(DisplayRouteName, new { number }) + "#request-protected");
@@ -668,7 +668,7 @@ public sealed class TicketPortalController : Controller
 
         if (check is TicketPasswordCheck.Wrong or TicketPasswordCheck.LockedOut)
         {
-            await protectedInformation.RecordRevealAsync(ticket.ContentItemId, actor, succeeded: false, HttpContext.RequestAborted);
+            await protectedInformation.RecordRevealAsync(ticket.ContentItemId, actor, succeeded: false, requesterSharedOnly: true, HttpContext.RequestAborted);
         }
 
         var model = await BuildDisplayAsync(ticket, viewer.Party, guest: false);
@@ -722,7 +722,7 @@ public sealed class TicketPortalController : Controller
             return NotFound();
         }
 
-        await protectedInformation.RemoveAsync(ticket.ContentItemId, itemId, new TicketActor { Party = viewer.Party, Name = viewer.UserName }, HttpContext.RequestAborted);
+        await protectedInformation.RemoveAsync(ticket.ContentItemId, itemId, new TicketActor { Party = viewer.Party, Name = viewer.UserName }, requesterSharedOnly: true, HttpContext.RequestAborted);
 
         return Redirect(Url.RouteUrl(DisplayRouteName, new { number }) + "#request-protected");
     }
@@ -744,7 +744,7 @@ public sealed class TicketPortalController : Controller
         }
 
         var part = ticket.GetOrCreate<TicketPart>();
-        await protectedInformation.RemoveAsync(ticket.ContentItemId, itemId, new TicketActor { Party = part.Requester, Name = part.RequesterContact?.Name ?? part.RequesterContact?.Email }, HttpContext.RequestAborted);
+        await protectedInformation.RemoveAsync(ticket.ContentItemId, itemId, new TicketActor { Party = part.Requester, Name = part.RequesterContact?.Name ?? part.RequesterContact?.Email }, requesterSharedOnly: true, HttpContext.RequestAborted);
 
         return Redirect(Url.RouteUrl(GuestRouteName, new { id }) + "#request-protected");
     }
@@ -819,18 +819,20 @@ public sealed class TicketPortalController : Controller
 
         // What the requester shared under protection: its labels; its values for the signed-in requester who confirmed
         // their password a few minutes ago. A guest can't confirm a password, so sees the labels and may remove them.
+        // What agents keep on the ticket under protection is theirs: the portal never lists, shows or removes it.
         if (HttpContext.RequestServices.GetService<ITicketProtectedInformation>() is { } protectedInformation)
         {
             var isRequester = !guest && !viewer.IsEmpty && part.Requester == viewer;
 
-            model.ProtectedItems = await protectedInformation.ListAsync(ticket.ContentItemId, HttpContext.RequestAborted);
+            model.ProtectedItems = [.. (await protectedInformation.ListAsync(ticket.ContentItemId, HttpContext.RequestAborted)).Where(item => item.FromRequester)];
             model.CanShowProtected = isRequester && viewer.Kind == PartyKinds.User;
             model.CanRemoveProtected = isRequester || guest;
 
             if (model.CanShowProtected && model.ProtectedItems.Count > 0
                 && await HttpContext.RequestServices.GetRequiredService<TicketProtectedReveals>().IsGrantedAsync(viewer.Id, ticket.ContentItemId, HttpContext.RequestAborted))
             {
-                model.ProtectedValues = await protectedInformation.ReadValuesAsync(ticket.ContentItemId, HttpContext.RequestAborted);
+                model.ProtectedValues = await protectedInformation.ReadValuesAsync(ticket.ContentItemId, requesterSharedOnly: true, HttpContext.RequestAborted);
+                TicketProtectedReveals.PreventCaching(HttpContext.Response);
             }
         }
 

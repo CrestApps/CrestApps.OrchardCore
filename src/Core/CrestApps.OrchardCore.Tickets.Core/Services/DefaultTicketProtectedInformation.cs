@@ -55,13 +55,21 @@ public sealed class DefaultTicketProtectedInformation : ITicketProtectedInformat
         => [.. (await DocumentsAsync(ticketId, cancellationToken)).Select(Item)];
 
     /// <inheritdoc/>
-    public async Task<IReadOnlySet<string>> FindTicketsWithItemsAsync(IEnumerable<string> ticketIds, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlySet<string>> FindTicketsWithItemsAsync(IEnumerable<string> ticketIds, bool requesterSharedOnly = false, CancellationToken cancellationToken = default)
     {
         var ids = (ticketIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
 
         if (ids.Length == 0)
         {
             return new HashSet<string>(StringComparer.Ordinal);
+        }
+
+        // The index holds ids only; who shared an item is on its document (a page of tickets has few).
+        if (requesterSharedOnly)
+        {
+            var documents = await _session.Query<TicketProtectedItemDocument, TicketProtectedItemIndex>(index => index.TicketId.IsIn(ids)).ListAsync(cancellationToken);
+
+            return documents.Where(document => document.FromRequester).Select(document => document.TicketId).ToHashSet(StringComparer.Ordinal);
         }
 
         var rows = await _session.QueryIndex<TicketProtectedItemIndex>(index => index.TicketId.IsIn(ids)).ListAsync(cancellationToken);
@@ -103,10 +111,11 @@ public sealed class DefaultTicketProtectedInformation : ITicketProtectedInformat
     }
 
     /// <inheritdoc/>
-    public async Task<bool> RemoveAsync(string ticketId, string itemId, TicketActor actor, CancellationToken cancellationToken = default)
+    public async Task<bool> RemoveAsync(string ticketId, string itemId, TicketActor actor, bool requesterSharedOnly = false, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(ticketId) || string.IsNullOrEmpty(itemId)
-            || await _session.Query<TicketProtectedItemDocument, TicketProtectedItemIndex>(index => index.TicketId == ticketId && index.ItemId == itemId).FirstOrDefaultAsync(cancellationToken) is not { } document)
+            || await _session.Query<TicketProtectedItemDocument, TicketProtectedItemIndex>(index => index.TicketId == ticketId && index.ItemId == itemId).FirstOrDefaultAsync(cancellationToken) is not { } document
+            || requesterSharedOnly && !document.FromRequester)
         {
             return false;
         }
@@ -118,13 +127,17 @@ public sealed class DefaultTicketProtectedInformation : ITicketProtectedInformat
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<TicketProtectedValue>> ReadValuesAsync(string ticketId, CancellationToken cancellationToken = default)
-        => [.. (await DocumentsAsync(ticketId, cancellationToken)).Select(document => new TicketProtectedValue(document.ItemId, document.Label, Unprotect(document.ProtectedValue)))];
+    public async Task<IReadOnlyList<TicketProtectedValue>> ReadValuesAsync(string ticketId, bool requesterSharedOnly = false, CancellationToken cancellationToken = default)
+        => [.. (await DocumentsAsync(ticketId, cancellationToken))
+            .Where(document => !requesterSharedOnly || document.FromRequester)
+            .Select(document => new TicketProtectedValue(document.ItemId, document.Label, Unprotect(document.ProtectedValue)))];
 
     /// <inheritdoc/>
-    public async Task RecordRevealAsync(string ticketId, TicketActor actor, bool succeeded, CancellationToken cancellationToken = default)
+    public async Task RecordRevealAsync(string ticketId, TicketActor actor, bool succeeded, bool requesterSharedOnly = false, CancellationToken cancellationToken = default)
     {
-        var labels = string.Join(", ", (await DocumentsAsync(ticketId, cancellationToken)).Select(document => document.Label));
+        var labels = string.Join(", ", (await DocumentsAsync(ticketId, cancellationToken))
+            .Where(document => !requesterSharedOnly || document.FromRequester)
+            .Select(document => document.Label));
 
         await NoteAsync(ticketId, actor, succeeded
             ? S["The protected information was shown: {0}.", labels]
@@ -181,7 +194,7 @@ public sealed class DefaultTicketProtectedInformation : ITicketProtectedInformat
         }
     }
 
-    private Task NoteAsync(string ticketId, TicketActor actor, string body, CancellationToken cancellationToken)
+    private Task<TimelineResult> NoteAsync(string ticketId, TicketActor actor, string body, CancellationToken cancellationToken)
         => _timeline.AddAsync(new TimelineEntry
         {
             Subject = new RecordRef(TicketsConstants.RecordKind, ticketId),

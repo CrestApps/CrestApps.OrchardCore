@@ -38,9 +38,10 @@ public interface ITicketProtectedInformation
     /// Finds which of some tickets hold protected information, for the lists' lock badge.
     /// </summary>
     /// <param name="ticketIds">The tickets.</param>
+    /// <param name="requesterSharedOnly">Whether to count only the items the requester shared, for the requester's own lists.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The ids of those that hold some.</returns>
-    Task<IReadOnlySet<string>> FindTicketsWithItemsAsync(IEnumerable<string> ticketIds, CancellationToken cancellationToken = default);
+    Task<IReadOnlySet<string>> FindTicketsWithItemsAsync(IEnumerable<string> ticketIds, bool requesterSharedOnly = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Adds an item to a ticket, its value encrypted, and notes it on the ticket's timeline (the label only).
@@ -60,17 +61,20 @@ public interface ITicketProtectedInformation
     /// <param name="ticketId">The ticket.</param>
     /// <param name="itemId">The item.</param>
     /// <param name="actor">Who removes it.</param>
+    /// <param name="requesterSharedOnly">Whether only an item the requester shared may be removed (a requester removing theirs).</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>Whether it was removed.</returns>
-    Task<bool> RemoveAsync(string ticketId, string itemId, TicketActor actor, CancellationToken cancellationToken = default);
+    Task<bool> RemoveAsync(string ticketId, string itemId, TicketActor actor, bool requesterSharedOnly = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Reads a ticket's items with their values. The caller has checked who may see them and their password.
     /// </summary>
     /// <param name="ticketId">The ticket.</param>
+    /// <param name="requesterSharedOnly">Whether to read only the items the requester shared: a requester never sees what agents
+    /// keep on their ticket.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The items with their values.</returns>
-    Task<IReadOnlyList<TicketProtectedValue>> ReadValuesAsync(string ticketId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TicketProtectedValue>> ReadValuesAsync(string ticketId, bool requesterSharedOnly = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Notes on a ticket's timeline that someone showed its items, or tried to and gave a wrong password.
@@ -78,9 +82,10 @@ public interface ITicketProtectedInformation
     /// <param name="ticketId">The ticket.</param>
     /// <param name="actor">Who.</param>
     /// <param name="succeeded">Whether the password was right.</param>
+    /// <param name="requesterSharedOnly">Whether only the items the requester shared were shown (the requester's own reveal).</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
-    Task RecordRevealAsync(string ticketId, TicketActor actor, bool succeeded, CancellationToken cancellationToken = default);
+    Task RecordRevealAsync(string ticketId, TicketActor actor, bool succeeded, bool requesterSharedOnly = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Moves a ticket's items to another, such as the ticket it is merged into.

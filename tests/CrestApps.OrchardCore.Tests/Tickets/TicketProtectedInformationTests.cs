@@ -39,7 +39,7 @@ public sealed class TicketProtectedInformationTests
         Assert.NotNull(added);
         var stored = await kit.ReadAsync(services => services.GetRequiredService<ISession>().Query<TicketProtectedItemDocument>().FirstOrDefaultAsync(TestContext.Current.CancellationToken));
         Assert.DoesNotContain("S3cret", stored.ProtectedValue, StringComparison.Ordinal);
-        var values = await kit.ReadAsync(services => services.GetRequiredService<ITicketProtectedInformation>().ReadValuesAsync(ticketId, TestContext.Current.CancellationToken));
+        var values = await kit.ReadAsync(services => services.GetRequiredService<ITicketProtectedInformation>().ReadValuesAsync(ticketId, cancellationToken: TestContext.Current.CancellationToken));
         Assert.Equal(("VPN login", Secret), (Assert.Single(values).Label, values[0].Value));
 
         // The ticket, its API model and its timeline: the label at most, never the value.
@@ -63,14 +63,14 @@ public sealed class TicketProtectedInformationTests
         var item = await kit.RunAsync(services => services.GetRequiredService<ITicketProtectedInformation>().AddAsync(withItems, "VPN login", Secret, TicketActor.User("ben", "Ben"), cancellationToken: TestContext.Current.CancellationToken));
 
         // Act
-        var found = await kit.ReadAsync(services => services.GetRequiredService<ITicketProtectedInformation>().FindTicketsWithItemsAsync([withItems, without], TestContext.Current.CancellationToken));
+        var found = await kit.ReadAsync(services => services.GetRequiredService<ITicketProtectedInformation>().FindTicketsWithItemsAsync([withItems, without], cancellationToken: TestContext.Current.CancellationToken));
         await kit.RunAsync(async services =>
         {
             var information = services.GetRequiredService<ITicketProtectedInformation>();
-            await information.RecordRevealAsync(withItems, TicketActor.User("ben", "Ben"), succeeded: false, TestContext.Current.CancellationToken);
-            await information.RecordRevealAsync(withItems, TicketActor.User("ben", "Ben"), succeeded: true, TestContext.Current.CancellationToken);
+            await information.RecordRevealAsync(withItems, TicketActor.User("ben", "Ben"), succeeded: false, cancellationToken: TestContext.Current.CancellationToken);
+            await information.RecordRevealAsync(withItems, TicketActor.User("ben", "Ben"), succeeded: true, cancellationToken: TestContext.Current.CancellationToken);
 
-            return await information.RemoveAsync(withItems, item.ItemId, TicketActor.User("ben", "Ben"), TestContext.Current.CancellationToken);
+            return await information.RemoveAsync(withItems, item.ItemId, TicketActor.User("ben", "Ben"), cancellationToken: TestContext.Current.CancellationToken);
         });
 
         // Assert
@@ -80,6 +80,61 @@ public sealed class TicketProtectedInformationTests
         Assert.Contains(bodies, body => body?.Contains("shown: VPN login", StringComparison.Ordinal) == true);
         Assert.Contains(bodies, body => body?.Contains("removed: VPN login", StringComparison.Ordinal) == true);
         Assert.Empty(await kit.ReadAsync(services => services.GetRequiredService<ITicketProtectedInformation>().ListAsync(withItems, TestContext.Current.CancellationToken)));
+    }
+
+    [Fact]
+    public async Task TheRequester_ReachesOnlyWhatTheyShared_NeverWhatAgentsKeepOnTheirTicket()
+    {
+        // Arrange: the requester shared their VPN login; an agent keeps the server's admin password on the same ticket, and
+        // another ticket holds only an agent's item.
+        await using var kit = await CreateKitAsync();
+        var ticketId = (await kit.CreateAsync()).Ticket.ContentItemId;
+        var agentsOnly = (await kit.CreateAsync("Second")).Ticket.ContentItemId;
+        var (shared, kept) = await kit.RunAsync(async services =>
+        {
+            var information = services.GetRequiredService<ITicketProtectedInformation>();
+            var fromRequester = await information.AddAsync(ticketId, "VPN login", Secret, TicketActor.User("ana", "Ana"), fromRequester: true, TestContext.Current.CancellationToken);
+            var fromAgent = await information.AddAsync(ticketId, "Server admin", "root / Adm1n!", TicketActor.User("ben", "Ben"), cancellationToken: TestContext.Current.CancellationToken);
+            await information.AddAsync(agentsOnly, "Router admin", "admin / R0uter!", TicketActor.User("ben", "Ben"), cancellationToken: TestContext.Current.CancellationToken);
+
+            return (fromRequester, fromAgent);
+        });
+
+        // Act
+        var (values, found, removedKept, removedShared) = await kit.RunAsync(async services =>
+        {
+            var information = services.GetRequiredService<ITicketProtectedInformation>();
+            var read = await information.ReadValuesAsync(ticketId, requesterSharedOnly: true, TestContext.Current.CancellationToken);
+            var withShared = await information.FindTicketsWithItemsAsync([ticketId, agentsOnly], requesterSharedOnly: true, TestContext.Current.CancellationToken);
+            await information.RecordRevealAsync(ticketId, TicketActor.User("ana", "Ana"), succeeded: true, requesterSharedOnly: true, TestContext.Current.CancellationToken);
+            var keptRemoved = await information.RemoveAsync(ticketId, kept.ItemId, TicketActor.User("ana", "Ana"), requesterSharedOnly: true, TestContext.Current.CancellationToken);
+            var sharedRemoved = await information.RemoveAsync(ticketId, shared.ItemId, TicketActor.User("ana", "Ana"), requesterSharedOnly: true, TestContext.Current.CancellationToken);
+
+            return (read, withShared, keptRemoved, sharedRemoved);
+        });
+
+        // Assert
+        Assert.Equal(("VPN login", Secret), (Assert.Single(values).Label, values[0].Value));
+        Assert.Equal([ticketId], found);
+        Assert.False(removedKept);
+        Assert.True(removedShared);
+        Assert.Equal("Server admin", Assert.Single(await kit.ReadAsync(services => services.GetRequiredService<ITicketProtectedInformation>().ListAsync(ticketId, TestContext.Current.CancellationToken))).Label);
+        var shown = Assert.Single(await kit.EntriesAsync(ticketId), entry => entry.Body?.Contains("was shown", StringComparison.Ordinal) == true);
+        Assert.DoesNotContain("Server admin", shown.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void APageShowingTheValues_IsKeptOutOfEveryCache()
+    {
+        // Arrange
+        var response = new Microsoft.AspNetCore.Http.DefaultHttpContext().Response;
+
+        // Act
+        TicketProtectedReveals.PreventCaching(response);
+
+        // Assert
+        Assert.Contains("no-store", response.Headers.CacheControl.ToString(), StringComparison.Ordinal);
+        Assert.Equal("no-cache", response.Headers.Pragma.ToString());
     }
 
     [Fact]

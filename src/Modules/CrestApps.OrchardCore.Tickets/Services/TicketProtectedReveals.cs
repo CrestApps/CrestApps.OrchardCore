@@ -146,6 +146,19 @@ public sealed class TicketProtectedReveals
     public Task RevokeAsync(string userId, string ticketId, CancellationToken cancellationToken = default)
         => _cache.RemoveAsync(Key(userId, ticketId), cancellationToken);
 
+    /// <summary>
+    /// Keeps a response that shows protected values out of every cache: the browser's (so Back after Hide or after the
+    /// window doesn't show them again) and any proxy's.
+    /// </summary>
+    /// <param name="response">The response.</param>
+    public static void PreventCaching(Microsoft.AspNetCore.Http.HttpResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        response.Headers.CacheControl = "no-store, no-cache, max-age=0";
+        response.Headers.Pragma = "no-cache";
+    }
+
     private string Key(string userId, string ticketId)
         => $"tickets:protected-reveal:{_tenant}:{userId}:{ticketId}";
 }

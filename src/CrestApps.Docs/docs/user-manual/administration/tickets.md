@@ -89,7 +89,7 @@ Requesters sometimes need to give a login or another secret. Instead of writing 
 - Only people with **View protected information** on the ticket's desk get **Show**, and the remove buttons. Administrators have it on a new site; on a site that existed before, give it to the roles that need it under **Users > Roles**.
 - If you sign in to the site without a password of your own (only through an outside sign-in), you can't show protected information: ask an administrator to set a password on your account.
 - Each time someone shows the secrets, gives a wrong password, adds or removes one, it's noted in the ticket's **History**, with who and when but never the secret. Too many wrong passwords lock the account for a while, as at sign-in.
-- Add protected information yourself with **Add protected information** on the ticket, or in **Protected information** on the new ticket form. Requesters can add it when they send a request or a reply from the site, or with the request form on a page.
+- Add protected information yourself with **Add protected information** on the ticket, or in **Protected information** on the new ticket form. Requesters can add it when they send a request or a reply from the site, or with the request form on a page. Requesters only ever see what they shared themselves, never what you add.
 - When a ticket is merged, its protected information moves to the ticket it's merged into. A desk can delete it a number of days after a ticket closes: set **Delete protected information after (days)** on the desk (0 keeps it).
 
 ## Merge and link tickets

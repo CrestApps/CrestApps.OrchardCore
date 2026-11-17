@@ -103,7 +103,7 @@
                 </div>
                 <div class="col-12 col-md-7">
                     <label for="ProtectedValue" class="form-label visually-hidden">@T["Value"]</label>
-                    <input id="ProtectedValue" name="ProtectedValue" type="password" class="form-control" maxlength="@CrestApps.OrchardCore.Tickets.Services.ITicketProtectedInformation.MaxValueLength" placeholder="@T["Value"]" autocomplete="new-password" />
+                    <input id="ProtectedValue" name="ProtectedValue" type="password" class="form-control" maxlength="@CrestApps.OrchardCore.Tickets.Services.ITicketProtectedInformation.MaxValueLength" placeholder="@T["Value"]" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
                 </div>
             </div>
             <span class="hint">@T["Optional. A login or other secret the requester gave: kept encrypted, apart from the ticket, and shown only to agents allowed to, after they confirm their password. More can be added on the ticket."]</span>
