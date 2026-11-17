@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
@@ -9,8 +10,10 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using CrestApps.OrchardCore.AI.Core.Recipes;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.Recipes;
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.DataConnectors;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -21,6 +24,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Recipes.Models;
+using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Api;
 
@@ -35,6 +39,7 @@ public sealed class AISourceCatalogApiSecretTests
     private const string Id = "4ds00000000000000000000001";
     private const string MetadataName = "AzureAISearchSourceMetadata";
     private const string StoredKey = "CfDJ8-protected-key";
+    private const string ConnectionId = "4qkc7h2m9x1r5t8v3w6y0z2b4d";
 
     private readonly EphemeralDataProtectionProvider _protection = new();
 
@@ -299,6 +304,143 @@ public sealed class AISourceCatalogApiSecretTests
         Assert.Equal(key, Metadata(Assert.Single(manager.Entries))["ApiKey"].GetValue<string>());
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Update_AnswersWithoutTheStoredKey_InClearOrProtected(bool isProtected)
+    {
+        // Arrange (review 8, G2): GET and the list left the secrets out, but PUT answered with the record as saved. A key
+        // written in clear before keys were protected came back in clear to a caller who renamed the record.
+        var key = isProtected ? Protected("the-stored-key") : "the-stored-key";
+        var manager = Manager(Stored("https://search.vendor.example/", key));
+        var body = new JsonObject { ["DisplayText"] = "Renamed" };
+
+        // Act
+        var result = await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, Secrets(), AIPermissions.ManageAIDataSources);
+        var response = await ResponseAsync(result.Result);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        Assert.Contains("Renamed", response.Body, StringComparison.Ordinal);
+        Assert.Contains("https://search.vendor.example/", response.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("the-stored-key", response.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain(key, response.Body, StringComparison.Ordinal);
+        Assert.Equal(key, Metadata(manager.Entries.Single())["ApiKey"].GetValue<string>());
+    }
+
+    [Fact]
+    public async Task Create_AnswersWithoutTheKey_ItWasGivenOrTheOneItStored()
+    {
+        // Arrange (review 8, G2): POST answered with the record as saved, protected key included.
+        var manager = new InMemorySources();
+        var body = Body("https://search.vendor.example/", "ApiKey", "plain-key");
+        body["Source"] = "AzureAISearch";
+        body["DisplayText"] = "Policies";
+
+        // Act
+        var result = await AISourceCatalogApi.CreateAsync(body, Context(), Authorization(), manager, Secrets(), "data-sources", "data source", AIPermissions.ManageAIDataSources);
+        var response = await ResponseAsync(result.Result);
+
+        // Assert
+        var stored = Metadata(Assert.Single(manager.Entries))["ApiKey"].GetValue<string>();
+        Assert.Equal(StatusCodes.Status201Created, response.StatusCode);
+        Assert.Contains("https://search.vendor.example/", response.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("plain-key", response.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain(stored, response.Body, StringComparison.Ordinal);
+        Assert.Equal("plain-key", Unprotect(stored));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Create_BindsADataConnection_OnlyForSomeoneWhoMayManageDataConnections(bool mayManageConnections)
+    {
+        // Arrange (review 8, G6): the editor lets only people who may manage data connections pick one, because a data
+        // source that uses a connection reads with its credentials; the API bound any connection id it was given.
+        var manager = new InMemorySources();
+        var body = Body("https://search.vendor.example/", "ApiKey", "plain-key");
+        body["Source"] = "AzureAISearch";
+        body["DisplayText"] = "Mine";
+        body["Properties"]["DataConnectionReference"] = new JsonObject { ["ConnectionId"] = ConnectionId };
+        var context = Context();
+
+        // Act
+        var result = await AISourceCatalogApi.CreateAsync(body, context, Authorization(), manager, Secrets(), "data-sources", "data source", AIPermissions.ManageAIDataSources, Picker(context, mayManageConnections));
+
+        // Assert
+        if (mayManageConnections)
+        {
+            Assert.IsType<Created<AIDataSource>>(result.Result);
+            Assert.Single(manager.Entries);
+        }
+        else
+        {
+            Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ProblemHttpResult>(result.Result).StatusCode);
+            Assert.Empty(manager.Entries);
+        }
+    }
+
+    [Fact]
+    public async Task Create_RefusesADataConnection_WhileNoEditorCanPickOne()
+    {
+        // Arrange (review 8, G6): with neither external source feature on, nothing can check the permission.
+        var manager = new InMemorySources();
+        var body = Body("https://search.vendor.example/", "ApiKey", "plain-key");
+        body["Source"] = "AzureAISearch";
+        body["DisplayText"] = "Mine";
+        body["Properties"]["DataConnectionReference"] = new JsonObject { ["ConnectionId"] = ConnectionId };
+
+        // Act
+        var result = await AISourceCatalogApi.CreateAsync(body, Context(), Authorization(), manager, Secrets(), "data-sources", "data source", AIPermissions.ManageAIDataSources, connectionPicker: null);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ProblemHttpResult>(result.Result).StatusCode);
+        Assert.Empty(manager.Entries);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("4qkc7h2m9x1r5t8v3w6y0z2b4e")]
+    public async Task Update_RefusesAnAddedOrChangedDataConnection_WithoutManageDataConnections(string storedConnectionId)
+    {
+        // Arrange (review 8, G6)
+        var stored = Stored("https://search.vendor.example/");
+
+        if (storedConnectionId is not null)
+        {
+            stored.Properties["DataConnectionReference"] = new JsonObject { ["ConnectionId"] = storedConnectionId };
+        }
+
+        var manager = Manager(stored);
+        var body = new JsonObject { ["Properties"] = new JsonObject { ["DataConnectionReference"] = new JsonObject { ["ConnectionId"] = ConnectionId } } };
+        var context = Context();
+
+        // Act
+        var result = await AISourceCatalogApi.UpdateAsync(Id, body, context, Authorization(), manager, Secrets(), AIPermissions.ManageAIDataSources, Picker(context, mayManageConnections: false));
+
+        // Assert
+        Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ProblemHttpResult>(result.Result).StatusCode);
+        Assert.Equal(0, manager.Saves);
+    }
+
+    [Fact]
+    public async Task Update_KeepsTheStoredDataConnection_WithoutManageDataConnections()
+    {
+        // Arrange (review 8, G6): as in the editor, someone who may not pick a connection keeps the stored one.
+        var stored = Stored("https://search.vendor.example/");
+        stored.Properties["DataConnectionReference"] = new JsonObject { ["ConnectionId"] = ConnectionId };
+        var manager = Manager(stored);
+        var body = new JsonObject { ["Properties"] = new JsonObject { [MetadataName] = new JsonObject { ["IndexName"] = "policies-v2" } } };
+        var context = Context();
+
+        // Act
+        var result = await AISourceCatalogApi.UpdateAsync(Id, body, context, Authorization(), manager, Secrets(), AIPermissions.ManageAIDataSources, Picker(context, mayManageConnections: false));
+
+        // Assert
+        Assert.IsType<Ok<AIDataSource>>(result.Result);
+        Assert.Equal(ConnectionId, manager.LastSaved["DataConnectionReference"]["ConnectionId"].GetValue<string>());
+    }
+
     [Fact]
     public void Startups_RegisterThePurposeOfEachSourcesSecrets()
     {
@@ -338,14 +480,41 @@ public sealed class AISourceCatalogApiSecretTests
     private static string Serialized(AIDataSource dataSource)
         => JsonSerializer.Serialize(dataSource, JsonSerializerOptions.Web);
 
-    private static AIDataSource Stored(string endpoint)
+    // The answer as it is written to the response, with the API's JSON options.
+    private static async Task<(int StatusCode, string Body)> ResponseAsync(IResult result)
+    {
+        await using var services = new ServiceCollection().AddLogging().BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = services };
+        using var body = new MemoryStream();
+        context.Response.Body = body;
+
+        await result.ExecuteAsync(context);
+
+        return (context.Response.StatusCode, Encoding.UTF8.GetString(body.ToArray()));
+    }
+
+    // The editors' connection picker, for a caller who may or may not manage data connections.
+    private static AIDataSourceConnectionPicker Picker(HttpContext context, bool mayManageConnections)
+    {
+        var authorization = new Mock<IAuthorizationService>();
+        authorization
+            .Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync((ClaimsPrincipal _, object _, IEnumerable<IAuthorizationRequirement> requirements) =>
+                mayManageConnections || !requirements.OfType<PermissionRequirement>().Any(requirement => requirement.Permission.Name == DataConnectorPermissions.ManageDataConnections.Name)
+                    ? AuthorizationResult.Success()
+                    : AuthorizationResult.Failed());
+
+        return new AIDataSourceConnectionPicker(authorization.Object, new HttpContextAccessor { HttpContext = context }, new PassThroughStringLocalizer<AIDataSourceConnectionPicker>(), Mock.Of<IDataConnectionResolver>());
+    }
+
+    private static AIDataSource Stored(string endpoint, string key = StoredKey)
     {
         var dataSource = new AIDataSource { ItemId = Id, Source = "AzureAISearch", DisplayText = "Policies" };
         dataSource.Properties[MetadataName] = new JsonObject
         {
             ["Endpoint"] = endpoint,
             ["AuthenticationType"] = "ApiKey",
-            ["ApiKey"] = StoredKey,
+            ["ApiKey"] = key,
             ["IndexName"] = "policies",
         };
 

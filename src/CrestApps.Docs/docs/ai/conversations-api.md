@@ -151,11 +151,13 @@ A conversation as listed:
 | `GET`, `POST data-sources`; `GET`, `PUT`, `DELETE data-sources/{id}` | Data sources, in the shape their recipe step takes. Creating one needs its `Source`. `GET` takes `source` to list one kind. |
 | The same on `file-sources` and `web-crawlers` | File sources and web crawlers. |
 
-A `GET` leaves a record's secrets out, such as an API key, a password, a private key or a connection string. A `POST` or `PUT` takes a secret in clear text and stores it protected, as the editor does: the Azure AI Search key, the Elasticsearch password and keys, the PostgreSQL connection string, and the FTP and SFTP passwords, private key and passphrase. A protected value is refused with `400`: a read never returns one, so it could only come from another record.
+A `GET`, and the record a `POST` or `PUT` answers with, leave its secrets out, such as an API key, a password, a private key or a connection string. A `POST` or `PUT` takes a secret in clear text and stores it protected, as the editor does: the Azure AI Search key, the Elasticsearch password and keys, the PostgreSQL connection string, and the FTP and SFTP passwords, private key and passphrase. A protected value is refused with `400`: a read never returns one, so it could only come from another record.
 
 A `PUT` changes the properties it sends and leaves the others as they are. One that leaves a secret out, or sends it empty, keeps the stored secret only while the record still sends it to the same place: when the same update changes the scheme, host or port of an endpoint or URL, the host, port, user name or host key fingerprint of an FTP or SFTP connection, or the authentication type, the kept secret is dropped, as the editor and the recipe step drop it. Send the secret again with such a change; a record that needs it answers `400` until it is given.
 
-A data source saved through the API or the **AIDataSource** recipe step goes through its source's own checks, as in the editor, so an endpoint on the site's own network, or a missing index name or key, answers `400`.
+A data source saved through the API or the **AIDataSource** recipe step goes through its source's own checks, as in the editor, so an endpoint on the site's own network, or a missing index name or key, answers `400`. An Elasticsearch URL is checked only when it is new or changed, so a cluster on a private network saved before the check can still be updated.
+
+A data source that uses a data connection reads with the connection's credentials, so a `POST` or `PUT` that binds one, or changes which one, needs **Manage data connections and their credentials** as well, as the editor's picker does, and answers `403` without it. A `PUT` that keeps the stored connection does not.
 
 ## Phone numbers
 

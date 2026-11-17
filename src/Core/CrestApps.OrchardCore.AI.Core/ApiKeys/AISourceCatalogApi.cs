@@ -1,14 +1,17 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Recipes;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using OrchardCore.Security.Permissions;
@@ -55,15 +58,15 @@ public static class AISourceCatalogApi
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary($"Gets a {displayName}. Secrets are left out.");
 
-        group.MapPost(string.Empty, (JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, IDataProtectionProvider dataProtectionProvider, IOptions<IngestionSourceSecretOptions> secretOptions)
-            => CreateAsync(body, httpContext, authorizationService, manager, new AISourceSecrets(dataProtectionProvider, secretOptions.Value), path, displayName, permission))
+        group.MapPost(string.Empty, (JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, IDataProtectionProvider dataProtectionProvider, IOptions<IngestionSourceSecretOptions> secretOptions, [FromServices] AIDataSourceConnectionPicker connectionPicker = null)
+            => CreateAsync(body, httpContext, authorizationService, manager, new AISourceSecrets(dataProtectionProvider, secretOptions.Value), path, displayName, permission, connectionPicker))
             .WithName($"Create{entityName}")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesValidationProblem()
             .WithSummary($"Creates a {displayName} from the JSON its recipe step takes, with its Source.");
 
-        group.MapPut("{id}", (string id, JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, IDataProtectionProvider dataProtectionProvider, IOptions<IngestionSourceSecretOptions> secretOptions)
-            => UpdateAsync(id, body, httpContext, authorizationService, manager, new AISourceSecrets(dataProtectionProvider, secretOptions.Value), permission))
+        group.MapPut("{id}", (string id, JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, IDataProtectionProvider dataProtectionProvider, IOptions<IngestionSourceSecretOptions> secretOptions, [FromServices] AIDataSourceConnectionPicker connectionPicker = null)
+            => UpdateAsync(id, body, httpContext, authorizationService, manager, new AISourceSecrets(dataProtectionProvider, secretOptions.Value), permission, connectionPicker))
             .WithName($"Update{entityName}")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -133,7 +136,7 @@ public static class AISourceCatalogApi
     /// <summary>
     /// Creates a record from the JSON its recipe step takes, with its source.
     /// </summary>
-    internal static async Task<Results<Created<T>, ValidationProblem, ProblemHttpResult>> CreateAsync<T>(JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, AISourceSecrets secrets, string path, string displayName, Permission permission)
+    internal static async Task<Results<Created<T>, ValidationProblem, ProblemHttpResult>> CreateAsync<T>(JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, AISourceSecrets secrets, string path, string displayName, Permission permission, AIDataSourceConnectionPicker connectionPicker = null)
         where T : CatalogItem, ISourceAwareModel
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Knowledge, permission))
@@ -156,6 +159,12 @@ public static class AISourceCatalogApi
         }
 
         var item = await manager.NewAsync(source, body, httpContext.RequestAborted);
+
+        if (!await MayBindConnectionAsync(stored: null, item, connectionPicker))
+        {
+            return ConnectionForbidden();
+        }
+
         var validation = await manager.ValidateAsync(item, httpContext.RequestAborted);
 
         if (!validation.Succeeded)
@@ -165,7 +174,7 @@ public static class AISourceCatalogApi
 
         await manager.CreateAsync(item, httpContext.RequestAborted);
 
-        return TypedResults.Created($"/api/ai/v1/{path}/{item.ItemId}", item);
+        return TypedResults.Created($"/api/ai/v1/{path}/{item.ItemId}", WithoutSecrets(item));
     }
 
     /// <summary>
@@ -183,8 +192,10 @@ public static class AISourceCatalogApi
     /// <param name="manager">The records' manager.</param>
     /// <param name="secrets">What protects the secrets the body gives.</param>
     /// <param name="permission">The permission to manage the records.</param>
+    /// <param name="connectionPicker">The data source editors' connection picker, which says whether the caller may bind a data
+    /// source to a data connection; <see langword="null"/> while no editor can pick one.</param>
     /// <returns>The updated record, or why it was not updated.</returns>
-    internal static async Task<Results<Ok<T>, ValidationProblem, ProblemHttpResult>> UpdateAsync<T>(string id, JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, AISourceSecrets secrets, Permission permission)
+    internal static async Task<Results<Ok<T>, ValidationProblem, ProblemHttpResult>> UpdateAsync<T>(string id, JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, AISourceSecrets secrets, Permission permission, AIDataSourceConnectionPicker connectionPicker = null)
         where T : CatalogItem, ISourceAwareModel
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Knowledge, permission))
@@ -220,6 +231,12 @@ public static class AISourceCatalogApi
         var copy = await manager.NewAsync(item.Source, Merge(current, changes), httpContext.RequestAborted);
         copy.ItemId = item.ItemId;
         RecipeSecretDestinations.DropKeptSecrets(copy, before);
+
+        if (!await MayBindConnectionAsync(item, copy, connectionPicker))
+        {
+            return ConnectionForbidden();
+        }
+
         var validation = await manager.ValidateAsync(copy, httpContext.RequestAborted);
 
         if (!validation.Succeeded)
@@ -229,7 +246,7 @@ public static class AISourceCatalogApi
 
         await RecipeSecretDestinations.UpdateAsync(item, changes, data => manager.UpdateAsync(item, data, httpContext.RequestAborted));
 
-        return TypedResults.Ok(item);
+        return TypedResults.Ok(WithoutSecrets(item));
     }
 
     /// <summary>
@@ -308,7 +325,7 @@ public static class AISourceCatalogApi
             .ToDictionary(group => group.Key, group => group.Select(error => error.ErrorMessage).ToArray()));
     }
 
-    // A read leaves the secrets out: the protected value is not bound to a record or an address, so whoever holds it could
+    // A read, and the answer to a create or an update, leaves the secrets out (review 8, G2): the protected value is not bound to a record or an address, so whoever holds it could
     // give it to another record that sends it to a host they chose (review 7, F9).
     private static T WithoutSecrets<T>(T item)
         where T : CatalogItem
@@ -355,6 +372,24 @@ public static class AISourceCatalogApi
         changes[key] = merged;
     }
 
+    // A data source that uses a data connection reads with the connection's credentials, so binding one, or changing which
+    // one, takes the permission the editors' picker asks for; keeping the stored one does not (review 8, G6).
+    private static async Task<bool> MayBindConnectionAsync<T>(T stored, T candidate, AIDataSourceConnectionPicker connectionPicker)
+    {
+        if (candidate is not AIDataSource dataSource || AIDataSourceConnectionPicker.GetConnectionId(dataSource) is not { } connectionId)
+        {
+            return true;
+        }
+
+        if (stored is AIDataSource storedDataSource &&
+            string.Equals(AIDataSourceConnectionPicker.GetConnectionId(storedDataSource), connectionId, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return connectionPicker is not null && await connectionPicker.CanPickAsync();
+    }
+
     private static JsonObject Child(JsonObject node, string name)
         => FindKey(node, name) is { } key ? node[key] as JsonObject : null;
 
@@ -385,6 +420,9 @@ public static class AISourceCatalogApi
 
     private static ProblemHttpResult Forbidden()
         => TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Forbidden");
+
+    private static ProblemHttpResult ConnectionForbidden()
+        => TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Forbidden", detail: "Binding a data source to a data connection takes the permission to manage data connections.");
 
     private static ProblemHttpResult NotFound()
         => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Not found");
