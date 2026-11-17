@@ -188,7 +188,7 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
     {
         // Arrange
         var stampBefore = await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true });
-        var signedInThroughGitHub = new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.AuthenticationMethod, "GitHub");
+        var signedInThroughGitHub = await _harness.SignInClaimsAsync("user-1", new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.AuthenticationMethod, "GitHub"));
         var asked = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", null, signedInThroughGitHub).Confirm(new EmailSignInViewModel()));
         var code = _harness.Sender.Sent[^1].Code;
 
@@ -221,7 +221,7 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         var user = new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true };
         user.LoginInfos.Add(new UserLoginInfo("GitHub", "github-someone-else", "GitHub"));
         await _harness.CreateUserAsync(user);
-        var signedInThroughGitHub = new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.AuthenticationMethod, "GitHub");
+        var signedInThroughGitHub = await _harness.SignInClaimsAsync("user-1", new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.AuthenticationMethod, "GitHub"));
         await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", null, signedInThroughGitHub).Confirm(new EmailSignInViewModel()));
         var code = _harness.Sender.Sent[^1].Code;
 
@@ -262,7 +262,7 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
     {
         // Arrange
         await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true }, withPassword: false);
-        var signedInThroughGitHub = new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.AuthenticationMethod, "GitHub");
+        var signedInThroughGitHub = await _harness.SignInClaimsAsync("user-1", new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.AuthenticationMethod, "GitHub"));
 
         // Act
         var page = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", null, signedInThroughGitHub).Confirm(returnUrl: null));
@@ -313,7 +313,7 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
     {
         // Arrange: a session a password began carries amr=pwd.
         await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true });
-        var signedInWithPassword = new System.Security.Claims.Claim("amr", "pwd");
+        var signedInWithPassword = await _harness.SignInClaimsAsync("user-1", new System.Security.Claims.Claim("amr", "pwd"));
         var asked = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", null, signedInWithPassword).Confirm(new EmailSignInViewModel()));
         var code = _harness.Sender.Sent[^1].Code;
 

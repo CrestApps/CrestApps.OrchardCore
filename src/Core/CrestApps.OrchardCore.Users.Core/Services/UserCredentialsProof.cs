@@ -21,6 +21,14 @@ namespace CrestApps.OrchardCore.Users.Core.Services;
 /// (with <c>amr=mfa</c> too when a second factor followed it). An e-mailed code (<c>amr=otp</c>, see
 /// <see cref="EmailedCodeMethod"/>) and Orchard Core's sign-in after registration show neither.
 /// </para>
+/// <para>
+/// Those marks say how the session began, not that the credential is still the one it began with: the cookie can be
+/// older than the account's current password or logins (somebody removed the login it signed in through and linked
+/// their own account of the same provider). Identity rotates the security stamp when a password is set, changed or
+/// reset and when a login is removed, so a session shows a credential only while its cookie carries the account's
+/// current stamp (<see cref="SecurityStampClaimType"/>). A fresh sign-in, Identity's refresh at its stamp check and
+/// <c>RefreshSignInAsync</c> all write the current stamp.
+/// </para>
 /// </remarks>
 public static class UserCredentialsProof
 {
@@ -28,6 +36,20 @@ public static class UserCredentialsProof
     /// The claim ASP.NET Core Identity adds to say how a session began.
     /// </summary>
     public const string AuthenticationMethodReferenceClaim = "amr";
+
+    /// <summary>
+    /// The claim ASP.NET Core Identity puts the account's security stamp in when it signs a session in
+    /// (<see cref="Microsoft.AspNetCore.Identity.ClaimsIdentityOptions.SecurityStampClaimType"/>'s default, which Orchard
+    /// Core keeps).
+    /// </summary>
+    public const string SecurityStampClaimType = "AspNet.Identity.SecurityStamp";
+
+    /// <summary>
+    /// The claim a sign-in carries when the account's address isn't proved and it has a password or an external login
+    /// (see <see cref="HasCredentialsInDoubt"/>). The Confirm email ownership feature adds it when it builds the
+    /// session's claims, so only such a session has its account read on every page.
+    /// </summary>
+    public const string CredentialsInDoubtClaim = "crestapps_credentials_in_doubt";
 
     /// <summary>
     /// The <see cref="AuthenticationMethodReferenceClaim"/> value of a session a code e-mailed to the account began, when
@@ -60,6 +82,7 @@ public static class UserCredentialsProof
     public static bool ShowsPassword(ClaimsPrincipal principal, User account)
         => IsSignedInTo(principal, account) &&
             !string.IsNullOrEmpty(account.PasswordHash) &&
+            HasCurrentSecurityStamp(principal, account) &&
             string.IsNullOrEmpty(principal.FindFirstValue(ClaimTypes.AuthenticationMethod)) &&
             principal.HasClaim(claim => claim.Type == AuthenticationMethodReferenceClaim && (claim.Value == "pwd" || claim.Value == "mfa"));
 
@@ -71,7 +94,7 @@ public static class UserCredentialsProof
     /// <param name="account">The account.</param>
     public static string ShownLoginProvider(ClaimsPrincipal principal, User account)
     {
-        if (!IsSignedInTo(principal, account))
+        if (!IsSignedInTo(principal, account) || !HasCurrentSecurityStamp(principal, account))
         {
             return null;
         }
@@ -86,6 +109,52 @@ public static class UserCredentialsProof
     }
 
     /// <summary>
+    /// Whether the account's address isn't proved and it has a password or an external login: credentials somebody else
+    /// may hold, which the first proof of the address removes unless the request shows them.
+    /// </summary>
+    /// <param name="account">The account.</param>
+    public static bool HasCredentialsInDoubt(User account)
+        => HasCredentials(account) && !UserEmailOwnership.IsVerified(account.Properties, account.Email);
+
+    /// <summary>
+    /// Whether <paramref name="principal"/>'s sign-in was to an account with credentials in doubt (it carries
+    /// <see cref="CredentialsInDoubtClaim"/>) or began with an e-mailed code. No other session can show less than its
+    /// account has, so nothing else needs the account read.
+    /// </summary>
+    /// <param name="principal">The request's user.</param>
+    public static bool MayHaveCredentialsInDoubt(ClaimsPrincipal principal)
+        => principal?.Identity?.IsAuthenticated == true &&
+            (principal.HasClaim(claim => claim.Type == CredentialsInDoubtClaim) || SignedInWithEmailedCode(principal));
+
+    /// <summary>
+    /// Whether <paramref name="account"/> has a password or an external login that <paramref name="principal"/> does not
+    /// show, which the first proof of its address would remove: anything but the password the session shows, or the
+    /// account's only login of the provider it shows.
+    /// </summary>
+    /// <param name="principal">The request's user.</param>
+    /// <param name="account">The account.</param>
+    public static bool HasCredentialsNotShown(ClaimsPrincipal principal, User account)
+    {
+        if (!HasCredentials(account))
+        {
+            return false;
+        }
+
+        var passwordShown = ShowsPassword(principal, account);
+
+        if (!passwordShown && !string.IsNullOrEmpty(account.PasswordHash))
+        {
+            return true;
+        }
+
+        var logins = account.LoginInfos ?? [];
+        var provider = passwordShown ? null : ShownLoginProvider(principal, account);
+        var shown = provider is not null && logins.Count(login => string.Equals(login.LoginProvider, provider, StringComparison.Ordinal)) == 1 ? 1 : 0;
+
+        return logins.Count > shown;
+    }
+
+    /// <summary>
     /// Whether <paramref name="principal"/>'s session began with a code e-mailed to an account whose credentials nobody
     /// proved were the code holder's (see <see cref="EmailedCodeMethod"/>).
     /// </summary>
@@ -93,6 +162,11 @@ public static class UserCredentialsProof
     public static bool SignedInWithEmailedCode(ClaimsPrincipal principal)
         => principal?.Identity?.IsAuthenticated == true &&
             principal.HasClaim(claim => claim.Type == AuthenticationMethodReferenceClaim && claim.Value == EmailedCodeMethod);
+
+    // The cookie was issued, or refreshed, since the account's credentials last changed.
+    private static bool HasCurrentSecurityStamp(ClaimsPrincipal principal, User account)
+        => !string.IsNullOrEmpty(account.SecurityStamp) &&
+            string.Equals(principal.FindFirstValue(SecurityStampClaimType), account.SecurityStamp, StringComparison.Ordinal);
 
     private static bool IsSignedInTo(ClaimsPrincipal principal, User account)
         => principal?.Identity?.IsAuthenticated == true &&

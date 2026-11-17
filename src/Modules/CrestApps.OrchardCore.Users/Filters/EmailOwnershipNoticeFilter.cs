@@ -12,15 +12,20 @@ using OrchardCore.Users.Models;
 namespace CrestApps.OrchardCore.Users.Filters;
 
 /// <summary>
-/// Tells a user whom an e-mailed code signed in to an account with a password or an external login nobody proved is
-/// theirs (<see cref="UserCredentialsProof.EmailedCodeMethod"/>), on every page they open, that somebody else may hold
+/// Tells a user whose account's address isn't proved, and has a password or an external login their session does not
+/// show (<see cref="UserCredentialsProof.HasCredentialsNotShown"/>, which counts a credential as shown only while the
+/// session's cookie carries the account's current security stamp), on every page they open, that somebody else may hold
 /// them, and how to remove them: "Confirm it's you". Whoever registered with the address, or changed their email to it,
-/// could otherwise keep reading what the owner adds to the account. It stops once the address is proved, which signs the
-/// browser in again without the mark.
+/// could otherwise keep reading what the owner adds to the account. It is decided on the account, not on how the
+/// session began, so it stays after the owner links or removes a login, which signs the browser in again. It stops once
+/// the address is proved.
 /// </summary>
 /// <remarks>
-/// It reads the account only for a session that carries the mark, and only for a page (a GET that renders a view), so
-/// other requests cost nothing. The notice goes through Orchard Core's notifier, which runs on the result after this.
+/// It reads the account only on a page (a GET that renders a view) of a session marked as one to an account with
+/// credentials in doubt (<see cref="UserCredentialsProof.CredentialsInDoubtClaim"/>, added when the session's claims are
+/// built, see <see cref="Services.EmailOwnershipClaimsProvider"/>) or begun with an e-mailed code: one user read per
+/// such page. Other sessions and other requests cost nothing. The notice goes through Orchard Core's notifier, which
+/// runs on the result after this.
 /// </remarks>
 public sealed class EmailOwnershipNoticeFilter : IAsyncActionFilter
 {
@@ -54,9 +59,9 @@ public sealed class EmailOwnershipNoticeFilter : IAsyncActionFilter
         if (executed.Result is not ViewResult ||
             !HttpMethods.IsGet(httpContext.Request.Method) ||
             context.Controller is EmailOwnershipController or EmailSignInController ||
-            !UserCredentialsProof.SignedInWithEmailedCode(httpContext.User) ||
+            !UserCredentialsProof.MayHaveCredentialsInDoubt(httpContext.User) ||
             await _userManager.GetUserAsync(httpContext.User) is not User account ||
-            !UserCredentialsProof.HasCredentials(account) ||
+            !UserCredentialsProof.HasCredentialsNotShown(httpContext.User, account) ||
             await _confirmationPage.GetUrlAsync(account, httpContext.Request.PathBase + httpContext.Request.Path + httpContext.Request.QueryString, httpContext.RequestAborted) is not { } url)
         {
             return;

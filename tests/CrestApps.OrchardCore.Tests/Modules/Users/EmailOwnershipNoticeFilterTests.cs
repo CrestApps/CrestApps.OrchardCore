@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Users;
+using CrestApps.OrchardCore.Users.Core.Services;
 using CrestApps.OrchardCore.Users.Filters;
 using CrestApps.OrchardCore.Users.Services;
 using Microsoft.AspNetCore.Http;
@@ -16,14 +17,18 @@ using Moq;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
+using OrchardCore.Users.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Users;
 
 /// <summary>
 /// F3 (third fix-verification review): a code signs the address's owner in to an account whose password or external
-/// login somebody else may hold, with nothing removed, and the only notice was shown once, after the sign-in, and said
-/// nothing about them. Every page now says it plainly to a session an e-mailed code began, until the owner confirms.
-/// These run the filter over Orchard Core's user store on SQLite, with the real confirmation page service.
+/// login somebody else may hold, with nothing removed. Every page says so plainly until the owner confirms.
+/// G4 (fourth fix-verification review): the warning was tied to the code session's <c>amr=otp</c>, which a later
+/// sign-in (linking or removing a login) drops, so it is now decided on the account: its address isn't proved and it
+/// has a credential the session doesn't show (with G1's security stamp check). These run the filter over Orchard Core's
+/// user store and claims principal factory on SQLite, with the feature's claims provider and the real confirmation page
+/// service; each session's claims are what a sign-in would put in its cookie.
 /// </summary>
 public sealed class EmailOwnershipNoticeFilterTests : IAsyncLifetime
 {
@@ -33,7 +38,7 @@ public sealed class EmailOwnershipNoticeFilterTests : IAsyncLifetime
     private EmailSignInHarness _harness;
 
     public async ValueTask InitializeAsync()
-        => _harness = await EmailSignInHarness.CreateAsync();
+        => _harness = await EmailSignInHarness.CreateAsync(services => services.AddScoped<IUserClaimsProvider, EmailOwnershipClaimsProvider>());
 
     public async ValueTask DisposeAsync()
         => await _harness.DisposeAsync();
@@ -42,8 +47,8 @@ public sealed class EmailOwnershipNoticeFilterTests : IAsyncLifetime
     public async Task ACodeSession_OnAnAccountWithCredentialsNobodyProved_IsToldOnEveryPage()
     {
         // Arrange
-        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true });
-        var codeSession = SignedIn(new Claim("amr", "otp"));
+        await CreateAccountAsync();
+        var codeSession = await SessionAsync(new Claim("amr", "otp"));
 
         // Act: two pages.
         var first = await RenderPageAsync(codeSession);
@@ -57,12 +62,53 @@ public sealed class EmailOwnershipNoticeFilterTests : IAsyncLifetime
         Assert.Single(second);
     }
 
+    // G4: the owner signed in with a code and linked their own login; Orchard Core signed the browser in again through
+    // it, without amr=otp. The password somebody else may hold is still there.
     [Fact]
-    public async Task APasswordSession_IsNotTold()
+    public async Task AfterTheCodeSessionLinksALogin_ItIsStillTold()
     {
-        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true });
+        await CreateAccountAsync();
 
-        Assert.Empty(await RenderPageAsync(SignedIn(new Claim("amr", "pwd"))));
+        Assert.Single(await RenderPageAsync(await SessionAsync(new Claim(ClaimTypes.AuthenticationMethod, "GitHub"))));
+    }
+
+    // G4 with G1: the session's login was replaced after its cookie was issued, so the session shows nothing.
+    [Fact]
+    public async Task ASessionWhoseLoginWasReplacedSinceItSignedIn_IsTold()
+    {
+        // Arrange
+        await CreateAccountAsync(withPassword: false);
+        var session = await SessionAsync(new Claim(ClaimTypes.AuthenticationMethod, "GitHub"));
+
+        await _harness.InRequestAsync(async services =>
+        {
+            var manager = services.GetRequiredService<UserManager<IUser>>();
+            var account = await manager.FindByIdAsync("user-1");
+
+            Assert.True((await manager.RemoveLoginAsync(account, "GitHub", "github-user-1")).Succeeded);
+            Assert.True((await manager.AddLoginAsync(account, new UserLoginInfo("GitHub", "github-squatter", "GitHub"))).Succeeded);
+
+            return account;
+        });
+
+        // Act and assert
+        Assert.Single(await RenderPageAsync(session));
+    }
+
+    [Fact]
+    public async Task APasswordSession_OnAnAccountWithOnlyItsPassword_IsNotTold()
+    {
+        await CreateAccountAsync(withLogin: false);
+
+        Assert.Empty(await RenderPageAsync(await SessionAsync(new Claim("amr", "pwd"))));
+    }
+
+    [Fact]
+    public async Task APasswordSession_OnAnAccountWithALoginItDoesntShow_IsTold()
+    {
+        await CreateAccountAsync();
+
+        Assert.Single(await RenderPageAsync(await SessionAsync(new Claim("amr", "pwd"))));
     }
 
     [Fact]
@@ -72,19 +118,42 @@ public sealed class EmailOwnershipNoticeFilterTests : IAsyncLifetime
         UserEmailOwnership.MarkVerified(user.Properties, Email, _harness.Now);
         await _harness.CreateUserAsync(user);
 
-        Assert.Empty(await RenderPageAsync(SignedIn(new Claim("amr", "otp"))));
+        Assert.Empty(await RenderPageAsync(await SessionAsync(new Claim("amr", "otp"))));
     }
 
     [Fact]
     public async Task AFormPost_IsNotTold()
     {
-        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true });
+        await CreateAccountAsync();
 
-        Assert.Empty(await RenderPageAsync(SignedIn(new Claim("amr", "otp")), HttpMethods.Post));
+        Assert.Empty(await RenderPageAsync(await SessionAsync(new Claim("amr", "otp")), HttpMethods.Post));
     }
 
-    private static ClaimsPrincipal SignedIn(params Claim[] claims)
-        => new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1"), .. claims], "Identity.Application"));
+    // What keeps the filter cheap: only a session of an account whose address isn't proved and that has a credential
+    // carries the mark, and the filter reads the account for no other session.
+    [Fact]
+    public async Task OnlyASessionOfAnAccountWithCredentialsInDoubt_CarriesTheMark()
+    {
+        // Arrange
+        await CreateAccountAsync();
+        var proved = new User { UserId = "user-2", UserName = "sam", Email = "sam@example.test", EmailConfirmed = true, IsEnabled = true };
+        UserEmailOwnership.MarkVerified(proved.Properties, proved.Email, _harness.Now);
+        await _harness.CreateUserAsync(proved);
+
+        // Act
+        var inDoubt = await _harness.SignInClaimsAsync("user-1");
+        var settled = await _harness.SignInClaimsAsync("user-2");
+
+        // Assert
+        Assert.Contains(inDoubt, claim => claim.Type == UserCredentialsProof.CredentialsInDoubtClaim);
+        Assert.DoesNotContain(settled, claim => claim.Type == UserCredentialsProof.CredentialsInDoubtClaim);
+    }
+
+    private Task<string> CreateAccountAsync(bool withPassword = true, bool withLogin = true)
+        => _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true }, withPassword, withLogin);
+
+    private async Task<ClaimsPrincipal> SessionAsync(params Claim[] signInClaims)
+        => new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1"), .. await _harness.SignInClaimsAsync("user-1", signInClaims)], IdentityConstants.ApplicationScheme));
 
     // One page request: the action renders a view, and the filter runs around it.
     private Task<List<Notice>> RenderPageAsync(ClaimsPrincipal principal, string method = "GET")

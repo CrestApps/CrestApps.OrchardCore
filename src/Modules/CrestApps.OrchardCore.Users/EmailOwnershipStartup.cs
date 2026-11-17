@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
+using OrchardCore.Users.Services;
 
 namespace CrestApps.OrchardCore.Users;
 
@@ -48,7 +49,9 @@ public sealed class EmailOwnershipStartup : StartupBase
         services.AddEmailOwnershipConfirmation();
         services.Configure<EmailSignInOptions>(_shellConfiguration.GetSection(EmailSignInOptions.SectionName));
 
-        // A user a code signed in to an account with credentials nobody proved are theirs is told on every page.
+        // A user whose account has credentials nobody proved are theirs, which the session doesn't show, is told on every
+        // page. The claims provider marks those sessions, so the filter reads the account for them only.
+        services.AddScoped<IUserClaimsProvider, EmailOwnershipClaimsProvider>();
         services.Configure<MvcOptions>(options => options.Filters.Add<EmailOwnershipNoticeFilter>());
 
         // Counted on the shared attempt limiter, across nodes, whether or not Rate Limits is on.

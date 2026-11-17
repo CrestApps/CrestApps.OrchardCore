@@ -128,7 +128,21 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
     }
 
     /// <summary>
-    /// Runs one request: the action gets the request's services, then the request's session commits.
+    /// The claims a sign-in to the account puts in its cookie now, after the user id: what Orchard Core's claims
+    /// principal factory makes of the account as saved (its security stamp included), and the claims the sign-in adds
+    /// (<c>amr=pwd</c> for a password, the provider's name for an external login, <c>amr=otp</c> for an e-mailed code).
+    /// </summary>
+    public Task<Claim[]> SignInClaimsAsync(string userId, params Claim[] signInClaims)
+        => InRequestAsync(async services =>
+        {
+            var account = await services.GetRequiredService<UserManager<IUser>>().FindByIdAsync(userId);
+            var principal = await services.GetRequiredService<IUserClaimsPrincipalFactory<IUser>>().CreateAsync(account);
+
+            return (Claim[])[.. principal.Claims.Where(claim => claim.Type != ClaimTypes.NameIdentifier), .. signInClaims];
+        });
+
+    /// <summary>
+    /// Runs one request:the action gets the request's services, then the request's session commits.
     /// </summary>
     public async Task<T> InRequestAsync<T>(Func<IServiceProvider, Task<T>> action)
     {
@@ -276,7 +290,7 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
             configuration.UseSqLite(ConnectionString);
             configuration.ConnectionFactory = new LooseCollationConnectionFactory(ConnectionString);
         });
-        Store.RegisterIndexes([new UserIndexProvider()]);
+        Store.RegisterIndexes([new UserIndexProvider(), new UserByLoginInfoIndexProvider()]);
         await Store.InitializeAsync(TestContext.Current.CancellationToken);
 
         await using (var session = Store.CreateSession())
@@ -294,6 +308,11 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
                 .Column<int>("AccessFailedCount")
                 .Column<DateTime>("LockoutEndUtc"));
 
+            // Identity's AddLoginAsync looks the login up in it, as Orchard Core's migration creates it.
+            await schemaBuilder.CreateMapIndexTableAsync<UserByLoginInfoIndex>(table => table
+                .Column<string>("LoginProvider")
+                .Column<string>("ProviderKey"));
+
             await transaction.CommitAsync(TestContext.Current.CancellationToken);
         }
 
@@ -305,6 +324,9 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
         services.AddHttpContextAccessor();
         services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
         services.AddIdentityCore<IUser>();
+
+        // Orchard Core's Users feature builds the cookie's claims this way, with the IUserClaimsProvider services.
+        services.AddScoped<IUserClaimsPrincipalFactory<IUser>, DefaultUserClaimsPrincipalProviderFactory>();
         services.AddSingleton(CreateClock());
         services.AddScoped(_ => Store.CreateSession());
 
