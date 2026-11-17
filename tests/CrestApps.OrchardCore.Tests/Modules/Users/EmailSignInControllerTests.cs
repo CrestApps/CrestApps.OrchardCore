@@ -274,7 +274,8 @@ public sealed class EmailSignInControllerTests
     [Fact]
     public async Task AnAccountWithOnlyAnExternalLogin_IsNotSignedInWithACode()
     {
-        // Arrange
+        // Arrange: its address is proved, so a code has nothing to take back (G5 covers one whose address isn't).
+        UserEmailOwnership.MarkVerified(_user.Properties, Email, _now);
         _userManager.Setup(manager => manager.HasPasswordAsync(_user)).ReturnsAsync(false);
         _userManager.Setup(manager => manager.GetLoginsAsync(_user)).ReturnsAsync([new UserLoginInfo("Microsoft", "key-1", "Microsoft")]);
         var code = await CreateCodes().IssueAsync(_user.UserId, Email, TestContext.Current.CancellationToken);

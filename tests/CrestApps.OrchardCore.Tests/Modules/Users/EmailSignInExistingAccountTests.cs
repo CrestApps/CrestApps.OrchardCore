@@ -287,6 +287,44 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         Assert.Contains(signIn.Claims, claim => claim.Type == "amr" && claim.Value == "otp");
     }
 
+    // G5 (fourth fix-verification review): somebody registered with the owner's address through their own external
+    // login. A code refused an account with only external logins, and where password reset is off the owner had no way
+    // back. A code now takes such an account back when its address isn't proved: its logins are removed, the address is
+    // proved, and the owner is signed in with nothing of the other person's left.
+    [Fact]
+    public async Task ACode_TakesBackAnAccountWithOnlyAnExternalLogin_WhoseAddressIsntProved()
+    {
+        // Arrange
+        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true }, withPassword: false);
+
+        // Act
+        var result = await SignInWithCodeAsync();
+
+        // Assert
+        Assert.IsType<LocalRedirectResult>(result);
+        var account = await FindAsync("user-1");
+        Assert.Empty(account.LoginInfos);
+        Assert.True(UserEmailOwnership.IsVerified(account.Properties, account.Email));
+        Assert.Equal(["user-1"], _harness.Revoked);
+
+        var signIn = Assert.Single(_harness.SignIns);
+        Assert.DoesNotContain(signIn.Claims, claim => claim.Type == "amr");
+        Assert.Equal(0, Assert.Single(_merges).Logins);
+    }
+
+    [Fact]
+    public async Task AnAccountWithOnlyAnExternalLogin_WhoseAddressIsProved_GetsNoCode()
+    {
+        var user = new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true };
+        UserEmailOwnership.MarkVerified(user.Properties, Email, _harness.Now);
+        await _harness.CreateUserAsync(user, withPassword: false);
+
+        await _harness.InRequestAsync(services => _harness.CreateController(services).Index(new EmailSignInViewModel { Email = Email }));
+
+        Assert.Empty(_harness.Sender.Sent);
+        Assert.Single((await FindAsync("user-1")).LoginInfos);
+    }
+
     [Fact]
     public async Task AWrongPassword_IsRefused_BeforeTheCode_SoTheCodeStillWorks()
     {

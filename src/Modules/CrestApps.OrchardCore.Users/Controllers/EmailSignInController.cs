@@ -187,10 +187,12 @@ public sealed class EmailSignInController : Controller
 
         // On a site that requires confirmed addresses, though, Orchard refuses every sign-in to an unconfirmed account, so
         // its password and logins never signed anyone in, and the owner couldn't reset the password either: that account
-        // is proved below like one with no credentials, which removes them.
+        // is proved below like one with no credentials, which removes them. So is an account that signs in only through
+        // external logins (G5): a code never signs in to one with its logins kept, which would get around the provider's
+        // checks, and EmailSignInEligibility lets a code reach it only while its address isn't proved, as a take-back.
         if (user is User account &&
             !UserEmailOwnership.IsVerified(account.Properties, account.Email) &&
-            EmailOwnershipProof.HasCredentials(account) &&
+            !string.IsNullOrEmpty(account.PasswordHash) &&
             !_proof.CredentialsNeverSignedIn(account))
         {
             // A password or an external login set before anyone proved the address may be somebody else's, and recording

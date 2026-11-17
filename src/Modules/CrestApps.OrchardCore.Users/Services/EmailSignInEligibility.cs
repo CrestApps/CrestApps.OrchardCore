@@ -8,8 +8,10 @@ namespace CrestApps.OrchardCore.Users.Services;
 /// <summary>
 /// Which accounts a code e-mailed to their address can sign in, or confirm the address of: enabled, not locked out,
 /// not using two-factor sign-in, which a code would get around, not in a role kept to password sign-in (Administrator
-/// by default), and, to sign in, not one that signs in only through an external provider, whose own checks a code
-/// would get around too.
+/// by default), and, to sign in, not one that signs in only through an external provider whose address is proved, whose
+/// own checks a code would get around too. One whose address isn't proved may be somebody else's registration with the
+/// owner's address, so a code takes it back instead: its logins are removed when the code proves the address (see
+/// <see cref="Controllers.EmailSignInController"/>), and nobody signs in through them again.
 /// </summary>
 public sealed class EmailSignInEligibility
 {
@@ -28,7 +30,9 @@ public sealed class EmailSignInEligibility
     /// <param name="user">The account.</param>
     public async Task<bool> AllowsAsync(IUser user)
         => await AllowsConfirmationAsync(user) &&
-            (await _userManager.HasPasswordAsync(user) || (await _userManager.GetLoginsAsync(user)).Count == 0);
+            (await _userManager.HasPasswordAsync(user) ||
+                (await _userManager.GetLoginsAsync(user)).Count == 0 ||
+                user is User account && !UserEmailOwnership.IsVerified(account.Properties, account.Email));
 
     /// <summary>
     /// Whether a code can confirm the address of <paramref name="user"/>, who is signed in already: the accounts a code
