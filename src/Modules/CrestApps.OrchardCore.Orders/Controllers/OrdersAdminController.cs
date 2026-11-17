@@ -18,6 +18,7 @@ using OrchardCore.Navigation;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Notify;
 
@@ -310,6 +311,15 @@ public sealed class OrdersAdminController : Controller
             return NotFound();
         }
 
+        // An amount that isn't a number binds as a model error and a null, and the refund reads a null as "everything still
+        // refundable". Only an empty amount means that.
+        if (IsInvalid(nameof(OrderRefundInputModel.Amount)) || IsInvalid($"{nameof(model)}.{nameof(OrderRefundInputModel.Amount)}"))
+        {
+            await _notifier.ErrorAsync(H["Enter the amount as a number, such as 12.50, or leave it empty to refund everything still refundable."]);
+
+            return RedirectToAction(nameof(Detail), new { orderId });
+        }
+
         var result = await operations.RefundAsync(order, model?.Amount, model?.Reason, model?.Restock == true, User.Identity?.Name, model?.AsStoreCredit == true, HttpContext.RequestAborted);
 
         await NotifyAsync(result, result.Refunded > 0m ? H["Refunded {0}.", ProductPriceFormatter.Format(result.Refunded, order.Currency)] : null);
@@ -365,6 +375,9 @@ public sealed class OrdersAdminController : Controller
 
         return await _orderStore.FindByIdAsync(orderId, HttpContext.RequestAborted);
     }
+
+    private bool IsInvalid(string key)
+        => ModelState.GetFieldValidationState(key) == ModelValidationState.Invalid;
 
     private async Task NotifyAsync(OrderOperationResult result, LocalizedHtmlString success)
     {
