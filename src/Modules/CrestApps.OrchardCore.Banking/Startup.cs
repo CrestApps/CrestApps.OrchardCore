@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Navigation;
 using CrestApps.OrchardCore.Banking.Recipes;
 using CrestApps.OrchardCore.Banking.Reports;
+using CrestApps.OrchardCore.Banking.Services;
 using CrestApps.OrchardCore.Banking.Workflows;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Recipes.Core;
@@ -48,6 +49,7 @@ public sealed class Startup : StartupBase
         services.AddPartyDirectory();
         services.AddHttpContextAccessor();
         services.AddDisplayDriver<BankAccount, BankAccountDisplayDriver>();
+        services.AddScoped<BankAccountLinkFlow>();
         services.AddPermissionProvider<BankingPermissionProvider>();
         services.AddNavigationProvider<BankingAdminMenu>();
     }

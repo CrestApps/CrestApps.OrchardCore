@@ -4,6 +4,7 @@ title: Bank accounts
 description: "Keep the business's bank accounts and the accounts of the people it pays in one place, with account numbers hidden, checked before payments go to them, and shown in full only to people allowed to see them."
 technical_manual:
   - modules/banking
+  - modules/plaid
 ---
 
 Bank accounts hold the accounts money is sent from and sent to: the business's own accounts, such as the one payroll is paid from, and the accounts of the people and organizations it pays, such as an employee's pay account. Checks, payments and payroll use these accounts instead of keeping account numbers of their own.
@@ -48,6 +49,32 @@ Open the account and set **Status** under **Verification**:
 Write in **Reason** how you checked it, such as "Called the bank". When a feature that checks accounts for you is on, the page offers a **Check with** button for it.
 
 Changing the routing number or the account number always takes the account back to **Unverified**.
+
+## Link the bank instead
+
+When **Plaid Bank Account Linking** is set up, the account holder can link their bank instead of anyone typing the numbers: they sign in to their bank in a Plaid window and choose the account. The bank's own routing and account numbers are saved and the account is **Verified** at once, with **Plaid** as how it was checked. Their bank password goes to the bank, never to this site.
+
+- On **Banking > My Bank Accounts**, choose **Add bank account**, then **Link your bank with Plaid**. Enter the name of the account holder, choose **Link your bank** and follow the Plaid window. The account is named after the bank and its last digits unless you give it a name.
+- To replace the numbers of an account you already have, open it and choose **Link your bank with Plaid instead**.
+- An administrator can open any account and choose **Link with Plaid** from the action bar's menu, for example while sitting with the account holder, who signs in to their own bank.
+
+If the bank can't give the numbers at once, nothing is saved and you can enter the numbers yourself. Some banks (such as Chase, PNC and US Bank) give an account number made for Plaid: if the account holder later removes Plaid's access at their bank, that number stops working, so the account goes back to **Unverified** with the reason, and no payment goes to it until it is linked again or the numbers are entered.
+
+### Set up Plaid
+
+| | |
+| --- | --- |
+| **Menu** | Configuration > Settings > Plaid |
+| **Permission** | Manage Plaid settings |
+| **Feature** | Plaid Bank Account Linking |
+
+<AskYourAdmin />
+
+1. In your Plaid dashboard, copy the client id and the secret of the environment you want: **Sandbox** links Plaid's test banks only, **Production** links real banks.
+2. Under **Security > Secrets**, add a text secret holding the Plaid secret, such as one named Plaid.Secret. The Plaid settings never keep the secret itself.
+3. Under **Configuration > Settings > Plaid**, choose the environment, enter the client id, choose the secret and save. Choose **Test the connection** to check that Plaid accepts them.
+
+The **Link your bank with Plaid** buttons show once the settings work. Plaid bills each linked account. To turn Plaid off, empty the client id.
 
 ## See a full account number
 

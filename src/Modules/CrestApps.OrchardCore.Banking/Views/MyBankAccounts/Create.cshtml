@@ -1,3 +1,6 @@
+@using CrestApps.OrchardCore.Banking.Services
+@inject IBankAccountService BankAccountService
+
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
@@ -5,6 +8,33 @@
         <breadcrumb-item id="MyBankAccounts" action="Index" controller="MyBankAccounts" area="CrestApps.OrchardCore.Banking" permission="@BankingPermissions.ManageOwnBankAccounts.Name">@T["My bank accounts"]</breadcrumb-item>
     </breadcrumb>
 </zone>
+
+@{
+    var linkProviders = new List<IBankAccountLinkProvider>();
+
+    foreach (var provider in BankAccountService.LinkProviders)
+    {
+        if (await provider.IsAvailableAsync())
+        {
+            linkProviders.Add(provider);
+        }
+    }
+}
+
+@if (linkProviders.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Link your bank"]</div>
+        <div class="card-body">
+            <p>@T["Sign in to your bank and choose the account: its numbers are filled in for you and it is verified at once, so it can receive payments right away."]</p>
+            @foreach (var provider in linkProviders)
+            {
+                <a class="btn btn-primary me-2" role="button" href="@Url.Action("Link", new { provider = provider.Name })">@T["Link your bank with {0}", provider.DisplayName]</a>
+            }
+            <p class="text-muted mt-3 mb-0">@T["Or enter the numbers yourself below. The account is then verified later."]</p>
+        </div>
+    </div>
+}
 
 <form method="post" class="no-multisubmit" autocomplete="off">
     @Html.ValidationSummary()

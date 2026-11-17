@@ -1,0 +1,14 @@
+@model BankAccountLinkViewModel
+
+@{
+    var id = ViewContext.RouteData.Values["id"]?.ToString();
+}
+
+<zone Name="Title">
+    <breadcrumb name="BankAccountsLink" title="@T["Link {0}", Model.AccountName]">
+        <breadcrumb-item id="BankAccounts" action="Index" controller="BankAccounts" area="CrestApps.OrchardCore.Banking" permission="@BankingPermissions.ManageBankAccounts.Name">@T["Bank accounts"]</breadcrumb-item>
+        <breadcrumb-item id="BankAccountsEdit" action="Edit" controller="BankAccounts" area="CrestApps.OrchardCore.Banking" route-id="@id" permission="@BankingPermissions.ManageBankAccounts.Name">@Model.AccountName</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_BankAccountLinkForm" model="Model" />
