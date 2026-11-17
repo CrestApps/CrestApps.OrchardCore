@@ -170,10 +170,32 @@ public sealed class SubscriptionLapseAndRecoverySqliteTests
         Assert.Equal(SubscriptionStatus.PastDue, (await subscriptions.FindByIdAsync("sub-1", TestContext.Current.CancellationToken)).Status);
     }
 
+    /// <summary>
+    /// Selling-sites Mild (third fix verification): a subscription a payment provider bills, whose renewal failed at the
+    /// provider, was resumed here when a terms invoice of the same checkout was paid, giving back what it grants while the
+    /// provider's renewal was still unpaid. Only the provider's own payment brings such a subscription back.
+    /// </summary>
+    [Fact]
+    public async Task PayingATermsInvoiceOfTheCheckout_LeavesAGatewayBilledSubscriptionPastDue()
+    {
+        await using var database = await Database.CreateAsync();
+        await using var session = database.Store.CreateSession();
+        var (handler, subscriptions, transactions) = await SeedPastDueAsync(session, overdueRenewals: 0, overdueFee: true, providerSubscriptionId: "sub_provider_1");
+
+        var fee = await transactions.GetByObligationAsync("session-1", "fee-ob", TestContext.Current.CancellationToken);
+        fee.Status = TransactionStatus.Paid;
+        await transactions.UpdateAsync(fee, TestContext.Current.CancellationToken);
+
+        await handler.StatusChangedAsync(fee, TransactionStatus.Outstanding, TransactionStatus.Paid, TestContext.Current.CancellationToken);
+
+        Assert.Equal(SubscriptionStatus.PastDue, (await subscriptions.FindByIdAsync("sub-1", TestContext.Current.CancellationToken)).Status);
+    }
+
     private static async Task<(SubscriptionFirstPaymentTransactionHandler Handler, SubscriptionManager Subscriptions, TransactionStore Transactions)> SeedPastDueAsync(
         ISession session,
         int overdueRenewals,
-        bool overdueFee = false)
+        bool overdueFee = false,
+        string providerSubscriptionId = null)
     {
         var clock = new TestClock(_now);
         var subscriptionStore = new SubscriptionStore(session, clock);
@@ -185,7 +207,8 @@ public sealed class SubscriptionLapseAndRecoverySqliteTests
             ItemId = "sub-1",
             Title = "Site plan",
             OwnerId = "owner-1",
-            ProviderKey = "PayLater",
+            ProviderKey = providerSubscriptionId is null ? "PayLater" : "Stripe",
+            ProviderSubscriptionId = providerSubscriptionId,
             CheckoutSessionId = "session-1",
             ObligationId = "plan-ob",
             Status = SubscriptionStatus.PastDue,

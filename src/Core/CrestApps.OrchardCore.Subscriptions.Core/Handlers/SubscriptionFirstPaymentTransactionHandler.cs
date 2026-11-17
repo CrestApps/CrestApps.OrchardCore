@@ -66,7 +66,11 @@ public sealed class SubscriptionFirstPaymentTransactionHandler : TransactionEven
             // An overdue transaction of the checkout made the agreement past due: an invoice of the agreement, its sign-up fee
             // or a one-time item bought with it. Paying one brings the agreement back once nothing of the checkout is overdue;
             // otherwise the grace window ran out on a customer who had paid, or a cycle paid over an unpaid fee cleared it.
+            // An agreement a payment provider bills is past due when the provider's renewal failed, which no transaction here
+            // records; only the provider's payment brings it back. Resuming it here gave back what it grants, a sold site
+            // included, while the provider's renewal was still unpaid.
             if (subscription.Status == SubscriptionStatus.PastDue &&
+                string.IsNullOrEmpty(subscription.ProviderSubscriptionId) &&
                 !(othersOverdue ??= await HasOtherOverdueAsync(transaction, cancellationToken)))
             {
                 await _lifecycleService.ResumeAsync(subscription.ItemId, cancellationToken);
