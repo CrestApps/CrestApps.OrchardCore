@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.KnowledgeBase.Indexes;
 using CrestApps.OrchardCore.KnowledgeBase.Models;
 using OrchardCore.Autoroute.Models;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
@@ -18,6 +19,9 @@ namespace CrestApps.OrchardCore.KnowledgeBase.Migrations;
 /// </summary>
 internal sealed class KnowledgeBaseMigrations : DataMigration
 {
+    // Orchard Core's Wysiwyg editor of a Markdown body, instead of its plain one.
+    private const string WysiwygEditor = "Wysiwyg";
+
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
     public KnowledgeBaseMigrations(IContentDefinitionManager contentDefinitionManager)
@@ -42,12 +46,14 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
                 .Creatable()
                 .Securable()
                 .WithPart<TitlePart>(part => part
-                    .WithPosition("1")
+                    .WithPosition(KnowledgeArticlePartPositions.Of(nameof(TitlePart)))
                     .WithSettings(new TitlePartSettings { Options = TitlePartOptions.EditableRequired }))
-                .WithPart(KnowledgeBaseConstants.PartName, part => part.WithPosition("2"))
-                .WithPart<MarkdownBodyPart>(part => part.WithPosition("3"))
+                .WithPart(KnowledgeBaseConstants.PartName, part => part.WithPosition(KnowledgeArticlePartPositions.Of(KnowledgeBaseConstants.PartName)))
+                .WithPart<MarkdownBodyPart>(part => part
+                    .WithPosition(KnowledgeArticlePartPositions.Of(nameof(MarkdownBodyPart)))
+                    .WithEditor(WysiwygEditor))
                 .WithPart<AutoroutePart>(part => part
-                    .WithPosition("4")
+                    .WithPosition(KnowledgeArticlePartPositions.Of(nameof(AutoroutePart)))
                     .WithSettings(new AutoroutePartSettings
                     {
                         AllowCustomPath = true,
@@ -72,7 +78,7 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
 
         await DefineCategoriesAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -92,6 +98,44 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
         await DefineCategoriesAsync();
 
         return 2;
+    }
+
+    /// <summary>
+    /// Gives the Knowledge Article type's parts whole positions, which Orchard Core's content type editor needs (version 2
+    /// put the category's part at 2.5, and that page failed), and makes the body's editor the Wysiwyg one where it is
+    /// still the default; an editor an administrator chose stays.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        var type = await _contentDefinitionManager.GetTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType);
+
+        if (type is null)
+        {
+            return 3;
+        }
+
+        var positions = KnowledgeArticlePartPositions.Renumber([.. type.Parts.Select(part => (part.Name, part.GetSettings<ContentTypePartSettings>().Position))]);
+        var body = type.Parts.FirstOrDefault(part => part.PartDefinition.Name == nameof(MarkdownBodyPart));
+        var bodyEditorIsDefault = body is not null && string.IsNullOrEmpty(body.Editor());
+
+        if (positions.Count > 0 || bodyEditorIsDefault)
+        {
+            await _contentDefinitionManager.AlterTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType, builder =>
+            {
+                foreach (var (name, position) in positions)
+                {
+                    builder.WithPart(name, part => part.WithPosition(position));
+                }
+
+                if (bodyEditorIsDefault)
+                {
+                    builder.WithPart(body.Name, part => part.WithEditor(WysiwygEditor));
+                }
+            });
+        }
+
+        return 3;
     }
 
     // The term type, and the Category taxonomy field of the Knowledge Article type with the taxonomy it uses (kept when an
@@ -134,7 +178,7 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
                     })));
 
             await _contentDefinitionManager.AlterTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType, type => type
-                .WithPart(KnowledgeBaseConstants.ArticleType, part => part.WithPosition("2.5")));
+                .WithPart(KnowledgeBaseConstants.ArticleType, part => part.WithPosition(KnowledgeArticlePartPositions.Of(KnowledgeBaseConstants.ArticleType))));
         }
 
         ShellScope.AddDeferredTask(scope => KnowledgeCategoryTerms.CreateAndConvertAsync(scope.ServiceProvider, taxonomyId));

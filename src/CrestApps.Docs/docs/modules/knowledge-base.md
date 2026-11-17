@@ -13,7 +13,7 @@ The **Knowledge Base** holds help articles. It has no dependency on [Tickets](./
 
 ## Articles
 
-The feature adds a **Knowledge Article** content type (`KnowledgeArticle`): a title, `KnowledgeArticlePart`, a Markdown body and a path (`help/{slug}`). Articles are drafted, versioned and translated as any content item. `KnowledgeArticlePart` holds:
+The feature adds a **Knowledge Article** content type (`KnowledgeArticle`): a title, `KnowledgeArticlePart`, a Markdown body (with Orchard Core's Wysiwyg editor) and a path (`help/{slug}`, from its Autoroute part). Each part has a whole-number position, which Orchard Core's content type editor needs. Articles are drafted, versioned and translated as any content item. `KnowledgeArticlePart` holds:
 
 | Property | Holds |
 | --- | --- |
