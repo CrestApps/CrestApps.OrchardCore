@@ -16,18 +16,22 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 internal sealed class AIChatSessionIndexMigrations : DataMigration
 {
     private readonly YesSqlStoreOptions _option;
+    private readonly IStore _store;
     private readonly ILogger<AIChatSessionIndexMigrations> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AIChatSessionIndexMigrations"/> class.
     /// </summary>
     /// <param name="option">The option.</param>
+    /// <param name="store">The tenant's store, whose configuration names the schema its tables are in.</param>
     /// <param name="logger">The logger.</param>
     public AIChatSessionIndexMigrations(
         IOptions<YesSqlStoreOptions> option,
+        IStore store,
         ILogger<AIChatSessionIndexMigrations> logger)
     {
         _option = option.Value;
+        _store = store;
         _logger = logger;
     }
 
@@ -114,7 +118,8 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom5Async()
     {
-        await SchemaBuilder.AddAIChatSessionIndexClientIdColumnAsync(_option);
+        // The column and its index are looked for in the schema the tenant's tables are in, not the connection's default.
+        await SchemaBuilder.AddAIChatSessionIndexClientIdColumnAsync(_option, _store.Configuration.Schema);
 
         if (ShellScope.Current is not null)
         {

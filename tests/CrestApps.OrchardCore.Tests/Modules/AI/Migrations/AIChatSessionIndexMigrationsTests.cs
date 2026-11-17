@@ -6,10 +6,12 @@ using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Services;
 using YesSql.Sql;
+using YesSql.Sql.Schema;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Migrations;
 
@@ -45,7 +47,7 @@ public sealed class AIChatSessionIndexMigrationsTests
             await using (var migrationSession = store.CreateSession())
             {
                 var transaction = await migrationSession.BeginTransactionAsync(TestContext.Current.CancellationToken);
-                version = await CreateMigrations(new SchemaBuilder(store.Configuration, transaction)).UpdateFrom5Async();
+                version = await CreateMigrations(new SchemaBuilder(store.Configuration, transaction), store).UpdateFrom5Async();
                 await transaction.CommitAsync(TestContext.Current.CancellationToken);
             }
 
@@ -80,8 +82,8 @@ public sealed class AIChatSessionIndexMigrationsTests
             await using var session = store.CreateSession();
             var schemaBuilder = new SchemaBuilder(store.Configuration, await session.BeginTransactionAsync(TestContext.Current.CancellationToken));
 
-            Assert.Equal(6, await CreateMigrations(schemaBuilder).CreateAsync());
-            Assert.Equal(6, await CreateMigrations(schemaBuilder).UpdateFrom5Async());
+            Assert.Equal(6, await CreateMigrations(schemaBuilder, store).CreateAsync());
+            Assert.Equal(6, await CreateMigrations(schemaBuilder, store).UpdateFrom5Async());
         }
         finally
         {
@@ -100,7 +102,7 @@ public sealed class AIChatSessionIndexMigrationsTests
             await using (var setup = store.CreateSession())
             {
                 var schemaBuilder = new SchemaBuilder(store.Configuration, await setup.BeginTransactionAsync(TestContext.Current.CancellationToken));
-                await CreateMigrations(schemaBuilder).CreateAsync();
+                await CreateMigrations(schemaBuilder, store).CreateAsync();
                 await setup.SaveChangesAsync(TestContext.Current.CancellationToken);
             }
 
@@ -136,8 +138,52 @@ public sealed class AIChatSessionIndexMigrationsTests
         }
     }
 
-    private static AIChatSessionIndexMigrations CreateMigrations(ISchemaBuilder schemaBuilder)
-        => new(Options.Create(_storeOptions), NullLogger<AIChatSessionIndexMigrations>.Instance)
+    [Fact]
+    public async Task UpgradeStep_LooksForTheColumnInTheStoresSchema()
+    {
+        // Review 7 (Mild): on PostgreSQL or SQL Server with a custom schema, the column check looked in the connection's
+        // default schema, did not find the column a preview.375 build had created, and added it again on every
+        // activation. A SQLite connection stands in for PostgreSQL here: it answers the catalog query the package sends,
+        // with the column and its index recorded in the tenant's own schema only.
+        const string tenantSchema = "tenant_schema";
+        var table = "tenant_" + new DefaultTableNameConvention().GetIndexTable(typeof(AIChatSessionIndex), _storeOptions.AICollectionName);
+
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        connection.CreateFunction("current_schema", () => "public");
+
+        await using (var setup = connection.CreateCommand())
+        {
+            setup.CommandText = $"""
+                ATTACH DATABASE ':memory:' AS information_schema;
+                CREATE TABLE information_schema.columns (table_schema TEXT, table_name TEXT, column_name TEXT);
+                CREATE TABLE pg_indexes (schemaname TEXT, tablename TEXT, indexname TEXT);
+                INSERT INTO information_schema.columns VALUES ('{tenantSchema}', '{table}', 'ClientId');
+                INSERT INTO pg_indexes VALUES ('{tenantSchema}', '{table}', 'IDX_AIChatSession_ClientId');
+                """;
+            await setup.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        }
+
+        var dialect = new Mock<ISqlDialect>();
+        dialect.SetupGet(d => d.Name).Returns("PostgreSql");
+        var schemaBuilder = new Mock<ISchemaBuilder>();
+        schemaBuilder.SetupGet(s => s.Dialect).Returns(dialect.Object);
+        schemaBuilder.SetupGet(s => s.Connection).Returns(connection);
+        schemaBuilder.SetupGet(s => s.TablePrefix).Returns("tenant_");
+        schemaBuilder.SetupGet(s => s.TableNameConvention).Returns(new DefaultTableNameConvention());
+        schemaBuilder
+            .Setup(s => s.AlterIndexTableAsync(It.IsAny<Type>(), It.IsAny<Action<IAlterTableCommand>>(), It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+        var store = new Mock<IStore>();
+        store.SetupGet(s => s.Configuration).Returns(new global::YesSql.Configuration { Schema = tenantSchema });
+
+        Assert.Equal(6, await CreateMigrations(schemaBuilder.Object, store.Object).UpdateFrom5Async());
+
+        schemaBuilder.Verify(s => s.AlterIndexTableAsync(It.IsAny<Type>(), It.IsAny<Action<IAlterTableCommand>>(), It.IsAny<string>()), Times.Never);
+    }
+
+    private static AIChatSessionIndexMigrations CreateMigrations(ISchemaBuilder schemaBuilder, IStore store)
+        => new(Options.Create(_storeOptions), store, NullLogger<AIChatSessionIndexMigrations>.Instance)
         {
             SchemaBuilder = schemaBuilder,
         };
