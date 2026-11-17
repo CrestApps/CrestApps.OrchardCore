@@ -75,6 +75,15 @@ const config = {
             from: '/docs/contact-center/user-manual',
             to: '/docs/user-manual',
           },
+          {
+            // The Tickets and Knowledge Base pages became the Service Desk section of the User Manual.
+            from: '/docs/user-manual/administration/tickets',
+            to: '/docs/user-manual/service-desk',
+          },
+          {
+            from: '/docs/user-manual/administration/knowledge-base',
+            to: '/docs/user-manual/service-desk/knowledge-base',
+          },
         ],
       }),
     ],

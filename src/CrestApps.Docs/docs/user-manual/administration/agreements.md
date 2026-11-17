@@ -49,7 +49,7 @@ Under **Reports > Billing & Usage**, with **View agreements with accounts and th
 | **Agreement Usage** | For each active agreement with covered hours: its period, the hours covered, used and left, the overage, the share used, and when the hours ran out or are expected to run out at the pace so far; then where the hours went (tickets, work orders) |
 | **Agreement Burn-down** | A chart of the hours left each day of the period against an even pace; choose an agreement to see its days |
 
-Both show where each agreement stands on the last day you choose (today at the latest), in the period that holds that day. Choose one agreement in **Agreement** to see only it. **Account Health**, under **Reports > Executive**, puts each account's tickets, service levels, satisfaction and agreement hours side by side (see [Tickets](./tickets.md#reports)).
+Both show where each agreement stands on the last day you choose (today at the latest), in the period that holds that day. Choose one agreement in **Agreement** to see only it. **Account Health**, under **Reports > Executive**, puts each account's tickets, service levels, satisfaction and agreement hours side by side (see [Service desk reports](../service-desk/reports.md)).
 
 ## Warnings
 

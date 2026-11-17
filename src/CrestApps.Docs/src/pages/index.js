@@ -88,7 +88,7 @@ const AREAS = [
     inHero: true,
     icon: 'life-buoy',
     text: 'Tickets for customers and employees, desks, service levels, boards, a customer portal and a knowledge base.',
-    user: '/docs/user-manual/administration/tickets',
+    user: '/docs/user-manual/service-desk',
     technical: '/docs/modules/tickets',
   },
   {

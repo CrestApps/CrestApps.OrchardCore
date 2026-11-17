@@ -49,7 +49,7 @@ With Reports on, two reports under **Reports > Billing & Usage** need `ViewAgree
 - **Agreement Usage**: for each agreement, the hours covered, used, left and past the cover, the share used (colored from 80% and at 100%), and the day the hours ran out or, at the pace from the period's start, are expected to (`AgreementBurnDown.ProjectRunOut`); then where the hours went, by usage provider.
 - **Agreement Burn-down**: a line chart of the hours left at the end of each day of the period against an even pace through it (a period without an end has no even line), with a table of the days for the chosen agreement; without a choice, the six agreements that used the most of their hours (`AgreementBurnDown.Days`).
 
-Tickets adds **Account Health** (see [Tickets](./tickets.md#reports)).
+Tickets adds **Account Health** (see [Tickets](./tickets/data-sets-and-reports.md#reports)).
 
 ## Permissions
 
@@ -87,6 +87,6 @@ The `Agreements` step creates or updates agreements by `ItemId`, with every valu
 
 With Notifications on, `AgreementAccountManagerNotifier` sends the account's manager (`AccountTeamPart.OwnerStaffId`, through the staff directory, to their user) a notification when an agreement passes 80% and 100% of its hours and when it is about to end.
 
-Tickets is a consumer: its terms are `TicketAgreementTerms` (the desks and ticket types it covers, the service-level policy of its tickets) with a **Tickets** panel, a new ticket takes the agreement that covers it, and its billable time counts against the hours (see [Tickets](./tickets.md#agreements)).
+Tickets is a consumer: its terms are `TicketAgreementTerms` (the desks and ticket types it covers, the service-level policy of its tickets) with a **Tickets** panel, a new ticket takes the agreement that covers it, and its billable time counts against the hours (see [Tickets](./tickets/integrations.md#agreements)).
 
 Work Orders is one consumer: its visit schedules are `WorkOrderAgreementTerms` with a **Visits** panel, and the billable labor of its completed work orders counts against the hours (see [Work Orders](./work-orders.md#service-agreements)).

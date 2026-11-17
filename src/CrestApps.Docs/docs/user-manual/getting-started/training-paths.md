@@ -2,7 +2,7 @@
 sidebar_label: Training Paths
 sidebar_position: 3
 title: Training Paths
-description: Ordered reading lists, with screencasts and time estimates, to onboard agents, supervisors, managers, administrators and AI content managers.
+description: Ordered reading lists, with screencasts and time estimates, to onboard agents, supervisors, managers, administrators, AI content managers and service desk staff.
 ---
 
 Use these training paths to onboard new staff. Each path is an ordered checklist of User Manual pages to read and screencasts to watch, with an estimated time. It ends with what the person should be able to do, so a trainer can check they are ready.
@@ -21,6 +21,9 @@ Use these training paths to onboard new staff. Each path is an ordered checklist
 | [Manager](#manager) | People who build the CRM and the contact center | About 2 days |
 | [Administrator](#administrator) | People who run the site, users and providers | About 1 day |
 | [AI content manager](#ai-content-manager) | People who build and look after the AI assistants | About 1 day |
+| [Service desk agent](#service-desk-agent) | People who answer tickets | About 2 hours |
+| [Desk manager](#desk-manager) | People who shape desks, ticket types and service levels | About 4 hours, after the Service desk agent path |
+| [Service desk administrator](#service-desk-administrator) | People who turn on and set up the Service Desk | About 3 hours |
 
 ## Agent
 
@@ -175,3 +178,78 @@ Use these training paths to onboard new staff. Each path is an ordered checklist
 - put the assistant on the website;
 - set an AI profile to answer a number's texts or calls;
 - read the AI analytics and find conversations the AI handed to a person.
+
+## Service desk agent
+
+**Time:** about 2 hours.
+
+1. **The basics** (20 minutes)
+   - [ ] Read [Finding your way](finding-your-way.md) and the [Service Desk overview](../service-desk/index.md).
+2. **Your tickets** (40 minutes)
+   - [ ] Find your work with saved views, search and filters: [Work the ticket list](../service-desk/ticket-list.md).
+   - [ ] Open a ticket for someone who calls or writes: [Open a ticket for someone](../service-desk/open-a-ticket.md).
+3. **Answering** (40 minutes)
+   - [ ] Reply, write internal notes, use reply templates and article suggestions, and change the ticket's details: [Answer a ticket](../service-desk/answer-a-ticket.md).
+   - [ ] Keep logins and secrets out of messages: [Protected information](../service-desk/protected-information.md).
+   - [ ] Merge duplicates and link problems: [Merge and link tickets](../service-desk/merge-and-link.md).
+4. **Your day** (20 minutes)
+   - [ ] Work a board and pin it to your menu: [Boards](../service-desk/boards.md).
+   - [ ] Record your time, if your desk tracks it: [Time on tickets](../service-desk/time-on-tickets.md).
+   - [ ] Choose how you're told: [Notifications](../service-desk/notifications.md).
+
+**You are ready when you can:**
+
+- find your open tickets and the unassigned ones on your desk;
+- open a ticket for a caller, with a category and the right desk;
+- reply to the requester and set the status in one step, and add an internal note that mentions a colleague;
+- add a knowledge article's link to a reply;
+- show and hide a ticket's protected information;
+- move a ticket on a board and log time on it.
+
+## Desk manager
+
+**Time:** about 4 hours, after the Service desk agent path.
+
+1. **Desks** (1 hour)
+   - [ ] [Desks](../service-desk/desks.md): who each serves, its team and assignment, solved tickets and who is told.
+   - [ ] [Statuses and priorities](../service-desk/statuses-and-priorities.md), with the priority matrix.
+   - [ ] [Saved views](../service-desk/views.md) and [Boards](../service-desk/boards.md) for your teams.
+2. **What tickets ask for** (1 hour)
+   - [ ] [Ticket types, fields and categories](../service-desk/ticket-types-and-categories.md).
+3. **Targets** (1 hour)
+   - [ ] [Service levels](../administration/service-levels.md) and [Business hours schedules](../administration/business-hours-schedules.md).
+   - [ ] [Agreements](../administration/agreements.md), if your accounts have them.
+4. **Results** (1 hour)
+   - [ ] [Service desk reports](../service-desk/reports.md).
+   - [ ] [Knowledge Base](../service-desk/knowledge-base.md): write articles for the questions you get most.
+
+**You are ready when you can:**
+
+- add a desk that assigns new tickets to its team in turn;
+- add a status that pauses service-level targets, and fill in a priority matrix;
+- add a category that routes its tickets to another desk;
+- write a service level policy and choose it on a desk;
+- read the response and resolution report for your desk.
+
+## Service desk administrator
+
+**Time:** about 3 hours.
+
+1. **Turn it on** (30 minutes)
+   - [ ] [Service Desk overview](../service-desk/index.md): the features and who does what.
+   - [ ] [Start from the help desk recipe](../service-desk/help-desk-starter.md).
+2. **People and access** (1 hour)
+   - [ ] [Roles](../administration/roles.md): give each role its desk permissions, as [Desks](../service-desk/desks.md) lists them.
+3. **For customers** (1 hour)
+   - [ ] [Notification templates](../service-desk/notification-templates.md).
+   - [ ] [Tickets Portal](../service-desk/portal.md) and [Request form on a page](../service-desk/web-form.md).
+4. **Extras** (30 minutes)
+   - [ ] [AI assistant](../service-desk/ai-assistant.md), [Approvals](../service-desk/approvals.md) and [Contact Center routing](../service-desk/contact-center-routing.md), if you use them.
+
+**You are ready when you can:**
+
+- turn on the Service Desk features and run the starter recipe;
+- give a role access to one desk's tickets only;
+- rewrite the message requesters get when their ticket is received;
+- let customers send requests from their account and from a page;
+- choose the AI profile agents' replies are drafted from.

@@ -23,7 +23,7 @@ It works with other features when they are on:
 | Audit Trail | Every recorded, ended, changed and removed entry, with who and why. |
 | Recipes, Deployment | The `TimeTracker` recipe step and deployment step. |
 | CrestApps Recipes | The steps' schemas (`IRecipeStep`, deployment step schema). |
-| Tickets | A desk names the stage its ticket work is recorded in; agents start and stop working on a ticket from its page (`Source` `Ticket`), and each ticket shows its time by person. See [Tickets](tickets.md#time-on-tickets). |
+| Tickets | A desk names the stage its ticket work is recorded in; agents start and stop working on a ticket from its page (`Source` `Ticket`), and each ticket shows its time by person. See [Tickets](tickets/integrations.md#time-on-tickets). |
 
 ## Records
 

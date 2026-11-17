@@ -247,7 +247,7 @@ These tools are meant for customer-facing assistants and also work for anonymous
 
 **Available when:** `CrestApps.OrchardCore.Tickets` with `CrestApps.OrchardCore.AI` on
 
-These tools act for the signed-in person using the AI, within the tickets they may view and the actions their ticket permissions allow, and refuse anonymous callers. They are in the **Tickets** category and selectable on AI profiles. See [Tickets](../modules/tickets.md#accounts-personal-data-and-ai-tools).
+These tools act for the signed-in person using the AI, within the tickets they may view and the actions their ticket permissions allow, and refuse anonymous callers. They are in the **Tickets** category and selectable on AI profiles. See [Tickets](../modules/tickets/ai.md#ai-tools).
 
 | Function | Description |
 | --- | --- |

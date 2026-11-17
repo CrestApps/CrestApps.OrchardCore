@@ -2,7 +2,7 @@
 sidebar_label: Knowledge Base
 title: Knowledge Base
 description: "Help articles for everyone, for signed-in people or for staff: the Knowledge Article content type, the help center at /help with search and categories, \"was this helpful?\" feedback, and suggestions for other modules."
-user_manual: user-manual/administration/knowledge-base
+user_manual: user-manual/service-desk/knowledge-base
 ---
 
 The **Knowledge Base** holds help articles. It has no dependency on [Tickets](./tickets): a site can publish a help center on its own, and Tickets suggests articles when it is on too.
