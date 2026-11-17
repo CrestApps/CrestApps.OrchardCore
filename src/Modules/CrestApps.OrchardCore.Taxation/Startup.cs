@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Addresses.Services;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Taxation.Core;
 using CrestApps.OrchardCore.Taxation.Drivers;
 using CrestApps.OrchardCore.Taxation.Handlers;
@@ -30,6 +31,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.AddTaxationCore();
         services.AddScoped<IStoreSetupStep, TaxSetupStep>();
 

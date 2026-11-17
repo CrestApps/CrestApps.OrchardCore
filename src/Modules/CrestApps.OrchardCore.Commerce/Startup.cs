@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Commerce.Drivers;
 using CrestApps.OrchardCore.Commerce.Navigation;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Commerce.Services;
 using CrestApps.OrchardCore.Customers.PersonalData;
@@ -27,6 +28,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.AddNavigationProvider<CommerceAdminMenu>();
         services.AddNavigationProvider<CommerceAccountMenu>();
         services.AddDisplayDriver<UserMenu, CommerceAccountUserMenuDisplayDriver>();

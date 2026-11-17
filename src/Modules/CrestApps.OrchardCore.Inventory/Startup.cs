@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Commerce;
@@ -58,6 +59,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         // Stock items and movements live in their own YesSql collection, which has to be declared for them to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(InventoryConstants.CollectionName));
         services.AddDataMigration<InventoryMigrations>()

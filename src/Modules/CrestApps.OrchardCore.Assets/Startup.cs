@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Assets.Migrations;
 using CrestApps.OrchardCore.Assets.Navigation;
 using CrestApps.OrchardCore.Assets.Owners;
 using CrestApps.OrchardCore.Assets.ViewModels;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -36,6 +37,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(AssetsConstants.CollectionName));
         services.AddAssetsCore();
         services.AddPermissionProvider<AssetsPermissionsProvider>();

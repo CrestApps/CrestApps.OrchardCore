@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Throttling;
@@ -53,6 +54,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.AddShippingCore();
         services.AddScoped<IStoreSetupStep, ShippingSetupStep>();
 

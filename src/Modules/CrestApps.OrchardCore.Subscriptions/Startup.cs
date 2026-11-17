@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Core.Throttling;
 using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Checkout;
@@ -64,6 +65,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.AddDataMigration<SubscriptionPartMigrations>()
             .AddContentPart<SubscriptionPart>()
             .UseDisplayDriver<SubscriptionPartDisplayDriver>();

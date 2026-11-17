@@ -1,4 +1,3 @@
-using System.Globalization;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Core.Throttling;
@@ -9,6 +8,7 @@ using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using CrestApps.OrchardCore.Throttling;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
@@ -115,8 +115,8 @@ public sealed class SubscriptionsController : Controller
     /// <param name="priceId">The price the buyer chose, if the plan offers more than one.</param>
     /// <param name="quantity">How many the buyer is taking.</param>
     /// <param name="customAmount">
-    /// The amount the buyer named, for a price that lets them name one, as the form wrote it. It is read here and not by the
-    /// model binder, which reads a form value in the request's culture.
+    /// The amount the buyer named, for a price that lets them name one. The module's invariant number binding reads it with
+    /// the invariant culture first and the request culture second, never with a group separator.
     /// </param>
     /// <returns>
     /// A redirect into the checkout, a not found result when the plan cannot be bought, or a bad request when the amount is
@@ -125,14 +125,16 @@ public sealed class SubscriptionsController : Controller
     [HttpPost("Subscription/Signup/{contentItemId}")]
     [ValidateAntiForgeryToken]
     [RateLimitGroup(CheckoutConstants.RateLimitGroups.Start)]
-    public async Task<IActionResult> SignupPost(string contentItemId, string priceId = null, int quantity = 1, string customAmount = null)
+    public async Task<IActionResult> SignupPost(string contentItemId, string priceId = null, int quantity = 1, decimal? customAmount = null)
     {
-        if (!TryReadAmount(customAmount, out var amount))
+        // An amount that is not a number ("1,250" in en-US, "1.250,00" in de-DE) binds as nothing; it starts no checkout
+        // at the price's default amount.
+        if (ModelState.GetFieldValidationState(nameof(customAmount)) == ModelValidationState.Invalid)
         {
             return BadRequest();
         }
 
-        var (plan, selection, pricing) = await ResolveAsync(contentItemId, priceId, quantity, amount);
+        var (plan, selection, pricing) = await ResolveAsync(contentItemId, priceId, quantity, customAmount);
 
         if (plan is null)
         {
@@ -195,32 +197,6 @@ public sealed class SubscriptionsController : Controller
         // A plan that can't be priced as a subscription would start a checkout that bills nothing. Refusing it
         // here keeps the buyer from walking through the steps for something they can't buy.
         return (plan, selection, await SubscriptionPlanPricing.ResolveAsync(_priceResolver, plan, selection));
-    }
-
-    // MVC binds a form value in the request's culture, where the dot of "12.50" is a group separator (1250, in de-DE) or not
-    // a number at all (fr-FR). A number input and the confirmation page always write a dot, so the amount is read with the
-    // invariant culture first; a text box a theme puts there may write the culture's decimal comma. Neither reading takes a
-    // group separator, so no spelling of an amount is read as a hundred times it.
-    private static bool TryReadAmount(string value, out decimal? amount)
-    {
-        const NumberStyles Style = NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite | NumberStyles.AllowDecimalPoint;
-
-        amount = null;
-
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return true;
-        }
-
-        if (decimal.TryParse(value, Style, CultureInfo.InvariantCulture, out var parsed) ||
-            decimal.TryParse(value, Style, CultureInfo.CurrentCulture, out parsed))
-        {
-            amount = parsed;
-
-            return true;
-        }
-
-        return false;
     }
 
     private async Task<IActionResult> UnavailableAsync(ContentItem plan, SubscriptionPlanPrice pricing)

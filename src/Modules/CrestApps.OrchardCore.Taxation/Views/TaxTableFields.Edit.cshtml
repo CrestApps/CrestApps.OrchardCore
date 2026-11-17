@@ -58,11 +58,11 @@
                 {
                     var row = rows[i];
                     <tr class="tax-table-row">
-                        <td><input type="number" step="any" class="form-control" data-field="Minimum" name="@(fieldPrefix)Rows[@i].Minimum" value="@row.Minimum" /></td>
+                        <td><input type="number" step="any" class="form-control" data-field="Minimum" name="@(fieldPrefix)Rows[@i].Minimum" value="@row.Minimum.ToString(System.Globalization.CultureInfo.InvariantCulture)" /></td>
                         <td><input type="number" step="any" class="form-control" data-field="Maximum" name="@(fieldPrefix)Rows[@i].Maximum" value="@(row.Maximum?.ToString(System.Globalization.CultureInfo.InvariantCulture))" /></td>
-                        <td><input type="number" step="any" class="form-control" data-field="Rate" name="@(fieldPrefix)Rows[@i].Rate" value="@row.Rate" /></td>
+                        <td><input type="number" step="any" class="form-control" data-field="Rate" name="@(fieldPrefix)Rows[@i].Rate" value="@row.Rate.ToString(System.Globalization.CultureInfo.InvariantCulture)" /></td>
                         <td>
-                            <input type="number" step="any" class="form-control" data-field="FixedAmount" name="@(fieldPrefix)Rows[@i].FixedAmount" value="@row.FixedAmount" />
+                            <input type="number" step="any" class="form-control" data-field="FixedAmount" name="@(fieldPrefix)Rows[@i].FixedAmount" value="@row.FixedAmount.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                             @* Not used by the built-in methods, so not shown; kept so a value a recipe set for a custom method survives a save. *@
                             <input type="hidden" data-field="BaseAmount" name="@(fieldPrefix)Rows[@i].BaseAmount" value="@row.BaseAmount" />
                         </td>

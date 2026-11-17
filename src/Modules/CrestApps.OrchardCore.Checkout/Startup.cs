@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.ModelBinding;
 using OrchardCore.Settings.Deployment;
 using OrchardCore.RateLimits;
 using OrchardCore.Environment.Shell.Configuration;
@@ -66,6 +67,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.TryAddScoped<GuestSessionTokenManager>();
         services.AddScoped<ICheckoutSessionStore, CheckoutSessionStore>();
         services.AddScoped<IStoreSetupStep, CurrencySetupStep>();

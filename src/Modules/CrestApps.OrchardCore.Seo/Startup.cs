@@ -1,4 +1,5 @@
 using CrestApps.Core.AI;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Seo.AI;
 using CrestApps.OrchardCore.Seo.Drivers;
 using CrestApps.OrchardCore.Seo.Handlers;
@@ -33,6 +34,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services
             .AddScoped<IStructuredDataManager, StructuredDataManager>()
             .AddScoped<IPageStructuredData, PageStructuredData>()

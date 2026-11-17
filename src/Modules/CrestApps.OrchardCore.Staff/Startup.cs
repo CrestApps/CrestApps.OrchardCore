@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Geo;
 using CrestApps.OrchardCore.Geo.Services;
 using CrestApps.OrchardCore.PageSections;
@@ -51,6 +52,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(StaffConstants.CollectionName));
         services.AddDataMigration<StaffMigrations>()
             .AddIndexProvider<StaffMemberIndexProvider>()

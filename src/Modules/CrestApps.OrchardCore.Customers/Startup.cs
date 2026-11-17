@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Checkout;
@@ -49,6 +50,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         // Customers live in their own YesSql collection, which has to be declared for its documents to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(CustomersConstants.CollectionName));
         services.AddDataMigration<CustomerMigrations>()
