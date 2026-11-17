@@ -238,6 +238,9 @@ public sealed class EmailOwnershipStartup : StartupBase
         services.AddEmailOwnershipConfirmation();
         services.Configure<EmailSignInOptions>(_shellConfiguration.GetSection(EmailSignInOptions.SectionName));
 
+        // A user a code signed in to an account with credentials nobody proved are theirs is told on every page.
+        services.Configure<MvcOptions>(options => options.Filters.Add<EmailOwnershipNoticeFilter>());
+
         // Counted on the shared attempt limiter, across nodes, whether or not Rate Limits is on.
         services
             .AddAttemptPolicy(EmailSignInCodes.SendNetworkPolicy, 10, TimeSpan.FromMinutes(15))

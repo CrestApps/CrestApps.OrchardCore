@@ -18,8 +18,8 @@ namespace CrestApps.OrchardCore.Users.Core.Services;
 /// <para>
 /// ASP.NET Core Identity marks how a session began: <c>amr=pwd</c> after a password sign-in, <c>amr=mfa</c> after a
 /// two-factor sign-in, and the provider's name in <see cref="ClaimTypes.AuthenticationMethod"/> after an external login
-/// (with <c>amr=mfa</c> too when a second factor followed it). An e-mailed code and Orchard Core's sign-in
-/// after registration show neither.
+/// (with <c>amr=mfa</c> too when a second factor followed it). An e-mailed code (<c>amr=otp</c>, see
+/// <see cref="EmailedCodeMethod"/>) and Orchard Core's sign-in after registration show neither.
 /// </para>
 /// </remarks>
 public static class UserCredentialsProof
@@ -28,6 +28,12 @@ public static class UserCredentialsProof
     /// The claim ASP.NET Core Identity adds to say how a session began.
     /// </summary>
     public const string AuthenticationMethodReferenceClaim = "amr";
+
+    /// <summary>
+    /// The <see cref="AuthenticationMethodReferenceClaim"/> value of a session a code e-mailed to the account began, when
+    /// the account had a password or an external login nobody proved was the code holder's (RFC 8176's one-time code).
+    /// </summary>
+    public const string EmailedCodeMethod = "otp";
 
     /// <summary>
     /// Whether the account can be signed in to without its mailbox: it has a password or an external login.
@@ -78,6 +84,15 @@ public static class UserCredentialsProof
                 ? provider
                 : null;
     }
+
+    /// <summary>
+    /// Whether <paramref name="principal"/>'s session began with a code e-mailed to an account whose credentials nobody
+    /// proved were the code holder's (see <see cref="EmailedCodeMethod"/>).
+    /// </summary>
+    /// <param name="principal">The request's user.</param>
+    public static bool SignedInWithEmailedCode(ClaimsPrincipal principal)
+        => principal?.Identity?.IsAuthenticated == true &&
+            principal.HasClaim(claim => claim.Type == AuthenticationMethodReferenceClaim && claim.Value == EmailedCodeMethod);
 
     private static bool IsSignedInTo(ClaimsPrincipal principal, User account)
         => principal?.Identity?.IsAuthenticated == true &&

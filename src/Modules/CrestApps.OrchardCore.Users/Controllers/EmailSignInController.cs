@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Users.Core.Services;
 using CrestApps.OrchardCore.Users.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -181,7 +183,7 @@ public sealed class EmailSignInController : Controller
 
         // The code proves the email is theirs, by a round trip, which is what lets a user claim what belongs to the address.
         // It is recorded before the login is validated, so Orchard's check that the email is confirmed sees it confirmed.
-        var confirmationOffered = false;
+        var credentialsInDoubt = false;
 
         // On a site that requires confirmed addresses, though, Orchard refuses every sign-in to an unconfirmed account, so
         // its password and logins never signed anyone in, and the owner couldn't reset the password either: that account
@@ -194,8 +196,9 @@ public sealed class EmailSignInController : Controller
             // A password or an external login set before anyone proved the address may be somebody else's, and recording
             // the proof hands over what belongs to the address, so it would have to remove them. A code signs the owner in
             // with nothing removed, recorded or confirmed (confirming would let that password in where confirmation is
-            // required); the owner confirms it is theirs, with a second code, when they choose to.
-            confirmationOffered = true;
+            // required); the owner confirms it is theirs, with a second code, when they choose to. The session is marked as
+            // begun with an e-mailed code, so every page tells them so until then (EmailOwnershipNoticeFilter).
+            credentialsInDoubt = true;
         }
         else if (user is User proved && (!proved.EmailConfirmed || !UserEmailOwnership.IsVerified(proved.Properties, proved.Email)))
         {
@@ -222,14 +225,16 @@ public sealed class EmailSignInController : Controller
 
         await _userManager.ResetAccessFailedCountAsync(user);
 
-        await _signInManager.SignInAsync(user, isPersistent: false);
+        if (credentialsInDoubt)
+        {
+            await _signInManager.SignInWithClaimsAsync(user, isPersistent: false, [new Claim(UserCredentialsProof.AuthenticationMethodReferenceClaim, UserCredentialsProof.EmailedCodeMethod)]);
+        }
+        else
+        {
+            await _signInManager.SignInAsync(user, isPersistent: false);
+        }
 
         await _loginFormEvents.InvokeAsync((handler, signedIn) => handler.LoggedInAsync(signedIn), user, _logger);
-
-        if (confirmationOffered)
-        {
-            await _notifier.InformationAsync(H["You're signed in. To link what was placed with your email before, such as guest orders, <a href=\"{0}\">confirm it's you</a>.", Url.RouteUrl("EmailSignInConfirm", new { returnUrl = model.ReturnUrl })]);
-        }
 
         return !string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl)
             ? LocalRedirect(model.ReturnUrl)
