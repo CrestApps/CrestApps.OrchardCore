@@ -415,6 +415,101 @@ The SQL query source logs a query its parser refuses and returns no rows. The to
 | `searchForUsers` | `OrchardCore.Users` | Searches the system for users. |
 | `getRoleInfo` | `OrchardCore.Roles` | Gets information about a role. |
 
+### User account tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Users`
+
+| Function | Description |
+| --- | --- |
+| `listUsers` | Lists user accounts with optional filters (text in the user name, email, role, enabled or disabled), sorting and paging. It returns ID, user name, email, roles and status only. |
+| `getUser` | Returns one user by ID, user name or email: profile, roles, enabled, email confirmed, whether a password is set, locked out until, failed sign-in count, two-factor state, external login provider names, time zone, culture and custom user settings. |
+| `saveUser` | Updates the user name, email and phone number of a user. It does not create a user and takes no password. Asks for approval. |
+| `enableUser` | Enables up to 20 disabled user accounts, for example registrations that wait for moderation, and reports the outcome for each. Asks for approval. |
+| `disableUser` | Disables up to 20 user accounts so they can no longer sign in, and reports the outcome for each. Asks for approval. |
+| `unlockUser` | Clears the lockout and the failed sign-in count of a user. Asks for approval. |
+| `confirmUserEmail` | Marks the email address of a user as confirmed without sending an email. Asks for approval. |
+| `deleteUser` | Permanently deletes a user account. Asks for approval. |
+
+These tools are added beside `getUserInfo` and `searchForUsers`. They check, for the person in the chat, the permission the matching action of the **Access Control > Users** page checks, on the user it acts on, so the permissions for the users of one role (for example **Edit users in Editor role**) work as they do on that page:
+
+- `listUsers` needs **List all users** or the permission to list the users of a role. It builds the filter text of the page's search box and runs it through the page's parser and query service. A role filter needs the permission to list the users of that role, and a user the caller may not list is left out of the page.
+- `getUser` needs **View user profiles** on the user. A person can always read their own account.
+- `saveUser`, `enableUser`, `disableUser`, `unlockUser` and `confirmUserEmail` need **Edit any user** on the user, and `deleteUser` needs **Delete any user**.
+
+A caller who may act on no user gets the same refusal for an ID that exists and for one that does not, so the tools cannot be used to learn which accounts exist.
+
+No tool returns or accepts a credential. Results are built from a fixed list of fields: the password hash, the security stamp, the reset token, the authenticator key, the recovery codes, the user's claims and the keys of external logins are never returned, and `getUser` says only whether a password is set and which external providers are linked. No tool takes a password, a hash or a token. A password is set by a person on the Users page.
+
+`saveUser` follows the Edit page: a field the site locks under **Settings > Security > User Login** is refused, to administrators too, the phone number is validated, and the user manager validates and stores the user (a user name or an email that is taken is reported). A person who changes their own account needs **Edit own user information**. It does not create a user, because an account created from a chat would have no password and the assistant cannot send the email that lets the user choose one; create users on the Users page. It does not change the time zone or the culture of a user.
+
+The tools refuse what the admin page leaves to the person:
+
+- `disableUser` and `deleteUser` refuse the caller's own account, the site owner (the super user of the site settings) and the only enabled user in the administrator role. The name of the administrator role is read from the role service, so a renamed administrator role is protected too.
+- `deleteUser` takes the user name with the ID and refuses when they do not match, so the approval shows which account is deleted.
+- `unlockUser` resets only the failed sign-in count of a user who is not locked out.
+
+### User role tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Users` + `OrchardCore.Roles`
+
+| Function | Description |
+| --- | --- |
+| `setUserRoles` | Adds roles to a user and removes roles from a user. Asks for approval. |
+
+It needs **Edit any user** on the user and, for every role it adds or removes, **Assign any role to users** on that role, the check the role editor of a user makes (the permission to assign one role is enough for that role). It checks everything before it changes anything, so a refused call leaves the user as it was. It refuses:
+
+- the caller's own account, which the role editor allows;
+- a role that cannot be given to a user (Anonymous, Authenticated or a name that is not a role), with the list of roles that can;
+- a role the caller may not assign;
+- removing the administrator role from the only enabled administrator.
+
+Removing a role changes the security stamp of the user, as the role editor does, which signs the user out of their open sessions.
+
+### User two-factor authentication tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Users.2FA`
+
+| Function | Description |
+| --- | --- |
+| `disableUserTwoFactor` | Switches off two-factor authentication for a user who lost their second factor. Asks for approval. |
+
+It needs **Disable two-factor authentication for any user**, the permission of the **Disable two-factor authentication** action of the Users page. It refuses the caller's own account. The result says whether the site, or a rule for the roles of the user, makes the user set two-factor authentication up again at the next sign-in. It does not read, show or reset an authenticator key or a recovery code.
+
+### Custom user settings tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Users.CustomUserSettings`
+
+| Function | Description |
+| --- | --- |
+| `saveUserCustomSettings` | Sets the values of one custom user settings type on a user, given the type name and the parts and fields to change. |
+
+Custom user settings are stored inside the user, not as content items, so the content tools do not reach them. The tool needs **Edit any user** on the user and the **Manage Own Custom User Settings** permission of the settings type, which the user editor checks for whichever user is edited. It reads the stored settings with the custom user settings service, merges the given parts and fields the way `createOrUpdateContentItem` merges a content item (a field that is not given keeps its value, a list that is given replaces the stored list), validates the result with the content manager and stores the user. `getUser` returns the settings of the types the caller holds the permission for.
+
+### Role and permission tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Roles`
+
+| Function | Description |
+| --- | --- |
+| `listRoles` | Lists the roles with their description and whether each is a system role or the administrator role. |
+| `getRole` | Returns one role with the permissions assigned to it, the permissions a user who holds only that role has in effect, the ones that come from Anonymous and Authenticated, and its security-critical permissions. |
+| `listPermissions` | Lists the permissions the enabled features provide, with name, description, group, the permissions that imply them and whether Orchard Core marks them as security critical; with a text filter and paging. |
+| `saveRole` | Creates a role, or changes the description and the permissions of a role (add, remove or replace; a new role can copy the permissions of another role). Asks for approval. |
+| `deleteRole` | Deletes a role that is not a system role and takes it from the users and OpenID applications that have it. Asks for approval. |
+
+These tools are added beside `getRoleInfo`. `listRoles`, `getRole` and `listPermissions` need **View Roles**; `saveRole` and `deleteRole` need **Manage Roles**, which Orchard Core marks as security critical. They use the role manager and the role service of the **Access Control > Roles** page.
+
+`getRole` asks the authorization service what a user who holds only the role may do, as the View page of a role does, so `effectivePermissions` holds the assigned permissions, the ones they imply and the ones every user gets from Anonymous and Authenticated. A list holds at most 200 names; `filter` narrows the lists. For the administrator role it says that the role holds every permission.
+
+`saveRole` updates a role unless `create` is true, so a mistyped name never creates a role. It keeps the rules of the admin page: a new role needs a name without a slash that no other role has, and the permissions of the administrator role cannot be changed. It adds four rules:
+
+- A permission must be one an enabled feature provides. `listPermissions` returns the exact names.
+- A security-critical permission is never given to Anonymous or Authenticated.
+- It does not add permissions to a role the caller holds (Anonymous and Authenticated count, because every signed-in user has what they grant), unless the caller is in the administrator role or is the site owner. Removing permissions from such a role is allowed.
+- Every security-critical permission the call gives must be named again in `securityCriticalPermissions`. When one is missing, the tool changes nothing and names it, so the assistant tells the person and the approval of the second call shows what is granted.
+
+Everything is checked before the role is changed. `deleteRole` reports how many users had the role.
+
 ### Workflow tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + the matching workflow feature set
