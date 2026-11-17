@@ -607,6 +607,79 @@ These tools are added beside `sendNotification`. They need **Manage notification
 
 These tools are added beside `sendEmail` and `sendSmsMessage` and do what the **Tools > Testing** pages do. `sendTestEmail` needs **Manage Email Settings**, sends to the email address of the caller unless `to` names one other address, and lists the enabled providers in its result. `sendTestSms` needs **Manage SMS Settings** and sends to the phone number the call names; `provider` can be left out when one provider only is enabled. The subject and the text are fixed, so the tools check the settings and cannot be used to write a message to somebody. When a provider throws, the error goes to the log of the site and is not returned, because it can name the host and the account of the provider settings.
 
+### Site settings tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Settings` (always on)
+
+| Function | Description |
+| --- | --- |
+| `listSiteSettingsGroups` | Lists the settings pages the caller can open, with group id, title, menu path and link. Search text and paging. |
+| `getSiteSettings` | Returns the fields of one settings group, by section, with their current values and a JSON schema of each section. |
+| `updateSiteSettings` | Changes fields of one settings group and returns the validation errors, or the saved values and whether the site reloads. Asks for approval. |
+
+The tools replay the settings page instead of writing the stored settings. `listSiteSettingsGroups` reads the admin menu of the caller, which already leaves out the pages the caller may not open, and needs **Access admin panel**. `getSiteSettings` and `updateSiteSettings` check the permission the **Settings** page checks for the group, then build the editor through the site settings display drivers, so each driver applies its own permission and fills its editor as the page does. A section is one editor of the page, named by its form prefix (for example `ISite` for the General page or `ISite.AdminSettings`); its fields are the fields of the editor, not of the stored settings, so the values `getSiteSettings` returns are in the shape `updateSiteSettings` takes.
+
+`updateSiteSettings` merges the changed fields over the values the editor was built with and posts the whole page back through the drivers, with the same model binding and validation as the page. The drivers then protect credentials, run their side effects and ask for the tenant reload as on a save from the page. When a driver reports an error, nothing is saved, the tenant is not reloaded, and the errors are returned as the driver wrote them. A page that has an editor the tool cannot read (a list of objects, an editor without a view model) is not changed, and the result says why.
+
+Secrets are never shown or accepted: a text field whose name holds a password, secret, token, API key, connection string or private key is returned only as whether it is set, and a credential edited with the secret input returns its source and secret name; a call can point it at a secret of the Secrets module by name but cannot set a value. The tools never change the super user, the site salt or the home route. Custom settings content types are not read or changed by these tools; a person edits them on their settings page. The **OpenID Client** settings are a site settings group and can be read and changed with these tools; the OpenID server and validation settings and the CORS settings have their own pages and documents and have no tool yet.
+
+### Admin page search tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Admin`
+
+| Function | Description |
+| --- | --- |
+| `findAdminPage` | Searches the admin menu the caller can see and returns the matching pages with their menu path and link. |
+
+The tool needs **Access admin panel**. It walks the admin menu the same way the quick navigation palette (Ctrl+K) does, for the caller only, so it never returns a page the caller cannot open.
+
+### Admin dashboard tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.AdminDashboard`
+
+| Function | Description |
+| --- | --- |
+| `listAdminDashboardWidgets` | Lists the dashboard widgets with content type, position, width and height, and the content types that can be added as widgets. |
+
+The tool needs **Access the Admin Dashboard**. With **Manage the Admin Dashboard** it lists the latest version of the widgets whose type the caller may edit and the widget types the caller may create, as the **Manage Dashboard** page does; otherwise it lists the published widgets the caller may view. Widgets are content items, so the content tools create, edit and delete them.
+
+### Admin menu tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.AdminMenu`
+
+| Function | Description |
+| --- | --- |
+| `listAdminMenus` | Lists the custom admin menus, optionally with the full node tree of each and the node types the site offers. |
+| `saveAdminMenu` | Creates a custom admin menu or replaces one, with its name, enabled state and whole node tree. |
+
+Both tools need **Manage the admin menu**. `listAdminMenus` reads the menus through the admin menu deployment step and returns the nodes in the shape of the `AdminMenu` recipe step, which `saveAdminMenu` runs. A node must have the `$type` of a node type of the site and the fields that type requires. Nodes that are not sent are removed.
+
+### Tenant feature profile tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Tenants.FeatureProfiles` (Default tenant only)
+
+| Function | Description |
+| --- | --- |
+| `listTenantFeatureProfiles` | Lists the feature profiles with their include and exclude rules and the tenants that use each one. |
+| `saveTenantFeatureProfile` | Creates or replaces a feature profile: a name and an ordered list of `Include` or `Exclude` rules with an expression. |
+
+Both tools need **Manage tenant feature profiles** and work from the Default tenant only. `saveTenantFeatureProfile` runs the `FeatureProfiles` recipe step and, as the **Feature Profiles** page does, refuses a name another profile has.
+
+### Deployment plan tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Deployment`
+
+| Function | Description |
+| --- | --- |
+| `listDeploymentPlans` | Lists the plans, optionally with the fields of their ordered steps and the step types the site offers. Search text and paging. |
+| `saveDeploymentPlan` | Creates a plan or replaces the steps of the plan with the same name. |
+| `deleteDeploymentPlan` | Deletes a plan. Asks for approval. |
+| `exportDeploymentPlan` | Runs a plan and returns the recipe it builds. Asks for approval. |
+
+`listDeploymentPlans` needs **Manage deployment plans** and **Export Data**, as the **Deployment Plans** page does; `saveDeploymentPlan` and `deleteDeploymentPlan` need **Manage deployment plans**, and `exportDeploymentPlan` needs **Export Data**. `saveDeploymentPlan` runs the `deployment` recipe step and refuses a step type that no enabled feature provides.
+
+`exportDeploymentPlan` runs the plan with the deployment manager in memory and writes nothing to disk. It returns the recipe when it is 100,000 bytes or smaller, and otherwise only its size and the link of the plan page; the recipe is never cut. Other files of the package, such as media files, are listed by name and size only, and the name, description and tags of a Recipe File step are not applied, so the full package is downloaded with **File Download** on the plan page. A plan can export any data of the site, so the tool is used only when the user asks for an export.
+
 ### Workflow tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + the matching workflow feature set
