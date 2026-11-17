@@ -91,9 +91,9 @@ A link provider lets a person sign in to their bank in the browser and choose th
 
 | Page | Route | Permission |
 | --- | --- | --- |
-| **My Bank Accounts > Add** shows **Link your bank with {provider}** per available provider; linking makes a new account | `banking/my-accounts/link/{provider}` | `ManageOwnBankAccounts` |
-| **My Bank Accounts > Edit** shows **Link your bank with {provider} instead**; the bank's numbers replace the stored ones | `banking/my-accounts/link/{provider}/{id}` | `ManageOwnBankAccounts`, own accounts only |
-| The admin account page shows **Link with {provider}** in the action bar's secondary buttons | `banking/accounts/link/{id}/{provider}` | `ManageBankAccounts` |
+| **My Bank Accounts > Add** shows **Link your bank with \{provider\}** per available provider; linking makes a new account | `banking/my-accounts/link/{provider}` | `ManageOwnBankAccounts` |
+| **My Bank Accounts > Edit** shows **Link your bank with \{provider\} instead**; the bank's numbers replace the stored ones | `banking/my-accounts/link/{provider}/{id}` | `ManageOwnBankAccounts`, own accounts only |
+| The admin account page shows **Link with \{provider\}** in the action bar's secondary buttons | `banking/accounts/link/{id}/{provider}` | `ManageBankAccounts` |
 
 The flow (`BankAccountLinkFlow` in the module):
 

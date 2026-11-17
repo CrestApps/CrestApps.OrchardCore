@@ -576,7 +576,7 @@ The review of F3 and F4 found 13 items; all are fixed in one commit, test-first.
 Rules A to E are carried into F5 and later slices: Disbursements gets the source access seam, deployment permission checks, a bank account usage, local dates and authorization tests from the start.
 
 - Also fixed: the full Architecture run found the static-state guard failing on the status tables of Banking and Checks since F3/F4 (`public static TransitionTable<T> Transitions { get; } = new(...)` reads as a static collection to the line scan); they are now `private static readonly` fields behind the property, as the Contact Center lifecycles do.
-- Open items for Mike: the positive pay pipeline's second run (owed until the SQLite paging fix is merged; it stays in its own branch, `ma/report-index-pages-sqlite-decimals`, commit a8600b3f6, and is not cherry-picked here); run the **Checks: positive pay file** pipeline twice on a SQLite site after that merge and confirm the second file holds only the changed checks.
+- Closed (2026-11-16): the positive pay pipeline's second run. The SQLite paging fix (`ma/report-index-pages-sqlite-decimals`, a8600b3f6) is merged, and on a fresh SQLite site the **Checks: positive pay file** pipeline ran twice: 2 rows (6,200.00 and 1,234.56), then 1 row (the check written in between), with no `InvalidCastException`.
 - Tests: Banking, Checks and Parties 138, all pass. Architecture 308: 307 passed and the static-state guard failed as above; after the fix its class passes. `npx vitest run tests/js/lint` (21) passes.
 - Browser (test site, admin): the register lists through the new store query; the bulk print refuses printed check 20001 with the reprint hint; **Reprint** asks for a reason and returns the PDF (`no-store`); the Audit Trail entry of the account number read carries the user id, and the site log names the check range and the print run; **Mark cleared** on reissued check 1001 shows **Paid after reissue**; **Write a check** starts on today's local date; deleting the bank account checks are drawn on is refused with the reason; the owner picker reads its URL from the route; **Mark Stale Checks** is in the workflow toolbox under Checks; the positive pay recipe ran and published (see item 8 for the run).
 
@@ -1189,6 +1189,17 @@ Mike asked that every CRUD import and export through Orchard (a recipe step, its
 - **Check address editors.** Checks stored `Address` from Addresses but had their own flat fields with the country fixed to US. **Write a check** (the payee) and the check layout (the payer on blank stock) now use the shared address editor (`IAddressEditorService`, `CreateAddressEditorAsync`) with its country formats and validation, as Payroll's employer, pay profile and garnishment payee do; the check designer previews the payer from the shared editor's fields. Checks depends on the Addresses feature.
 - **Workflow events.** See the module docs' Workflows sections for the events added this round (pay runs, approvals, checks, disbursements and their batches, bank account status, garnishments, filings).
 
+### Merges: Plaid link providers and the SQLite paging fix (2026-11-16)
+
+Every session's work goes into this PR.
+
+- **`ma/keen-yalow-7407fa`** (be16e7370, 102c4e919): instant bank account verification. `IBankAccountLinkProvider`, `AddBankAccountLinkProvider<T>()` and `IBankAccountService.ApplyLink` belong to Bank Accounts (`Banking.Abstractions`/`.Core`); Banking owns the link pages (**My Bank Accounts > Add** and **Edit**, the admin account page) with their buttons in the bottom action bar. The **Plaid** module stays its own module, depends on the Bank Accounts feature, Secrets and the Provider Webhook Inbox, keeps the Plaid secret in an Orchard secret named by its settings, and writes the bank's numbers through `ApplyNumbers`, so they keep `ISensitiveValueProtector` and last-digit masking. The branch was cut before Checks, Disbursements and Direct Deposit joined the Banking module; only the docs conflicted (the building-blocks row, the feature reference, the sidebar and `banking.md`, which now keeps the one Banking module and adds Plaid). The `{provider}` placeholders in `banking.md` are escaped for MDX.
+- **`ma/report-index-pages-sqlite-decimals`** (a8600b3f6): `ReportIndexPages` reads only the row id and date of each page.
+- Also fixed: `BankingWorkflowEventsTests` passes the test cancellation token (xUnit1051 under `-warnaserror`).
+- **Existing flaky test**: `RealtimeVoiceConversationRunnerTests.TheCallersKeysAndASupervisorNote_AreAddedToTheConversation` (Omnichannel Voice, not touched by this branch) hung a full run for over 30 minutes waiting on its fake media session. Its class passes on its own (107 of 107), so it only hangs under full-suite load; it was left out of the full runs and Omnichannel Voice is not changed here.
+- **Validation on the merged tip**: the Release solution build with `-warnaserror` (0 warnings, 0 errors); the full test project 16,463 passed and 1 skipped (the flaky test above excluded); `npm run rebuild` wrote 0 changed files; the manuals check (170 User Manual and 190 Technical Manual pages) and the docs build pass (its two old minifier warnings remain).
+- **Browser, fresh SQLite site**: with no Plaid keys, **My Bank Accounts > Add** shows no link card and the link URL is a 404; with a client id and a fake text secret, **Test the connection** says Plaid could not be reached and **Link your bank with Plaid** returns to the page with "Plaid did not answer". Neither log holds the secret or the client id. Positive pay ran twice as above.
+
 ### For Mike
 
 What only you can settle before the first live pay:
@@ -1198,7 +1209,7 @@ What only you can settle before the first live pay:
 3. **Stripe payout keys**: the Marketplace payouts on Disbursements (Stripe Connect) have only run against a fake provider. A Stripe test-mode payout and refusal need test keys.
 4. **SFTP server**: bank files, the payroll journal and the EFW2 file go out through Data Pipelines delivery steps. No SFTP server was available, so delivery is untested.
 5. **Bank acceptance**: the bank must accept a test NACHA file with its own immediate origin and destination and company id, and confirm prenotes or micro-deposit verification. Account verification was set by hand here.
-6. **Positive pay second run**: a second run of the positive pay pipeline against the bank, to confirm it sends only new checks.
+6. **Positive pay with the bank**: the second run now sends only new checks on SQLite (checked 2026-11-16); the bank still has to accept the file in its own layout.
 7. **Also owed**:
    - an SSA AccuWage check of an EFW2 file;
    - IRS e-filing (FIRE or IRIS) of Forms 1099-NEC is not built;
