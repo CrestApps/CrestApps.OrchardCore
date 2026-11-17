@@ -50,6 +50,44 @@ internal static class AgentToolArguments
     }
 
     /// <summary>
+    /// Reads an argument that holds a list of texts, such as IDs or names.
+    /// </summary>
+    /// <param name="arguments">The arguments of the tool invocation.</param>
+    /// <param name="key">The name of the argument.</param>
+    /// <param name="values">The texts without blanks and repeats, in the given order, or <see langword="null"/> when the argument is not given.</param>
+    /// <returns><see langword="false"/> when the argument is given but is not a list of texts.</returns>
+    public static bool TryReadStrings(AIFunctionArguments arguments, string key, out List<string> values)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+
+        values = null;
+
+        if (!arguments.TryGetFirst(key, out _))
+        {
+            return true;
+        }
+
+        if (!arguments.TryGetFirst<string[]>(key, out var given) || given is null)
+        {
+            return false;
+        }
+
+        values = [];
+
+        foreach (var value in given)
+        {
+            var trimmed = value?.Trim();
+
+            if (!string.IsNullOrEmpty(trimmed) && !values.Contains(trimmed, StringComparer.Ordinal))
+            {
+                values.Add(trimmed);
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Reads an argument that holds a JSON array. A model sends it as an array or as JSON text; both are accepted.
     /// </summary>
     /// <param name="arguments">The arguments of the tool invocation.</param>

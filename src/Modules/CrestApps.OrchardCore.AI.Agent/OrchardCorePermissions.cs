@@ -62,6 +62,38 @@ internal static class OrchardCorePermissions
     /// </summary>
     public static readonly Permission ManageSqlQueries = new("ManageSqlQueries", LocalizationSource.Create("Manage SQL Queries", typeof(OrchardCorePermissions)), isSecurityCritical: true);
 
+    /// <summary>
+    /// Gets the permission to create, change, move and delete secrets. The Secrets module declares it in its module
+    /// assembly.
+    /// </summary>
+    public static readonly Permission ManageSecrets = new("ManageSecrets", LocalizationSource.Create("Manage secrets", typeof(OrchardCorePermissions)));
+
+    /// <summary>
+    /// Gets the permission to list secrets, without their values. As in the Secrets module, the permission to manage
+    /// secrets implies it.
+    /// </summary>
+    public static readonly Permission ViewSecrets = new("ViewSecrets", LocalizationSource.Create("View secrets", typeof(OrchardCorePermissions)), [ManageSecrets]);
+
+    /// <summary>
+    /// Gets the security-critical permission to see the details of the audit trail events about any user. The Users
+    /// module declares it in its module assembly.
+    /// </summary>
+    public static readonly Permission ViewUserAuditTrailEvents = new(
+        "ViewUserAuditTrailEvents",
+        LocalizationSource.Create("View Audit Trail events about users", typeof(OrchardCorePermissions)),
+        [],
+        isSecurityCritical: true);
+
+    /// <summary>
+    /// Gets the security-critical permission to see the details of the audit trail events about the caller's own
+    /// account. As in the Users module, the permission for the events about any user implies it.
+    /// </summary>
+    public static readonly Permission ViewOwnUserAuditTrailEvents = new(
+        "ViewOwnUserAuditTrailEvents",
+        LocalizationSource.Create("View Audit Trail events about own user", typeof(OrchardCorePermissions)),
+        [ViewUserAuditTrailEvents],
+        isSecurityCritical: true);
+
     // The Users module declares this template in its module assembly. As there, the permission to manage users implies it.
     private static readonly PermissionTemplate _manageOwnCustomUserSettings = new(
         "ManageOwnCustomUserSettings_{0}",
