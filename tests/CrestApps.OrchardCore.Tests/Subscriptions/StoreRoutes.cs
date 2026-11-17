@@ -1,8 +1,10 @@
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Patterns;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Moq;
 using OrchardCore.ContentManagement.Routing;
@@ -13,7 +15,8 @@ namespace CrestApps.OrchardCore.Tests.Subscriptions;
 
 /// <summary>
 /// Builds the real <see cref="StoreRouteSegments"/> over ASP.NET Core's own <see cref="DefaultEndpointDataSource"/>, with
-/// the route patterns a store registers, the module and theme ids Orchard's extension manager lists, and a web root.
+/// the route patterns a store registers, the module and theme ids Orchard's extension manager lists, a web root, and
+/// ASP.NET Core's own authentication scheme and handler providers.
 /// </summary>
 internal static class StoreRoutes
 {
@@ -24,6 +27,10 @@ internal static class StoreRoutes
         => Create(session, extensionIds: [], webRoot: null, patterns);
 
     public static StoreRouteSegments Create(ISession session, string[] extensionIds, IFileProvider webRoot, params string[] patterns)
+        => Create(session, extensionIds, webRoot, authentication: null, patterns);
+
+    /// <param name="authentication">Registers the store's authentication schemes; none when <see langword="null"/>.</param>
+    public static StoreRouteSegments Create(ISession session, string[] extensionIds, IFileProvider webRoot, Action<AuthenticationBuilder> authentication, params string[] patterns)
     {
         var endpoints = patterns
             .Select((pattern, order) => (Endpoint)new RouteEndpoint(
@@ -42,11 +49,20 @@ internal static class StoreRoutes
         var environment = new Mock<IWebHostEnvironment>();
         environment.SetupGet(host => host.WebRootFileProvider).Returns(webRoot ?? new NullFileProvider());
 
+        var services = new ServiceCollection().AddLogging();
+        authentication?.Invoke(services.AddAuthentication());
+        services.AddAuthenticationCore();
+
+        var requestServices = services.BuildServiceProvider();
+
         return new StoreRouteSegments(
             new DefaultEndpointDataSource(endpoints),
             session is null ? [] : [Mock.Of<IAutorouteEntries>()],
             session ?? Mock.Of<ISession>(),
             extensionManager.Object,
-            environment.Object);
+            environment.Object,
+            requestServices.GetRequiredService<IAuthenticationSchemeProvider>(),
+            requestServices.GetRequiredService<IAuthenticationHandlerProvider>(),
+            new HttpContextAccessor { HttpContext = new DefaultHttpContext { RequestServices = requestServices } });
     }
 }

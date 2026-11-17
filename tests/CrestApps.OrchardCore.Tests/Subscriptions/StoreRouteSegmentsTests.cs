@@ -1,10 +1,18 @@
+using System.Reflection;
+using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Tests.Utilities;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Autoroute.Core.Indexes;
 using YesSql;
 using YesSql.Indexes;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Subscriptions;
 
@@ -97,7 +105,75 @@ public sealed class StoreRouteSegmentsTests
         }
     }
 
+    /// <summary>
+    /// Selling-sites Mild (third fix verification): a remote sign-in callback such as <c>/signin-google</c> is answered by
+    /// the authentication middleware, not by an endpoint, so a site sold on <c>signin-google</c> took the store's callback:
+    /// external sign-in failed for everyone, and the provider's answer went to the buyer's site. The first segment of each
+    /// path a scheme answers on is now held, read from the scheme's own options, so a callback path the operator changed
+    /// is held too.
+    /// </summary>
+    [Theory]
+    [InlineData("sso-return", true)]
+    [InlineData("SSO-Return", true)]
+    [InlineData("sso-out", true)]
+    [InlineData("sso", false)]
+    [InlineData("shop1", false)]
+    public async Task IsTakenAsync_ThePathOfARemoteSignInScheme_IsTaken(string segment, bool taken)
+    {
+        var routes = StoreRoutes.Create(session: null, [], webRoot: null, authentication => authentication
+            .AddCookie()
+            .AddRemoteScheme<SsoOptions, SsoHandler>("Sso", "Single sign-on", options => options.CallbackPath = "/sso-return/done"), "cart");
+
+        Assert.Equal(taken, await routes.IsTakenAsync(segment, TestContext.Current.CancellationToken));
+    }
+
+    // ASP.NET Core names every remote sign-in callback signin-{provider} and its sign-out callbacks signout-{...}, so a
+    // provider the operator turns on after the site was sold would answer there too.
+    [Theory]
+    [InlineData("signin-google")]
+    [InlineData("signin-oidc")]
+    [InlineData("SignIn-Microsoft")]
+    [InlineData("signout-callback-oidc")]
+    public async Task IsTakenAsync_ASegmentNamedLikeARemoteSignInCallback_IsTaken(string segment)
+        => Assert.True(await StoreRoutes.Create("cart").IsTakenAsync(segment, TestContext.Current.CancellationToken));
+
+    // A segment that only starts the same way is not a callback.
+    [Theory]
+    [InlineData("signing")]
+    [InlineData("signout")]
+    public async Task IsTakenAsync_ASegmentThatOnlyStartsLikeACallback_IsFree(string segment)
+        => Assert.False(await StoreRoutes.Create("cart").IsTakenAsync(segment, TestContext.Current.CancellationToken));
+
+    /// <summary>
+    /// Selling-sites Mild (third fix verification): the check read every page whose path starts with the segment's first
+    /// letter, 500 at a time and with no cap, on each save of the step, at the payment gate and at provisioning. It now asks
+    /// for the segment itself, in the spellings a permalink takes, so a store with many pages under one letter answers
+    /// with one short query.
+    /// </summary>
+    [Fact]
+    public async Task IsTakenAsync_ManyPagesUnderTheSameLetter_AreNotRead()
+    {
+        var paths = Enumerable.Range(1, 1_200).Select(number => $"products/item-{number}").ToArray();
+
+        var (taken, queries) = await QueryPagesAsync("pricing", exactPaths: true, paths);
+
+        Assert.False(taken);
+        Assert.Equal(1, queries);
+    }
+
+    // The spellings a permalink takes on a database that compares text exactly, as PostgreSQL does.
+    [Theory]
+    [InlineData("getting-started", "Getting-Started/intro")]
+    [InlineData("getting-started", "GETTING-STARTED")]
+    [InlineData("Getting-Started", "getting-started/intro")]
+    [InlineData("about_us", "About_Us")]
+    public async Task IsTakenAsync_APagePathInALikelySpelling_IsTaken(string segment, string pagePath)
+        => Assert.True(await IsTakenByPagesAsync(segment, exactPaths: true, pagePath));
+
     private static async Task<bool> IsTakenByPagesAsync(string segment, bool exactPaths, params string[] pagePaths)
+        => (await QueryPagesAsync(segment, exactPaths, pagePaths)).Taken;
+
+    private static async Task<(bool Taken, int Queries)> QueryPagesAsync(string segment, bool exactPaths, params string[] pagePaths)
     {
         var path = Path.Combine(Path.GetTempPath(), $"crestapps-store-routes-{Guid.NewGuid():N}.db");
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={path};Pooling=False"));
@@ -146,13 +222,66 @@ public sealed class StoreRouteSegmentsTests
 
             await using (var session = store.CreateSession())
             {
-                return await StoreRoutes.Create(session, "cart").IsTakenAsync(segment, TestContext.Current.CancellationToken);
+                var counting = QueryCountingSession.Wrap(session);
+                var taken = await StoreRoutes.Create((ISession)counting, "cart").IsTakenAsync(segment, TestContext.Current.CancellationToken);
+
+                return (taken, ((QueryCountingSession)counting).IndexQueries);
             }
         }
         finally
         {
             TemporarySqliteDatabase.DisposeAndDelete(store, path);
         }
+    }
+
+    // Forwards every call to the real YesSql session and counts the queries started on it.
+    public class QueryCountingSession : DispatchProxy
+    {
+        private ISession _session;
+
+        public int IndexQueries { get; private set; }
+
+        public static object Wrap(ISession session)
+        {
+            var proxy = Create<ISession, QueryCountingSession>();
+            ((QueryCountingSession)(object)proxy)._session = session;
+
+            return proxy;
+        }
+
+        protected override object Invoke(MethodInfo targetMethod, object[] args)
+        {
+            // YesSql's QueryIndex extension starts every index query with ISession.Query().
+            if (targetMethod.Name == nameof(ISession.Query))
+            {
+                IndexQueries++;
+            }
+
+            try
+            {
+                return targetMethod.Invoke(_session, args);
+            }
+            catch (TargetInvocationException exception) when (exception.InnerException is not null)
+            {
+                throw exception.InnerException;
+            }
+        }
+    }
+
+    private sealed class SsoOptions : RemoteAuthenticationOptions
+    {
+        public PathString SignedOutCallbackPath { get; set; } = "/sso-out";
+    }
+
+    private sealed class SsoHandler : RemoteAuthenticationHandler<SsoOptions>
+    {
+        public SsoHandler(IOptionsMonitor<SsoOptions> options, ILoggerFactory logger, UrlEncoder encoder)
+            : base(options, logger, encoder)
+        {
+        }
+
+        protected override Task<HandleRequestResult> HandleRemoteAuthenticateAsync()
+            => Task.FromResult(HandleRequestResult.Fail("Not used."));
     }
 
     private sealed class Page
