@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using System.Net;
 using CrestApps.OrchardCore.Diagnostics;
-using Microsoft.AspNetCore.Authorization;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Designer.Workflows;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Reports.Services;
 using CrestApps.OrchardCore.Reports.Subscriptions.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Email;
@@ -194,10 +194,18 @@ public sealed class ReportSubscriptionService
             return (S["The report {0} isn't available; its feature may be off.", subscription.ReportName], "report_unavailable");
         }
 
+        // The report is sent only while the person who saved the subscription may still view it, and runs as them.
+        var owner = await _owners.ResolveByUserNameAsync(subscription.ModifiedBy ?? subscription.CreatedBy);
+
+        if (owner is null || (descriptor.Permission is not null && !await _authorizationService.AuthorizeAsync(owner, descriptor.Permission)))
+        {
+            return (S["The report can't be sent, because {0} may no longer view it.", subscription.ModifiedBy ?? subscription.CreatedBy], "view_denied");
+        }
+
         var format = string.IsNullOrWhiteSpace(subscription.AttachmentFormat) ? null : _exports.GetDescriptor(subscription.AttachmentFormat);
 
         // A report that needs a permission to export is attached only while the person who saved the subscription has it.
-        if (format is not null && descriptor.ExportPermission is not null && !await CanExportAsync(subscription, descriptor))
+        if (format is not null && descriptor.ExportPermission is not null && !await _authorizationService.AuthorizeAsync(owner, descriptor.ExportPermission))
         {
             return (S["The file can't be attached, because {0} may not export this report. Choose no file format, or give them the permission to export it.", subscription.ModifiedBy ?? subscription.CreatedBy], "export_denied");
         }
@@ -207,9 +215,6 @@ public sealed class ReportSubscriptionService
 
         // The email shows the report as it looks on screen; an attachment gets the document made for an export, which
         // can be shaped differently, such as a row per record.
-        // The report runs as the person who saved the subscription, so a report that shows each person only what they
-        // may see e-mails what that person sees.
-        var owner = await _owners.ResolveByUserNameAsync(subscription.ModifiedBy ?? subscription.CreatedBy);
         var document = await RunAsync(descriptor, fromUtc, toUtc, ReportRunMode.Display, title, owner, cancellationToken);
         var exportDocument = format is null ? null : await RunAsync(descriptor, fromUtc, toUtc, ReportRunMode.Export, title, owner, cancellationToken);
 
@@ -271,10 +276,4 @@ public sealed class ReportSubscriptionService
         return document;
     }
 
-    private async Task<bool> CanExportAsync(ReportSubscription subscription, ReportDescriptor descriptor)
-    {
-        var owner = await _owners.ResolveByUserNameAsync(subscription.ModifiedBy ?? subscription.CreatedBy);
-
-        return owner is not null && await _authorizationService.AuthorizeAsync(owner, descriptor.ExportPermission);
-    }
 }

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CrestApps.OrchardCore.Parties.Models;
 
 /// <summary>
@@ -10,8 +12,9 @@ namespace CrestApps.OrchardCore.Parties.Models;
 public readonly record struct PartyRef(string Kind, string Id)
 {
     /// <summary>
-    /// Gets whether the reference names no party.
+    /// Gets whether the reference names no party. It is computed, so it is not stored.
     /// </summary>
+    [JsonIgnore]
     public bool IsEmpty => string.IsNullOrEmpty(Kind) || string.IsNullOrEmpty(Id);
 
     /// <summary>

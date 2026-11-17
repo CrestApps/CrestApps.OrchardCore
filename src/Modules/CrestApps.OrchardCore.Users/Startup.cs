@@ -53,6 +53,7 @@ public sealed class Startup : StartupBase
         services.AddUserCacheService();
         services.TryAddBasicDisplayNameProvider();
         services.AddUserSearchService();
+        services.AddPasswordConfirmation();
         services.AddPartySource<UserPartySource>(PartyKinds.User, LocalizationSource.Create<Startup>("User"), UserSearchPermissions.SearchUsers);
         services.AddPermissionProvider<UserSearchPermissionProvider>();
         services.AddDisplayDriver<UserMenu, DisplayNameUserMenuDisplayDriver>();

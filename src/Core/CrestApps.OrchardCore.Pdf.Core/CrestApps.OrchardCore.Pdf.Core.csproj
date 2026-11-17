@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore PDF Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Writes PDF documents: pages, text measured and wrapped with embedded fonts, lines, shapes and pictures placed
+      at exact positions. Reports, check printing and other modules build their documents on it.
+    </Description>
+    <PackageTags>$(PackageTags) PDF Documents Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PdfPig" />
+  </ItemGroup>
+
+</Project>

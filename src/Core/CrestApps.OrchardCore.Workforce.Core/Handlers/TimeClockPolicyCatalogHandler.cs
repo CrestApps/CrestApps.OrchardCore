@@ -1,10 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
-using CrestApps.OrchardCore.Workforce.Core.Services;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Handlers;
 
@@ -14,13 +15,13 @@ namespace CrestApps.OrchardCore.Workforce.Core.Handlers;
 internal sealed class TimeClockPolicyCatalogHandler : CatalogEntryHandlerBase<TimeClockPolicy>
 {
     private readonly IClock _clock;
-    private readonly PayPeriodCalendarStore _calendarStore;
+    private readonly IPayScheduleManager _paySchedules;
 
     internal readonly IStringLocalizer S;
 
-    public TimeClockPolicyCatalogHandler(PayPeriodCalendarStore calendarStore, IClock clock, IStringLocalizer<TimeClockPolicyCatalogHandler> stringLocalizer)
+    public TimeClockPolicyCatalogHandler(IPayScheduleManager paySchedules, IClock clock, IStringLocalizer<TimeClockPolicyCatalogHandler> stringLocalizer)
     {
-        _calendarStore = calendarStore;
+        _paySchedules = paySchedules;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -50,7 +51,7 @@ internal sealed class TimeClockPolicyCatalogHandler : CatalogEntryHandlerBase<Ti
             context.Result.Fail(new ValidationResult(S["The name is required."], [nameof(TimeClockPolicy.Name)]));
         }
 
-        if (string.IsNullOrEmpty(item.PayPeriodCalendarId) || await _calendarStore.FindByIdAsync(item.PayPeriodCalendarId, cancellationToken) is null)
+        if (string.IsNullOrEmpty(item.PayPeriodCalendarId) || await _paySchedules.FindByIdAsync(item.PayPeriodCalendarId, cancellationToken) is null)
         {
             context.Result.Fail(new ValidationResult(S["Choose the pay periods."], [nameof(TimeClockPolicy.PayPeriodCalendarId)]));
         }

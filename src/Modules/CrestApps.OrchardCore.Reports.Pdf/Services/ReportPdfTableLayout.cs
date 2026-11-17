@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Pdf;
 using CrestApps.OrchardCore.Reports.Models;
 
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
@@ -61,7 +62,7 @@ internal sealed class ReportPdfTableLayout
     /// every value is measured bold.</param>
     /// <param name="baseFontSize">The font size of the text of the report.</param>
     /// <returns>The layout, or <see langword="null"/> when the table has no column.</returns>
-    public static ReportPdfTableLayout Measure(ReportSection section, ReportPdfFont font, double baseFontSize)
+    public static ReportPdfTableLayout Measure(ReportSection section, PdfFontFace font, double baseFontSize)
     {
         var columns = section.Columns ?? [];
         var rows = (section.Rows ?? []).Where(row => row is not null).ToList();

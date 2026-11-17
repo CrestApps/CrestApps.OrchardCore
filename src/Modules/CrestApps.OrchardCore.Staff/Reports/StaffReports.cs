@@ -143,6 +143,8 @@ public sealed class StaffHistoryReportDataSet : IndexedReportDataSet<StaffHistor
     /// </summary>
     public const string DataSetName = "StaffHistory";
 
+    private readonly IAuthorizationService _authorizationService;
+
     private Dictionary<string, string> _people = new(StringComparer.Ordinal);
 
     /// <summary>
@@ -152,8 +154,10 @@ public sealed class StaffHistoryReportDataSet : IndexedReportDataSet<StaffHistor
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public StaffHistoryReportDataSet(ISession session, IAuthorizationService authorizationService, IStringLocalizer<StaffHistoryReportDataSet> stringLocalizer)
-        : base(new DataSetDescriptor(DataSetName, stringLocalizer["Staff history"], stringLocalizer["One row per change to a staff member's employment: added, job title, status, employment, manager, teams, work location and last day."]), session, authorizationService, StaffConstants.CollectionName, StaffPermissions.ViewStaff)
+        : base(new DataSetDescriptor(DataSetName, stringLocalizer["Staff history"], stringLocalizer["One row per change to a staff member's employment: added, job title, status, employment, manager, teams, work location, last day and, for people who manage staff pay, pay."]), session, authorizationService, StaffConstants.CollectionName, StaffPermissions.ViewStaff)
     {
+        _authorizationService = authorizationService;
+
         var S = stringLocalizer;
         var group = S["Change"].Value;
 
@@ -185,14 +189,23 @@ public sealed class StaffHistoryReportDataSet : IndexedReportDataSet<StaffHistor
     /// </summary>
     /// <param name="context">The context of the run.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>No narrowing.</returns>
+    /// <returns>The pay changes left out for a reader who may not manage staff pay.</returns>
     protected override async Task<Func<IQueryIndex<StaffHistoryIndex>, IQueryIndex<StaffHistoryIndex>>> RestrictAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
         _people = (await Session.QueryIndex<StaffMemberIndex>(collection: StaffConstants.CollectionName).ListAsync(cancellationToken))
             .GroupBy(index => index.ItemId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First().DisplayName, StringComparer.Ordinal);
 
-        return await base.RestrictAsync(context, cancellationToken);
+        var restrict = await base.RestrictAsync(context, cancellationToken);
+
+        if (context?.User is { } user && await _authorizationService.AuthorizeAsync(user, StaffPermissions.ManageStaffPay))
+        {
+            return restrict;
+        }
+
+        var pay = StaffHistoryFields.Pay;
+
+        return rows => restrict(rows).Where(index => index.Field != pay);
     }
 
 }

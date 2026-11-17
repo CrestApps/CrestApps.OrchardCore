@@ -1,6 +1,8 @@
 using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -22,8 +24,8 @@ internal sealed class DefaultTimesheetService : ITimesheetService
 {
     private readonly TimesheetStore _store;
     private readonly AttendanceExceptionStore _exceptionStore;
-    private readonly PayPeriodCalendarStore _calendarStore;
-    private readonly PayCodeStore _payCodeStore;
+    private readonly IPayScheduleManager _paySchedules;
+    private readonly IPayCodeManager _payCodes;
     private readonly StaffMemberStore _workerStore;
     private readonly ITimeClockService _timeClock;
     private readonly ITimesheetCalculator _calculator;
@@ -43,8 +45,8 @@ internal sealed class DefaultTimesheetService : ITimesheetService
     public DefaultTimesheetService(
         TimesheetStore store,
         AttendanceExceptionStore exceptionStore,
-        PayPeriodCalendarStore calendarStore,
-        PayCodeStore payCodeStore,
+        IPayScheduleManager paySchedules,
+        IPayCodeManager payCodes,
         StaffMemberStore workerStore,
         ITimeClockService timeClock,
         ITimesheetCalculator calculator,
@@ -62,8 +64,8 @@ internal sealed class DefaultTimesheetService : ITimesheetService
     {
         _store = store;
         _exceptionStore = exceptionStore;
-        _calendarStore = calendarStore;
-        _payCodeStore = payCodeStore;
+        _paySchedules = paySchedules;
+        _payCodes = payCodes;
         _workerStore = workerStore;
         _timeClock = timeClock;
         _calculator = calculator;
@@ -94,7 +96,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
             return result;
         }
 
-        var calendar = await _calendarStore.FindByIdAsync(policy.PayPeriodCalendarId, cancellationToken);
+        var calendar = await _paySchedules.FindByIdAsync(policy.PayPeriodCalendarId, cancellationToken);
 
         if (calendar is null)
         {
@@ -368,7 +370,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
                 result.Fail(S["A line has more than 0 and up to 24 hours."]);
             }
 
-            if (string.IsNullOrEmpty(line.PayCodeId) || await _payCodeStore.FindByIdAsync(line.PayCodeId, cancellationToken) is null)
+            if (string.IsNullOrEmpty(line.PayCodeId) || await _payCodes.FindByIdAsync(line.PayCodeId, cancellationToken) is null)
             {
                 result.Fail(S["Choose the pay code."]);
             }
@@ -474,16 +476,16 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         }
     }
 
-    private async Task<(TimeClockPolicy Policy, PayPeriodCalendar Calendar)> PolicyAsync(StaffMember worker, Timesheet timesheet, CancellationToken cancellationToken)
+    private async Task<(TimeClockPolicy Policy, PaySchedule Calendar)> PolicyAsync(StaffMember worker, Timesheet timesheet, CancellationToken cancellationToken)
     {
         var policy = await _timeClock.GetPolicyAsync(worker, timesheet.PeriodStart, cancellationToken)
             ?? await _timeClock.GetPolicyAsync(worker, timesheet.PeriodEnd, cancellationToken);
-        var calendar = await _calendarStore.FindByIdAsync(timesheet.PayPeriodCalendarId, cancellationToken);
+        var calendar = await _paySchedules.FindByIdAsync(timesheet.PayPeriodCalendarId, cancellationToken);
 
         return (policy, calendar);
     }
 
-    private async Task<TimesheetCalculation> RecalculateAsync(Timesheet timesheet, StaffMember worker, TimeClockPolicy policy, PayPeriodCalendar calendar, CancellationToken cancellationToken)
+    private async Task<TimesheetCalculation> RecalculateAsync(Timesheet timesheet, StaffMember worker, TimeClockPolicy policy, PaySchedule calendar, CancellationToken cancellationToken)
     {
         var calculation = await BuildAsync(timesheet, worker, policy, calendar, cancellationToken);
 
@@ -539,7 +541,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         return calculation;
     }
 
-    private async Task<TimesheetCalculation> BuildAsync(Timesheet timesheet, StaffMember worker, TimeClockPolicy policy, PayPeriodCalendar calendar, CancellationToken cancellationToken)
+    private async Task<TimesheetCalculation> BuildAsync(Timesheet timesheet, StaffMember worker, TimeClockPolicy policy, PaySchedule calendar, CancellationToken cancellationToken)
     {
         var zone = await _timeZones.GetAsync(worker, WorkerTimeZones.TeamOn(worker, timesheet.PeriodStart), cancellationToken);
         var weekStart = calendar.WeekOf(timesheet.PeriodStart);
@@ -559,7 +561,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
             });
         }
 
-        var payCodes = await _payCodeStore.GetAllAsync(cancellationToken);
+        var payCodes = await _payCodes.GetAllAsync(cancellationToken);
 
         return _calculator.Calculate(new TimesheetCalculationInput
         {
@@ -589,7 +591,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         }
 
         var codesByCode = payCodes.Where(code => code.Enabled).ToDictionary(code => code.Code ?? string.Empty, code => code, StringComparer.OrdinalIgnoreCase);
-        var unpaid = payCodes.FirstOrDefault(code => code.Enabled && code.Kind == PayCodeKind.Unpaid);
+        var unpaid = payCodes.FirstOrDefault(code => code.Enabled && code.Kind == PayCodeKinds.Unpaid);
         var days = new List<TimesheetTimeOff>();
 
         foreach (var request in await requestStore.ListLiveForWorkerAsync(worker.ItemId, timesheet.PeriodStart, timesheet.PeriodEnd, cancellationToken))

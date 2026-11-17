@@ -438,6 +438,10 @@ The widget has these options: the **first window** (7 days) and **second window*
 
 Orders adds the recipes **Automation: thank-you email** (on) and **Automation: canceled order alert** (added off), and Inventory adds **Automation: low stock alert** (added off). Each turns on Workflows and Email and adds a `WorkflowType` with stable ids: `OrderPaidEvent`, `OrderCanceledEvent` or `LowStockEvent` leading to an `EmailTask` in Liquid over `Workflow.Input`.
 
+## Commissions in payroll
+
+With Payroll's Pay Setup and Staff on, `OrderCommissionPayInputSource` (source kind `Order`) gives payroll each paid order's commission: the `CommissionRate` of the staff member who made it (`StaffUserId`) times the subtotal less discounts and refunds, on the day it was paid in the site's zone. A run that takes it stamps the order (`OrderCommissionPayroll`), so it is paid once; a void gives it back. A refund after the commission was paid doesn't take it back.
+
 ## The account page
 
 With [Accounts](accounts.md) on, an account's page gets an **Orders** tab: the latest 25 orders placed for the account

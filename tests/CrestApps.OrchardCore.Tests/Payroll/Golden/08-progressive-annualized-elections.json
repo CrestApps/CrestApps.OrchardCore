@@ -1,0 +1,91 @@
+{
+  "Frequency": "Biweekly",
+  "PeriodStart": "2026-11-01",
+  "PeriodEnd": "2026-11-14",
+  "PayDate": "2026-11-20",
+  "Description": "Progressive brackets on a year's wages: 2000 x 26 = 52000, less two allowances of 4000 = 44000; 30000 at 10% + 4000 at 20% = 3800 a year, 146.15 a period, plus 10 extra withholding.",
+  "Pay": {
+    "PayBasis": "Hourly",
+    "Rates": [
+      {
+        "EffectiveFrom": "2020-01-01",
+        "HourlyRate": 25
+      }
+    ]
+  },
+  "Codes": [
+    {
+      "Code": "REG",
+      "Class": "Earning",
+      "Kind": "Regular"
+    }
+  ],
+  "Distribution": [
+    {
+      "Method": "Check",
+      "Split": "Remainder"
+    }
+  ],
+  "Inputs": [
+    {
+      "PayCode": "REG",
+      "Hours": 80
+    }
+  ],
+  "Elections": [
+    {
+      "Jurisdiction": "US",
+      "EffectiveFrom": "2026-01-01",
+      "Values": {
+        "Allowances": "2",
+        "ExtraWithholding": "10"
+      }
+    }
+  ],
+  "TaxRules": [
+    {
+      "rule": {
+        "TaxCode": "US-FIT",
+        "Name": "Income tax",
+        "Jurisdiction": "US",
+        "Category": "IncomeTax",
+        "Payer": "Employee",
+        "Method": "Progressive",
+        "EffectiveFrom": "2026-01-01",
+        "Annualize": true,
+        "UsesElections": true,
+        "AllowanceAmount": 4000
+      },
+      "Table": [
+        {
+          "Minimum": 0,
+          "Maximum": 10000,
+          "Rate": 0
+        },
+        {
+          "Minimum": 10000,
+          "Maximum": 40000,
+          "Rate": 0.1
+        },
+        {
+          "Minimum": 40000,
+          "Rate": 0.2
+        }
+      ]
+    }
+  ],
+  "Expected": {
+    "Lines": [
+      "Earning REG 2000.00 for 80h",
+      "Tax US-FIT Employee 156.15 on 2000.00"
+    ],
+    "Gross": 2000.0,
+    "Net": 1843.85,
+    "Payments": [
+      {
+        "Method": "Check",
+        "Amount": 1843.85
+      }
+    ]
+  }
+}

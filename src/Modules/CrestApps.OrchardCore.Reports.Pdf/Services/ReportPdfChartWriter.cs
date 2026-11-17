@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Pdf;
 using CrestApps.OrchardCore.Reports.Models;
 
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
@@ -126,7 +127,7 @@ internal sealed class ReportPdfChartWriter
     /// </summary>
     public double Height => _chartHeight > 0 ? SpaceBefore + _chartHeight : 0;
 
-    private ReportPdfFont Font => _flow.Regular;
+    private PdfFontFace Font => _flow.Regular;
 
     private double LineHeight => Font.LineHeight * FontSize;
 
@@ -184,7 +185,7 @@ internal sealed class ReportPdfChartWriter
 
         for (var index = 0; index < _categoryCount; index += step)
         {
-            var label = ReportPdfText.Fit(_labels[index], Font, FontSize, Math.Min(MaxCategoryLabelWidth, (bandWidth * step) - 2));
+            var label = PdfText.Fit(_labels[index], Font, FontSize, Math.Min(MaxCategoryLabelWidth, (bandWidth * step) - 2));
             var center = plotLeft + ((index + 0.5) * bandWidth);
 
             page.DrawText(label, Font, FontSize, center - (Font.Measure(label, FontSize) / 2), plotBottom + 3, ReportPdfTheme.Muted);
@@ -205,7 +206,7 @@ internal sealed class ReportPdfChartWriter
         foreach (var line in _lines)
         {
             var y = Y(line.Value);
-            var label = ReportPdfText.Fit(line.Label, Font, FontSize, (plotRight - plotLeft) / 2);
+            var label = PdfText.Fit(line.Label, Font, FontSize, (plotRight - plotLeft) / 2);
             var top = y - LineHeight - 1 < plotTop ? y + 1 : y - LineHeight - 1;
 
             DrawDashedLine(plotLeft, y, plotRight, y, line.Color);
@@ -214,7 +215,7 @@ internal sealed class ReportPdfChartWriter
     }
 
     // Draws a dashed line between two points, as reference lines are drawn on screen.
-    private void DrawDashedLine(double x1, double top1, double x2, double top2, ReportPdfColor color)
+    private void DrawDashedLine(double x1, double top1, double x2, double top2, PdfColor color)
     {
         const double Dash = 5;
         const double Gap = 3;
@@ -347,13 +348,13 @@ internal sealed class ReportPdfChartWriter
 
         for (var category = 0; category < _categoryCount; category++)
         {
-            var lines = ReportPdfText.Wrap(_labels[category], Font, FontSize, labelWidth);
+            var lines = PdfText.Wrap(_labels[category], Font, FontSize, labelWidth);
 
             if (lines.Count > maxLines)
             {
                 var rest = string.Join(' ', lines.Skip(maxLines - 1));
 
-                lines = [.. lines.Take(maxLines - 1), ReportPdfText.Fit(rest, Font, FontSize, labelWidth)];
+                lines = [.. lines.Take(maxLines - 1), PdfText.Fit(rest, Font, FontSize, labelWidth)];
             }
 
             var top = plotTop + ((category + 0.5) * bandHeight) - (lines.Count * LineHeight / 2);
@@ -381,7 +382,7 @@ internal sealed class ReportPdfChartWriter
         foreach (var line in _lines)
         {
             var x = X(line.Value);
-            var label = ReportPdfText.Fit(line.Label, Font, FontSize, (plotRight - plotLeft) / 2);
+            var label = PdfText.Fit(line.Label, Font, FontSize, (plotRight - plotLeft) / 2);
             var width = Font.Measure(label, FontSize);
             var left = x + 2 + width > plotRight ? x - 2 - width : x + 2;
 
@@ -487,7 +488,7 @@ internal sealed class ReportPdfChartWriter
         // The slices of a pie are named in a column at its right.
         var maxWidth = box.Width * 0.4;
         var rowHeight = LineHeight * 1.3;
-        var items = _labels.Select((label, index) => (Text: ReportPdfText.Fit(label, Font, FontSize, maxWidth - Swatch - 3), Color: ReportPdfTheme.GetPaletteColor(index))).ToList();
+        var items = _labels.Select((label, index) => (Text: PdfText.Fit(label, Font, FontSize, maxWidth - Swatch - 3), Color: ReportPdfTheme.GetPaletteColor(index))).ToList();
         var width = Math.Min(maxWidth, items.Max(item => Swatch + 3 + Font.Measure(item.Text, FontSize)));
         var visible = Math.Max(1, Math.Min(items.Count, (int)Math.Floor(box.Height / rowHeight)));
         var left = box.Right - width;
@@ -511,13 +512,13 @@ internal sealed class ReportPdfChartWriter
         // The series are named in rows under the chart, centered, wrapping when they do not fit across it.
         const double Gap = 12;
 
-        var current = new List<(string Text, ReportPdfColor Color, double Width)>();
-        var rows = new List<List<(string Text, ReportPdfColor Color, double Width)>> { current };
+        var current = new List<(string Text, PdfColor Color, double Width)>();
+        var rows = new List<List<(string Text, PdfColor Color, double Width)>> { current };
         var rowWidth = 0d;
 
         foreach (var series in _series)
         {
-            var text = ReportPdfText.Fit(series.Label, Font, FontSize, box.Width - Swatch - 3);
+            var text = PdfText.Fit(series.Label, Font, FontSize, box.Width - Swatch - 3);
             var width = Swatch + 3 + Font.Measure(text, FontSize);
 
             if (current.Count > 0 && rowWidth + Gap + width > box.Width)
@@ -551,7 +552,7 @@ internal sealed class ReportPdfChartWriter
         return height;
     }
 
-    private void DrawLegendItem(string text, ReportPdfColor color, double left, double top)
+    private void DrawLegendItem(string text, PdfColor color, double left, double top)
     {
         _flow.Page.FillRectangle(left, top + ((LineHeight - Swatch) / 2), Swatch, Swatch, color);
         _flow.Page.DrawText(text, Font, FontSize, left + Swatch + 3, top, ReportPdfTheme.Text);
@@ -604,9 +605,9 @@ internal sealed class ReportPdfChartWriter
         return Font.Prepare(value).Replace('\n', ' ');
     }
 
-    private sealed record Series(string Label, double[] Values, ReportPdfColor Color);
+    private sealed record Series(string Label, double[] Values, PdfColor Color);
 
-    private sealed record ReferenceLine(string Label, double Value, ReportPdfColor Color);
+    private sealed record ReferenceLine(string Label, double Value, PdfColor Color);
 
     private readonly record struct Box(double Left, double Top, double Width, double Height)
     {

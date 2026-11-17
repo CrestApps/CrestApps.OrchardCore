@@ -71,7 +71,7 @@
             else
             {
                 <table class="table table-sm align-middle">
-                    <thead><tr><th scope="col">@T["From"]</th><th scope="col">@T["Rate an hour"]</th><th scope="col">@T["For"]</th><th scope="col"><span class="visually-hidden">@T["Actions"]</span></th></tr></thead>
+                    <thead><tr><th scope="col">@T["From"]</th><th scope="col">@T["Rate an hour"]</th><th scope="col">@T["For"]</th></tr></thead>
                     <tbody>
                         @foreach (var rate in Model.Rates)
                         {
@@ -79,27 +79,12 @@
                                 <td>@rate.EffectiveFrom.ToString("d MMM yyyy")</td>
                                 <td>@rate.HourlyRate.ToString("0.00##")</td>
                                 <td>@(string.IsNullOrEmpty(rate.ActivityCodeId) ? T["All work"].Value : Model.ActivityNames.GetValueOrDefault(rate.ActivityCodeId, rate.ActivityCodeId))</td>
-                                <td class="text-end">
-                                    <form asp-action="RemoveRate" asp-route-workerId="@Model.Worker.ItemId" method="post">
-                                        <input type="hidden" name="from" value="@rate.EffectiveFrom.ToString("yyyy-MM-dd")" />
-                                        <input type="hidden" name="activityCodeId" value="@rate.ActivityCodeId" />
-                                        <button type="submit" class="btn btn-link btn-sm text-danger p-0">@T["Remove"]</button>
-                                    </form>
-                                </td>
                             </tr>
                         }
                     </tbody>
                 </table>
             }
-            <form asp-action="AddRate" asp-route-workerId="@Model.Worker.ItemId" method="post" class="row g-2 align-items-end">
-                <div class="col-sm-auto"><label class="form-label" for="RateFrom">@T["From"]</label><input asp-for="RateFrom" type="date" class="form-control" required /></div>
-                <div class="col-sm-auto"><label class="form-label" for="HourlyRate">@T["Rate an hour"]</label><input asp-for="HourlyRate" type="number" step="0.01" min="0.01" class="form-control" style="max-width: 10rem" required /></div>
-                <div class="col-sm-auto">
-                    <label class="form-label" for="RateActivityCodeId">@T["For"]</label>
-                    <select asp-for="RateActivityCodeId" asp-items="Model.ActivityOptions" class="form-select"><option value="">@T["All work"]</option></select>
-                </div>
-                <div class="col-sm-auto"><button type="submit" class="btn btn-secondary">@T["Add rate"]</button></div>
-            </form>
+            <p class="hint mb-0">@T["Pay is changed in the staff member's Pay card, by people who manage staff pay."] <a asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Edit" asp-route-id="@Model.Worker.ItemId">@T["Open the staff member"]</a></p>
         </div>
     </div>
 }

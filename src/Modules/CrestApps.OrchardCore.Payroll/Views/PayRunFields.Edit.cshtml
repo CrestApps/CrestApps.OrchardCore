@@ -1,0 +1,66 @@
+@model PayRunViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["The pay run"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="EmployerId">
+            <label asp-for="EmployerId" class="ocat-label ocat-label-required">@T["Employer"]</label>
+            <div class="ocat-end">
+                <select asp-for="EmployerId" asp-items="Model.Employers" class="form-select" style="max-width: 24rem">
+                    <option value="">@T["Choose…"]</option>
+                </select>
+                <span asp-validation-for="EmployerId" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="PayScheduleId">
+            <label asp-for="PayScheduleId" class="ocat-label">@T["Pay schedule"]</label>
+            <div class="ocat-end">
+                <select asp-for="PayScheduleId" asp-items="Model.Schedules" class="form-select" style="max-width: 24rem">
+                    <option value="">@T["Choose…"]</option>
+                </select>
+                <span asp-validation-for="PayScheduleId" class="text-danger"></span>
+                <span class="hint">@T["Everyone of the employer with an active pay profile on the schedule is paid by the run."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Type" class="ocat-label">@T["Type"]</label>
+            <div class="ocat-end">
+                <select asp-for="Type" class="form-select" style="max-width: 24rem">
+                    <option value="Regular">@T["Regular (salaries, hours, pay items and inputs)"]</option>
+                    <option value="Supplemental">@T["Supplemental (bonuses and commissions: inputs only)"]</option>
+                    <option value="OffCycle">@T["Off-cycle (inputs only)"]</option>
+                    <option value="Final">@T["Final pay"]</option>
+                    <option value="Correction">@T["Correction"]</option>
+                    <option value="Contractor">@T["Contractors (nothing withheld)"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="SupplementalMethod" class="ocat-label">@T["Bonuses withheld"]</label>
+            <div class="ocat-end">
+                <select asp-for="SupplementalMethod" class="form-select" style="max-width: 24rem">
+                    <option value="Aggregate">@T["With regular wages"]</option>
+                    <option value="Flat">@T["At each tax's flat supplemental rate"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="PeriodStart">
+            <label asp-for="PeriodStart" class="ocat-label">@T["Period"]</label>
+            <div class="ocat-end">
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <input asp-for="PeriodStart" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["First day"]" />
+                    <span>@T["to"]</span>
+                    <input asp-for="PeriodEnd" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["Last day"]" />
+                </div>
+                <span asp-validation-for="PeriodStart" class="text-danger"></span>
+                <span class="hint">@T["Leave the period and the pay date empty to take the schedule's current period and its pay date."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="PayDate" class="ocat-label">@T["Pay date"]</label>
+            <div class="ocat-end">
+                <input asp-for="PayDate" type="date" class="form-control" style="max-width: 12rem" />
+            </div>
+        </div>
+    </div>
+</div>

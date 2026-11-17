@@ -1,3 +1,5 @@
+using CrestApps.Core;
+using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -12,11 +14,11 @@ namespace CrestApps.OrchardCore.Tests.Workforce;
 public sealed class TimesheetCalculatorTests
 {
     private static readonly DateOnly _monday = new(2026, 11, 9);
-    private static readonly PayCode _regular = Code("REG", PayCodeKind.Regular);
-    private static readonly PayCode _overtime = Code("OT", PayCodeKind.Overtime, 1.5m);
-    private static readonly PayCode _doubleTime = Code("DT", PayCodeKind.DoubleTime, 2);
-    private static readonly PayCode _paidTimeOff = Code("PTO", PayCodeKind.PaidTimeOff);
-    private static readonly PayCode _predictability = Code("PP", PayCodeKind.PredictabilityPay);
+    private static readonly PayCode _regular = Code("REG", PayCodeKinds.Regular);
+    private static readonly PayCode _overtime = Code("OT", PayCodeKinds.Overtime, 1.5m);
+    private static readonly PayCode _doubleTime = Code("DT", PayCodeKinds.DoubleTime, 2);
+    private static readonly PayCode _paidTimeOff = Code("PTO", PayCodeKinds.PaidTimeOff);
+    private static readonly PayCode _predictability = Code("PP", PayCodeKinds.PredictabilityPay);
 
     private readonly DefaultTimesheetCalculator _calculator = new();
 
@@ -154,7 +156,7 @@ public sealed class TimesheetCalculatorTests
 
         input.Policy.DailyOvertimeHours = 8;
         input.Policy.Holidays = [_monday];
-        input.PayCodes = [.. input.PayCodes, Code("HOL", PayCodeKind.Holiday, 1.5m)];
+        input.PayCodes = [.. input.PayCodes, Code("HOL", PayCodeKinds.Holiday, 1.5m)];
 
         var result = _calculator.Calculate(input);
 
@@ -173,7 +175,7 @@ public sealed class TimesheetCalculatorTests
 
         Assert.Equal([(saturday, "REG", 4m)], Lines(_calculator.Calculate(input)));
 
-        input.PayCodes = [.. input.PayCodes, Code("WKND", PayCodeKind.Weekend, 1.5m)];
+        input.PayCodes = [.. input.PayCodes, Code("WKND", PayCodeKinds.Weekend, 1.5m)];
 
         Assert.Equal([(saturday, "WKND", 4m)], Lines(_calculator.Calculate(input)));
     }
@@ -382,10 +384,9 @@ public sealed class TimesheetCalculatorTests
     [Fact]
     public void ANightDifferential_AddsAPremiumLineForTheHoursInItsWindow()
     {
-        var night = Code("NIGHT", PayCodeKind.ShiftDifferential);
+        var night = Code("NIGHT", PayCodeKinds.ShiftDifferential);
 
-        night.WindowStart = new TimeOnly(22, 0);
-        night.WindowEnd = new TimeOnly(6, 0);
+        night.Put(new WorkforcePayCodeSettings { WindowStart = new TimeOnly(22, 0), WindowEnd = new TimeOnly(6, 0) });
         night.PremiumPerHour = 2;
 
         var input = Input(Punch(TimePunchKind.In, _monday, 20, 0), Punch(TimePunchKind.Out, _monday.AddDays(1), 4, 0));
@@ -460,10 +461,10 @@ public sealed class TimesheetCalculatorTests
     [Fact]
     public void PayPeriods_FollowTheirFrequency()
     {
-        var weekly = new PayPeriodCalendar { Frequency = PayPeriodFrequency.Weekly, AnchorDate = new DateOnly(2026, 1, 4) };
-        var biweekly = new PayPeriodCalendar { Frequency = PayPeriodFrequency.Biweekly, AnchorDate = new DateOnly(2026, 1, 4) };
-        var semiMonthly = new PayPeriodCalendar { Frequency = PayPeriodFrequency.SemiMonthly };
-        var monthly = new PayPeriodCalendar { Frequency = PayPeriodFrequency.Monthly };
+        var weekly = new PaySchedule { Frequency = PayFrequency.Weekly, AnchorDate = new DateOnly(2026, 1, 4) };
+        var biweekly = new PaySchedule { Frequency = PayFrequency.Biweekly, AnchorDate = new DateOnly(2026, 1, 4) };
+        var semiMonthly = new PaySchedule { Frequency = PayFrequency.SemiMonthly };
+        var monthly = new PaySchedule { Frequency = PayFrequency.Monthly };
 
         Assert.Equal((new DateOnly(2026, 11, 8), new DateOnly(2026, 11, 14)), weekly.PeriodOn(new DateOnly(2026, 11, 10)));
         Assert.Equal((new DateOnly(2026, 11, 8), new DateOnly(2026, 11, 21)), biweekly.PeriodOn(new DateOnly(2026, 11, 10)));
@@ -496,7 +497,7 @@ public sealed class TimesheetCalculatorTests
         };
     }
 
-    private static PayCode Code(string code, PayCodeKind kind, decimal multiplier = 1)
+    private static PayCode Code(string code, string kind, decimal multiplier = 1)
     {
         return new PayCode { ItemId = code.ToLowerInvariant(), Code = code, Name = code, Kind = kind, Multiplier = multiplier };
     }

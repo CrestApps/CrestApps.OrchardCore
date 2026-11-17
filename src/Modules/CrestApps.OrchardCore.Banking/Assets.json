@@ -1,0 +1,14 @@
+[
+  {
+    "action": "vite",
+    "name": "check-layout-designer.js",
+    "source": "Assets/js/check-layout-designer.js",
+    "dest": "wwwroot/scripts/check-layout-designer.js"
+  },
+  {
+    "action": "vite",
+    "name": "check-layout-designer.css",
+    "source": "Assets/css/check-layout-designer.css",
+    "dest": "wwwroot/styles/check-layout-designer.css"
+  }
+]

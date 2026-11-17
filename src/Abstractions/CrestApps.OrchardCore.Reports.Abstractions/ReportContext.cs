@@ -38,11 +38,11 @@ public sealed class ReportContext
     public ReportFilter Filter { get; }
 
     /// <summary>
-    /// Gets the person the report runs for: the viewer of the page or the widget, or, for a scheduled e-mail, the
+    /// Gets or sets the person the report runs for: the viewer of the page or the widget, or, for a scheduled e-mail, the
     /// person who saved the subscription. A report whose rows depend on who reads it (such as one that shows only the
     /// records a person may see) reads it here, not from the request, which a scheduled run doesn't have.
     /// </summary>
-    public System.Security.Claims.ClaimsPrincipal User { get; init; }
+    public System.Security.Claims.ClaimsPrincipal User { get; set; }
 
     /// <summary>
     /// Gets what the document is for. A report that pages its rows on screen gives an export every matching row.

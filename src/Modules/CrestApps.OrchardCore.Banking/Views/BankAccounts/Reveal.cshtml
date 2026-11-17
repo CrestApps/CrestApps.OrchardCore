@@ -1,0 +1,29 @@
+@model BankAccountRevealViewModel
+
+<zone Name="Title">
+    <breadcrumb name="BankAccountsReveal" title="@T["Account number of {0}", Model.Name]">
+        <breadcrumb-item id="BankAccounts" action="Index" controller="BankAccounts" area="CrestApps.OrchardCore.Banking" permission="@BankingPermissions.ManageBankAccounts.Name">@T["Bank accounts"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="alert alert-warning" role="alert">
+    @T["This page shows the full account number. Your viewing it has been recorded. Do not copy it anywhere that is not secure."]
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Numbers"]</div>
+    <div class="card-body">
+        <div class="mb-3">
+            <span class="form-label d-block">@T["Routing number"]</span>
+            <code class="fs-5">@Model.RoutingNumber</code>
+        </div>
+        <div class="mb-3">
+            <span class="form-label d-block">@T["Account number"]</span>
+            <code class="fs-5">@Model.AccountNumber</code>
+        </div>
+    </div>
+</div>
+
+<div class="action-bar-bottom">
+    <a class="btn btn-secondary cancel" role="button" asp-action="Edit" asp-route-id="@Model.ItemId">@T["Back"]</a>
+</div>

@@ -1,0 +1,35 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+
+@model PayrollTaskViewModel
+
+<p class="hint">@T["Adds a pay run for an employer and a pay schedule, for the schedule's period of today unless a period is given. A run of the same employer, schedule, type and period that is not cancelled is not added twice. Writes PayRunId and PayRunNumber to the output."]</p>
+<div class="mb-3">
+    <label asp-for="EmployerId" class="form-label">@T["Employer id"]</label>
+    <input asp-for="EmployerId" class="form-control code" />
+    <span class="hint">@T["The employer's id. Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="PayScheduleId" class="form-label">@T["Pay schedule id"]</label>
+    <input asp-for="PayScheduleId" class="form-control code" />
+    <span class="hint">@T["The pay schedule's id. Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="RunType" class="form-label">@T["Type"]</label>
+    <input asp-for="RunType" class="form-control code" />
+    <span class="hint">@T["Regular, Supplemental, OffCycle, Final, Correction or Contractor; Regular when empty. Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="PeriodStart" class="form-label">@T["First day"]</label>
+    <input asp-for="PeriodStart" class="form-control code" />
+    <span class="hint">@T["yyyy-MM-dd, or empty for the schedule's period of today. Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="PeriodEnd" class="form-label">@T["Last day"]</label>
+    <input asp-for="PeriodEnd" class="form-control code" />
+    <span class="hint">@T["yyyy-MM-dd, or empty. Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="PayDate" class="form-label">@T["Pay date"]</label>
+    <input asp-for="PayDate" class="form-control code" />
+    <span class="hint">@T["yyyy-MM-dd, or empty for the schedule's. Liquid."]</span>
+</div>

@@ -57,6 +57,22 @@ public static class PartiesServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers a source that tells which parties of one kind a signed-in user is.
+    /// </summary>
+    /// <typeparam name="TSource">The source.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddUserPartySource<TSource>(this IServiceCollection services)
+        where TSource : class, IUserPartySource
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IUserPartySource, TSource>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers the <see cref="IPartyDirectory"/> once, for a feature that reads parties without keeping any.
     /// </summary>
     /// <param name="services">The service collection.</param>

@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<PayRunOpenedEvent>
+
+<header><h4><i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Pay Run Opened"])</h4></header>

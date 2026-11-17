@@ -1,0 +1,93 @@
+@model IncomeTaxWithholdingViewModel
+
+@{
+    string IdFor(string field, string key) => Html.IdFor(m => m.Tables).ToString().Replace("Tables", field) + "_" + System.Text.RegularExpressions.Regex.Replace(key, "[^A-Za-z0-9]", "_");
+}
+
+<div class="card mb-3">
+    <div class="card-header">@Model.MethodDisplayName</div>
+    <div class="card-body">
+        @foreach (var table in Model.TableInputs)
+        {
+            var id = IdFor("Tables", table.Key);
+            var selected = Model.Tables.GetValueOrDefault(table.Key);
+            <div class="ocat-wrapper">
+                <label for="@id" class="ocat-label @(table.Required ? "ocat-label-required" : null)">@table.Label</label>
+                <div class="ocat-end">
+                    <select id="@id" name="@(Html.NameFor(m => m.Tables))[@table.Key]" class="form-select" style="max-width: 24rem">
+                        <option value="">@T["None"]</option>
+                        @foreach (var option in Model.AvailableTables)
+                        {
+                            <option value="@option.Value" selected="@(option.Value == selected)">@option.Text</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        }
+        @foreach (var parameter in Model.ParameterInputs)
+        {
+            var id = IdFor("Parameters", parameter.Key);
+            <div class="ocat-wrapper">
+                <label for="@id" class="ocat-label @(parameter.Required ? "ocat-label-required" : null)">@parameter.Label</label>
+                <div class="ocat-end">
+                    <input id="@id" name="@(Html.NameFor(m => m.Parameters))[@parameter.Key]" value="@Model.Parameters.GetValueOrDefault(parameter.Key)" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+                </div>
+            </div>
+        }
+        @if (Model.TableInputs.Count > 0)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <span class="hint">@T["Tables are tables of Commerce &gt; Taxation &gt; Tables, worked out as progressive brackets on a year's amount. Amounts take a dot for decimals."]</span>
+                </div>
+            </div>
+        }
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="UsesElections" type="checkbox" class="form-check-input" />
+                    <label asp-for="UsesElections" class="form-check-label">@T["The person's election applies"]</label>
+                    <span class="hint dashed">@T["The person's withholding form for the jurisdiction is used: exempt withholds nothing, and extra withholding is added."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AllowanceAmount">
+            <label asp-for="AllowanceAmount" class="ocat-label">@T["Each allowance"]</label>
+            <div class="ocat-end">
+                <input asp-for="AllowanceAmount" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+                <span asp-validation-for="AllowanceAmount" class="text-danger"></span>
+                <span class="hint">@T["What one allowance on an older withholding form lowers a year's income by; empty for none."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!Model.HandlesSupplementalIncome)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Bonuses and commissions"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="SupplementalRate">
+                <label asp-for="SupplementalRate" class="ocat-label">@T["Flat rate (%)"]</label>
+                <div class="ocat-end">
+                    <input asp-for="SupplementalRate" class="form-control" inputmode="decimal" style="max-width: 8rem" placeholder="22" />
+                    <span asp-validation-for="SupplementalRate" class="text-danger"></span>
+                    <span class="hint">@T["Withheld from bonuses and commissions when a run uses the flat method; empty to withhold them with regular income."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="SupplementalExcessRate">
+                <label asp-for="SupplementalExcessRate" class="ocat-label">@T["Rate over a year's amount (%)"]</label>
+                <div class="ocat-end">
+                    <div class="input-group" style="max-width: 24rem">
+                        <input asp-for="SupplementalExcessRate" class="form-control" inputmode="decimal" placeholder="37" aria-label="@T["Rate over a year's amount (%)"]" />
+                        <span class="input-group-text">@T["over"]</span>
+                        <input asp-for="SupplementalExcessThreshold" class="form-control" inputmode="decimal" placeholder="1000000" aria-label="@T["Year's amount"]" />
+                    </div>
+                    <span asp-validation-for="SupplementalExcessRate" class="text-danger"></span>
+                    <span asp-validation-for="SupplementalExcessThreshold" class="text-danger"></span>
+                    <span class="hint">@T["The rate withheld from the supplemental income a person is paid in a calendar year above the amount, whatever the method and the election; empty for none."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}

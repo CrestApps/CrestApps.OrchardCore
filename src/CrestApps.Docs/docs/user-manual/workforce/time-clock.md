@@ -1,7 +1,7 @@
 ---
 sidebar_label: Time Clock
 title: Time Clock
-description: "Clock in and out from My Work or a kiosk, set how time is rounded and paid with time clock policies, pay periods and pay codes, approve timesheets, handle attendance exceptions and points, and export locked timesheets for payroll."
+description: "Clock in and out from My Work or a kiosk, set how time is rounded and paid with time clock policies, pay schedules and pay codes, approve timesheets, handle attendance exceptions and points, and export locked timesheets for payroll."
 technical_manual:
   - modules/workforce
 ---
@@ -10,8 +10,8 @@ The time clock records when workers start and stop work, turns their punches int
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Time Management > Timesheets, Attendance, Payroll Export, Time Clock Policies, Pay Periods, Pay Codes, Time Clock Kiosks |
-| **Permission** | Manage time clock policies, Approve timesheets, Edit punches, Export payroll, View pay rates, Clock in and out |
+| **Menu** | Workforce > Time Management > Timesheets, Attendance, Past Payroll Exports, Time Clock Policies, Time Clock Kiosks; Tools > Data Pipelines; Payroll > Setup > Pay Schedules, Pay Codes |
+| **Permission** | Manage time clock policies, Approve timesheets, Edit punches, Lock timesheets for payroll, Export payroll data, Clock in and out |
 | **Feature** | Workforce Time Clock (it needs Workforce and Time Tracker) |
 
 <AskYourAdmin />
@@ -27,8 +27,8 @@ Every punch of a worker who has a login also keeps their day in [Time Tracker](.
 
 ## Setting it up
 
-1. Under **Workforce > Time Management > Pay Periods**, choose **Add pay periods**: how often workers are paid (every week, every two weeks, twice a month or every month), the first day of any one period for weekly and two-weekly pay, and the day the overtime week starts. The editor shows the next periods.
-2. Under **Workforce > Time Management > Pay Codes**, check the codes. Regular, overtime, double time, paid time off, predictability pay, holiday (time and a half), weekend (time and a half) and unpaid codes are added when the feature is turned on. Give a code a **payroll code** when your payroll system calls it something else.
+1. Under **Payroll > Setup > Pay Schedules**, choose **Add pay schedule**: how often workers are paid, the first day of any one period for weekly and two-weekly pay, the day the overtime week starts, and the pay date. The editor shows the next periods. See [Pay schedules and pay codes](../finance/pay-setup.md).
+2. Under **Payroll > Setup > Pay Codes**, check the codes. Regular, overtime, double time, paid time off, predictability pay, holiday (time and a half), weekend (time and a half) and unpaid codes are added when the feature is turned on. Give a code an **export code** when your payroll system calls it something else.
 3. Under **Workforce > Time Management > Time Clock Policies**, choose **Add policy** (see below).
 4. Under **Teams**, give the team its **time clock policy**. Sub-teams use their parent's. A team with no policy, and no parent with one, doesn't clock time.
 5. For kiosks, give each worker an **employee number** (their badge number) and a PIN under **Workers > Actions > Time clock**.
@@ -37,7 +37,7 @@ Every punch of a worker who has a login also keeps their day in [Time Tracker](.
 
 | Field | What it does |
 | --- | --- |
-| **Pay periods** | The periods the team's timesheets cover. |
+| **Pay schedule** | The periods the team's timesheets cover. |
 | **Round punch times to** | Not at all, or to 1, 5, 6 or 15 minutes; to the nearest step, or with starts rounded down and ends rounded up so the worker never loses time. |
 | **Early grace** | Clocking in this early, or out this late, is paid from the shift's start or to its end. |
 | **Late grace** | Clocking in this late, or out this early, is paid as on time and isn't an exception. |
@@ -116,16 +116,19 @@ Several timesheets can be approved at once from the list. **Make this period's t
 
 ## Payroll export
 
-Under **Workforce > Time Management > Payroll Export**, choose the pay period. The counts show how many timesheets are open, submitted, approved and locked. **Export locked timesheets** writes a CSV file with a row per worker and pay code, which you download from the list of exports. Each timesheet is exported once; tick **Export again the ones already exported** to include them again.
+Locked timesheets go to payroll as **pay inputs**. To send them to an outside payroll system, use a data pipeline:
 
-**Choose the CSV columns** sets the file's columns and headings: payroll id, employee number, name, pay code, day, hours, rate, amount, period, activity and job. A day, activity or job column gives a row per day, activity or job. Rates come from the worker's **pay rates** under **Workers > Actions > Time clock** (people with the View pay rates permission see them): a rate an hour from a day on, for all work or one activity. The amount is the hours times the rate and the code's multiplier, or the hours times a differential's premium.
+1. Under **Configuration > Recipes**, run **Payroll: export pay inputs to a CSV file**. It adds the draft pipeline **Pay inputs export**: one row per person, period, pay code and rate, with the hours and the amount (the hours times the rate and the code's multiplier, or times a differential's premium).
+2. Under **Tools > Data Pipelines**, open it. Add how the file is delivered, such as **Upload to an SFTP server** or **Send by email**, after **Payroll CSV**, then **Publish**.
+3. Choose **Run**, or schedule it with a workflow timer. The **Export to payroll** link on **Timesheets** opens Data Pipelines.
+
+Each timesheet is exported once: the pipeline marks the timesheets it read as exported only when the whole run succeeds, so a failed delivery exports them again next time. To export again what was already exported, add the parameter `IncludeExported=true` to its **Pay inputs** step. Change the columns, their headings or their order in the **Columns** step.
+
+Rates come from the staff member's **Pay** card (Staff Compensation). People who manage staff pay or may export payroll data see them, read only, under **Workers > Actions > Time clock**.
+
+If your site had chosen CSV columns for the earlier export, the update turned them into the draft pipeline **Payroll CSV export**, to publish the same way. The files the earlier export wrote stay under **Workforce > Time Management > Past Payroll Exports**.
 
 ## Pay codes
 
-| Field | What it does |
-| --- | --- |
-| **Code** | Short and unique, such as REG. |
-| **Pays for** | Regular hours, overtime, double time, holiday hours, weekend hours, paid time off, predictability pay, call back, a shift differential, or unpaid time. |
-| **Multiplier** | What the rate is multiplied by, such as 1.5 for overtime. |
-| **Premium an hour**, **Hours**, **On** | For a shift differential: the premium, the window in the worker's time (an end before the start runs past midnight), and the days it starts on. |
-| **Payroll code** | What payroll calls it, when that differs. |
+Pay codes are kept under **Payroll > Setup > Pay Codes** and shared with payroll (see [Pay schedules and pay codes](../finance/pay-setup.md)). The time clock uses the earning and memo codes in use: regular, overtime and double time for worked hours, holiday and weekend codes instead of the regular one on those days, and a shift differential for the hours in its window. A shift differential's hours, in the worker's time, and the days it starts on are set in the **Shift differential hours** card of the pay code.
+

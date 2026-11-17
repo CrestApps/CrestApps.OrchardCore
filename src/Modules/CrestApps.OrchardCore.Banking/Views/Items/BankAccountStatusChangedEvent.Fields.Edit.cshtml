@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.Banking.Models
+@using CrestApps.OrchardCore.Banking.Workflows
+
+@model BankAccountStatusChangedEventViewModel
+
+<p class="hint">@T["Starts when a bank account's status changes, such as when it is verified or closed. Input: BankAccountId, Name, OwnerKind, OwnerId, Status, PreviousStatus, Reason, Changes and Actor. It never holds a number."]</p>
+<div class="mb-3">
+    <label asp-for="Status" class="form-label">@T["Status"]</label>
+    <select asp-for="Status" class="form-select">
+        <option value="">@T["Any status"]</option>
+        <option value="@BankAccountStatus.Unverified">@T["Unverified"]</option>
+        <option value="@BankAccountStatus.VerificationSent">@T["Verification sent"]</option>
+        <option value="@BankAccountStatus.Verified">@T["Verified"]</option>
+        <option value="@BankAccountStatus.Failed">@T["Failed"]</option>
+        <option value="@BankAccountStatus.Closed">@T["Closed"]</option>
+    </select>
+    <span class="hint">@T["Only when the account moves to this status, such as Verified or Closed."]</span>
+</div>

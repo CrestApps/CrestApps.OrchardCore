@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Payroll;
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Teams;
@@ -64,12 +65,13 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = WorkforceConstants.Features.TimeClock,
     Name = "Workforce Time Clock",
-    Description = "Punches from the My Work portal, kiosks, the contact center and the API; time clock policies with rounding, grace, meals, geofences and overtime; timesheets workers attest to and managers approve; attendance exceptions and points; and payroll export. Each worker's day is kept in Time Tracker too.",
+    Description = "Punches from the My Work portal, kiosks, the contact center and the API; time clock policies with rounding, grace, meals, geofences and overtime; timesheets workers attest to and managers approve; attendance exceptions and points; and payroll export. Pay periods and pay codes come from Pay Setup. Each worker's day is kept in Time Tracker too.",
     Category = "Workforce",
     Dependencies =
     [
         WorkforceConstants.Features.Workforce,
         TimeTrackerConstants.Features.TimeTracker,
+        PayrollConstants.Features.PaySetup,
     ]
 )]
 

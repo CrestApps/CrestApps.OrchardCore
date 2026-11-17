@@ -1,0 +1,78 @@
+{
+  "name": "PayrollW2Efw2",
+  "displayName": "United States Payroll: W-2 wage records as an SSA EFW2 file",
+  "description": "Adds a draft data pipeline that writes the latest year's Form W-2 wage statements of the employers you may export as the SSA's EFW2 file. Prepare the year's W-2 filing first (Payroll > Filings). The social security numbers are read only for a user who may see full tax ids, and each one read is recorded. Publish it under Tools > Data Pipelines and add a delivery step that keeps the file private, such as an SFTP server or a download link: never the media library.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "payroll"
+  ],
+  "tags": [
+    "payroll",
+    "united states",
+    "w-2",
+    "data pipelines"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Payroll.UnitedStates",
+        "OrchardCore.DataPipelines"
+      ]
+    },
+    {
+      "name": "DataPipelines",
+      "Pipelines": [
+        {
+          "PipelineId": "payrollw2efw2file000000001",
+          "Name": "W-2 EFW2 file",
+          "Description": "The latest year's W-2 wage statements as the SSA's EFW2 file.",
+          "IsEnabled": true,
+          "Definition": {
+            "Steps": [
+              {
+                "StepId": "records",
+                "Type": "DataSource",
+                "Title": "W-2 wage records",
+                "X": 120,
+                "Y": 320,
+                "Properties": {
+                  "DataSourceStepSettings": {
+                    "Source": "Payroll",
+                    "DataSet": "WageRecords",
+                    "Fields": []
+                  }
+                }
+              },
+              {
+                "StepId": "file",
+                "Type": "CreateFile",
+                "Title": "EFW2 file",
+                "X": 400,
+                "Y": 320,
+                "Properties": {
+                  "CreateFileStepSettings": {
+                    "Format": "efw2",
+                    "FileName": "W2REPORT-{Date:yyyyMMdd}",
+                    "UseDisplayNames": false
+                  }
+                }
+              }
+            ],
+            "Connections": [
+              {
+                "SourceStepId": "records",
+                "SourcePort": "Output",
+                "TargetStepId": "file",
+                "TargetPort": "Input"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

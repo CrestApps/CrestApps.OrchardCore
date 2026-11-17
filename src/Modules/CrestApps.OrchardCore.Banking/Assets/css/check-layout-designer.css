@@ -1,0 +1,115 @@
+/* The check layout designer: the check at its real proportions, with each field where it prints. */
+
+.check-designer-canvas {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 612 / 264;
+    overflow: hidden;
+    background-color: #f8fbff;
+    background-image:
+        linear-gradient(rgba(13, 110, 253, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(13, 110, 253, 0.05) 1px, transparent 1px);
+    background-size: calc(var(--check-scale, 1) * 36px) calc(var(--check-scale, 1) * 36px);
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.25rem;
+    color: #212529;
+    font-family: Helvetica, Arial, sans-serif;
+    touch-action: none;
+    user-select: none;
+}
+
+/* The bottom 5/8 inch the check line needs, kept clear of every other field. */
+.check-designer-band {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(100% * 45 / 264);
+    background: repeating-linear-gradient(45deg, rgba(108, 117, 125, 0.07), rgba(108, 117, 125, 0.07) 6px, transparent 6px, transparent 12px);
+    border-top: 1px dashed rgba(108, 117, 125, 0.5);
+    pointer-events: none;
+}
+
+.check-designer-field {
+    position: absolute;
+    box-sizing: border-box;
+    padding: 0 2px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    border: 1px dashed rgba(13, 110, 253, 0.45);
+    background-color: rgba(255, 255, 255, 0.6);
+    cursor: move;
+}
+
+.check-designer-field:hover,
+.check-designer-field:focus {
+    outline: none;
+    border-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.06);
+}
+
+.check-designer-field.is-selected {
+    border: 2px solid #0d6efd;
+    background-color: rgba(13, 110, 253, 0.1);
+    z-index: 2;
+}
+
+.check-designer-field.is-off {
+    opacity: 0.35;
+    border-style: dotted;
+}
+
+.check-designer-field.is-in-band {
+    border-color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.08);
+}
+
+.check-designer-signature {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    bottom: 0;
+    border-top: 1px solid #212529;
+    white-space: nowrap;
+}
+
+.check-designer-resize {
+    position: absolute;
+    top: 0;
+    right: -1px;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+}
+
+.check-designer-field.is-selected .check-designer-resize {
+    background: linear-gradient(90deg, transparent 3px, #0d6efd 3px, #0d6efd 5px, transparent 5px);
+}
+
+.check-designer-micr {
+    position: absolute;
+    display: flex;
+    font-family: "Courier New", monospace;
+    letter-spacing: 0;
+    pointer-events: none;
+}
+
+.check-designer-micr span {
+    display: inline-block;
+    width: var(--micr-position, 9px);
+    text-align: center;
+}
+
+.check-designer-panel {
+    min-height: 2.5rem;
+}
+
+.check-designer-number {
+    max-width: 5rem;
+}
+
+/* Without the script, the exact positions are the editor; with it, they are tucked away. */
+[data-check-designer]:not(.is-ready) .check-designer-visual {
+    display: none;
+}

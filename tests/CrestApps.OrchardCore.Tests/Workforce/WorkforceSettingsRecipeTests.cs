@@ -1,4 +1,6 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
@@ -100,14 +102,14 @@ public sealed class WorkforceSettingsRecipeTests
 
         await harness.RunAsync(async services =>
         {
-            var calendar = Assert.Single(await services.GetRequiredService<IPayPeriodCalendarManager>().GetAllAsync());
+            var calendar = Assert.Single(await services.GetRequiredService<IPayScheduleManager>().GetAllAsync());
             var codes = await services.GetRequiredService<IPayCodeManager>().GetAllAsync();
             var policy = Assert.Single(await services.GetRequiredService<ITimeClockPolicyManager>().GetAllAsync());
             var stored = await services.GetRequiredService<ITeamManager>().FindByIdAsync(team.ItemId);
 
-            Assert.Equal(PayPeriodFrequency.Biweekly, calendar.Frequency);
+            Assert.Equal(PayFrequency.Biweekly, calendar.Frequency);
             Assert.Equal(["NIGHT", "REG"], codes.Select(code => code.Code).Order(StringComparer.Ordinal));
-            Assert.Equal(new TimeOnly(22, 0), codes.Single(code => code.Code == "NIGHT").WindowStart);
+            Assert.Equal(new TimeOnly(22, 0), codes.Single(code => code.Code == "NIGHT").GetWorkforceSettings().WindowStart);
             Assert.Equal(calendar.ItemId, policy.PayPeriodCalendarId);
             Assert.Equal(5, policy.RoundingMinutes);
             Assert.Equal(policy.ItemId, stored.GetWorkforceSettings().TimeClockPolicyId);

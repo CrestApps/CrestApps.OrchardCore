@@ -1,0 +1,3 @@
+@model ShapeViewModel<PayStatement>
+
+<a asp-action="Statement" asp-controller="PayRuns" asp-route-id="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Open"]</a>

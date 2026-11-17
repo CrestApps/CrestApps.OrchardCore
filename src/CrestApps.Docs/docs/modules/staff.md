@@ -51,13 +51,15 @@ Each staff member is a YesSql document in the `Staff` collection, with `StaffMem
 | Teams | `StaffTeams_Edit` | Teams, while it is on |
 | Capabilities | `StaffMemberCapabilities_Edit` | Staff, listing what other modules register |
 | Pay, Badge | `StaffMemberPay_Edit`, `StaffMemberBadge_Edit` | the Staff Compensation and Staff Badges features |
+
+**Pay (Staff Compensation).** `StaffPayRates` holds the pay basis (`StaffPayBasis`: `Hourly`, `Salary`, `PerUnit`), the currency (three-letter code, empty for the site's), dated rates (`StaffPayRate`, per hour or per unit, optionally for one kind of work; `RateOn(date, activityCodeId)`), dated yearly salaries (`StaffSalary`; `SalaryOn(date)` falls back to the older undated `AnnualSalary`), the loaded cost of an hour (`CostOn(date)`), and the commission on sales (`CommissionRate`, a percent; Orders pays it through Payroll). The **Pay** card, under `ManageStaffPay`, is the only editor; amounts are typed and shown with the invariant culture (a dot for decimals). Every change writes a `Pay` entry to the staff history (`StaffHistoryFields.Pay`) with the pay on one line; its values are shown only to people who manage staff pay, and the **Staff history** data set leaves pay entries out for other readers.
 | Skills | `StaffMemberSkills_Edit` | Skills |
 | Phone | `PhoneStaff_Edit` | Telephony (the person's extension) |
 | Agent | `AgentStaff_Edit` | Contact Center |
 | Workforce shifts | `WorkforceStaffFields_Edit` | Workforce (hours, availability and shift rules) |
 | Preferred technicians, fleet driver | `WorkOrderTechnicians_Edit`, `AssetFleetDriver_Edit` | Work Orders and Assets, on their own editors |
 
-**Staff > My Profile** shows a person their own record and a **My work** list that other modules fill through `IStaffHomeLinkProvider`. **Staff > Organization Chart** (Staff Organization Chart feature) draws the reporting line as a chart you can zoom, pan, expand and collapse, with each person's picture (from the User Avatars feature, else their initials), job title and main team, using [d3-org-chart](https://github.com/bumbeishvili/org-chart). **Settings > Staff** turns on **Offer only staff where people are assigned work**.
+**Staff > My Profile** shows a person their own record and a **My work** list that other modules fill through `IStaffHomeLinkProvider`. A user linked to a staff member who is not terminated and holds **View one's own staff profile** may open the admin to reach these pages (`StaffAdminAccessAuthorizationHandler`); each page still checks its own permission. **Staff > Organization Chart** (Staff Organization Chart feature) draws the reporting line as a chart you can zoom, pan, expand and collapse, with each person's picture (from the User Avatars feature, else their initials), job title and main team, using [d3-org-chart](https://github.com/bumbeishvili/org-chart). **Settings > Staff** turns on **Offer only staff where people are assigned work**.
 
 ### Capabilities
 
@@ -115,7 +117,7 @@ Register the services with `services.AddStaffCore()`; it is safe to repeat. `Add
 | `DisplayDriver<StaffMember>` | Adding a card to the staff editor (Workforce scheduling, Contact Center agent, Telephony phone, Skills, Pay, Badge). |
 | `AddStaffCapability(name, displayName, description, position)` | Seeding a built-in capability a module's code relies on: Contact Center seeds `Agent`, Dispatch `Technician`, Scheduling `Bookable`, Point of Sale `Cashier`. Admins can relabel, reorder or turn it off under **Staff > Capabilities**, but not delete or rename it. Screens read capabilities through `IStaffCapabilityService`, never the code registrations. |
 | `IStaffLifecycleObserver` (`AddStaffLifecycleObserver`) | Reacting after a person is saved: `StaffChangedContext` tells whether they were just created, `Activated`, `Terminated`, whether the manager, user or teams changed. On termination, Workforce removes their future shifts, Dispatch unassigns their future visits, Contact Center signs them out and Telephony frees their extension. |
-| `IStaffHomeLinkProvider` (`AddStaffHomeLinkProvider`) | Adding links to the **My work** list of **My Profile**. Register it in the startup of the feature that owns the pages, so a link never points at a page that is off: the Workforce Portal feature adds My Work and the schedule, Time Tracker adds My time. |
+| `IStaffHomeLinkProvider` (`AddStaffHomeLinkProvider`) | Adding links to the **My work** list of **My Profile**. Register it in the startup of the feature that owns the pages, so a link never points at a page that is off: the Workforce Portal feature adds My Work and the schedule, Time Tracker adds My time, Payroll's My Pay adds My pay. |
 | `AddStaffScopePermissions(manageEveryone, manageOwn)` | Letting holders of another module's permissions manage staff. |
 | `ICatalogEntryHandler<StaffMember>` | The manager's lifecycle, such as Workforce writing its settings back before a save. |
 | Index providers on `StaffMember` | Querying a module's own data on staff, in the `Staff` collection. |
@@ -147,8 +149,12 @@ With Data Pipelines on, the **Staff** report data source offers **Staff members*
 
 ## Recipes and deployment
 
-The `Staff` recipe step creates or updates staff members, matched by id, then employee number, then user (by `userName`); teams are given by name and the manager by id or `managerEmployeeNumber`, in any order. The **Staff** deployment step exports every staff member with their teams by name and their user by user name, and leaves out the date of birth unless **Include sensitive data** is ticked. The `StaffSettings` site settings travel in Orchard Core's `Settings` step.
+The `Staff` recipe step creates or updates staff members, matched by id, then employee number, then user (by `userName`); teams are given by name and the manager by id or `managerEmployeeNumber`, in any order. `pay`, when given, replaces the person's pay (`StaffPayRates`, such as `{ "payBasis": "Salary", "currency": "USD", "salaries": [ { "effectiveFrom": "2026-01-01", "annualAmount": 78000 } ] }`); the deployment step never writes it. The **Staff** deployment step exports every staff member with their teams by name and their user by user name, and leaves out the date of birth unless **Include sensitive data** is ticked. The `StaffSettings` site settings travel in Orchard Core's `Settings` step.
 
 ## Upgrading from Workforce workers
 
 Workforce used to keep its own `WorkerProfile` records. The Workforce migration moves each worker into the `Staff` collection as a staff member with the **same id**, so every stored worker id (punches, timesheets, shifts, time off, visits, territories, skills) still points at the same person. Workforce's hours and availability move to `WorkforceStaffSettings`, pay rates to `StaffPayRates`, the kiosk PIN to `StaffBadge`, and the manager worker id becomes the manager. A site that ran Workforce before Staff existed gets the Staff feature turned on first; the move runs at the next start. The old worker index tables are left in place, empty.
+
+## Private pay cards
+
+Pay cards on a profile ask for the viewer's password first (`StaffPayPrivacy`, Staff.Core, over the Users module's `IPasswordConfirmation`). A module's pay card calls `StaffPayPrivacy.DecideAsync(httpContext)`: `Show` renders the card, `Prompt` renders the `StaffPayConfirmation` shape (with `ConfirmUrl`) in its place, and `Hide` renders nothing, so a profile shows one prompt however many pay cards it has. The Staff **Pay** card and Payroll's cards (the **Payroll** card, and **My pay** on the person's own profile) use it.

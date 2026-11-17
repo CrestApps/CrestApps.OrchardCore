@@ -34,7 +34,9 @@ Teams describe how your organization is built: a region, a site, a department, a
 | **Linked role** | Optional. Users in this role are treated as part of the team, for example to read its Workforce calendar. |
 | **In use** | Untick to stop using a team without deleting it. |
 
-Other features add their own cards to the team editor. With Workforce on, the **Workforce** card holds the team's address and its scheduling and time clock settings; see [Workers and Teams](./workers-and-teams.md#the-workforce-card).
+With Addresses on, the **Address** card holds where the team works, such as a site's street address, laid out for its country. It is optional; an address you start has to be complete for its country. Workforce starts a site's time clock geofence from it and Payroll reads a work site's tax jurisdictions from it.
+
+Other features add their own cards to the team editor. With Workforce on, the **Workforce** card holds the team's scheduling and time clock settings; see [Workers and Teams](./workers-and-teams.md#the-workforce-card).
 
 ## Find a team
 
