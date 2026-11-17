@@ -32,6 +32,7 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
     /// </summary>
     /// <param name="shellHost">The shell host used to read and update the tenant's state.</param>
     /// <param name="shellSettings">The settings of the tenant this code runs on.</param>
+    /// <param name="jobStore">The provisioning jobs, which tell which site a subscription bought and record billing's disable.</param>
     /// <param name="logger">The logger.</param>
     public TenantSubscriptionEntitlementApplier(
         IShellHost shellHost,
@@ -92,7 +93,9 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
         // that was never created because the name was taken, must not reach the tenant that already had it. The jobs are
         // looked up by the name the shell host holds: it finds a tenant without case, and the database may compare the
         // name exactly, so the entitlement's spelling missed a name sold again in another case.
-        if (!await WasCreatedForAsync(context, settings.Name))
+        var job = await FindOwnJobAsync(context, settings.Name);
+
+        if (job is null)
         {
             _logger.LogWarning("A tenant entitlement of subscription '{SubscriptionId}' names a tenant its provisioning job did not create. It was ignored.", context.Subscription?.ItemId);
 
@@ -132,9 +135,13 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
             return;
         }
 
-        // Only a site billing took down comes back with billing. One an operator disabled stays disabled, whatever the
-        // subscriber does: canceling at period end makes the agreement current, and that used to switch the site back on.
-        if (state == TenantState.Running && !suspendedByBilling)
+        // Only a site billing took down, and that nobody changed since, comes back with billing. One an operator disabled
+        // stays disabled, whatever the subscriber does: canceling at period end makes the agreement current, and that used to
+        // switch the site back on. Orchard Core gives the settings a new version on every change, so an operator who switched
+        // the site on by hand while the subscription was not current, and disabled it again later, leaves another version
+        // than the one billing recorded.
+        if (state == TenantState.Running &&
+            (!suspendedByBilling || !string.Equals(job.SuspendedTenantVersionId, settings.VersionId, StringComparison.Ordinal)))
         {
             return;
         }
@@ -143,6 +150,10 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
         settings[SubscriptionConstants.SuspendedBySubscriptionSetting] = state == TenantState.Disabled ? "true" : null;
 
         await _shellHost.UpdateShellSettingsAsync(settings);
+
+        // The shell host gave the settings their new version as it saved them.
+        job.SuspendedTenantVersionId = state == TenantState.Disabled ? settings.VersionId : null;
+        await _jobStore.UpdateAsync(job);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -155,7 +166,8 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
         }
     }
 
-    private async Task<bool> WasCreatedForAsync(SubscriptionEntitlementContext context, string tenantName)
+    // The job that created the tenant for this subscription; null when its own job did not create it.
+    private async Task<TenantProvisioningJob> FindOwnJobAsync(SubscriptionEntitlementContext context, string tenantName)
     {
         TenantProvisioningJob job;
 
@@ -171,7 +183,7 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
 
             if (newest is not null && !string.Equals(newest.ItemId, job.ItemId, StringComparison.Ordinal))
             {
-                return false;
+                return null;
             }
         }
         else
@@ -181,12 +193,14 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
 
             if (job is not null && !string.Equals(job.SubscriptionId, context.Subscription?.ItemId, StringComparison.Ordinal))
             {
-                return false;
+                return null;
             }
         }
 
         return job is not null &&
             job.Status == TenantProvisioningStatus.Succeeded &&
-            string.Equals(job.TenantName, tenantName, StringComparison.OrdinalIgnoreCase);
+            string.Equals(job.TenantName, tenantName, StringComparison.OrdinalIgnoreCase)
+            ? job
+            : null;
     }
 }

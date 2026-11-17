@@ -133,6 +133,33 @@ public sealed class TenantEntitlementOwnershipTests
         Assert.Equal(TenantState.Disabled, site.State);
     }
 
+    /// <summary>
+    /// Selling-sites Mild (third fix verification): billing disabled the site; the operator switched it on by hand while
+    /// the subscription was still not current, so the applier never found it running with the mark; the operator later
+    /// disabled it for abuse. When the subscription became current, the old mark switched the site on again. Billing now
+    /// records the tenant's version when it disables the site, and switches it back on only while that is unchanged.
+    /// </summary>
+    [Fact]
+    public async Task ApplyAsync_ASiteTheOperatorChangedAfterBillingDisabledIt_StaysDisabled()
+    {
+        var host = await Host.CreateAsync(TenantState.Running,
+            new TenantProvisioningJob { ItemId = "job-1", TenantName = "Shop1", SubscriptionId = "sub-1", Status = TenantProvisioningStatus.Succeeded, CreatedUtc = _now });
+
+        await host.Applier.RevokeAsync(Context("sub-1", "job-1", tenantId: null));
+
+        // The operator switches the site on by hand, and later disables it for abuse.
+        Assert.True(host.Shells.TryGetSettings("Shop1", out var site));
+        site.State = TenantState.Running;
+        await host.Shells.UpdateShellSettingsAsync(site);
+        site.State = TenantState.Disabled;
+        await host.Shells.UpdateShellSettingsAsync(site);
+
+        await host.Applier.ApplyAsync(Context("sub-1", "job-1", tenantId: null));
+
+        Assert.True(host.Shells.TryGetSettings("Shop1", out var after));
+        Assert.Equal(TenantState.Disabled, after.State);
+    }
+
     private static SubscriptionEntitlementContext Context(string subscriptionId, string jobId, string tenantId, string tenantName = "Shop1")
     {
         var data = new Dictionary<string, string>();
