@@ -1200,6 +1200,10 @@ Every session's work goes into this PR.
 - **Validation on the merged tip**: the Release solution build with `-warnaserror` (0 warnings, 0 errors); the full test project 16,463 passed and 1 skipped (the flaky test above excluded); `npm run rebuild` wrote 0 changed files; the manuals check (170 User Manual and 190 Technical Manual pages) and the docs build pass (its two old minifier warnings remain).
 - **Browser, fresh SQLite site**: with no Plaid keys, **My Bank Accounts > Add** shows no link card and the link URL is a 404; with a client id and a fake text secret, **Test the connection** says Plaid could not be reached and **Link your bank with Plaid** returns to the page with "Plaid did not answer". Neither log holds the secret or the client id. Positive pay ran twice as above.
 
+### One event per Banking change (2026-11-16)
+
+Banking is new in this PR, so no workflow depends on the earlier double events. A stopped or reissued check starts only **Check Stop Payment** or **Check Reissued**, not Check Voided, and a cancelled or reversed disbursement starts only **Disbursement Canceled** or **Disbursement Reversed**, not Disbursement Failed. A voided or stopped check cancels its disbursement, so it starts Disbursement Canceled; Disbursement Failed is for a disbursement that failed, such as a check that could not be issued. The event descriptions in the workflow toolbox, the editors and the recipe schemas, `banking.md` and the changelog say so. `CheckWorkflowEventsTests` and `DisbursementWorkflowEventsTests` assert that every change kind starts at most one event and that only a void starts Check Voided and only a failure starts Disbursement Failed. A batch release that the provider pays in full still starts Batch Released and Batch Settled, as two steps of the batch.
+
 ### For Mike
 
 What only you can settle before the first live pay:

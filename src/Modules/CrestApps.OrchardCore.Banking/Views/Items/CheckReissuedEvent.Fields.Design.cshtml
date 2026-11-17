@@ -5,4 +5,4 @@
 @model ActivityViewModel<CheckReissuedEvent>
 
 <header><h4><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Check Reissued"])</h4></header>
-<p class="hint">@T["Starts when a check is replaced by a new one; ReplacedById is the new check. Check Voided starts too. Input: CheckId, Number, BankAccountId, PayeeName, Amount, Currency, CheckDate, SourceKind, SourceId, Status, Change, ReplacedById, Reason and Actor."]</p>
+<p class="hint">@T["Starts when a check is replaced by a new one; ReplacedById is the new check. Input: CheckId, Number, BankAccountId, PayeeName, Amount, Currency, CheckDate, SourceKind, SourceId, Status, Change, ReplacedById, Reason and Actor."]</p>

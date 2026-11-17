@@ -239,7 +239,7 @@ Both steps have schemas for CrestApps Recipes.
 
 ### Workflows
 
-Events (category Checks): **Check Issued**, **Check Printed** (also a reprint, `Change` = `Reprinted`), **Check Voided** (also stop payment and reissue; `Change` says which), **Check Stop Payment** and **Check Reissued** (each starts with Check Voided; `ReplacedById` is the new check), **Check Stale** (by hand or by Mark Stale Checks) and **Check Cleared**. Input: `CheckId`, `Number`, `BankAccountId`, `PayeeName`, `Amount`, `Currency`, `CheckDate`, `SourceKind`, `SourceId`, `Status`, `Change`, `ReplacedById`, `Reason`, `Actor`.
+Events (category Checks): **Check Issued**, **Check Printed** (also a reprint, `Change` = `Reprinted`), **Check Voided**, **Check Stop Payment** and **Check Reissued** (`ReplacedById` is the new check), **Check Stale** (by hand or by Mark Stale Checks) and **Check Cleared**. Input: `CheckId`, `Number`, `BankAccountId`, `PayeeName`, `Amount`, `Currency`, `CheckDate`, `SourceKind`, `SourceId`, `Status`, `Change`, `ReplacedById`, `Reason`, `Actor`.
 
 Task: **Mark Stale Checks** (`AgeInDays`, 180 by default) marks stale every printed check dated more than that many days before today, in the site's time zone, and writes the count to the workflow output `StaleChecks`. Run it from a Timer Event once a day.
 
@@ -328,7 +328,7 @@ Both steps have schemas for CrestApps Recipes.
 
 ### Workflows
 
-Events (category Disbursements): **Disbursement Created**, **Disbursement Added to Batch**, **Disbursement Removed from Batch** (its open batch was cancelled or reopened), **Disbursement Submitted**, **Settled**, **Returned**, **Failed** (also cancelled and reversed), and **Disbursement Canceled** and **Disbursement Reversed** (each starts with Failed). Input: `DisbursementId`, `PayeeName`, `Amount`, `Currency`, `Method`, `Status`, `Change`, `SourceKind`, `SourceId`, `BatchId`, `TraceNumber`, `FailureCode`, `FailureReason`, `IsPrenote`, `EffectiveDate`, `Actor`. Never an account number.
+Events (category Disbursements): **Disbursement Created**, **Disbursement Added to Batch**, **Disbursement Removed from Batch** (its open batch was cancelled or reopened), **Disbursement Submitted**, **Settled**, **Returned**, **Failed**, **Disbursement Canceled** (such as when its check is voided or stopped) and **Disbursement Reversed**. Each change starts exactly one event. Input: `DisbursementId`, `PayeeName`, `Amount`, `Currency`, `Method`, `Status`, `Change`, `SourceKind`, `SourceId`, `BatchId`, `TraceNumber`, `FailureCode`, `FailureReason`, `IsPrenote`, `EffectiveDate`, `Actor`. Never an account number.
 
 Batch events (category Disbursements, from `IDisbursementBatchObserver`): **Disbursement Batch Created**, **Released** (a release the provider paid in full starts Settled too), **Reopened** (a batch stuck in sending; `Reason` says why), **Canceled** and **Settled**. Input: `BatchId`, `Provider`, `SourceBankAccountId`, `SourceBankAccountName`, `EffectiveDate`, `Count`, `TotalAmount`, `Currency`, `Status`, `PreviousStatus`, `SourceKind`, `AccessScope`, `FileName`, `ProviderReference`, `Change`, `Reason`, `Settled` (how many it paid), `Actor`. Never the file or an account number. **Disbursement Returns Applied** starts when a returns file is applied, with `Returned`, `Problems` (a count), `ProblemMessages` and `Actor`; each returned disbursement also starts Disbursement Returned.
 

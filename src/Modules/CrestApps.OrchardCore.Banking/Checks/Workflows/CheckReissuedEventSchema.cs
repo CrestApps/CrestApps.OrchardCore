@@ -6,5 +6,5 @@ internal sealed class CheckReissuedEventSchema : CheckEventSchemaBase
 
     protected override string DisplayText => "Check Reissued";
 
-    protected override string Description => "Starts when a check is replaced by a new one; ReplacedById is the new check. Check Voided starts too." + Input;
+    protected override string Description => "Starts when a check is replaced by a new one; ReplacedById is the new check." + Input;
 }

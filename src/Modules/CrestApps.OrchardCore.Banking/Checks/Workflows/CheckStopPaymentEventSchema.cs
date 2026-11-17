@@ -6,5 +6,5 @@ internal sealed class CheckStopPaymentEventSchema : CheckEventSchemaBase
 
     protected override string DisplayText => "Check Stop Payment";
 
-    protected override string Description => "Starts when the bank is asked not to pay a check. Check Voided starts too." + Input;
+    protected override string Description => "Starts when the bank is asked not to pay a check." + Input;
 }

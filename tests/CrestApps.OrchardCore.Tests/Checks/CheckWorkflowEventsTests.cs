@@ -4,8 +4,8 @@ using CrestApps.OrchardCore.Banking.Checks.Workflows;
 namespace CrestApps.OrchardCore.Tests.Checks;
 
 /// <summary>
-/// The Checks workflow events: a stale check has its own event, and a stopped or reissued check its own besides Check
-/// Voided.
+/// The Checks workflow events: each change starts exactly one event, so a stopped or reissued check starts its own
+/// event and not Check Voided.
 /// </summary>
 public sealed class CheckWorkflowEventsTests
 {
@@ -13,11 +13,23 @@ public sealed class CheckWorkflowEventsTests
     [InlineData(CheckChangeKind.Issued, new[] { nameof(CheckIssuedEvent) })]
     [InlineData(CheckChangeKind.Reprinted, new[] { nameof(CheckPrintedEvent) })]
     [InlineData(CheckChangeKind.Voided, new[] { nameof(CheckVoidedEvent) })]
-    [InlineData(CheckChangeKind.StopPayment, new[] { nameof(CheckVoidedEvent), nameof(CheckStopPaymentEvent) })]
-    [InlineData(CheckChangeKind.Reissued, new[] { nameof(CheckVoidedEvent), nameof(CheckReissuedEvent) })]
+    [InlineData(CheckChangeKind.StopPayment, new[] { nameof(CheckStopPaymentEvent) })]
+    [InlineData(CheckChangeKind.Reissued, new[] { nameof(CheckReissuedEvent) })]
     [InlineData(CheckChangeKind.Stale, new[] { nameof(CheckStaleEvent) })]
     public void EachCheckChange_StartsItsEvents(CheckChangeKind kind, string[] expected)
         => Assert.Equal(expected, ChecksWorkflowObserver.EventsFor(kind));
+
+    [Fact]
+    public void EveryCheckChange_StartsAtMostOneEvent_AndOnlyAVoidStartsCheckVoided()
+    {
+        foreach (var kind in Enum.GetValues<CheckChangeKind>())
+        {
+            var events = ChecksWorkflowObserver.EventsFor(kind);
+
+            Assert.True(events.Length <= 1, $"{kind} starts {string.Join(", ", events)}; a change starts one event.");
+            Assert.Equal(kind == CheckChangeKind.Voided, events.Contains(nameof(CheckVoidedEvent)));
+        }
+    }
 
     [Fact]
     public void AReissuedChecksInput_NamesTheNewCheck()

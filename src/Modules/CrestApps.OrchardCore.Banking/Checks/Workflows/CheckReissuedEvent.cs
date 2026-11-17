@@ -3,7 +3,7 @@ using Microsoft.Extensions.Localization;
 namespace CrestApps.OrchardCore.Banking.Checks.Workflows;
 
 /// <summary>
-/// Starts when a check is replaced by a new one; ReplacedById is the new check. Check Voided starts too.
+/// Starts when a check is replaced by a new one; ReplacedById is the new check.
 /// </summary>
 public sealed class CheckReissuedEvent : CheckEventActivity
 {

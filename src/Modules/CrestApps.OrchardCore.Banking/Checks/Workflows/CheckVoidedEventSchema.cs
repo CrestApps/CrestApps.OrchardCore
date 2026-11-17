@@ -6,5 +6,5 @@ internal sealed class CheckVoidedEventSchema : CheckEventSchemaBase
 
     protected override string DisplayText => "Check Voided";
 
-    protected override string Description => "Starts when a check is voided, stopped or replaced by a reissued check (Change says which)." + Input;
+    protected override string Description => "Starts when a check is voided. A stopped or reissued check starts Check Stop Payment or Check Reissued instead." + Input;
 }

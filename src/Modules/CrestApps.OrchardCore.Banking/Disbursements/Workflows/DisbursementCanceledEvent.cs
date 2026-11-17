@@ -3,7 +3,7 @@ using Microsoft.Extensions.Localization;
 namespace CrestApps.OrchardCore.Banking.Disbursements.Workflows;
 
 /// <summary>
-/// Starts when a disbursement is cancelled. Disbursement Failed starts too.
+/// Starts when a disbursement is cancelled, such as when its check is voided or stopped.
 /// </summary>
 public sealed class DisbursementCanceledEvent : DisbursementEventActivity
 {

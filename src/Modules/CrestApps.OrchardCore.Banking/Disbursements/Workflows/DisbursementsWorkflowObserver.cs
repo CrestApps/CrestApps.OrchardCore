@@ -8,8 +8,8 @@ using OrchardCore.Workflows.Services;
 namespace CrestApps.OrchardCore.Banking.Disbursements.Workflows;
 
 /// <summary>
-/// Starts the Disbursements workflow events after the change is saved. A cancelled or reversed disbursement starts
-/// Disbursement Failed too, as it always did, besides its own event.
+/// Starts the Disbursements workflow events after the change is saved. Each change starts exactly one event: a
+/// cancelled or reversed disbursement starts Disbursement Canceled or Disbursement Reversed, not Disbursement Failed.
 /// </summary>
 internal sealed class DisbursementsWorkflowObserver : IDisbursementObserver, IDisbursementBatchObserver
 {
@@ -54,8 +54,8 @@ internal sealed class DisbursementsWorkflowObserver : IDisbursementObserver, IDi
             DisbursementChangeKind.Settled => [nameof(DisbursementSettledEvent)],
             DisbursementChangeKind.Returned => [nameof(DisbursementReturnedEvent)],
             DisbursementChangeKind.Failed => [nameof(DisbursementFailedEvent)],
-            DisbursementChangeKind.Canceled => [nameof(DisbursementFailedEvent), nameof(DisbursementCanceledEvent)],
-            DisbursementChangeKind.Reversed => [nameof(DisbursementFailedEvent), nameof(DisbursementReversedEvent)],
+            DisbursementChangeKind.Canceled => [nameof(DisbursementCanceledEvent)],
+            DisbursementChangeKind.Reversed => [nameof(DisbursementReversedEvent)],
             _ => [],
         };
 

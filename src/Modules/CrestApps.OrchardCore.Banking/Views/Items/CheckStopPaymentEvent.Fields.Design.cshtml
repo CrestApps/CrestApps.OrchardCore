@@ -5,4 +5,4 @@
 @model ActivityViewModel<CheckStopPaymentEvent>
 
 <header><h4><i class="fa-solid fa-hand" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Check Stop Payment"])</h4></header>
-<p class="hint">@T["Starts when the bank is asked not to pay a check. Check Voided starts too. Input: CheckId, Number, BankAccountId, PayeeName, Amount, Currency, CheckDate, SourceKind, SourceId, Status, Change, ReplacedById, Reason and Actor."]</p>
+<p class="hint">@T["Starts when the bank is asked not to pay a check. Input: CheckId, Number, BankAccountId, PayeeName, Amount, Currency, CheckDate, SourceKind, SourceId, Status, Change, ReplacedById, Reason and Actor."]</p>

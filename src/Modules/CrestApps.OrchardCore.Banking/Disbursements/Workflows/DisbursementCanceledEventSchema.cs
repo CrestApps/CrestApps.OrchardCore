@@ -6,5 +6,5 @@ internal sealed class DisbursementCanceledEventSchema : DisbursementEventSchemaB
 
     protected override string DisplayText => "Disbursement Canceled";
 
-    protected override string Description => "Starts when a disbursement is cancelled. Disbursement Failed starts too." + Input;
+    protected override string Description => "Starts when a disbursement is cancelled, such as when its check is voided or stopped." + Input;
 }

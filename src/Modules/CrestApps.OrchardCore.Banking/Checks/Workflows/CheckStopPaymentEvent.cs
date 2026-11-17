@@ -3,7 +3,7 @@ using Microsoft.Extensions.Localization;
 namespace CrestApps.OrchardCore.Banking.Checks.Workflows;
 
 /// <summary>
-/// Starts when the bank is asked not to pay a check. Check Voided starts too.
+/// Starts when the bank is asked not to pay a check.
 /// </summary>
 public sealed class CheckStopPaymentEvent : CheckEventActivity
 {

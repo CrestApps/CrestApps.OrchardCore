@@ -8,8 +8,8 @@ using OrchardCore.Workflows.Services;
 namespace CrestApps.OrchardCore.Banking.Checks.Workflows;
 
 /// <summary>
-/// Starts the Checks workflow events once the change is committed. A stopped or reissued check starts Check Voided too,
-/// as it always did, besides its own event.
+/// Starts the Checks workflow events once the change is committed. Each change starts exactly one event: a stopped or
+/// reissued check starts Check Stop Payment or Check Reissued, not Check Voided.
 /// </summary>
 internal sealed class ChecksWorkflowObserver : ICheckObserver
 {
@@ -45,8 +45,8 @@ internal sealed class ChecksWorkflowObserver : ICheckObserver
             CheckChangeKind.Printed or CheckChangeKind.Reprinted => [nameof(CheckPrintedEvent)],
             CheckChangeKind.Cleared => [nameof(CheckClearedEvent)],
             CheckChangeKind.Voided => [nameof(CheckVoidedEvent)],
-            CheckChangeKind.StopPayment => [nameof(CheckVoidedEvent), nameof(CheckStopPaymentEvent)],
-            CheckChangeKind.Reissued => [nameof(CheckVoidedEvent), nameof(CheckReissuedEvent)],
+            CheckChangeKind.StopPayment => [nameof(CheckStopPaymentEvent)],
+            CheckChangeKind.Reissued => [nameof(CheckReissuedEvent)],
             CheckChangeKind.Stale => [nameof(CheckStaleEvent)],
             _ => [],
         };

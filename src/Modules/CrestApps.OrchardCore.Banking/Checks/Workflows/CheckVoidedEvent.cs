@@ -3,7 +3,7 @@ using Microsoft.Extensions.Localization;
 namespace CrestApps.OrchardCore.Banking.Checks.Workflows;
 
 /// <summary>
-/// Starts when a check is voided, stopped or replaced by a reissued check.
+/// Starts when a check is voided. A stopped or reissued check starts Check Stop Payment or Check Reissued instead.
 /// </summary>
 public sealed class CheckVoidedEvent : CheckEventActivity
 {

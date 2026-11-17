@@ -5,4 +5,4 @@
 @model ActivityViewModel<DisbursementReversedEvent>
 
 <header><h4><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Disbursement Reversed"])</h4></header>
-<p class="hint">@T["Starts when a settled disbursement is taken back. Disbursement Failed starts too. Input: DisbursementId, PayeeName, Amount, Currency, Method, Status, Change, SourceKind, SourceId, BatchId, TraceNumber, FailureCode, FailureReason, IsPrenote and Actor."]</p>
+<p class="hint">@T["Starts when a settled disbursement is taken back. Input: DisbursementId, PayeeName, Amount, Currency, Method, Status, Change, SourceKind, SourceId, BatchId, TraceNumber, FailureCode, FailureReason, IsPrenote and Actor."]</p>

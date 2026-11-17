@@ -15,10 +15,22 @@ public sealed class DisbursementWorkflowEventsTests
     [InlineData(DisbursementChangeKind.Unbatched, new[] { nameof(DisbursementUnbatchedEvent) })]
     [InlineData(DisbursementChangeKind.Submitted, new[] { nameof(DisbursementSubmittedEvent) })]
     [InlineData(DisbursementChangeKind.Failed, new[] { nameof(DisbursementFailedEvent) })]
-    [InlineData(DisbursementChangeKind.Canceled, new[] { nameof(DisbursementFailedEvent), nameof(DisbursementCanceledEvent) })]
-    [InlineData(DisbursementChangeKind.Reversed, new[] { nameof(DisbursementFailedEvent), nameof(DisbursementReversedEvent) })]
+    [InlineData(DisbursementChangeKind.Canceled, new[] { nameof(DisbursementCanceledEvent) })]
+    [InlineData(DisbursementChangeKind.Reversed, new[] { nameof(DisbursementReversedEvent) })]
     public void EachDisbursementChange_StartsItsEvents(DisbursementChangeKind kind, string[] expected)
         => Assert.Equal(expected, DisbursementsWorkflowObserver.EventsFor(kind));
+
+    [Fact]
+    public void EveryDisbursementChange_StartsAtMostOneEvent_AndOnlyAFailureStartsDisbursementFailed()
+    {
+        foreach (var kind in Enum.GetValues<DisbursementChangeKind>())
+        {
+            var events = DisbursementsWorkflowObserver.EventsFor(kind);
+
+            Assert.True(events.Length <= 1, $"{kind} starts {string.Join(", ", events)}; a change starts one event.");
+            Assert.Equal(kind == DisbursementChangeKind.Failed, events.Contains(nameof(DisbursementFailedEvent)));
+        }
+    }
 
     [Fact]
     public void EachBatchChange_StartsItsEvents_AndAReleasePaidInFullSettlesToo()

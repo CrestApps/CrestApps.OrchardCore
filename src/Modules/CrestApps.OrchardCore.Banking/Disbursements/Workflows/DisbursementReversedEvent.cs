@@ -3,7 +3,7 @@ using Microsoft.Extensions.Localization;
 namespace CrestApps.OrchardCore.Banking.Disbursements.Workflows;
 
 /// <summary>
-/// Starts when a settled disbursement is taken back. Disbursement Failed starts too.
+/// Starts when a settled disbursement is taken back.
 /// </summary>
 public sealed class DisbursementReversedEvent : DisbursementEventActivity
 {

@@ -6,5 +6,5 @@ internal sealed class DisbursementFailedEventSchema : DisbursementEventSchemaBas
 
     protected override string DisplayText => "Disbursement Failed";
 
-    protected override string Description => "Starts when a disbursement fails or is cancelled, such as when its check is voided." + Input;
+    protected override string Description => "Starts when a disbursement fails, such as when its check can't be issued. A cancelled or reversed disbursement starts Disbursement Canceled or Disbursement Reversed instead." + Input;
 }

@@ -6,5 +6,5 @@ internal sealed class DisbursementReversedEventSchema : DisbursementEventSchemaB
 
     protected override string DisplayText => "Disbursement Reversed";
 
-    protected override string Description => "Starts when a settled disbursement is taken back. Disbursement Failed starts too." + Input;
+    protected override string Description => "Starts when a settled disbursement is taken back." + Input;
 }
