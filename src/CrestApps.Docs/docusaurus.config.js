@@ -43,13 +43,20 @@ const config = {
         language: ['en'],
         highlightSearchTermsOnTargetPage: true,
         explicitSearchResultPath: true,
-        // The User Manual gets its own search index so people who use the app can search only it.
-        // The search box on a User Manual page searches the User Manual; everywhere else it searches
-        // the whole site. The search page has a filter to switch between the two.
+        // Each manual gets its own search index, so a reader can search both (the default) or only one:
+        // the search box and the search page have a User Manual and a Technical Manual checkbox. The
+        // Technical Manual is every doc except the User Manual; `exclude` is added by our patch
+        // (patches/@easyops-cn+docusaurus-search-local+*.patch). The User Manual comes first: a page
+        // belongs to the first context whose path it is under.
         searchContextByPaths: [
           {
             label: 'User Manual',
             path: 'docs/user-manual',
+          },
+          {
+            label: 'Technical Manual',
+            path: 'docs',
+            exclude: ['docs/user-manual'],
           },
         ],
         useAllContextsWithNoSearchContext: true,

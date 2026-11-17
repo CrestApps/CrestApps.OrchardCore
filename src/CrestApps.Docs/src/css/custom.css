@@ -141,6 +141,12 @@ html[data-manual='technical'] {
     backdrop-filter: none;
 }
 
+/* On a narrow screen the navbar's search box is positioned over the navbar, after the mobile sidebar, so it was drawn
+   on top of the open sidebar, under its close button. It is hidden while the sidebar is open. */
+.navbar.navbar-sidebar--show [class*='navbarSearchContainer'] {
+    visibility: hidden;
+}
+
 [data-theme='dark'] .navbar {
     border-bottom-color: rgba(208, 219, 227, 0.1);
 }

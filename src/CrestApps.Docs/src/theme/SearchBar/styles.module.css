@@ -4,28 +4,41 @@
   gap: 0.6rem;
 }
 
+.scopes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
 .scope {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   color: var(--ifm-color-emphasis-700);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 500;
+  line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
 }
 
 .scope input {
-  width: 0.95rem;
-  height: 0.95rem;
+  width: 0.9rem;
+  height: 0.9rem;
   margin: 0;
   accent-color: var(--crestapps-manual-user);
   cursor: pointer;
 }
 
+.scope input.technical {
+  accent-color: var(--crestapps-manual-technical);
+}
+
+/* The navbar has no room for them on a narrow screen: the search box searches both manuals there, and the search page
+   has the checkboxes. */
 @media (max-width: 996px) {
-  .scope span {
+  .scopes {
     display: none;
   }
 }
