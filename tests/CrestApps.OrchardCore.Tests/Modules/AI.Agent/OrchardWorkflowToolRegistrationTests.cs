@@ -37,7 +37,7 @@ public sealed class OrchardWorkflowToolRegistrationTests
     public static TheoryData<string, bool> Tools => new()
     {
         { GetWorkflowActivityTool.TheName, false },
-        { SaveWorkflowTypeTool.TheName, false },
+        { SaveWorkflowTypeTool.TheName, true },
         { ListWorkflowTypeVersionsTool.TheName, false },
         { CloneWorkflowTypeTool.TheName, false },
         { EnableWorkflowTypeTool.TheName, false },

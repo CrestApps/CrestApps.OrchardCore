@@ -36,6 +36,7 @@ public sealed class WorkflowsToolsStartup : StartupBase
             .WithTitle(S["Save Workflow Type"])
             .WithDescription(S["Creates a workflow (disabled unless told otherwise) from a full definition: settings, variables, activities and transitions. The result lists the validation issues to fix, and validateOnly checks a definition without saving it."])
             .WithCategory(S["Workflow Management"])
+            .RequireApproval()
             .Selectable();
 
         services.AddCoreAITool<ListWorkflowTypeVersionsTool>(ListWorkflowTypeVersionsTool.TheName)
