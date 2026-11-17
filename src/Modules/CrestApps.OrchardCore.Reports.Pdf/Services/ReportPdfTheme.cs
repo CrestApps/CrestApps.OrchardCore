@@ -14,6 +14,11 @@ internal static class ReportPdfTheme
     public const double BaseFontSize = 9;
 
     /// <summary>
+    /// The family the report is written in, or the installed font that stands in for it.
+    /// </summary>
+    public const string FontFamily = "Arial";
+
+    /// <summary>
     /// The color of body text.
     /// </summary>
     public static readonly PdfColor Text = new(0x21, 0x25, 0x29);

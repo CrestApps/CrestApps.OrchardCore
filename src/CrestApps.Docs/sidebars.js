@@ -186,6 +186,26 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Finance and Payroll',
+            className: icon('list-checks'),
+            items: [
+                'user-manual/finance/bank-accounts',
+                'user-manual/finance/checks',
+                'user-manual/finance/disbursements',
+                'user-manual/finance/approvals',
+                'user-manual/finance/pay-setup',
+                'user-manual/finance/payroll-employers',
+                'user-manual/finance/payroll-employees',
+                'user-manual/finance/income-tax',
+                'user-manual/finance/canada-payroll',
+                'user-manual/finance/payroll-garnishments',
+                'user-manual/finance/payroll-filings',
+                'user-manual/finance/payroll-pay-runs',
+                'user-manual/finance/payroll-my-pay',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Geo',
             className: icon('compass'),
             items: [
@@ -474,6 +494,17 @@ const sidebars = {
                 'modules/skills',
                 'modules/staff',
                 'modules/teams',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Finance and Payroll',
+            className: icon('list-checks'),
+            items: [
+                'modules/banking',
+                'modules/plaid',
+                'modules/approvals',
+                'modules/payroll',
             ],
         },
         {

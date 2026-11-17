@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.BusinessDocuments.Core;
 using CrestApps.OrchardCore.BusinessDocuments.Models;
 using CrestApps.OrchardCore.Pdf;
-using UglyToad.PdfPig.Writer;
 
 namespace CrestApps.OrchardCore.BusinessDocuments.Services;
 
@@ -21,7 +20,7 @@ internal sealed class BusinessDocumentPdfWriter
 
     private readonly BusinessDocument _document;
     private readonly BusinessDocumentPdfLabels _labels;
-    private readonly PdfFonts _fonts;
+    private readonly PdfFontSet _fonts;
     private readonly PdfImage _logo;
     private readonly string _accentColor;
     private readonly PdfColor? _accent;
@@ -38,7 +37,7 @@ internal sealed class BusinessDocumentPdfWriter
     public BusinessDocumentPdfWriter(
         BusinessDocument document,
         BusinessDocumentPdfLabels labels,
-        PdfFonts fonts,
+        PdfFontSet fonts,
         PdfImage logo)
     {
         _document = document;
@@ -55,25 +54,20 @@ internal sealed class BusinessDocumentPdfWriter
     /// <returns>The PDF file.</returns>
     public byte[] Build()
     {
-        using var builder = new PdfDocumentBuilder();
-
         var title = string.Join(" ", new[] { _document.Title, _document.Number }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
-        if (!string.IsNullOrWhiteSpace(title))
-        {
-            builder.DocumentInformation.Title = title;
-        }
+        using var writer = new PdfDocumentWriter(title);
 
-        var regular = _fonts.CreateRegular(builder);
-        var bold = _fonts.CreateBold(builder);
-        var (width, height) = BusinessDocumentStyle.GetPaperSize(_document.PaperSize) == BusinessDocumentPaperSize.A4
-            ? (BusinessDocumentPdfTheme.A4Width, BusinessDocumentPdfTheme.A4Height)
-            : (BusinessDocumentPdfTheme.LetterWidth, BusinessDocumentPdfTheme.LetterHeight);
+        var regular = writer.AddRegularFont(_fonts);
+        var bold = writer.AddBoldFont(_fonts);
+        var size = BusinessDocumentStyle.GetPaperSize(_document.PaperSize) == BusinessDocumentPaperSize.A4
+            ? PdfPageSize.A4
+            : PdfPageSize.Letter;
         var watermark = string.IsNullOrWhiteSpace(_document.Watermark)
             ? null
             : bold.Prepare(_document.Watermark.Trim()).Replace('\n', ' ');
 
-        _flow = new PdfFlow(builder, width, height, regular, bold, watermark is null ? null : page => DrawWatermark(page, watermark, bold, width, height));
+        _flow = new PdfFlow(writer, size, regular, bold, watermark is null ? null : page => DrawWatermark(page, watermark, bold, size));
 
         WriteHeader();
         WriteParties();
@@ -84,12 +78,14 @@ internal sealed class BusinessDocumentPdfWriter
 
         _flow.WriteFooters(_labels.PageNumbers, BusinessDocumentPdfTheme.SmallSize, BusinessDocumentPdfTheme.Muted);
 
-        return builder.Build();
+        return writer.Build();
     }
 
     // The watermark is drawn when a page starts, so the content of the page is drawn over it.
-    private static void DrawWatermark(PdfPage page, string text, PdfFont font, double pageWidth, double pageHeight)
+    private static void DrawWatermark(PdfCanvas page, string text, PdfFontFace font, PdfPageSize pageSize)
     {
+        var (pageWidth, pageHeight) = (pageSize.Width, pageSize.Height);
+
         var unitWidth = font.Measure(text, 1);
 
         if (unitWidth <= 0)

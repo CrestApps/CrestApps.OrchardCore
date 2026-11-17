@@ -1,0 +1,4 @@
+@model ShapeViewModel<MyPayStatementRow>
+
+<a asp-action="Statement" asp-controller="MyPay" asp-area="CrestApps.OrchardCore.Payroll" asp-route-id="@Model.Value.Statement.ItemId" class="btn btn-primary btn-sm">@T["Open"]</a>
+<a asp-action="StatementPdf" asp-controller="MyPay" asp-area="CrestApps.OrchardCore.Payroll" asp-route-id="@Model.Value.Statement.ItemId" class="btn btn-secondary btn-sm">@T["Stub"]</a>

@@ -14,7 +14,7 @@ internal sealed class ReportPdfTableWriter
     private const double VerticalPadding = 3;
     private const double HorizontalPadding = ReportPdfTableLayout.CellPadding / 2;
 
-    private readonly PdfFlow _flow;
+    private readonly ReportPdfFlow _flow;
     private readonly ReportSection _section;
     private readonly ReportPdfTableLayout _layout;
     private readonly double[] _widths;
@@ -30,7 +30,7 @@ internal sealed class ReportPdfTableWriter
     /// <param name="layout">The measured columns of the table.</param>
     /// <param name="space">The height a page has under the head of the section, in points.</param>
     public ReportPdfTableWriter(
-        PdfFlow flow,
+        ReportPdfFlow flow,
         ReportSection section,
         ReportPdfTableLayout layout,
         double space)
@@ -289,7 +289,7 @@ internal sealed class ReportPdfTableWriter
         _flow.Advance(height);
     }
 
-    private sealed record Cell(List<string> Lines, PdfFont Font, PdfColor Color, PdfColor? Fill, ReportColumnAlign Align, int Column, int Span);
+    private sealed record Cell(List<string> Lines, PdfFontFace Font, PdfColor Color, PdfColor? Fill, ReportColumnAlign Align, int Column, int Span);
 
     private sealed class Row
     {

@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Banking.Disbursements.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<DisbursementSettledEvent>
+
+<header><h4><i class="fa-solid fa-circle-check" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Disbursement Settled"])</h4></header>
+<p class="hint">@T["Starts when a disbursement is paid: its batch settled, its check cleared, or it was paid outside the system. Input: DisbursementId, PayeeName, Amount, Currency, Method, Status, Change, SourceKind, SourceId, BatchId, TraceNumber, FailureCode, FailureReason, IsPrenote and Actor."]</p>

@@ -25,7 +25,10 @@ public sealed class CommerceAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], "15", commerce => commerce
-                .Id("commerce"));
+                .Id("commerce")
+                .AddClass("commerce")
+                .AddClass("icon-class-fa-solid")
+                .AddClass("icon-class-fa-store"));
 
         return ValueTask.CompletedTask;
     }

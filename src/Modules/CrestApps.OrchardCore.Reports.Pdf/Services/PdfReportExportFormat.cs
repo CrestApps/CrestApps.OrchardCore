@@ -47,7 +47,7 @@ public sealed class PdfReportExportFormat : IReportExportFormat
     {
         ArgumentNullException.ThrowIfNull(document);
 
-        var fonts = PdfFonts.Installed;
+        var fonts = PdfFontSet.GetInstalled(ReportPdfTheme.FontFamily);
 
         // Without a TrueType font the PDF falls back to Helvetica, which shows only Latin-1 text.
         if (fonts.Regular is null)

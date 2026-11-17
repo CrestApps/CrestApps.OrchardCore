@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<RejectPayRunTask>
+
+<header><h4><i class="fa-solid fa-circle-xmark" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Reject Pay Run"])</h4></header>

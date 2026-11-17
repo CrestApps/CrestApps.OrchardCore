@@ -51,6 +51,7 @@ public sealed class Startup : StartupBase
         services.AddUserCacheService();
         services.TryAddBasicDisplayNameProvider();
         services.AddUserSearchService();
+        services.AddPasswordConfirmation();
         services.AddPartySource<UserPartySource>();
 
         // A user is billed under their display name at their e-mail address, and acts for themselves.

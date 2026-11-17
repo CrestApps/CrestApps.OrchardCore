@@ -499,7 +499,7 @@ internal sealed class RecurringPlansRecipeStepSchema : IRecipeStep
 public sealed class RecurringDeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddDeployment<RecurringPlansDeploymentSource, RecurringPlansDeploymentStep>();
+        => services.AddDeployment<RecurringPlansDeploymentSource, RecurringPlansDeploymentStep, SummaryDeploymentStepDisplayDriver<RecurringPlansDeploymentStep>>();
 }
 
 [Feature(InvoicingConstants.Features.Recurring)]

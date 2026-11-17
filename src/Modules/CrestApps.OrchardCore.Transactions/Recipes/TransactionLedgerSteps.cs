@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Deployments;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
@@ -125,7 +126,7 @@ public sealed class TransactionsDeploymentStartup : StartupBase
 {
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddDeployment<TransactionsDeploymentSource, TransactionsDeploymentStep>();
+        => services.AddDeployment<TransactionsDeploymentSource, TransactionsDeploymentStep, SummaryDeploymentStepDisplayDriver<TransactionsDeploymentStep>>();
 }
 
 /// <summary>

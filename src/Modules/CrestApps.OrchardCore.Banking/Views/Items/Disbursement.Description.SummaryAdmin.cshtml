@@ -1,0 +1,27 @@
+@using CrestApps.OrchardCore.Currencies
+@inject Microsoft.Extensions.Localization.IStringLocalizer<Disbursement> Localizer
+@model ShapeViewModel<Disbursement>
+
+@{
+    var disbursement = Model.Value;
+}
+
+<div class="admin-list-secondary">
+    @CurrencyScale.FormatForDisplay(disbursement.Amount, disbursement.Currency) @disbursement.Currency
+    @if (disbursement.EffectiveDate is { } date)
+    {
+        <span> · @T["arrives {0}", date.ToString("d")]</span>
+    }
+    @if (!string.IsNullOrEmpty(disbursement.TraceNumber))
+    {
+        <span> · @T["trace {0}", disbursement.TraceNumber]</span>
+    }
+    @if (!string.IsNullOrEmpty(disbursement.Memo))
+    {
+        <span> · @disbursement.Memo</span>
+    }
+    @if (!string.IsNullOrEmpty(disbursement.FailureReason) || !string.IsNullOrEmpty(disbursement.FailureCode))
+    {
+        <span class="text-danger"> · @disbursement.FailureCode @(disbursement.FailureReason ?? CrestApps.OrchardCore.Banking.DirectDeposit.NachaReasonCodes.Describe(disbursement.FailureCode, Localizer)?.Value)</span>
+    }
+</div>

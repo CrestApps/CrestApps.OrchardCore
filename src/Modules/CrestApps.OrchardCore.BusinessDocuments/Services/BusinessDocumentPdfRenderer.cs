@@ -30,7 +30,7 @@ internal sealed class BusinessDocumentPdfRenderer : IBusinessDocumentPdfRenderer
     /// <summary>
     /// Gets or sets the font files the documents are written in; the installed fonts unless a test sets others.
     /// </summary>
-    internal PdfFonts Fonts { get; set; } = PdfFonts.Installed;
+    internal PdfFontSet Fonts { get; set; } = PdfFontSet.GetInstalled(BusinessDocumentPdfTheme.FontFamily);
 
     public async Task<byte[]> RenderAsync(BusinessDocument document, CancellationToken cancellationToken = default)
     {

@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
@@ -26,7 +27,7 @@ public sealed class TimeClockPoliciesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly ITimeClockPolicyManager _manager;
     private readonly INotifier _notifier;
-    private readonly IPayPeriodCalendarManager _calendarManager;
+    private readonly IPayScheduleManager _calendarManager;
     private readonly IEnumerable<ITimePunchSourceProvider> _sourceProviders;
 
     internal readonly IHtmlLocalizer H;
@@ -46,7 +47,7 @@ public sealed class TimeClockPoliciesController : Controller
         IAuthorizationService authorizationService,
         ITimeClockPolicyManager manager,
         INotifier notifier,
-        IPayPeriodCalendarManager calendarManager,
+        IPayScheduleManager calendarManager,
         IEnumerable<ITimePunchSourceProvider> sourceProviders,
         IHtmlLocalizer<TimeClockPoliciesController> htmlLocalizer,
         IStringLocalizer<TimeClockPoliciesController> stringLocalizer)

@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<GarnishmentOrderCreatedEvent>
+
+<header><h4><i class="fa-solid fa-gavel" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Garnishment Order Created"])</h4></header>
+<p class="hint">@T["Starts when a garnishment order is added. Input: OrderId, EmployerId, StaffMemberId, ProfileId, Type, CaseNumber, Agency, Status, TotalOwed, PayeeName, PaymentMethod and StartDate."]</p>

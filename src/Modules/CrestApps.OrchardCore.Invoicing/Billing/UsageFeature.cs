@@ -394,7 +394,7 @@ internal sealed class UsageMetersRecipeStepSchema : IRecipeStep
 public sealed class UsageDeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddDeployment<UsageMetersDeploymentSource, UsageMetersDeploymentStep>();
+        => services.AddDeployment<UsageMetersDeploymentSource, UsageMetersDeploymentStep, SummaryDeploymentStepDisplayDriver<UsageMetersDeploymentStep>>();
 }
 
 [Feature(InvoicingConstants.Features.Billing)]

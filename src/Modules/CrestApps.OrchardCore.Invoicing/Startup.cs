@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.BusinessDocuments;
@@ -272,7 +273,7 @@ public sealed class DeploymentStartup : StartupBase
     {
         services.AddDeployment<InvoicesDeploymentSource, InvoicesDeploymentStep>();
         services.AddDisplayDriver<DeploymentStep, InvoicesDeploymentStepDisplayDriver>();
-        services.AddDeployment<CreditNotesDeploymentSource, CreditNotesDeploymentStep>();
+        services.AddDeployment<CreditNotesDeploymentSource, CreditNotesDeploymentStep, SummaryDeploymentStepDisplayDriver<CreditNotesDeploymentStep>>();
     }
 }
 

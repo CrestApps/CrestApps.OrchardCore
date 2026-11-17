@@ -3,7 +3,7 @@ using System.Globalization;
 namespace CrestApps.OrchardCore.Pdf;
 
 /// <summary>
-/// An opaque RGB color of a PDF.
+/// An opaque RGB color of a PDF document.
 /// </summary>
 /// <param name="R">The red component.</param>
 /// <param name="G">The green component.</param>
@@ -11,7 +11,24 @@ namespace CrestApps.OrchardCore.Pdf;
 public readonly record struct PdfColor(byte R, byte G, byte B)
 {
     /// <summary>
-    /// Reads a color written as six hexadecimal digits, with or without a leading <c>#</c>, such as <c>#2563EB</c>.
+    /// Gets black.
+    /// </summary>
+    public static PdfColor Black => new(0, 0, 0);
+
+    /// <summary>
+    /// Creates a color from its red, green and blue bytes packed in a number, such as <c>0x2563EB</c>. Higher bits are
+    /// ignored.
+    /// </summary>
+    /// <param name="rgb">The packed color.</param>
+    /// <returns>The color.</returns>
+    public static PdfColor FromRgb(uint rgb)
+    {
+        return new PdfColor((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+    }
+
+    /// <summary>
+    /// Reads a color written as six hexadecimal digits, with or without a leading <c>#</c>, such as <c>#2563EB</c>,
+    /// as a site setting stores a brand color.
     /// </summary>
     /// <param name="value">The color.</param>
     /// <param name="color">The color, when the value is one.</param>
@@ -40,17 +57,6 @@ public readonly record struct PdfColor(byte R, byte G, byte B)
         color = FromRgb(number);
 
         return true;
-    }
-
-    /// <summary>
-    /// Creates a color from its red, green and blue bytes packed in a number, such as <c>0x2563EB</c>. Higher bits are
-    /// ignored.
-    /// </summary>
-    /// <param name="rgb">The packed color.</param>
-    /// <returns>The color.</returns>
-    public static PdfColor FromRgb(uint rgb)
-    {
-        return new PdfColor((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
     }
 
     /// <summary>

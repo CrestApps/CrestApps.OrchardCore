@@ -19,11 +19,10 @@ internal static class BusinessDocumentPdfTheme
     public const double EmphasizedTotalSize = 11.5;
     public const double WatermarkMaximumSize = 110;
 
-    // US Letter and ISO A4, in points.
-    public const double LetterWidth = 612;
-    public const double LetterHeight = 792;
-    public const double A4Width = 595.28;
-    public const double A4Height = 841.89;
+    /// <summary>
+    /// The font family documents are written in, or the installed font that stands in for it.
+    /// </summary>
+    public const string FontFamily = "Arial";
 
     public static readonly PdfColor Text = Parse(BusinessDocumentStyle.TextColor);
     public static readonly PdfColor Muted = Parse(BusinessDocumentStyle.MutedColor);

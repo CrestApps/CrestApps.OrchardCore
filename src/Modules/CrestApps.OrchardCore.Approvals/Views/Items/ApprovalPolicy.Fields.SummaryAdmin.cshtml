@@ -1,0 +1,4 @@
+@model ShapeViewModel<ApprovalPolicy>
+
+<a asp-action="Edit" asp-route-id="@Model.Value.ItemId">@(Model.Value.Title ?? Model.Value.Name)</a>
+<span class="text-muted small ms-1">@Model.Value.Name</span>

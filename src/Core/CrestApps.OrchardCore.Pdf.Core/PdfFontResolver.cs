@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.Pdf;
 
 /// <summary>
-/// Finds the installed TrueType font a PDF is written in: the family a document asks for when it is installed,
+/// Finds the installed TrueType font a PDF document is written in: the family a document asks for when it is installed,
 /// otherwise the installed font that stands in for it — Liberation Sans first, because it has the widths of Arial, so
 /// a document lays out as it does on Windows — and the bold face of that font. It reads the font folders of Windows,
 /// Linux and macOS.
@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Pdf;
 /// <c>arialbd.ttf</c> beside <c>arial.ttf</c> on Windows. When no sans-serif font is installed, any installed font is
 /// used rather than failing the document.
 /// </remarks>
-public sealed class PdfFontResolver
+internal sealed class PdfFontResolver
 {
     private const int MaxFontFiles = 5000;
 

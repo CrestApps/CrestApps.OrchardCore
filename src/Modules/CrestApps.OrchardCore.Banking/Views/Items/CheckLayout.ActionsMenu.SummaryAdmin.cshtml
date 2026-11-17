@@ -1,0 +1,3 @@
+@model ShapeViewModel<CheckLayout>
+
+<a asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this check layout? Its signatures and font stay stored until you upload new ones."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

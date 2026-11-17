@@ -46,7 +46,7 @@ internal sealed class BusinessDocumentPdfBlock
     /// <param name="color">The color.</param>
     /// <param name="alignment">Where the lines sit in the width.</param>
     /// <returns>The block.</returns>
-    public BusinessDocumentPdfBlock AddText(string value, PdfFont font, double size, PdfColor color, BusinessDocumentAlignment alignment = BusinessDocumentAlignment.Start)
+    public BusinessDocumentPdfBlock AddText(string value, PdfFontFace font, double size, PdfColor color, BusinessDocumentAlignment alignment = BusinessDocumentAlignment.Start)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -99,7 +99,7 @@ internal sealed class BusinessDocumentPdfBlock
     /// <param name="color">The color of the text.</param>
     /// <param name="alignment">Where the badge sits in the width.</param>
     /// <returns>The block.</returns>
-    public BusinessDocumentPdfBlock AddBadge(string label, PdfFont font, double size, PdfColor fill, PdfColor color, BusinessDocumentAlignment alignment)
+    public BusinessDocumentPdfBlock AddBadge(string label, PdfFontFace font, double size, PdfColor fill, PdfColor color, BusinessDocumentAlignment alignment)
     {
         if (string.IsNullOrWhiteSpace(label))
         {
@@ -144,7 +144,7 @@ internal sealed class BusinessDocumentPdfBlock
     /// <param name="page">The page.</param>
     /// <param name="left">The left of the block on the page.</param>
     /// <param name="top">The top of the block on the page.</param>
-    public void Draw(PdfPage page, double left, double top)
+    public void Draw(PdfCanvas page, double left, double top)
         => Draw(page, left, top, 0, double.MaxValue);
 
     /// <summary>
@@ -156,7 +156,7 @@ internal sealed class BusinessDocumentPdfBlock
     /// <param name="top">Where the top of the band is drawn on the page.</param>
     /// <param name="from">The top of the band, from the top of the block.</param>
     /// <param name="to">The bottom of the band, from the top of the block.</param>
-    public void Draw(PdfPage page, double left, double top, double from, double to)
+    public void Draw(PdfCanvas page, double left, double top, double from, double to)
     {
         foreach (var item in _items)
         {
@@ -170,7 +170,7 @@ internal sealed class BusinessDocumentPdfBlock
 
             if (item.Image is not null)
             {
-                page.DrawImage(item.Image, x, y, item.ImageWidth, item.Height);
+                page.DrawImage(item.Image.Data, x, y, item.ImageWidth, item.Height);
             }
             else if (item.Fill is { } fill)
             {
@@ -192,7 +192,7 @@ internal sealed class BusinessDocumentPdfBlock
             _ => 0,
         };
 
-    private sealed record Item(string Text, PdfFont Font, double Size, PdfColor Color, double X, double Top, double Height, PdfImage Image, PdfColor? Fill)
+    private sealed record Item(string Text, PdfFontFace Font, double Size, PdfColor Color, double X, double Top, double Height, PdfImage Image, PdfColor? Fill)
     {
         public double ImageWidth { get; init; }
     }

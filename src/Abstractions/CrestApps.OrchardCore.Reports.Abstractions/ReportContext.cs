@@ -41,4 +41,10 @@ public sealed class ReportContext
     /// Gets what the document is for. A report that pages its rows on screen gives an export every matching row.
     /// </summary>
     public ReportRunMode Mode { get; }
+
+    /// <summary>
+    /// Gets or sets the user the report runs for when it runs without a request, such as a subscription's owner, so
+    /// it reads only what they may see; <see langword="null"/> for the user of the request.
+    /// </summary>
+    public System.Security.Claims.ClaimsPrincipal User { get; set; }
 }

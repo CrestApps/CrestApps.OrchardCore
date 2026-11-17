@@ -1,0 +1,33 @@
+@model ListCatalogEntryViewModel<CatalogEntryViewModel<BankAccount>>
+
+<zone Name="Title">
+    <breadcrumb name="MyBankAccounts" title="@T["My bank accounts"]" />
+</zone>
+
+@* The form is necessary to generate an antiforgery token for the close actions. *@
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <p class="mb-0 hint">@T["The accounts you are paid into. A new or changed account is checked before payments go to it."]</p>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add bank account"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="MyBankAccounts" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> You have not added a bank account yet."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Account" position="30" title="@T["Account"]" width="auto" />
+            <admin-list-column name="Status" position="40" title="@T["Status"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>

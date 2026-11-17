@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Transactions.Deployments;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Deployment;
@@ -15,6 +16,6 @@ public sealed class PaymentTermsDeploymentStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDeployment<PaymentTermsDeploymentSource, PaymentTermsDeploymentStep>();
+        services.AddDeployment<PaymentTermsDeploymentSource, PaymentTermsDeploymentStep, SummaryDeploymentStepDisplayDriver<PaymentTermsDeploymentStep>>();
     }
 }

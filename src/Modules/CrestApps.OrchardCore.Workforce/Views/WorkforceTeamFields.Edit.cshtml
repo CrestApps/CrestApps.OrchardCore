@@ -3,7 +3,7 @@
 <div class="card text-bg-theme mb-3">
     <div class="card-header">@T["Workforce"]</div>
     <div class="card-body">
-        <div class="ocat-wrapper"><label asp-for="Address" class="ocat-label">@T["Address"]</label><div class="ocat-end"><input asp-for="Address" class="form-control" /><span class="hint">@T["Where the team works, for a site."]</span></div></div>
+        <div class="ocat-wrapper"><span class="ocat-label">@T["Address"]</span><div class="ocat-end"><span class="form-control-plaintext">@(string.IsNullOrEmpty(Model.TeamAddress) ? T["None"] : Model.TeamAddress)</span><span class="hint">@T["The team's address, set in its Address card. The site coordinates are found from it when left empty."]</span></div></div>
         @if (Model.ShowTimeClock)
         {
             <div class="ocat-wrapper">

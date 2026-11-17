@@ -83,4 +83,10 @@ public static class StaffHistoryFields
     /// The termination date.
     /// </summary>
     public const string TerminationDate = "TerminationDate";
+
+    /// <summary>
+    /// The pay (Compensation): basis, currency, rates, salaries and cost of an hour. Its values are shown only to
+    /// people who manage staff pay.
+    /// </summary>
+    public const string Pay = "Pay";
 }

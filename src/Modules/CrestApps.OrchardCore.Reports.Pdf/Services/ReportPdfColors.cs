@@ -5,7 +5,7 @@ using CrestApps.OrchardCore.Reports.Models;
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 
 /// <summary>
-/// Reads the colors of a report for its PDF.
+/// Reads the colors of report styles as colors of a PDF.
 /// </summary>
 internal static class ReportPdfColors
 {
@@ -26,7 +26,8 @@ internal static class ReportPdfColors
             return false;
         }
 
-        color = PdfColor.FromRgb(number).Lighten(1 - ((number >> 24) / 255d));
+        color = new PdfColor((byte)(number >> 16), (byte)(number >> 8), (byte)number)
+            .Lighten(1 - ((number >> 24) / 255d));
 
         return true;
     }

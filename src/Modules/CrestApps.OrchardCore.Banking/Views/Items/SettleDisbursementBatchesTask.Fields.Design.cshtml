@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Banking.Disbursements.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SettleDisbursementBatchesTask>
+
+<header><h4><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Settle Disbursement Batches"])</h4></header>
+<p class="hint">@T["Settles the batches released more than {0} days ago.", Model.Activity.AgeInDays]</p>

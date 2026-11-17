@@ -532,7 +532,7 @@ internal sealed class LateFeePoliciesRecipeStepSchema : IRecipeStep
 public sealed class CollectionsDeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddDeployment<LateFeePoliciesDeploymentSource, LateFeePoliciesDeploymentStep>();
+        => services.AddDeployment<LateFeePoliciesDeploymentSource, LateFeePoliciesDeploymentStep, SummaryDeploymentStepDisplayDriver<LateFeePoliciesDeploymentStep>>();
 }
 
 [Feature(InvoicingConstants.Features.Collections)]

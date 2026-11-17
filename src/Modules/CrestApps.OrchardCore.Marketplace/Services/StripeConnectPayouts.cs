@@ -1,9 +1,12 @@
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Banking.Disbursements.Models;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Settings;
 using Stripe;
@@ -123,38 +126,85 @@ public sealed class StripeConnectVendorService
 }
 
 /// <summary>
-/// Pays a vendor's earnings on an order to its Stripe account: a transfer funded by that order's charge, so it doesn't
-/// wait for the store's own balance.
+/// Sends vendor payouts as Stripe Connect transfers to the vendors' own accounts, each from its order's payment, as a
+/// Disbursements provider. A transfer either goes through (the disbursement is settled) or is refused (failed with
+/// Stripe's reason); the disbursement's key is the transfer's idempotency key.
 /// </summary>
 internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
 {
     private readonly StripeClient _stripeClient;
     private readonly IPaymentAttemptStore _attempts;
+    private readonly IVendorStore _vendors;
+    private readonly IOrderStore _orders;
     private readonly ILogger _logger;
 
-    public StripeConnectPayoutProvider(StripeClient stripeClient, IPaymentAttemptStore attempts, ILogger<StripeConnectPayoutProvider> logger)
+    internal readonly IStringLocalizer S;
+
+    public StripeConnectPayoutProvider(
+        StripeClient stripeClient,
+        IPaymentAttemptStore attempts,
+        IVendorStore vendors,
+        IOrderStore orders,
+        ILogger<StripeConnectPayoutProvider> logger,
+        IStringLocalizer<StripeConnectPayoutProvider> stringLocalizer)
     {
         _stripeClient = stripeClient;
         _attempts = attempts;
+        _vendors = vendors;
+        _orders = orders;
         _logger = logger;
+        S = stringLocalizer;
     }
 
     public string Name
         => MarketplaceConstants.StripeConnectPayoutProvider;
 
-    public async Task<(string TransferId, string Failure)> PayAsync(Vendor vendor, Order order, decimal amount, string currency, string idempotencyKey, CancellationToken cancellationToken = default)
+    public LocalizedString DisplayName
+        => S["Stripe Connect transfer"];
+
+    public string Method
+        => MarketplaceConstants.StripeConnectPayoutProvider;
+
+    public async Task<DisbursementSubmitResult> SubmitAsync(DisbursementBatch batch, IReadOnlyList<Disbursement> disbursements, CancellationToken cancellationToken = default)
+    {
+        var result = new DisbursementSubmitResult { Succeeded = true };
+
+        foreach (var disbursement in disbursements)
+        {
+            var vendor = disbursement.Payee.Kind == MarketplaceConstants.VendorPartyKind ? await _vendors.FindByIdAsync(disbursement.Payee.Id, cancellationToken) : null;
+            var order = disbursement.SourceKind == MarketplaceConstants.PayoutSourceKind && !string.IsNullOrEmpty(disbursement.SourceId)
+                ? await _orders.FindByIdAsync(disbursement.SourceId, cancellationToken)
+                : null;
+            var (transferId, failure) = await TransferAsync(vendor, order, disbursement, cancellationToken);
+
+            if (failure is null)
+            {
+                result.Statuses[disbursement.ItemId] = DisbursementStatus.Settled;
+                result.TraceNumbers[disbursement.ItemId] = transferId;
+            }
+            else
+            {
+                result.Statuses[disbursement.ItemId] = DisbursementStatus.Failed;
+                result.FailureReasons[disbursement.ItemId] = failure;
+            }
+        }
+
+        return result;
+    }
+
+    private async Task<(string TransferId, string Failure)> TransferAsync(Vendor vendor, Order order, Disbursement disbursement, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(vendor?.StripeAccountId))
         {
-            return (null, "The vendor has no Stripe account.");
+            return (null, S["The vendor has no Stripe account."].Value);
         }
 
         try
         {
             var options = new TransferCreateOptions
             {
-                Amount = StripeCurrency.ToMinorUnits(amount, currency),
-                Currency = currency.ToLowerInvariant(),
+                Amount = StripeCurrency.ToMinorUnits(disbursement.Amount, disbursement.Currency),
+                Currency = disbursement.Currency.ToLowerInvariant(),
                 Destination = vendor.StripeAccountId,
                 TransferGroup = order?.OrderNumber,
                 Description = order is null ? null : $"Order {order.OrderNumber}",
@@ -162,6 +212,7 @@ internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
                 {
                     ["vendorId"] = vendor.ItemId,
                     ["orderId"] = order?.ItemId ?? string.Empty,
+                    ["disbursementId"] = disbursement.ItemId,
                 },
             };
 
@@ -171,7 +222,7 @@ internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
                 options.SourceTransaction = chargeId;
             }
 
-            var transfer = await new TransferService(_stripeClient).CreateAsync(options, new RequestOptions { IdempotencyKey = "vendor-payout-" + idempotencyKey }, cancellationToken);
+            var transfer = await new TransferService(_stripeClient).CreateAsync(options, new RequestOptions { IdempotencyKey = "vendor-payout-" + disbursement.IdempotencyKey }, cancellationToken);
 
             return (transfer.Id, null);
         }

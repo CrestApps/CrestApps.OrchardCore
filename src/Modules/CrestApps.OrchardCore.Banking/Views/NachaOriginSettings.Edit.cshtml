@@ -1,0 +1,107 @@
+@model NachaOriginSettingsViewModel
+
+@* Only the business's own accounts send bank files: the card hides while an owner is chosen on the form, and its fields
+   show once sending is on. The driver checks both again when the account is saved. *@
+<div class="card mb-3" data-nacha-origin>
+    <div class="card-header">@T["Bank file (ACH)"]</div>
+    <div class="card-body">
+        <input type="hidden" asp-for="Shown" value="true" />
+        <div class="ocat-wrapper">
+            <div class="ocat-end ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Enabled" class="form-check-input" data-nacha-enabled />
+                    <label asp-for="Enabled" class="form-check-label">@T["Send bank files from this account"]</label>
+                    <span class="hint dashed">@T["Your bank gives you these values when it sets up ACH origination for the business."]</span>
+                </div>
+            </div>
+        </div>
+        <div data-nacha-fields class="@(Model.Enabled ? null : "d-none")">
+        <div class="ocat-wrapper" asp-validation-class-for="CompanyName">
+            <label asp-for="CompanyName" class="ocat-label">@T["Company name"]</label>
+            <div class="ocat-end ocat-limited-wrapper">
+                <input asp-for="CompanyName" class="form-control" maxlength="16" />
+                <span asp-validation-for="CompanyName" class="text-danger"></span>
+                <span class="hint">@T["Shown on the payee's bank statement. Sixteen characters at most."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="CompanyIdentification">
+            <label asp-for="CompanyIdentification" class="ocat-label">@T["Company identification"]</label>
+            <div class="ocat-end ocat-limited-wrapper">
+                <input asp-for="CompanyIdentification" class="form-control" maxlength="10" />
+                <span asp-validation-for="CompanyIdentification" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="CompanyEntryDescription">
+            <label asp-for="CompanyEntryDescription" class="ocat-label">@T["Entry description"]</label>
+            <div class="ocat-end ocat-limited-wrapper">
+                <input asp-for="CompanyEntryDescription" class="form-control" maxlength="10" placeholder="PAYMENT" />
+                <span asp-validation-for="CompanyEntryDescription" class="text-danger"></span>
+                <span class="hint">@T["Such as PAYROLL. Ten characters at most."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="ImmediateOrigin">
+            <label asp-for="ImmediateOrigin" class="ocat-label">@T["Immediate origin"]</label>
+            <div class="ocat-end ocat-limited-wrapper">
+                <input asp-for="ImmediateOrigin" class="form-control" maxlength="10" />
+                <span asp-validation-for="ImmediateOrigin" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ImmediateOriginName" class="ocat-label">@T["Immediate origin name"]</label>
+            <div class="ocat-end ocat-limited-wrapper">
+                <input asp-for="ImmediateOriginName" class="form-control" maxlength="23" />
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="ImmediateDestination">
+            <label asp-for="ImmediateDestination" class="ocat-label">@T["Immediate destination"]</label>
+            <div class="ocat-end ocat-limited-wrapper">
+                <input asp-for="ImmediateDestination" class="form-control" inputmode="numeric" maxlength="9" />
+                <span asp-validation-for="ImmediateDestination" class="text-danger"></span>
+                <span class="hint">@T["The routing number of the bank that receives the file. Leave it empty for this account's bank."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ImmediateDestinationName" class="ocat-label">@T["Immediate destination name"]</label>
+            <div class="ocat-end ocat-limited-wrapper">
+                <input asp-for="ImmediateDestinationName" class="form-control" maxlength="23" />
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="IncludeOffset" class="form-check-input" />
+                    <label asp-for="IncludeOffset" class="form-check-label">@T["Add an offset entry"]</label>
+                    <span class="hint dashed">@T["Ends each batch with a debit of this account for its total. Turn it on only when your bank asks for it."]</span>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const card = document.querySelector('[data-nacha-origin]');
+
+        if (!card) {
+            return;
+        }
+
+        const enabled = card.querySelector('[data-nacha-enabled]');
+        const fields = card.querySelector('[data-nacha-fields]');
+        const owner = card.closest('form')?.querySelector('select[name$=".Owner"]');
+
+        enabled.addEventListener('change', function () {
+            fields.classList.toggle('d-none', !enabled.checked);
+        });
+
+        if (owner) {
+            const showForOwner = function () {
+                card.classList.toggle('d-none', Array.from(owner.selectedOptions).some(function (option) { return option.value; }));
+            };
+
+            owner.addEventListener('change', showForOwner);
+            showForOwner();
+        }
+    })();
+</script>

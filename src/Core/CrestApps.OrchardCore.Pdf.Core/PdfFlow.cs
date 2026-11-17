@@ -1,13 +1,17 @@
 using System.Globalization;
 using System.Text;
-using UglyToad.PdfPig.Writer;
 
 namespace CrestApps.OrchardCore.Pdf;
 
 /// <summary>
-/// Lays content out down the pages of a PDF: it holds the page being filled and the position on it, and adds a
-/// page when the next block does not fit.
+/// Lays content out down the pages of a PDF document: it holds the page being filled and the position on it, and adds
+/// a page to the <see cref="PdfDocumentWriter"/> when the next block does not fit.
 /// </summary>
+/// <remarks>
+/// This is the entry point for documents whose content flows from page to page, such as an invoice with any number of
+/// lines; a document that places its content at exact positions, such as a check, draws on the pages of
+/// <see cref="PdfDocumentWriter"/> itself.
+/// </remarks>
 public sealed class PdfFlow
 {
     /// <summary>
@@ -19,51 +23,33 @@ public sealed class PdfFlow
     private const double FooterDistance = Margin / 2;
     private const double BottomMargin = Margin + 10;
 
-    private readonly PdfDocumentBuilder _builder;
-    private readonly double _pageWidth;
-    private readonly double _pageHeight;
-    private readonly List<PdfPage> _pages = [];
-    private readonly Action<PdfPage> _pageStarted;
+    private readonly PdfDocumentWriter _document;
+    private readonly PdfPageSize _size;
+    private readonly List<PdfCanvas> _pages = [];
+    private readonly Action<PdfCanvas> _pageStarted;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PdfFlow"/> class, with its first page.
+    /// Initializes a new instance of the <see cref="PdfFlow"/> class, and adds its first page to the document.
     /// </summary>
-    /// <param name="builder">The document.</param>
-    /// <param name="pageWidth">The width of a page, in points.</param>
-    /// <param name="pageHeight">The height of a page, in points.</param>
-    /// <param name="regular">The regular face.</param>
-    /// <param name="bold">The bold face.</param>
-    public PdfFlow(
-        PdfDocumentBuilder builder,
-        double pageWidth,
-        double pageHeight,
-        PdfFont regular,
-        PdfFont bold)
-        : this(builder, pageWidth, pageHeight, regular, bold, pageStarted: null)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PdfFlow"/> class, with its first page.
-    /// </summary>
-    /// <param name="builder">The document.</param>
-    /// <param name="pageWidth">The width of a page, in points.</param>
-    /// <param name="pageHeight">The height of a page, in points.</param>
-    /// <param name="regular">The regular face.</param>
-    /// <param name="bold">The bold face.</param>
+    /// <param name="document">The document the pages are added to.</param>
+    /// <param name="size">The size of a page.</param>
+    /// <param name="regular">The regular face, from the document.</param>
+    /// <param name="bold">The bold face, from the document.</param>
     /// <param name="pageStarted">Draws on each page as it starts, before its content, such as a watermark behind the
     /// content; <see langword="null"/> to draw nothing.</param>
     public PdfFlow(
-        PdfDocumentBuilder builder,
-        double pageWidth,
-        double pageHeight,
-        PdfFont regular,
-        PdfFont bold,
-        Action<PdfPage> pageStarted)
+        PdfDocumentWriter document,
+        PdfPageSize size,
+        PdfFontFace regular,
+        PdfFontFace bold,
+        Action<PdfCanvas> pageStarted = null)
     {
-        _builder = builder;
-        _pageWidth = pageWidth;
-        _pageHeight = pageHeight;
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(regular);
+        ArgumentNullException.ThrowIfNull(bold);
+
+        _document = document;
+        _size = size;
         _pageStarted = pageStarted;
         Regular = regular;
         Bold = bold;
@@ -74,17 +60,22 @@ public sealed class PdfFlow
     /// <summary>
     /// Gets the regular face.
     /// </summary>
-    public PdfFont Regular { get; }
+    public PdfFontFace Regular { get; }
 
     /// <summary>
     /// Gets the bold face.
     /// </summary>
-    public PdfFont Bold { get; }
+    public PdfFontFace Bold { get; }
 
     /// <summary>
     /// Gets the page being filled.
     /// </summary>
-    public PdfPage Page { get; private set; }
+    public PdfCanvas Page { get; private set; }
+
+    /// <summary>
+    /// Gets the size of a page.
+    /// </summary>
+    public PdfPageSize Size => _size;
 
     /// <summary>
     /// Gets the left of the content, in points.
@@ -94,25 +85,15 @@ public sealed class PdfFlow
     /// <summary>
     /// Gets the width of the content, in points.
     /// </summary>
-    public double Width => _pageWidth - (2 * Margin);
+    public double Width => _size.Width - (2 * Margin);
 
     /// <summary>
     /// Gets the height of the content of a page, in points.
     /// </summary>
-    public double PageContentHeight => _pageHeight - Margin - BottomMargin;
+    public double PageContentHeight => _size.Height - Margin - BottomMargin;
 
     /// <summary>
-    /// Gets the width of a page, in points.
-    /// </summary>
-    public double PageWidth => _pageWidth;
-
-    /// <summary>
-    /// Gets the height of a page, in points.
-    /// </summary>
-    public double PageHeight => _pageHeight;
-
-    /// <summary>
-    /// Gets the number of pages started so far.
+    /// Gets the number of pages laid out.
     /// </summary>
     public int PageCount => _pages.Count;
 
@@ -124,7 +105,7 @@ public sealed class PdfFlow
     /// <summary>
     /// Gets the height left on the page, in points.
     /// </summary>
-    public double Remaining => _pageHeight - BottomMargin - Top;
+    public double Remaining => _size.Height - BottomMargin - Top;
 
     // Whether nothing was laid out on the page yet.
     private bool IsPageEmpty => Top <= Margin;
@@ -134,7 +115,7 @@ public sealed class PdfFlow
     /// </summary>
     public void NewPage()
     {
-        Page = new PdfPage(_builder.AddPage(_pageWidth, _pageHeight), _pageHeight);
+        Page = _document.AddPage(_size);
         _pages.Add(Page);
         Top = Margin;
         _pageStarted?.Invoke(Page);
@@ -170,19 +151,22 @@ public sealed class PdfFlow
     {
         if (!IsPageEmpty)
         {
-            Top = Math.Min(Top + height, _pageHeight - BottomMargin);
+            Top = Math.Min(Top + height, _size.Height - BottomMargin);
         }
     }
 
     /// <summary>
-    /// Measures the lines of a paragraph across the content.
+    /// Measures the lines of a paragraph.
     /// </summary>
     /// <param name="lines">The lines, from <see cref="PdfText.Wrap"/>.</param>
     /// <param name="font">The face.</param>
     /// <param name="size">The font size, in points.</param>
     /// <returns>The height, in points.</returns>
-    public static double GetHeight(IReadOnlyCollection<string> lines, PdfFont font, double size)
+    public static double GetHeight(IReadOnlyCollection<string> lines, PdfFontFace font, double size)
     {
+        ArgumentNullException.ThrowIfNull(lines);
+        ArgumentNullException.ThrowIfNull(font);
+
         return lines.Count * font.LineHeight * size;
     }
 
@@ -193,8 +177,11 @@ public sealed class PdfFlow
     /// <param name="font">The face.</param>
     /// <param name="size">The font size, in points.</param>
     /// <param name="color">The color.</param>
-    public void WriteLines(IReadOnlyList<string> lines, PdfFont font, double size, PdfColor color)
+    public void WriteLines(IReadOnlyList<string> lines, PdfFontFace font, double size, PdfColor color)
     {
+        ArgumentNullException.ThrowIfNull(lines);
+        ArgumentNullException.ThrowIfNull(font);
+
         var lineHeight = font.LineHeight * size;
 
         foreach (var line in lines)
@@ -206,7 +193,7 @@ public sealed class PdfFlow
     }
 
     /// <summary>
-    /// Writes the page numbers in the footer of every page.
+    /// Writes the page numbers at the right of the footer of every page, once the content is laid out.
     /// </summary>
     /// <param name="format">The page numbers, with <c>{0}</c> for the page and <c>{1}</c> for the number of pages.</param>
     /// <param name="size">The font size, in points.</param>
@@ -218,9 +205,8 @@ public sealed class PdfFlow
         for (var index = 0; index < _pages.Count; index++)
         {
             var text = Regular.Prepare(FormatPageNumbers(format, index + 1, _pages.Count)).Replace('\n', ' ');
-            var width = Regular.Measure(text, size);
 
-            _pages[index].DrawText(text, Regular, size, _pageWidth - Margin - width, _pageHeight - FooterDistance - lineHeight, color);
+            _pages[index].DrawTextRight(text, Regular, size, _size.Width - Margin, _size.Height - FooterDistance - lineHeight, color);
         }
     }
 

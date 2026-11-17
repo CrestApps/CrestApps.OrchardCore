@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Banking.Disbursements.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<DisbursementUnbatchedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> @T["Disbursement Removed from Batch"]</h4>
+<p>@T["Starts when a disbursement goes back to pending."]</p>

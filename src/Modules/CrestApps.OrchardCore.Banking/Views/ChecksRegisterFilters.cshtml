@@ -1,0 +1,21 @@
+@model ChecksRegisterFiltersViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="btn-group filter">
+    <select class="selectpicker show-tick me-2" data-style="btn-sm" data-width="fit" data-header="@T["Bank account"]" data-dropdown-align-right="auto" aria-label="@T["Bank account"]" data-checks-filter="BankAccountId" asp-items="Model.BankAccountOptions"></select>
+</div>
+<div class="btn-group filter">
+    <select class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]" data-checks-filter="Status" asp-items="Model.StatusOptions"></select>
+</div>
+
+<script at="Foot">
+    document.querySelectorAll('[data-checks-filter]').forEach(select => {
+        select.addEventListener('change', () => {
+            const form = document.getElementById('checks-filter');
+            form.querySelector('input[type=hidden][name="' + select.dataset.checksFilter + '"]').value = select.value;
+            document.getElementById('submitFilter').click();
+        });
+    });
+</script>

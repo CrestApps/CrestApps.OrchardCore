@@ -20,10 +20,23 @@ public sealed class ConfigurationDeploymentStartup : StartupBase
     {
         services.AddDeployment<TaxCategoryDeploymentSource, TaxCategoryDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxCategoryDeploymentStep>>();
         services.AddDeployment<TaxTypeDeploymentSource, TaxTypeDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxTypeDeploymentStep>>();
-        services.AddDeployment<TaxJurisdictionDeploymentSource, TaxJurisdictionDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxJurisdictionDeploymentStep>>();
         services.AddDeployment<TaxRuleDeploymentSource, TaxRuleDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxRuleDeploymentStep>>();
-        services.AddDeployment<TaxTableDeploymentSource, TaxTableDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxTableDeploymentStep>>();
         services.AddDeployment<MerchantTaxRegistrationDeploymentSource, MerchantTaxRegistrationDeploymentStep, SummaryDeploymentStepDisplayDriver<MerchantTaxRegistrationDeploymentStep>>();
         services.AddDeployment<ExemptionCertificateDeploymentSource, ExemptionCertificateDeploymentStep, SummaryDeploymentStepDisplayDriver<ExemptionCertificateDeploymentStep>>();
+    }
+}
+
+/// <summary>
+/// Registers the deployment steps that export tax jurisdictions and tax tables.
+/// </summary>
+[Feature(TaxationConstants.Feature.Tables)]
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
+public sealed class TaxTablesDeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<TaxJurisdictionDeploymentSource, TaxJurisdictionDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxJurisdictionDeploymentStep>>();
+        services.AddDeployment<TaxTableDeploymentSource, TaxTableDeploymentStep, SummaryDeploymentStepDisplayDriver<TaxTableDeploymentStep>>();
     }
 }

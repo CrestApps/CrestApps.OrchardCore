@@ -23,7 +23,7 @@ internal sealed class ReportPdfChartWriter
     private const double GroupShare = 0.8;
     private const double BarShare = 0.9;
 
-    private readonly PdfFlow _flow;
+    private readonly ReportPdfFlow _flow;
     private readonly ReportChart _chart;
     private readonly ChartKind _kind;
     private readonly bool _stacked;
@@ -41,7 +41,7 @@ internal sealed class ReportPdfChartWriter
     /// <param name="chart">The chart of the section.</param>
     /// <param name="maxHeight">The height a page has under the head of the section, in points, which the chart is kept to.</param>
     public ReportPdfChartWriter(
-        PdfFlow flow,
+        ReportPdfFlow flow,
         ReportChart chart,
         double maxHeight)
     {
@@ -127,7 +127,7 @@ internal sealed class ReportPdfChartWriter
     /// </summary>
     public double Height => _chartHeight > 0 ? SpaceBefore + _chartHeight : 0;
 
-    private PdfFont Font => _flow.Regular;
+    private PdfFontFace Font => _flow.Regular;
 
     private double LineHeight => Font.LineHeight * FontSize;
 

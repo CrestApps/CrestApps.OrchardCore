@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Deployments;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -465,7 +466,7 @@ internal sealed class EstimatesRecipeStepSchema : IRecipeStep
 public sealed class EstimatesDeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddDeployment<EstimatesDeploymentSource, EstimatesDeploymentStep>();
+        => services.AddDeployment<EstimatesDeploymentSource, EstimatesDeploymentStep, SummaryDeploymentStepDisplayDriver<EstimatesDeploymentStep>>();
 }
 
 [Feature(InvoicingConstants.Features.Estimates)]

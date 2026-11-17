@@ -43,7 +43,11 @@ public class InMemoryCatalog<T> : ICatalog<T>
 
     public ValueTask CreateAsync(T entry, CancellationToken cancellationToken = default)
     {
-        Entries.Add(entry);
+        lock (Entries)
+        {
+            Entries.Add(entry);
+        }
+
 
         return ValueTask.CompletedTask;
     }

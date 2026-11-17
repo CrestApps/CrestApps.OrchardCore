@@ -60,7 +60,7 @@ public sealed class Startup : StartupBase
 public sealed class DeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddDeployment<ExchangeRatesDeploymentSource, ExchangeRatesDeploymentStep>();
+        => services.AddDeployment<ExchangeRatesDeploymentSource, ExchangeRatesDeploymentStep, SummaryDeploymentStepDisplayDriver<ExchangeRatesDeploymentStep>>();
 }
 
 [RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]

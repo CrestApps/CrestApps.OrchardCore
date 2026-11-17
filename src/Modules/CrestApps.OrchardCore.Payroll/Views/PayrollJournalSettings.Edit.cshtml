@@ -1,0 +1,79 @@
+@model PayrollJournalSettingsViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Journal accounts"]</div>
+    <div class="card-body">
+        <p class="hint">@T["Each line of a final pay statement becomes a debit and a credit on these ledger accounts, in the Journal entries data set; a data pipeline writes the file your accounting system imports. Payroll keeps no ledger."]</p>
+        <div class="ocat-wrapper">
+            <label asp-for="NetPayAccount" class="ocat-label">@T["Net pay owed"]</label>
+            <div class="ocat-end">
+                <input asp-for="NetPayAccount" class="form-control" style="max-width: 14rem" />
+                <span class="hint">@T["Credited by pay and reimbursements, debited by deductions and the employee's taxes: what is left is the net pay to pay."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="WageExpenseAccount" class="ocat-label">@T["Wages expense"]</label>
+            <div class="ocat-end">
+                <input asp-for="WageExpenseAccount" class="form-control" style="max-width: 14rem" />
+                <span class="hint">@T["Debited by earnings."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="DeductionLiabilityAccount" class="ocat-label">@T["Deductions payable"]</label>
+            <div class="ocat-end">
+                <input asp-for="DeductionLiabilityAccount" class="form-control" style="max-width: 14rem" />
+                <span class="hint">@T["Credited by deductions withheld."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="TaxLiabilityAccount" class="ocat-label">@T["Taxes payable"]</label>
+            <div class="ocat-end">
+                <input asp-for="TaxLiabilityAccount" class="form-control" style="max-width: 14rem" />
+                <span class="hint">@T["Credited by taxes withheld and the employer's taxes."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="EmployerTaxExpenseAccount" class="ocat-label">@T["Employer taxes expense"]</label>
+            <div class="ocat-end">
+                <input asp-for="EmployerTaxExpenseAccount" class="form-control" style="max-width: 14rem" />
+                <span class="hint">@T["Debited by the employer's taxes."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ContributionExpenseAccount" class="ocat-label">@T["Benefits expense"]</label>
+            <div class="ocat-end">
+                <input asp-for="ContributionExpenseAccount" class="form-control" style="max-width: 14rem" />
+                <span class="hint">@T["Debited by employer contributions."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ContributionLiabilityAccount" class="ocat-label">@T["Benefits payable"]</label>
+            <div class="ocat-end">
+                <input asp-for="ContributionLiabilityAccount" class="form-control" style="max-width: 14rem" />
+                <span class="hint">@T["Credited by employer contributions."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ReimbursementExpenseAccount" class="ocat-label">@T["Reimbursements expense"]</label>
+            <div class="ocat-end">
+                <input asp-for="ReimbursementExpenseAccount" class="form-control" style="max-width: 14rem" />
+                <span class="hint">@T["Debited by reimbursements."]</span>
+            </div>
+        </div>
+        <h6 class="mt-3">@T["For a pay code or a tax"]</h6>
+        <p class="hint">@T["The code of a pay code (such as REG) or a tax (such as US-FIT), and the accounts it uses instead of the ones above; leave a side empty to keep the default. Clear the code to remove a row."]</p>
+        <table class="table table-sm">
+            <thead><tr><th>@T["Pay code or tax"]</th><th>@T["Debit account"]</th><th>@T["Credit account"]</th></tr></thead>
+            <tbody>
+                @for (var i = 0; i < Model.Mappings.Count; i++)
+                {
+                    <tr>
+                        <td><input asp-for="Mappings[i].Key" class="form-control form-control-sm text-uppercase" /></td>
+                        <td><input asp-for="Mappings[i].DebitAccount" class="form-control form-control-sm" /></td>
+                        <td><input asp-for="Mappings[i].CreditAccount" class="form-control form-control-sm" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

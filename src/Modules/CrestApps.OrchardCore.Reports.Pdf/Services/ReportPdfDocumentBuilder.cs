@@ -40,10 +40,10 @@ internal sealed class ReportPdfDocumentBuilder
 
     private readonly ReportDocument _report;
     private readonly string _pageNumberFormat;
-    private readonly PdfFonts _fonts;
+    private readonly PdfFontSet _fonts;
     private readonly Dictionary<ReportSection, ReportPdfTableLayout> _tables = [];
 
-    private PdfFlow _flow;
+    private ReportPdfFlow _flow;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportPdfDocumentBuilder"/> class.
@@ -54,7 +54,7 @@ internal sealed class ReportPdfDocumentBuilder
     public ReportPdfDocumentBuilder(
         ReportDocument report,
         string pageNumberFormat,
-        PdfFonts fonts)
+        PdfFontSet fonts)
     {
         _report = report;
         _pageNumberFormat = pageNumberFormat;
@@ -80,14 +80,14 @@ internal sealed class ReportPdfDocumentBuilder
         MeasureTables(bold);
 
         // Landscape when a table's words do not fit across a portrait page, or a table of many columns would wrap.
-        var portraitWidth = LetterWidth - (2 * PdfFlow.Margin);
+        var portraitWidth = LetterWidth - (2 * ReportPdfFlow.Margin);
         var landscape = _tables.Values.Any(layout =>
             layout.MinimumWidth > portraitWidth ||
             (layout.ColumnCount > PortraitColumns && layout.PreferredWidth > portraitWidth));
 
         _flow = landscape
-            ? new PdfFlow(builder, LetterHeight, LetterWidth, regular, bold)
-            : new PdfFlow(builder, LetterWidth, LetterHeight, regular, bold);
+            ? new ReportPdfFlow(builder, LetterHeight, LetterWidth, regular, bold)
+            : new ReportPdfFlow(builder, LetterWidth, LetterHeight, regular, bold);
 
         if (!string.IsNullOrWhiteSpace(_report.Title))
         {
@@ -114,12 +114,12 @@ internal sealed class ReportPdfDocumentBuilder
             }
         }
 
-        _flow.WriteFooters(_pageNumberFormat, ReportPdfTheme.BaseFontSize - 1.5, ReportPdfTheme.Muted);
+        _flow.WriteFooters(_pageNumberFormat);
 
         return builder.Build();
     }
 
-    private void MeasureTables(PdfFont font)
+    private void MeasureTables(PdfFontFace font)
     {
         foreach (var section in _report.Sections)
         {
@@ -226,12 +226,12 @@ internal sealed class ReportPdfDocumentBuilder
 
         if (title.Count > 0)
         {
-            height += PdfFlow.GetHeight(title, bold, SectionTitleSize) + HeadSpacing;
+            height += ReportPdfFlow.GetHeight(title, bold, SectionTitleSize) + HeadSpacing;
         }
 
         if (description.Count > 0)
         {
-            height += PdfFlow.GetHeight(description, regular, DescriptionSize) + HeadSpacing;
+            height += ReportPdfFlow.GetHeight(description, regular, DescriptionSize) + HeadSpacing;
         }
 
         return new Head(band, title, description, height);
@@ -290,7 +290,7 @@ internal sealed class ReportPdfDocumentBuilder
 
     private double GetBandHeight(List<string> lines)
     {
-        return PdfFlow.GetHeight(lines, _flow.Bold, ContainerTitleSize) + (2 * ContainerTitlePadding);
+        return ReportPdfFlow.GetHeight(lines, _flow.Bold, ContainerTitleSize) + (2 * ContainerTitlePadding);
     }
 
     private List<List<Card>> CreateMetricRows(IList<ReportMetric> metrics)
@@ -366,7 +366,7 @@ internal sealed class ReportPdfDocumentBuilder
             parts.Add(new CardPart(PdfText.Wrap(regular.Prepare(metric.Hint), regular, SmallSize, width), regular, SmallSize, ReportPdfTheme.Muted, 2));
         }
 
-        var height = (2 * CardVerticalPadding) + parts.Sum(part => part.SpaceBefore + PdfFlow.GetHeight(part.Lines, part.Font, part.Size));
+        var height = (2 * CardVerticalPadding) + parts.Sum(part => part.SpaceBefore + ReportPdfFlow.GetHeight(part.Lines, part.Font, part.Size));
 
         return new Card(parts, cardWidth, height);
     }
@@ -441,7 +441,7 @@ internal sealed class ReportPdfDocumentBuilder
     // filters it and its description, wrapped, with their height on the page.
     private sealed record Head(List<string> Band, List<string> Title, List<string> Description, double Height);
 
-    private sealed record CardPart(List<string> Lines, PdfFont Font, double Size, PdfColor Color, double SpaceBefore);
+    private sealed record CardPart(List<string> Lines, PdfFontFace Font, double Size, PdfColor Color, double SpaceBefore);
 
     private sealed record Card(List<CardPart> Parts, double Width, double Height);
 

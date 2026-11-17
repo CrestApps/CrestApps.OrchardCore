@@ -323,7 +323,7 @@ internal sealed class BusinessDocumentPdfTable
         return widths;
     }
 
-    private static double Measure(PdfFont font, double size, string value, bool longestWord)
+    private static double Measure(PdfFontFace font, double size, string value, bool longestWord)
     {
         var text = font.Prepare(value);
         var parts = longestWord
