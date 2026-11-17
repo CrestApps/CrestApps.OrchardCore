@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Threading.Channels;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.AGUI;
 using CrestApps.Core.AI.Chat.Hubs;
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Clients;
@@ -578,6 +579,17 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
             return;
         }
 
+        // On the AG-UI protocol the run is started on the session, and the text is written as one message's content,
+        // as the base method does: the turn's writer sends every write after the first under one message id as
+        // "message replaced", which showed only the last chunk.
+        var aguiTurn = writer as AGUIChatTurn;
+
+        if (aguiTurn is not null)
+        {
+            aguiTurn.Events.ThreadId = chatSession.SessionId;
+            await aguiTurn.Events.StartAsync(CancellationToken.None);
+        }
+
         var generatedPrompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
         new Dictionary<string, FluidValue>
         {
@@ -613,6 +625,13 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
             }
 
             builder.Append(chunk.Text);
+
+            if (aguiTurn is not null)
+            {
+                await aguiTurn.Events.WriteTextAsync(assistantMessage.ItemId, chunk.Text, cancellationToken);
+
+                continue;
+            }
 
             var partialMessage = new CompletionPartialMessage
             {
