@@ -277,16 +277,21 @@ internal static class NestedContentItemTree
     /// <param name="root">The working JSON of the top content item, with the changes.</param>
     /// <param name="partNames">The names of the parts of the top content item that changed.</param>
     /// <param name="isDraft">Whether the content item is saved as a draft; otherwise it is published.</param>
+    /// <param name="versionOptions">
+    /// The version that takes the change. The default is a draft, which the content editor asks for. The menu and
+    /// taxonomy editors change the latest version in place when the content type cannot have a draft.
+    /// </param>
     /// <returns>The saved content item, or the error that stopped it.</returns>
     public static async Task<(ContentItem ContentItem, string Error)> SaveAsync(
         IServiceProvider services,
         string contentItemId,
         JsonObject root,
         IEnumerable<string> partNames,
-        bool isDraft)
+        bool isDraft,
+        VersionOptions versionOptions = null)
     {
         var contentManager = services.GetRequiredService<IContentManager>();
-        var contentItem = await contentManager.GetAsync(contentItemId, VersionOptions.DraftRequired);
+        var contentItem = await contentManager.GetAsync(contentItemId, versionOptions ?? VersionOptions.DraftRequired);
 
         if (contentItem is null)
         {

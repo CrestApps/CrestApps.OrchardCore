@@ -1,3 +1,5 @@
+using OrchardCore.Contents;
+using OrchardCore.Contents.Security;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
@@ -39,4 +41,17 @@ internal static class OrchardCorePermissions
     /// Gets the security-critical permission to manage workflows.
     /// </summary>
     public static readonly Permission ManageWorkflows = new("ManageWorkflows", LocalizationSource.Create("Manage workflows", typeof(OrchardCorePermissions)), isSecurityCritical: true);
+
+    /// <summary>
+    /// Gets the permission to manage menus. As in the Menu module, the permission to edit Menu content items implies it.
+    /// </summary>
+    public static readonly Permission ManageMenu = new(
+        "ManageMenu",
+        LocalizationSource.Create("Manage menus", typeof(OrchardCorePermissions)),
+        [ContentTypePermissionsHelper.CreateDynamicPermissionOf(CommonPermissions.EditContent.Name, "Menu")]);
+
+    /// <summary>
+    /// Gets the permission to manage taxonomies. Its name is singular in the Taxonomies module.
+    /// </summary>
+    public static readonly Permission ManageTaxonomies = new("ManageTaxonomy", LocalizationSource.Create("Manage taxonomies", typeof(OrchardCorePermissions)));
 }

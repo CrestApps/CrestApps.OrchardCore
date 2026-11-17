@@ -427,33 +427,7 @@ public sealed class SaveNestedContentItemTool : AIFunction
         shape.Remove(FlowMetadataName);
         shape.Remove(WidgetMetadataName);
 
-        var payloadAssistanceService = services.GetRequiredService<IContentItemPayloadAssistanceService>();
-        var result = await payloadAssistanceService.ValidateAsync(definition, shape, cancellationToken);
-
-        if (result.IsValid)
-        {
-            return null;
-        }
-
-        var details = new List<string>(result.Messages);
-
-        if (result.UnmappedPaths.Count > 0)
-        {
-            details.Add($"Unmapped or misplaced paths: {string.Join(", ", result.UnmappedPaths)}.");
-        }
-
-        var guidance = string.IsNullOrWhiteSpace(result.Guidance)
-            ? await payloadAssistanceService.GetGuidanceAsync(definition, cancellationToken)
-            : result.Guidance;
-
-        return
-        $"""
-        Nothing was saved: the nested content item JSON does not match the content type '{definition.Name}'.
-        {string.Join(Environment.NewLine, details)}
-        Call the function again with a contentItem that follows the structure below.
-
-        {guidance}
-        """;
+        return await ContentItemPayloadCheck.GetErrorAsync(services, definition, shape, "nested content item", "contentItem", cancellationToken);
     }
 
     /// <summary>
