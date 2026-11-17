@@ -51,6 +51,12 @@ public static class InvoicingConstants
     public const string RenewalReferenceType = "Renewal";
 
     /// <summary>
+    /// The source type of an invoice made for what a checkout left owing through a pay-later method (Pay Later, account
+    /// terms) for a purchase that is not an order, such as a subscription's first cycle; its source id is the transaction's.
+    /// </summary>
+    public const string CheckoutDebtReferenceType = "CheckoutDebt";
+
+    /// <summary>
     /// The number series of estimates.
     /// </summary>
     public const string EstimateNumberSeries = "Invoicing.Estimate";

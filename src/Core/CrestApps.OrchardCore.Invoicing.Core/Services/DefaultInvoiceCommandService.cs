@@ -227,11 +227,11 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
                 return null;
             }
 
-            // An invoice that took over a debt it did not post (an order's, a renewal's) is corrected with a credit note:
-            // voiding it would cancel what the customer owes for the order.
-            if (invoice.SourceType is InvoicingConstants.OrderReferenceType or InvoicingConstants.RenewalReferenceType)
+            // An invoice that took over a debt it did not post (an order's, a renewal's, a checkout's) is corrected with a
+            // credit note: voiding it would cancel what the customer owes for the purchase.
+            if (invoice.SourceType is InvoicingConstants.OrderReferenceType or InvoicingConstants.RenewalReferenceType or InvoicingConstants.CheckoutDebtReferenceType)
             {
-                result.Fail(S["This invoice took over the debt of an order or a renewal, so it is corrected with a credit note rather than revised."]);
+                result.Fail(S["This invoice took over the debt of an order, a renewal or a checkout, so it is corrected with a credit note rather than revised."]);
 
                 return null;
             }

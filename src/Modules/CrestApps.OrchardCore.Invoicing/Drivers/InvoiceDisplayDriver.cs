@@ -108,7 +108,7 @@ public sealed class InvoiceDisplayDriver : DisplayDriver<Invoice>
             CanApprove = canApprove && invoice.Status == InvoiceStatus.PendingApproval,
             CanRevise = canManage && canIssue && invoice.Status == InvoiceStatus.Open && invoice.Kind == InvoiceKind.Standard &&
                 string.IsNullOrEmpty(invoice.ReplacedById) && invoice.AmountPaid <= 0m && invoice.BilledItems.Count == 0 &&
-                invoice.SourceType is not (InvoicingConstants.OrderReferenceType or InvoicingConstants.RenewalReferenceType),
+                invoice.SourceType is not (InvoicingConstants.OrderReferenceType or InvoicingConstants.RenewalReferenceType or InvoicingConstants.CheckoutDebtReferenceType),
             CanVoid = canVoid && InvoiceLifecycle.CanVoid(invoice),
             CanWriteOff = canVoid && InvoiceLifecycle.CanWriteOff(invoice) && string.IsNullOrEmpty(invoice.InstallmentPlanId),
             CanReinstate = canVoid && invoice.Status == InvoiceStatus.Uncollectible,

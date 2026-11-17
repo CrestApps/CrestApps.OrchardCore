@@ -1,8 +1,9 @@
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Invoicing;
 using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Orders;
-using CrestApps.OrchardCore.Invoicing.Renewals;
+using CrestApps.OrchardCore.Invoicing.DeferredDebts;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -13,11 +14,13 @@ using Moq;
 namespace CrestApps.OrchardCore.Tests.Invoicing;
 
 /// <summary>
-/// A renewal cycle's debt, written on the ledger by the provider that bills the agreement (Pay Later for a subscription
-/// with no gateway), gets an issued invoice that takes the debt over, once; the first cycle is left to its order, and
-/// the order's invoice is never made from a renewal's debt.
+/// A debt a customer was let to pay later gets an issued invoice that takes it over, once: a renewal cycle's debt,
+/// written on the ledger by the provider that bills the agreement (Pay Later for a subscription with no gateway), and
+/// what a pay-later checkout method left owing for a purchase that is not an order, its first cycle included. An
+/// order's debt is left to the order's invoice, which is never made from a renewal's debt, and a debt a card method
+/// left is not invoiced here.
 /// </summary>
-public sealed class RenewalInvoicingTests
+public sealed class DeferredDebtInvoicingTests
 {
     private static readonly DateTime _periodStart = new(2026, 11, 1, 5, 0, 0, DateTimeKind.Utc);
 
@@ -89,10 +92,67 @@ public sealed class RenewalInvoicingTests
         Assert.Equal(InvoicingConstants.RenewalReferenceType, asRenewal.SourceType);
     }
 
-    private static Task<Invoice> BuildAsync(InvoicingTestHarness harness, string transactionId)
-        => harness.InScopeAsync(services => services.GetRequiredService<RenewalInvoiceBuilder>().InvoiceAsync(transactionId, TestContext.Current.CancellationToken));
+    [Theory]
+    [InlineData(1)]
+    [InlineData(0)]
+    public async Task WhatAPayLaterCheckoutLeftOwing_ForAPurchaseThatIsNotAnOrder_IsInvoicedTakingItOver(int cycle)
+    {
+        // Arrange: a subscription's first $20 cycle, or a one-off $20 purchase, owed through Pay Later.
+        await using var harness = await InvoicingTestHarness.CreateAsync(configureServices: services => services.AddSingleton(Providers(defersPayment: true)));
+        var debt = await CreateCycleAsync(harness, cycle, amount: 20m, checkoutSessionId: "session-1");
 
-    private static Task<Transaction> CreateCycleAsync(InvoicingTestHarness harness, int cycle, decimal amount, string orderId = null)
+        // Act
+        var first = await BuildAsync(harness, debt.ItemId);
+        var second = await BuildAsync(harness, debt.ItemId);
+
+        // Assert
+        Assert.NotNull(first);
+        Assert.Equal(first.ItemId, second.ItemId);
+
+        var invoice = await harness.FindInvoiceAsync(first.ItemId);
+        Assert.Equal((InvoiceStatus.Open, debt.ItemId, InvoicingConstants.CheckoutDebtReferenceType, debt.ItemId), (invoice.Status, invoice.TransactionId, invoice.SourceType, invoice.SourceId));
+        Assert.Equal(20m, invoice.Totals.Total);
+
+        var line = Assert.Single(invoice.Lines);
+        Assert.Equal(("Membership", 1m, 20m), (line.Name, line.Quantity, line.UnitPrice));
+        Assert.Equal(cycle == 1, line.ServiceStart.HasValue);
+        Assert.Equal(invoice.Number, (await harness.FindTransactionAsync(debt.ItemId)).InvoiceNumber);
+    }
+
+    [Fact]
+    public async Task ADebtACardMethodLeft_OrAnOrdersDebt_IsNotInvoicedHere()
+    {
+        // Arrange: the same first cycle left by a method that charges, and an order's debt left by Pay Later.
+        await using var charged = await InvoicingTestHarness.CreateAsync(configureServices: services => services.AddSingleton(Providers(defersPayment: false)));
+        var chargedDebt = await CreateCycleAsync(charged, cycle: 1, amount: 20m, checkoutSessionId: "session-1");
+
+        await using var deferred = await InvoicingTestHarness.CreateAsync(configureServices: services => services.AddSingleton(Providers(defersPayment: true)));
+        var orderDebt = await CreateCycleAsync(deferred, cycle: 1, amount: 20m, orderId: "order-9", checkoutSessionId: "session-2");
+
+        // Act
+        var forCharged = await BuildAsync(charged, chargedDebt.ItemId);
+        var forOrder = await BuildAsync(deferred, orderDebt.ItemId);
+
+        // Assert
+        Assert.Null(forCharged);
+        Assert.Null(forOrder);
+    }
+
+    private static ICheckoutPaymentProviderResolver Providers(bool defersPayment)
+    {
+        var provider = new Mock<ICheckoutPaymentProvider>();
+        provider.SetupGet(item => item.Capabilities).Returns(new PaymentProviderCapabilities { DefersPayment = defersPayment });
+
+        var resolver = new Mock<ICheckoutPaymentProviderResolver>();
+        resolver.Setup(item => item.GetProvider("PayLater")).Returns(provider.Object);
+
+        return resolver.Object;
+    }
+
+    private static Task<Invoice> BuildAsync(InvoicingTestHarness harness, string transactionId)
+        => harness.InScopeAsync(services => services.GetRequiredService<DeferredDebtInvoiceBuilder>().InvoiceAsync(transactionId, TestContext.Current.CancellationToken));
+
+    private static Task<Transaction> CreateCycleAsync(InvoicingTestHarness harness, int cycle, decimal amount, string orderId = null, string checkoutSessionId = null)
         => harness.InScopeAsync(async services =>
         {
             var manager = services.GetRequiredService<ITransactionManager>();
@@ -103,8 +163,9 @@ public sealed class RenewalInvoicingTests
             transaction.OwnerId = "user-1";
             transaction.GuestContactName = "Pat Doe";
             transaction.GuestContactEmail = "pat@example.com";
-            transaction.ReferenceType = orderId is null ? null : CheckoutReferenceTypes.Order;
-            transaction.ReferenceId = orderId;
+            transaction.ReferenceType = orderId is null ? (checkoutSessionId is null ? null : "Subscription") : CheckoutReferenceTypes.Order;
+            transaction.ReferenceId = orderId ?? (checkoutSessionId is null ? null : "plan-1");
+            transaction.CheckoutSessionId = checkoutSessionId;
             transaction.ObligationId = "obligation-1:cycle-" + cycle;
             transaction.Currency = "USD";
             transaction.Amount = amount;
