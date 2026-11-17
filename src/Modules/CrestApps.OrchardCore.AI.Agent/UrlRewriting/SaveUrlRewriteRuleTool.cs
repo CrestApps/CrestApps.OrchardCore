@@ -123,12 +123,13 @@ public sealed class SaveUrlRewriteRuleTool : AIFunction
         }
 
         var rulesManager = services.GetRequiredService<IRewriteRulesManager>();
+        var changes = UrlRewriteRuleScopeChanges.Get(services);
         RewriteRule rule;
         bool created;
 
         if (!string.IsNullOrEmpty(id))
         {
-            var stored = await rulesManager.FindByIdAsync(id);
+            var stored = await changes.FindAsync(rulesManager, id);
 
             if (stored is null)
             {
@@ -179,6 +180,7 @@ public sealed class SaveUrlRewriteRuleTool : AIFunction
         }
 
         await rulesManager.SaveAsync(rule);
+        changes.Saved(rule);
         UrlRewriteRuleToolSupport.RequestRelease(services);
 
         var localClock = services.GetRequiredService<ILocalClock>();

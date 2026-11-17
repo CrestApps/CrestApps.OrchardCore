@@ -85,6 +85,13 @@ public sealed class ListDynamicTranslationsTool : AIFunction
             return AIToolCallerAuthorization.NotAllowedMessage;
         }
 
+        // Reading now would load the translations from the document as it was before the save, and the site would keep
+        // showing them after the save commits.
+        if (DynamicTranslationScopeChanges.Get(services).HasChanges)
+        {
+            return "Translations were saved earlier in this reply and are stored when it ends. List them again in the next reply; the strings just saved are already translated.";
+        }
+
         var resourceManager = services.GetService<DataResourceManager>();
 
         if (resourceManager is null)

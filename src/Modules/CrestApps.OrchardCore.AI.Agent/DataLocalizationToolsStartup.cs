@@ -26,6 +26,8 @@ public sealed class DataLocalizationToolsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<DynamicTranslationScopeChanges>();
+
         services.AddCoreAITool<ListDynamicTranslationsTool>(ListDynamicTranslationsTool.TheName)
             .WithTitle(S["List Dynamic Translations"])
             .WithDescription(S["Lists the translatable dynamic strings for one culture with their current translation, filterable by context, search text and \"untranslated only\", and returns translation progress per culture. Use it to find what is missing before translating."])

@@ -165,10 +165,15 @@ public sealed class SaveDynamicTranslationsTool : AIFunction
             return "Nothing was saved: " + string.Join("; ", problems.Distinct()) + ".";
         }
 
+        // Every translation of the culture saved earlier in this scope is sent again: the step merges into the cached
+        // translations, which do not include them until the scope commits.
+        var changes = DynamicTranslationScopeChanges.Get(services);
+        var toSave = changes.Combine(cultureName, translations);
+
         var step = new JsonObject
         {
             ["name"] = StepName,
-            ["translations"] = new JsonArray(translations
+            ["translations"] = new JsonArray(toSave
                 .Select(translation => (JsonNode)new JsonObject
                 {
                     ["culture"] = cultureName,
@@ -185,6 +190,8 @@ public sealed class SaveDynamicTranslationsTool : AIFunction
         {
             return "The translations were not saved: " + string.Join(" ", errors);
         }
+
+        changes.Saved(cultureName, translations);
 
         return AgentToolResults.Json(new
         {

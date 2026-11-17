@@ -26,6 +26,8 @@ public sealed class UrlRewritingToolsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<UrlRewriteRuleScopeChanges>();
+
         services.AddCoreAITool<ListUrlRewriteRulesTool>(ListUrlRewriteRulesTool.TheName)
             .WithTitle(S["List URL Rewrite Rules"])
             .WithDescription(S["Lists the URL redirect and rewrite rules in the order they are applied, with their patterns and options. Call it before adding a rule so it does not conflict with an existing one."])

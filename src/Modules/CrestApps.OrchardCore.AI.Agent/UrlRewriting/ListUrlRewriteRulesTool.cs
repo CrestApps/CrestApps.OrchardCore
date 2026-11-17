@@ -87,8 +87,9 @@ public sealed class ListUrlRewriteRulesTool : AIFunction
 
         var localClock = services.GetRequiredService<ILocalClock>();
 
-        // The manager returns the rules in the order they are applied; the position counts every rule.
-        var rules = (await services.GetRequiredService<IRewriteRulesManager>().GetAllAsync())
+        // The rules in the order they are applied, with the changes made earlier in this scope; the position counts
+        // every rule.
+        var rules = (await UrlRewriteRuleScopeChanges.Get(services).GetAllAsync(services.GetRequiredService<IRewriteRulesManager>()))
             .Select((rule, index) => (Rule: rule, Position: index + 1))
             .Where(entry => string.IsNullOrEmpty(type) || string.Equals(entry.Rule.Source, type, StringComparison.OrdinalIgnoreCase))
             .Where(entry => string.IsNullOrEmpty(search) || UrlRewriteRuleToolSupport.Matches(entry.Rule, search))

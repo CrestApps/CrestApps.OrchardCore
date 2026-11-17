@@ -1,4 +1,6 @@
 using System.Globalization;
+using CrestApps.OrchardCore.AI.Agent.DataLocalization;
+using CrestApps.OrchardCore.AI.Agent.UrlRewriting;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -48,6 +50,12 @@ internal sealed class SiteOperationsToolHarness
     /// Gets or sets whether the background service, and so its monitor, is registered.
     /// </summary>
     public bool HasMonitor { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether the rule store reads, as Orchard Core's does, from the document as it was when the scope
+    /// started, while the saves go to the scope's own copy.
+    /// </summary>
+    public bool CachedReads { get; set; }
 
     /// <summary>
     /// Gets the rules of the in-memory rule store, by ID.
@@ -110,7 +118,8 @@ internal sealed class SiteOperationsToolHarness
         }
 
         // URL rewriting, on the real rule manager, handlers and sources.
-        services.AddSingleton<IRewriteRulesStore>(new InMemoryRewriteRulesStore(Rules));
+        services.AddSingleton<IRewriteRulesStore>(new InMemoryRewriteRulesStore(Rules, CachedReads));
+        services.AddScoped<UrlRewriteRuleScopeChanges>();
         services.AddScoped<IRewriteRulesManager, RewriteRulesManager>();
         services.AddScoped<IRewriteRuleHandler, RewriteRuleHandler>();
         services.AddScoped<IRewriteRuleHandler, UrlRedirectRuleHandler>();
@@ -132,6 +141,7 @@ internal sealed class SiteOperationsToolHarness
         services.AddSingleton<IMemoryCache>(new MemoryCache(new MemoryCacheOptions()));
         services.AddTransient<DataResourceManager>();
         services.AddSingleton<IRecipeStepHandler>(new RecordingRecipeStepHandler(this));
+        services.AddScoped<DynamicTranslationScopeChanges>();
 
         return services.BuildServiceProvider();
     }
@@ -249,10 +259,12 @@ internal sealed class SiteOperationsToolHarness
     private sealed class InMemoryRewriteRulesStore : IRewriteRulesStore
     {
         private readonly Dictionary<string, RewriteRule> _rules;
+        private readonly Dictionary<string, RewriteRule> _reads;
 
-        public InMemoryRewriteRulesStore(Dictionary<string, RewriteRule> rules)
+        public InMemoryRewriteRulesStore(Dictionary<string, RewriteRule> rules, bool cachedReads)
         {
             _rules = rules;
+            _reads = cachedReads ? new Dictionary<string, RewriteRule>(rules) : rules;
         }
 
         public Task DeleteAsync(RewriteRule rule)
@@ -263,10 +275,10 @@ internal sealed class SiteOperationsToolHarness
         }
 
         public Task<RewriteRule> FindByIdAsync(string id)
-            => Task.FromResult(_rules.GetValueOrDefault(id));
+            => Task.FromResult(_reads.GetValueOrDefault(id));
 
         public Task<IEnumerable<RewriteRule>> GetAllAsync()
-            => Task.FromResult<IEnumerable<RewriteRule>>(_rules.Values.ToList());
+            => Task.FromResult<IEnumerable<RewriteRule>>(_reads.Values.ToList());
 
         public Task SaveAsync(RewriteRule rule)
         {

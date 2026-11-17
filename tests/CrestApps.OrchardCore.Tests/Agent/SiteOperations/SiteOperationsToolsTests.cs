@@ -436,6 +436,113 @@ public sealed class SiteOperationsToolsTests
         Assert.Empty(harness.RecipeSteps);
     }
 
+    [Fact]
+    public async Task SaveUrlRewriteRule_TwiceInOneScope_KeepsBothChanges()
+    {
+        // Arrange
+        var harness = new SiteOperationsToolHarness
+        {
+            CachedReads = true,
+        };
+
+        using var services = harness.Build();
+
+        // Act
+        await AgentToolTestContext.InvokeAsync(new SaveUrlRewriteRuleTool(), services, new()
+        {
+            ["id"] = SiteOperationsToolHarness.RedirectRuleId,
+            ["redirectType"] = "Found",
+        });
+
+        await AgentToolTestContext.InvokeAsync(new SaveUrlRewriteRuleTool(), services, new()
+        {
+            ["id"] = SiteOperationsToolHarness.RedirectRuleId,
+            ["name"] = "Old blog posts",
+        });
+
+        // Assert
+        var rule = harness.Rules[SiteOperationsToolHarness.RedirectRuleId];
+
+        Assert.Equal("Old blog posts", rule.Name);
+        Assert.Equal(RedirectType.Found, GetMetadata<UrlRedirectSourceMetadata>(rule).RedirectType);
+    }
+
+    [Fact]
+    public async Task DeleteUrlRewriteRule_AfterCreatingItInTheSameScope_DeletesIt()
+    {
+        // Arrange
+        var harness = new SiteOperationsToolHarness
+        {
+            CachedReads = true,
+        };
+
+        using var services = harness.Build();
+
+        var created = await AgentToolTestContext.InvokeAsync(new SaveUrlRewriteRuleTool(), services, new()
+        {
+            ["type"] = "Redirect",
+            ["name"] = "Sale",
+            ["pattern"] = "^sale$",
+            ["substitutionPattern"] = "/offers",
+        });
+
+        var id = AgentToolTestContext.ReadJson(created).GetProperty("rule").GetProperty("id").GetString();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteUrlRewriteRuleTool(), services, new() { ["ids"] = new[] { id } });
+
+        // Assert
+        Assert.DoesNotContain("Nothing was deleted", result);
+        Assert.False(harness.Rules.ContainsKey(id));
+    }
+
+    [Fact]
+    public async Task SaveDynamicTranslations_TwiceInOneScope_SendsTheFirstTranslationsAgain()
+    {
+        // Arrange
+        var harness = new SiteOperationsToolHarness();
+        using var services = harness.Build();
+
+        // Act
+        await AgentToolTestContext.InvokeAsync(new SaveDynamicTranslationsTool(), services, new()
+        {
+            ["culture"] = "fr-FR",
+            ["translations"] = JsonNode.Parse("""[ { "context": "Content Types", "key": "Article", "value": "Article de presse" } ]"""),
+        });
+
+        await AgentToolTestContext.InvokeAsync(new SaveDynamicTranslationsTool(), services, new()
+        {
+            ["culture"] = "fr-FR",
+            ["translations"] = JsonNode.Parse("""[ { "context": "Permissions", "key": "Manage blogs", "value": "Gérer les blogs" } ]"""),
+        });
+
+        // Assert
+        var keys = harness.RecipeSteps[1].Step["translations"].AsArray().Select(translation => translation["key"].GetValue<string>());
+
+        Assert.Equal(2, harness.RecipeSteps.Count);
+        Assert.Equal(["Article", "Manage blogs"], keys.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task ListDynamicTranslations_AfterASaveInTheSameScope_AsksToListInTheNextReply()
+    {
+        // Arrange
+        var harness = new SiteOperationsToolHarness();
+        using var services = harness.Build();
+
+        await AgentToolTestContext.InvokeAsync(new SaveDynamicTranslationsTool(), services, new()
+        {
+            ["culture"] = "fr-FR",
+            ["translations"] = JsonNode.Parse("""[ { "context": "Content Types", "key": "Article", "value": "Article de presse" } ]"""),
+        });
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new ListDynamicTranslationsTool(), services, new() { ["culture"] = "fr-FR" });
+
+        // Assert
+        Assert.StartsWith("Translations were saved earlier in this reply", result);
+    }
+
     private static T GetMetadata<T>(RewriteRule rule)
         where T : new()
     {

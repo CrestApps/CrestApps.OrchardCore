@@ -719,7 +719,7 @@ The tool needs **Access admin panel**. It returns what the health endpoint shows
 | `listDynamicTranslations` | Lists the translatable dynamic strings of one culture with their translation, and the translation progress of every supported culture. Filters by context, search text and untranslated only, with paging. Without a culture it returns only the progress. |
 | `saveDynamicTranslations` | Adds or changes translations of one culture; strings that are not sent keep their translation. |
 
-`listDynamicTranslations` needs **View dynamic translations and statistics**. `saveDynamicTranslations` needs **Manage all dynamic translations** or the culture's own **Manage {culture} translations** permission, as the **Dynamic Translations** page does. The culture must be one of the site's supported cultures, each string must be one that `listDynamicTranslations` returns, and a translation cannot be empty. The tool runs the `Translations` recipe step, which merges the translations into the culture's saved ones.
+`listDynamicTranslations` needs **View dynamic translations and statistics**. `saveDynamicTranslations` needs **Manage all dynamic translations** or the culture's own **Manage {culture} translations** permission, as the **Dynamic Translations** page does. The culture must be one of the site's supported cultures, each string must be one that `listDynamicTranslations` returns, and a translation cannot be empty. The tool runs the `Translations` recipe step, which merges the translations into the culture's saved ones. Translations saved in one reply are stored when the reply ends, so `listDynamicTranslations` asks to be called again in the next reply instead of reading them early.
 
 ### Workflow tools
 

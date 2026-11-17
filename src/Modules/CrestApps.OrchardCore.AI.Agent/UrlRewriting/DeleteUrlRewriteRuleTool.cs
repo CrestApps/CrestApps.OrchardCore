@@ -81,12 +81,13 @@ public sealed class DeleteUrlRewriteRuleTool : AIFunction
         }
 
         var rulesManager = services.GetRequiredService<IRewriteRulesManager>();
+        var changes = UrlRewriteRuleScopeChanges.Get(services);
         var rules = new List<RewriteRule>();
         var unknown = new List<string>();
 
         foreach (var id in ids)
         {
-            var rule = await rulesManager.FindByIdAsync(id);
+            var rule = await changes.FindAsync(rulesManager, id);
 
             if (rule is null)
             {
@@ -107,6 +108,7 @@ public sealed class DeleteUrlRewriteRuleTool : AIFunction
         foreach (var rule in rules)
         {
             await rulesManager.DeleteAsync(rule);
+            changes.Deleted(rule.Id);
         }
 
         UrlRewriteRuleToolSupport.RequestRelease(services);
