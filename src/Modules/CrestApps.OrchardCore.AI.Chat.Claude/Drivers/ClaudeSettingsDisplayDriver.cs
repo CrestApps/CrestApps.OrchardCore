@@ -24,6 +24,8 @@ public sealed class ClaudeSettingsDisplayDriver : SiteDisplayDriver<ClaudeSettin
 {
     private const string ProtectorPurpose = "CrestApps.OrchardCore.AI.Chat.Claude.Settings";
 
+    private const string DefaultBaseUrl = "https://api.anthropic.com";
+
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
@@ -91,8 +93,15 @@ public sealed class ClaudeSettingsDisplayDriver : SiteDisplayDriver<ClaudeSettin
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        var baseUrl = string.IsNullOrWhiteSpace(model.BaseUrl) ? DefaultBaseUrl : model.BaseUrl.Trim();
+
+        // The stored key was given for the stored base URL, blank being Anthropic's own; another scheme, host or port drops
+        // it in any mode, so a user who never saw it can't send it to a host of their own.
+        settings.ProtectedApiKey = SecretDestination.Keep(
+            settings.ProtectedApiKey,
+            SecretDestination.SameOrigin(string.IsNullOrWhiteSpace(settings.BaseUrl) ? DefaultBaseUrl : settings.BaseUrl, baseUrl));
         settings.AuthenticationType = model.AuthenticationType;
-        settings.BaseUrl = string.IsNullOrWhiteSpace(model.BaseUrl) ? "https://api.anthropic.com" : model.BaseUrl.Trim();
+        settings.BaseUrl = baseUrl;
         settings.DefaultModel = model.DefaultModel?.Trim();
 
         if (settings.AuthenticationType == ClaudeAuthenticationType.ApiKey)

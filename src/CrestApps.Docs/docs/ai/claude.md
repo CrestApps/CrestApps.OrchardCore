@@ -85,7 +85,7 @@ From there you can configure:
 - base URL
 - default model
 
-When API key authentication is enabled, the stored API key is encrypted at rest. The editor also uses the configured Claude connection to populate the available model list from Anthropic so Orchard users can pick a model instead of typing one manually.
+When API key authentication is enabled, the stored API key is encrypted at rest. It is kept when the field is left blank only while the base URL keeps its scheme, host and port (a blank base URL is `https://api.anthropic.com`); changing any of them drops it, so it must be entered again. The editor also uses the configured Claude connection to populate the available model list from Anthropic so Orchard users can pick a model instead of typing one manually.
 
 Tenant site settings override the shell configuration for values such as the base URL and default model. When API-key authentication is used, the key is stored encrypted.
 

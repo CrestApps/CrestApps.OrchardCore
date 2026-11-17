@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Asterisk.Deployments;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
@@ -68,12 +69,20 @@ internal sealed class AsteriskSettingsStep : NamedRecipeStepHandler
         var previousIsEnabled = settings.IsEnabled;
         var previousBaseUrl = settings.BaseUrl;
         var previousApplicationName = settings.ApplicationName;
+        var previousPassword = settings.Password;
 
         ProtectedSettingsDeploymentSerializer.Populate(settings, data, AsteriskDeploymentSteps.ProtectedMembers, _dataProtectionProvider);
 
         settings.BaseUrl = string.IsNullOrWhiteSpace(settings.BaseUrl)
             ? settings.BaseUrl
             : AsteriskSettingsUtilities.NormalizeBaseUrl(settings.BaseUrl);
+
+        // A step that leaves the password out keeps the stored one; when it also moves the ARI address to another scheme,
+        // host or port, the kept password is dropped, as the settings screen drops it.
+        if (string.Equals(settings.Password, previousPassword, StringComparison.Ordinal))
+        {
+            settings.Password = SecretDestination.Keep(settings.Password, SecretDestination.SameOrigin(previousBaseUrl, settings.BaseUrl));
+        }
 
         if (previousIsEnabled &&
             IsAriIdentityAbandoned(previousBaseUrl, previousApplicationName, settings) &&

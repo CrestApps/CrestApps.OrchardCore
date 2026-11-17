@@ -134,6 +134,9 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         else if (settings.AuthenticationType == CopilotAuthenticationType.ApiKey)
         {
             // BYOK (API Key) validation
+            // The stored key was given for the stored base URL; another scheme, host or port drops it, so a user who never
+            // saw it can't send it to a host of their own.
+            settings.ProtectedApiKey = SecretDestination.Keep(settings.ProtectedApiKey, SecretDestination.SameOrigin(settings.BaseUrl, model.BaseUrl));
             settings.ProviderType = model.ProviderType;
             settings.BaseUrl = model.BaseUrl;
             settings.WireApi = model.WireApi;

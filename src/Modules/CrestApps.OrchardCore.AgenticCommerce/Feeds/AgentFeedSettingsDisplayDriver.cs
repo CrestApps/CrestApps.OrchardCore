@@ -218,9 +218,13 @@ public sealed class AgentFeedSettingsDisplayDriver : SiteDisplayDriver<AgentFeed
 
             var target = current ?? new AcpFeedTarget { Id = IdGenerator.GenerateId() };
 
+            // The stored token was given for the target's address; another scheme, host or port drops it, so a user who
+            // never saw it can't send it to a host of their own.
+            var storedToken = SecretDestination.Keep(target.BearerToken, SecretDestination.SameOrigin(target.BaseUrl, baseUrl));
+
             target.Name = Clean(row.Name) ?? baseUrl;
             target.BaseUrl = baseUrl;
-            target.BearerToken = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, target.BearerToken, row.BearerToken);
+            target.BearerToken = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, storedToken, row.BearerToken);
             target.FeedId = Clean(row.FeedId);
             target.TargetCountry = Clean(row.TargetCountry)?.ToUpperInvariant();
             target.Currency = CurrencyCodeUtility.IsValid(row.Currency) ? CurrencyCodeUtility.Normalize(row.Currency) : null;

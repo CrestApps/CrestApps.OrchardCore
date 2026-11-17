@@ -708,7 +708,7 @@ When **Push the full feed over SFTP every day** is on, `AgentFeedPushBackgroundT
 
 ### ACP feed APIs
 
-Each `AcpFeedTarget` in `AgentFeedSettings.FeedApiTargets` has a name, the feed API's https base address, the platform's bearer key (stored protected), a feed id, a target country, a currency and an enabled flag. `AcpFeedPusher`:
+Each `AcpFeedTarget` in `AgentFeedSettings.FeedApiTargets` has a name, the feed API's https base address, the platform's bearer key (stored protected), a feed id, a target country, a currency and an enabled flag. The stored key is kept when its field is left blank only while the base address keeps its scheme, host and port; changing any of them drops it, so it must be entered again. `AcpFeedPusher`:
 
 - creates the feed with `POST /feeds` (`{"target_country": "US"}`) when the target has no feed id, and keeps the id it gets in the `AgentFeedStatusDocument`;
 - upserts complete products with `PATCH /feeds/{id}/products` in batches of 100, every product in the daily push and on **Push now**, and the changed products after a product is published or, with Inventory on, after its available units change (in a deferred task, once per unit of work).

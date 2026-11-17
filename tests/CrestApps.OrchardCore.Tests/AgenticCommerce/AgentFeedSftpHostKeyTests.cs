@@ -132,6 +132,40 @@ public sealed class AgentFeedSftpHostKeyTests
     }
 
     /// <summary>
+    /// F10 (fix verification, round 7): a feed API target kept its stored bearer token when the box came back blank,
+    /// whatever base URL it now named, so a user who may change the settings, but never saw the token, could send it to a
+    /// host of their own with the next push.
+    /// </summary>
+    [Theory]
+    [InlineData("https://feeds.attacker.test/acp", false)]
+    [InlineData("https://api.example.test:8443/acp", false)]
+    [InlineData("https://API.example.test/v2/acp", true)]
+    public async Task Settings_KeepAFeedApiTargetsToken_OnlyForTheSameOrigin(string baseUrl, bool kept)
+    {
+        // Arrange
+        var protection = new EphemeralDataProtectionProvider();
+        var token = protection.CreateProtector(AgentFeedSettings.ProtectionPurpose).Protect("feed-token");
+        var settings = new AgentFeedSettings
+        {
+            FeedApiTargets = [new AcpFeedTarget { Id = "partner", Name = "Partner", BaseUrl = "https://api.example.test/acp", BearerToken = token }],
+        };
+        var context = PostedFormUpdateModel.CreateContext(new AgentFeedSettingsViewModel
+        {
+            FeedApiTargets = [new AcpFeedTargetViewModel { Id = "partner", Name = "Partner", BaseUrl = baseUrl, Enabled = true }],
+        });
+
+        // Act
+        await Driver(protection).UpdateAsync(new SiteSettings(), settings, context);
+
+        // Assert
+        var target = Assert.Single(settings.FeedApiTargets);
+
+        Assert.Equal(baseUrl, target.BaseUrl);
+        Assert.Equal(kept, target.BearerToken == token);
+        Assert.Equal(kept, context.Updater.ModelState.IsValid);
+    }
+
+    /// <summary>
     /// MD7 (fix verification, round 6): the push checks the server with CrestApps.Core's SftpHostKeys, so the settings
     /// accept every fingerprint form it matches and refuse one it never matches.
     /// </summary>
