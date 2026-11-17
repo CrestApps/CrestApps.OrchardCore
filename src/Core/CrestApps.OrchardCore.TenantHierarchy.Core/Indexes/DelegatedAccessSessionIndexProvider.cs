@@ -21,6 +21,8 @@ public sealed class DelegatedAccessSessionIndexProvider : IndexProvider<Delegate
     {
         context
             .For<DelegatedAccessSessionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(document => new DelegatedAccessSessionIndex
             {
                 SessionHash = document.SessionHash,

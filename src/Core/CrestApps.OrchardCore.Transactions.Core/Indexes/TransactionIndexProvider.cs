@@ -27,6 +27,8 @@ public sealed class TransactionIndexProvider : IndexProvider<Transaction>
     public override void Describe(DescribeContext<Transaction> context)
     {
         context.For<TransactionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(transaction => new TransactionIndex
             {
                 ItemId = transaction.ItemId,

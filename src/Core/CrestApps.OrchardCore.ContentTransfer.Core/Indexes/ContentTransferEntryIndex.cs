@@ -37,6 +37,8 @@ public sealed class ContentTransferEntryIndexProvider : IndexProvider<ContentTra
     public override void Describe(DescribeContext<ContentTransferEntry> context)
     {
         context.For<ContentTransferEntryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(entry => new ContentTransferEntryIndex()
             {
                 EntryId = entry.EntryId,

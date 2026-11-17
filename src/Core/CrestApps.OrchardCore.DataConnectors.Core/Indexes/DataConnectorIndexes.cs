@@ -41,6 +41,8 @@ public sealed class DataConnectionIndexProvider : IndexProvider<DataConnection>
     /// <inheritdoc/>
     public override void Describe(DescribeContext<DataConnection> context)
         => context.For<DataConnectionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(connection => new DataConnectionIndex
             {
                 ItemId = connection.ItemId,
@@ -110,6 +112,8 @@ public sealed class ConnectedDataSetIndexProvider : IndexProvider<ConnectedDataS
     /// <inheritdoc/>
     public override void Describe(DescribeContext<ConnectedDataSet> context)
         => context.For<ConnectedDataSetIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(dataSet => new ConnectedDataSetIndex
             {
                 ItemId = dataSet.ItemId,
@@ -160,6 +164,8 @@ public sealed class DataSetRefreshRunIndexProvider : IndexProvider<DataSetRefres
     /// <inheritdoc/>
     public override void Describe(DescribeContext<DataSetRefreshRun> context)
         => context.For<DataSetRefreshRunIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(run => new DataSetRefreshRunIndex
             {
                 ItemId = run.ItemId,

@@ -42,6 +42,8 @@ public sealed class StockLocationIndexProvider : IndexProvider<StockLocation>
     public override void Describe(DescribeContext<StockLocation> context)
     {
         context.For<StockLocationIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(location => new StockLocationIndex
             {
                 ItemId = location.ItemId,

@@ -72,6 +72,8 @@ public sealed class GarnishmentOrderIndexProvider : IndexProvider<GarnishmentOrd
     {
         context
             .For<GarnishmentOrderIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(order => new GarnishmentOrderIndex
             {
                 ItemId = order.ItemId,

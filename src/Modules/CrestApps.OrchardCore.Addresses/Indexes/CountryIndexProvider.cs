@@ -12,6 +12,8 @@ public sealed class CountryIndexProvider : IndexProvider<ContentItem>, IScopedIn
     public override void Describe(DescribeContext<ContentItem> context)
     {
         context.For<CountryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .When(contentItem => string.Equals(contentItem.ContentType, AddressConstants.Country, StringComparison.Ordinal))
             .Map(contentItem =>
                 new CountryIndex

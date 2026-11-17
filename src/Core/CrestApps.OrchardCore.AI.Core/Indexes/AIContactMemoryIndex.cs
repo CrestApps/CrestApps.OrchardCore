@@ -35,6 +35,8 @@ public sealed class AIContactMemoryIndexProvider : IndexProvider<AIContactMemory
     public override void Describe(DescribeContext<AIContactMemory> context)
     {
         context.For<AIContactMemoryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(memory => new AIContactMemoryIndex { ContactId = memory.ContactId });
     }
 }

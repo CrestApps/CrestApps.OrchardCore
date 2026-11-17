@@ -102,6 +102,8 @@ public sealed class CapacityPlanIndexProvider : IndexProvider<CapacityPlan>
     public override void Describe(DescribeContext<CapacityPlan> context)
     {
         context.For<CapacityPlanIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new CapacityPlanIndex { ItemId = item.ItemId, Name = item.Name, PlanningGroupId = item.PlanningGroupId });
     }
 }
@@ -123,6 +125,8 @@ public sealed class PlanningGroupIndexProvider : IndexProvider<PlanningGroup>
     public override void Describe(DescribeContext<PlanningGroup> context)
     {
         context.For<PlanningGroupIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new PlanningGroupIndex { ItemId = item.ItemId, Name = item.Name, TeamId = item.TeamId });
     }
 }
@@ -144,6 +148,8 @@ public sealed class ForecastEventIndexProvider : IndexProvider<ForecastEvent>
     public override void Describe(DescribeContext<ForecastEvent> context)
     {
         context.For<ForecastEventIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new ForecastEventIndex { ItemId = item.ItemId, Name = item.Name, StartDate = item.StartDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) });
     }
 }
@@ -165,6 +171,8 @@ public sealed class ForecastIndexProvider : IndexProvider<Forecast>
     public override void Describe(DescribeContext<Forecast> context)
     {
         context.For<ForecastIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new ForecastIndex
             {
                 ItemId = item.ItemId,

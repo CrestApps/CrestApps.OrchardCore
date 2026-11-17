@@ -20,6 +20,8 @@ public sealed class ShiftReminderLogIndexProvider : IndexProvider<ShiftReminderL
     public override void Describe(DescribeContext<ShiftReminderLog> context)
     {
         context.For<ShiftReminderLogIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(log => new ShiftReminderLogIndex
             {
                 ItemId = log.ItemId,

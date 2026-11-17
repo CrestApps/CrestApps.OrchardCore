@@ -24,6 +24,8 @@ public sealed class AIVoiceSessionSummaryIndexProvider : IndexProvider<AIVoiceSe
     public override void Describe(DescribeContext<AIVoiceSessionSummary> context)
     {
         context.For<AIVoiceSessionSummaryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(summary => ToIndex(summary));
     }
 

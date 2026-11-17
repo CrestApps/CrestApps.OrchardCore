@@ -36,6 +36,8 @@ public sealed class PriceListIndexProvider : IndexProvider<PriceList>
 
     public override void Describe(DescribeContext<PriceList> context)
         => context.For<PriceListIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(list => new PriceListIndex
             {
                 ItemId = list.ItemId,
@@ -51,6 +53,8 @@ public sealed class B2BAccountIndexProvider : IndexProvider<ContentItem>
     public override void Describe(DescribeContext<ContentItem> context)
     {
         context.For<B2BAccountIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .When(contentItem => contentItem.Has<B2BAccountPart>())
             .Map(contentItem =>
             {

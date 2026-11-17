@@ -21,6 +21,8 @@ public sealed class AccessGrantIndexProvider : IndexProvider<AccessGrant>
     {
         context
             .For<AccessGrantIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(document => new AccessGrantIndex
             {
                 GrantId = document.GrantId,

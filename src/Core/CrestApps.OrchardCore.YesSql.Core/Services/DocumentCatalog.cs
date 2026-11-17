@@ -122,6 +122,11 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         {
             if (!string.IsNullOrEmpty(context.Name))
             {
+                // A text can't seek. Grouped by document, the database reads the matches and sorts them; without the
+                // grouping the index declarations allow, it could walk an index of the order looking for the few rows
+                // that contain the text, all of it when none does.
+                query = query.NoIndexOptimizations();
+
                 if (typeof(INameAwareIndex).IsAssignableFrom(typeof(TIndex)))
                 {
                     if (context.Sorted)
@@ -188,7 +193,9 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(Expression.Lambda<Func<TIndex, bool>>(
+            // Grouped by document, as in PageAsync: a text can't seek, so the database reads the matches and sorts them
+            // instead of walking an index of the name looking for the few rows that contain the text.
+            query = query.NoIndexOptimizations().With(Expression.Lambda<Func<TIndex, bool>>(
                 Expression.Call(name.Body, _stringContains, Expression.Constant(search.Trim())),
                 name.Parameters));
         }

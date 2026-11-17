@@ -20,6 +20,8 @@ public sealed class SchedulePeriodIndexProvider : IndexProvider<SchedulePeriod>
     public override void Describe(DescribeContext<SchedulePeriod> context)
     {
         context.For<SchedulePeriodIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new SchedulePeriodIndex
             {
                 ItemId = item.ItemId,

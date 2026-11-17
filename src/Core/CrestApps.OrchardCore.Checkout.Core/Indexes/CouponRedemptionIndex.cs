@@ -40,6 +40,8 @@ public sealed class CouponRedemptionIndexProvider : IndexProvider<CouponRedempti
     public override void Describe(DescribeContext<CouponRedemption> context)
     {
         context.For<CouponRedemptionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(redemption => new CouponRedemptionIndex
             {
                 ItemId = redemption.ItemId,

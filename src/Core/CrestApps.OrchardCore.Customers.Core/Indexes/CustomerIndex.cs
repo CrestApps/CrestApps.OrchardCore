@@ -41,6 +41,8 @@ public sealed class CustomerIndexProvider : IndexProvider<Customer>
     public override void Describe(DescribeContext<Customer> context)
     {
         context.For<CustomerIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(customer => new CustomerIndex
             {
                 ItemId = customer.ItemId,

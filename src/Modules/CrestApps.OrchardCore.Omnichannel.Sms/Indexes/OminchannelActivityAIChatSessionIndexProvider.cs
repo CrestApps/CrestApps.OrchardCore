@@ -14,6 +14,8 @@ public sealed class OminchannelActivityAIChatSessionIndexProvider : IndexProvide
     {
         context
             .For<OminchannelActivityAIChatSessionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(session =>
             {
                 if (!session.TryGet<OminchannelActivityMetadata>(out var metadata) || string.IsNullOrEmpty(metadata.ActivityId))

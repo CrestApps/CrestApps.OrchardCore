@@ -20,6 +20,8 @@ public sealed class DraftShiftIndexProvider : IndexProvider<DraftShift>
     public override void Describe(DescribeContext<DraftShift> context)
     {
         context.For<DraftShiftIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new DraftShiftIndex
             {
                 ItemId = item.ItemId,

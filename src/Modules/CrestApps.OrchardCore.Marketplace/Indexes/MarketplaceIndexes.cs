@@ -51,6 +51,8 @@ public sealed class VendorIndexProvider : IndexProvider<Vendor>
     public override void Describe(DescribeContext<Vendor> context)
     {
         context.For<VendorIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(vendor => new VendorIndex
             {
                 ItemId = vendor.ItemId,
@@ -59,6 +61,7 @@ public sealed class VendorIndexProvider : IndexProvider<Vendor>
             });
 
         context.For<VendorUserIndex>()
+            .ExclusiveToDocumentType()
             .Map(vendor => (vendor.UserIds ?? []).Select(userId => new VendorUserIndex { VendorId = vendor.ItemId, UserId = userId }));
     }
 }
@@ -72,6 +75,8 @@ public sealed class VendorEarningIndexProvider : IndexProvider<VendorEarning>
 
     public override void Describe(DescribeContext<VendorEarning> context)
         => context.For<VendorEarningIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(earning => new VendorEarningIndex
             {
                 ItemId = earning.ItemId,
@@ -92,6 +97,8 @@ public sealed class VendorPayoutIndexProvider : IndexProvider<VendorPayout>
 
     public override void Describe(DescribeContext<VendorPayout> context)
         => context.For<VendorPayoutIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(payout => new VendorPayoutIndex
             {
                 ItemId = payout.ItemId,
