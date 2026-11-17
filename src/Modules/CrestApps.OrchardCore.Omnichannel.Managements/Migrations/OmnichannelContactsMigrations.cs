@@ -46,6 +46,11 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         ("IDX_OCPhone_DocumentId", ["DocumentId"]),
         ("IDX_OCPhone_Number", ["NormalizedPhoneNumber", "Published", "Latest"]),
         ("IDX_OCPhone_ContentItem", ["ContentItemId", "Published", "Latest"]),
+
+        // The search box of a contact or lead list asks for the DocumentId of every number that starts with what was
+        // typed. Holding both columns lets the database answer from this index alone, without reading the table row
+        // of every number that matches a short search.
+        ("IDX_OCPhone_NumberDocument", ["NormalizedPhoneNumber", "DocumentId"]),
     ];
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -96,7 +101,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
 
         ScheduleContactDefinitionRepair();
 
-        return 13;
+        return 14;
     }
 
     /// <summary>
@@ -286,6 +291,20 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         }
 
         return 13;
+    }
+
+    /// <summary>
+    /// Adds the index the search box of a contact or lead list reads its numbers from, so a search by number is
+    /// answered from that index alone.
+    /// </summary>
+    public async Task<int> UpdateFrom13Async()
+    {
+        foreach (var (name, columns) in _phoneNumberIndexIndexes)
+        {
+            await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelContactPhoneNumberIndex>(SchemaBuilder, name, collection: null, columns);
+        }
+
+        return 14;
     }
 
     internal static Task CreatePhoneNumberIndexTableAsync(ISchemaBuilder schemaBuilder)
