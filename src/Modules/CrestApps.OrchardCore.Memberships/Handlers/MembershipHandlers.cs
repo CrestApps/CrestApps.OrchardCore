@@ -70,9 +70,14 @@ internal sealed class MembershipOrderEventHandler : OrderLineGrantHandlerBase<Me
 
         // Roles are read from the sign-in, so a buyer paying now is signed in again to open what they bought at once.
         // Paid any other way, such as by a payment provider's webhook, the sign-in catches up when it's next checked.
-        if (_httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier) is { } userId &&
+        // A refresh writes the account's current security stamp but keeps the cookie's other claims, such as the provider
+        // it signed in through, so a cookie older than the account's last credential change is left to that check, which
+        // signs it out: refreshed, it would show a login it never used to "Confirm it's you".
+        if (_httpContextAccessor.HttpContext?.User is { } principal &&
+            principal.FindFirstValue(ClaimTypes.NameIdentifier) is { } userId &&
             userId == order.UserId &&
-            await _userService.GetUserByUniqueIdAsync(userId) is { } user)
+            await _userService.GetUserByUniqueIdAsync(userId) is { } user &&
+            await _signInManager.ValidateSecurityStampAsync(principal) is not null)
         {
             await _signInManager.RefreshSignInAsync(user);
         }
