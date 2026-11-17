@@ -73,8 +73,8 @@ public sealed class ListDeploymentPlansTool : AIFunction
         var services = arguments.Services;
 
         // As the Deployment Plans page does: both permissions are needed to see the plans.
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, DeploymentPermissions.ManageDeploymentPlan) ||
-            !await AIToolCallerAuthorization.IsAuthorizedAsync(services, DeploymentPermissions.Export))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, DeploymentPermissions.ManageDeploymentPlan) ||
+            !await AgentToolAuthorization.IsAuthorizedAsync(services, DeploymentPermissions.Export))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

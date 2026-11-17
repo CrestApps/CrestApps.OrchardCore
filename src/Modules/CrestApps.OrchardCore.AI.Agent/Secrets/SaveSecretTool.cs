@@ -123,7 +123,7 @@ public sealed class SaveSecretTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageSecrets))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageSecrets))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

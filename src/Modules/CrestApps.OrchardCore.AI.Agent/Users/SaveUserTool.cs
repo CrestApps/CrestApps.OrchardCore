@@ -125,7 +125,7 @@ public sealed class SaveUserTool : AIFunction
         var isOwnAccount = UserToolAccess.IsCaller(caller, user);
 
         // As on the Edit page, a person changes their own user information only with the permission for it.
-        if (isOwnAccount && !await AIToolCallerAuthorization.IsAuthorizedAsync(services, UsersPermissions.EditOwnUser))
+        if (isOwnAccount && !await AgentToolAuthorization.IsAuthorizedAsync(services, UsersPermissions.EditOwnUser))
         {
             return "Nothing was saved: you are not allowed to change your own user information.";
         }

@@ -76,7 +76,7 @@ public sealed class RunSqlQueryTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageSqlQueries))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageSqlQueries))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

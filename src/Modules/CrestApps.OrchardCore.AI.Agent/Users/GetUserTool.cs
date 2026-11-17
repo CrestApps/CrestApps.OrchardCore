@@ -115,7 +115,7 @@ public sealed class GetUserTool : AIFunction
         var customSettings = await UserToolProjection.ReadCustomSettingsAsync(
             services,
             user,
-            settingsType => AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.CreateManageOwnCustomUserSettings(settingsType)));
+            settingsType => AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.CreateManageOwnCustomUserSettings(settingsType)));
 
         return AgentToolResults.Json(new
         {

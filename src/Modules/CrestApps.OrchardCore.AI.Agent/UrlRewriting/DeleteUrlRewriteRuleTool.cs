@@ -65,7 +65,7 @@ public sealed class DeleteUrlRewriteRuleTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, UrlRewritingPermissions.ManageUrlRewritingRules))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, UrlRewritingPermissions.ManageUrlRewritingRules))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

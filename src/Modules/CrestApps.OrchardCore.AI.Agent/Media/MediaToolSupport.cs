@@ -50,7 +50,7 @@ internal static class MediaToolSupport
     /// <param name="services">The services of the tool invocation.</param>
     /// <returns><see langword="true"/> when a signed-in caller holds the permission to manage media.</returns>
     public static Task<bool> CanManageMediaAsync(IServiceProvider services)
-        => AIToolCallerAuthorization.IsAuthorizedAsync(services, MediaPermissions.ManageMedia);
+        => AgentToolAuthorization.IsAuthorizedAsync(services, MediaPermissions.ManageMedia);
 
     /// <summary>
     /// Whether the signed-in caller may manage a folder or a file of the media library. The path is the resource, as in
@@ -69,7 +69,7 @@ internal static class MediaToolSupport
     /// <param name="services">The services of the tool invocation.</param>
     /// <returns><see langword="true"/> when a signed-in caller holds the permission to upload restricted media.</returns>
     public static Task<bool> CanUploadRestrictedMediaAsync(IServiceProvider services)
-        => AIToolCallerAuthorization.IsAuthorizedAsync(services, MediaPermissions.UploadRestrictedMedia);
+        => AgentToolAuthorization.IsAuthorizedAsync(services, MediaPermissions.UploadRestrictedMedia);
 
     /// <summary>
     /// Checks the path of a media folder the model gave and puts it in the form of the media store: forward slashes, no

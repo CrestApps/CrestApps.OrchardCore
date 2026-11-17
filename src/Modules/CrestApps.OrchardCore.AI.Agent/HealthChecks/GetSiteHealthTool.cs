@@ -59,7 +59,7 @@ public sealed class GetSiteHealthTool : AIFunction
         var services = arguments.Services;
 
         // The health endpoint is public; the tool reports on the site's dependencies, so it asks for admin access.
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, AdminPermissions.AccessAdminPanel))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, AdminPermissions.AccessAdminPanel))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

@@ -64,7 +64,7 @@ public sealed class DisableUserTwoFactorTool : AIFunction
         var caller = AgentToolAuthorization.GetCaller(services);
 
         // The check of the admin action, which passes no user.
-        if (caller is null || !await AIToolCallerAuthorization.IsAuthorizedAsync(services, UsersPermissions.DisableTwoFactorAuthenticationForUsers))
+        if (caller is null || !await AgentToolAuthorization.IsAuthorizedAsync(services, UsersPermissions.DisableTwoFactorAuthenticationForUsers))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

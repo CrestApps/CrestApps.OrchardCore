@@ -55,7 +55,7 @@ public sealed class GetRobotsTxtTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, SeoConstants.ManageSeoSettings))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, SeoConstants.ManageSeoSettings))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

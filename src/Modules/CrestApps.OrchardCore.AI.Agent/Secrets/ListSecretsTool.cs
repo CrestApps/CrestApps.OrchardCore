@@ -86,7 +86,7 @@ public sealed class ListSecretsTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ViewSecrets))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ViewSecrets))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

@@ -78,7 +78,7 @@ public sealed class SaveAdminMenuTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageAdminMenu))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageAdminMenu))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

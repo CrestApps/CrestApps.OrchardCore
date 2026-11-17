@@ -161,7 +161,7 @@ public sealed class SaveRateLimitPolicyTool : AIFunction
         var services = arguments.Services;
         var caller = AgentToolAuthorization.GetCaller(services);
 
-        if (caller is null || !await AIToolCallerAuthorization.IsAuthorizedAsync(services, RateLimitsPermissions.ManageRateLimits))
+        if (caller is null || !await AgentToolAuthorization.IsAuthorizedAsync(services, RateLimitsPermissions.ManageRateLimits))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

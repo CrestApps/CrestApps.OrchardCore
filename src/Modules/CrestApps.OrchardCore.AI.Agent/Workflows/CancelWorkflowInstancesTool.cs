@@ -67,7 +67,7 @@ public sealed class CancelWorkflowInstancesTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, WorkflowsPermissions.ManageWorkflows))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, WorkflowsPermissions.ManageWorkflows))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

@@ -64,7 +64,7 @@ public sealed class DeleteOpenIdApplicationTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OpenIdPermissions.ManageApplications))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OpenIdPermissions.ManageApplications))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

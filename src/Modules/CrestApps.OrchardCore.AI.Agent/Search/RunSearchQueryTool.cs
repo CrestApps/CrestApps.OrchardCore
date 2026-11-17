@@ -95,7 +95,7 @@ public sealed class RunSearchQueryTool : AIFunction
 
         foreach (var providerName in SearchQueryProviders.Names)
         {
-            if (await AIToolCallerAuthorization.IsAuthorizedAsync(services, SearchQueryProviders.GetRunQueryPermission(providerName)))
+            if (await AgentToolAuthorization.IsAuthorizedAsync(services, SearchQueryProviders.GetRunQueryPermission(providerName)))
             {
                 allowedProviders.Add(providerName);
             }

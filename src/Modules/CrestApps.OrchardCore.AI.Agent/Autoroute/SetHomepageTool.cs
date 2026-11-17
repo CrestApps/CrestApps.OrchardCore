@@ -65,7 +65,7 @@ public sealed class SetHomepageTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, AutoroutePermissions.SetHomepage))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, AutoroutePermissions.SetHomepage))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

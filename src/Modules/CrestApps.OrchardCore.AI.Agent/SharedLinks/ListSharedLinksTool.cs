@@ -68,7 +68,7 @@ public sealed class ListSharedLinksTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageSharedLinks))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageSharedLinks))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

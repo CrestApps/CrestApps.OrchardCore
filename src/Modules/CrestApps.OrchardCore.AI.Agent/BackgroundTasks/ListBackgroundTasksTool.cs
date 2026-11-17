@@ -83,7 +83,7 @@ public sealed class ListBackgroundTasksTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageBackgroundTasks))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageBackgroundTasks))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

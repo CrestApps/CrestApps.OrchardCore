@@ -97,7 +97,7 @@ public sealed class SaveIndexProfileTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, IndexingPermissions.ManageIndexes))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, IndexingPermissions.ManageIndexes))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

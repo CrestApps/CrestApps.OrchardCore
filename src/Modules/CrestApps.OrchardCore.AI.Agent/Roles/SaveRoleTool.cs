@@ -108,7 +108,7 @@ public sealed class SaveRoleTool : AIFunction
         var services = arguments.Services;
         var caller = AgentToolAuthorization.GetCaller(services);
 
-        if (caller is null || !await AIToolCallerAuthorization.IsAuthorizedAsync(services, RolesPermissions.ManageRoles))
+        if (caller is null || !await AgentToolAuthorization.IsAuthorizedAsync(services, RolesPermissions.ManageRoles))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

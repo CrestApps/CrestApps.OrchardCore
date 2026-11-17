@@ -110,7 +110,7 @@ public sealed class SaveUserCustomSettingsTool : AIFunction
         }
 
         // The second check of the user editor: the permission of the settings type, for whichever user is edited.
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.CreateManageOwnCustomUserSettings(settingsType.Name)))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.CreateManageOwnCustomUserSettings(settingsType.Name)))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

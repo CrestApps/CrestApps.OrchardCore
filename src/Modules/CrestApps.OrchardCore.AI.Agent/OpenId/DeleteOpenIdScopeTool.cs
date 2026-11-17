@@ -68,7 +68,7 @@ public sealed class DeleteOpenIdScopeTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OpenIdPermissions.ManageScopes))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OpenIdPermissions.ManageScopes))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

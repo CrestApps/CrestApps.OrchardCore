@@ -72,7 +72,7 @@ public sealed class ListDataSetsTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageDataPipelines))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageDataPipelines))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

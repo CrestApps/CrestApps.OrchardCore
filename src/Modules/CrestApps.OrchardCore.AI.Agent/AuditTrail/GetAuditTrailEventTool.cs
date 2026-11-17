@@ -91,7 +91,7 @@ public sealed class GetAuditTrailEventTool : AIFunction
         var services = arguments.Services;
         var caller = AgentToolAuthorization.GetCaller(services);
 
-        if (caller is null || !await AIToolCallerAuthorization.IsAuthorizedAsync(services, AuditTrailPermissions.ViewAuditTrail))
+        if (caller is null || !await AgentToolAuthorization.IsAuthorizedAsync(services, AuditTrailPermissions.ViewAuditTrail))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }
@@ -154,7 +154,7 @@ public sealed class GetAuditTrailEventTool : AIFunction
         var isOwn = !string.IsNullOrEmpty(callerId) &&
             string.Equals(callerId, ReadText(userEvent["UserId"]), StringComparison.OrdinalIgnoreCase);
 
-        return await AIToolCallerAuthorization.IsAuthorizedAsync(services, isOwn
+        return await AgentToolAuthorization.IsAuthorizedAsync(services, isOwn
             ? OrchardCorePermissions.ViewOwnUserAuditTrailEvents
             : OrchardCorePermissions.ViewUserAuditTrailEvents);
     }

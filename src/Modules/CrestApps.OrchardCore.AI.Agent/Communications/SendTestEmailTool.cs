@@ -80,7 +80,7 @@ public sealed class SendTestEmailTool : AIFunction
         var services = arguments.Services;
         var caller = AgentToolAuthorization.GetCaller(services);
 
-        if (caller is null || !await AIToolCallerAuthorization.IsAuthorizedAsync(services, EmailPermissions.ManageEmailSettings))
+        if (caller is null || !await AgentToolAuthorization.IsAuthorizedAsync(services, EmailPermissions.ManageEmailSettings))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

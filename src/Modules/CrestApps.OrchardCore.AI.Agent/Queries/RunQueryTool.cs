@@ -93,7 +93,7 @@ public sealed class RunQueryTool : AIFunction
 
         // The check of the query API. It is made for a name that matches no query too, so a caller who may not run
         // queries does not learn which names exist.
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, QueryPermissions.CreatePermissionForQuery(query?.Name ?? name)))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, QueryPermissions.CreatePermissionForQuery(query?.Name ?? name)))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

@@ -69,7 +69,7 @@ public sealed class DeleteMenuItemTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageMenu))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageMenu))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

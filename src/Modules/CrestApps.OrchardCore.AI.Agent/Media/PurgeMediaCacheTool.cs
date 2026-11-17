@@ -49,7 +49,7 @@ public sealed class PurgeMediaCacheTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, MediaPermissions.ManageAssetCache))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, MediaPermissions.ManageAssetCache))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

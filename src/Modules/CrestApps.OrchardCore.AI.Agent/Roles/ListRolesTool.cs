@@ -64,7 +64,7 @@ public sealed class ListRolesTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, RolesPermissions.ViewRoles))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, RolesPermissions.ViewRoles))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

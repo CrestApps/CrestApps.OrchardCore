@@ -63,7 +63,7 @@ public sealed class DeleteNotificationsTool : AIFunction
         var services = arguments.Services;
         var callerId = NotificationToolSupport.GetCallerId(services);
 
-        if (callerId is null || !await AIToolCallerAuthorization.IsAuthorizedAsync(services, NotificationPermissions.ManageNotifications))
+        if (callerId is null || !await AgentToolAuthorization.IsAuthorizedAsync(services, NotificationPermissions.ManageNotifications))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

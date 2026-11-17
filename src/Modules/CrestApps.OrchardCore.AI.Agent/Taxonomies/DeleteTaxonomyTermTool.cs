@@ -70,7 +70,7 @@ public sealed class DeleteTaxonomyTermTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageTaxonomies))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageTaxonomies))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

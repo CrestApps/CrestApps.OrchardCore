@@ -62,7 +62,7 @@ public sealed class DeleteQueryTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, QueryPermissions.ManageQueries))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, QueryPermissions.ManageQueries))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

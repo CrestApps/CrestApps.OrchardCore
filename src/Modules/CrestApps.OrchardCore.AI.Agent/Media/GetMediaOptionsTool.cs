@@ -52,7 +52,7 @@ public sealed class GetMediaOptionsTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, MediaPermissions.ViewMediaOptions))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, MediaPermissions.ViewMediaOptions))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

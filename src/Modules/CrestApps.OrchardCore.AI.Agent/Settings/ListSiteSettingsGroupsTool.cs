@@ -71,7 +71,7 @@ public sealed class ListSiteSettingsGroupsTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, AdminPermissions.AccessAdminPanel))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, AdminPermissions.AccessAdminPanel))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

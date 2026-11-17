@@ -80,7 +80,7 @@ public sealed class ListDynamicTranslationsTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, DataLocalizationPermissions.ViewDynamicTranslations))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, DataLocalizationPermissions.ViewDynamicTranslations))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

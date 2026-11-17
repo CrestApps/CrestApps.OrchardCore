@@ -90,7 +90,7 @@ public sealed class SaveContentTypePartTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.EditContentTypes))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.EditContentTypes))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

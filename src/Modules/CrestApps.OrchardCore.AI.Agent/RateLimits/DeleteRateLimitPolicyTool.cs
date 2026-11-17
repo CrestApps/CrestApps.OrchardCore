@@ -71,7 +71,7 @@ public sealed class DeleteRateLimitPolicyTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, RateLimitsPermissions.ManageRateLimits))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, RateLimitsPermissions.ManageRateLimits))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

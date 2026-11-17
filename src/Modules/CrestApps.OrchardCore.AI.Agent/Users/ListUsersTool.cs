@@ -259,7 +259,7 @@ public sealed class ListUsersTool : AIFunction
         }
 
         // The role filter of the admin page offers the roles whose users the caller may list.
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, UsersPermissions.CreateListUsersInRolePermission(roleName)))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, UsersPermissions.CreateListUsersInRolePermission(roleName)))
         {
             return (null, $"Nothing was listed: you are not allowed to list the users of the role '{roleName}'.");
         }

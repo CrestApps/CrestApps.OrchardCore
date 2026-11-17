@@ -61,7 +61,7 @@ public sealed class DeleteDeploymentPlanTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, DeploymentPermissions.ManageDeploymentPlan))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, DeploymentPermissions.ManageDeploymentPlan))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

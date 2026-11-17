@@ -110,7 +110,7 @@ public sealed class ListAuditTrailEventsTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, AuditTrailPermissions.ViewAuditTrail))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, AuditTrailPermissions.ViewAuditTrail))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

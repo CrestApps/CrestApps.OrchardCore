@@ -105,10 +105,10 @@ public sealed class SaveDynamicTranslationsTool : AIFunction
 
         // As the Dynamic Translations page does before saving a culture: managing all translations, or the culture's own
         // permission. A caller without the first one learns nothing about the cultures before the check.
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, DataLocalizationPermissions.ManageTranslations))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, DataLocalizationPermissions.ManageTranslations))
         {
             if (cultureName is null ||
-                !await AIToolCallerAuthorization.IsAuthorizedAsync(services, DataLocalizationPermissions.CreateCulturePermission(cultureName, DynamicTranslationToolSupport.GetDisplayName(cultureName))))
+                !await AgentToolAuthorization.IsAuthorizedAsync(services, DataLocalizationPermissions.CreateCulturePermission(cultureName, DynamicTranslationToolSupport.GetDisplayName(cultureName))))
             {
                 return AIToolCallerAuthorization.NotAllowedMessage;
             }

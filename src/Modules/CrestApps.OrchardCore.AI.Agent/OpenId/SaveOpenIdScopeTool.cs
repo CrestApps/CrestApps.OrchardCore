@@ -79,7 +79,7 @@ public sealed class SaveOpenIdScopeTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OpenIdPermissions.ManageScopes))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OpenIdPermissions.ManageScopes))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

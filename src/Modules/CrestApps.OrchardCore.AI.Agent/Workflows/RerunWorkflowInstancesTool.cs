@@ -81,8 +81,8 @@ public sealed class RerunWorkflowInstancesTool : AIFunction
         var mode = arguments.GetFirstValueOrDefault<string>("mode")?.Trim().ToLowerInvariant();
 
         // The instances pages need Manage workflows; running an activity again also needs Execute workflows.
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, WorkflowsPermissions.ManageWorkflows) ||
-            (mode != "restart" && !await AIToolCallerAuthorization.IsAuthorizedAsync(services, WorkflowsPermissions.ExecuteWorkflows)))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, WorkflowsPermissions.ManageWorkflows) ||
+            (mode != "restart" && !await AgentToolAuthorization.IsAuthorizedAsync(services, WorkflowsPermissions.ExecuteWorkflows)))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

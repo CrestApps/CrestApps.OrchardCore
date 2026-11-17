@@ -95,7 +95,7 @@ public sealed class SaveTenantFeatureProfileTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageTenantFeatureProfiles))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ManageTenantFeatureProfiles))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

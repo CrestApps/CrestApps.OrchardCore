@@ -56,7 +56,7 @@ public sealed class PurgeSitemapCacheTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, SitemapsPermissions.ManageSitemaps))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, SitemapsPermissions.ManageSitemaps))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

@@ -81,7 +81,7 @@ public sealed class ListAdminDashboardWidgetsTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.AccessAdminDashboard))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.AccessAdminDashboard))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.Core.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,13 +9,14 @@ namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
 /// Checks a permission on one record (a content item, for example) for the signed-in caller of a tool, with the same
-/// resource the matching admin action passes. A check that has no resource uses
-/// <c>AIToolCallerAuthorization.IsAuthorizedAsync</c> from <c>CrestApps.OrchardCore.AI.Core</c>.
+/// resource the matching admin action passes, or the permission alone.
 /// </summary>
 internal static class AgentToolAuthorization
 {
     /// <summary>
-    /// Gets the signed-in caller of the tool.
+    /// Gets the signed-in caller of the tool. The chat hubs publish the caller through <see cref="IUserAccessor"/> for the
+    /// whole invocation, which also works on transports where the request is not available to the hub method; the
+    /// request's user is the fallback.
     /// </summary>
     /// <param name="services">The services of the tool invocation.</param>
     /// <returns>The caller, or <see langword="null"/> when nobody is signed in.</returns>
@@ -22,12 +24,22 @@ internal static class AgentToolAuthorization
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        var user = services.GetService<IHttpContextAccessor>()?.HttpContext?.User;
+        var user = services.GetService<IUserAccessor>()?.User
+            ?? services.GetService<IHttpContextAccessor>()?.HttpContext?.User;
 
         return user?.Identity?.IsAuthenticated == true
             ? user
             : null;
     }
+
+    /// <summary>
+    /// Whether the signed-in caller holds the permission.
+    /// </summary>
+    /// <param name="services">The services of the tool invocation.</param>
+    /// <param name="permission">The permission the tool needs.</param>
+    /// <returns><see langword="true"/> when a signed-in caller holds the permission.</returns>
+    public static Task<bool> IsAuthorizedAsync(IServiceProvider services, Permission permission)
+        => IsAuthorizedAsync(services, permission, resource: null);
 
     /// <summary>
     /// Whether the signed-in caller holds the permission on the resource.

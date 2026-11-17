@@ -71,7 +71,7 @@ public sealed class TriggerWorkflowSignalTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, WorkflowsPermissions.ExecuteWorkflows))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, WorkflowsPermissions.ExecuteWorkflows))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

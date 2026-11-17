@@ -71,7 +71,7 @@ public sealed class SendTestSmsTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, SmsPermissions.ManageSmsSettings))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, SmsPermissions.ManageSmsSettings))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

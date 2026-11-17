@@ -74,7 +74,7 @@ public sealed class ListDataPipelineStepTypesTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ViewDataPipelines))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, OrchardCorePermissions.ViewDataPipelines))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

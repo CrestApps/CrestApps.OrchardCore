@@ -64,7 +64,7 @@ public sealed class DeleteRoleTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, RolesPermissions.ManageRoles))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, RolesPermissions.ManageRoles))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }

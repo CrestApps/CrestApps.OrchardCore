@@ -70,7 +70,7 @@ public sealed class FindAdminPageTool : AIFunction
 
         var services = arguments.Services;
 
-        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(services, AdminPermissions.AccessAdminPanel))
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(services, AdminPermissions.AccessAdminPanel))
         {
             return AIToolCallerAuthorization.NotAllowedMessage;
         }
