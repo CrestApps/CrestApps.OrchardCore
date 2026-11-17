@@ -199,6 +199,7 @@ const sidebars = {
                 'user-manual/learning/selling-courses',
                 'user-manual/learning/external-tools',
                 'user-manual/learning/digital-credentials',
+                'user-manual/learning/learning-assistant',
             ],
         },
         {
@@ -497,6 +498,7 @@ const sidebars = {
                 'modules/learning-lti',
                 'modules/learning-credentials',
                 'modules/learning-programs',
+                'modules/learning-ai',
             ],
         },
         {
