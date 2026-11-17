@@ -677,6 +677,50 @@ Both tools need **Manage tenant feature profiles** and work from the Default ten
 
 `listDeploymentPlans` needs **Manage deployment plans** and **Export Data**, as the **Deployment Plans** page does; `saveDeploymentPlan` and `deleteDeploymentPlan` need **Manage deployment plans**. `saveDeploymentPlan` runs the `deployment` recipe step and refuses a step type that no enabled feature provides. No tool runs a plan: an export can hold any data of the site, secrets included, so it is downloaded with **File Download** on the plan page.
 
+### Background task tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.BackgroundTasks`
+
+| Function | Description |
+| --- | --- |
+| `listBackgroundTasks` | Lists the background tasks with their schedule, enabled state, status, last and next start, and run and failure counts. Given a task name, it also returns the lock settings and the recent runs with their error messages. Search text, a status filter (`enabled`, `disabled`, `running`, `failed`) and paging. |
+| `runBackgroundTask` | Asks the background service to run one or more tasks now, outside their schedule, and says for each whether the run was queued. |
+
+Both tools need **Manage background tasks**. Times are in the user's or the site's time zone. The execution state is kept in memory by each server, so on a web farm it shows the runs of the server that answered. `runBackgroundTask` returns as soon as the run is requested; call `listBackgroundTasks` afterwards to see how it went. When the background service is not registered, there is no state and nothing can be run on demand. Schedules and other task settings are changed on the **Background Tasks** page.
+
+### URL rewriting tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.UrlRewriting`
+
+| Function | Description |
+| --- | --- |
+| `listUrlRewriteRules` | Lists the redirect and rewrite rules in the order they are applied, with their pattern, substitution and options. Search text, a type filter and paging. |
+| `saveUrlRewriteRule` | Creates a `Redirect` or `Rewrite` rule, or changes one by ID; fields that are not sent keep their value. A new rule is applied after the existing ones. |
+| `deleteUrlRewriteRule` | Deletes one or more rules by ID. Asks for approval. |
+
+All three tools need **Manage URLs rewriting rules**. `saveUrlRewriteRule` validates the rule as the **URL Rewriting** page does and saves nothing when a pattern is not a valid regular expression. After a save or a delete the tenant reloads its rules at the end of the request. Pages under the admin prefix are never rewritten. Rules are reordered by dragging them on the **URL Rewriting** page.
+
+### Health check tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.HealthChecks`
+
+| Function | Description |
+| --- | --- |
+| `getSiteHealth` | Runs the health checks the enabled features register, or one of them by name, and returns the overall status and each check's status, description and duration. |
+
+The tool needs **Access admin panel**. It returns what the health endpoint shows with details on; exceptions and check data are left out, as they can hold connection details.
+
+### Dynamic translation tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.DataLocalization`
+
+| Function | Description |
+| --- | --- |
+| `listDynamicTranslations` | Lists the translatable dynamic strings of one culture with their translation, and the translation progress of every supported culture. Filters by context, search text and untranslated only, with paging. Without a culture it returns only the progress. |
+| `saveDynamicTranslations` | Adds or changes translations of one culture; strings that are not sent keep their translation. |
+
+`listDynamicTranslations` needs **View dynamic translations and statistics**. `saveDynamicTranslations` needs **Manage all dynamic translations** or the culture's own **Manage {culture} translations** permission, as the **Dynamic Translations** page does. The culture must be one of the site's supported cultures, each string must be one that `listDynamicTranslations` returns, and a translation cannot be empty. The tool runs the `Translations` recipe step, which merges the translations into the culture's saved ones.
+
 ### Workflow tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + the matching workflow feature set
