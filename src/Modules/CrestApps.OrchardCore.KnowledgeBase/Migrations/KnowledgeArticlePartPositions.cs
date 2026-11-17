@@ -9,12 +9,13 @@ namespace CrestApps.OrchardCore.KnowledgeBase.Migrations;
 internal static class KnowledgeArticlePartPositions
 {
     /// <summary>
-    /// The part names in the order the editor shows them: the title, who may read it and the summary, the category field
-    /// (on the type's own part), the body and the permalink.
+    /// The part names in the order the editor shows them: the title, who may read it (Content Access Control's role
+    /// picker), the summary, the category field (on the type's own part), the body and the permalink.
     /// </summary>
     public static readonly string[] Order =
     [
         "TitlePart",
+        KnowledgeBaseConstants.WhoCanReadItPart,
         KnowledgeBaseConstants.PartName,
         KnowledgeBaseConstants.ArticleType,
         "MarkdownBodyPart",
@@ -28,6 +29,31 @@ internal static class KnowledgeArticlePartPositions
     /// <returns>Its position.</returns>
     public static string Of(string partName)
         => (Array.IndexOf(Order, partName) + 1).ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Gets the position for a part added to a type that has other parts: the place of the part it goes before in the
+    /// usual order, so <see cref="Renumber"/> puts it just ahead of that part wherever an administrator moved it; or its
+    /// usual position when no such part has a place.
+    /// </summary>
+    /// <param name="parts">Each existing part's name and position.</param>
+    /// <param name="partName">The part being added.</param>
+    /// <returns>Its position.</returns>
+    public static string ForAdded(IReadOnlyCollection<(string Name, string Position)> parts, string partName)
+    {
+        ArgumentNullException.ThrowIfNull(parts);
+
+        foreach (var next in Order.Skip(Array.IndexOf(Order, partName) + 1))
+        {
+            var (name, position) = parts.FirstOrDefault(part => part.Name == next);
+
+            if (name is not null && decimal.TryParse(position, NumberStyles.Number, CultureInfo.InvariantCulture, out _))
+            {
+                return position;
+            }
+        }
+
+        return Of(partName);
+    }
 
     /// <summary>
     /// Gives the parts whole, distinct positions in the order they are shown, where one isn't a whole number (such as

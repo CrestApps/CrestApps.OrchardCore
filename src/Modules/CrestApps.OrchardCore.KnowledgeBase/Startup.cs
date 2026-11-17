@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.KnowledgeBase.Migrations;
 using CrestApps.OrchardCore.KnowledgeBase.Navigation;
 using CrestApps.OrchardCore.KnowledgeBase.Models;
 using CrestApps.OrchardCore.KnowledgeBase.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -13,7 +12,6 @@ using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.RateLimits;
-using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.KnowledgeBase;
 
@@ -28,11 +26,8 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<KnowledgeArticlePartDisplayDriver>();
         services.AddIndexProvider<KnowledgeArticleIndexProvider>();
         services.AddDataMigration<KnowledgeBaseMigrations>();
-        services.AddScoped<KnowledgeArticleAccess>();
         services.AddScoped<KnowledgeArticleSearch>();
         services.AddScoped<KnowledgeBaseCategories>();
-        services.AddScoped<IAuthorizationHandler, KnowledgeArticleAuthorizationHandler>();
-        services.AddPermissionProvider<KnowledgeBasePermissionProvider>();
         services.AddNavigationProvider<KnowledgeBaseAdminMenu>();
     }
 }

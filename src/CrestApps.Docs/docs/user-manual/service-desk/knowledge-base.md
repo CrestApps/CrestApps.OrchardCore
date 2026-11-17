@@ -11,7 +11,7 @@ The **Knowledge Base** is your help center: articles that answer common question
 | | |
 | --- | --- |
 | **Menu** | Service Desk > Knowledge Base > Articles; Service Desk > Knowledge Base > Help center |
-| **Permission** | **View staff-only knowledge articles** for the menu and staff articles; the content permissions of the Knowledge Article type to write articles |
+| **Permission** | **List content items** for the menu; the content permissions of the Knowledge Article type to write articles. Who reads each article is its **Who can read it** |
 | **Feature** | Knowledge Base |
 
 <AskYourAdmin />
@@ -21,7 +21,7 @@ The **Knowledge Base** is your help center: articles that answer common question
 1. Turn on **Knowledge Base** under **Tools > Features**.
 2. Go to **Service Desk > Knowledge Base > Articles** and select **New Knowledge Article**.
 3. Give it a **Title**.
-4. Choose **Who can read it**: everyone, people who are signed in, or staff only.
+4. In **Who can read it**, pick who may open it: no role for everyone, **Authenticated** for anyone signed in, or your staff roles.
 5. Write a short **Summary**: one or two sentences shown in lists, searches and suggestions. Search looks at the title and the summary.
 6. Choose its **Category** to list it with similar articles.
 7. Write the body in the editor. Its toolbar formats text, adds links, lists, tables and pictures, and shows a preview.
@@ -30,13 +30,17 @@ The **Knowledge Base** is your help center: articles that answer common question
 
 ## Who can read it
 
-| Choice | Who sees the article |
+| Roles picked | Who sees the article |
 | --- | --- |
-| **Everyone** | Anyone, signed in or not |
-| **People who are signed in** | Anyone with an account who is signed in |
-| **Staff only** | People with the **View staff-only knowledge articles** permission |
+| None | Anyone, signed in or not |
+| **Authenticated** | Anyone with an account who is signed in |
+| Staff roles, such as **Editor** | People in one of those roles |
 
-The choice holds everywhere the article shows: the help center, searches, suggestions and its own page. Give **View staff-only knowledge articles** to the roles that should read staff articles, under **Users > Roles**. The same permission shows **Knowledge Base** in the **Service Desk** menu.
+Administrators read every article. **Who can read it** works as [Restrict Content by Role](../administration/content-access-control.md) does for any content, and holds everywhere the article shows: the help center, searches, suggestions and its own page. People outside the picked roles don't find the article, and get *You do not have access to this resource.* if they open its link.
+
+:::note[Articles written before]
+Articles written when the editor offered *Everyone*, *People who are signed in* and *Staff only* keep who could read them: *Everyone* picks no role, *People who are signed in* picks **Authenticated**, and *Staff only* picks the roles that had the old **View staff-only knowledge articles** permission, and **Administrator**.
+:::
 
 ## Categories
 

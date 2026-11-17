@@ -1,7 +1,9 @@
 using System.Globalization;
 using CrestApps.OrchardCore.KnowledgeBase;
 using CrestApps.OrchardCore.KnowledgeBase.Migrations;
+using CrestApps.OrchardCore.Roles.Core.Models;
 using CrestApps.OrchardCore.Tests.Modules.Accounts;
+using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Builders;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -22,7 +24,8 @@ public sealed class KnowledgeArticlePartPositionsTests
 
         Assert.All(positions, position => int.Parse(position, CultureInfo.InvariantCulture));
         Assert.Equal(positions.Count, positions.Distinct().Count());
-        Assert.Equal("3", KnowledgeArticlePartPositions.Of(KnowledgeBaseConstants.ArticleType));
+        Assert.Equal("2", KnowledgeArticlePartPositions.Of(KnowledgeBaseConstants.WhoCanReadItPart));
+        Assert.Equal("4", KnowledgeArticlePartPositions.Of(KnowledgeBaseConstants.ArticleType));
     }
 
     // Version 2 put the type's own part, with the category field, at 2.5.
@@ -81,7 +84,7 @@ public sealed class KnowledgeArticlePartPositionsTests
             .WithPart("MarkdownBodyPart", part => part.WithPosition("3"))
             .WithPart("AutoroutePart", part => part.WithPosition("4"))
             .Build());
-        var migrations = new KnowledgeBaseMigrations(definitions);
+        var migrations = Migrations(definitions);
 
         // Act: what steps 1 to 2, 2 to 3 and 3 to 4 change in the content definitions, in one go.
         await definitions.GetTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType);
@@ -114,13 +117,46 @@ public sealed class KnowledgeArticlePartPositionsTests
             .Build());
 
         // Act
-        Assert.Equal(4, await new KnowledgeBaseMigrations(definitions).UpdateFrom3Async());
+        Assert.Equal(4, await Migrations(definitions).UpdateFrom3Async());
 
         // Assert
         var type = await definitions.LoadTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType);
         Assert.Equal(["TitlePart", KnowledgeBaseConstants.PartName, KnowledgeBaseConstants.ArticleType, "MarkdownBodyPart", "AutoroutePart"], Ordered(type));
         Assert.Equal("Body", type.Parts.Single(part => part.Name == "MarkdownBodyPart").GetSettings<ContentTypePartSettings>().DisplayName);
     }
+
+    // Version 5 gives the type Content Access Control's role picker, "Who can read it", right after the title.
+    [Fact]
+    public async Task AVersion4Site_GetsWhoCanReadIt_AfterTheTitle_WithWholePositions()
+    {
+        // Arrange
+        var definitions = new CachingDefinitions();
+        await definitions.StoreTypeDefinitionAsync(new ContentTypeDefinitionBuilder()
+            .WithName(KnowledgeBaseConstants.ArticleType)
+            .WithPart("TitlePart", part => part.WithPosition("1"))
+            .WithPart(KnowledgeBaseConstants.PartName, part => part.WithPosition("2"))
+            .WithPart(KnowledgeBaseConstants.ArticleType, part => part.WithPosition("3"))
+            .WithPart("MarkdownBodyPart", part => part.WithPosition("4"))
+            .WithPart("AutoroutePart", part => part.WithPosition("5"))
+            .Build());
+        var migrations = Migrations(definitions);
+
+        // Act: twice, as a second run changes nothing.
+        await migrations.AddWhoCanReadItAsync();
+        await migrations.AddWhoCanReadItAsync();
+
+        // Assert
+        var type = await definitions.LoadTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType);
+        Assert.Equal(["TitlePart", KnowledgeBaseConstants.WhoCanReadItPart, KnowledgeBaseConstants.PartName, KnowledgeBaseConstants.ArticleType, "MarkdownBodyPart", "AutoroutePart"], Ordered(type));
+        Assert.Equal(["1", "2", "3", "4", "5", "6"], type.Parts.Select(Position).Order());
+        var picker = type.Parts.Single(part => part.Name == KnowledgeBaseConstants.WhoCanReadItPart);
+        Assert.Equal("Who can read it", picker.GetSettings<ContentTypePartSettings>().DisplayName);
+        Assert.True(picker.GetSettings<RolePickerPartContentAccessControlSettings>().IsContentRestricted);
+        Assert.True(picker.GetSettings<RolePickerPartSettings>().AllowSelectMultiple);
+    }
+
+    private static KnowledgeBaseMigrations Migrations(IContentDefinitionManager definitions)
+        => new(definitions, null, null, NullLogger<KnowledgeBaseMigrations>.Instance);
 
     private static string Position(ContentTypePartDefinition part)
         => part.GetSettings<ContentTypePartSettings>().Position;

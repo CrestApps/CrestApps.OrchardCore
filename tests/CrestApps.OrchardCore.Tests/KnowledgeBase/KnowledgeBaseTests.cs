@@ -1,41 +1,46 @@
 using System.Security.Claims;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.ContentAccessControl.Indexes;
+using CrestApps.OrchardCore.ContentAccessControl.Migrations;
 using CrestApps.OrchardCore.KnowledgeBase;
 using CrestApps.OrchardCore.KnowledgeBase.Indexes;
+using CrestApps.OrchardCore.KnowledgeBase.Migrations;
 using CrestApps.OrchardCore.KnowledgeBase.Models;
 using CrestApps.OrchardCore.KnowledgeBase.Services;
+using CrestApps.OrchardCore.Roles.Core.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
-using Microsoft.AspNetCore.Authorization;
+using CrestApps.OrchardCore.Tests.ContentAccessControl;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
 using OrchardCore.ContentManagement;
-using OrchardCore.Contents;
-using OrchardCore.Security;
-using OrchardCore.Security.Permissions;
 using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Tests.KnowledgeBase;
 
 /// <summary>
-/// The help center on a real store: a visitor finds public articles only, a signed-in person also those for signed-in
-/// people, and staff also staff-only ones; each searched word must be in the title or summary; unpublished articles are
-/// never found; and viewing a staff-only article fails for anyone without the staff permission.
+/// The help center on a real store, with who may read each article decided by Content Access Control: an article with
+/// no role picked is for everyone, one for Authenticated for anyone signed in, and one for staff roles for those roles.
+/// Search, categories and suggestions keep to what the reader may open in SQL; each searched word must be in the title
+/// or summary; unpublished articles are never found. Articles written before keep who could read them.
 /// </summary>
 public sealed class KnowledgeBaseTests
 {
+    private static readonly string[] _everyone = [];
+    private static readonly string[] _signedIn = ["Authenticated"];
+    private static readonly string[] _staff = ["Editor", "Administrator"];
+
     [Fact]
-    public async Task EachReader_FindsTheArticlesOfTheirAudience_ByWordsInTitleOrSummary()
+    public async Task EachReader_FindsTheArticlesTheirRolesMayOpen_ByWordsInTitleOrSummary()
     {
         // Arrange
         await using var harness = await CreateAsync();
         await harness.RunAsync(async services =>
         {
             var session = services.GetRequiredService<ISession>();
-            await session.SaveAsync(Article("a1", "Reset your password", "Use the link on the sign-in page.", "Accounts", KnowledgeArticleAudience.Public));
-            await session.SaveAsync(Article("a2", "Download your invoices", "Invoices are under Billing.", "Billing", KnowledgeArticleAudience.SignedIn));
-            await session.SaveAsync(Article("a3", "Refund a customer's password reset fee", "Staff procedure.", "Accounts", KnowledgeArticleAudience.Staff));
-            await session.SaveAsync(Article("a4", "Old password policy", "Draft.", "Accounts", KnowledgeArticleAudience.Public, published: false));
+            await session.SaveAsync(Article("a1", "Reset your password", "Use the link on the sign-in page.", "Accounts", _everyone));
+            await session.SaveAsync(Article("a2", "Download your invoices", "Invoices are under Billing.", "Billing", _signedIn));
+            await session.SaveAsync(Article("a3", "Refund a customer's password reset fee", "Staff procedure.", "Accounts", _staff));
+            await session.SaveAsync(Article("a4", "Old password policy", "Draft.", "Accounts", _everyone, published: false));
         });
 
         // Act
@@ -48,10 +53,12 @@ public sealed class KnowledgeBaseTests
             {
                 Visitor = (await search.FindAsync(new ClaimsPrincipal(new ClaimsIdentity()), null, null, 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
                 SignedIn = (await search.FindAsync(CalendarTestHarness.User("dana"), null, null, 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
-                Staff = (await search.FindAsync(CalendarTestHarness.User("staff"), "password", null, 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
-                Words = (await search.FindAsync(CalendarTestHarness.User("staff"), "refund password", null, 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
-                Categories = (await search.ByCategoryAsync(CalendarTestHarness.User("dana"), 5, ct)).ToDictionary(pair => pair.Key, pair => (pair.Value.Count, pair.Value.Articles.Select(a => a.ContentItemId).ToList())),
-                InAccounts = (await search.FindAsync(CalendarTestHarness.User("staff"), null, ["Accounts"], 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
+                Staff = (await search.FindAsync(Staff(), "password", null, 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
+                Words = (await search.FindAsync(Staff(), "refund password", null, 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
+                Administrator = (await search.FindAsync(CalendarTestHarness.User("root", "role:Administrator"), null, null, 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
+                Categories = Grouped(await search.ByCategoryAsync(CalendarTestHarness.User("dana"), 5, ct)),
+                StaffCategories = Grouped(await search.ByCategoryAsync(Staff(), 5, ct)),
+                InAccounts = (await search.FindAsync(Staff(), null, ["Accounts"], 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
                 Suggested = (await search.SuggestAsync(CalendarTestHarness.User("dana"), "Have you tried to reset your password?", 5, ct)).Select(a => a.ContentItemId).ToList(),
             };
         }, commit: false);
@@ -61,11 +68,9 @@ public sealed class KnowledgeBaseTests
         Assert.Equal(["a1", "a2"], found.SignedIn);
         Assert.Equal(["a1", "a3"], found.Staff);
         Assert.Equal(["a3"], found.Words);
-        Assert.Equal(2, found.Categories.Count);
-        Assert.Equal(1, found.Categories["Accounts"].Count);
-        Assert.Equal(["a1"], found.Categories["Accounts"].Item2);
-        Assert.Equal(1, found.Categories["Billing"].Count);
-        Assert.Equal(["a2"], found.Categories["Billing"].Item2);
+        Assert.Equal(["a1", "a2", "a3"], found.Administrator);
+        Assert.Equal(["Accounts: a1", "Billing: a2"], found.Categories);
+        Assert.Equal(["Accounts: a1, a3", "Billing: a2"], found.StaffCategories);
         Assert.Equal(["a1", "a3"], found.InAccounts);
         Assert.Equal(["a1"], found.Suggested);
     }
@@ -78,23 +83,23 @@ public sealed class KnowledgeBaseTests
         await harness.RunAsync(async services =>
         {
             var session = services.GetRequiredService<ISession>();
-            await session.SaveAsync(Article("a1", "Reset your password", "Use the link on the sign-in page.", "Accounts", KnowledgeArticleAudience.Public));
-            await session.SaveAsync(Article("a2", "Password rules for members", "Members' passwords.", "Accounts", KnowledgeArticleAudience.SignedIn));
-            await session.SaveAsync(Article("a3", "Password reset override", "Staff procedure.", "Accounts", KnowledgeArticleAudience.Staff));
+            await session.SaveAsync(Article("a1", "Reset your password", "Use the link on the sign-in page.", "Accounts", _everyone));
+            await session.SaveAsync(Article("a2", "Password rules for members", "Members' passwords.", "Accounts", _signedIn));
+            await session.SaveAsync(Article("a3", "Password reset override", "Staff procedure.", "Accounts", _staff));
         });
 
         // Act
         var found = await harness.RunAsync(async services =>
         {
             var search = services.GetRequiredService<KnowledgeArticleSearch>();
-            var staff = CalendarTestHarness.User("staff");
             var ct = TestContext.Current.CancellationToken;
 
             return new
             {
-                Note = (await search.SuggestAsync(staff, "password", 5, ct)).Select(a => a.ContentItemId).Order().ToList(),
-                ToGuest = (await search.SuggestAsync(staff, "password", 5, [KnowledgeArticleAudience.Public], ct)).Select(a => a.ContentItemId).Order().ToList(),
-                ToMember = (await search.SuggestAsync(staff, "password", 5, [KnowledgeArticleAudience.Public, KnowledgeArticleAudience.SignedIn], ct)).Select(a => a.ContentItemId).Order().ToList(),
+                Note = (await search.SuggestAsync(Staff(), "password", 5, ct)).Select(a => a.ContentItemId).Order().ToList(),
+                ToGuest = (await search.SuggestAsync(Staff(), "password", 5, KnowledgeArticleSearch.VisitorReader, ct)).Select(a => a.ContentItemId).Order().ToList(),
+                ToMember = (await search.SuggestAsync(Staff(), "password", 5, KnowledgeArticleSearch.SignedInReader, ct)).Select(a => a.ContentItemId).Order().ToList(),
+                VisitorToMember = (await search.SuggestAsync(new ClaimsPrincipal(new ClaimsIdentity()), "password", 5, KnowledgeArticleSearch.SignedInReader, ct)).Select(a => a.ContentItemId).Order().ToList(),
             };
         }, commit: false);
 
@@ -102,74 +107,49 @@ public sealed class KnowledgeBaseTests
         Assert.Equal(["a1", "a2", "a3"], found.Note);
         Assert.Equal(["a1"], found.ToGuest);
         Assert.Equal(["a1", "a2"], found.ToMember);
+        Assert.Equal(["a1"], found.VisitorToMember);
     }
 
     [Theory]
-    [InlineData("ViewContent", true)]
-    [InlineData("ViewContent_KnowledgeArticle", true)]
-    [InlineData("ViewOwnContent_KnowledgeArticle", true)]
-    [InlineData("PreviewContent", true)]
-    [InlineData("PreviewOwnContent_KnowledgeArticle", true)]
-    [InlineData("ListContent", true)]
-    [InlineData("EditContent", false)]
-    [InlineData("PublishContent_KnowledgeArticle", false)]
-    public void TheAudience_AppliesToEveryPermissionThatReadsAnArticle(string permission, bool reading)
-        => Assert.Equal(reading, KnowledgeArticleAuthorizationHandler.IsReading(permission));
-
-    [Fact]
-    public async Task AStaffArticle_OnASecurableType_StaysStaffOnly()
-    {
-        // Arrange: the type's own view permission, which an anonymous visitor may hold through the type.
-        var services = new ServiceCollection()
-            .AddSingleton(Authorization())
-            .AddScoped<KnowledgeArticleAccess>()
-            .BuildServiceProvider();
-        var handler = new KnowledgeArticleAuthorizationHandler(services);
-        var staffOnly = Article("a3", "Staff procedure", null, null, KnowledgeArticleAudience.Staff);
-        var typed = new global::OrchardCore.Security.Permissions.Permission("ViewContent_KnowledgeArticle", global::OrchardCore.Localization.LocalizationSource.Create<KnowledgeBaseTests>("View knowledge articles"));
-
-        // Act
-        var anonymous = new AuthorizationHandlerContext([new PermissionRequirement(typed)], new ClaimsPrincipal(new ClaimsIdentity()), staffOnly);
-        var signedIn = new AuthorizationHandlerContext([new PermissionRequirement(new global::OrchardCore.Security.Permissions.Permission("ViewOwnContent_KnowledgeArticle", global::OrchardCore.Localization.LocalizationSource.Create<KnowledgeBaseTests>("View own")))], CalendarTestHarness.User("dana"), staffOnly);
-        await handler.HandleAsync(anonymous);
-        await handler.HandleAsync(signedIn);
-
-        // Assert
-        Assert.True(anonymous.HasFailed);
-        Assert.True(signedIn.HasFailed);
-    }
-
-    [Fact]
-    public async Task ViewingAStaffOnlyArticle_FailsForAnyoneWithoutTheStaffPermission()
+    [InlineData(null, new string[0])]
+    [InlineData(0, new string[0])]
+    [InlineData(1, new[] { "Authenticated" })]
+    [InlineData(2, new[] { "Editor", "Support", "Administrator" })]
+    [InlineData("Public", new string[0])]
+    [InlineData("SignedIn", new[] { "Authenticated" })]
+    [InlineData("Staff", new[] { "Editor", "Support", "Administrator" })]
+    public void AnArticleWrittenBefore_KeepsWhoCouldReadIt(object audience, string[] roles)
     {
         // Arrange
-        var authorization = Authorization();
-        var services = new ServiceCollection()
-            .AddSingleton(authorization)
-            .AddScoped<KnowledgeArticleAccess>()
-            .BuildServiceProvider();
-        var handler = new KnowledgeArticleAuthorizationHandler(services);
-        var staffOnly = Article("a3", "Staff procedure", null, null, KnowledgeArticleAudience.Staff);
+        var item = new ContentItem { ContentItemId = "old", ContentType = KnowledgeBaseConstants.ArticleType };
+        var part = new JsonObject { ["Summary"] = "Use the link on the sign-in page." };
+
+        if (audience is not null)
+        {
+            part["Audience"] = audience is int number ? JsonValue.Create(number) : JsonValue.Create((string)audience);
+        }
+
+        ((JsonObject)item.Content)[KnowledgeBaseConstants.PartName] = part;
 
         // Act
-        var forDana = new AuthorizationHandlerContext([new PermissionRequirement(CommonPermissions.ViewContent)], CalendarTestHarness.User("dana"), staffOnly);
-        var forStaff = new AuthorizationHandlerContext([new PermissionRequirement(CommonPermissions.ViewContent)], CalendarTestHarness.User("staff"), staffOnly);
-        await handler.HandleAsync(forDana);
-        await handler.HandleAsync(forStaff);
+        KnowledgeBaseMigrations.MoveAudienceToRoles(item, ["Editor", "Support"]);
 
         // Assert
-        Assert.True(forDana.HasFailed);
-        Assert.False(forStaff.HasFailed);
+        Assert.Equal(roles, item.GetOrCreate<RolePickerPart>().RoleNames);
+        Assert.False(((JsonObject)item.Content)[KnowledgeBaseConstants.PartName].AsObject().ContainsKey("Audience"));
+        Assert.Equal("Use the link on the sign-in page.", item.GetOrCreate<KnowledgeArticlePart>().Summary);
     }
+
+    // Each category with its article ids, in order, for comparing.
+    private static List<string> Grouped(IReadOnlyDictionary<string, (int Count, IReadOnlyList<KnowledgeArticleIndex> Articles)> groups)
+        => [.. groups.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Key + ": " + string.Join(", ", pair.Value.Articles.Select(a => a.ContentItemId).Order()))];
+
+    private static ClaimsPrincipal Staff()
+        => CalendarTestHarness.User("staff", "role:Editor");
 
     private static Task<CalendarTestHarness> CreateAsync()
         => CalendarTestHarness.CreateAsync(
-            services =>
-            {
-                services.AddSingleton(Authorization());
-                services.AddScoped<KnowledgeArticleAccess>();
-                services.AddScoped<KnowledgeArticleSearch>();
-            },
+            services => services.AddScoped<KnowledgeArticleSearch>(),
             async schema =>
             {
                 await schema.CreateMapIndexTableAsync<KnowledgeArticleIndex>(table => table
@@ -177,38 +157,26 @@ public sealed class KnowledgeBaseTests
                     .Column<string>("Title", column => column.WithLength(255))
                     .Column<string>("Summary", column => column.WithLength(1000))
                     .Column<string>("CategoryId", column => column.Nullable().WithLength(26))
-                    .Column<int>("Audience")
                     .Column<DateTime>("PublishedUtc", column => column.Nullable())
                     .Column<int>("HelpfulCount", column => column.Nullable()));
+                await ContentAccessControlMigrations.CreateRoleIndexTableAsync(schema);
             },
-            [new KnowledgeArticleIndexProvider()]);
+            [new KnowledgeArticleIndexProvider(), new ContentAccessRoleIndexProvider(ContentAccessRoleIndexTests.DefinitionServices(KnowledgeBaseConstants.ArticleType))]);
 
-    // The "staff" user holds the staff permission.
-    private static IAuthorizationService Authorization()
-    {
-        var authorization = new Mock<IAuthorizationService>();
-        authorization.Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
-            .ReturnsAsync((ClaimsPrincipal user, object _, IEnumerable<IAuthorizationRequirement> requirements) =>
-                requirements.OfType<PermissionRequirement>().Any(requirement => requirement.Permission.Name == KnowledgeBasePermissions.ViewStaffArticles.Name)
-                    && user.FindFirstValue(ClaimTypes.NameIdentifier) == "staff"
-                    ? AuthorizationResult.Success()
-                    : AuthorizationResult.Failed());
-
-        return authorization.Object;
-    }
-
-    private static ContentItem Article(string id, string title, string summary, string category, KnowledgeArticleAudience audience, bool published = true)
+    private static ContentItem Article(string id, string title, string summary, string category, string[] roles, bool published = true)
     {
         var item = new ContentItem
         {
             ContentItemId = id,
+            ContentItemVersionId = id + "-v1",
             ContentType = KnowledgeBaseConstants.ArticleType,
             DisplayText = title,
             Published = published,
             Latest = true,
             PublishedUtc = published ? CalendarTestHarness.Now : null,
         };
-        item.Apply(new KnowledgeArticlePart { Audience = audience, Summary = summary });
+        item.Apply(new KnowledgeArticlePart { Summary = summary });
+        item.Weld(new RolePickerPart { RoleNames = roles });
 
         // The category is a term of the categories' taxonomy, in the type's Category field; here its id is the name.
         if (category is not null)

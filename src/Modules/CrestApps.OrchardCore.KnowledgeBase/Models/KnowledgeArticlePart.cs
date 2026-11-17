@@ -3,15 +3,11 @@ using OrchardCore.ContentManagement;
 namespace CrestApps.OrchardCore.KnowledgeBase.Models;
 
 /// <summary>
-/// What makes a content item a help article: who may read it, its category and summary, and what readers said about it.
+/// What makes a content item a help article: its summary and what readers said about it.
 /// </summary>
+/// <remarks>Who may read an article is the Content Access Control feature's <c>RolePickerPart</c> on the type.</remarks>
 public sealed class KnowledgeArticlePart : ContentPart
 {
-    /// <summary>
-    /// Gets or sets who may read the article.
-    /// </summary>
-    public KnowledgeArticleAudience Audience { get; set; }
-
     /// <summary>
     /// Gets or sets the short summary shown in lists, searches and suggestions.
     /// </summary>
@@ -26,25 +22,4 @@ public sealed class KnowledgeArticlePart : ContentPart
     /// Gets or sets how many readers said it didn't help.
     /// </summary>
     public int NotHelpfulCount { get; set; }
-}
-
-/// <summary>
-/// Who may read an article.
-/// </summary>
-public enum KnowledgeArticleAudience
-{
-    /// <summary>
-    /// Everyone, signed in or not.
-    /// </summary>
-    Public,
-
-    /// <summary>
-    /// Anyone signed in.
-    /// </summary>
-    SignedIn,
-
-    /// <summary>
-    /// Staff only: people with the View staff articles permission.
-    /// </summary>
-    Staff,
 }

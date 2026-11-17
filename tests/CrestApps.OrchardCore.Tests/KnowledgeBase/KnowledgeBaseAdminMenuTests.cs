@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.KnowledgeBase;
 using CrestApps.OrchardCore.KnowledgeBase.Navigation;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Contents;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Tests.KnowledgeBase;
@@ -27,13 +28,13 @@ public sealed class KnowledgeBaseAdminMenuTests
         Assert.Equal(("knowledgeBase", "Knowledge Base"), (knowledgeBase.Id, knowledgeBase.Text.Value));
         Assert.True(string.CompareOrdinal(knowledgeBase.Position, new LocalizedString("Boards", "Boards").PrefixPosition("1.5")) > 0);
         Assert.True(string.CompareOrdinal(knowledgeBase.Position, new LocalizedString("Desks", "Desks").PrefixPosition("2")) < 0);
-        Assert.Contains(knowledgeBase.Permissions, permission => permission.Name == KnowledgeBasePermissions.ViewStaffArticles.Name);
+        Assert.Contains(knowledgeBase.Permissions, permission => permission.Name == CommonPermissions.ListContent.Name);
 
         var items = knowledgeBase.Items.OrderBy(item => item.Position, StringComparer.Ordinal).ToList();
         Assert.Equal(["knowledgeArticles", "knowledgeBaseHelpCenter"], items.Select(item => item.Id));
         Assert.Equal(("OrchardCore.Contents", KnowledgeBaseConstants.ArticleType), ((string)items[0].RouteValues["area"], (string)items[0].RouteValues["contentTypeId"]));
         Assert.Equal("~/help", items[1].Url);
-        Assert.All(items, item => Assert.Contains(item.Permissions, permission => permission.Name == KnowledgeBasePermissions.ViewStaffArticles.Name));
+        Assert.All(items, item => Assert.Contains(item.Permissions, permission => permission.Name == CommonPermissions.ListContent.Name));
     }
 
     private sealed class PassThroughLocalizer<T> : IStringLocalizer<T>

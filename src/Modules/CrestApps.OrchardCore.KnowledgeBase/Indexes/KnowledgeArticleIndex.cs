@@ -6,7 +6,8 @@ using YesSql.Indexes;
 namespace CrestApps.OrchardCore.KnowledgeBase.Indexes;
 
 /// <summary>
-/// The published articles, for the help center's lists, its search and suggestions.
+/// The published articles, for the help center's lists, its search and suggestions. Who may read each one is in
+/// Content Access Control's <c>ContentAccessRoleIndex</c>, matched on the content item id (both hold only the published version).
 /// </summary>
 public sealed class KnowledgeArticleIndex : MapIndex
 {
@@ -17,8 +18,6 @@ public sealed class KnowledgeArticleIndex : MapIndex
     public string Summary { get; set; }
 
     public string CategoryId { get; set; }
-
-    public KnowledgeArticleAudience Audience { get; set; }
 
     public DateTime? PublishedUtc { get; set; }
 
@@ -51,7 +50,6 @@ public sealed class KnowledgeArticleIndexProvider : IndexProvider<ContentItem>
                     Title = Cut(item.DisplayText, MaxTitleLength),
                     Summary = Cut(part.Summary, MaxSummaryLength),
                     CategoryId = CategoryOf(item),
-                    Audience = part.Audience,
                     PublishedUtc = item.PublishedUtc,
                     HelpfulCount = part.HelpfulCount,
                 };

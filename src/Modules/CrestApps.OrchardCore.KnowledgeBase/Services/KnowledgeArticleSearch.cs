@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.KnowledgeBase.Indexes;
-using CrestApps.OrchardCore.KnowledgeBase.Models;
+using CrestApps.OrchardCore.Roles.Core;
+using CrestApps.OrchardCore.Roles.Core.Indexes;
+using OrchardCore;
 using YesSql;
 using YesSql.Services;
 
@@ -8,6 +10,8 @@ namespace CrestApps.OrchardCore.KnowledgeBase.Services;
 
 /// <summary>
 /// Finds the published articles a user may read: by words in the title or summary, by category, or the latest ones.
+/// Who may read an article is Content Access Control's: each query keeps, in SQL, to the articles whose
+/// <see cref="ContentAccessRoleIndex"/> rows meet the reader's roles.
 /// </summary>
 public sealed class KnowledgeArticleSearch
 {
@@ -22,13 +26,21 @@ public sealed class KnowledgeArticleSearch
     // The most articles the home page groups by category; a help center holds far fewer.
     private const int MaxGroupedArticles = 1000;
 
-    private readonly ISession _session;
-    private readonly KnowledgeArticleAccess _access;
+    /// <summary>
+    /// The roles of a reader who is not signed in, for <see cref="SuggestAsync(ClaimsPrincipal, string, int, IReadOnlyCollection{string}, CancellationToken)"/>.
+    /// </summary>
+    public static readonly IReadOnlyCollection<string> VisitorReader = [OrchardCoreConstants.Roles.Anonymous];
 
-    public KnowledgeArticleSearch(ISession session, KnowledgeArticleAccess access)
+    /// <summary>
+    /// The roles of a reader who is signed in, with no role known to matter.
+    /// </summary>
+    public static readonly IReadOnlyCollection<string> SignedInReader = [OrchardCoreConstants.Roles.Authenticated];
+
+    private readonly ISession _session;
+
+    public KnowledgeArticleSearch(ISession session)
     {
         _session = session;
-        _access = access;
     }
 
     /// <summary>
@@ -43,8 +55,7 @@ public sealed class KnowledgeArticleSearch
     /// <returns>The articles.</returns>
     public async Task<IReadOnlyList<KnowledgeArticleIndex>> FindAsync(ClaimsPrincipal user, string terms, IReadOnlyCollection<string> categoryIds, int take, CancellationToken cancellationToken = default)
     {
-        var audiences = (await _access.GetAudiencesAsync(user)).ToArray();
-        var query = _session.QueryIndex<KnowledgeArticleIndex>(index => index.Audience.IsIn(audiences));
+        var query = Readable(user, readerRoles: null);
 
         if (categoryIds is { Count: > 0 })
         {
@@ -70,19 +81,20 @@ public sealed class KnowledgeArticleSearch
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The articles.</returns>
     public Task<IReadOnlyList<KnowledgeArticleIndex>> SuggestAsync(ClaimsPrincipal user, string text, int take, CancellationToken cancellationToken = default)
-        => SuggestAsync(user, text, take, reader: null, cancellationToken);
+        => SuggestAsync(user, text, take, readerRoles: null, cancellationToken);
 
     /// <summary>
-    /// The articles that match what someone is writing, among those the user may read and, when <paramref name="reader"/>
+    /// The articles that match what someone is writing, among those the user may read and, when <paramref name="readerRoles"/>
     /// is given, that reader may read too: an agent answering a customer sees only what the customer can open.
     /// </summary>
     /// <param name="user">The user writing.</param>
     /// <param name="text">What they wrote.</param>
     /// <param name="take">How many at most.</param>
-    /// <param name="reader">The audiences the message's reader may read, or <see langword="null"/> for the user's own.</param>
+    /// <param name="readerRoles">The roles of the message's reader (<see cref="VisitorReader"/>, <see cref="SignedInReader"/>),
+    /// or <see langword="null"/> for the user's own.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The articles, best first.</returns>
-    public async Task<IReadOnlyList<KnowledgeArticleIndex>> SuggestAsync(ClaimsPrincipal user, string text, int take, IReadOnlyCollection<KnowledgeArticleAudience> reader, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<KnowledgeArticleIndex>> SuggestAsync(ClaimsPrincipal user, string text, int take, IReadOnlyCollection<string> readerRoles, CancellationToken cancellationToken = default)
     {
         var words = SuggestionWords(text);
 
@@ -91,18 +103,11 @@ public sealed class KnowledgeArticleSearch
             return [];
         }
 
-        var audiences = (await _access.GetAudiencesAsync(user)).Where(audience => reader is null || reader.Contains(audience)).ToArray();
-
-        if (audiences.Length == 0)
-        {
-            return [];
-        }
-
         var found = new Dictionary<long, (KnowledgeArticleIndex Article, int Hits)>();
 
         foreach (var word in words)
         {
-            foreach (var article in await _session.QueryIndex<KnowledgeArticleIndex>(index => index.Audience.IsIn(audiences) && (index.Title.Contains(word) || index.Summary.Contains(word))).Take(50).ListAsync(cancellationToken))
+            foreach (var article in await Readable(user, readerRoles).Where(index => index.Title.Contains(word) || index.Summary.Contains(word)).Take(50).ListAsync(cancellationToken))
             {
                 found[article.Id] = found.TryGetValue(article.Id, out var known) ? (known.Article, known.Hits + 1) : (article, 1);
             }
@@ -132,8 +137,7 @@ public sealed class KnowledgeArticleSearch
     /// <returns>Each category's id, its article count and its most helpful articles.</returns>
     public async Task<IReadOnlyDictionary<string, (int Count, IReadOnlyList<KnowledgeArticleIndex> Articles)>> ByCategoryAsync(ClaimsPrincipal user, int perCategory, CancellationToken cancellationToken = default)
     {
-        var audiences = (await _access.GetAudiencesAsync(user)).ToArray();
-        var rows = await _session.QueryIndex<KnowledgeArticleIndex>(index => index.Audience.IsIn(audiences) && index.CategoryId != null)
+        var rows = await Readable(user, readerRoles: null).Where(index => index.CategoryId != null)
             .OrderByDescending(index => index.HelpfulCount)
             .ThenByDescending(index => index.PublishedUtc)
             .Take(MaxGroupedArticles)
@@ -144,6 +148,27 @@ public sealed class KnowledgeArticleSearch
                 group => group.Key,
                 group => (group.Count(), (IReadOnlyList<KnowledgeArticleIndex>)[.. group.Take(Math.Clamp(perCategory, 1, 50))]),
                 StringComparer.Ordinal);
+    }
+
+    // The published articles the user may read and, when given, the reader too. An article with no role picked has an
+    // Anonymous and an Authenticated row, so everyone's roles meet it.
+    private IQueryIndex<KnowledgeArticleIndex> Readable(ClaimsPrincipal user, IReadOnlyCollection<string> readerRoles)
+    {
+        var query = _session.QueryIndex<KnowledgeArticleIndex>();
+
+        if (!ContentAccessRoles.SeesEverything(user))
+        {
+            var roles = ContentAccessRoles.GetReaderRoles(user).ToArray();
+            query = query.Where(index => index.ContentItemId.IsIn<ContentAccessRoleIndex>(row => row.ContentItemId, row => row.RoleName.IsIn(roles)));
+        }
+
+        if (readerRoles is not null)
+        {
+            var reader = readerRoles.ToArray();
+            query = query.Where(index => index.ContentItemId.IsIn<ContentAccessRoleIndex>(row => row.ContentItemId, row => row.RoleName.IsIn(reader)));
+        }
+
+        return query;
     }
 
     // At most five words of two letters or more, so a search stays cheap.

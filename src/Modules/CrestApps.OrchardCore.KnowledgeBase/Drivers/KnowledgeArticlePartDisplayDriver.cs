@@ -7,7 +7,7 @@ using OrchardCore.DisplayManagement.Views;
 namespace CrestApps.OrchardCore.KnowledgeBase.Drivers;
 
 /// <summary>
-/// Edits an article's audience, category and summary, and shows the "was this helpful?" question under it.
+/// Edits an article's summary, and shows the "was this helpful?" question under it.
 /// </summary>
 internal sealed class KnowledgeArticlePartDisplayDriver : ContentPartDisplayDriver<KnowledgeArticlePart>
 {
@@ -21,7 +21,6 @@ internal sealed class KnowledgeArticlePartDisplayDriver : ContentPartDisplayDriv
     public override IDisplayResult Edit(KnowledgeArticlePart part, BuildPartEditorContext context)
         => Initialize<KnowledgeArticlePartViewModel>("KnowledgeArticlePart_Edit", model =>
         {
-            model.Audience = part.Audience;
             model.Summary = part.Summary;
         });
 
@@ -31,7 +30,6 @@ internal sealed class KnowledgeArticlePartDisplayDriver : ContentPartDisplayDriv
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        part.Audience = model.Audience;
         part.Summary = string.IsNullOrWhiteSpace(model.Summary) ? null : model.Summary.Trim();
 
         return Edit(part, context);

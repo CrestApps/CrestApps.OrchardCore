@@ -15,6 +15,31 @@ namespace CrestApps.OrchardCore.Core.Security;
 public static class RolePermissionMigrations
 {
     /// <summary>
+    /// Lists the roles that hold a permission through their claims, for a migration that moves what the permission
+    /// granted somewhere else. The Administrator role, which holds every permission without claims, is not listed.
+    /// </summary>
+    /// <param name="serviceProvider">The services of the scope to work in.</param>
+    /// <param name="permissionName">The permission's name.</param>
+    /// <returns>The role names.</returns>
+    public static async Task<IReadOnlyList<string>> GetRolesHoldingAsync(IServiceProvider serviceProvider, string permissionName)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(permissionName);
+
+        var roleService = serviceProvider.GetService<IRoleService>();
+
+        if (roleService is null)
+        {
+            return [];
+        }
+
+        return [.. (await roleService.GetRolesAsync())
+            .OfType<Role>()
+            .Where(role => role.RoleClaims?.Any(claim => claim.ClaimType == Permission.ClaimType && claim.ClaimValue == permissionName) == true)
+            .Select(role => role.RoleName)
+            .Order(StringComparer.OrdinalIgnoreCase)];
+    }
+
+    /// <summary>
     /// Grants every role that holds one of the keys the permissions listed against it.
     /// </summary>
     /// <param name="serviceProvider">The services of the scope to work in.</param>

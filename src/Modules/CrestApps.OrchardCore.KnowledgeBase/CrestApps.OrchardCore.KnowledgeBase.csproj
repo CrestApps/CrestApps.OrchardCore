@@ -6,7 +6,7 @@
     <Description>
       $(OCCMSDescription)
 
-      Help articles for customers, signed-in people or staff: a Knowledge Article content type with categories, a help
+      Help articles for everyone, signed-in people or the roles you pick: a Knowledge Article content type with categories, a help
       center with search, "was this helpful?" feedback, and suggestions other modules show while people write.
     </Description>
     <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS KnowledgeBase HelpCenter Articles</PackageTags>
@@ -44,6 +44,12 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.ContentFields.Abstractions\CrestApps.OrchardCore.ContentFields.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Roles.Core\CrestApps.OrchardCore.Roles.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Carries the Content Access Control feature dependency, so a site that installs this package loads it. -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.ContentAccessControl\CrestApps.OrchardCore.ContentAccessControl.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

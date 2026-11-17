@@ -1,13 +1,15 @@
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Contents;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.KnowledgeBase.Navigation;
 
 /// <summary>
 /// Adds Knowledge Base to the Service Desk menu: the knowledge articles (Orchard Core's content list of the Knowledge
-/// Article type, which has its own New button) and the help center at /help. Whoever may read staff-only articles sees
-/// it; the list and the editor still ask for the content permissions of the type.
+/// Article type, which has its own New button) and the help center at /help. Whoever may list content items sees it,
+/// as with Orchard Core's own content lists; the list and the editor still ask for the content permissions of the type,
+/// and who may read each article is Content Access Control's.
 /// </summary>
 internal sealed class KnowledgeBaseAdminMenu : AdminNavigationProvider
 {
@@ -33,7 +35,7 @@ internal sealed class KnowledgeBaseAdminMenu : AdminNavigationProvider
             .Id("serviceDesk")
             .Add(S["Knowledge Base"], S["Knowledge Base"].PrefixPosition("1.8"), knowledgeBase => knowledgeBase
                 .Id("knowledgeBase")
-                .Permission(KnowledgeBasePermissions.ViewStaffArticles)
+                .Permission(CommonPermissions.ListContent)
                 .Add(S["Articles"], S["Articles"].PrefixPosition("1"), articles => articles
                     .Id("knowledgeArticles")
                     .Action("List", "Admin", new RouteValueDictionary
@@ -41,12 +43,12 @@ internal sealed class KnowledgeBaseAdminMenu : AdminNavigationProvider
                         { "area", "OrchardCore.Contents" },
                         { "contentTypeId", KnowledgeBaseConstants.ArticleType },
                     })
-                    .Permission(KnowledgeBasePermissions.ViewStaffArticles)
+                    .Permission(CommonPermissions.ListContent)
                     .LocalNav())
                 .Add(S["Help center"], S["Help center"].PrefixPosition("2"), helpCenter => helpCenter
                     .Id("knowledgeBaseHelpCenter")
                     .Url("~/help")
-                    .Permission(KnowledgeBasePermissions.ViewStaffArticles)
+                    .Permission(CommonPermissions.ListContent)
                     .LocalNav())));
 
         return ValueTask.CompletedTask;

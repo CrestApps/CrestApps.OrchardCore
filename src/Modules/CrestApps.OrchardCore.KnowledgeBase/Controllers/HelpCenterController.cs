@@ -92,10 +92,10 @@ public sealed class HelpCenterController : Controller
     [HttpGet("help/api/suggest", Name = KnowledgeBaseConstants.SuggestRouteName)]
     public async Task<IActionResult> Suggest(string q, string reader = null)
     {
-        IReadOnlyCollection<KnowledgeArticleAudience> readable = reader?.ToLowerInvariant() switch
+        var readable = reader?.ToLowerInvariant() switch
         {
-            "public" => [KnowledgeArticleAudience.Public],
-            "signedin" => [KnowledgeArticleAudience.Public, KnowledgeArticleAudience.SignedIn],
+            "public" => KnowledgeArticleSearch.VisitorReader,
+            "signedin" => KnowledgeArticleSearch.SignedInReader,
             _ => null,
         };
         var found = await _search.SuggestAsync(User, q, 5, readable, HttpContext.RequestAborted);
