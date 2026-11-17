@@ -252,6 +252,57 @@ It needs **Manage SEO related settings**. Use it to read back the effect of a ch
 
 The four tools need **Manage sitemaps**. `saveSitemap` checks every argument before it changes anything, so a refused call leaves the sitemap as it was. A source listed with its `sourceId` is kept and updated; a stored source that is not listed is removed. The tools cannot create a sitemap index, and they neither list nor change the sitemaps an index contains: that stays on the **Sitemap Indexes** page.
 
+### Media library tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Media`
+
+| Function | Description |
+| --- | --- |
+| `listMediaFiles` | Lists the sub-folders and files of a media folder (the root when no path is given), with optional name and extension filter, recursion and paging. Each file has its path, size, MIME type, date and public URL. |
+| `getMediaFile` | Returns one media file's details and public URL and, when asked, its text content. |
+| `getMediaOptions` | Returns the media configuration: allowed and restricted file extensions, maximum upload size, supported image sizes, CDN base URL, the enabled media features and the remaining permitted storage. |
+| `importMediaFromUrl` | Downloads a file from a public http or https URL and stores it in a media folder. Asks for approval. |
+| `saveMediaTextFile` | Creates a text file (for example `.csv`, `.svg`, `.css` or `.js`) in a media folder from the supplied text. Asks for approval. |
+| `moveMediaFile` | Moves or renames up to 50 media files: each file's current path and its new path. |
+| `copyMediaFile` | Copies a media file to a new path. |
+| `deleteMediaFile` | Permanently deletes up to 50 media files by path. Asks for approval. |
+
+The file tools check what the Media Library checks: **Manage Media** first, then the folder permission with the path as the resource. Orchard Core maps the path to the right permission, so the attached media folder needs **Manage Attached Media Fields Folder**, another user's folder needs **Manage Media For Others**, and with Secure Media the folder's view permission applies too. `listMediaFiles` leaves out the folders the caller may not manage. `getMediaOptions` needs **View Media Options**; it adds the remaining storage only for a caller who may manage the media library.
+
+A path is given from the root of the media library, for example `brand/logo.png`, as the media library stores it and not URL-encoded. A path with a drive or a `..` segment is refused, and so is a path that names another folder or file when it is URL-decoded, because Orchard Core decodes a path before it checks the folder permission. The tools move, copy, import and save only into a folder that exists, and none of them creates or deletes a folder: do that in the Media Library. A new file must have an extension the site allows; a restricted extension (`.css`, `.js` and `.svg` by default) also needs **Upload media file extensions requiring additional permission**. No tool replaces a file unless `overwrite` is set, and `moveMediaFile` and `copyMediaFile` never replace one. `moveMediaFile` and `deleteMediaFile` check every file before they change the first one. Content that references a moved or deleted file is not updated, because media fields and HTML or Markdown bodies store the path as text.
+
+`importMediaFromUrl` and `saveMediaTextFile` store the file through the file creation pipeline of an upload, so the file event handlers of the site (an antivirus scan, for example) can refuse it, and the site's maximum upload size applies. `saveMediaTextFile` writes UTF-8 text and only the text extensions `.css`, `.csv`, `.htm`, `.html`, `.js`, `.json`, `.md`, `.srt`, `.svg`, `.tsv`, `.txt`, `.vtt`, `.xml`, `.yaml` and `.yml`. The file is served from the site, so it must hold no secret and no script the user did not review.
+
+`importMediaFromUrl` fetches an address the model chose, so it is built to never read the site's own network:
+
+- Only `http` and `https` addresses are accepted, without a user name or password.
+- The host is resolved before the request, and the request is refused when any of its addresses is a loopback, private, link-local or other internal address. The connection goes through the shared egress guard, which checks the address again when the connection opens.
+- Redirects are followed by the tool, at most five, and each one is checked the same way. A redirect to an internal address is not followed.
+- The download stops at the site's maximum upload size and after 100 seconds.
+- A web page returned in place of the file (a sign-in page, for example) is not stored.
+
+`getMediaFile` returns text only when `includeText` is set, and at most the first 20000 characters. Text, Markdown, PDF, Word and PowerPoint files are read by the text providers of the media indexing features (`OrchardCore.Media.Indexing.Text`, `OrchardCore.Media.Indexing.Pdf`, `OrchardCore.Media.Indexing.OpenXML`) when they are enabled. Without a provider, the tool reads a plain-text file of up to 1 MB.
+
+### Media cache tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Media.Cache`
+
+| Function | Description |
+| --- | --- |
+| `purgeMediaCache` | Purges the local cache of files fetched from remote media storage (Amazon S3 or Azure Blob). Files are fetched again on the next request. |
+
+It needs **Manage Asset Cache Folder**. It says so when no remote media store is enabled and configured, because then there is no cache.
+
+### Shortcode tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Shortcodes`
+
+| Function | Description |
+| --- | --- |
+| `listShortcodes` | Lists every shortcode available on the site (built-in and template-based) with its hint, usage, default value and categories, with an optional search on the name, hint or category. |
+
+The list is the catalog the shortcode picker of the HTML and Markdown editors shows. That picker checks no permission, so the tool asks only for a signed-in user. It does not return the Liquid content of a shortcode template.
+
 ### Feature management tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Features`
