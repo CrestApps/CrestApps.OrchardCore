@@ -32,6 +32,7 @@
     <PackageReference Include="OrchardCore.Email.Abstractions" />
     <PackageReference Include="OrchardCore.Flows.Core" />
     <PackageReference Include="OrchardCore.Media.Core" />
+    <PackageReference Include="OrchardCore.Shortcodes.Abstractions" />
     <PackageReference Include="OrchardCore.Sms.Abstractions" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
     <PackageReference Include="OrchardCore.Notifications.Core" />

@@ -150,6 +150,8 @@ public static class OrchardCoreFeatureIds
 
     public const string Seo = "OrchardCore.Seo";
 
+    public const string Shortcodes = "OrchardCore.Shortcodes";
+
     public const string ShortcodesTemplates = "OrchardCore.Shortcodes.Templates";
 
     public const string SignalR = "OrchardCore.SignalR";
