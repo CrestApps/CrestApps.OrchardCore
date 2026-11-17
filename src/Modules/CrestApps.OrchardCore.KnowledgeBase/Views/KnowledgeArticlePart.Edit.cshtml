@@ -1,16 +1,6 @@
 @model KnowledgeArticlePartViewModel
 
 <div class="mb-3">
-    <label asp-for="Audience" class="form-label">@T["Who can read it"]</label>
-    <select asp-for="Audience" class="form-select">
-        <option value="@KnowledgeArticleAudience.Public">@T["Everyone"]</option>
-        <option value="@KnowledgeArticleAudience.SignedIn">@T["People who are signed in"]</option>
-        <option value="@KnowledgeArticleAudience.Staff">@T["Staff only"]</option>
-    </select>
-    <span class="hint">@T["Staff only articles need the View staff-only knowledge articles permission."]</span>
-</div>
-
-<div class="mb-3">
     <label asp-for="Category" class="form-label">@T["Category"]</label>
     <input asp-for="Category" class="form-control" maxlength="100" />
     <span class="hint">@T["Articles with the same category are listed together in the help center."]</span>

@@ -1,12 +1,9 @@
 using CrestApps.OrchardCore.KnowledgeBase.Indexes;
-using CrestApps.OrchardCore.KnowledgeBase.Models;
 
 namespace CrestApps.OrchardCore.KnowledgeBase.ViewModels;
 
 public class KnowledgeArticlePartViewModel
 {
-    public KnowledgeArticleAudience Audience { get; set; }
-
     public string Category { get; set; }
 
     public string Summary { get; set; }

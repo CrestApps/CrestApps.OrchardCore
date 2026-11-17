@@ -704,6 +704,17 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "Workforce_TeamIndex",
             "The index of the team documents Workforce kept in its own collection before teams had their own module. Workforce is new in 3.0.0, so no stable release created the table. It is dropped in the same step that saves every one of those teams again in the Teams collection with the same id, where the Teams module's own index serves them."),
         new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.KnowledgeBase/Migrations/KnowledgeBaseMigrations.cs",
+            "KnowledgeBaseMigrations",
+            "UpdateFrom1Async",
+            "DropIndex",
+            "IDX_KnowledgeArticleIndex_Category",
+            MigrationContractJustification.InPlaceRebuild,
+            "3.0.0",
+            null,
+            "The category index, which led with the article's own audience, comes down and is recreated over the category in the same step, while the unused nullable audience column stays.",
+            "CreateIndex"),
+        new MigrationContractEntry(
             "src/Modules/CrestApps.OrchardCore.Workforce/Migrations/WorkforceTeamsMove.cs",
             "WorkforceTeamsMove",
             "DeleteLegacyDocumentsAsync",
