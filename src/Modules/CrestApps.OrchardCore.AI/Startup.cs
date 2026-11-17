@@ -690,6 +690,7 @@ public sealed class ToolInstancesStartup : StartupBase
 
         services
             .AddDataMigration<AIToolInstanceIndexMigrations>()
+            .AddScoped<HttpApiRequestSecretPlace>()
             .AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>()
             .AddDisplayDriver<AIToolInstance, AIToolInstanceParametersDisplayDriver>()
             .AddDisplayDriver<AIToolInstance, HttpApiRequestToolInstanceDisplayDriver>()

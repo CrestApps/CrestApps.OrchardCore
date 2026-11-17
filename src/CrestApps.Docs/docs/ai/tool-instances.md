@@ -46,7 +46,7 @@ The base URL and the OAuth 2.0 token endpoint may not be on the site's own netwo
 
 The check resolves the host name when the instance is saved, and the same rule applies to AI connections, deployments and data sources. An Azure OpenAI, Azure AI Search or other provider endpoint reached through a private endpoint resolves to a private address from inside the network, so it can be saved only when the host sets `CrestApps:AI:Egress:AllowPrivateNetwork`.
 
-A stored API key, password, token or client secret is kept only while the instance, connection, deployment or data source sends it to the same place. Changing the scheme, host or port of the base URL, endpoint or token endpoint, or the authentication type, drops the stored secrets in the editor and in the recipe steps, and they must be entered again. A change of path keeps them.
+A stored API key, password, token or client secret is kept only while the instance, connection, deployment or data source sends it to the same place. Changing the scheme, host or port of the base URL, endpoint or token endpoint, or the authentication type, drops the stored secrets in the editor and in the recipe steps, and they must be entered again. A change of path keeps them. On an HTTP API Request instance the same change also drops the cached OAuth 2.0 access and refresh tokens and the value of every fixed parameter marked secret, such as a key sent in a header.
 
 ## The documentation search sources
 

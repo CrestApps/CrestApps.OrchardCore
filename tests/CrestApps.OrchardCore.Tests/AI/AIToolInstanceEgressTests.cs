@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Tooling.Instances.Documentation;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
+using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
@@ -80,7 +81,7 @@ public sealed class AIToolInstanceEgressTests
         var context = CreateContext(new HttpApiRequestToolInstanceViewModel { BaseUrl = baseUrl, HttpMethod = "GET" });
 
         // Act
-        await new HttpApiRequestToolInstanceDisplayDriver(new EphemeralDataProtectionProvider(), Policy(), new PassThroughLocalizer<HttpApiRequestToolInstanceDisplayDriver>())
+        await new HttpApiRequestToolInstanceDisplayDriver(new EphemeralDataProtectionProvider(), Policy(), new HttpApiRequestSecretPlace(), new PassThroughLocalizer<HttpApiRequestToolInstanceDisplayDriver>())
             .UpdateAsync(instance, context);
 
         // Assert
@@ -103,7 +104,7 @@ public sealed class AIToolInstanceEgressTests
         });
 
         // Act
-        await new HttpApiRequestToolInstanceDisplayDriver(new EphemeralDataProtectionProvider(), Policy(), new PassThroughLocalizer<HttpApiRequestToolInstanceDisplayDriver>())
+        await new HttpApiRequestToolInstanceDisplayDriver(new EphemeralDataProtectionProvider(), Policy(), new HttpApiRequestSecretPlace(), new PassThroughLocalizer<HttpApiRequestToolInstanceDisplayDriver>())
             .UpdateAsync(instance, context);
 
         // Assert
@@ -118,7 +119,7 @@ public sealed class AIToolInstanceEgressTests
         var context = CreateContext(new HttpApiRequestToolInstanceViewModel { BaseUrl = "https://api.example.com/orders", HttpMethod = "GET" });
 
         // Act
-        await new HttpApiRequestToolInstanceDisplayDriver(new EphemeralDataProtectionProvider(), Policy(), new PassThroughLocalizer<HttpApiRequestToolInstanceDisplayDriver>())
+        await new HttpApiRequestToolInstanceDisplayDriver(new EphemeralDataProtectionProvider(), Policy(), new HttpApiRequestSecretPlace(), new PassThroughLocalizer<HttpApiRequestToolInstanceDisplayDriver>())
             .UpdateAsync(instance, context);
 
         // Assert

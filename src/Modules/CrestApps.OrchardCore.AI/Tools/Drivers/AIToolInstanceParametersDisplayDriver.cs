@@ -3,6 +3,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.AI.Tooling.Instances;
 using CrestApps.Core.AI.Tooling.Parameters;
+using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
@@ -24,6 +25,7 @@ internal sealed class AIToolInstanceParametersDisplayDriver : DisplayDriver<AITo
     private readonly AIOptions _aiOptions;
     private readonly IEnumerable<IAIToolParameterContextResolver> _contextResolvers;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly HttpApiRequestSecretPlace _secretPlace;
 
     internal readonly IStringLocalizer S;
 
@@ -31,11 +33,13 @@ internal sealed class AIToolInstanceParametersDisplayDriver : DisplayDriver<AITo
         IOptions<AIOptions> aiOptions,
         IEnumerable<IAIToolParameterContextResolver> contextResolvers,
         IDataProtectionProvider dataProtectionProvider,
+        HttpApiRequestSecretPlace secretPlace,
         IStringLocalizer<AIToolInstanceParametersDisplayDriver> stringLocalizer)
     {
         _aiOptions = aiOptions.Value;
         _contextResolvers = contextResolvers;
         _dataProtectionProvider = dataProtectionProvider;
+        _secretPlace = secretPlace;
         S = stringLocalizer;
     }
 
@@ -72,9 +76,16 @@ internal sealed class AIToolInstanceParametersDisplayDriver : DisplayDriver<AITo
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        // A fixed secret parameter, such as a key sent in a header, was given for the place the instance sends to. When the
+        // post moves it, a blank secret box keeps nothing and the value must be entered again, on the same answer the
+        // settings driver uses, whichever of the two drivers runs first.
+        var stored = await _secretPlace.IsSamePlaceAsync(instance, context.Updater, Prefix)
+            ? AIToolParameterBinder.GetParameters(instance)
+            : [];
+
         var parameters = AIToolInstanceParameterViewModel.ToParameters(
             model.Parameters,
-            AIToolParameterBinder.GetParameters(instance),
+            stored,
             value => _dataProtectionProvider.ProtectSetting(HttpApiRequestToolConstants.DataProtectionPurpose, value));
 
         foreach (var (index, error) in AIToolParameterValidator.Validate(parameters, capabilities))

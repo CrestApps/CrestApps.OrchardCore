@@ -17,12 +17,19 @@ namespace CrestApps.OrchardCore.AI.Core.Recipes;
 /// an object with a <c>Host</c> member; in it, the host, port and user name, the SFTP host key fingerprint and the
 /// proxy's type, host, port and user name are compared as they are, with <see cref="SecretDestination.SameValue"/>, as
 /// the FTP and SFTP editors compare them. A secret is a text member <see cref="IngestionSourceSecrets.IsSecret"/> names,
-/// in <see cref="ExtensibleEntity.Properties"/>. Matching by name covers the metadata of every provider without listing
-/// it, as the deployment plans do.
+/// in <see cref="ExtensibleEntity.Properties"/>, or the <c>DefaultValue</c> of a tool instance's declared parameter marked
+/// <c>IsSecret</c>, matched with the stored parameter by its <c>Name</c>. Matching by name covers the metadata of every
+/// provider without listing it, as the deployment plans do.
 /// </remarks>
 public static class RecipeSecretDestinations
 {
     private const string HostMember = "Host";
+
+    private const string NameMember = "Name";
+
+    private const string IsSecretMember = "IsSecret";
+
+    private const string DefaultValueMember = "DefaultValue";
 
     private static readonly string[] _addressSuffixes = ["Endpoint", "Url"];
 
@@ -132,9 +139,65 @@ public static class RecipeSecretDestinations
             {
                 dropped = true;
             }
+            else if (value is JsonArray items && DropKeptParameterValues(items, before[key] as JsonArray))
+            {
+                dropped = true;
+            }
         }
 
         return dropped;
+    }
+
+    // A tool instance's declared parameters are an array of objects named by "Name"; a fixed one marked "IsSecret", such as
+    // a key sent in a header, holds its protected value in "DefaultValue", which is dropped when the recipe kept it.
+    private static bool DropKeptParameterValues(JsonArray after, JsonArray before)
+    {
+        if (before is null)
+        {
+            return false;
+        }
+
+        var dropped = false;
+
+        foreach (var parameter in after.OfType<JsonObject>())
+        {
+            if (Member(parameter, IsSecretMember, out _) is not JsonValue isSecret ||
+                !isSecret.TryGetValue<bool>(out var secret) ||
+                !secret ||
+                Member(parameter, DefaultValueMember, out var valueKey) is not { } value ||
+                Text(value) is not { Length: > 0 } text)
+            {
+                continue;
+            }
+
+            var name = Text(Member(parameter, NameMember, out _));
+            var previous = before.OfType<JsonObject>().FirstOrDefault(item => string.Equals(Text(Member(item, NameMember, out _)), name, StringComparison.OrdinalIgnoreCase));
+
+            if (previous is not null && string.Equals(text, Text(Member(previous, DefaultValueMember, out _)), StringComparison.Ordinal))
+            {
+                parameter[valueKey] = null;
+                dropped = true;
+            }
+        }
+
+        return dropped;
+    }
+
+    private static JsonNode Member(JsonObject node, string name, out string key)
+    {
+        foreach (var (memberName, value) in node)
+        {
+            if (string.Equals(memberName, name, StringComparison.OrdinalIgnoreCase))
+            {
+                key = memberName;
+
+                return value;
+            }
+        }
+
+        key = null;
+
+        return null;
     }
 
     private static bool IsKeptSecret(string name, JsonNode after, JsonNode before)
