@@ -125,7 +125,7 @@ public sealed class KnowledgeArticlePartPositionsTests
         Assert.Equal("Body", type.Parts.Single(part => part.Name == "MarkdownBodyPart").GetSettings<ContentTypePartSettings>().DisplayName);
     }
 
-    // Version 5 gives the type Content Access Control's role picker, "Who can read it", right after the title.
+    // Version 5 gives the type Content Access Control's role picker, under its own name, right after the title.
     [Fact]
     public async Task AVersion4Site_GetsWhoCanReadIt_AfterTheTitle_WithWholePositions()
     {
@@ -150,9 +150,37 @@ public sealed class KnowledgeArticlePartPositionsTests
         Assert.Equal(["TitlePart", KnowledgeBaseConstants.WhoCanReadItPart, KnowledgeBaseConstants.PartName, KnowledgeBaseConstants.ArticleType, "MarkdownBodyPart", "AutoroutePart"], Ordered(type));
         Assert.Equal(["1", "2", "3", "4", "5", "6"], type.Parts.Select(Position).Order());
         var picker = type.Parts.Single(part => part.Name == KnowledgeBaseConstants.WhoCanReadItPart);
-        Assert.Equal("Who can read it", picker.GetSettings<ContentTypePartSettings>().DisplayName);
+        Assert.Null(picker.GetSettings<ContentTypePartSettings>().DisplayName);
         Assert.True(picker.GetSettings<RolePickerPartContentAccessControlSettings>().IsContentRestricted);
         Assert.True(picker.GetSettings<RolePickerPartSettings>().AllowSelectMultiple);
+    }
+
+    // Version 5 named the role picker "Who can read it"; version 6 shows Content Access Control's own name, Role Picker,
+    // and leaves a name an administrator chose.
+    [Theory]
+    [InlineData("Who can read it", null)]
+    [InlineData("Readers", "Readers")]
+    public async Task AVersion5Site_ShowsTheRolePickersOwnName(string label, string expected)
+    {
+        // Arrange
+        var definitions = new CachingDefinitions();
+        await definitions.StoreTypeDefinitionAsync(new ContentTypeDefinitionBuilder()
+            .WithName(KnowledgeBaseConstants.ArticleType)
+            .WithPart("TitlePart", part => part.WithPosition("1"))
+            .WithPart(KnowledgeBaseConstants.WhoCanReadItPart, part => part
+                .WithPosition("2")
+                .WithDisplayName(label)
+                .WithSettings(new RolePickerPartContentAccessControlSettings { IsContentRestricted = true }))
+            .Build());
+
+        // Act
+        Assert.Equal(6, await Migrations(definitions).UpdateFrom5Async());
+
+        // Assert: only the name changes.
+        var picker = (await definitions.LoadTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType)).Parts.Single(part => part.Name == KnowledgeBaseConstants.WhoCanReadItPart);
+        Assert.Equal(expected, picker.GetSettings<ContentTypePartSettings>().DisplayName);
+        Assert.Equal("2", Position(picker));
+        Assert.True(picker.GetSettings<RolePickerPartContentAccessControlSettings>().IsContentRestricted);
     }
 
     private static KnowledgeBaseMigrations Migrations(IContentDefinitionManager definitions)

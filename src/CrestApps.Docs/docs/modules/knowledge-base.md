@@ -13,7 +13,7 @@ The **Knowledge Base** holds help articles. It has no dependency on [Tickets](./
 
 ## Articles
 
-The feature adds a **Knowledge Article** content type (`KnowledgeArticle`): a title, a **Who can read it** role picker, `KnowledgeArticlePart`, a **Category** field, a Markdown body labelled **Body** (with Orchard Core's Wysiwyg editor) and a path (`help/{slug}`, from its Autoroute part), in that order. Each part has a whole-number position, which Orchard Core's content type editor needs. Articles are drafted, versioned and translated as any content item. `KnowledgeArticlePart` holds:
+The feature adds a **Knowledge Article** content type (`KnowledgeArticle`): a title, Content Access Control's **Role Picker**, `KnowledgeArticlePart`, a **Category** field, a Markdown body labelled **Body** (with Orchard Core's Wysiwyg editor) and a path (`help/{slug}`, from its Autoroute part), in that order. Each part has a whole-number position, which Orchard Core's content type editor needs. Articles are drafted, versioned and translated as any content item. `KnowledgeArticlePart` holds:
 
 | Property | Holds |
 | --- | --- |
@@ -22,7 +22,7 @@ The feature adds a **Knowledge Article** content type (`KnowledgeArticle`): a ti
 
 ## Who can read an article
 
-The Knowledge Base has no audience of its own: who may read an article is [Content Access Control](./content-access-control)'s. The type carries a `RolePickerPart` named **Who can read it** with **Restrict content?** on, so:
+The Knowledge Base has no audience of its own: who may read an article is [Content Access Control](./content-access-control)'s. The type carries a `RolePickerPart` (**Role Picker** on the editor) with **Restrict content?** on, so:
 
 | Roles picked | Who reads the article |
 | --- | --- |

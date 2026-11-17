@@ -26,7 +26,7 @@ public static class KnowledgeBaseConstants
     public const string PartName = "KnowledgeArticlePart";
 
     /// <summary>
-    /// The part, Content Access Control's restricted role picker, that holds who may read an article ("Who can read it").
+    /// The part, Content Access Control's restricted role picker, that holds who may read an article.
     /// </summary>
     public const string WhoCanReadItPart = "RolePickerPart";
 

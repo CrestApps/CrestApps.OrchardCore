@@ -42,6 +42,9 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
     // Where an article kept who may read it before Content Access Control did.
     private const string AudienceProperty = "Audience";
 
+    // The label version 5 gave the role picker on the article editor, before it kept Content Access Control's own.
+    private const string OldWhoCanReadItLabel = "Who can read it";
+
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ISession _session;
     private readonly IServiceProvider _serviceProvider;
@@ -106,7 +109,7 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
         ConvertCategoriesOnceCommitted(await DefineCategoriesAsync());
         await AddWhoCanReadItAsync();
 
-        return 5;
+        return 6;
     }
 
     /// <summary>
@@ -207,7 +210,7 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
 
     /// <summary>
     /// Moves who may read each article from its own audience to Content Access Control: the type gets the restricted
-    /// role picker "Who can read it", and an article for everyone picks no role, one for signed-in people picks
+    /// role picker, and an article for everyone picks no role, one for signed-in people picks
     /// Authenticated, and a staff one the roles that held <see cref="StaffArticlesPermission"/> and Administrator.
     /// </summary>
     /// <returns>The version.</returns>
@@ -246,6 +249,28 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
     }
 
     /// <summary>
+    /// Shows the role picker on the article editor under Content Access Control's own name, Role Picker, where version 5
+    /// named it "Who can read it"; a name an administrator gave it stays.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        var type = await _contentDefinitionManager.LoadTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType);
+        var picker = type?.Parts.FirstOrDefault(part => part.Name == KnowledgeBaseConstants.WhoCanReadItPart);
+        var settings = picker?.GetSettings<ContentTypePartSettings>();
+
+        if (settings is not null && string.Equals(settings.DisplayName, OldWhoCanReadItLabel, StringComparison.Ordinal))
+        {
+            settings.DisplayName = null;
+
+            await _contentDefinitionManager.AlterTypeDefinitionAsync(KnowledgeBaseConstants.ArticleType, builder =>
+                builder.WithPart(KnowledgeBaseConstants.WhoCanReadItPart, part => part.WithSettings(settings)));
+        }
+
+        return 6;
+    }
+
+    /// <summary>
     /// Picks the roles an article written before may be read by, from the audience it had, and removes the audience.
     /// </summary>
     /// <param name="article">The article.</param>
@@ -270,8 +295,8 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
     }
 
     /// <summary>
-    /// Gives the Knowledge Article type Content Access Control's restricted role picker, "Who can read it", with no role
-    /// meaning everyone. It goes after the title, with every part's final position in the same change, so positions stay
+    /// Gives the Knowledge Article type Content Access Control's restricted role picker, under its own name (Role Picker),
+    /// with no role meaning everyone. It goes after the title, with every part's final position in the same change, so positions stay
     /// whole and distinct; a type that already has it keeps its place.
     /// </summary>
     /// <returns>A task that completes when the type has the part.</returns>
@@ -314,8 +339,7 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
                     part.WithPosition(position);
                 }
 
-                part.WithDisplayName("Who can read it")
-                    .WithSettings(new RolePickerPartSettings
+                part.WithSettings(new RolePickerPartSettings
                     {
                         AllowSelectMultiple = true,
                         Hint = "Leave empty for everyone. Pick Authenticated for anyone who is signed in, or the roles of the staff who may read it.",
