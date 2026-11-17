@@ -7,21 +7,60 @@
 	var chatAttributePattern = /^data-(?:coreai-chat|chat-interaction)(?:-|$)/i;
 	var allowedDataAttributePattern = /^data-(?:chart-id|agui-(?:tool-call|interrupt|approved)|doc-index|error-index|carousel-(?:key|size|size-option|step|target)|stack-offset|active-index|image-count)$/i;
 	var chartCanvasIdPattern = /^chat_chart_\d+$/;
+	var formElementNames = [
+		"form",
+		"textarea",
+		"select",
+		"option",
+		"optgroup",
+		"datalist",
+		"output",
+		"label"
+	];
+	var linkingAttributeNames = /* @__PURE__ */ new Set([
+		"for",
+		"name",
+		"list",
+		"form",
+		"formaction",
+		"formmethod",
+		"formenctype",
+		"formtarget",
+		"formnovalidate",
+		"command",
+		"commandfor",
+		"popovertarget",
+		"popovertargetaction"
+	]);
+	var settingsClassPattern = /^(?:prompt-template-[\w-]+|remove-prompt-template-btn|capability-checkbox|setting-input|group-toggle|ci-agent-global-toggle)$/i;
 	var sanitizerMarker = "__crestAppsChatOutputGuard";
 	var watcherMarker = "__crestAppsChatOutputWatcher";
 	/**
-	* Returns whether an answer may keep an attribute: no data attribute but the chat's own, and no id except a chart's
-	* canvas.
+	* Returns whether an answer may keep an attribute: no data attribute but the chat's own, no id except a chart's canvas,
+	* nothing that ties an element to another control of the page, and checked only on a disabled checkbox (a task list).
 	* @param {string} elementName The element's tag name.
 	* @param {string} attributeName The attribute's name.
 	* @param {string} attributeValue The attribute's value.
+	* @param {Element} [element] The element, for the rules that look at it; without it those attributes are refused.
 	* @returns {boolean} Whether the attribute is kept.
 	*/
-	function isAllowedAttribute(elementName, attributeName, attributeValue) {
+	function isAllowedAttribute(elementName, attributeName, attributeValue, element) {
 		const name = String(attributeName || "").toLowerCase();
 		if (name.startsWith("data-")) return allowedDataAttributePattern.test(name);
 		if (name === "id") return String(elementName || "").toUpperCase() === "CANVAS" && chartCanvasIdPattern.test(String(attributeValue || ""));
-		return true;
+		if (name === "checked") return isTaskListCheckbox(element);
+		return !linkingAttributeNames.has(name);
+	}
+	/**
+	* Removes the classes Chat Interactions' settings script selects on from an answer's class attribute.
+	* @param {string} value The class attribute's value.
+	* @returns {string} The classes that are kept.
+	*/
+	function withoutSettingsClasses(value) {
+		return String(value || "").split(/\s+/).filter((token) => token && !settingsClassPattern.test(token)).join(" ");
+	}
+	function isTaskListCheckbox(element) {
+		return !!element && String(element.nodeName).toUpperCase() === "INPUT" && String(element.getAttribute("type") || "").trim().toLowerCase() === "checkbox" && element.hasAttribute("disabled");
 	}
 	/**
 	* Makes DOMPurify drop the attributes an answer must not carry, from every call the chat scripts make.
@@ -31,8 +70,18 @@
 	function hardenSanitizer(purify) {
 		if (!purify || typeof purify.addHook !== "function") return false;
 		if (purify[sanitizerMarker]) return true;
+		purify.addHook("uponSanitizeElement", (node, data) => {
+			if (data && data.allowedTags) for (const name of formElementNames) delete data.allowedTags[name];
+		});
 		purify.addHook("uponSanitizeAttribute", (node, data) => {
-			if (!isAllowedAttribute(node && node.nodeName, data.attrName, data.attrValue)) data.keepAttr = false;
+			if (!isAllowedAttribute(node && node.nodeName, data.attrName, data.attrValue, node)) {
+				data.keepAttr = false;
+				return;
+			}
+			if (String(data.attrName).toLowerCase() === "class") data.attrValue = withoutSettingsClasses(data.attrValue);
+		});
+		purify.addHook("afterSanitizeAttributes", (node) => {
+			if (node && String(node.nodeName).toUpperCase() === "BUTTON" && typeof node.setAttribute === "function") node.setAttribute("type", "button");
 		});
 		purify[sanitizerMarker] = true;
 		return true;

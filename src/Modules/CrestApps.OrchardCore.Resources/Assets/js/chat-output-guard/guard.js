@@ -5,6 +5,12 @@
 // attributes too: Orchard's admin theme posts a form with the page's antiforgery token for a click on
 // data-url-af="UnsafeUrl", and writes data-title into its confirm dialog as HTML. This guard closes that from outside
 // the vendored bundles, so it holds whether the page loads the local copy or the CDN one and survives a package bump.
+//
+// An answer could also reach the page's own form controls: a label stretched over the page with for set to a control's
+// id (a submit button, a role checkbox) turns the next click anywhere into a click on that control, and a form of the
+// answer's own can post off-site. On Chat Interactions the settings script collects prompt templates and tool
+// checkboxes from the whole document, by class and by name, so markup in an answer was saved as the user's settings.
+// The guard removes those elements and attributes from every call; none of the chat's own markup uses them.
 
 // The attributes that configure or start a chat or a chat widget. The watcher removes them from anything rendered.
 const chatAttributePattern = /^data-(?:coreai-chat|chat-interaction)(?:-|$)/i;
@@ -18,18 +24,30 @@ const allowedDataAttributePattern = /^data-(?:chart-id|agui-(?:tool-call|interru
 // The chart renderer gives each chart's canvas an id, which the chart is drawn into; every other id is refused.
 const chartCanvasIdPattern = /^chat_chart_\d+$/;
 
+// Form elements: an answer shows no form, field or label of its own. Their text is kept.
+const formElementNames = ['form', 'textarea', 'select', 'option', 'optgroup', 'datalist', 'output', 'label'];
+
+// The attributes that tie an element to another control of the page (for, list, form, the invoker and popover targets),
+// or name a value a form or a settings script reads (name).
+const linkingAttributeNames = new Set(['for', 'name', 'list', 'form', 'formaction', 'formmethod', 'formenctype', 'formtarget',
+    'formnovalidate', 'command', 'commandfor', 'popovertarget', 'popovertargetaction']);
+
+// The classes Chat Interactions' settings script selects on, anywhere in the document, to collect and save settings.
+const settingsClassPattern = /^(?:prompt-template-[\w-]+|remove-prompt-template-btn|capability-checkbox|setting-input|group-toggle|ci-agent-global-toggle)$/i;
+
 const sanitizerMarker = '__crestAppsChatOutputGuard';
 const watcherMarker = '__crestAppsChatOutputWatcher';
 
 /**
- * Returns whether an answer may keep an attribute: no data attribute but the chat's own, and no id except a chart's
- * canvas.
+ * Returns whether an answer may keep an attribute: no data attribute but the chat's own, no id except a chart's canvas,
+ * nothing that ties an element to another control of the page, and checked only on a disabled checkbox (a task list).
  * @param {string} elementName The element's tag name.
  * @param {string} attributeName The attribute's name.
  * @param {string} attributeValue The attribute's value.
+ * @param {Element} [element] The element, for the rules that look at it; without it those attributes are refused.
  * @returns {boolean} Whether the attribute is kept.
  */
-export function isAllowedAttribute(elementName, attributeName, attributeValue) {
+export function isAllowedAttribute(elementName, attributeName, attributeValue, element) {
     const name = String(attributeName || '').toLowerCase();
 
     if (name.startsWith('data-')) {
@@ -40,7 +58,27 @@ export function isAllowedAttribute(elementName, attributeName, attributeValue) {
         return String(elementName || '').toUpperCase() === 'CANVAS' && chartCanvasIdPattern.test(String(attributeValue || ''));
     }
 
-    return true;
+    if (name === 'checked') {
+        return isTaskListCheckbox(element);
+    }
+
+    return !linkingAttributeNames.has(name);
+}
+
+/**
+ * Removes the classes Chat Interactions' settings script selects on from an answer's class attribute.
+ * @param {string} value The class attribute's value.
+ * @returns {string} The classes that are kept.
+ */
+export function withoutSettingsClasses(value) {
+    return String(value || '').split(/\s+/).filter(token => token && !settingsClassPattern.test(token)).join(' ');
+}
+
+function isTaskListCheckbox(element) {
+    return !!element
+        && String(element.nodeName).toUpperCase() === 'INPUT'
+        && String(element.getAttribute('type') || '').trim().toLowerCase() === 'checkbox'
+        && element.hasAttribute('disabled');
 }
 
 /**
@@ -57,9 +95,31 @@ export function hardenSanitizer(purify) {
         return true;
     }
 
+    // A form element is dropped from the allowed tags of the call, so DOMPurify removes it and keeps its text.
+    purify.addHook('uponSanitizeElement', (node, data) => {
+        if (data && data.allowedTags) {
+            for (const name of formElementNames) {
+                delete data.allowedTags[name];
+            }
+        }
+    });
+
     purify.addHook('uponSanitizeAttribute', (node, data) => {
-        if (!isAllowedAttribute(node && node.nodeName, data.attrName, data.attrValue)) {
+        if (!isAllowedAttribute(node && node.nodeName, data.attrName, data.attrValue, node)) {
             data.keepAttr = false;
+
+            return;
+        }
+
+        if (String(data.attrName).toLowerCase() === 'class') {
+            data.attrValue = withoutSettingsClasses(data.attrValue);
+        }
+    });
+
+    // Every button the chat's markup renders is type="button"; any other one would submit a form.
+    purify.addHook('afterSanitizeAttributes', node => {
+        if (node && String(node.nodeName).toUpperCase() === 'BUTTON' && typeof node.setAttribute === 'function') {
+            node.setAttribute('type', 'button');
         }
     });
 
