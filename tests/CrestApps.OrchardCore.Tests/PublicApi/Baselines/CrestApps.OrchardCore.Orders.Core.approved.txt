@@ -43,6 +43,7 @@ namespace CrestApps.OrchardCore.Orders.Core.Indexes
         public OrderIndex() { }
         public string AccountId { get; set; }
         public System.DateTime? AnonymizedUtc { get; set; }
+        public System.DateTime? BudgetCommittedUtc { get; set; }
         public string CartId { get; set; }
         public string Channel { get; set; }
         public string CheckoutSessionId { get; set; }
@@ -829,6 +830,7 @@ namespace CrestApps.OrchardCore.Orders.Core.Services
     {
         public OrderQuery() { }
         public string AccountId { get; set; }
+        public System.DateTime? BudgetCommittedOnOrAfter { get; set; }
         public string Channel { get; set; }
         public System.DateTime? CreatedBefore { get; set; }
         public System.DateTime? CreatedOnOrAfter { get; set; }

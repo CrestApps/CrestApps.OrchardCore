@@ -82,6 +82,12 @@ public sealed class OrderQuery
     public DateTime? PaidOnOrAfter { get; set; }
 
     /// <summary>
+    /// Gets or sets the date on or after which the orders were asked to be approved or had their payment hold made
+    /// (<see cref="OrderIndex.BudgetCommittedUtc"/>). An order that did neither doesn't match.
+    /// </summary>
+    public DateTime? BudgetCommittedOnOrAfter { get; set; }
+
+    /// <summary>
     /// Gets or sets whether to leave out orders whose personal details were already removed.
     /// </summary>
     public bool NotAnonymized { get; set; }
@@ -212,6 +218,11 @@ public sealed class OrderStore : DocumentCatalog<Order, OrderIndex>, IOrderStore
         if (query.PaidOnOrAfter is { } paidOnOrAfter)
         {
             orders = orders.Where(index => (index.PaidUtc != null && index.PaidUtc >= paidOnOrAfter) || (index.PaidUtc == null && index.CreatedUtc >= paidOnOrAfter));
+        }
+
+        if (query.BudgetCommittedOnOrAfter is { } committedOnOrAfter)
+        {
+            orders = orders.Where(index => index.BudgetCommittedUtc != null && index.BudgetCommittedUtc >= committedOnOrAfter);
         }
 
         if (query.NotAnonymized)

@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -116,6 +117,84 @@ public sealed class B2BBudgetMonthTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(25m, spent);
+    }
+
+    /// <summary>
+    /// G16 (fix verification): the unpaid orders were read newest made first, 1,000 at most, from all time, so an order made
+    /// last month and held this month fell off the page behind 1,000 newer open checkouts. Only unpaid orders asked for or
+    /// held this month are read now.
+    /// </summary>
+    [Fact]
+    public async Task AnOrderMadeLastMonthAndHeldThisMonth_CountsBehindMoreThanAPageOfNewerUnpaidOrders()
+    {
+        // Arrange: the older order held this month, then a page and more of open checkouts made after it.
+        await AddAsync(new Order
+        {
+            ItemId = "held-after-midnight",
+            Status = OrderStatus.AwaitingPayment,
+            Subtotal = 30m,
+            CreatedUtc = _lastDayOfOctober,
+            BudgetHold = new OrderBudgetHold { Amount = 30m, Currency = "USD", HeldUtc = _afterMidnight },
+        });
+
+        await using (var session = _store.CreateSession())
+        {
+            var orders = new OrderStore(session);
+
+            for (var i = 0; i < 1001; i++)
+            {
+                await orders.CreateAsync(new Order { ItemId = $"open-{i}", AccountId = AccountId, Currency = "USD", Status = OrderStatus.Draft, Subtotal = 5m, CreatedUtc = _now.AddMinutes(-i) }, TestContext.Current.CancellationToken);
+            }
+
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        var spent = await GetSpentThisMonthAsync();
+
+        // Assert
+        Assert.Equal(30m, spent);
+    }
+
+    /// <summary>
+    /// G16: the orders migration that adds the budget column indexes the unpaid orders saved before it again, so an order
+    /// held this month before the upgrade still counts.
+    /// </summary>
+    [Fact]
+    public async Task AnUnpaidOrderIndexedBeforeTheBudgetColumn_CountsOnceTheUpgradeIndexesItAgain()
+    {
+        // Arrange
+        await AddAsync(new Order
+        {
+            ItemId = "held-after-midnight",
+            Status = OrderStatus.AwaitingPayment,
+            Subtotal = 30m,
+            CreatedUtc = _lastDayOfOctober,
+            BudgetHold = new OrderBudgetHold { Amount = 30m, Currency = "USD", HeldUtc = _afterMidnight },
+        });
+
+        await using (var session = _store.CreateSession())
+        {
+            var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            var dialect = _store.Configuration.SqlDialect;
+            await using var command = transaction.Connection.CreateCommand();
+
+            command.Transaction = transaction;
+            command.CommandText = $"UPDATE {dialect.QuoteForTableName(OrderConstants.CollectionName + "_" + nameof(OrderIndex), _store.Configuration.Schema)} SET {dialect.QuoteForColumnName(nameof(OrderIndex.BudgetCommittedUtc))} = NULL";
+            await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+            await transaction.CommitAsync(TestContext.Current.CancellationToken);
+        }
+
+        Assert.Equal(0m, await GetSpentThisMonthAsync());
+
+        // Act: the deferred task the upgrade schedules.
+        await using (var session = _store.CreateSession())
+        {
+            Assert.Equal(1, await OrderMigrations.ReindexUnpaidAsync(session, NullLogger.Instance));
+        }
+
+        // Assert
+        Assert.Equal(30m, await GetSpentThisMonthAsync());
     }
 
     /// <summary>

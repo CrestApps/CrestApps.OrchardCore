@@ -135,11 +135,13 @@ public sealed class B2BApprovalService
             PaidOnOrAfter = monthStart,
         }, 0, 1000, cancellationToken);
 
-        // An unpaid order may have been made in any month; when it was asked for or held decides.
+        // An unpaid order may have been made in any month; when it was asked for or held decides, so only those asked for
+        // or held this month are read.
         var (_, unpaid) = await _orders.PageAsync(new OrderQuery
         {
             AccountId = account.AccountId,
             Statuses = _unpaidStatuses,
+            BudgetCommittedOnOrAfter = monthStart,
         }, 0, 1000, cancellationToken);
 
         var spent = 0m;
