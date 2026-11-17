@@ -17,7 +17,7 @@ Both features are **enabled by dependency only**: each is activated automaticall
 is enabled.
 
 - **Commerce Foundation** (`CrestApps.OrchardCore.Commerce.Foundation`) — What billing and the store share: the
-  Commerce admin menu and its icon, the storefront account (My account), the commerce admin list helpers, customers'
+  Commerce admin menu and its icon, the storefront account (Account in the user menu), the commerce admin list helpers, customers'
   access to the admin pages of their own data, and the export and anonymization of a person's commerce data.
   Transactions, Taxation, Exchange Rates and Customers depend on it, so a site with Invoicing alone does not turn on
   the store.

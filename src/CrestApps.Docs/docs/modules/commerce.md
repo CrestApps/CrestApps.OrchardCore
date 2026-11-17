@@ -68,7 +68,7 @@ The Commerce module has two features. Neither is enabled directly: each is enabl
 | **Category** | Commerce | Commerce |
 | **Enabled** | By dependency only | By dependency only |
 | **Depends on** | Nothing | Commerce Foundation |
-| **What it gives** | What billing and the store share: the **Commerce** admin menu and its icon, the storefront account (**My account**), the shared admin list UI, customers' access to their own admin pages, and personal data requests | The store layer: **Commerce › Set up your store** (the store's setup guide), its **Set up the store** permission and the roles it adds for a store's staff |
+| **What it gives** | What billing and the store share: the **Commerce** admin menu and its icon, the storefront account (**Account** in the user menu), the shared admin list UI, customers' access to their own admin pages, and personal data requests | The store layer: **Commerce › Set up your store** (the store's setup guide), its **Set up the store** permission and the roles it adds for a store's staff |
 | **Turned on by** | Transactions, Taxation, Exchange Rates, Customers, so Invoicing and the rest of billing | The store modules: Products, Carts, Checkout, Orders, Shipping, Inventory and the others that sell |
 
 So a site that only bills, with Invoicing and its features, has the Commerce menu and the account without the store's setup guide. A store has both. A site that had Commerce before keeps it, and Commerce Foundation is loaded with it as its dependency.
@@ -111,7 +111,7 @@ Keep `.AddClass("commerce").Id("commerce")` on the node: the icon is attached to
 
 ### Storefront account
 
-Commerce Foundation serves the buyer's account at `account` (route `CommerceAccount`, signed-in users only) and adds **My account** to Orchard Core's user menu. The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with a `NamedNavigationProvider` created for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
+Commerce Foundation serves the buyer's account at `account` (route `CommerceAccount`, signed-in users only) and adds **Account** to Orchard Core's user menu, on the site's pages and in the admin, beside **Profile** and **Security** (`CommerceAccountUserMenuDisplayDriver`, the `UserMenuItems__CommerceAccount` shape). The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with a `NamedNavigationProvider` created for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
 
 ```csharp
 public sealed class MyAccountMenu : INavigationProvider
