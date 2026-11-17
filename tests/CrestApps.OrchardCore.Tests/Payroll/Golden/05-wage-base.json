@@ -1,0 +1,69 @@
+{
+  "Frequency": "Biweekly",
+  "PeriodStart": "2026-11-01",
+  "PeriodEnd": "2026-11-14",
+  "PayDate": "2026-11-20",
+  "Description": "Social insurance with a 176100 wage base and 175000 already taxed this year: only 1100 of 1600 is taxed.",
+  "Pay": {
+    "PayBasis": "Hourly",
+    "Rates": [
+      {
+        "EffectiveFrom": "2020-01-01",
+        "HourlyRate": 20
+      }
+    ]
+  },
+  "Codes": [
+    {
+      "Code": "REG",
+      "Class": "Earning",
+      "Kind": "Regular"
+    }
+  ],
+  "Distribution": [
+    {
+      "Method": "Check",
+      "Split": "Remainder"
+    }
+  ],
+  "Inputs": [
+    {
+      "PayCode": "REG",
+      "Hours": 80
+    }
+  ],
+  "Accumulators": {
+    "tax:US-SS": {
+      "YearTaxableWages": 175000
+    }
+  },
+  "TaxRules": [
+    {
+      "rule": {
+        "TaxCode": "US-SS",
+        "Name": "Social insurance",
+        "Jurisdiction": "US",
+        "Category": "SocialInsurance",
+        "Payer": "Employee",
+        "Method": "Percentage",
+        "EffectiveFrom": "2026-01-01",
+        "Rate": 6.2,
+        "WageBase": 176100
+      }
+    }
+  ],
+  "Expected": {
+    "Lines": [
+      "Earning REG 1600.00 for 80h",
+      "Tax US-SS Employee 68.20 on 1100.00"
+    ],
+    "Gross": 1600.0,
+    "Net": 1531.8,
+    "Payments": [
+      {
+        "Method": "Check",
+        "Amount": 1531.8
+      }
+    ]
+  }
+}

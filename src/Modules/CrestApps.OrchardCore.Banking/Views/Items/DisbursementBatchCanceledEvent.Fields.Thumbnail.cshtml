@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Banking.Disbursements.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<DisbursementBatchCanceledEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-ban" aria-hidden="true"></i> @T["Disbursement Batch Canceled"]</h4>
+<p>@T["Starts when an open batch is cancelled."]</p>

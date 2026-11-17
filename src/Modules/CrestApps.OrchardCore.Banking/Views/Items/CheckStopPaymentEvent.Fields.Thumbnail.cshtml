@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Banking.Checks.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CheckStopPaymentEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-hand" aria-hidden="true"></i> @T["Check Stop Payment"]</h4>
+<p>@T["Starts when the bank is asked not to pay a check."]</p>

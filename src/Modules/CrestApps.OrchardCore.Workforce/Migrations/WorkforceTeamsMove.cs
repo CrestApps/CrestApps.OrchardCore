@@ -84,6 +84,14 @@ internal static class WorkforceTeamsMove
                 team.Put(settings);
             }
 
+            // The address was one line on the Workforce location; it is the team's own address now.
+            if (System.Text.Json.Nodes.JsonNode.Parse(content)?["Location"]?["Address"] is System.Text.Json.Nodes.JsonValue legacy
+                && legacy.TryGetValue<string>(out var line)
+                && !string.IsNullOrWhiteSpace(line))
+            {
+                team.Address = new global::CrestApps.OrchardCore.Addresses.Models.Address { AddressLine1 = line.Trim() };
+            }
+
             await session.SaveAsync(team, false, TeamsConstants.CollectionName);
             moved++;
         }

@@ -1,0 +1,47 @@
+@model ShapeViewModel<PayCode>
+
+@{
+    var code = Model.Value;
+    var payClass = code.Class switch
+    {
+        PayCodeClass.Deduction => T["Deduction"],
+        PayCodeClass.EmployerContribution => T["Employer contribution"],
+        PayCodeClass.ImputedIncome => T["Imputed income"],
+        PayCodeClass.Reimbursement => T["Reimbursement"],
+        PayCodeClass.Memo => T["Memo"],
+        _ => T["Earning"],
+    };
+    var kind = code.Kind switch
+    {
+        PayCodeKinds.Regular => T["Regular hours"].Value,
+        PayCodeKinds.Overtime => T["Overtime"].Value,
+        PayCodeKinds.DoubleTime => T["Double time"].Value,
+        PayCodeKinds.Holiday => T["Holiday hours"].Value,
+        PayCodeKinds.Weekend => T["Weekend hours"].Value,
+        PayCodeKinds.PaidTimeOff => T["Paid time off"].Value,
+        PayCodeKinds.PredictabilityPay => T["Predictability pay"].Value,
+        PayCodeKinds.CallBack => T["Call back"].Value,
+        PayCodeKinds.ShiftDifferential => T["Shift differential"].Value,
+        PayCodeKinds.Unpaid => T["Unpaid time"].Value,
+        PayCodeKinds.Salary => T["Salary"].Value,
+        PayCodeKinds.Bonus => T["Bonus"].Value,
+        PayCodeKinds.Commission => T["Commission"].Value,
+        PayCodeKinds.Tips => T["Tips"].Value,
+        PayCodeKinds.Reimbursement => T["Reimbursement"].Value,
+        PayCodeKinds.Loan => T["Loan or advance repayment"].Value,
+        PayCodeKinds.Contribution => T["Plan contribution"].Value,
+        PayCodeKinds.Garnishment => T["Garnishment"].Value,
+        _ => code.Kind,
+    };
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Class"]">@payClass</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Pays for"]">@kind</span>
+@if (code.Class == PayCodeClass.Earning)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Multiplier"]">× @code.Multiplier.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)</span>
+}
+@if (!code.Enabled)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Off"]</span>
+}

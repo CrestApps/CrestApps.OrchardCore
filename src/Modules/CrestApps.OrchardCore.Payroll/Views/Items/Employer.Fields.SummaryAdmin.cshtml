@@ -1,0 +1,7 @@
+@model ShapeViewModel<Employer>
+
+<a asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.Name</a>
+@if (!string.IsNullOrEmpty(Model.Value.LegalName) && Model.Value.LegalName != Model.Value.Name)
+{
+    <span class="text-muted small ms-1">@Model.Value.LegalName</span>
+}

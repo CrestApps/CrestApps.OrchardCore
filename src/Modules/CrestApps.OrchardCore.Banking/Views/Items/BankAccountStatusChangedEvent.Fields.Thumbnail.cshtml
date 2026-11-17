@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Banking.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BankAccountStatusChangedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-building-columns" aria-hidden="true"></i> @T["Bank Account Status Changed"]</h4>
+<p>@T["Starts when a bank account is verified, closed or its status changes."]</p>

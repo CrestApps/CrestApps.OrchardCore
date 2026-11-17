@@ -1,0 +1,31 @@
+@using CrestApps.OrchardCore.Banking.Services
+@inject IBankAccountService BankAccountService
+
+@model EditCatalogEntryViewModel
+
+@{
+    var id = ViewContext.RouteData.Values["id"]?.ToString();
+}
+
+<zone Name="Title">
+    <breadcrumb name="MyBankAccountsEdit" title="@T["Edit {0}", Model.DisplayName]">
+        <breadcrumb-item id="MyBankAccounts" action="Index" controller="MyBankAccounts" area="CrestApps.OrchardCore.Banking" permission="@BankingPermissions.ManageOwnBankAccounts.Name">@T["My bank accounts"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit" autocomplete="off">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        @foreach (var provider in BankAccountService.LinkProviders)
+        {
+            if (await provider.IsAvailableAsync())
+            {
+                <a class="btn btn-secondary action-bar-secondary" role="button" href="@Url.Action("Link", new { provider = provider.Name, id })">@T["Link your bank with {0} instead", provider.DisplayName]</a>
+            }
+        }
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

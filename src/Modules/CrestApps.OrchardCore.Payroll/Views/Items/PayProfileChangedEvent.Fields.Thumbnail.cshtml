@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<PayProfileChangedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-user-pen" aria-hidden="true"></i> @T["Pay Profile Changed"]</h4>
+<p>@T["Starts when a pay profile changes, such as its tax id, a tax election or where net pay goes; Change says what."]</p>

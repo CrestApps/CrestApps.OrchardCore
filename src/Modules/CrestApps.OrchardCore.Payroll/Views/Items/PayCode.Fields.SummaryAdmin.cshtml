@@ -1,0 +1,4 @@
+@model ShapeViewModel<PayCode>
+
+<a asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.Code</a>
+<span class="text-muted small ms-1">@Model.Value.Name</span>

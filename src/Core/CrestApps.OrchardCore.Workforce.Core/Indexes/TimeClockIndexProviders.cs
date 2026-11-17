@@ -30,60 +30,6 @@ public sealed class TimeClockPolicyIndexProvider : IndexProvider<TimeClockPolicy
 }
 
 /// <summary>
-/// Maps PayPeriodCalendar records to <see cref="PayPeriodCalendarIndex"/> rows.
-/// </summary>
-public sealed class PayPeriodCalendarIndexProvider : IndexProvider<PayPeriodCalendar>
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PayPeriodCalendarIndexProvider"/> class.
-    /// </summary>
-    public PayPeriodCalendarIndexProvider()
-    {
-        CollectionName = WorkforceConstants.CollectionName;
-    }
-
-    /// <inheritdoc />
-    public override void Describe(DescribeContext<PayPeriodCalendar> context)
-    {
-        context.For<PayPeriodCalendarIndex>()
-            .Map(item => new PayPeriodCalendarIndex
-            {
-                ItemId = item.ItemId,
-                Name = item.Name,
-                Enabled = item.Enabled,
-            });
-    }
-}
-
-/// <summary>
-/// Maps PayCode records to <see cref="PayCodeIndex"/> rows.
-/// </summary>
-public sealed class PayCodeIndexProvider : IndexProvider<PayCode>
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PayCodeIndexProvider"/> class.
-    /// </summary>
-    public PayCodeIndexProvider()
-    {
-        CollectionName = WorkforceConstants.CollectionName;
-    }
-
-    /// <inheritdoc />
-    public override void Describe(DescribeContext<PayCode> context)
-    {
-        context.For<PayCodeIndex>()
-            .Map(item => new PayCodeIndex
-            {
-                ItemId = item.ItemId,
-                Name = item.Name,
-                Code = item.Code,
-                Kind = item.Kind,
-                Enabled = item.Enabled,
-            });
-    }
-}
-
-/// <summary>
 /// Maps TimeClockKiosk records to <see cref="TimeClockKioskIndex"/> rows.
 /// </summary>
 public sealed class TimeClockKioskIndexProvider : IndexProvider<TimeClockKiosk>
@@ -271,8 +217,6 @@ public static class TimeClockIndexProviders
         return
         [
             new TimeClockPolicyIndexProvider(),
-            new PayPeriodCalendarIndexProvider(),
-            new PayCodeIndexProvider(),
             new TimeClockKioskIndexProvider(),
             new TimePunchIndexProvider(),
             new TimesheetIndexProvider(),

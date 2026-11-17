@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams;
@@ -109,13 +110,13 @@ public sealed class WorkforceSetupController : Controller
             return (S["Rule sets: {0}", sets.Count()], sets.Any(), S["Labor Rules"], Url.Action("Index", "LaborRuleSets"));
         });
 
-        await AddAsync(model, features, WorkforceConstants.Features.TimeClock, S["Turn on the time clock"], S["Pay periods, a time clock policy, and the teams that use it. Workers then clock in from My Work or a kiosk."], async () =>
+        await AddAsync(model, features, WorkforceConstants.Features.TimeClock, S["Turn on the time clock"], S["A pay schedule (Payroll > Setup), a time clock policy, and the teams that use it. Workers then clock in from My Work or a kiosk."], async () =>
         {
-            var calendars = await services.GetRequiredService<IPayPeriodCalendarManager>().GetAllAsync(HttpContext.RequestAborted);
+            var calendars = await services.GetRequiredService<IPayScheduleManager>().GetAllAsync(HttpContext.RequestAborted);
             var policies = await services.GetRequiredService<ITimeClockPolicyManager>().GetAllAsync(HttpContext.RequestAborted);
             var clocked = teams.Count(team => !string.IsNullOrEmpty(team.GetWorkforceSettings().TimeClockPolicyId));
 
-            return (S["Pay periods: {0} · Policies: {1} · Teams with a policy: {2}", calendars.Count(), policies.Count(), clocked], calendars.Any() && policies.Any() && clocked > 0, S["Time Clock Policies"], Url.Action("Index", "TimeClockPolicies"));
+            return (S["Pay schedules: {0} · Policies: {1} · Teams with a policy: {2}", calendars.Count(), policies.Count(), clocked], calendars.Any() && policies.Any() && clocked > 0, S["Time Clock Policies"], Url.Action("Index", "TimeClockPolicies"));
         });
 
         model.Steps.Add(new WorkforceSetupStep

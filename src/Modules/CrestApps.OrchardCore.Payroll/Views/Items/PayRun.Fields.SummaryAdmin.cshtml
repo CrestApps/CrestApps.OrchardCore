@@ -1,0 +1,3 @@
+@model ShapeViewModel<PayRun>
+
+<a asp-action="Details" asp-controller="PayRuns" asp-route-id="@Model.Value.ItemId">@T["Run {0}", Model.Value.Number]</a>

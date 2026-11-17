@@ -13,7 +13,7 @@
         <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
         <div class="ocat-wrapper"><label asp-for="Description" class="ocat-label">@T["Description"]</label><div class="ocat-end"><textarea asp-for="Description" class="form-control" rows="2"></textarea></div></div>
         <div class="ocat-wrapper">
-            <label asp-for="PayPeriodCalendarId" class="ocat-label ocat-label-required">@T["Pay periods"]</label>
+            <label asp-for="PayPeriodCalendarId" class="ocat-label ocat-label-required">@T["Pay schedule"]</label>
             <div class="ocat-end">
                 <select asp-for="PayPeriodCalendarId" asp-items="Model.CalendarOptions" class="form-select" style="max-width: 22rem"><option value="">@T["Choose…"]</option></select>
                 <span class="hint">@T["The periods timesheets cover. Add them under Workforce > Pay Periods."]</span>

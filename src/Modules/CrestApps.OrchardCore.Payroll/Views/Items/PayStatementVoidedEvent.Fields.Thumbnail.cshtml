@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<PayStatementVoidedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-ban" aria-hidden="true"></i> @T["Pay Statement Voided"]</h4>
+<p>@T["Starts when a pay statement is voided; ReversalId is the reversing statement."]</p>

@@ -1,0 +1,21 @@
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService
+@model ShapeViewModel<Disbursement>
+
+@{
+    var disbursement = Model.Value;
+    var canManage = !disbursement.IsHistorical && await AuthorizationService.AuthorizeAsync(User, DisbursementsPermissions.ManageDisbursements);
+}
+
+@if (canManage && disbursement.Status == DisbursementStatus.Pending)
+{
+    <a asp-action="Cancel" asp-route-id="@disbursement.ItemId" class="dropdown-item text-danger" data-title="@T["Cancel"]" data-message="@T["Cancel the disbursement to {0}? It won't be sent.", disbursement.PayeeName]" data-url-af="RemoveUrl UnsafeUrl">@T["Cancel"]</a>
+}
+else if (!string.IsNullOrEmpty(disbursement.BatchId))
+{
+    <a asp-action="Index" asp-route-BatchId="@disbursement.BatchId" class="dropdown-item">@T["Show its batch"]</a>
+}
+else
+{
+    <span class="dropdown-item-text text-secondary">@T["No action"]</span>
+}

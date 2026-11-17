@@ -1,0 +1,17 @@
+@model ShapeViewModel<TaxLiabilityPeriod>
+@using System.Globalization
+
+@{
+    var period = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Owed (employees and employer)"]">@period.Owed.ToString("N2", CultureInfo.CurrentCulture)</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Deposited"]">@T["Deposited {0}", period.Deposited.ToString("N2", CultureInfo.CurrentCulture)]</span>
+@if (period.Balance > 0)
+{
+    <span class="badge text-bg-warning fw-normal">@T["{0} due {1}", period.Balance.ToString("N2", CultureInfo.CurrentCulture), period.DueDate.ToString("d", CultureInfo.CurrentCulture)]</span>
+}
+else
+{
+    <span class="badge text-bg-success fw-normal">@T["Paid"]</span>
+}

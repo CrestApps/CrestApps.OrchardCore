@@ -1,0 +1,78 @@
+{
+  "name": "PayrollT4Xml",
+  "displayName": "Canada Payroll: T4 slips as a T4 XML file",
+  "description": "Adds a draft data pipeline that writes the latest year's T4 slips and T4 Summary of the employers you may export as the CRA's T4 XML file for Internet file transfer. Prepare the year's T4 filing first (Payroll > Filings). The social insurance numbers are read only for a user who may see full tax ids, and each one read is recorded. Publish it under Tools > Data Pipelines and add a delivery step that keeps the file private, such as an SFTP server or a download link: never the media library.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "payroll"
+  ],
+  "tags": [
+    "payroll",
+    "canada",
+    "t4",
+    "data pipelines"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Payroll.Canada",
+        "OrchardCore.DataPipelines"
+      ]
+    },
+    {
+      "name": "DataPipelines",
+      "Pipelines": [
+        {
+          "PipelineId": "payrollt4xmlfile0000000001",
+          "Name": "T4 XML file",
+          "Description": "The latest year's T4 slips and Summary as the CRA's T4 XML file.",
+          "IsEnabled": true,
+          "Definition": {
+            "Steps": [
+              {
+                "StepId": "records",
+                "Type": "DataSource",
+                "Title": "T4 slips",
+                "X": 120,
+                "Y": 320,
+                "Properties": {
+                  "DataSourceStepSettings": {
+                    "Source": "Payroll",
+                    "DataSet": "T4Slips",
+                    "Fields": []
+                  }
+                }
+              },
+              {
+                "StepId": "file",
+                "Type": "CreateFile",
+                "Title": "T4 XML file",
+                "X": 400,
+                "Y": 320,
+                "Properties": {
+                  "CreateFileStepSettings": {
+                    "Format": "t4xml",
+                    "FileName": "T4-{Date:yyyyMMdd}",
+                    "UseDisplayNames": false
+                  }
+                }
+              }
+            ],
+            "Connections": [
+              {
+                "SourceStepId": "records",
+                "SourcePort": "Output",
+                "TargetStepId": "file",
+                "TargetPort": "Input"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

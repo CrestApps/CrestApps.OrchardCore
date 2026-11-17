@@ -93,6 +93,16 @@ public static class CurrencyScale
     public static string Format(decimal amount, string currency)
         => amount.ToString("F" + GetDecimalPlaces(currency).ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// Formats a major-unit amount for people to read: the currency's precision with the culture's group and decimal
+    /// separators, such as <c>9,164.00</c>. <see cref="Format"/> is for files and messages machines read.
+    /// </summary>
+    /// <param name="amount">The amount expressed in major units.</param>
+    /// <param name="currency">The ISO-4217 currency code used to determine precision.</param>
+    /// <param name="culture">The culture to format with; the current culture when <see langword="null"/>.</param>
+    public static string FormatForDisplay(decimal amount, string currency, IFormatProvider culture = null)
+        => amount.ToString("N" + GetDecimalPlaces(currency).ToString(CultureInfo.InvariantCulture), culture ?? CultureInfo.CurrentCulture);
+
     private static decimal Pow10(int exponent)
         => exponent switch
         {

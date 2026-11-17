@@ -1,22 +1,50 @@
+@using CrestApps.OrchardCore.Staff.Models
 @model StaffPayProfileViewModel
+
+@{
+    string Amount(decimal? value) => value is null ? "-" : value.Value.ToString("N2") + (string.IsNullOrEmpty(Model.Currency) ? string.Empty : " " + Model.Currency);
+
+    // The rows keep the editor's invariant text; shown here as amounts like the lines above.
+    string RowAmount(string text) => decimal.TryParse(text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var value) ? Amount(value) : text;
+}
 
 <div class="card text-bg-theme mb-3">
     <div class="card-header">@T["Pay"]</div>
     <div class="card-body">
         <dl class="row mb-3">
-            <dt class="col-sm-4">@T["Hourly rate today"]</dt><dd class="col-sm-8">@(Model.CurrentRate?.ToString("N2") ?? "-")</dd>
-            <dt class="col-sm-4">@T["Annual salary"]</dt><dd class="col-sm-8">@(Model.AnnualSalary?.ToString("N2") ?? "-")</dd>
-            <dt class="col-sm-4">@T["Cost of an hour"]</dt><dd class="col-sm-8">@(Model.HourlyCost?.ToString("N2") ?? "-")</dd>
+            <dt class="col-sm-4">@T["Paid"]</dt>
+            <dd class="col-sm-8">@(Model.PayBasis switch { StaffPayBasis.Salary => T["A yearly salary"], StaffPayBasis.PerUnit => T["By the unit of work"], _ => T["By the hour"] })</dd>
+            <dt class="col-sm-4">@(Model.PayBasis == StaffPayBasis.PerUnit ? T["Rate per unit today"] : T["Hourly rate today"])</dt><dd class="col-sm-8">@Amount(Model.CurrentRate)</dd>
+            <dt class="col-sm-4">@T["Yearly salary today"]</dt><dd class="col-sm-8">@Amount(Model.AnnualSalary)</dd>
+            <dt class="col-sm-4">@T["Cost of an hour"]</dt><dd class="col-sm-8">@Amount(Model.HourlyCost)</dd>
+            @if (Model.CommissionRate is { } commission)
+            {
+                <dt class="col-sm-4">@T["Commission on sales"]</dt><dd class="col-sm-8">@commission.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%</dd>
+            }
         </dl>
         @if (Model.Rates.Count > 0)
         {
             <div class="table-responsive">
-                <table class="table table-sm mb-0">
-                    <thead><tr><th>@T["From"]</th><th>@T["Hourly rate"]</th></tr></thead>
+                <table class="table table-sm mb-3">
+                    <thead><tr><th>@T["From"]</th><th>@T["Rate"]</th></tr></thead>
                     <tbody>
                         @foreach (var rate in Model.Rates)
                         {
-                            <tr><td>@rate.EffectiveFrom?.ToString("d")</td><td>@rate.HourlyRate?.ToString("N2")</td></tr>
+                            <tr><td>@rate.EffectiveFrom?.ToString("d")</td><td>@RowAmount(rate.HourlyRate)</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        @if (Model.Salaries.Count > 0)
+        {
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>@T["From"]</th><th>@T["Yearly salary"]</th></tr></thead>
+                    <tbody>
+                        @foreach (var salary in Model.Salaries)
+                        {
+                            <tr><td>@salary.EffectiveFrom?.ToString("d")</td><td>@RowAmount(salary.AnnualAmount)</td></tr>
                         }
                     </tbody>
                 </table>

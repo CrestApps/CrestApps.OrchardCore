@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Workforce.Models;
 using Json.Schema;
@@ -18,7 +19,7 @@ internal sealed class TimeClockRecipeStepSchema : IRecipeStep
     {
         _cached ??= Step(
             TimeClockRecipeStep.TimeClockStepName,
-            "Creates or updates the time clock settings: pay periods, policies and kiosks matched by itemId then name, and pay codes matched by itemId then code. Pay periods, pay codes and policies that are updated take every member of the entry, so a member left out goes back to its default.",
+            "Creates or updates the time clock settings: pay periods, policies and kiosks matched by itemId then name, and pay codes matched by itemId then code. Pay periods and pay codes are saved as Pay Setup's pay schedules and pay codes; new recipes use the PaySchedules and PayCodes steps. Pay periods, pay codes and policies that are updated take every member of the entry, so a member left out goes back to its default.",
             ("PayPeriods", Array(PayPeriods(), "The pay period calendars to create or update.")),
             ("PayCodes", Array(PayCode(), "The pay codes to create or update.")),
             ("Policies", Array(Policy(), "The time clock policies to create or update. Pay periods are imported first, so a policy can name one of the same step.")),
@@ -33,7 +34,7 @@ internal sealed class TimeClockRecipeStepSchema : IRecipeStep
             "A pay period calendar.",
             ("itemId", ItemId("pay period calendar")),
             ("name", Text("The calendar name, unique.")),
-            ("frequency", Enum<PayPeriodFrequency>("How often a pay period starts. Defaults to Biweekly.")),
+            ("frequency", Enum<PayFrequency>("How often a pay period starts. Defaults to Biweekly.")),
             ("anchorDate", Date("The first day of any one pay period, which the others count from.")),
             ("weekStart", Enum<DayOfWeek>("The first day of the week, for weekly overtime. Defaults to Sunday.")),
             ("enabled", Flag("Whether the calendar is in use. Defaults to true.")))
@@ -45,7 +46,7 @@ internal sealed class TimeClockRecipeStepSchema : IRecipeStep
             ("itemId", Text("The pay code's id. When it matches a stored pay code, that pay code is updated; otherwise it is matched by code, and a new one keeps this id.")),
             ("code", Text("The code, unique.")),
             ("name", Text("The pay code name.")),
-            ("kind", Enum<PayCodeKind>("What the hours are. Defaults to Regular.")),
+            ("kind", Text("What the hours are: Regular, Overtime, DoubleTime, Holiday, PaidTimeOff, PredictabilityPay, CallBack, ShiftDifferential, Unpaid, Weekend, or a kind a module registers. Defaults to Regular.")),
             ("multiplier", Number("The pay rate multiplier, such as 1.5 for overtime. Defaults to 1.")),
             ("premiumPerHour", OptionalNumber("For a shift differential: the amount added per hour.")),
             ("windowStart", OptionalTime("For a shift differential: when the window starts.")),

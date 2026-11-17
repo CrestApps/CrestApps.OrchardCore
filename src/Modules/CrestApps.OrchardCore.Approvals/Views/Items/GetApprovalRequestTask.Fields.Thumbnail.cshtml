@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Approvals.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<GetApprovalRequestTask>
+
+<h4 class="card-title"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> @T["Get Approval Request"]</h4>
+<p>@T["Reads where a request is; empty RequestId reads the workflow's correlation id."]</p>

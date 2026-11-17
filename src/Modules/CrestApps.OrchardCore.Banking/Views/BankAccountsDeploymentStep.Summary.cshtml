@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Banking.Deployments
+
+@model ShapeViewModel<BankAccountsDeploymentStep>
+
+<h5>@T["Bank accounts"]</h5>
+
+@if (Model.Value.IncludeSensitiveData)
+{
+    <span class="badge text-bg-warning">@T["All bank accounts, with their numbers"]</span>
+}
+else
+{
+    <span class="badge text-bg-success">@T["All bank accounts, without their numbers"]</span>
+}

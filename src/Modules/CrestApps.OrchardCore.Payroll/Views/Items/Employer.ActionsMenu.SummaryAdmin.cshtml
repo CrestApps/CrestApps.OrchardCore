@@ -1,0 +1,3 @@
+@model ShapeViewModel<Employer>
+
+<a asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete the employer? One that is in use can't be deleted: make it inactive instead."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

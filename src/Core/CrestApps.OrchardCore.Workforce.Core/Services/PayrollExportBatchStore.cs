@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Models;
-using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
 using YesSql.Services;
@@ -8,25 +7,28 @@ using YesSql.Services;
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
 
 /// <summary>
-/// Stores payroll exports.
+/// Keeps the files the time clock's payroll export wrote before the export became a data pipeline, to download until
+/// they age out.
 /// </summary>
-internal sealed class PayrollExportBatchStore : DocumentCatalog<PayrollExportBatch, PayrollExportBatchIndex>
+public sealed class PayrollExportBatchStore : DocumentCatalog<PayrollExportBatch, PayrollExportBatchIndex>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PayrollExportBatchStore"/> class.
+    /// </summary>
+    /// <param name="session">The session.</param>
     public PayrollExportBatchStore(ISession session)
         : base(session)
     {
         CollectionName = WorkforceConstants.CollectionName;
     }
 
-    public async Task<IReadOnlySet<string>> ListIdsAsync(string providerName, string calendarId, DateOnly periodStart, CancellationToken cancellationToken = default)
-    {
-        var start = WorkforceDates.ToKey(periodStart);
-        var rows = await Session.QueryIndex<PayrollExportBatchIndex>(index => index.ProviderName == providerName && index.PayPeriodCalendarId == calendarId && index.PeriodStart == start, collection: CollectionName)
-            .ListAsync(cancellationToken);
-
-        return rows.Select(row => row.ItemId).ToHashSet(StringComparer.Ordinal);
-    }
-
+    /// <summary>
+    /// Reads a page of the files, the newest first.
+    /// </summary>
+    /// <param name="skip">The files to skip.</param>
+    /// <param name="take">The files to read.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The count of every file and the page.</returns>
     public async Task<(int Count, IReadOnlyList<PayrollExportBatch> Items)> PageAsync(int skip, int take, CancellationToken cancellationToken = default)
     {
         var search = Session.Query<PayrollExportBatch, PayrollExportBatchIndex>(collection: CollectionName);
