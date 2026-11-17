@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Invoicing;
 using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Orders;
+using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Invoicing.DeferredDebts;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Payments.Models;
@@ -117,6 +118,27 @@ public sealed class DeferredDebtInvoicingTests
         Assert.Equal(("Membership", 1m, 20m), (line.Name, line.Quantity, line.UnitPrice));
         Assert.Equal(cycle == 1, line.ServiceStart.HasValue);
         Assert.Equal(invoice.Number, (await harness.FindTransactionAsync(debt.ItemId)).InvoiceNumber);
+    }
+
+    [Fact]
+    public async Task TheInvoiceOfADeferredDebt_IsSentOnceIssued()
+    {
+        // Arrange: the buyer was told at checkout an invoice follows.
+        var sender = new Mock<IInvoiceSender>();
+        sender.Setup(item => item.SendAsync(It.IsAny<InvoiceSendRequest>(), It.IsAny<CancellationToken>())).ReturnsAsync(new InvoiceSendResult());
+
+        await using var harness = await InvoicingTestHarness.CreateAsync(configureServices: services =>
+        {
+            services.AddSingleton(Providers(defersPayment: true));
+            services.AddSingleton(sender.Object);
+        });
+        var debt = await CreateCycleAsync(harness, cycle: 1, amount: 20m, checkoutSessionId: "session-1");
+
+        // Act
+        var invoice = await BuildAsync(harness, debt.ItemId);
+
+        // Assert
+        sender.Verify(item => item.SendAsync(It.Is<InvoiceSendRequest>(request => request.InvoiceId == invoice.ItemId), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

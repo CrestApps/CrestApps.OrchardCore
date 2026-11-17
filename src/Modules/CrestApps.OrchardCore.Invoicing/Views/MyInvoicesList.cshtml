@@ -47,10 +47,10 @@ else
                                     }
                                 </td>
                             }
-                            <td><a asp-action="Show" asp-controller="MyInvoices" asp-area="@InvoicingConstants.Features.Area" asp-route-itemId="@invoice.ItemId">@invoice.Number</a></td>
+                            <td class="text-nowrap"><a asp-action="Show" asp-controller="MyInvoices" asp-area="@InvoicingConstants.Features.Area" asp-route-itemId="@invoice.ItemId">@invoice.Number</a></td>
                             @* Issue and due dates are dates, kept as dates: shown as they are. *@
-                            <td>@invoice.IssueDate?.ToString("d")</td>
-                            <td>@invoice.DueDate?.ToString("d")</td>
+                            <td class="text-nowrap">@invoice.IssueDate?.ToString("d")</td>
+                            <td class="text-nowrap">@invoice.DueDate?.ToString("d")</td>
                             <td class="text-end text-nowrap">@MoneyFormatter.Format(invoice.Totals?.Total ?? 0m, invoice.Currency)</td>
                             <td class="text-end text-nowrap">@MoneyFormatter.Format(invoice.AmountDue, invoice.Currency)</td>
                             <td><partial name="_InvoiceStatusBadge" model="invoice" /></td>

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Payments;
@@ -163,6 +164,9 @@ public sealed class CheckoutStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICheckoutHandler, SubscriptionPlanCheckoutHandler>();
+
+        // A subscription checkout's reference reads as the plan it bought.
+        services.AddScoped<ICheckoutReferenceDescriber, SubscriptionCheckoutReferenceDescriber>();
         services.AddScoped<ICheckoutHandler, UserRegistrationCheckoutHandler>();
         services.AddScoped<ICheckoutHandler, ContentCheckoutHandler>();
         services.AddScoped<ICheckoutHandler, SubscriptionActivationCheckoutHandler>();

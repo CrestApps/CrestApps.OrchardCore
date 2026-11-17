@@ -211,6 +211,18 @@ public sealed class DeferredDebtInvoiceBuilder
             return invoice;
         }
 
+        // The customer was told at checkout that an invoice follows, and billing systems send an invoice collected later
+        // as soon as it is issued; the reminders then chase it. Without e-mail, or an address, it waits to be sent by hand.
+        if (scope.ServiceProvider.GetService<IInvoiceSender>() is { } sender)
+        {
+            var sent = await sender.SendAsync(new InvoiceSendRequest { InvoiceId = issued.Invoice.ItemId }, cancellationToken);
+
+            if (!sent.Succeeded && _logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Invoice {InvoiceNumber} of the debt '{TransactionId}' was issued but not sent: {Errors}", issued.Invoice.Number, transaction.ItemId, string.Join(" ", sent.Errors));
+            }
+        }
+
         return issued.Invoice;
     }
 

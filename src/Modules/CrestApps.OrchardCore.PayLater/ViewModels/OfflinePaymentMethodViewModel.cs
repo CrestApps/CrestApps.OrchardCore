@@ -39,4 +39,9 @@ public class OfflinePaymentMethodViewModel
     /// Gets or sets the balance's transaction id, whose admin page records the payment, for the store's view.
     /// </summary>
     public string TransactionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets where a signed-in buyer sees and pays what they owe, or <see langword="null"/> for a guest.
+    /// </summary>
+    public string StatementUrl { get; set; }
 }
