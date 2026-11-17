@@ -1,5 +1,8 @@
 @model TicketViewViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
 @{
     string CategoryName(TicketStatusCategory category) => category switch
     {
@@ -62,7 +65,7 @@
         <div class="ocat-wrapper">
             <label asp-for="DeskIds" class="ocat-label">@T["Desks"]</label>
             <div class="ocat-end">
-                <select asp-for="DeskIds" asp-items="Model.Desks" class="form-select" multiple size="4"></select>
+                <select asp-for="DeskIds" asp-items="Model.Desks" class="selectpicker show-tick" multiple data-width="100%" title="@T["Every desk"]"></select>
                 <span class="hint">@T["Leave none selected to list every desk the user may see."]</span>
             </div>
         </div>

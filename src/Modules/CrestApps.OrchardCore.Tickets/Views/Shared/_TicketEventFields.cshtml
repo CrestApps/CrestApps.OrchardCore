@@ -2,9 +2,12 @@
 @using CrestApps.OrchardCore.Tickets.Workflows
 @model TicketEventViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
 <div class="mb-3">
     <label asp-for="DeskIds" class="form-label">@T["Desks"]</label>
-    <select asp-for="DeskIds" asp-items="Model.DeskOptions" class="form-select" multiple size="4"></select>
+    <select asp-for="DeskIds" asp-items="Model.DeskOptions" class="selectpicker show-tick" multiple data-width="100%" title="@T["Every desk"]"></select>
     <span class="hint">@T["Leave none selected to start for every desk."]</span>
 </div>
 
@@ -12,7 +15,7 @@
 {
     <div class="mb-3">
         <label asp-for="TicketTypes" class="form-label">@T["Ticket types"]</label>
-        <select asp-for="TicketTypes" asp-items="Model.TicketTypeOptions" class="form-select" multiple size="4"></select>
+        <select asp-for="TicketTypes" asp-items="Model.TicketTypeOptions" class="selectpicker show-tick" multiple data-width="100%" title="@T["Every ticket type"]"></select>
         <span class="hint">@T["Leave none selected to start for every ticket type."]</span>
     </div>
 }
@@ -21,7 +24,7 @@
 {
     <div class="mb-3">
         <label asp-for="CategoryIds" class="form-label">@T["Ticket categories"]</label>
-        <select asp-for="CategoryIds" asp-items="Model.CategoryOptions" class="form-select" multiple size="6"></select>
+        <select asp-for="CategoryIds" asp-items="Model.CategoryOptions" class="selectpicker show-tick" multiple data-width="100%" data-live-search="true" title="@T["Any category"]"></select>
         <span class="hint">@T["A category takes the categories below it along. Leave none selected to start for any ticket, with a category or without."]</span>
     </div>
 }
@@ -40,7 +43,7 @@
 {
     <div class="mb-3">
         <label asp-for="ChangedFields" class="form-label">@T["Only when these change"]</label>
-        <select asp-for="ChangedFields" class="form-select" multiple size="8">
+        <select asp-for="ChangedFields" class="selectpicker show-tick" multiple data-width="100%" title="@T["Any change"]">
             @foreach (var (key, label) in new[]
             {
                 (TicketChangeKeys.Status, T["Status"]),
@@ -92,7 +95,7 @@
 {
     <div class="mb-3">
         <label asp-for="Categories" class="form-label">@T["Status categories"]</label>
-        <select asp-for="Categories" class="form-select" multiple size="6">
+        <select asp-for="Categories" class="selectpicker show-tick" multiple data-width="100%" title="@T["Any status category"]">
             @foreach (var category in Enum.GetNames<TicketStatusCategory>())
             {
                 <option value="@category" selected="@Model.Categories.Contains(category)">@T[category]</option>

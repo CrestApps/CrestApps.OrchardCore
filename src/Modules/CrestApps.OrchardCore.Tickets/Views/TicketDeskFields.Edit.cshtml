@@ -1,5 +1,8 @@
 @model TicketDeskViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
 <div class="card text-bg-theme mb-3">
     <div class="card-header">@T["Desk"]</div>
     <div class="card-body">
@@ -31,7 +34,7 @@
         <div class="ocat-wrapper">
             <label asp-for="TicketTypes" class="ocat-label">@T["Ticket types"]</label>
             <div class="ocat-end">
-                <select asp-for="TicketTypes" asp-items="Model.TicketTypeOptions" class="form-select" multiple size="4"></select>
+                <select asp-for="TicketTypes" asp-items="Model.TicketTypeOptions" class="selectpicker show-tick" multiple data-width="100%" title="@T["Every ticket type"]"></select>
                 <span class="hint">@T["Leave none selected to offer every ticket type."]</span>
             </div>
         </div>

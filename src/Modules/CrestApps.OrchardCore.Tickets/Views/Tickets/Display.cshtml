@@ -106,7 +106,8 @@ else if (Model.IsReadOnly)
 <div class="row g-3">
     <div class="col-12 col-lg-8">
         @* Details: what the ticket's type asks for, always shown. Who may edit changes it here; who may only view reads it. *@
-        <div class="card mb-3" id="ticket-details">
+        <style asp-name="@CrestApps.OrchardCore.Tickets.Services.TicketsResourceConfiguration.FormStyle"></style>
+        <div class="card mb-3 ticket-fields" id="ticket-details">
             <div class="card-header">@T["Details"]</div>
             <div class="card-body">
                 @if (Model.Editor is not null)

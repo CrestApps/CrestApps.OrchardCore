@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
@@ -20,6 +21,10 @@ namespace CrestApps.OrchardCore.Tickets.Migrations;
 /// </summary>
 internal sealed class TicketsMigrations : DataMigration
 {
+    // The help desk starter recipe's IT request type and its Root cause field.
+    private const string StarterITRequestPart = "ITRequest";
+    private const string StarterRootCauseField = "RootCause";
+
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ICatalogManager<TicketStatus> _statuses;
     private readonly ICatalogManager<TicketPriority> _priorities;
@@ -94,7 +99,7 @@ internal sealed class TicketsMigrations : DataMigration
         await DefineCategoriesAsync();
         await SeedAsync();
 
-        return 17;
+        return 18;
     }
 
     /// <summary>
@@ -333,6 +338,24 @@ internal sealed class TicketsMigrations : DataMigration
         return 17;
     }
 
+    /// <summary>
+    /// Gives the help desk starter's Root cause field (on the IT request type) a multi-line editor, as the recipe now does,
+    /// where the site ran the recipe and the field still has the default single-line one.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom17Async()
+    {
+        var part = await _contentDefinitionManager.GetPartDefinitionAsync(StarterITRequestPart);
+        var field = part?.Fields.FirstOrDefault(value => value.Name == StarterRootCauseField && value.FieldDefinition.Name == "TextField");
+
+        if (field is not null && string.IsNullOrEmpty(field.Editor()))
+        {
+            await _contentDefinitionManager.AlterPartDefinitionAsync(StarterITRequestPart, builder => builder
+                .WithField(StarterRootCauseField, fieldBuilder => fieldBuilder.WithEditor("TextArea")));
+        }
+
+        return 18;
+    }
 
     // The part a ticket category's term carries, and a term type with it for taxonomies of ticket categories.
     private async Task DefineCategoriesAsync()

@@ -216,7 +216,7 @@
               "FieldName": "TextField",
               "Name": "RootCause",
               "Settings": {
-                "ContentPartFieldSettings": { "DisplayName": "Root cause", "Position": "4" },
+                "ContentPartFieldSettings": { "DisplayName": "Root cause", "Position": "4", "Editor": "TextArea" },
                 "TextFieldSettings": { "Hint": "For agents: what caused it, once known." }
               }
             }

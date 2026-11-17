@@ -57,7 +57,8 @@ function start(source) {
     const emptyText = source.options.length > 0 ? source.options[0].textContent ?? '' : '';
     const levels = document.createElement('div');
 
-    levels.className = 'd-flex flex-wrap gap-2';
+    // One full-width list per level, under each other, as wide as the form's other fields.
+    levels.className = 'd-flex flex-column gap-2';
     source.hidden = true;
 
     // A hidden list the browser must check can't show its message; the server checks the answer.
@@ -78,7 +79,7 @@ function start(source) {
             }
 
             const select = document.createElement('select');
-            select.className = 'form-select w-auto';
+            select.className = 'form-select';
             select.setAttribute('aria-label', labels[level] ?? labels[labels.length - 1] ?? emptyText);
 
             const empty = document.createElement('option');

@@ -28,6 +28,11 @@ internal sealed class TicketsResourceConfiguration : IConfigureOptions<ResourceM
     /// </summary>
     public const string ListStyle = "CrestApps.OrchardCore.Tickets.List";
 
+    /// <summary>
+    /// The style of the ticket type's fields on the ticket page and the new ticket form.
+    /// </summary>
+    public const string FormStyle = "CrestApps.OrchardCore.Tickets.Form";
+
     private static readonly ResourceManifest _manifest;
 
     static TicketsResourceConfiguration()
@@ -54,6 +59,13 @@ internal sealed class TicketsResourceConfiguration : IConfigureOptions<ResourceM
             .SetUrl(
                 "~/CrestApps.OrchardCore.Tickets/styles/ticket-list.min.css",
                 "~/CrestApps.OrchardCore.Tickets/styles/ticket-list.css")
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineStyle(FormStyle)
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Tickets/styles/ticket-form.min.css",
+                "~/CrestApps.OrchardCore.Tickets/styles/ticket-form.css")
             .SetVersion("1.0.0");
 
         _manifest

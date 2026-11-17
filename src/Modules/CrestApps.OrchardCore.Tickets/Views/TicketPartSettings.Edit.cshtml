@@ -1,5 +1,8 @@
 @model TicketPartSettingsViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
 <div class="ocat-wrapper">
     <label asp-for="DefaultDeskId" class="ocat-label">@T["Desk"]</label>
     <div class="ocat-end">
@@ -43,7 +46,7 @@
     <div class="ocat-wrapper">
         <label asp-for="RequiredSkillIds" class="ocat-label">@T["Required skills"]</label>
         <div class="ocat-end">
-            <select asp-for="RequiredSkillIds" asp-items="Model.Skills" class="form-select" multiple size="4"></select>
+            <select asp-for="RequiredSkillIds" asp-items="Model.Skills" class="selectpicker show-tick" multiple data-width="100%" title="@T["No skills required"]"></select>
             <span class="hint">@T["Only team members who hold every one of these skills are assigned tickets of this type."]</span>
         </div>
     </div>

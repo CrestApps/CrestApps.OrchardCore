@@ -19,6 +19,12 @@
   },
   {
     "action": "vite",
+    "name": "ticket-form.css",
+    "source": "Assets/css/ticket-form.css",
+    "dest": "wwwroot/styles/ticket-form.css"
+  },
+  {
+    "action": "vite",
     "name": "ticket-board.css",
     "source": "Assets/css/ticket-board.css",
     "dest": "wwwroot/styles/ticket-board.css"

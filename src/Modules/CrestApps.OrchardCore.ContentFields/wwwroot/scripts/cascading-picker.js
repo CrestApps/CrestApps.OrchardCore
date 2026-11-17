@@ -47,7 +47,7 @@
 		const labels = (source.dataset.levelLabels ?? "").split("|").filter((label) => label !== "");
 		const emptyText = source.options.length > 0 ? source.options[0].textContent ?? "" : "";
 		const levels = document.createElement("div");
-		levels.className = "d-flex flex-wrap gap-2";
+		levels.className = "d-flex flex-column gap-2";
 		source.hidden = true;
 		source.required = false;
 		source.insertAdjacentElement("afterend", levels);
@@ -59,7 +59,7 @@
 				const children = items.filter((item) => item.parentId === parentId);
 				if (children.length === 0) break;
 				const select = document.createElement("select");
-				select.className = "form-select w-auto";
+				select.className = "form-select";
 				select.setAttribute("aria-label", labels[level] ?? labels[labels.length - 1] ?? emptyText);
 				const empty = document.createElement("option");
 				empty.value = "";
