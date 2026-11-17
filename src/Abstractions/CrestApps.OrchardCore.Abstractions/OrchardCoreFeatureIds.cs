@@ -22,6 +22,8 @@ public static class OrchardCoreFeatureIds
 
     public const string AzureAI = "OrchardCore.AzureAI";
 
+    public const string BackgroundTasks = "OrchardCore.BackgroundTasks";
+
     public const string ContentFields = "OrchardCore.ContentFields";
 
     public const string ContentLocalization = "OrchardCore.ContentLocalization";

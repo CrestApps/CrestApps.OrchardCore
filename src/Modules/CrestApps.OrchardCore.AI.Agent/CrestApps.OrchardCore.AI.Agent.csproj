@@ -38,6 +38,7 @@
     <PackageReference Include="OrchardCore.Flows.Core" />
     <PackageReference Include="OrchardCore.Indexing.Core" />
     <PackageReference Include="OrchardCore.Lucene.Core" />
+    <PackageReference Include="OrchardCore.Localization.Core" />
     <PackageReference Include="OrchardCore.Elasticsearch.Core" />
     <PackageReference Include="OrchardCore.Media.Core" />
     <PackageReference Include="OrchardCore.OpenId.Core" />
@@ -48,6 +49,8 @@
     <PackageReference Include="OrchardCore.Shortcodes.Abstractions" />
     <PackageReference Include="OrchardCore.Sms.Abstractions" />
     <PackageReference Include="OrchardCore.Sms.Core" />
+    <PackageReference Include="OrchardCore.UrlRewriting.Abstractions" />
+    <PackageReference Include="OrchardCore.UrlRewriting.Core" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
     <PackageReference Include="OrchardCore.Notifications.Core" />
     <PackageReference Include="OrchardCore.Deployment.Core" />

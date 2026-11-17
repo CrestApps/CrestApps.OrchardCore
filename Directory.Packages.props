@@ -76,6 +76,7 @@
     <PackageVersion Include="OrchardCore.Lists" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Liquid" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Liquid.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Localization.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Logging.NLog" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Markdown" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Media" Version="$(OrchardCoreVersion)" />
@@ -124,6 +125,8 @@
     <PackageVersion Include="OrchardCore.Taxonomies.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Tenants" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Title" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.UrlRewriting.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.UrlRewriting.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Users" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Users.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Users.Core" Version="$(OrchardCoreVersion)" />

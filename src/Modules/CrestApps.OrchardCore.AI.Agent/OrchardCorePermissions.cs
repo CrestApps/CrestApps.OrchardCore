@@ -117,6 +117,12 @@ internal static class OrchardCorePermissions
     /// </summary>
     public static readonly Permission ManageTenantFeatureProfiles = new("ManageTenantFeatureProfiles", LocalizationSource.Create("Manage tenant feature profiles", typeof(OrchardCorePermissions)));
 
+    /// <summary>
+    /// Gets the permission to see, change and run the background tasks. The Background Tasks module declares it in its
+    /// module assembly.
+    /// </summary>
+    public static readonly Permission ManageBackgroundTasks = new("ManageBackgroundTasks", LocalizationSource.Create("Manage background tasks", typeof(OrchardCorePermissions)));
+
     // The Users module declares this template in its module assembly. As there, the permission to manage users implies it.
     private static readonly PermissionTemplate _manageOwnCustomUserSettings = new(
         "ManageOwnCustomUserSettings_{0}",
