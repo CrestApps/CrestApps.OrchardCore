@@ -54,4 +54,10 @@ internal static class OrchardCorePermissions
     /// Gets the permission to manage taxonomies. Its name is singular in the Taxonomies module.
     /// </summary>
     public static readonly Permission ManageTaxonomies = new("ManageTaxonomy", LocalizationSource.Create("Manage taxonomies", typeof(OrchardCorePermissions)));
+
+    /// <summary>
+    /// Gets the security-critical permission to run SQL queries. Orchard Core declares it in OrchardCore.Queries.Core,
+    /// a package this repository does not reference.
+    /// </summary>
+    public static readonly Permission ManageSqlQueries = new("ManageSqlQueries", LocalizationSource.Create("Manage SQL Queries", typeof(OrchardCorePermissions)), isSecurityCritical: true);
 }
