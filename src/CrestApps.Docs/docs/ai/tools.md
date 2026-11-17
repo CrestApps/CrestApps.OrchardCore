@@ -510,6 +510,103 @@ These tools are added beside `getRoleInfo`. `listRoles`, `getRole` and `listPerm
 
 Everything is checked before the role is changed. `deleteRole` reports how many users had the role.
 
+### OpenID Connect tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.OpenId.Management`; `saveOpenIdApplication` also needs `OrchardCore.OpenId.Server`
+
+| Function | Description |
+| --- | --- |
+| `listOpenIdApplications` | Lists the client applications with id, client id, display name and type, with a search by display name and paging. |
+| `getOpenIdApplication` | Returns one application by id or client id: type, consent type, redirect addresses, allowed flows and endpoints, the PKCE and pushed authorization request requirements, roles and scopes. |
+| `saveOpenIdApplication` | Creates a public client, or changes the display name, consent type, redirect addresses, flows, endpoints, requirements, roles and scopes of an application. Asks for approval. |
+| `deleteOpenIdApplication` | Deletes an application. The call names its id and its client id. Asks for approval. |
+| `listOpenIdScopes` | Lists the scopes with id, name, display name, description and resources. |
+| `saveOpenIdScope` | Creates a scope, or changes its name, display name, description and resources. Asks for approval. |
+| `deleteOpenIdScope` | Deletes a scope and names the applications that were allowed to request it. Asks for approval. |
+
+The application tools need the `ManageApplications` permission (**View, add, edit and remove the OpenID Connect applications**) and the scope tools need the `ManageScopes` permission (**View, add, edit and remove the OpenID Connect scopes**), the permissions of the **Access Control > OpenID Connect** pages. They read and delete through the application and scope managers of Orchard Core.
+
+No tool returns, takes or writes a client secret. `getOpenIdApplication` returns `hasClientSecret` only. `saveOpenIdApplication` saves through the `OpenIdApplication` recipe step of the OpenID module, which the Authorization Server feature registers and which keeps the stored secret of a confidential client when it is given none. It refuses:
+
+- A new confidential client, and a change of the type of an application. Both set or remove a client secret, which a person does on the **Applications** page.
+- A new redirect or post-logout redirect address that is not an absolute `https` address without a fragment. An address that is already stored may stay.
+- The administrator role, a role that cannot be given to a user, and a role the caller may not assign (**Assign any role to users**, checked on that role). A role on an application is what its client credentials act with.
+- The implicit and the password flow, unless the call sets `confirmDiscouragedFlows`, so the person who approves sees them.
+- A scope that does not exist, and a client id another application has.
+
+The lists it is given (`redirectUris`, `allowedFlows`, `allowedEndpoints`, `roles`, `scopes`) replace the stored lists; a field that is left out keeps its value. The tool does not change a client id. `saveOpenIdScope` refuses a name another scope has and a resource that names the tenant itself (`oct:<tenant>`), as the admin page does.
+
+### Rate limit tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.RateLimits`
+
+| Function | Description |
+| --- | --- |
+| `listRateLimitPolicies` | Lists the policies with scope, path or group, status and limiters, and the built-in route and group limits that modules register in code. Search text, status filter and paging. |
+| `saveRateLimitPolicy` | Creates a policy, or changes its name, description, scope (global, endpoint path or group) and limiters (fixed window, sliding window, concurrency, token bucket). Asks for approval. |
+| `enableRateLimitPolicy` | Enables one or more policies. The tenant reloads. Asks for approval. |
+| `disableRateLimitPolicy` | Disables one or more policies. The tenant reloads. Asks for approval. |
+| `deleteRateLimitPolicy` | Deletes one or more policies. The tenant reloads when an enabled policy is deleted. Asks for approval. |
+
+The tools need **Manage Rate Limits** and use the policy store of the **Tools > Rate Limits** page with its rules: a policy name is unique, an endpoint policy needs a path that starts with `/`, a group policy needs a group, and the scope, path, group and limiters of an enabled policy cannot be changed until it is disabled. The numbers of a limiter have the limits of the limiter editors (each at least 1; a queue limit of 0 or more).
+
+`saveRateLimitPolicy` always saves a new policy disabled, so the person can review its limits before `enableRateLimitPolicy` turns it on. The result warns when a policy is global, has no limiters, or names a group that no endpoint of the site is in.
+
+`listRateLimitPolicies` marks with `protectsSignIn` each enabled policy that limits the sign-in and account endpoints: a global policy, a policy on one of the rate-limit groups the Users module puts on those endpoints, and an endpoint policy whose path covers one of them. `disableRateLimitPolicy` and `deleteRateLimitPolicy` refuse such a policy unless the call sets `confirmRemovesSignInProtection`, and then say in the result which protection went. The built-in limits stay on in every case.
+
+### Secret tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Secrets`
+
+| Function | Description |
+| --- | --- |
+| `listSecrets` | Lists the secrets by name, store, type, description and created, updated and expiry dates, with search, type and expiry filters, and the secret stores. |
+| `saveSecret` | Creates an X.509 secret that points to a certificate in a certificate store of the server, or changes the description and the expiry date of any secret. Asks for approval. |
+| `deleteSecret` | Deletes a secret from its store. Asks for approval. |
+| `moveSecrets` | Moves one secret, or every secret, from one writable store to another and reports the outcome for each. Asks for approval. |
+
+`listSecrets` needs **View secrets**; the other tools need **Manage secrets**. They use the secret manager and the store operations service of the **Tools > Security > Secrets** pages.
+
+No tool returns the value of a secret, a private key or PEM material, and no tool has an argument for one. `listSecrets` reads only what the stores tell about a secret. To change a description or an expiry date, `saveSecret` saves the stored secret back unchanged, as the Edit page does when its value fields are empty. It creates nothing for a text secret or an RSA key secret, and it does not accept a PEM certificate: it returns the address of the Secrets page where a person types the value or has the key pair generated. For a new X.509 secret it says whether a certificate with the thumbprint is in that certificate store of the server. Dates are given and returned in the time zone of the user or the site.
+
+`deleteSecret` and `saveSecret` refuse a read-only store. No lookup tells which settings reference a secret, so `deleteSecret` cannot name them. When a store fails during `moveSecrets`, the tool does not return what the store answered.
+
+### Audit trail tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.AuditTrail`
+
+| Function | Description |
+| --- | --- |
+| `listAuditTrailEvents` | Lists the events, newest first, with filters for category, event name, user name, user id, correlation id and a date range, and paging. |
+| `getAuditTrailEvent` | Returns one event with its IP address and its details: the user snapshot of a user event, or the content item version of a content event. |
+
+Both tools need **View audit trail**. `listAuditTrailEvents` turns its arguments into the filter text of the **Tools > Audit Trail** page and runs it through the filter parser and the query service of that page. Dates are local dates or times in the time zone of the user or the site. A list returns who did what and when, without the IP address.
+
+The admin page shows the data of an event through the display driver of the module that recorded it. `getAuditTrailEvent` knows the user events and the content events of Orchard Core and returns the header only for any other event type. The details of a user event need **View Audit Trail events about users**, or **View Audit Trail events about own user** when the event is about the caller, as on the admin page; without it the tool returns the header and says so. A user snapshot is returned from a fixed list of fields (user id, user name, email, phone number, enabled, roles, the confirmation, two-factor and lockout flags and the failed sign-in count), with the values as the site redacted them when the event was recorded. For a content event the tool returns the ids, type, title, version number, author, comment and whether the version is published, not the content itself.
+
+### Notification tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Notifications`
+
+| Function | Description |
+| --- | --- |
+| `listNotifications` | Lists the caller's own notifications, newest first, with filters for read or unread, type and text, and paging. |
+| `markNotifications` | Marks notifications of the caller as read or unread: the given ids, or all of them for read. |
+| `deleteNotifications` | Removes the given notifications of the caller. Asks for approval. |
+
+These tools are added beside `sendNotification`. They need **Manage notifications**, which is about the user's own notifications, and act on the notifications of the signed-in caller only: the id of a notification that was sent to another user is answered like an id that does not exist. `listNotifications` uses the filter parser and the query service of the **Notifications** admin page. The admin page has no action that marks every notification as unread, so `all` works with `read` only.
+
+### Test email and test SMS tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Email` (`sendTestEmail`) or `OrchardCore.Sms` (`sendTestSms`)
+
+| Function | Required feature | Description |
+| --- | --- | --- |
+| `sendTestEmail` | `OrchardCore.Email` | Sends a test email with a fixed subject and body through a chosen email provider, or the default one, and returns the provider's result. Asks for approval. |
+| `sendTestSms` | `OrchardCore.Sms` | Sends the fixed test text message to a phone number through a chosen SMS provider and returns the provider's result. Asks for approval. |
+
+These tools are added beside `sendEmail` and `sendSmsMessage` and do what the **Tools > Testing** pages do. `sendTestEmail` needs **Manage Email Settings**, sends to the email address of the caller unless `to` names one other address, and lists the enabled providers in its result. `sendTestSms` needs **Manage SMS Settings** and sends to the phone number the call names; `provider` can be left out when one provider only is enabled. The subject and the text are fixed, so the tools check the settings and cannot be used to write a message to somebody. When a provider throws, the error goes to the log of the site and is not returned, because it can name the host and the account of the provider settings.
+
 ### Workflow tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + the matching workflow feature set
