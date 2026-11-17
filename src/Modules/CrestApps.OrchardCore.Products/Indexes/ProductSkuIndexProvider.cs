@@ -8,7 +8,9 @@ namespace CrestApps.OrchardCore.Products.Indexes;
 internal sealed class ProductSkuIndexProvider : IndexProvider<ContentItem>
 {
     public override void Describe(DescribeContext<ContentItem> context)
-        => context.For<ProductSkuIndex>().Map(CreateIndexes);
+        => context.For<ProductSkuIndex>()
+            .ExclusiveToDocumentType()
+            .Map(CreateIndexes);
 
     internal static IEnumerable<ProductSkuIndex> CreateIndexes(ContentItem contentItem)
     {

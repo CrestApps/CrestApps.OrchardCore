@@ -30,6 +30,8 @@ public sealed class StoreCreditAccountIndexProvider : IndexProvider<StoreCreditA
     public override void Describe(DescribeContext<StoreCreditAccount> context)
     {
         context.For<StoreCreditAccountIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(account => new StoreCreditAccountIndex
             {
                 ItemId = account.ItemId,

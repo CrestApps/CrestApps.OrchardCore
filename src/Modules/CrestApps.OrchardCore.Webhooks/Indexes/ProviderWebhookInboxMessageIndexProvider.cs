@@ -27,6 +27,8 @@ public sealed class ProviderWebhookInboxMessageIndexProvider : IndexProvider<Pro
     {
         context
             .For<ProviderWebhookInboxMessageIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(message => new ProviderWebhookInboxMessageIndex
             {
                 ItemId = message.ItemId,

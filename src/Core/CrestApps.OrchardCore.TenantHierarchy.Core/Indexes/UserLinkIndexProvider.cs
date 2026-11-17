@@ -21,6 +21,8 @@ public sealed class UserLinkIndexProvider : IndexProvider<UserLink>
     {
         context
             .For<UserLinkIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(document => new UserLinkIndex
             {
                 ChildUserId = document.ChildUserId,

@@ -47,6 +47,8 @@ public sealed class WishlistIndexProvider : IndexProvider<Wishlist>
 
     public override void Describe(DescribeContext<Wishlist> context)
         => context.For<WishlistIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(wishlist => new WishlistIndex { ItemId = wishlist.ItemId, UserId = wishlist.UserId });
 }
 

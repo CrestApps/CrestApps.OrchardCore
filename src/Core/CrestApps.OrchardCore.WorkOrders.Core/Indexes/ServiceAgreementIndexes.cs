@@ -53,6 +53,8 @@ public sealed class ServiceAgreementIndexProvider : IndexProvider<ServiceAgreeme
     public override void Describe(DescribeContext<ServiceAgreement> context)
     {
         context.For<ServiceAgreementIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new ServiceAgreementIndex
             {
                 ItemId = item.ItemId,

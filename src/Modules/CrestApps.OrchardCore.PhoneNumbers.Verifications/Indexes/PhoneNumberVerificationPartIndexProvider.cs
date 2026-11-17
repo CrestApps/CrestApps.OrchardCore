@@ -16,6 +16,8 @@ public sealed class PhoneNumberVerificationPartIndexProvider : IndexProvider<Con
     public override void Describe(DescribeContext<ContentItem> context)
     {
         context.For<PhoneNumberVerificationPartIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(contentItem =>
             {
                 if (!contentItem.Latest || !contentItem.TryGet<PhoneNumberVerificationPart>(out var part))

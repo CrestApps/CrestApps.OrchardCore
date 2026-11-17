@@ -20,6 +20,8 @@ public sealed class CoverageRequirementIndexProvider : IndexProvider<CoverageReq
     public override void Describe(DescribeContext<CoverageRequirement> context)
     {
         context.For<CoverageRequirementIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new CoverageRequirementIndex
             {
                 ItemId = item.ItemId,

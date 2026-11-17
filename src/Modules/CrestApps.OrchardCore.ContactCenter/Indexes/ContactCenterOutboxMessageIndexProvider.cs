@@ -22,6 +22,8 @@ public sealed class ContactCenterOutboxMessageIndexProvider : IndexProvider<Cont
     {
         context
             .For<ContactCenterOutboxMessageIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(message => new ContactCenterOutboxMessageIndex
             {
                 ItemId = message.ItemId,

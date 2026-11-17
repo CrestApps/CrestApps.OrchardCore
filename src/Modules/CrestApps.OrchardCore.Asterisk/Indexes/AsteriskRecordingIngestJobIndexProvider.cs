@@ -13,6 +13,8 @@ public sealed class AsteriskRecordingIngestJobIndexProvider : IndexProvider<Aste
     {
         context
             .For<AsteriskRecordingIngestJobIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(job => new AsteriskRecordingIngestJobIndex
             {
                 RecordingName = job.RecordingName,

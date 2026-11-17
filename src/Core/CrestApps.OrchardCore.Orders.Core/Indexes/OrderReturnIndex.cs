@@ -29,6 +29,8 @@ public sealed class OrderReturnIndexProvider : IndexProvider<OrderReturn>
     public override void Describe(DescribeContext<OrderReturn> context)
     {
         context.For<OrderReturnIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(orderReturn => new OrderReturnIndex
             {
                 ItemId = orderReturn.ItemId,

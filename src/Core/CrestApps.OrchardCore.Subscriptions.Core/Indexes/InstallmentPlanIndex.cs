@@ -92,6 +92,8 @@ public sealed class InstallmentPlanIndexProvider : IndexProvider<InstallmentPlan
     public override void Describe(DescribeContext<InstallmentPlan> context)
     {
         context.For<InstallmentPlanIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(plan => new InstallmentPlanIndex
             {
                 ItemId = plan.ItemId,

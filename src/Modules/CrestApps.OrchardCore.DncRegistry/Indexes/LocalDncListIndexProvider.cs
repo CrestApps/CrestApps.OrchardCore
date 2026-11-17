@@ -20,6 +20,8 @@ public sealed class LocalDncListIndexProvider : IndexProvider<LocalDncList>
     public override void Describe(DescribeContext<LocalDncList> context)
     {
         context.For<LocalDncListIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(list => new LocalDncListIndex
             {
                 ListId = list.ListId,

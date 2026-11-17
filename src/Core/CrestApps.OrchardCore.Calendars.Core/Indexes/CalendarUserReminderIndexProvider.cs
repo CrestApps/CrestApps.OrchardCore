@@ -20,6 +20,8 @@ public sealed class CalendarUserReminderIndexProvider : IndexProvider<CalendarUs
     public override void Describe(DescribeContext<CalendarUserReminder> context)
     {
         context.For<CalendarUserReminderIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(reminder => new CalendarUserReminderIndex
             {
                 ItemId = reminder.ItemId,

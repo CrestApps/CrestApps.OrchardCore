@@ -25,6 +25,7 @@ public sealed class AgentQueueMembershipIndexProvider : IndexProvider<AgentProfi
     {
         context
             .For<AgentQueueMembershipIndex>()
+            .ExclusiveToDocumentType()
             .Map(profile => AgentEntitlementUtilities
                 .GetEntitledQueueIds(profile)
                 .Select(queueId => new AgentQueueMembershipIndex

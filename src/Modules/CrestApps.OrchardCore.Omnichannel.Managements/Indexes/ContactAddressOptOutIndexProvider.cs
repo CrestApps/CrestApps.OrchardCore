@@ -19,6 +19,8 @@ internal sealed class ContactAddressOptOutIndexProvider : IndexProvider<ContactA
     {
         context
             .For<ContactAddressOptOutIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(optOut => new ContactAddressOptOutIndex
             {
                 ItemId = optOut.ItemId,

@@ -22,6 +22,8 @@ public sealed class RegisterIndexProvider : IndexProvider<Register>
 
     public override void Describe(DescribeContext<Register> context)
         => context.For<RegisterIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(register => new RegisterIndex
             {
                 ItemId = register.ItemId,
@@ -51,6 +53,8 @@ public sealed class PosDepartmentIndexProvider : IndexProvider<PosDepartment>
 
     public override void Describe(DescribeContext<PosDepartment> context)
         => context.For<PosDepartmentIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(department => new PosDepartmentIndex
             {
                 ItemId = department.ItemId,
@@ -91,6 +95,8 @@ public sealed class RegisterShiftIndexProvider : IndexProvider<RegisterShift>
 
     public override void Describe(DescribeContext<RegisterShift> context)
         => context.For<RegisterShiftIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(shift => new RegisterShiftIndex
             {
                 ItemId = shift.ItemId,

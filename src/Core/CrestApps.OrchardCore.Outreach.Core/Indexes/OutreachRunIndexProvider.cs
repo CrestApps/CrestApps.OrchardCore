@@ -21,6 +21,8 @@ public sealed class OutreachRunIndexProvider : IndexProvider<OutreachRun>
     {
         context
             .For<OutreachRunIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(run => new OutreachRunIndex
             {
                 ItemId = run.ItemId,

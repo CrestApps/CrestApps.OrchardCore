@@ -12,6 +12,8 @@ public sealed class CheckoutSessionIndexProvider : IndexProvider<CheckoutSession
     public override void Describe(DescribeContext<CheckoutSession> context)
     {
         context.For<CheckoutSessionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(session => new CheckoutSessionIndex
             {
                 SessionId = session.SessionId,

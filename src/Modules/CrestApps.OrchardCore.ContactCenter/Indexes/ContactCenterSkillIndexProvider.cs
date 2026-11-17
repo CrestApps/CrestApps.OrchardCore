@@ -22,6 +22,8 @@ public sealed class ContactCenterSkillIndexProvider : IndexProvider<ContactCente
     {
         context
             .For<ContactCenterSkillIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(skill => new ContactCenterSkillIndex
             {
                 ItemId = skill.ItemId,

@@ -22,6 +22,8 @@ public sealed class DialerProfileIndexProvider : IndexProvider<DialerProfile>
     {
         context
             .For<DialerProfileIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(profile => new DialerProfileIndex
             {
                 ItemId = profile.ItemId,
