@@ -69,6 +69,7 @@ public sealed class Startup : StartupBase
         services.AddEmailOwnershipConfirmation();
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
         services.AddScoped<ILoginFormEvent, CustomerMergeLoginFormEvent>();
+        services.AddScoped<IRegistrationFormEvents, CustomerMergeRegistrationFormEvent>();
         services.AddScoped<IUserEventHandler, CustomerMergeUserEventHandler>();
 
         services.AddScoped<CustomerAddressBook>();

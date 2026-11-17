@@ -33,7 +33,7 @@ public sealed class OpenIdUserSignInRevocationTests
         // unless the server's feature is on, which is also what registers the managers it takes.
         var startup = typeof(EmailCodeSignInOpenIdStartup);
 
-        Assert.Equal(UsersConstants.Feature.EmailCodeSignIn, startup.GetCustomAttribute<FeatureAttribute>()?.FeatureName);
+        Assert.Equal(UsersConstants.Feature.EmailOwnership, startup.GetCustomAttribute<FeatureAttribute>()?.FeatureName);
         Assert.Equal(new[] { OrchardCoreFeatureIds.OpenIdServer }, startup.GetCustomAttribute<RequireFeaturesAttribute>()?.RequiredFeatureNames);
     }
 }

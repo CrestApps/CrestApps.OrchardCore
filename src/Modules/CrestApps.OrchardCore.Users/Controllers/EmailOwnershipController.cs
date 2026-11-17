@@ -25,7 +25,7 @@ namespace CrestApps.OrchardCore.Users.Controllers;
 /// and every earlier sign-in ends, and only then is the address recorded as proved.
 /// </summary>
 [Authorize]
-[Feature(UsersConstants.Feature.EmailCodeSignIn)]
+[Feature(UsersConstants.Feature.EmailOwnership)]
 public sealed class EmailOwnershipController : Controller
 {
     private readonly UserManager<IUser> _userManager;
@@ -230,14 +230,14 @@ public sealed class EmailOwnershipController : Controller
         };
     }
 
-    // The signed-in account, when a code can confirm its address: the same accounts code sign-in serves, on a site that
-    // allows local sign-in.
+    // The signed-in account, when a code can confirm its address: the accounts code sign-in serves, and one that signs
+    // in only through an external provider, on a site that allows local sign-in.
     private async Task<User> FindAccountAsync()
     {
         if (!await EmailSignInAvailability.IsAvailableAsync(_siteService) ||
             await _userManager.GetUserAsync(User) is not User account ||
             string.IsNullOrWhiteSpace(account.Email) ||
-            !await _eligibility.AllowsAsync(account))
+            !await _eligibility.AllowsConfirmationAsync(account))
         {
             return null;
         }

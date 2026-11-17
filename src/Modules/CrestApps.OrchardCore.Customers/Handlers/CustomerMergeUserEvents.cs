@@ -1,7 +1,10 @@
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Users;
+using CrestApps.OrchardCore.Users.Core.Services;
+using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Users;
 using OrchardCore.Users.Events;
 using OrchardCore.Users.Handlers;
@@ -11,7 +14,9 @@ namespace CrestApps.OrchardCore.Customers.Handlers;
 
 /// <summary>
 /// Merges a user's guest customers when the user signs in, registers or confirms their email. The merge itself checks
-/// that the email is verified; a failure is logged and the merge is tried again on the next sign-in.
+/// that the email is verified; a failure is logged and the merge is tried again on the next sign-in. A sign-in whose
+/// address isn't verified yet, and a registration, are told when guest orders with the address are waiting, and where
+/// to confirm it.
 /// </summary>
 /// <remarks>
 /// The merge service is resolved when the event fires, not injected: Orchard Core's user store and user service build
@@ -41,6 +46,36 @@ internal static class CustomerMerge
             logger.LogError(exception, "The guest customers of a user could not be merged; they merge on the next sign-in.");
         }
     }
+
+    // A user whose address isn't proved gets nothing bought with it (owner decision 17). When guest orders with it are
+    // waiting, the user is told so, with a link to the page where a code proves it, so "register with the same email, and
+    // your orders appear in your account" stays true. The page is there whenever this feature is on, which depends on it.
+    public static async Task OfferConfirmationAsync(IServiceProvider serviceProvider, IUser user, ILogger logger)
+    {
+        if (user is not User { Email: { Length: > 0 } email } account ||
+            UserEmailOwnership.IsVerified(account.Properties, email) ||
+            serviceProvider.GetService<IEmailOwnershipConfirmationPage>() is not { } confirmationPage)
+        {
+            return;
+        }
+
+        try
+        {
+            if ((await serviceProvider.GetRequiredService<ICustomerStore>().ListGuestsByEmailAsync(email)).Count == 0 ||
+                await confirmationPage.GetUrlAsync(account) is not { } url)
+            {
+                return;
+            }
+
+            var H = serviceProvider.GetRequiredService<IHtmlLocalizer<CustomerMergeLoginFormEvent>>();
+
+            await serviceProvider.GetRequiredService<INotifier>().InformationAsync(H["Orders placed as a guest with {0} are waiting for your account. <a href=\"{1}\">Confirm it's you</a> to add them.", email, url]);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Could not tell a user whether guest orders with their email are waiting for them.");
+        }
+    }
 }
 
 public sealed class CustomerMergeLoginFormEvent : LoginFormEventBase
@@ -54,8 +89,11 @@ public sealed class CustomerMergeLoginFormEvent : LoginFormEventBase
         _logger = logger;
     }
 
-    public override Task LoggedInAsync(IUser user)
-        => CustomerMerge.RunAsync(_serviceProvider, user, _logger);
+    public override async Task LoggedInAsync(IUser user)
+    {
+        await CustomerMerge.RunAsync(_serviceProvider, user, _logger);
+        await CustomerMerge.OfferConfirmationAsync(_serviceProvider, user, _logger);
+    }
 }
 
 public sealed class CustomerMergeUserEventHandler : UserEventHandlerBase

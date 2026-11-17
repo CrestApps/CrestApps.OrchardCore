@@ -104,7 +104,7 @@ public sealed class OrderAccountController : Controller
         // Without email the account could never be confirmed, and the buyer would be told a link was sent.
         if (!_emailSender.CanSend)
         {
-            await _notifier.ErrorAsync(H["An account can't be made from this page right now. Register with the same email, and your orders appear in your account."]);
+            await _notifier.ErrorAsync(H["An account can't be made from this page right now. Register with the same email and confirm it's yours when asked, and your orders appear in your account."]);
 
             return LocalRedirect(back);
         }
@@ -129,7 +129,7 @@ public sealed class OrderAccountController : Controller
                 return LocalRedirect(back);
             }
 
-            await _notifier.InformationAsync(H["There's already an account with {0}. Sign in, and your orders with this email appear in your account.", email]);
+            await _notifier.InformationAsync(H["There's already an account with {0}. Sign in and confirm the email is yours when asked, and your orders with it appear in your account.", email]);
 
             return LocalRedirect(back);
         }

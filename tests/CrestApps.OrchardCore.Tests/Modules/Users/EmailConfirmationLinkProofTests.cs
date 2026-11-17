@@ -22,7 +22,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.Users;
 /// <summary>
 /// MD1 (fix-verification review): the handler that records a confirmation link as proof of the address lived in the
 /// Customers feature, so on a site without it a link never counted. These run Orchard Core's own e-mail confirmation
-/// controller over its user store on SQLite, with only the services the Email Code Sign-In feature's startup
+/// controller over its user store on SQLite, with only the services the "Confirm email ownership" feature's startup
 /// registers.
 /// </summary>
 public sealed class EmailConfirmationLinkProofTests : IAsyncLifetime
@@ -37,7 +37,7 @@ public sealed class EmailConfirmationLinkProofTests : IAsyncLifetime
         var empty = new ConfigurationBuilder().Build();
         configuration.Setup(c => c.GetSection(It.IsAny<string>())).Returns((string key) => empty.GetSection(key));
 
-        _harness = await EmailSignInHarness.CreateAsync(services => new EmailCodeSignInStartup(configuration.Object).ConfigureServices(services));
+        _harness = await EmailSignInHarness.CreateAsync(services => new EmailOwnershipStartup(configuration.Object).ConfigureServices(services));
     }
 
     public async ValueTask DisposeAsync()

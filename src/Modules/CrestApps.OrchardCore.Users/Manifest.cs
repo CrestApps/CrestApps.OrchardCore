@@ -39,6 +39,21 @@ using OrchardCore.Modules.Manifest;
         OrchardCoreFeatureIds.Users,
         OrchardCoreFeatureIds.Email,
         UsersConstants.Feature.Area,
+        UsersConstants.Feature.EmailOwnership,
+    ]
+)]
+
+[assembly: Feature(
+    Name = "Confirm email ownership",
+    Category = "Users",
+    Description = "Lets a signed-in person confirm, with a code emailed to them, that their email address is theirs, so what was placed with it before, such as guest orders, joins their account.",
+    Id = UsersConstants.Feature.EmailOwnership,
+    EnabledByDependencyOnly = true,
+    Dependencies =
+    [
+        OrchardCoreFeatureIds.Users,
+        OrchardCoreFeatureIds.Email,
+        UsersConstants.Feature.Area,
     ]
 )]
 

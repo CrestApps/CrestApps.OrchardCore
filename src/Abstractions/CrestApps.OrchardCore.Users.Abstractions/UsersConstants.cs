@@ -21,6 +21,8 @@ public static class UsersConstants
 
         public const string EmailCodeSignIn = "CrestApps.OrchardCore.Users.EmailCodeSignIn";
 
+        public const string EmailOwnership = "CrestApps.OrchardCore.Users.EmailOwnership";
+
         public const string Avatars = "CrestApps.OrchardCore.Users.Avatars";
     }
 }

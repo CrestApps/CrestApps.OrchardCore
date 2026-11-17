@@ -60,6 +60,8 @@
   <ItemGroup>
     <!-- Carries the Resources feature dependency so the package comes along. -->
     <ProjectReference Include="..\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
+    <!-- Carries the "Confirm email ownership" feature the Customers feature depends on; no type of it is used. -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

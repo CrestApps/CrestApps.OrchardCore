@@ -7,9 +7,9 @@ using OrchardCore.RateLimits;
 namespace CrestApps.OrchardCore.Users;
 
 /// <summary>
-/// The built-in limit of the sign-in code pages, listed read-only under Tools &gt; Rate Limits.
+/// The built-in limit of the sign-in code and "Confirm it's you" pages, listed read-only under Tools &gt; Rate Limits.
 /// </summary>
-[Feature(UsersConstants.Feature.EmailCodeSignIn)]
+[Feature(UsersConstants.Feature.EmailOwnership)]
 [RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
 public sealed class EmailCodeSignInRateLimitsStartup : StartupBase
 {

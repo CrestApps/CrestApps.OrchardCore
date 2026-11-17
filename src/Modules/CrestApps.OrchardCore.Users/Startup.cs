@@ -204,18 +204,19 @@ public sealed class DisplayNameRecipesSchemaStartup : StartupBase
 }
 
 /// <summary>
-/// Signing in with an emailed code.
+/// Confirming, with an emailed code, that a signed-in user's address is theirs: the "Confirm it's you" pages and what
+/// they share with signing in by code. Signing in with a code and the Customers feature depend on it.
 /// </summary>
-[Feature(UsersConstants.Feature.EmailCodeSignIn)]
-public sealed class EmailCodeSignInStartup : StartupBase
+[Feature(UsersConstants.Feature.EmailOwnership)]
+public sealed class EmailOwnershipStartup : StartupBase
 {
     private readonly IShellConfiguration _shellConfiguration;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EmailCodeSignInStartup"/> class.
+    /// Initializes a new instance of the <see cref="EmailOwnershipStartup"/> class.
     /// </summary>
     /// <param name="shellConfiguration">The tenant's configuration.</param>
-    public EmailCodeSignInStartup(IShellConfiguration shellConfiguration)
+    public EmailOwnershipStartup(IShellConfiguration shellConfiguration)
     {
         _shellConfiguration = shellConfiguration;
     }
@@ -226,15 +227,15 @@ public sealed class EmailCodeSignInStartup : StartupBase
         services.AddScoped<IEmailSignInCodeSender, EmailSignInCodeSender>();
         services.AddScoped<EmailSignInEligibility>();
         services.AddScoped<EmailOwnershipProof>();
+        services.AddScoped<IEmailOwnershipConfirmationPage, EmailOwnershipConfirmationPage>();
 
         // A proof that resets an account's earlier credentials ends its earlier sessions at once, not at the next
         // security stamp check.
         services.AddSingleton<UserCredentialsResets>();
         services.AddTransient<IPostConfigureOptions<CookieAuthenticationOptions>, CredentialsResetCookieValidation>();
 
-        // A confirmation link proves the address as a code does, with or without the Customers feature.
+        // A confirmation link proves the address of an account with no credentials, with or without the Customers feature.
         services.AddEmailOwnershipConfirmation();
-        services.AddDisplayDriver<LoginForm, EmailCodeLoginFormDisplayDriver>();
         services.Configure<EmailSignInOptions>(_shellConfiguration.GetSection(EmailSignInOptions.SectionName));
 
         // Counted on the shared attempt limiter, across nodes, whether or not Rate Limits is on.
@@ -244,4 +245,15 @@ public sealed class EmailCodeSignInStartup : StartupBase
             .AddAttemptPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15))
             .AddAttemptPolicyOverrides(_shellConfiguration.GetSection(AttemptLimitOptions.SectionName));
     }
+}
+
+/// <summary>
+/// Signing in with an emailed code. The codes and the services it shares with the confirmation pages come from the
+/// "Confirm email ownership" feature, which it depends on.
+/// </summary>
+[Feature(UsersConstants.Feature.EmailCodeSignIn)]
+public sealed class EmailCodeSignInStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddDisplayDriver<LoginForm, EmailCodeLoginFormDisplayDriver>();
 }
