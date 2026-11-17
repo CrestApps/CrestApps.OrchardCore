@@ -15,8 +15,8 @@ namespace CrestApps.OrchardCore.Customers.Handlers;
 /// <summary>
 /// Merges a user's guest customers when the user signs in, registers or confirms their email. The merge itself checks
 /// that the email is verified; a failure is logged and the merge is tried again on the next sign-in. A sign-in whose
-/// address isn't verified yet, and a registration, are told when guest orders with the address are waiting, and where
-/// to confirm it.
+/// address isn't verified yet, and a registration, are told that guest orders placed with it join the account once it
+/// is confirmed, and where to confirm it.
 /// </summary>
 /// <remarks>
 /// The merge service is resolved when the event fires, not injected: Orchard Core's user store and user service build
@@ -47,11 +47,13 @@ internal static class CustomerMerge
         }
     }
 
-    // A user whose address isn't proved gets nothing bought with it (owner decision 17). When guest orders with it are
-    // waiting, the user is told so, with a link to the page where a code proves it, so "register with the same email, and
-    // your orders appear in your account" stays true. The page is there whenever this feature is on, which depends on it.
+    // A user whose address isn't proved gets nothing bought with it (owner decision 17). The user is told that guest
+    // orders placed with it join the account once it is confirmed, with a link to the page where a code proves it, so
+    // "register with the same email, and your orders appear in your account" stays true. The page is there whenever this
+    // feature is on, which depends on it. Every such user gets the same notice, worded conditionally, and the store isn't
+    // asked: telling only those whose address has guest orders would tell anyone who registers with an address whether
+    // its owner bought here (G3).
     public static async Task OfferConfirmationAsync(
-        ICustomerStore store,
         IEmailOwnershipConfirmationPage confirmationPage,
         INotifier notifier,
         IHtmlLocalizer htmlLocalizer,
@@ -67,19 +69,18 @@ internal static class CustomerMerge
 
         try
         {
-            if ((await store.ListGuestsByEmailAsync(email)).Count == 0 ||
-                await confirmationPage.GetUrlAsync(account) is not { } url)
+            if (await confirmationPage.GetUrlAsync(account) is not { } url)
             {
                 return;
             }
 
             var H = htmlLocalizer;
 
-            await notifier.InformationAsync(H["Orders placed as a guest with {0} are waiting for your account. <a href=\"{1}\">Confirm it's you</a> to add them.", email, url]);
+            await notifier.InformationAsync(H["If you placed orders as a guest with {0}, <a href=\"{1}\">confirm it's you</a> to add them to your account.", email, url]);
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Could not tell a user whether guest orders with their email are waiting for them.");
+            logger.LogError(exception, "Could not tell a user where to confirm their email so the guest orders placed with it join their account.");
         }
     }
 }
@@ -99,7 +100,6 @@ public sealed class CustomerMergeLoginFormEvent : LoginFormEventBase
     {
         await CustomerMerge.RunAsync(_serviceProvider, user, _logger);
         await CustomerMerge.OfferConfirmationAsync(
-            _serviceProvider.GetRequiredService<ICustomerStore>(),
             _serviceProvider.GetService<IEmailOwnershipConfirmationPage>(),
             _serviceProvider.GetRequiredService<INotifier>(),
             _serviceProvider.GetRequiredService<IHtmlLocalizer<CustomerMergeLoginFormEvent>>(),

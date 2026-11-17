@@ -49,14 +49,25 @@ public sealed class CustomerMergeConfirmationOfferTests
         _merge.Verify(merge => merge.MergeVerifiedGuestsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact]
-    public async Task WithNoGuestOrders_NothingIsSaid()
+    // G3 (fourth fix-verification review): the notice was shown only when guest orders with the address were waiting,
+    // so registering with somebody's address told you whether they had bought there. It is now the same for every
+    // user whose address isn't proved, worded conditionally, and the store isn't asked.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task WithOrWithoutGuestOrders_TheSameNoticeIsShown_AndTheStoreIsNotAsked(bool guestOrdersWaiting)
     {
-        _store.Setup(store => store.ListGuestsByEmailAsync(Email, It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        // Arrange
+        _store.Setup(store => store.ListGuestsByEmailAsync(Email, It.IsAny<CancellationToken>())).ReturnsAsync(guestOrdersWaiting ? [new Customer()] : []);
 
+        // Act
         await CreateHandler().LoggedInAsync(new User { UserId = "user-1", Email = Email, EmailConfirmed = true, PasswordHash = "hash" });
 
-        Assert.Empty(_notices);
+        // Assert
+        var notice = Assert.Single(_notices);
+        Assert.StartsWith("If you placed orders as a guest", notice.Name, StringComparison.Ordinal);
+        Assert.Contains(ConfirmPath, Render(notice), StringComparison.Ordinal);
+        _store.Verify(store => store.ListGuestsByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

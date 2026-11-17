@@ -26,7 +26,7 @@ Enabling a feature of this module enables the features it depends on:
 ## Extension points
 
 - `IDisplayNameProvider` (CrestApps.OrchardCore.Users.Abstractions): Defines the contract for display name provider.
-- `IEmailOwnershipConfirmationPage` (CrestApps.OrchardCore.Users.Core): The address of the "Confirm it's you" page for a user whose email isn't proved yet, for a module that hands over what belongs to an address (Customers links to it when guest orders wait).
+- `IEmailOwnershipConfirmationPage` (CrestApps.OrchardCore.Users.Core): The address of the "Confirm it's you" page for a user whose email isn't proved yet, for a module that hands over what belongs to an address (Customers links to it for every signed-in user whose address isn't proved).
 - `IRoleGrantService` (CrestApps.OrchardCore.Users.Abstractions): Puts users in roles on behalf of the things that grant them, such as a membership or a subscription, and keeps a record of each grant by its source.
 - `IRoleGrantSource` (CrestApps.OrchardCore.Users.Abstractions): A kind of thing that grants roles through `IRoleGrantService`, such as memberships or subscriptions.
 - `IUserSearchService` (CrestApps.OrchardCore.Users.Abstractions): Finds users for user pickers and other lookups, so every module searches users the same way.
