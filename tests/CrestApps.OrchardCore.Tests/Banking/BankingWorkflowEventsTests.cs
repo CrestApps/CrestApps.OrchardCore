@@ -22,12 +22,12 @@ public sealed class BankingWorkflowEventsTests
         var created = changes[^1];
 
         // Act: the input is read when each change is told, since the account object moves on.
-        Assert.True(await context.Service.ChangeStatusAsync(account, BankAccountStatus.Verified, "Called the bank"));
+        Assert.True(await context.Service.ChangeStatusAsync(account, BankAccountStatus.Verified, "Called the bank", cancellationToken: TestContext.Current.CancellationToken));
         var verified = changes[^1];
         var verifiedEvents = BankingWorkflowObserver.EventsFor(verified);
         var input = BankingWorkflowObserver.Input(verified);
 
-        Assert.True(await context.Service.ChangeStatusAsync(account, BankAccountStatus.Closed, "Moved banks"));
+        Assert.True(await context.Service.ChangeStatusAsync(account, BankAccountStatus.Closed, "Moved banks", cancellationToken: TestContext.Current.CancellationToken));
         var closed = BankingWorkflowObserver.Input(changes[^1]);
 
         // Assert
