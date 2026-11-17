@@ -3,6 +3,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
 using OrchardCore.Environment.Shell;
 
@@ -102,23 +103,10 @@ internal sealed class ProfileScenarioCatalog
     public static string GetTitle(AIProfileTemplate template)
         => string.IsNullOrEmpty(template.DisplayText) ? template.Name : template.DisplayText;
 
-    private async Task<FeatureLookup> GetFeatureLookupAsync()
-    {
-        var enabledFeatureIds = (await _shellFeaturesManager.GetEnabledFeaturesAsync())
-            .Select(feature => feature.Id)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    private Task<ProfileScenarioFeatureLookup> GetFeatureLookupAsync()
+        => ProfileScenarioFeatureLookup.CreateAsync(_shellFeaturesManager);
 
-        var featureNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var feature in await _shellFeaturesManager.GetAvailableFeaturesAsync())
-        {
-            featureNames[feature.Id] = string.IsNullOrEmpty(feature.Name) ? feature.Id : feature.Name;
-        }
-
-        return new FeatureLookup(enabledFeatureIds, featureNames);
-    }
-
-    private static ProfileScenarioCardViewModel BuildCard(AIProfileTemplate template, ProfileScenarioMetadata scenario, FeatureLookup features)
+    private static ProfileScenarioCardViewModel BuildCard(AIProfileTemplate template, ProfileScenarioMetadata scenario, ProfileScenarioFeatureLookup features)
     {
         return new ProfileScenarioCardViewModel
         {
@@ -129,24 +117,9 @@ internal sealed class ProfileScenarioCatalog
             Icon = scenario.Icon,
             IsFeatured = scenario.Featured,
             ProfileType = template.GetOrCreate<ProfileTemplateMetadata>().ProfileType,
-            MissingFeatureNames = GetMissingFeatureNames(scenario, features),
+            MissingFeatureNames = features.GetMissingFeatureNames(scenario),
         };
     }
 
-    private static List<string> GetMissingFeatureNames(ProfileScenarioMetadata scenario, FeatureLookup features)
-    {
-        if (scenario.RequiresFeatures is not { Length: > 0 })
-        {
-            return [];
-        }
-
-        return scenario.RequiresFeatures
-            .Where(featureId => !features.EnabledFeatureIds.Contains(featureId))
-            .Select(featureId => features.FeatureNames.TryGetValue(featureId, out var name) ? name : featureId)
-            .ToList();
-    }
-
     private sealed record Entry(AIProfileTemplate Template, ProfileScenarioMetadata Scenario, AIProfileType? ProfileType);
-
-    private sealed record FeatureLookup(HashSet<string> EnabledFeatureIds, Dictionary<string, string> FeatureNames);
 }

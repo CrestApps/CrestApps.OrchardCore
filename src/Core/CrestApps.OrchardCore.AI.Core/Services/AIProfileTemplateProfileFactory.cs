@@ -1,13 +1,12 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.AI.Services;
+namespace CrestApps.OrchardCore.AI.Core.Services;
 
 /// <summary>
 /// Builds a profile from a template on the server and persists it, without a round trip through the profile
@@ -17,7 +16,7 @@ namespace CrestApps.OrchardCore.AI.Services;
 /// The editor rebuilds a new profile from the fields it renders, so a template value with no field of its own
 /// never reaches a profile saved there. Building the profile here keeps every value the template carries.
 /// </remarks>
-internal sealed class AIProfileTemplateProfileFactory
+public sealed class AIProfileTemplateProfileFactory
 {
     private readonly IAIProfileManager _profileManager;
     private readonly IEnumerable<IAIProfileTemplateApplicationHandler> _handlers;

@@ -4,7 +4,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;

@@ -3,11 +3,19 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Models;
 
-namespace CrestApps.OrchardCore.AI.Services;
+namespace CrestApps.OrchardCore.AI.Core.Services;
 
-internal static class AIProfileTemplateApplicator
+/// <summary>
+/// Copies the values a profile template carries onto a profile.
+/// </summary>
+public static class AIProfileTemplateApplicator
 {
-    internal static void Apply(AIProfile profile, AIProfileTemplate template)
+    /// <summary>
+    /// Copies the values of a template onto a profile.
+    /// </summary>
+    /// <param name="profile">The profile to fill.</param>
+    /// <param name="template">The template to copy from.</param>
+    public static void Apply(AIProfile profile, AIProfileTemplate template)
     {
         if (template.Properties != null)
         {
