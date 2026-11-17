@@ -1,7 +1,9 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Recipes;
 using CrestApps.OrchardCore.Banking.Services;
+using CrestApps.OrchardCore.Core.Deployments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -74,6 +76,12 @@ internal sealed class BankAccountsDeploymentSource : DeploymentSourceBase<BankAc
                 [nameof(BankAccount.Currency)] = account.Currency,
                 [nameof(BankAccount.BankName)] = account.BankName,
             };
+
+            // What other features keep on the account, such as the Bank file (ACH) settings: no account number is in it.
+            if (account.Properties is { Count: > 0 } properties)
+            {
+                node[nameof(BankAccount.Properties)] = JsonSerializer.SerializeToNode(properties, CatalogDeploymentSerializer.Options);
+            }
 
             if (includeNumbers)
             {

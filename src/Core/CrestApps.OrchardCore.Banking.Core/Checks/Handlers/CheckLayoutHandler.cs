@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Banking.Checks.Core.Services;
@@ -16,7 +17,8 @@ namespace CrestApps.OrchardCore.Banking.Checks.Core.Handlers;
 /// </summary>
 public sealed class CheckLayoutHandler : CatalogEntryHandlerBase<CheckLayout>
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    // The stock and the form are read by name, as the recipe schema lists them, or by number.
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
     private readonly IClock _clock;
 

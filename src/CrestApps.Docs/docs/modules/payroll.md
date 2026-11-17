@@ -104,6 +104,15 @@ The `PaySchedules` step (`Schedules`, matched by id then name) and the `PayCodes
 
 Workforce's `WorkforceTimeClock` step still reads its `PayPeriods` and `PayCodes` keys and saves them through these managers, so older recipes keep working. Its deployment step keeps exporting the pay schedules its policies name, and leaves pay codes to the `PayCodes` step.
 
+The **Payroll sample** recipe (`PayrollSample`, `payroll-sample.recipe.json`) sets up a payroll to try a pay run on. It turns on Payroll, United States Payroll Filings, Garnishments and Banking's Bank Accounts, Checks, Disbursements and Direct Deposit, runs the **United States Income Tax: federal rules for 2026** recipe through Orchard's `Recipes` step, and then adds, with fixed ids so a second run updates instead of duplicating:
+
+- the employer **Contoso** in Austin, Texas, with its `US` and `US-TX` registrations (the Texas one with a 2.7% rate) and the funding account **Contoso operating account**, a business account with **Bank file (ACH)** settings (`NachaOriginSettings`) of test values;
+- the check layout **Contoso paychecks** (blank stock, check on top, no check line until a font is uploaded);
+- the pay schedule **Every two weeks** (anchored on 4 January 2026, paid six days after the period, on Fridays) and the pay codes `401K` (a deduction exempt from income tax, a percent of earnings, with a limit of 24,500 a year and W-2 box 12D) and `CSUP` (child support, a garnishment);
+- four staff members with their pay (Staff Compensation) and pay profiles: Avery Lee (salary), Jordan Smith (paid by the hour, overtime eligible), Riley Chen (salary, a 401(k) item with a 50% employer match up to 3% of pay, and a child support order of 150 each pay paid by check) and Sam Rivera (salary, paid by check); the others are paid by deposit to verified accounts of their own.
+
+Tax ids are fictitious (987-65-4320 to 987-65-4323, numbers the Social Security Administration never issues), and account numbers are test values on routing number 021000021. No recipe step adds pay inputs, so open a pay run of Contoso for the current period and add Jordan's hours (such as 80 regular and 4 overtime) as the run's inputs before you calculate it. The sample has no Canadian employer: a Canadian employee needs a work site team with a province in its **Payroll** card, which no recipe step sets yet.
+
 ## Employers
 
 An `Employer` (catalog entry, `IEmployerManager`, name unique) is the legal entity that pays people: `Name`, `LegalName` (`PrintedName` falls back to the name), its own `TaxId`, `Address` (the shared address editor), `LogoPath` (media library), `CountryPack`, `Currency`, `FundingBankAccountId` (with Banking on, one of the bank accounts the employer owns: `PartyRef("Employer", id)`), signatory and contact, `Registrations` (`EmployerTaxRegistration`: jurisdiction, agency, account id, deposit frequency and dated `Rates`, `RateOn(day)`) and `Status`. Employers are a party kind (`EmployerPartySource`). A module that points at an employer registers an `IEmployerUsage`; an employer in use can't be deleted (the page and the store both refuse).

@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Services;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Parties.Models;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -10,7 +11,8 @@ namespace CrestApps.OrchardCore.Banking.Recipes;
 /// <summary>
 /// Imports bank accounts. An account is matched by its id and created when none matches. Numbers are read in clear
 /// text, checked and protected with this site's keys; an account without numbers is imported as unverified, as a
-/// deployment without sensitive data writes it.
+/// deployment without sensitive data writes it. <c>Properties</c> carries what other features keep on the account, such
+/// as the Bank file (ACH) settings (<c>NachaOriginSettings</c>) of one of the business's own accounts.
 /// </summary>
 internal sealed class BankAccountsRecipeStep : NamedRecipeStepHandler
 {
@@ -66,6 +68,21 @@ internal sealed class BankAccountsRecipeStep : NamedRecipeStepHandler
             if (node.ContainsKey("OwnerKind") || node.ContainsKey("OwnerId"))
             {
                 account.Owner = string.IsNullOrEmpty(ownerKind) || string.IsNullOrEmpty(ownerId) ? default : new PartyRef(ownerKind, ownerId);
+            }
+
+            // What other features keep on the account, such as the Bank file (ACH) settings of one of the business's
+            // own accounts: each settings object given replaces the stored one of that name.
+            if (node[nameof(BankAccount.Properties)] is JsonObject properties)
+            {
+                // Read the way every catalog entry reads its properties, so the settings are found again.
+                var incoming = new BankAccount();
+
+                CatalogDeploymentSerializer.Populate(incoming, new JsonObject { [nameof(BankAccount.Properties)] = properties.DeepClone() });
+
+                foreach (var (key, value) in incoming.Properties)
+                {
+                    account.Properties[key] = value;
+                }
             }
 
             var errors = _bankAccountService.ApplyNumbers(account, Text(node, nameof(BankAccount.RoutingNumber)), Text(node, nameof(BankAccount.AccountNumber)));

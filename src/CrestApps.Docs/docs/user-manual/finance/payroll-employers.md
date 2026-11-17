@@ -44,6 +44,8 @@ Every payroll permission, except seeing your own pay and changing your own pay d
 
 Run **Payroll: sample roles** under **Configuration > Recipes** to add three roles to start from: Payroll administrator, Payroll clerk (never approves) and Payroll approver. They cover every employer; copy one and pick the per-employer permissions instead for a clerk of one company.
 
+To see a complete employer before you add your own, run the **Payroll sample** recipe: it adds Contoso with its registrations, funding account, check layout, pay schedule and four people to pay (see [Pay runs](./payroll-pay-runs.md#try-it-with-the-sample)).
+
 Data pipelines read data with the access of the person who published them, so a pipeline a clerk of Contoso publishes reads only Contoso's people. The Data Pipelines pages themselves are for every employer: give **Manage data pipelines** only to people who may see all payroll.
 
 ## Settings

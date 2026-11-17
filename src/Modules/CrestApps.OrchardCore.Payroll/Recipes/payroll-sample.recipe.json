@@ -1,0 +1,547 @@
+{
+  "name": "PayrollSample",
+  "displayName": "Payroll sample",
+  "description": "Sets up a sample payroll to try a pay run: it runs the United States Income Tax: federal rules for 2026 recipe, then adds the employer Contoso in Austin, Texas (federal and Texas registrations, paid from the Contoso operating account at Woodgrove Bank with Bank file (ACH) settings of test values), a check layout, a pay schedule every two weeks paid on Fridays, a 401(k) and a child support pay code, and four staff members with pay profiles: Avery Lee and Riley Chen on a salary, Jordan Smith paid by the hour with overtime, and Sam Rivera on a salary paid by check. Riley saves 5% in the 401(k) with a 50% employer match and has a child support order. The others are paid by direct deposit to verified accounts. Every tax id and bank account number is a test value. Open a pay run of Contoso for the current period under Payroll > Pay Runs, add Jordan's hours (such as 80 regular and 4 overtime) as the run's inputs, and calculate it.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "payroll"
+  ],
+  "tags": [
+    "payroll",
+    "pay runs",
+    "garnishments",
+    "direct deposit",
+    "checks",
+    "sample"
+  ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "CrestApps.OrchardCore.Staff",
+        "CrestApps.OrchardCore.Staff.Compensation",
+        "CrestApps.OrchardCore.Banking",
+        "CrestApps.OrchardCore.Banking.Checks",
+        "CrestApps.OrchardCore.Banking.Disbursements",
+        "CrestApps.OrchardCore.Banking.DirectDeposit",
+        "CrestApps.OrchardCore.Payroll",
+        "CrestApps.OrchardCore.Payroll.UnitedStates",
+        "CrestApps.OrchardCore.Payroll.Garnishments"
+      ]
+    },
+    {
+      "name": "recipes",
+      "Values": [
+        {
+          "executionid": "PayrollSample",
+          "name": "IncomeTaxUnitedStatesFederal2026"
+        }
+      ]
+    },
+    {
+      "name": "PayCodes",
+      "Codes": [
+        {
+          "ItemId": "4baf1gbz8m54e0yhgk7vr4y1xc",
+          "Code": "401K",
+          "Name": "401(k) retirement plan",
+          "Class": "Deduction",
+          "Kind": "Contribution",
+          "Multiplier": 1,
+          "Enabled": true,
+          "Properties": {
+            "PayrollPayCodeSettings": {
+              "Calculation": "PercentOfEarnings",
+              "TaxTreatment": {
+                "IncomeTax": "Exempt"
+              },
+              "YearLimits": [
+                {
+                  "EffectiveFrom": "2026-01-01",
+                  "Amount": 24500
+                }
+              ],
+              "Priority": 20,
+              "FormBoxes": [
+                "W2:12D"
+              ]
+            }
+          }
+        },
+        {
+          "ItemId": "4xjfjxzfvbn4tk1eg6zsr0fqwx",
+          "Code": "CSUP",
+          "Name": "Child support",
+          "Class": "Deduction",
+          "Kind": "Garnishment",
+          "Multiplier": 1,
+          "Enabled": true
+        }
+      ]
+    },
+    {
+      "name": "PaySchedules",
+      "Schedules": [
+        {
+          "ItemId": "46vehrw7f1shx55yfm94qd8p1x",
+          "Name": "Every two weeks",
+          "Frequency": "Biweekly",
+          "AnchorDate": "2026-01-04",
+          "WeekStart": "Sunday",
+          "PayDateRule": "DaysAfterPeriodEnd",
+          "PayDateOffsetDays": 6,
+          "NonBusinessDayShift": "Before",
+          "ApprovalLeadDays": 2,
+          "Enabled": true
+        }
+      ]
+    },
+    {
+      "name": "Staff",
+      "Staff": [
+        {
+          "itemId": "4axdzn9tasrs7rnmatqf4km8en",
+          "displayName": "Avery Lee",
+          "email": "avery.lee@example.com",
+          "employeeNumber": "P101",
+          "jobTitle": "Finance manager",
+          "employmentType": "FullTime",
+          "status": "Active",
+          "hireDate": "2023-04-03",
+          "timeZoneId": "America/Chicago",
+          "workLocation": "Austin office",
+          "contractedHoursPerWeek": 40,
+          "pay": {
+            "payBasis": "Salary",
+            "currency": "USD",
+            "salaries": [
+              {
+                "effectiveFrom": "2026-01-01",
+                "annualAmount": 78000
+              }
+            ]
+          }
+        },
+        {
+          "itemId": "4myr6vcada8bpfzkwerh8p0de0",
+          "displayName": "Jordan Smith",
+          "email": "jordan.smith@example.com",
+          "employeeNumber": "P102",
+          "jobTitle": "Warehouse associate",
+          "employmentType": "FullTime",
+          "status": "Active",
+          "hireDate": "2024-06-10",
+          "timeZoneId": "America/Chicago",
+          "workLocation": "Austin warehouse",
+          "contractedHoursPerWeek": 40,
+          "pay": {
+            "payBasis": "Hourly",
+            "currency": "USD",
+            "rates": [
+              {
+                "effectiveFrom": "2026-01-01",
+                "hourlyRate": 24
+              }
+            ]
+          }
+        },
+        {
+          "itemId": "4264gqxhp63awcbtedg2pab5ma",
+          "displayName": "Riley Chen",
+          "email": "riley.chen@example.com",
+          "employeeNumber": "P103",
+          "jobTitle": "Account manager",
+          "employmentType": "FullTime",
+          "status": "Active",
+          "hireDate": "2022-09-12",
+          "timeZoneId": "America/Chicago",
+          "workLocation": "Austin office",
+          "contractedHoursPerWeek": 40,
+          "pay": {
+            "payBasis": "Salary",
+            "currency": "USD",
+            "salaries": [
+              {
+                "effectiveFrom": "2026-01-01",
+                "annualAmount": 65000
+              }
+            ]
+          }
+        },
+        {
+          "itemId": "4jj0m140xqgnt48dvhf0r3cxfd",
+          "displayName": "Sam Rivera",
+          "email": "sam.rivera@example.com",
+          "employeeNumber": "P104",
+          "jobTitle": "Receptionist",
+          "employmentType": "FullTime",
+          "status": "Active",
+          "hireDate": "2025-02-17",
+          "timeZoneId": "America/Chicago",
+          "workLocation": "Austin office",
+          "contractedHoursPerWeek": 40,
+          "pay": {
+            "payBasis": "Salary",
+            "currency": "USD",
+            "salaries": [
+              {
+                "effectiveFrom": "2026-01-01",
+                "annualAmount": 41600
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BankAccounts",
+      "Accounts": [
+        {
+          "ItemId": "49rj58f0yqys0k5nvjtxz8e0m5",
+          "Name": "Contoso operating account",
+          "HolderName": "Contoso, Inc.",
+          "Kind": "Checking",
+          "Country": "US",
+          "Currency": "USD",
+          "BankName": "Woodgrove Bank",
+          "RoutingNumber": "021000021",
+          "AccountNumber": "4500012345",
+          "Status": "Verified",
+          "StatusReason": "Sample account with test numbers.",
+          "Properties": {
+            "NachaOriginSettings": {
+              "Enabled": true,
+              "ImmediateDestination": "021000021",
+              "ImmediateDestinationName": "WOODGROVE BANK",
+              "ImmediateOrigin": "1123456789",
+              "ImmediateOriginName": "CONTOSO INC",
+              "CompanyName": "CONTOSO INC",
+              "CompanyIdentification": "1123456789",
+              "CompanyEntryDescription": "PAYROLL",
+              "IncludeOffset": false
+            }
+          }
+        },
+        {
+          "ItemId": "4ka95k8dbtftw7b9cm7vzsa081",
+          "Name": "Avery's checking",
+          "OwnerKind": "Staff",
+          "OwnerId": "4axdzn9tasrs7rnmatqf4km8en",
+          "HolderName": "Avery Lee",
+          "Kind": "Checking",
+          "Country": "US",
+          "Currency": "USD",
+          "BankName": "Woodgrove Bank",
+          "RoutingNumber": "021000021",
+          "AccountNumber": "4500020001",
+          "Status": "Verified",
+          "StatusReason": "Sample account with test numbers."
+        },
+        {
+          "ItemId": "4tbs4xkxcfz2qmdqasdxvhp0e8",
+          "Name": "Jordan's checking",
+          "OwnerKind": "Staff",
+          "OwnerId": "4myr6vcada8bpfzkwerh8p0de0",
+          "HolderName": "Jordan Smith",
+          "Kind": "Checking",
+          "Country": "US",
+          "Currency": "USD",
+          "BankName": "Woodgrove Bank",
+          "RoutingNumber": "021000021",
+          "AccountNumber": "4500020002",
+          "Status": "Verified",
+          "StatusReason": "Sample account with test numbers."
+        },
+        {
+          "ItemId": "4wkrafyp1j56w46j57y1ga89dx",
+          "Name": "Riley's savings",
+          "OwnerKind": "Staff",
+          "OwnerId": "4264gqxhp63awcbtedg2pab5ma",
+          "HolderName": "Riley Chen",
+          "Kind": "Savings",
+          "Country": "US",
+          "Currency": "USD",
+          "BankName": "Woodgrove Bank",
+          "RoutingNumber": "021000021",
+          "AccountNumber": "4500020003",
+          "Status": "Verified",
+          "StatusReason": "Sample account with test numbers."
+        }
+      ]
+    },
+    {
+      "name": "PayrollEmployers",
+      "Employers": [
+        {
+          "ItemId": "4gn8cjc0e2ffzb2kyq1gjwaf3m",
+          "Name": "Contoso",
+          "LegalName": "Contoso, Inc.",
+          "TaxId": "12-3456789",
+          "Address": {
+            "AddressLine1": "100 Main Street",
+            "City": "Austin",
+            "Region": "TX",
+            "PostalCode": "78701",
+            "Country": "US"
+          },
+          "CountryPack": "US",
+          "Currency": "USD",
+          "FundingBankAccountId": "49rj58f0yqys0k5nvjtxz8e0m5",
+          "SignatoryName": "Avery Lee",
+          "SignatoryTitle": "Finance manager",
+          "ContactName": "Avery Lee",
+          "ContactEmail": "payroll@example.com",
+          "ContactPhone": "+1 512 555 0100",
+          "Registrations": [
+            {
+              "Jurisdiction": "US",
+              "Agency": "Internal Revenue Service",
+              "AccountId": "12-3456789",
+              "DepositFrequency": "Monthly"
+            },
+            {
+              "Jurisdiction": "US-TX",
+              "Agency": "Texas Workforce Commission",
+              "AccountId": "99-999999-9",
+              "DepositFrequency": "Quarterly",
+              "Rates": [
+                {
+                  "EffectiveFrom": "2026-01-01",
+                  "Rate": 2.7
+                }
+              ]
+            }
+          ],
+          "Status": "Active"
+        }
+      ]
+    },
+    {
+      "name": "CheckLayouts",
+      "Layouts": [
+        {
+          "ItemId": "4g5063cwh97kbeeaqnpjp1mkj8",
+          "Name": "Contoso paychecks",
+          "Description": "Blank check stock with the check on top, for paychecks and payments to a garnishment's payee. Upload a check line font and turn on the check line before printing real checks.",
+          "Stock": "Blank",
+          "Form": "CheckOnTop",
+          "PrintMicr": false,
+          "PayerName": "Contoso, Inc.",
+          "PayerAddress": {
+            "AddressLine1": "100 Main Street",
+            "City": "Austin",
+            "Region": "TX",
+            "PostalCode": "78701",
+            "Country": "US"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PayrollPayProfiles",
+      "Profiles": [
+        {
+          "ItemId": "4jk297r2w1enbpzdyrc0xe3a0a",
+          "EmployeeNumber": "P101",
+          "EmployerName": "Contoso",
+          "PayScheduleName": "Every two weeks",
+          "WorkerType": "Employee",
+          "OvertimeStatus": "Exempt",
+          "Status": "Active",
+          "TaxId": "987-65-4320",
+          "HomeAddress": {
+            "AddressLine1": "12 Oak Lane",
+            "City": "Austin",
+            "Region": "TX",
+            "PostalCode": "78702",
+            "Country": "US"
+          },
+          "Elections": [
+            {
+              "Jurisdiction": "US",
+              "EffectiveFrom": "2026-01-01",
+              "Values": {
+                "FormYear": "2020",
+                "FilingStatus": "Single"
+              }
+            },
+            {
+              "Jurisdiction": "US-TX",
+              "EffectiveFrom": "2026-01-01",
+              "Values": {}
+            }
+          ],
+          "Distribution": [
+            {
+              "Method": "BankAccount",
+              "BankAccountId": "4ka95k8dbtftw7b9cm7vzsa081",
+              "Split": "Remainder"
+            }
+          ]
+        },
+        {
+          "ItemId": "43d8p5352djz324djvsakc3yqn",
+          "EmployeeNumber": "P102",
+          "EmployerName": "Contoso",
+          "PayScheduleName": "Every two weeks",
+          "WorkerType": "Employee",
+          "OvertimeStatus": "NonExempt",
+          "Status": "Active",
+          "TaxId": "987-65-4321",
+          "HomeAddress": {
+            "AddressLine1": "48 Elm Street",
+            "City": "Austin",
+            "Region": "TX",
+            "PostalCode": "78704",
+            "Country": "US"
+          },
+          "Elections": [
+            {
+              "Jurisdiction": "US",
+              "EffectiveFrom": "2026-01-01",
+              "Values": {
+                "FormYear": "2020",
+                "FilingStatus": "HeadOfHousehold",
+                "Dependents": "2000"
+              }
+            },
+            {
+              "Jurisdiction": "US-TX",
+              "EffectiveFrom": "2026-01-01",
+              "Values": {}
+            }
+          ],
+          "Distribution": [
+            {
+              "Method": "BankAccount",
+              "BankAccountId": "4tbs4xkxcfz2qmdqasdxvhp0e8",
+              "Split": "Remainder"
+            }
+          ]
+        },
+        {
+          "ItemId": "4nettp6gcxecw3avr24e27e4fv",
+          "EmployeeNumber": "P103",
+          "EmployerName": "Contoso",
+          "PayScheduleName": "Every two weeks",
+          "WorkerType": "Employee",
+          "OvertimeStatus": "Exempt",
+          "Status": "Active",
+          "TaxId": "987-65-4322",
+          "HomeAddress": {
+            "AddressLine1": "7 Pine Court",
+            "City": "Austin",
+            "Region": "TX",
+            "PostalCode": "78745",
+            "Country": "US"
+          },
+          "Elections": [
+            {
+              "Jurisdiction": "US",
+              "EffectiveFrom": "2026-01-01",
+              "Values": {
+                "FormYear": "2020",
+                "FilingStatus": "MarriedFilingJointly"
+              }
+            },
+            {
+              "Jurisdiction": "US-TX",
+              "EffectiveFrom": "2026-01-01",
+              "Values": {}
+            }
+          ],
+          "Distribution": [
+            {
+              "Method": "BankAccount",
+              "BankAccountId": "4wkrafyp1j56w46j57y1ga89dx",
+              "Split": "Remainder"
+            }
+          ]
+        },
+        {
+          "ItemId": "4q0pnr8gfq2tvdrt4099571z6d",
+          "EmployeeNumber": "P104",
+          "EmployerName": "Contoso",
+          "PayScheduleName": "Every two weeks",
+          "WorkerType": "Employee",
+          "OvertimeStatus": "NonExempt",
+          "Status": "Active",
+          "TaxId": "987-65-4323",
+          "HomeAddress": {
+            "AddressLine1": "305 Cedar Avenue",
+            "City": "Austin",
+            "Region": "TX",
+            "PostalCode": "78753",
+            "Country": "US"
+          },
+          "Elections": [
+            {
+              "Jurisdiction": "US",
+              "EffectiveFrom": "2026-01-01",
+              "Values": {
+                "FormYear": "2020",
+                "FilingStatus": "Single"
+              }
+            },
+            {
+              "Jurisdiction": "US-TX",
+              "EffectiveFrom": "2026-01-01",
+              "Values": {}
+            }
+          ],
+          "Distribution": [
+            {
+              "Method": "Check",
+              "Split": "Remainder"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "PayrollPayItems",
+      "Items": [
+        {
+          "ItemId": "4mjefn32zm772ggq6etcd0whgd",
+          "ProfileId": "4nettp6gcxecw3avr24e27e4fv",
+          "PayCode": "401K",
+          "Percent": 5,
+          "StartDate": "2026-01-01",
+          "EmployerMatchPercent": 50,
+          "EmployerMatchLimitPercent": 3,
+          "Note": "5% of pay, matched half by Contoso up to 3% of pay."
+        }
+      ]
+    },
+    {
+      "name": "PayrollGarnishments",
+      "Orders": [
+        {
+          "ItemId": "4svexxw08fsh6tfkw2dn335ng6",
+          "ProfileId": "4nettp6gcxecw3avr24e27e4fv",
+          "Type": "Support",
+          "CaseNumber": "FC-2026-000123",
+          "Agency": "County family court",
+          "PayCodeId": "4xjfjxzfvbn4tk1eg6zsr0fqwx",
+          "Amount": 150,
+          "ReceivedDate": "2026-10-15",
+          "StartDate": "2026-11-01",
+          "Status": "Active",
+          "PayeeName": "State disbursement unit",
+          "PayeeAddress": {
+            "AddressLine1": "PO Box 1000",
+            "City": "Austin",
+            "Region": "TX",
+            "PostalCode": "78711",
+            "Country": "US"
+          },
+          "PaymentMethod": "Check",
+          "Notes": "A sample order: 150 each pay, within the support limit of disposable earnings."
+        }
+      ]
+    }
+  ]
+}

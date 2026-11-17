@@ -36,6 +36,36 @@ public sealed class ChecksRecipeAndDeploymentTests
     }
 
     [Fact]
+    public async Task CheckLayoutsRecipe_ReadsTheStockAndTheFormByName()
+    {
+        // Arrange: the layout handler once read only numbers, so a recipe written as the schema lists them lost the
+        // whole layout ("Name is required.").
+        var clock = new Mock<global::OrchardCore.Modules.IClock>();
+        var manager = new NamedCatalogManager<CheckLayout>(
+            new CrestApps.OrchardCore.Tests.Taxation.Fakes.InMemoryNamedCatalog<CheckLayout>(),
+            [new CrestApps.OrchardCore.Banking.Checks.Core.Handlers.CheckLayoutHandler(clock.Object, RecipeRoundTrip.Localizer<CrestApps.OrchardCore.Banking.Checks.Core.Handlers.CheckLayoutHandler>())],
+            Mock.Of<Microsoft.Extensions.Logging.ILogger<NamedCatalogManager<CheckLayout>>>());
+        var step = new JsonObject
+        {
+            ["name"] = "CheckLayouts",
+            [CheckLayoutsRecipeStep.EntriesName] = new JsonArray(new JsonObject
+            {
+                ["Name"] = "Payroll checks",
+                ["Stock"] = "PrePrinted",
+                ["Form"] = "ThreePerPage",
+            }),
+        };
+
+        // Act
+        var errors = await RecipeRoundTrip.RunAsync(new CheckLayoutsRecipeStep(manager), step);
+
+        // Assert
+        Assert.Empty(errors);
+        var layout = Assert.Single(await manager.GetAllAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(("Payroll checks", CheckStock.PrePrinted, CheckForm.ThreePerPage), (layout.Name, layout.Stock, layout.Form));
+    }
+
+    [Fact]
     public async Task CheckRegisterRecipe_ImportsChecksAsHistory_AndSkipsOnesAlreadyThere()
     {
         // Arrange

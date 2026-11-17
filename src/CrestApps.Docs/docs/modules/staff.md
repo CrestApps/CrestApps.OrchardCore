@@ -149,7 +149,7 @@ With Data Pipelines on, the **Staff** report data source offers **Staff members*
 
 ## Recipes and deployment
 
-The `Staff` recipe step creates or updates staff members, matched by id, then employee number, then user (by `userName`); teams are given by name and the manager by id or `managerEmployeeNumber`, in any order. The **Staff** deployment step exports every staff member with their teams by name and their user by user name, and leaves out the date of birth unless **Include sensitive data** is ticked. The `StaffSettings` site settings travel in Orchard Core's `Settings` step.
+The `Staff` recipe step creates or updates staff members, matched by id, then employee number, then user (by `userName`); teams are given by name and the manager by id or `managerEmployeeNumber`, in any order. `pay`, when given, replaces the person's pay (`StaffPayRates`, such as `{ "payBasis": "Salary", "currency": "USD", "salaries": [ { "effectiveFrom": "2026-01-01", "annualAmount": 78000 } ] }`); the deployment step never writes it. The **Staff** deployment step exports every staff member with their teams by name and their user by user name, and leaves out the date of birth unless **Include sensitive data** is ticked. The `StaffSettings` site settings travel in Orchard Core's `Settings` step.
 
 ## Upgrading from Workforce workers
 

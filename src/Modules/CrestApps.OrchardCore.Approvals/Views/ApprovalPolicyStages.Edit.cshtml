@@ -62,7 +62,7 @@
         var builder = new HtmlContentBuilder();
 
         builder.AppendHtml($"<div class=\"card mb-3\" data-approval-stage=\"{stageKey}\"><input type=\"hidden\" name=\"{stagesName}.Index\" value=\"{stageKey}\" />");
-        builder.AppendHtml("<div class=\"card-header d-flex align-items-center\"><span class=\"flex-grow-1\" data-approval-stage-number>").Append(T["Stage {0}", number].Value).AppendHtml("</span>");
+        builder.AppendHtml("<div class=\"card-header d-flex align-items-center\"><span class=\"flex-grow-1\" data-approval-stage-number>").AppendHtml(T["Stage {0}", number]).AppendHtml("</span>");
         builder.AppendHtml("<button type=\"button\" class=\"btn btn-sm btn-outline-danger\" data-approval-stage-remove>").Append(T["Remove stage"].Value).AppendHtml("</button></div>");
         builder.AppendHtml("<div class=\"card-body\">");
         builder.AppendHtml($"<div class=\"ocat-wrapper\"><label class=\"ocat-label\" for=\"{stageId}_Title\">").Append(T["Title"].Value).AppendHtml("</label><div class=\"ocat-end\">");

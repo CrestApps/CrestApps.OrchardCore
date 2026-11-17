@@ -35,7 +35,8 @@ internal sealed class BankAccountsRecipeStepSchema : IRecipeStep
                             ("RoutingNumber", Text("The bank's routing number; checked for the country.")),
                             ("AccountNumber", Text("The account number in clear text; protected with the importing site's keys. Omit it to import the account without numbers.")),
                             ("Status", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Unverified", "VerificationSent", "Verified", "Failed", "Closed").Description("The status; kept only when the numbers are imported too.")),
-                            ("StatusReason", Text("Why the account has that status.")))
+                            ("StatusReason", Text("Why the account has that status.")),
+                            ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object | SchemaValueType.Null).AdditionalProperties(true).Description("What other features keep on the account, by the name of the settings object; each one given replaces the stored one. NachaOriginSettings holds the Bank file (ACH) settings of one of the business's own accounts: Enabled, ImmediateDestination (a routing number, or empty for the account's bank), ImmediateDestinationName, ImmediateOrigin (ten characters at most), ImmediateOriginName, CompanyName (sixteen at most), CompanyIdentification (ten at most), CompanyEntryDescription (ten at most, such as PAYROLL) and IncludeOffset.")))
                         .Required("Name", "HolderName")
                         .AdditionalProperties(true))
                     .Description("The bank accounts to create, or update by id.")))

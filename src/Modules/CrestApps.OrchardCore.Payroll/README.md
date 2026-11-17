@@ -34,7 +34,9 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
   `IPayrollScopeService` for pages, data sets and exports. `IPayrollEmployeeDirectory` maps employers to staff.
 - A **Payroll** card on teams (`PayrollTeamSettings`: ledger code, jurisdictions) and **Settings > Payroll**
   (`PayrollSettings`).
-- The recipe **Payroll: sample roles**.
+- The recipe **Payroll: sample roles**, and the **Payroll sample** recipe (`payroll-sample.recipe.json`): the employer
+  Contoso with its funding account, check layout and pay schedule, and four staff members with pay profiles to try a pay
+  run on.
 - The employee review (`PayrollSettings.EmployeeReview`, `PayStatementReviewService`, `PayReviewNotificationObserver`,
   **Your coming pay** in My Pay) and statement balances (`IPayStatementBalanceSource`, `PayStatement.Balances`).
 - **Payroll AI Tools** (`CrestApps.OrchardCore.Payroll.AI`, off by default): `MyPayStatementTool` and `PayRunChangesTool`.

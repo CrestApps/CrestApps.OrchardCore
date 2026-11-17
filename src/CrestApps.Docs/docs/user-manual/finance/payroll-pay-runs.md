@@ -16,6 +16,12 @@ A **pay run** pays the people of one employer for one period. Payroll works out 
 
 <AskYourAdmin />
 
+## Try it with the sample
+
+To try a pay run without setting everything up, run the **Payroll sample** recipe under **Configuration > Recipes**. It turns on Payroll and Banking, adds the 2026 federal income tax rules, and sets up the employer Contoso (with its bank account, a check layout and a pay schedule every two weeks) and four staff members with pay profiles: two on a salary paid by deposit, one paid by the hour, and one paid by check. One of them saves in a 401(k) and has a child support order. Every tax id and account number in it is made up.
+
+Then add a pay run for Contoso and leave the period empty to take the current one. Jordan Smith is paid by the hour, so enter Jordan's hours as inputs of the run, such as 80 hours of **REG** and 4 of **OT**, and choose **Calculate**.
+
 ## Add a pay run
 
 1. Open **Payroll > Pay Runs** and choose **Add pay run**.

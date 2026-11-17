@@ -44,7 +44,7 @@ internal sealed class EmployersRecipeStepSchema : IRecipeStep
                             ("Name", Text("The name the employer is known by, unique.")),
                             ("LegalName", Text("The legal name printed on statements, checks and forms.")),
                             ("TaxId", Text("The employer's own tax id, such as its employer identification number.")),
-                            ("Address", new JsonSchemaBuilder().Type(SchemaValueType.Object | SchemaValueType.Null).Description("The address printed on statements and checks: AddressLine1, AddressLine2, City, StateOrProvince, PostalCode, Country.")),
+                            ("Address", new JsonSchemaBuilder().Type(SchemaValueType.Object | SchemaValueType.Null).Description("The address printed on statements and checks: AddressLine1, AddressLine2, City, Region (the state or province code, such as TX), PostalCode, Country (two letters).")),
                             ("LogoPath", Text("The logo, a path in the media library.")),
                             ("CountryPack", Text("The country pack, such as US.")),
                             ("Currency", Text("The three-letter currency people are paid in.")),

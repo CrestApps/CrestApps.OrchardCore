@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using System.Text.Json.Nodes;
+using CrestApps.Core;
 using CrestApps.OrchardCore.Banking;
 using CrestApps.OrchardCore.Banking.Deployments;
+using CrestApps.OrchardCore.Banking.DirectDeposit;
 using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Recipes;
 using CrestApps.OrchardCore.Parties.Models;
@@ -112,6 +114,27 @@ public sealed class BankAccountsRecipeAndDeploymentTests
         var imported = Assert.Single(target.Store.Entries);
         Assert.Equal(BankAccountStatus.Unverified, imported.Status);
         Assert.False(BankAccountNumbers.HasNumbers(imported));
+    }
+
+    [Fact]
+    public async Task RoundTrip_CarriesTheBankFileSettingsOfTheBusinesssOwnAccount()
+    {
+        // Arrange
+        var source = new BankingTestContext();
+        var account = await source.CreateAsync("555000111");
+        account.Put(new NachaOriginSettings { Enabled = true, ImmediateOrigin = "1123456789", CompanyName = "CONTOSO INC", CompanyIdentification = "1123456789", CompanyEntryDescription = "PAYROLL" });
+        await source.Manager.UpdateAsync(account, cancellationToken: TestContext.Current.CancellationToken);
+        var step = await RecipeRoundTrip.ExportAsync(Source(source, mayReveal: true), new BankAccountsDeploymentStep());
+        var target = new BankingTestContext();
+
+        // Act
+        var errors = await RecipeRoundTrip.RunAsync(new BankAccountsRecipeStep(target.Manager, target.Service), step);
+
+        // Assert
+        Assert.Empty(errors);
+        Assert.DoesNotContain("555000111", step.ToJsonString(), StringComparison.Ordinal);
+        Assert.True(Assert.Single(target.Store.Entries).TryGet<NachaOriginSettings>(out var settings));
+        Assert.Equal((true, "1123456789", "CONTOSO INC", "PAYROLL"), (settings.Enabled, settings.ImmediateOrigin, settings.CompanyName, settings.CompanyEntryDescription));
     }
 
     [Fact]

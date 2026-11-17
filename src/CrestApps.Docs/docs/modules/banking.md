@@ -138,9 +138,9 @@ The `BankAccounts` recipe step creates accounts, or updates them by `ItemId`:
 }
 ```
 
-`OwnerKind` and `OwnerId` set the owner. Numbers are read in clear text and protected with the importing site's keys, since protected values can't be read on another site. A status is kept only when the numbers come with it; an account without numbers is imported as unverified.
+`OwnerKind` and `OwnerId` set the owner. Numbers are read in clear text and protected with the importing site's keys, since protected values can't be read on another site. A status is kept only when the numbers come with it; an account without numbers is imported as unverified. `Properties` carries what other features keep on the account, by the name of each settings object, such as the **Bank file (ACH)** settings of a business account (`"NachaOriginSettings": { "Enabled": true, "ImmediateOrigin": "1123456789", "CompanyName": "CONTOSO INC", "CompanyIdentification": "1123456789", "CompanyEntryDescription": "PAYROLL" }`); each one given replaces the stored one.
 
-The **Bank accounts** deployment step exports every account without its numbers or status. Run from a request, it needs `ManageBankAccounts`: without it the plan leaves the accounts out and says so, and the step can't be added to a plan. Its **Include the account numbers** option (`IncludeSensitiveData`) writes them in clear text; only a user with `RevealBankAccountNumbers` can turn it on or run a plan that uses it, and each exported number is recorded in the Audit Trail as a reveal. Both steps have schemas for CrestApps Recipes.
+The **Bank accounts** deployment step exports every account, with its `Properties`, without its numbers or status. Run from a request, it needs `ManageBankAccounts`: without it the plan leaves the accounts out and says so, and the step can't be added to a plan. Its **Include the account numbers** option (`IncludeSensitiveData`) writes them in clear text; only a user with `RevealBankAccountNumbers` can turn it on or run a plan that uses it, and each exported number is recorded in the Audit Trail as a reveal. Both steps have schemas for CrestApps Recipes.
 
 ### Reports and data pipelines
 
