@@ -68,14 +68,23 @@ public sealed partial class VoiceAgentConversationLoop
         var holdAudioPlaying = !string.IsNullOrWhiteSpace(request.HoldAudio) &&
             await media.PlayAudioAsync(voiceEvent.ProviderCallId, request.HoldAudio, loop: true, cancellationToken);
 
+        var briefing = request.Briefing?.Trim();
+
+        if (string.IsNullOrEmpty(briefing))
+        {
+            briefing = await WriteBriefingAsync(activity, cancellationToken);
+
+            // The briefing is a model turn, and a tool on it may have committed the session and saved the activity: the
+            // secure keypad does, in a scope of its own. So the activity is read again before the transfer is saved on it.
+            activity = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken) ?? activity;
+        }
+
         var transfer = new AIAttendedTransfer
         {
             SideCallId = sideCallId,
             PhoneNumber = request.TargetPhoneNumber,
             Mode = request.TransferMode,
-            Briefing = string.IsNullOrWhiteSpace(request.Briefing)
-                ? await WriteBriefingAsync(activity, cancellationToken)
-                : request.Briefing.Trim(),
+            Briefing = briefing,
             Introduction = string.IsNullOrWhiteSpace(request.Introduction) ? null : request.Introduction.Trim(),
             HoldAudioPlaying = holdAudioPlaying,
             StartedUtc = _clock.UtcNow,
