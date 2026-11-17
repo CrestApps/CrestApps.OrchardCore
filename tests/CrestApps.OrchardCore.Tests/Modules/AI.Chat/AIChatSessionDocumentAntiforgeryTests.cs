@@ -131,6 +131,36 @@ public sealed class AIChatSessionDocumentAntiforgeryTests
         Assert.False(page.Response.Headers.ContainsKey("X-Frame-Options"));
     }
 
+    /// <summary>
+    /// G9 of the fourth fix-verification review: the page a chat with document uploads is on varies with the fetch
+    /// metadata, and the normal path's antiforgery token marks it no-store. The cross-site frame variant is marked
+    /// no-store too, so a shared cache keyed on the URL can't serve it to same-site visitors, whose chat would then have no
+    /// attachment bar.
+    /// </summary>
+    [Fact]
+    public void ChatInACrossSiteFrame_IsNotStored_LikeThePageWithTheToken()
+    {
+        using var services = CreateServices();
+        var framed = NewContext(services, new ClaimsPrincipal(new ClaimsIdentity()), HttpMethods.Get);
+        framed.Request.Headers["Sec-Fetch-Site"] = "cross-site";
+        framed.Request.Headers["Sec-Fetch-Dest"] = "iframe";
+
+        var direct = NewContext(services, new ClaimsPrincipal(new ClaimsIdentity()), HttpMethods.Get);
+
+        foreach (var page in new[] { framed, direct })
+        {
+            CreateConfiguration(services, page).SerializeChatConfig(new
+            {
+                sessionDocumentsEnabled = true,
+                uploadDocumentUrl = "/ai/chat-sessions/upload-document",
+            });
+        }
+
+        Assert.Contains("no-store", direct.Response.Headers.CacheControl.ToString(), StringComparison.Ordinal);
+        Assert.Equal(direct.Response.Headers.CacheControl.ToString(), framed.Response.Headers.CacheControl.ToString());
+        Assert.Equal(direct.Response.Headers.Pragma.ToString(), framed.Response.Headers.Pragma.ToString());
+    }
+
     [Theory]
     [InlineData("same-origin", "iframe")]
     [InlineData("same-site", "iframe")]

@@ -135,6 +135,11 @@ public sealed class AIChatUIConfiguration
             chatConfig.Remove("uploadDocumentUrl");
             chatConfig.Remove("removeDocumentUrl");
 
+            // The page now varies with the fetch metadata. The token marks the other variant no-store; this one is
+            // marked the same, so a shared cache keyed on the URL can't serve it to visitors of the site itself.
+            httpContext.Response.Headers.CacheControl = "no-cache, no-store";
+            httpContext.Response.Headers.Pragma = "no-cache";
+
             return;
         }
 
