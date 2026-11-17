@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using CrestApps.Core.Services;
 using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
@@ -45,6 +46,7 @@ public sealed partial class MessagingWorkspaceBuilder
     private readonly IMessagingAgentNameProvider _agentNames;
     private readonly IMessagingFavoritesService _favoritesService;
     private readonly IActivityQueueManager _queueManager;
+    private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly MessagingQuietHoursGuard _quietHoursGuard;
@@ -67,6 +69,7 @@ public sealed partial class MessagingWorkspaceBuilder
         IMessagingAgentNameProvider agentNames,
         IMessagingFavoritesService favoritesService,
         IEnumerable<IActivityQueueManager> queueManagers,
+        IEnumerable<ICatalog<OmnichannelCampaign>> campaignCatalogs,
         IContentManager contentManager,
         IAuthorizationService authorizationService,
         MessagingQuietHoursGuard quietHoursGuard,
@@ -89,6 +92,8 @@ public sealed partial class MessagingWorkspaceBuilder
         _favoritesService = favoritesService;
         // Queues are a feature of their own; without it a conversation can only be transferred to a person.
         _queueManager = queueManagers.FirstOrDefault();
+        // Campaigns come with the Omnichannel management feature; without it the inbox has no campaign filter.
+        _campaignCatalog = campaignCatalogs.FirstOrDefault();
         _contentManager = contentManager;
         _authorizationService = authorizationService;
         _quietHoursGuard = quietHoursGuard;
@@ -149,7 +154,7 @@ public sealed partial class MessagingWorkspaceBuilder
     /// <summary>
     /// Builds the customer list.
     /// </summary>
-    public async Task<InboxViewModel> BuildInboxAsync(
+    public Task<InboxViewModel> BuildInboxAsync(
         ClaimsPrincipal user,
         AgentProfile currentAgent,
         string show,
@@ -158,7 +163,28 @@ public sealed partial class MessagingWorkspaceBuilder
         int page,
         string selectedCustomerKey,
         CancellationToken cancellationToken)
+        => BuildInboxAsync(user, currentAgent, show, channel, unreadOnly, page, selectedCustomerKey, MessagingInboxNarrowing.None, includeFilterOptions: false, cancellationToken);
+
+    /// <summary>
+    /// Builds the customer list, narrowed to one person's, one queue's or one campaign's conversations.
+    /// </summary>
+    /// <param name="narrowing">The person, queue and campaign the list is narrowed to.</param>
+    /// <param name="includeFilterOptions">Whether to list the people, queues and campaigns the list can be narrowed
+    /// to. Only the full page shows the filters, so the list refreshed on every new message does not read them.</param>
+    public async Task<InboxViewModel> BuildInboxAsync(
+        ClaimsPrincipal user,
+        AgentProfile currentAgent,
+        string show,
+        string channel,
+        bool unreadOnly,
+        int page,
+        string selectedCustomerKey,
+        MessagingInboxNarrowing narrowing,
+        bool includeFilterOptions,
+        CancellationToken cancellationToken)
     {
+        narrowing ??= MessagingInboxNarrowing.None;
+
         // Supervisors see every conversation; an agent sees their own and the unclaimed ones of the queues they serve.
         var scope = await MessagingInboxScope.ResolveAsync(_authorizationService, _entitlementPolicy, user, currentAgent);
 
@@ -170,6 +196,18 @@ public sealed partial class MessagingWorkspaceBuilder
 
         // An unknown channel filter would show an empty list with no way to tell why, so it falls back to all.
         viewModel.ChannelFilter = _channelResolver.Get(channel)?.Name;
+
+        // Only a supervisor sees other people's conversations, so only they can narrow the list to one person's. The
+        // queue and campaign filters only ever narrow what the viewer may already see.
+        viewModel.CanFilterByAgent = scope.IncludeAll;
+        viewModel.AgentFilter = scope.IncludeAll ? Normalize(narrowing.AgentId) : null;
+        viewModel.QueueFilter = _queueManager is null ? null : Normalize(narrowing.QueueId);
+        viewModel.CampaignFilter = _campaignCatalog is null ? null : Normalize(narrowing.CampaignId);
+
+        if (includeFilterOptions)
+        {
+            await PopulateFilterOptionsAsync(viewModel, scope, cancellationToken);
+        }
 
         // Surface the agent's messaging availability toggle (independent of voice presence). A viewer without an
         // agent profile (for example an admin) simply does not see the toggle.
@@ -204,6 +242,9 @@ public sealed partial class MessagingWorkspaceBuilder
             Filter = tab,
             Channel = viewModel.ChannelFilter,
             UnreadOnly = viewModel.UnreadOnly,
+            HolderAgentId = viewModel.AgentFilter,
+            QueueId = viewModel.QueueFilter,
+            CampaignId = viewModel.CampaignFilter,
             Skip = skip,
             Take = take,
         };

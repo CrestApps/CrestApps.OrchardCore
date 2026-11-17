@@ -230,6 +230,13 @@
 		var id = String(active.activityItemId);
 		return poppedActivityIds && Object.prototype.hasOwnProperty.call(poppedActivityIds, id) ? "" : id;
 	}
+	function isOfferForUser(notification, ownUserId) {
+		return !!notification && !!notification.userId && !!ownUserId && String(notification.userId) === String(ownUserId);
+	}
+	function acceptedOfferActivityToOpen(notification, ownUserId) {
+		if (!isOfferForUser(notification, ownUserId) || notification.reason !== "Accepted" || notification.kind === "AutoDial" || !notification.activityItemId) return "";
+		return String(notification.activityItemId);
+	}
 	var POPPED_STORAGE_KEY = "cc-agent-bar:popped-activities";
 	var POPPED_LIMIT = 50;
 	function readPoppedActivities(storage) {
@@ -462,6 +469,10 @@
 				if (!force && isPageDirty()) return false;
 				rememberPoppedActivity(poppedStorage, poppedActivityIds, activityId);
 				if (isCurrentPage(target)) return false;
+				diagnostic("activity-opened", {
+					activityId: String(activityId),
+					forced: !!force
+				});
 				window.location.assign(target);
 				return true;
 			}
@@ -484,6 +495,9 @@
 			}
 			function wasPopped(activityId) {
 				return Object.prototype.hasOwnProperty.call(poppedActivityIds, String(activityId));
+			}
+			function ownUserId() {
+				return state && state.userId || "";
 			}
 			function presenceStatus() {
 				return state && state.presence && state.presence.status || "Offline";
@@ -775,13 +789,21 @@
 				var isNew = notification.reservationId && notification.reservationId !== lastOfferReservationId;
 				lastOfferReservationId = notification.reservationId;
 				var beepFor = notification.kind === "InboundCall" && isNew ? notification.reservationId : null;
-				if (notification.autoOpenActivity && notification.activityItemId && !wasPopped(notification.activityItemId)) popActivity(notification.activityItemId, false);
+				if (notification.autoOpenActivity && notification.activityItemId && isOfferForUser(notification, ownUserId()) && !wasPopped(notification.activityItemId)) popActivity(notification.activityItemId, false);
 				refresh().then(function() {
 					if (beepFor && state && state.offer && state.offer.reservationId === beepFor) beep();
 				});
 			}
 			function onOfferRevoked(notification) {
-				if (notification && notification.reason === "Accepted" && notification.kind !== "AutoDial" && notification.activityItemId) popActivity(notification.activityItemId, false);
+				var acceptedActivityId = acceptedOfferActivityToOpen(notification, ownUserId());
+				diagnostic("offer-revoked", notification ? {
+					reservationId: notification.reservationId,
+					reason: notification.reason,
+					kind: notification.kind,
+					own: isOfferForUser(notification, ownUserId()),
+					opensActivityId: acceptedActivityId || null
+				} : {});
+				if (acceptedActivityId) popActivity(acceptedActivityId, false);
 				lastOfferReservationId = null;
 				refresh();
 			}

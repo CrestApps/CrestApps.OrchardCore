@@ -72,13 +72,13 @@ public sealed class Startup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes
-            .AddDownloadAIDocumentEndpoint()
-            // An answer that mentions a figure writes [fig:N], which the chat surfaces expand into an
-            // image pointing here. The endpoint looks the figure up on the document rather than trusting
-            // the id in the address, and applies the same rule the document download applies -- whoever
-            // may manage the owning interaction, session or profile may see its figures.
-            .AddDownloadAIDocumentFigureEndpoint();
+        routes.AddDownloadAIDocumentEndpoint();
+
+        // An answer that mentions a figure writes [fig:N], which the chat surfaces expand into an
+        // image pointing here. The endpoint looks the figure up on the document rather than trusting
+        // the id in the address, and applies the same rule the document download applies -- whoever
+        // may manage the owning interaction, session or profile may see its figures.
+        routes.AddDownloadAIDocumentFigureEndpoint();
     }
 }
 
@@ -105,9 +105,8 @@ public sealed class ChatInteractionDocumentsStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes
-            .AddUploadChatInteractionDocumentEndpoint(AIConstants.RouteNames.ChatInteractionUploadDocument)
-            .AddRemoveChatInteractionDocumentEndpoint(AIConstants.RouteNames.ChatInteractionRemoveDocument);
+        routes.AddUploadChatInteractionDocumentEndpoint(AIConstants.RouteNames.ChatInteractionUploadDocument);
+        routes.AddRemoveChatInteractionDocumentEndpoint(AIConstants.RouteNames.ChatInteractionRemoveDocument);
     }
 }
 
@@ -143,9 +142,8 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes
-            .AddUploadChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionUploadDocument)
-            .AddRemoveChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionRemoveDocument);
+        routes.AddUploadChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionUploadDocument);
+        routes.AddRemoveChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionRemoveDocument);
     }
 }
 

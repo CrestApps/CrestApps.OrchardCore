@@ -58,7 +58,8 @@ internal sealed class MessagingMigrations : DataMigration
             .Column<DateTime>("LastActivityUtc", column => column.Nullable())
             .Column<int>("UnreadCount", column => column.NotNull().WithDefault(0))
             .Column<DateTime>("AssignedUtc", column => column.Nullable())
-            .Column<DateTime>("FirstResponseDueUtc", column => column.Nullable()),
+            .Column<DateTime>("FirstResponseDueUtc", column => column.Nullable())
+            .Column<string>("CampaignId", column => column.Nullable().WithLength(26)),
             collection: MessagingStorage.CollectionName
         );
 
@@ -165,8 +166,9 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateAttentionIndexesAsync();
         await CreateActivityIndexAsync();
         await CreateLookupIndexesAsync();
+        await CreateCampaignIndexAsync();
 
-        return 6;
+        return 8;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -281,6 +283,57 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateLookupIndexesAsync();
 
         return 6;
+    }
+
+    /// <summary>
+    /// Adds the campaign a thread was handed off from, so the workspace can list one campaign's conversations. Threads
+    /// handed off before this have no campaign recorded, so no campaign filter lists them.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        await EnsureCampaignColumnAsync();
+        await CreateCampaignIndexAsync();
+
+        return 7;
+    }
+
+    /// <summary>
+    /// Adds the campaign column and its index where version 7 was recorded without them. Every save of a conversation
+    /// maps the column, so on such a database opening a conversation, receiving a message and every workflow that
+    /// touched one failed with "Invalid column name 'CampaignId'". Both checks find what is already there, so this is a
+    /// no-op wherever version 7 applied.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom7Async()
+    {
+        if (await EnsureCampaignColumnAsync())
+        {
+            _logger.LogWarning(
+                "The messaging conversation index had no 'CampaignId' column although its migration was recorded; the column was added.");
+        }
+
+        await CreateCampaignIndexAsync();
+
+        return 8;
+    }
+
+    private Task<bool> EnsureCampaignColumnAsync()
+    {
+        return IndexTableColumnCreation.AddIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            MessagingStorage.CollectionName,
+            "CampaignId",
+            table => table.AddColumn<string>("CampaignId", column => column.Nullable().WithLength(26)));
+    }
+
+    private Task<bool> CreateCampaignIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            "IDX_MessagingConversationIndex_Campaign",
+            MessagingStorage.CollectionName,
+            "CampaignId", "DocumentId");
     }
 
     private async Task CreateLookupIndexesAsync()

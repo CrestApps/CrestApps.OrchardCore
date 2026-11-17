@@ -298,6 +298,31 @@ public sealed class MessagingConversationStore : DocumentCatalog<MessagingConver
             results = results.Where(index => index.Channel == channel);
         }
 
+        if (!string.IsNullOrEmpty(query.HolderAgentId))
+        {
+            // The same rule as MessagingConversation.GetHolderAgentId, so the filter lists exactly the threads the
+            // thread view says the person holds.
+            var holderId = query.HolderAgentId;
+
+            results = results.Where(index =>
+                (index.AssignmentStatus == assigned && index.AssignedAgentId == holderId) ||
+                (index.OwnerType == personal && index.OwnerId == holderId && (index.AssignmentStatus != assigned || index.AssignedAgentId == null)));
+        }
+
+        if (!string.IsNullOrEmpty(query.QueueId))
+        {
+            var queueId = query.QueueId;
+
+            results = results.Where(index => index.OwnerType == queueOwner && index.OwnerId == queueId);
+        }
+
+        if (!string.IsNullOrEmpty(query.CampaignId))
+        {
+            var campaignId = query.CampaignId;
+
+            results = results.Where(index => index.CampaignId == campaignId);
+        }
+
         if (query.OpenOnly)
         {
             var open = ConversationStatus.Open.ToString();

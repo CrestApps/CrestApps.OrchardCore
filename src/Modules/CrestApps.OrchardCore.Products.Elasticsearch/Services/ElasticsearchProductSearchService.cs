@@ -65,8 +65,8 @@ public sealed class ElasticsearchProductSearchService : IProductIndexSearchServi
                 results[facet.Key] = new ProductFacetResult
                 {
                     Key = facet.Key,
-                    Min = min is { } low ? (decimal)low : null,
-                    Max = max is { } high ? (decimal)high : null,
+                    Min = min is { } low ? DecimalConversion.FromDouble(low) : null,
+                    Max = max is { } high ? DecimalConversion.FromDouble(high) : null,
                 };
 
                 continue;
