@@ -140,6 +140,20 @@ Some taxes are charged where the seller is rather than where the buyer is. Under
 
 Customers you mark **Exempt from tax** under [Customers](customers.md) pay no tax when they check out signed in.
 
+## Choose how tax is rounded
+
+Open **Settings > Commerce > Tax calculation** (permission **Manage taxation**) to choose where tax is rounded to the cent. The checkout and [invoices](invoicing.md) both use this setting, so a cart and an invoice with the same lines come to the same tax.
+
+| **Round tax at** | What it does |
+| --- | --- |
+| **Each tax and rate on the total** | Each tax and rate is rounded once, on what its lines add up to. This is what the European invoice standard (EN 16931) asks for. Two lines of 10.05 at 7.5% come to 1.51. The default for new sites. |
+| **Each line** | Every line's tax is rounded on its own and the rounded amounts are added up. Two lines of 10.05 at 7.5% come to 0.75 + 0.75 = 1.50. A site that already charged tax before this setting existed keeps this one. |
+| **Each kind of tax** | What each kind of tax, such as VAT or a sales tax, adds up to is rounded once. |
+| **Each jurisdiction** | What each jurisdiction, such as a state or a county, levies is rounded once. |
+| **The whole order** | Only the order's total tax is rounded. |
+
+Changing it changes what the checkout charges from then on. Orders and issued invoices keep their amounts.
+
 ## 6. Classify your products
 
 <YouTube video="taxation" title="Video of adding the Taxation part and setting a product's tax category" start={244} end={285} />

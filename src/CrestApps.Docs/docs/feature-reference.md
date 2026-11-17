@@ -262,7 +262,8 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Customers` | Customers | [Customers](./modules/customers) |
-| `CrestApps.OrchardCore.Commerce` | Commerce (dependency only) | [Commerce](./modules/commerce) |
+| `CrestApps.OrchardCore.Commerce.Foundation` | Commerce Foundation (dependency only) | [Commerce](./modules/commerce#the-commerce-foundation-and-commerce-features) |
+| `CrestApps.OrchardCore.Commerce` | Commerce (dependency only) | [Commerce](./modules/commerce#the-commerce-foundation-and-commerce-features) |
 | `CrestApps.OrchardCore.Checkout` | Checkout | [Checkout](./modules/checkout) |
 | `CrestApps.OrchardCore.Markets` | Markets | [Markets](./modules/markets) |
 | `CrestApps.OrchardCore.Accounts.B2B` | Accounts B2B | [Accounts B2B](./modules/accounts-b2b) |
@@ -370,6 +371,9 @@ Orchard Core's settings screen (`/Admin/Settings/{groupId}`) authorizes `Setting
 | `paylater` | `ManageTransactionSettings` | Pay Later |
 | `receipts` | `ManageReceiptSettings` | Receipts |
 | `number-series` | `ManageNumberSeries` | Business Documents |
+| `invoicing` | `ManageInvoicingSettings` | Invoicing |
+| `exchangeRates` | `ManageExchangeRates` | Exchange Rates |
+| `tax-origin`, `tax-calculation` | `ManageTaxation` | Taxation |
 | `inventory` | `ManageInventory` | Inventory |
 | `shipping` | `ManageShipping` | Shipping |
 | `taxjar` | `ManageTaxation` | TaxJar (`CrestApps.OrchardCore.Taxation.TaxJar`) |
