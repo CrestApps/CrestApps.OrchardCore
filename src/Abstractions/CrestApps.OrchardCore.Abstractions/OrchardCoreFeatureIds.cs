@@ -100,6 +100,8 @@ public static class OrchardCoreFeatureIds
 
     public const string Media = "OrchardCore.Media";
 
+    public const string MediaCache = "OrchardCore.Media.Cache";
+
     public const string Menu = "OrchardCore.Menu";
 
     public const string MicrosoftAuthenticationAzureAD = "OrchardCore.Microsoft.Authentication.AzureAD";
