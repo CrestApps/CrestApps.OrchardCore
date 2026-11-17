@@ -174,11 +174,33 @@
         text-transform: none;
     }
 
-    .admin-list-grid-row {
+    // One surface carries the hover: the cells of a table row (TheAdmin tints them in its own gray), or the whole
+    // row once a narrow list folds it into wrapped lines, where tinted cells would read as separate boxes.
+    .admin-list-grid-row > .admin-list-grid-cell {
+        transition: background-color 0.15s ease-in-out;
+    }
+
+    .admin-list-grid-row:hover > .admin-list-grid-cell {
+        background-color: var(--ca-row-hover-bg);
+    }
+
+    // The badges of a row (type, status, date) are outlined, so they never show a second shade on the row.
+    .admin-list-grid-row .ta-badge,
+    .list-group-item .ta-badge {
+        background-color: transparent;
+    }
+}
+
+@container admin-list (max-width: 48rem) {
+    .ca-admin .admin-list .admin-list-grid-row {
         transition: background-color 0.15s ease-in-out;
 
         &:hover {
             background-color: var(--ca-row-hover-bg);
+        }
+
+        &:hover > .admin-list-grid-cell {
+            background-color: transparent;
         }
     }
 }
