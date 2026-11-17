@@ -33,11 +33,13 @@
 		"popovertargetaction"
 	]);
 	var settingsClassPattern = /^(?:prompt-template-[\w-]+|remove-prompt-template-btn|capability-checkbox|setting-input|group-toggle|ci-agent-global-toggle)$/i;
+	var approvalAttributePattern = /^data-agui-(?:interrupt|approved)$/i;
 	var sanitizerMarker = "__crestAppsChatOutputGuard";
 	var watcherMarker = "__crestAppsChatOutputWatcher";
 	/**
 	* Returns whether an answer may keep an attribute: no data attribute but the chat's own, no id except a chart's canvas,
-	* nothing that ties an element to another control of the page, and checked only on a disabled checkbox (a task list).
+	* nothing that ties an element to another control of the page, checked only on a disabled checkbox (a task list), and
+	* the approval attributes only on a button of the chat's own approval box.
 	* @param {string} elementName The element's tag name.
 	* @param {string} attributeName The attribute's name.
 	* @param {string} attributeValue The attribute's value.
@@ -46,6 +48,7 @@
 	*/
 	function isAllowedAttribute(elementName, attributeName, attributeValue, element) {
 		const name = String(attributeName || "").toLowerCase();
+		if (approvalAttributePattern.test(name)) return isApprovalButton(element);
 		if (name.startsWith("data-")) return allowedDataAttributePattern.test(name);
 		if (name === "id") return String(elementName || "").toUpperCase() === "CANVAS" && chartCanvasIdPattern.test(String(attributeValue || ""));
 		if (name === "checked") return isTaskListCheckbox(element);
@@ -58,6 +61,10 @@
 	*/
 	function withoutSettingsClasses(value) {
 		return String(value || "").split(/\s+/).filter((token) => token && !settingsClassPattern.test(token)).join(" ");
+	}
+	function isApprovalButton(element) {
+		const parent = element && element.parentElement;
+		return !!parent && String(element.nodeName).toUpperCase() === "BUTTON" && !!parent.classList && parent.classList.contains("ai-chat-agui-approval");
 	}
 	function isTaskListCheckbox(element) {
 		return !!element && String(element.nodeName).toUpperCase() === "INPUT" && String(element.getAttribute("type") || "").trim().toLowerCase() === "checkbox" && element.hasAttribute("disabled");
