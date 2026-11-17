@@ -59,10 +59,10 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Transactions.Core\CrestApps.OrchardCore.Transactions.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
     <!-- Carried for the feature dependencies only: Invoicing's code uses their Abstractions and Core projects. -->
-    <ProjectReference Include="..\CrestApps.OrchardCore.Transactions\CrestApps.OrchardCore.Transactions.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.BusinessDocuments\CrestApps.OrchardCore.BusinessDocuments.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Taxation\CrestApps.OrchardCore.Taxation.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Transactions\CrestApps.OrchardCore.Transactions.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.BusinessDocuments\CrestApps.OrchardCore.BusinessDocuments.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Taxation\CrestApps.OrchardCore.Taxation.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>
