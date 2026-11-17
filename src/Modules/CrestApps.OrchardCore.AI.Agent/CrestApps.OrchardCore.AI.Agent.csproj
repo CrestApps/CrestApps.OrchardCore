@@ -31,7 +31,12 @@
     <PackageReference Include="OrchardCore.Taxonomies.Core" />
     <PackageReference Include="OrchardCore.Email.Abstractions" />
     <PackageReference Include="OrchardCore.Flows.Core" />
+    <PackageReference Include="OrchardCore.Indexing.Core" />
+    <PackageReference Include="OrchardCore.Lucene.Core" />
+    <PackageReference Include="OrchardCore.Elasticsearch.Core" />
     <PackageReference Include="OrchardCore.Media.Core" />
+    <PackageReference Include="OrchardCore.Queries.Abstractions" />
+    <PackageReference Include="OrchardCore.Search.Abstractions" />
     <PackageReference Include="OrchardCore.Shortcodes.Abstractions" />
     <PackageReference Include="OrchardCore.Sms.Abstractions" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
