@@ -1406,6 +1406,48 @@ html .ca-admin .CodeMirror-lines {
   padding-block: 0.375rem;
 }
 
+html .ca-admin .EasyMDEContainer .editor-toolbar:not(.fullscreen) {
+  border-color: var(--ca-control-border);
+  border-bottom: 0;
+  border-radius: var(--bs-border-radius) var(--bs-border-radius) 0 0;
+  background-color: var(--ca-surface);
+  opacity: 1;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+html .ca-admin .EasyMDEContainer .editor-toolbar:not(.fullscreen):hover {
+  opacity: 1;
+}
+html .ca-admin .EasyMDEContainer .editor-toolbar button {
+  border-color: transparent;
+  border-radius: var(--bs-border-radius-sm);
+  color: var(--bs-body-color);
+}
+html .ca-admin .EasyMDEContainer .editor-toolbar button:hover, html .ca-admin .EasyMDEContainer .editor-toolbar button.active {
+  border-color: transparent;
+  background-color: var(--ca-row-hover-bg);
+}
+html .ca-admin .EasyMDEContainer .editor-toolbar i.separator {
+  border-left-color: var(--ca-border);
+  border-right-color: transparent;
+}
+html .ca-admin .EasyMDEContainer:has(.editor-toolbar:not(.fullscreen)) > .CodeMirror:not(.CodeMirror-fullscreen) {
+  border-top-color: var(--ca-border);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+html .ca-admin .EasyMDEContainer:has(.CodeMirror-focused) .editor-toolbar:not(.fullscreen) {
+  border-color: var(--ca-focus-color);
+  box-shadow: 0 0 0 1px var(--ca-focus-color);
+  clip-path: inset(-2px -2px 0 -2px);
+}
+html .ca-admin .EasyMDEContainer:has(.editor-toolbar:not(.fullscreen)) > .CodeMirror-focused:not(.CodeMirror-fullscreen) {
+  border-top-color: var(--ca-border);
+  clip-path: inset(0 -2px -2px -2px);
+}
+html .ca-admin .EasyMDEContainer .editor-statusbar {
+  color: var(--ca-muted);
+}
+
 .ca-admin .alert {
   border-radius: var(--ca-radius);
 }

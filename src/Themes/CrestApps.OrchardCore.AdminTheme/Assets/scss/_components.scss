@@ -470,6 +470,66 @@ html .ca-admin .CodeMirror-lines {
     padding-block: 0.375rem;
 }
 
+// The Markdown editor (EasyMDE)
+// -----------------------------
+// The toolbar and the text area read as one field: the toolbar takes the field's border and top corners, the
+// text area keeps the bottom ones, a hairline divides them, and focus outlines both.
+html .ca-admin .EasyMDEContainer {
+    .editor-toolbar:not(.fullscreen) {
+        border-color: var(--ca-control-border);
+        border-bottom: 0;
+        border-radius: var(--bs-border-radius) var(--bs-border-radius) 0 0;
+        background-color: var(--ca-surface);
+        opacity: 1;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+
+    .editor-toolbar {
+        button {
+            border-color: transparent;
+            border-radius: var(--bs-border-radius-sm);
+            color: var(--bs-body-color);
+
+            &:hover,
+            &.active {
+                border-color: transparent;
+                background-color: var(--ca-row-hover-bg);
+            }
+        }
+
+        i.separator {
+            border-left-color: var(--ca-border);
+            border-right-color: transparent;
+        }
+    }
+
+    // The Shortcodes feature wraps the toolbar in a div of its own, so the text area is found from the container.
+    &:has(.editor-toolbar:not(.fullscreen)) > .CodeMirror:not(.CodeMirror-fullscreen) {
+        border-top-color: var(--ca-border);
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+
+    &:has(.CodeMirror-focused) .editor-toolbar:not(.fullscreen) {
+        border-color: var(--ca-focus-color);
+        box-shadow: 0 0 0 1px var(--ca-focus-color);
+        clip-path: inset(-2px -2px 0 -2px);
+    }
+
+    &:has(.editor-toolbar:not(.fullscreen)) > .CodeMirror-focused:not(.CodeMirror-fullscreen) {
+        border-top-color: var(--ca-border);
+        clip-path: inset(0 -2px -2px -2px);
+    }
+
+    .editor-statusbar {
+        color: var(--ca-muted);
+    }
+}
+
 // Alerts and badges
 // -----------------
 .ca-admin .alert {
