@@ -24,6 +24,10 @@ The feature adds a **Knowledge Article** content type (`KnowledgeArticle`): a ti
 
 The audience is enforced wherever an article is shown: an authorization handler fails every permission that reads an article (view, view own, preview, preview own and list, in general or for the type, such as `ViewContent_KnowledgeArticle`, compared by name) for anyone outside its audience, whatever content permissions they hold. So Orchard's search results, which check **ViewContent** on each hit, leave staff articles out for everyone else. Writing articles uses the type's content permissions. Published articles are indexed in `KnowledgeArticleIndex` (title, summary, category, audience, published date, helpful count).
 
+## Admin menu
+
+The module adds **Knowledge Base** to the **Service Desk** menu (`KnowledgeBaseAdminMenu`, the same `serviceDesk` item the Tickets feature adds, so the two merge; on its own it makes that menu): **Articles**, Orchard Core's content list of the `KnowledgeArticle` type with its **New Knowledge Article** button, and **Help center**, a link to `/help`. All three need **View staff-only knowledge articles**; the list and the editor still check the type's content permissions.
+
 ## Help center
 
 `/help` (route `KnowledgeBaseHome`) shows the categories with their article counts and the most helpful articles; `?category=` lists a category and `?q=` searches. A search matches articles with every word (up to five, two letters or more) in the title or the summary, most helpful first, among the articles the reader may read (`KnowledgeArticleSearch`). Each article ends with **Was this helpful?**, posted to `help/articles/{id}/feedback` and counted once per browser, under a lock on the article so answers given at the same time all count. Through Orchard Core's **Rate Limits** (the feature turns it on), a visitor address gives at most 20 answers in 10 minutes (group `knowledge-base-feedback`), so a script can't push an article up.

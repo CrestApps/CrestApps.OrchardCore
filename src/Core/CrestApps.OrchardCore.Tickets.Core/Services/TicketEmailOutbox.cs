@@ -83,7 +83,7 @@ public sealed class TicketEmailOutbox
     public async Task<int> SendDueAsync(CancellationToken cancellationToken = default)
     {
         var now = _clock.UtcNow;
-        var due = await _session.Query<TicketEmailOutboxItem, TicketEmailOutboxIndex>(index => index.Status == TicketEmailOutboxStatus.Pending && index.NextAttemptUtc != null && index.NextAttemptUtc <= now)
+        var due = await _session.Query<TicketEmailOutboxItem, TicketEmailOutboxIndex>(index => index.Status == TicketEmailOutboxStatus.Pending && index.NextAttemptUtc != null && index.NextAttemptUtc <= now, TicketsConstants.CollectionName)
             .OrderBy(index => index.NextAttemptUtc)
             .Take(SendsPerRun)
             .ListAsync(cancellationToken);
@@ -148,7 +148,7 @@ public sealed class TicketEmailOutbox
             item.NextAttemptUtc = now.Add(_retries[item.Attempts - 1]);
         }
 
-        await _session.SaveAsync(item, cancellationToken: cancellationToken);
+        await _session.SaveAsync(item, false, TicketsConstants.CollectionName, cancellationToken);
         await MarkEntryAsync(item, cancellationToken);
 
         return sent;

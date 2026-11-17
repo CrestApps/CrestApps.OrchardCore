@@ -76,6 +76,14 @@ public sealed class TicketProtectedItemIndex : MapIndex
 /// </summary>
 public sealed class TicketProtectedItemIndexProvider : IndexProvider<TicketProtectedItemDocument>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TicketProtectedItemIndexProvider"/> class, which maps to the service desk's collection.
+    /// </summary>
+    public TicketProtectedItemIndexProvider()
+    {
+        CollectionName = TicketsConstants.CollectionName;
+    }
+
     /// <inheritdoc/>
     public override void Describe(DescribeContext<TicketProtectedItemDocument> context)
         => context.For<TicketProtectedItemIndex>()

@@ -66,7 +66,15 @@ public sealed class Startup : StartupBase
             .AddCatalogs()
             .AddCatalogManagers();
 
+        // The service desk's own records live in their collection; tickets, as content items, stay in the default one.
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(TicketsConstants.CollectionName));
+
         services.AddDataMigration<TicketsMigrations>()
+            .AddIndexProvider<TicketSettingsRecordIndexProvider<TicketDesk, TicketDeskIndex>>()
+            .AddIndexProvider<TicketSettingsRecordIndexProvider<TicketStatus, TicketStatusIndex>>()
+            .AddIndexProvider<TicketSettingsRecordIndexProvider<TicketPriority, TicketPriorityIndex>>()
+            .AddIndexProvider<TicketSettingsRecordIndexProvider<TicketView, TicketViewIndex>>()
+            .AddIndexProvider<TicketSettingsRecordIndexProvider<TicketBoard, TicketBoardIndex>>()
             .AddIndexProvider<TicketIndexProvider>()
             .AddIndexProvider<TicketBacklogIndexProvider>()
             .AddIndexProvider<TicketTimeElapsedMarkIndexProvider>()

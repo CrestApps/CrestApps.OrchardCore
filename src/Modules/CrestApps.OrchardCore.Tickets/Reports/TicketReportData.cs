@@ -247,7 +247,7 @@ internal sealed class TicketReportData
             _session,
             index => index.Where(row => row.DeskId.IsIn(desks) && row.TakenUtc >= from && row.TakenUtc <= to),
             index => index.TakenUtc,
-            null,
+            TicketsConstants.CollectionName,
             cancellationToken))
         {
             rows.AddRange(day.Groups

@@ -92,6 +92,14 @@ public sealed class TicketEmailOutboxIndex : MapIndex
 /// </summary>
 public sealed class TicketEmailOutboxIndexProvider : IndexProvider<TicketEmailOutboxItem>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TicketEmailOutboxIndexProvider"/> class, which maps to the service desk's collection.
+    /// </summary>
+    public TicketEmailOutboxIndexProvider()
+    {
+        CollectionName = TicketsConstants.CollectionName;
+    }
+
     /// <inheritdoc/>
     public override void Describe(DescribeContext<TicketEmailOutboxItem> context)
         => context.For<TicketEmailOutboxIndex>()

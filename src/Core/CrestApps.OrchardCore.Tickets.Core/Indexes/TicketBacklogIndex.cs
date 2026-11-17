@@ -20,6 +20,14 @@ public sealed class TicketBacklogIndex : MapIndex
 /// </summary>
 public sealed class TicketBacklogIndexProvider : IndexProvider<TicketBacklogDay>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TicketBacklogIndexProvider"/> class, which maps to the service desk's collection.
+    /// </summary>
+    public TicketBacklogIndexProvider()
+    {
+        CollectionName = TicketsConstants.CollectionName;
+    }
+
     /// <inheritdoc/>
     public override void Describe(DescribeContext<TicketBacklogDay> context)
         => context.For<TicketBacklogIndex>()

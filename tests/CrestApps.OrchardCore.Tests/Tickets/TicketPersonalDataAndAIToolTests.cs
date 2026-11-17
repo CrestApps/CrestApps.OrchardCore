@@ -55,8 +55,13 @@ public sealed class TicketPersonalDataAndAIToolTests
                 services.AddScoped<TicketPersonalDataContributor>();
                 services.AddSingleton(attachments.Object);
             },
-            TicketIndexSchema.CreateAsync,
-            [new TicketIndexProvider(), new TicketEmailOutboxIndexProvider()]);
+            async schema =>
+            {
+                await TicketIndexSchema.CreateAsync(schema);
+                await TicketIndexSchema.CreateServiceDeskAsync(schema);
+            },
+            [new TicketIndexProvider(), new TicketEmailOutboxIndexProvider()],
+            [TicketsConstants.CollectionName]);
 
         await harness.RunAsync(async services =>
         {
@@ -64,8 +69,8 @@ public sealed class TicketPersonalDataAndAIToolTests
             await session.SaveAsync(Ticket("t1", "Pat Doe can't print", new PartyRef(PartyKinds.User, "u1"), null));
             await session.SaveAsync(Ticket("t2", "Scanner offline", default, new ContactInfo { Name = "Pat Doe", Email = "Pat@Example.com" }));
             await session.SaveAsync(Ticket("t3", "Someone else", default, new ContactInfo { Name = "Lee", Email = "lee@example.com" }));
-            await session.SaveAsync(new TicketEmailOutboxItem { TicketId = "t2", To = "pat@example.com", Html = "<p>Hi Pat Doe</p>", Status = TicketEmailOutboxStatus.Pending });
-            await session.SaveAsync(new TicketEmailOutboxItem { TicketId = "t3", To = "lee@example.com", Status = TicketEmailOutboxStatus.Sent });
+            await session.SaveAsync(new TicketEmailOutboxItem { TicketId = "t2", To = "pat@example.com", Html = "<p>Hi Pat Doe</p>", Status = TicketEmailOutboxStatus.Pending }, false, TicketsConstants.CollectionName);
+            await session.SaveAsync(new TicketEmailOutboxItem { TicketId = "t3", To = "lee@example.com", Status = TicketEmailOutboxStatus.Sent }, false, TicketsConstants.CollectionName);
         });
         timeline.Entries.Add(new TimelineEntry { ItemId = "e1", Subject = new RecordRef(TicketsConstants.RecordKind, "t2"), Kind = TicketsConstants.EntryKinds.Reply, Visibility = TimelineVisibility.Public, Body = "Hi Pat Doe, try again.", AuthorName = "Agent", Author = new PartyRef(PartyKinds.User, "agent-1"), AttachmentIds = ["agent-file"], Properties = { ["Notice"] = "Not delivered: 550 pat@example.com unknown" } });
         timeline.Entries.Add(new TimelineEntry { ItemId = "e0", Subject = new RecordRef(TicketsConstants.RecordKind, "t2"), Kind = TicketsConstants.EntryKinds.Reply, Visibility = TimelineVisibility.Public, Body = "My scanner is offline.", AuthorName = "Pat Doe", AttachmentIds = ["pats-photo"] });
@@ -83,7 +88,7 @@ public sealed class TicketPersonalDataAndAIToolTests
         });
         var t2 = await harness.RunAsync(services => services.GetRequiredService<ISession>().Query<ContentItem, TicketIndex>(index => index.ContentItemId == "t2").FirstOrDefaultAsync(), commit: false);
         var t2Index = await harness.RunAsync(services => services.GetRequiredService<ISession>().QueryIndex<TicketIndex>(index => index.ContentItemId == "t2").FirstOrDefaultAsync(), commit: false);
-        var outbox = await harness.RunAsync(async services => (await services.GetRequiredService<ISession>().Query<TicketEmailOutboxItem>().ListAsync()).ToList(), commit: false);
+        var outbox = await harness.RunAsync(async services => (await services.GetRequiredService<ISession>().Query<TicketEmailOutboxItem>(TicketsConstants.CollectionName).ListAsync()).ToList(), commit: false);
 
         // Assert
         Assert.Equal(["t1", "t2"], export.Records.Where(record => record.Kind == TicketPersonalDataContributor.TicketKind).Select(record => record.Id).Order());

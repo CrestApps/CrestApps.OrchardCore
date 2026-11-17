@@ -105,11 +105,12 @@ internal sealed class TicketKit : IAsyncDisposable
             async schema =>
             {
                 await TicketIndexSchema.CreateAsync(schema);
+                await TicketIndexSchema.CreateServiceDeskAsync(schema);
                 await TimelineIndexSchema.CreateAsync(schema);
                 await ServiceLevelsIndexSchema.CreateAsync(schema);
             },
             [new TicketIndexProvider(), new TicketTimeElapsedMarkIndexProvider(), new TicketEmailOutboxIndexProvider(), new TicketProtectedItemIndexProvider(), new TicketLinkIndexProvider(), new TimelineEntryIndexProvider(), new ServiceLevelPolicyIndexProvider(), new ServiceLevelTimerIndexProvider()],
-            [TimelineConstants.CollectionName, ServiceLevelsConstants.CollectionName]);
+            [TimelineConstants.CollectionName, ServiceLevelsConstants.CollectionName, TicketsConstants.CollectionName]);
 
         if (withPolicy)
         {

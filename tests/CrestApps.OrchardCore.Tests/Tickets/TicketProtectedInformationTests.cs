@@ -37,7 +37,7 @@ public sealed class TicketProtectedInformationTests
 
         // Assert: the stored document holds a cipher, which reads back to the value.
         Assert.NotNull(added);
-        var stored = await kit.ReadAsync(services => services.GetRequiredService<ISession>().Query<TicketProtectedItemDocument>().FirstOrDefaultAsync(TestContext.Current.CancellationToken));
+        var stored = await kit.ReadAsync(services => services.GetRequiredService<ISession>().Query<TicketProtectedItemDocument>(TicketsConstants.CollectionName).FirstOrDefaultAsync(TestContext.Current.CancellationToken));
         Assert.DoesNotContain("S3cret", stored.ProtectedValue, StringComparison.Ordinal);
         var values = await kit.ReadAsync(services => services.GetRequiredService<ITicketProtectedInformation>().ReadValuesAsync(ticketId, cancellationToken: TestContext.Current.CancellationToken));
         Assert.Equal(("VPN login", Secret), (Assert.Single(values).Label, values[0].Value));

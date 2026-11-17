@@ -77,7 +77,7 @@ public sealed class TicketBacklogRecorder
         {
             var deskId = desk.ItemId;
 
-            if (await _session.QueryIndex<TicketBacklogIndex>(index => index.Day == day && index.DeskId == deskId).CountAsync(cancellationToken) > 0)
+            if (await _session.QueryIndex<TicketBacklogIndex>(index => index.Day == day && index.DeskId == deskId, TicketsConstants.CollectionName).CountAsync(cancellationToken) > 0)
             {
                 continue;
             }
@@ -85,7 +85,7 @@ public sealed class TicketBacklogRecorder
             var snapshot = await TakeAsync(deskId, now, cancellationToken);
             snapshot.Day = day;
 
-            await _session.SaveAsync(snapshot, false, null, cancellationToken);
+            await _session.SaveAsync(snapshot, false, TicketsConstants.CollectionName, cancellationToken);
             recorded++;
         }
 

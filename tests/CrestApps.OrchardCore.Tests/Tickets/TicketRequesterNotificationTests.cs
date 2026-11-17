@@ -50,7 +50,7 @@ public sealed class TicketRequesterNotificationTests
         Assert.Equal(("u-dana", TicketsConstants.EmailKinds.Reply), (userId, notified.Kind));
         Assert.Equal(("Template: [T-1] Printer jams", "<div class=\"template\"><p>Hello</p></div>"), (message.Subject, message.Html));
         Assert.Empty(kit.Sender.Sent);
-        Assert.Equal(TicketEmailOutboxStatus.Sent, (await kit.ReadAsync(services => services.GetRequiredService<ISession>().Query<TicketEmailOutboxItem>().FirstOrDefaultAsync(TestContext.Current.CancellationToken))).Status);
+        Assert.Equal(TicketEmailOutboxStatus.Sent, (await kit.ReadAsync(services => services.GetRequiredService<ISession>().Query<TicketEmailOutboxItem>(TicketsConstants.CollectionName).FirstOrDefaultAsync(TestContext.Current.CancellationToken))).Status);
     }
 
     [Fact]

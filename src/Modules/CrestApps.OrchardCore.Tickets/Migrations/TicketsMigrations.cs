@@ -9,6 +9,7 @@ using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Title.Models;
+using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Tickets.Migrations;
@@ -26,6 +27,8 @@ internal sealed class TicketsMigrations : DataMigration
     private readonly ICatalogManager<TicketView> _views;
     private readonly ICatalogManager<TicketBoard> _boards;
     private readonly ResumableSteps _steps;
+    private readonly IStore _store;
+    private readonly ISession _session;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TicketsMigrations"/> class.
@@ -37,6 +40,8 @@ internal sealed class TicketsMigrations : DataMigration
     /// <param name="views">The saved views.</param>
     /// <param name="boards">The boards.</param>
     /// <param name="steps">The resumable steps, which a request adds to in the migration's own transaction.</param>
+    /// <param name="store">The store, whose table naming and serializer the move to the service desk's collection uses.</param>
+    /// <param name="session">The migration's session, which saves the moved records.</param>
     public TicketsMigrations(
         IContentDefinitionManager contentDefinitionManager,
         ICatalogManager<TicketStatus> statuses,
@@ -44,9 +49,13 @@ internal sealed class TicketsMigrations : DataMigration
         ICatalogManager<TicketDesk> desks,
         ICatalogManager<TicketView> views,
         ICatalogManager<TicketBoard> boards,
-        ResumableSteps steps)
+        ResumableSteps steps,
+        IStore store,
+        ISession session)
     {
         _steps = steps;
+        _store = store;
+        _session = session;
         _contentDefinitionManager = contentDefinitionManager;
         _statuses = statuses;
         _priorities = priorities;
@@ -81,11 +90,11 @@ internal sealed class TicketsMigrations : DataMigration
         }
 
         await TicketIndexSchema.CreateAsync(SchemaBuilder);
-        await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
+        await TicketIndexSchema.CreateServiceDeskAsync(SchemaBuilder);
         await DefineCategoriesAsync();
         await SeedAsync();
 
-        return 16;
+        return 17;
     }
 
     /// <summary>
@@ -107,7 +116,8 @@ internal sealed class TicketsMigrations : DataMigration
     /// <returns>The version.</returns>
     public async Task<int> UpdateFrom2Async()
     {
-        await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
+        // In the default collection, as then; version 17 moves it to the service desk's.
+        await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder, collection: null);
 
         return 3;
     }
@@ -189,7 +199,7 @@ internal sealed class TicketsMigrations : DataMigration
             table.AddColumn<int>("ReopenCount", column => column.Nullable());
             table.AddColumn<int>("EscalationLevel", column => column.Nullable());
         });
-        await TicketIndexSchema.CreateTimeElapsedMarksAsync(SchemaBuilder);
+        await TicketIndexSchema.CreateTimeElapsedMarksAsync(SchemaBuilder, collection: null);
 
         await _steps.RequestAsync(TicketReindexStep.StepName);
 
@@ -202,7 +212,7 @@ internal sealed class TicketsMigrations : DataMigration
     /// <returns>The version.</returns>
     public async Task<int> UpdateFrom8Async()
     {
-        await TicketIndexSchema.CreateEmailOutboxAsync(SchemaBuilder);
+        await TicketIndexSchema.CreateEmailOutboxAsync(SchemaBuilder, collection: null);
 
         return 9;
     }
@@ -237,13 +247,12 @@ internal sealed class TicketsMigrations : DataMigration
     }
 
     /// <summary>
-    /// Adds a board shared with everybody, with a column per status category, when the site has no board yet.
+    /// Was where a board shared with everybody was added; version 17 adds it, in the service desk's collection, when the
+    /// site has no board yet, since the boards weren't there before.
     /// </summary>
     /// <returns>The version.</returns>
-    public async Task<int> UpdateFrom11Async()
+    public static int UpdateFrom11()
     {
-        await SeedBoardAsync();
-
         return 12;
     }
 
@@ -297,10 +306,33 @@ internal sealed class TicketsMigrations : DataMigration
     /// <returns>The version.</returns>
     public async Task<int> UpdateFrom15Async()
     {
-        await TicketIndexSchema.CreateProtectedItemIndexAsync(SchemaBuilder);
+        await TicketIndexSchema.CreateProtectedItemIndexAsync(SchemaBuilder, collection: null);
 
         return 16;
     }
+
+    /// <summary>
+    /// Moves the service desk's own records to its collection (<see cref="TicketsConstants.CollectionName"/>): the desks,
+    /// statuses, priorities, saved views and boards, each a document of its own instead of one dictionary per kind, and
+    /// the protected information, the requester e-mail outbox, the backlog snapshots and the time-elapsed markers. Their
+    /// old index tables in the default collection go first, then the new ones are created and the records moved. A site
+    /// without a board then gets the shared one.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom16Async()
+    {
+        // The default collection's index tables carry the type's name; the collection's own carry its prefix.
+        await SchemaBuilder.DropTableAsync("TicketProtectedItemIndex");
+        await SchemaBuilder.DropTableAsync("TicketEmailOutboxIndex");
+        await SchemaBuilder.DropTableAsync("TicketBacklogIndex");
+        await SchemaBuilder.DropTableAsync("TicketTimeElapsedMarkIndex");
+        await TicketIndexSchema.CreateServiceDeskAsync(SchemaBuilder);
+        await TicketServiceDeskMove.MoveAsync(SchemaBuilder, _store, _session);
+        await SeedBoardAsync();
+
+        return 17;
+    }
+
 
     // The part a ticket category's term carries, and a term type with it for taxonomies of ticket categories.
     private async Task DefineCategoriesAsync()

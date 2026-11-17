@@ -49,9 +49,9 @@ public sealed class TicketContentCleanup : ContentHandlerBase
         // need the content manager this handler is part of.
         var ticketId = context.ContentItem.ContentItemId;
 
-        foreach (var item in await _session.Query<TicketProtectedItemDocument, TicketProtectedItemIndex>(index => index.TicketId == ticketId).ListAsync())
+        foreach (var item in await _session.Query<TicketProtectedItemDocument, TicketProtectedItemIndex>(index => index.TicketId == ticketId, TicketsConstants.CollectionName).ListAsync())
         {
-            _session.Delete(item);
+            _session.Delete(item, TicketsConstants.CollectionName);
         }
 
         if (ShellScope.Current is not null)

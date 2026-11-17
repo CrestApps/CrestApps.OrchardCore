@@ -37,7 +37,7 @@ internal sealed class TicketBacklogReportDataSet : IndexedReportDataSet<TicketBa
                 stringLocalizer["The open tickets at the start of each day, as recorded that day: how many, how many were overdue and how old they were, by desk, status, priority, team and assignee."]),
             session,
             authorizationService,
-            collection: null)
+            collection: TicketsConstants.CollectionName)
     {
         _access = access;
 

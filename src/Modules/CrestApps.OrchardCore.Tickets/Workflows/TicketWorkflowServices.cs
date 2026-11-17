@@ -202,7 +202,7 @@ internal sealed class TicketTimeElapsedScanner
             }
 
             var ticketIds = rows.Select(row => row.ContentItemId).ToArray();
-            var marks = (await _session.Query<TicketTimeElapsedMark, TicketTimeElapsedMarkIndex>(mark => mark.StartKey == key && mark.TicketId.IsIn(ticketIds)).ListAsync(cancellationToken))
+            var marks = (await _session.Query<TicketTimeElapsedMark, TicketTimeElapsedMarkIndex>(mark => mark.StartKey == key && mark.TicketId.IsIn(ticketIds), TicketsConstants.CollectionName).ListAsync(cancellationToken))
                 .GroupBy(mark => mark.TicketId, StringComparer.Ordinal)
                 .ToDictionary(group => group.Key, group => group.OrderByDescending(mark => mark.Moment).First(), StringComparer.Ordinal);
 
@@ -232,7 +232,7 @@ internal sealed class TicketTimeElapsedScanner
                 mark ??= new TicketTimeElapsedMark { StartKey = key, TicketId = row.ContentItemId };
                 mark.Moment = moment;
                 mark.FiredUtc = now;
-                await _session.SaveAsync(mark, cancellationToken: cancellationToken);
+                await _session.SaveAsync(mark, false, TicketsConstants.CollectionName, cancellationToken);
 
                 var input = TicketWorkflowInput.Of(ticket);
                 input[TicketWorkflowInput.ActivityId] = activity.ActivityId;
@@ -288,7 +288,7 @@ internal sealed class TicketTimeElapsedScanner
     // a moment; it goes once the ticket is solved, closed, merged or deleted.
     private async Task CleanMarksAsync(CancellationToken cancellationToken)
     {
-        var marks = (await _session.Query<TicketTimeElapsedMark, TicketTimeElapsedMarkIndex>()
+        var marks = (await _session.Query<TicketTimeElapsedMark, TicketTimeElapsedMarkIndex>(TicketsConstants.CollectionName)
             .OrderBy(mark => mark.FiredUtc)
             .Take(MarksCleanedPerRun)
             .ListAsync(cancellationToken)).ToList();
@@ -305,7 +305,7 @@ internal sealed class TicketTimeElapsedScanner
 
         foreach (var mark in marks.Where(mark => !open.Contains(mark.TicketId)))
         {
-            _session.Delete(mark);
+            _session.Delete(mark, TicketsConstants.CollectionName);
         }
     }
 }

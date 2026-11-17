@@ -1,7 +1,10 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ServiceLevels;
 using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.Teams.Services;
+using CrestApps.OrchardCore.Tickets.Core.Indexes;
 using CrestApps.OrchardCore.Tickets.Core.Services;
+using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +25,13 @@ public static class TicketsCoreServiceCollectionExtensions
     public static IServiceCollection AddTicketsCore(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+
+        // The settings records, one document per record in the service desk's collection.
+        services.TryAddScoped<ICatalog<TicketDesk>, TicketSettingsStore<TicketDesk, TicketDeskIndex>>();
+        services.TryAddScoped<ICatalog<TicketStatus>, TicketSettingsStore<TicketStatus, TicketStatusIndex>>();
+        services.TryAddScoped<ICatalog<TicketPriority>, TicketSettingsStore<TicketPriority, TicketPriorityIndex>>();
+        services.TryAddScoped<ICatalog<TicketView>, TicketSettingsStore<TicketView, TicketViewIndex>>();
+        services.TryAddScoped<ICatalog<TicketBoard>, TicketSettingsStore<TicketBoard, TicketBoardIndex>>();
 
         // Ticket numbers come from the shared number sequence; nothing else in the feature registers it.
         services.AddNumberSequence();

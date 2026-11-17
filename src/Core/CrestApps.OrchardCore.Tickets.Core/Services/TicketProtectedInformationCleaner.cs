@@ -67,7 +67,7 @@ public sealed class TicketProtectedInformationCleaner
         }
 
         // The tickets that hold protected information, then those of them closed on a desk that deletes it.
-        var ticketIds = (await _session.QueryIndex<TicketProtectedItemIndex>().ListAsync(cancellationToken))
+        var ticketIds = (await _session.QueryIndex<TicketProtectedItemIndex>(TicketsConstants.CollectionName).ListAsync(cancellationToken))
             .Select(index => index.TicketId)
             .Distinct(StringComparer.Ordinal)
             .Take(TicketsPerRun)

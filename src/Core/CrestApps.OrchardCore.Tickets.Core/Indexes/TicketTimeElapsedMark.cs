@@ -47,6 +47,14 @@ public sealed class TicketTimeElapsedMarkIndex : MapIndex
 /// </summary>
 public sealed class TicketTimeElapsedMarkIndexProvider : IndexProvider<TicketTimeElapsedMark>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TicketTimeElapsedMarkIndexProvider"/> class, which maps to the service desk's collection.
+    /// </summary>
+    public TicketTimeElapsedMarkIndexProvider()
+    {
+        CollectionName = TicketsConstants.CollectionName;
+    }
+
     /// <inheritdoc/>
     public override void Describe(DescribeContext<TicketTimeElapsedMark> context)
         => context.For<TicketTimeElapsedMarkIndex>()

@@ -60,7 +60,7 @@ public sealed class TicketTimeElapsedScannerTests
         await ScanAsync(kit, []);
 
         // Assert
-        var marks = await kit.ReadAsync(async services => await services.GetRequiredService<ISession>().QueryIndex<TicketTimeElapsedMarkIndex>().CountAsync(TestContext.Current.CancellationToken));
+        var marks = await kit.ReadAsync(async services => await services.GetRequiredService<ISession>().QueryIndex<TicketTimeElapsedMarkIndex>(TicketsConstants.CollectionName).CountAsync(TestContext.Current.CancellationToken));
         Assert.Equal(0, marks);
     }
 

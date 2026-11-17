@@ -16,9 +16,11 @@ public static class TicketsConstants
     public const string ServiceLevelScope = "Tickets";
 
     /// <summary>
-    /// The YesSql collection that holds the ticket settings records.
+    /// The YesSql collection that holds the service desk's own records: the desks, statuses, priorities, saved views and
+    /// boards, and the protected information, requester e-mail outbox, backlog snapshots and time-elapsed markers.
+    /// Tickets themselves are content items and stay in the default collection.
     /// </summary>
-    public const string CollectionName = "Tickets";
+    public const string CollectionName = "ServiceDesk";
 
     /// <summary>
     /// The stereotype of a ticket content type.

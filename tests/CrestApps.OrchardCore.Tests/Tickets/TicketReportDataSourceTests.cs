@@ -111,7 +111,7 @@ public sealed class TicketReportDataSourceTests
         var first = await harness.RunAsync(services => services.GetRequiredService<TicketBacklogRecorder>().RecordAsync(TestContext.Current.CancellationToken));
         var again = await harness.RunAsync(services => services.GetRequiredService<TicketBacklogRecorder>().RecordAsync(TestContext.Current.CancellationToken));
         var days = await harness.RunAsync(
-            async services => (await services.GetRequiredService<ISession>().Query<TicketBacklogDay, TicketBacklogIndex>().ListAsync(TestContext.Current.CancellationToken)).ToList(),
+            async services => (await services.GetRequiredService<ISession>().Query<TicketBacklogDay, TicketBacklogIndex>(TicketsConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken)).ToList(),
             commit: false);
 
         // Assert
@@ -155,7 +155,7 @@ public sealed class TicketReportDataSourceTests
             harness.RunAsync(services => services.GetRequiredService<TicketBacklogRecorder>().RecordAsync(TestContext.Current.CancellationToken)),
             harness.RunAsync(services => services.GetRequiredService<TicketBacklogRecorder>().RecordAsync(TestContext.Current.CancellationToken)));
         var rows = await harness.RunAsync(
-            services => services.GetRequiredService<ISession>().QueryIndex<TicketBacklogIndex>(index => index.Day == "2026-11-03").CountAsync(TestContext.Current.CancellationToken),
+            services => services.GetRequiredService<ISession>().QueryIndex<TicketBacklogIndex>(index => index.Day == "2026-11-03", TicketsConstants.CollectionName).CountAsync(TestContext.Current.CancellationToken),
             commit: false);
 
         // Assert
@@ -173,7 +173,7 @@ public sealed class TicketReportDataSourceTests
         // Act
         var recorded = await harness.RunAsync(services => services.GetRequiredService<TicketBacklogRecorder>().RecordAsync(TestContext.Current.CancellationToken));
         var days = await harness.RunAsync(
-            async services => (await services.GetRequiredService<ISession>().QueryIndex<TicketBacklogIndex>(index => index.Day == "2026-11-02").ListAsync(TestContext.Current.CancellationToken)).Select(index => index.DeskId).Order().ToList(),
+            async services => (await services.GetRequiredService<ISession>().QueryIndex<TicketBacklogIndex>(index => index.Day == "2026-11-02", TicketsConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken)).Select(index => index.DeskId).Order().ToList(),
             commit: false);
 
         // Assert: HR's day is recorded at 23:00; Support's, already recorded earlier that day, isn't recorded twice.
@@ -332,7 +332,7 @@ public sealed class TicketReportDataSourceTests
             async schema =>
             {
                 await TicketIndexSchema.CreateAsync(schema);
-                await TicketIndexSchema.CreateBacklogIndexAsync(schema);
+                await TicketIndexSchema.CreateServiceDeskAsync(schema);
                 await TimelineIndexSchema.CreateAsync(schema);
                 await ServiceLevelsIndexSchema.CreateAsync(schema);
 
@@ -342,7 +342,7 @@ public sealed class TicketReportDataSourceTests
                 }
             },
             [new TicketIndexProvider(), new TicketBacklogIndexProvider(), new TimelineEntryIndexProvider(), new ServiceLevelTimerIndexProvider(), .. moreIndexProviders ?? []],
-            [TimelineConstants.CollectionName, ServiceLevelsConstants.CollectionName, .. moreCollections ?? []]);
+            [TimelineConstants.CollectionName, ServiceLevelsConstants.CollectionName, TicketsConstants.CollectionName, .. moreCollections ?? []]);
 
     internal static Task SeedAsync(CalendarTestHarness harness)
         => harness.RunAsync(async services =>
@@ -382,7 +382,7 @@ public sealed class TicketReportDataSourceTests
                     new TicketBacklogGroup { TeamId = "teamB", AssigneeId = "ana", Count = 1, StatusId = "open", StatusCategory = TicketStatusCategory.Open },
                     new TicketBacklogGroup { TeamId = "teamB", AssigneeId = "ben", Count = 1, StatusId = "open", StatusCategory = TicketStatusCategory.Open },
                 ],
-            });
+            }, false, TicketsConstants.CollectionName);
 
             await session.SaveAsync(Timer("s1", TicketsConstants.RecordKind, "t1", now.AddHours(-3)), false, ServiceLevelsConstants.CollectionName);
             var s2 = Timer("s2", TicketsConstants.RecordKind, "t2", now.AddHours(-10));

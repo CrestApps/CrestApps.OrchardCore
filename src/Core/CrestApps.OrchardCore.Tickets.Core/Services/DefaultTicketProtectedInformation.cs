@@ -67,12 +67,12 @@ public sealed class DefaultTicketProtectedInformation : ITicketProtectedInformat
         // The index holds ids only; who shared an item is on its document (a page of tickets has few).
         if (requesterSharedOnly)
         {
-            var documents = await _session.Query<TicketProtectedItemDocument, TicketProtectedItemIndex>(index => index.TicketId.IsIn(ids)).ListAsync(cancellationToken);
+            var documents = await _session.Query<TicketProtectedItemDocument, TicketProtectedItemIndex>(index => index.TicketId.IsIn(ids), TicketsConstants.CollectionName).ListAsync(cancellationToken);
 
             return documents.Where(document => document.FromRequester).Select(document => document.TicketId).ToHashSet(StringComparer.Ordinal);
         }
 
-        var rows = await _session.QueryIndex<TicketProtectedItemIndex>(index => index.TicketId.IsIn(ids)).ListAsync(cancellationToken);
+        var rows = await _session.QueryIndex<TicketProtectedItemIndex>(index => index.TicketId.IsIn(ids), TicketsConstants.CollectionName).ListAsync(cancellationToken);
 
         return rows.Select(row => row.TicketId).ToHashSet(StringComparer.Ordinal);
     }
@@ -85,7 +85,7 @@ public sealed class DefaultTicketProtectedInformation : ITicketProtectedInformat
         if (string.IsNullOrEmpty(ticketId)
             || string.IsNullOrEmpty(label) || label.Length > ITicketProtectedInformation.MaxLabelLength
             || string.IsNullOrWhiteSpace(value) || value.Length > ITicketProtectedInformation.MaxValueLength
-            || await _session.QueryIndex<TicketProtectedItemIndex>(index => index.TicketId == ticketId).CountAsync(cancellationToken) >= ITicketProtectedInformation.MaxItemsPerTicket)
+            || await _session.QueryIndex<TicketProtectedItemIndex>(index => index.TicketId == ticketId, TicketsConstants.CollectionName).CountAsync(cancellationToken) >= ITicketProtectedInformation.MaxItemsPerTicket)
         {
             return null;
         }
@@ -102,7 +102,7 @@ public sealed class DefaultTicketProtectedInformation : ITicketProtectedInformat
             FromRequester = fromRequester,
         };
 
-        await _session.SaveAsync(document, cancellationToken: cancellationToken);
+        await _session.SaveAsync(document, false, TicketsConstants.CollectionName, cancellationToken);
         await NoteAsync(ticketId, actor, fromRequester
             ? S["The requester added protected information: {0}.", label]
             : S["Protected information was added: {0}.", label], cancellationToken);
@@ -114,13 +114,13 @@ public sealed class DefaultTicketProtectedInformation : ITicketProtectedInformat
     public async Task<bool> RemoveAsync(string ticketId, string itemId, TicketActor actor, bool requesterSharedOnly = false, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(ticketId) || string.IsNullOrEmpty(itemId)
-            || await _session.Query<TicketProtectedItemDocument, TicketProtectedItemIndex>(index => index.TicketId == ticketId && index.ItemId == itemId).FirstOrDefaultAsync(cancellationToken) is not { } document
+            || await _session.Query<TicketProtectedItemDocument, TicketProtectedItemIndex>(index => index.TicketId == ticketId && index.ItemId == itemId, TicketsConstants.CollectionName).FirstOrDefaultAsync(cancellationToken) is not { } document
             || requesterSharedOnly && !document.FromRequester)
         {
             return false;
         }
 
-        _session.Delete(document);
+        _session.Delete(document, TicketsConstants.CollectionName);
         await NoteAsync(ticketId, actor, S["Protected information was removed: {0}.", document.Label], cancellationToken);
 
         return true;
@@ -157,7 +157,7 @@ public sealed class DefaultTicketProtectedInformation : ITicketProtectedInformat
         foreach (var document in documents)
         {
             document.TicketId = toTicketId;
-            await _session.SaveAsync(document, cancellationToken: cancellationToken);
+            await _session.SaveAsync(document, false, TicketsConstants.CollectionName, cancellationToken);
         }
 
         return documents.Count;
@@ -170,7 +170,7 @@ public sealed class DefaultTicketProtectedInformation : ITicketProtectedInformat
 
         foreach (var document in documents)
         {
-            _session.Delete(document);
+            _session.Delete(document, TicketsConstants.CollectionName);
         }
 
         return documents.Count;
@@ -179,7 +179,7 @@ public sealed class DefaultTicketProtectedInformation : ITicketProtectedInformat
     private async Task<IReadOnlyList<TicketProtectedItemDocument>> DocumentsAsync(string ticketId, CancellationToken cancellationToken)
         => string.IsNullOrEmpty(ticketId)
             ? []
-            : [.. (await _session.Query<TicketProtectedItemDocument, TicketProtectedItemIndex>(index => index.TicketId == ticketId).ListAsync(cancellationToken)).OrderBy(document => document.CreatedUtc).ThenBy(document => document.Id)];
+            : [.. (await _session.Query<TicketProtectedItemDocument, TicketProtectedItemIndex>(index => index.TicketId == ticketId, TicketsConstants.CollectionName).ListAsync(cancellationToken)).OrderBy(document => document.CreatedUtc).ThenBy(document => document.Id)];
 
     // A value its keys can no longer read (keys lost or rotated out) shows as unreadable rather than failing the page.
     private string Unprotect(string protectedValue)

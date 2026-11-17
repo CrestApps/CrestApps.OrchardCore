@@ -125,16 +125,16 @@ public sealed class TicketEmailOutboxTests
         };
 
     private static Task<TicketEmailOutboxItem> OutboxAsync(TicketKit kit)
-        => kit.ReadAsync(services => services.GetRequiredService<ISession>().Query<TicketEmailOutboxItem>().FirstOrDefaultAsync(TestContext.Current.CancellationToken));
+        => kit.ReadAsync(services => services.GetRequiredService<ISession>().Query<TicketEmailOutboxItem>(TicketsConstants.CollectionName).FirstOrDefaultAsync(TestContext.Current.CancellationToken));
 
     // Moves the next try to now, as if its wait had passed.
     private static Task<bool> DueNowAsync(TicketKit kit)
         => kit.RunAsync(async services =>
         {
             var session = services.GetRequiredService<ISession>();
-            var item = await session.Query<TicketEmailOutboxItem>().FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+            var item = await session.Query<TicketEmailOutboxItem>(TicketsConstants.CollectionName).FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             item.NextAttemptUtc = Calendars.CalendarTestHarness.Now;
-            await session.SaveAsync(item, cancellationToken: TestContext.Current.CancellationToken);
+            await session.SaveAsync(item, false, TicketsConstants.CollectionName, TestContext.Current.CancellationToken);
 
             return true;
         });

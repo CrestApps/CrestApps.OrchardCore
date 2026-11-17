@@ -114,9 +114,9 @@ internal sealed class TicketPersonalDataContributor : IPersonalDataContributor
 
             // The e-mails to the requester kept in the outbox hold their address and the replies; a pending one would
             // still go out to someone who asked to be forgotten.
-            foreach (var email in await _session.Query<TicketEmailOutboxItem, TicketEmailOutboxIndex>(index => index.TicketId == ticket.ContentItemId).ListAsync(cancellationToken))
+            foreach (var email in await _session.Query<TicketEmailOutboxItem, TicketEmailOutboxIndex>(index => index.TicketId == ticket.ContentItemId, TicketsConstants.CollectionName).ListAsync(cancellationToken))
             {
-                _session.Delete(email);
+                _session.Delete(email, TicketsConstants.CollectionName);
             }
 
             // What the requester shared under protection (their logins) goes too.
