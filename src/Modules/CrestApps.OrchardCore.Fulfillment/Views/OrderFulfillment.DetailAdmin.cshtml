@@ -1,0 +1,70 @@
+@using CrestApps.OrchardCore.Fulfillment.Core.Models
+@model OrderFulfillmentViewModel
+
+@{
+    var canRetry = Model.Requests.Any(entry => entry.Request.Status is FulfillmentRequestStatus.NeedsAttention or FulfillmentRequestStatus.NothingToSend or FulfillmentRequestStatus.Pending);
+    var unclear = Model.Requests.Any(entry => entry.Request.Status == FulfillmentRequestStatus.NeedsAttention);
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Fulfillment partners"]</div>
+    <div class="card-body">
+        @if (Model.Requests.Count == 0)
+        {
+            <p class="mb-2">@T["This order has not been sent to a fulfillment partner yet."]</p>
+        }
+        else
+        {
+            <ul class="list-unstyled mb-2">
+                @foreach (var entry in Model.Requests)
+                {
+                    var request = entry.Request;
+                    var (badge, label) = request.Status switch
+                    {
+                        FulfillmentRequestStatus.Sent => ("text-bg-success", T["Sent"].Value),
+                        FulfillmentRequestStatus.NothingToSend => ("text-bg-secondary", T["Nothing to send"].Value),
+                        FulfillmentRequestStatus.NeedsAttention => ("text-bg-danger", T["Needs attention"].Value),
+                        FulfillmentRequestStatus.Sending => ("text-bg-warning", T["Sending"].Value),
+                        _ => ("text-bg-info", T["Waiting to be sent"].Value),
+                    };
+
+                    <li class="mb-2">
+                        <span class="badge @badge ta-badge fw-normal">@label</span>
+                        <strong class="ms-1">@entry.DisplayName</strong>
+                        @if (!string.IsNullOrEmpty(request.ExternalOrderId))
+                        {
+                            <span class="ms-1 text-muted">@T["Order {0}", request.ExternalOrderId]</span>
+                        }
+                        @if (!string.IsNullOrEmpty(request.Message))
+                        {
+                            <div class="hint">@request.Message</div>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (Model.NotSentYet.Count > 0 || canRetry)
+        {
+            <form method="post" asp-action="Send" asp-controller="FulfillmentAdmin" asp-area="@FulfillmentConstants.Features.Fulfillment" class="d-inline">
+                <input type="hidden" name="orderId" value="@Model.OrderId" />
+                <input type="hidden" name="returnUrl" value="@(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString)" />
+                <button type="submit" class="btn btn-primary btn-sm" data-confirm-unclear="@(unclear ? T["Check first that the partner did not already create this order, or it may be made twice. Send again?"].Value : null)">
+                    @(Model.Requests.Count == 0 ? T["Send to fulfillment partners"] : T["Send again"])
+                </button>
+            </form>
+            @if (unclear)
+            {
+                <script at="Foot">
+                    document.querySelectorAll('[data-confirm-unclear]').forEach(function (button) {
+                        button.addEventListener('click', function (event) {
+                            if (!window.confirm(button.getAttribute('data-confirm-unclear'))) {
+                                event.preventDefault();
+                            }
+                        });
+                    });
+                </script>
+            }
+        }
+    </div>
+</div>
