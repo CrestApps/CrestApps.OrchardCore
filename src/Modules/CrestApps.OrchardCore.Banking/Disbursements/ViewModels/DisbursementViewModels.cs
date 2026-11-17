@@ -91,7 +91,7 @@ public class DisbursementsIndexViewModel
     public string BatchId { get; set; }
 
     /// <summary>
-    /// Gets or sets the date the money of a new batch should arrive, as yyyy-MM-dd.
+    /// Gets or sets the date the money of a new batch should arrive, as yyyy-MM-dd; empty keeps the payments' own date.
     /// </summary>
     public string EffectiveDate { get; set; }
 

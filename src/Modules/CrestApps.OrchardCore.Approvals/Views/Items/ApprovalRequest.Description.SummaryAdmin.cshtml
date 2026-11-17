@@ -19,7 +19,7 @@
     <span> · @(string.IsNullOrEmpty(request.RequesterName) ? T["asked by a workflow"] : T["asked by {0}", request.RequesterName])</span>
     @if (request.Amount is { } amount && !string.IsNullOrEmpty(request.Currency))
     {
-        <span> · @CurrencyScale.Format(amount, request.Currency)</span>
+        <span> · @CurrencyScale.FormatForDisplay(amount, request.Currency) @request.Currency</span>
     }
     @if (stages.Count > 1)
     {

@@ -82,6 +82,20 @@ internal sealed class PayRunDisplayDriver : DisplayDriver<PayRun>
 
             model.Employers = [.. (await _employers.ListAsync()).Where(employer => scope.Allows(employer.ItemId)).Select(employer => new SelectListItem(employer.Name, employer.ItemId, employer.ItemId == run.EmployerId))];
             model.Schedules = [.. (await _schedules.ListEnabledAsync()).Select(schedule => new SelectListItem(schedule.Name, schedule.ItemId, schedule.ItemId == run.PayScheduleId))];
+
+            // A new run of the only employer, or on the only schedule, starts with it chosen.
+            if (context.IsNew)
+            {
+                if (string.IsNullOrEmpty(model.EmployerId) && model.Employers.Count == 1)
+                {
+                    model.EmployerId = model.Employers[0].Value;
+                }
+
+                if (string.IsNullOrEmpty(model.PayScheduleId) && model.Schedules.Count == 1)
+                {
+                    model.PayScheduleId = model.Schedules[0].Value;
+                }
+            }
         }).Location("Content:1");
 
     public override async Task<IDisplayResult> UpdateAsync(PayRun run, UpdateEditorContext context)

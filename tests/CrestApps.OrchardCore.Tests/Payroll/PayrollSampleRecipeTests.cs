@@ -66,6 +66,7 @@ public sealed class PayrollSampleRecipeTests
         Assert.Contains(PayrollConstants.Features.Payroll, features);
         Assert.Contains(PayrollConstants.Features.UnitedStates, features);
         Assert.Contains(PayrollConstants.Features.Garnishments, features);
+        Assert.Contains(PayrollConstants.Features.SelfService, features);
         Assert.Contains(CrestApps.OrchardCore.Banking.Disbursements.DisbursementsConstants.Features.DirectDeposit, features);
         Assert.Contains(CrestApps.OrchardCore.Banking.Checks.ChecksConstants.Features.Checks, features);
 
@@ -124,6 +125,7 @@ public sealed class PayrollSampleRecipeTests
             [PayrollConstants.PayProfilesRecipeStepName] = typeof(PayProfilesRecipeStep),
             [PayrollConstants.PayItemsRecipeStepName] = typeof(PayItemsRecipeStep),
             [PayrollConstants.GarnishmentsRecipeStepName] = typeof(GarnishmentsRecipeStep),
+            [TaxationConstants.IncomeTaxRulesRecipeStepName] = typeof(IncomeTaxRulesRecipeStep),
         };
         var errors = new List<string>();
 
@@ -298,6 +300,9 @@ public sealed class PayrollSampleRecipeTests
         Assert.Equal(125m, riley.Lines.Single(line => line.Type == PayLineType.Deduction && CodeOf(line) == "401K").Amount);
         Assert.Equal(62.50m, riley.Lines.Single(line => line.Type == PayLineType.EmployerContribution && CodeOf(line) == "401K").Amount);
         Assert.Equal(150m, riley.Lines.Single(line => CodeOf(line) == "CSUP").Amount);
+
+        // Texas unemployment at the employer's own 2.7% registration rate, under the year's 9,000 wage base.
+        Assert.Equal(67.50m, riley.Lines.Single(line => line.TaxCode == "US-TX-SUI").Amount);
 
         Assert.Equal(NetPayMethod.Check, Assert.Single(statements.Single(statement => statement.Gross == 1600m).Payments).Method);
         Assert.Equal(3, statements.Count(statement => statement.Payments.All(payment => payment.Method == NetPayMethod.BankAccount)));

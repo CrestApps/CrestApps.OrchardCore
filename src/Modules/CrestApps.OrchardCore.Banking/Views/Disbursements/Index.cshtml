@@ -24,7 +24,7 @@
                 @if (Model.CanManage)
                 {
                     <div class="col-auto">
-                        <div class="input-group" title="@T["The date the money of a new batch should arrive"]">
+                        <div class="input-group" title="@T["The date the money of a new batch should arrive. Leave it empty to keep the payments' own date, such as a pay run's pay date."]">
                             <label class="input-group-text" for="EffectiveDate">@T["Arrives"]</label>
                             <input asp-for="EffectiveDate" type="date" class="form-control" />
                         </div>

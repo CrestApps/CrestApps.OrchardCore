@@ -27,6 +27,7 @@
           "Name": "Payroll administrator",
           "Description": "Sets up and runs payroll for every employer.",
           "Permissions": [
+            "AccessAdminPanel",
             "ManagePaySetup",
             "ManagePayrollSettings",
             "ManagePayProfiles",
@@ -46,6 +47,7 @@
           "Name": "Payroll clerk",
           "Description": "Keeps pay profiles and prepares pay runs. Never approves them.",
           "Permissions": [
+            "AccessAdminPanel",
             "ViewPayProfiles",
             "ManagePayProfiles",
             "PreparePayRuns",
@@ -57,6 +59,7 @@
           "Name": "Payroll approver",
           "Description": "Approves pay runs others prepared.",
           "Permissions": [
+            "AccessAdminPanel",
             "ApprovePayRuns",
             "ViewPayRuns",
             "ViewPayrollReports"

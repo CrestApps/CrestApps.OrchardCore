@@ -138,11 +138,7 @@ internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy
         policy.AllowSubjectToDecide = model.AllowSubjectToDecide;
         policy.AllowSamePersonAcrossStages = model.AllowSamePersonAcrossStages;
 
-        if (model.Stages?.Count > ApprovalPolicyViewModel.MaxStages || model.Stages?.Any(stage => stage.Approvers?.Count > ApprovalPolicyViewModel.MaxRules) == true)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Stages), S["A policy has at most {0} stages of {1} rules each.", ApprovalPolicyViewModel.MaxStages, ApprovalPolicyViewModel.MaxRules]);
-        }
-
+        // The policy's handler refuses more than ten stages, or ten rules in a stage, as a recipe would be refused.
         // Each rule keeps the value of the provider chosen for it; a stage without rules isn't kept. The stages are
         // the policy's approvers from now on, so the fields of a policy saved before stages are cleared.
         policy.Stages = [.. (model.Stages ?? [])

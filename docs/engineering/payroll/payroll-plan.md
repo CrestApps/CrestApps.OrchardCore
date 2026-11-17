@@ -1204,6 +1204,40 @@ Every session's work goes into this PR.
 
 Banking is new in this PR, so no workflow depends on the earlier double events. A stopped or reissued check starts only **Check Stop Payment** or **Check Reissued**, not Check Voided, and a cancelled or reversed disbursement starts only **Disbursement Canceled** or **Disbursement Reversed**, not Disbursement Failed. A voided or stopped check cancels its disbursement, so it starts Disbursement Canceled; Disbursement Failed is for a disbursement that failed, such as a check that could not be issued. The event descriptions in the workflow toolbox, the editors and the recipe schemas, `banking.md` and the changelog say so. `CheckWorkflowEventsTests` and `DisbursementWorkflowEventsTests` assert that every change kind starts at most one event and that only a void starts Check Voided and only a failure starts Disbursement Failed. A batch release that the provider pays in full still starts Batch Released and Batch Settled, as two steps of the batch.
 
+### UX pass with the Payroll sample (2026-11-16)
+
+Mike's browser findings on 7bbdc1947, then a full pay run in the browser on a fresh site from the **Payroll sample** recipe.
+
+- **Findings fixed** (be3edaaee): an empty "Share of another tax" is no longer called a share of itself. The approval policy editor shows only the stages and rules in use, with **Add a rule**, **Add a stage** and **Remove** (`.Index` binding, at most 10 stages of 10 rules, checked on the server). The permission picker is a searchable selectpicker of descriptions grouped by category or feature. The page and breadcrumb use the policy's title. The seeded stage is titled **Payroll approver** (migration step 10). **Approvals** opens on **Waiting for me**. The ACH card's fields stay closed until **Send bank files** is on, and the card hides while the account has an owner.
+- **Payroll sample** (`PayrollSample`, 03161db7d plus this commit): it runs the 2026 federal income tax recipe and adds a **Texas unemployment (SUI)** rule at the employer's own rate. It adds Contoso (US and US-TX registrations), a verified funding account with ACH settings, a check layout and a biweekly schedule paid on Fridays. It adds four staff: salary, hourly with overtime, one with a 401(k) match and a child support order, and one paid by check. It turns on My Pay. For it, the `Staff` step reads `pay`, the `BankAccounts` step and deployment step carry `Properties`, and the `CheckLayouts` step reads the stock by name. **Not done**: a Canadian employee needs a work site team with a province, which no recipe step sets. Pay inputs have no recipe step, so the docs say to enter Jordan's hours on the run.
+- **Fixed in the pass**:
+  - Amounts read for people, such as 9,164.00 USD (`CurrencyScale.FormatForDisplay`): on the payroll pages and stubs, the check vouchers, and the Banking and Approvals rows. `Format` stays for files.
+  - The stub marks a draft DRAFT, has no empty statement label or year-to-date column, and lists what the employer pays under **Paid by your employer** after net pay.
+  - The permission picker crashed the policy page: `T["... {0}"]` was written with no arguments. A new guard in `ViewLocalizerFormatArgumentsArchitectureTests` fails on any view that writes such a string.
+  - The sample roles had no **Access admin panel**, so the approver got a 403.
+  - A batch made with **Arrives** empty arrived tomorrow instead of on the pay date. It now keeps the payments' own date: the last one when they differ, with a warning.
+  - **Process and pay**, **Cancel the run** and **Void** never asked first. They now confirm with a script that keeps the button's `formaction`. The batch and check menus confirm too (`RemoveUrl UnsafeUrl`).
+  - A processed run's page offers **Batch the deposits** and **Print the checks**. These are route links, shown only while Banking has them.
+  - Supplemental, off-cycle and contractor runs pay only the people with inputs, not everyone with a $0 statement and a garnishment warning.
+  - The rest:
+    - A new run of the only employer and schedule starts with them chosen.
+    - The approval request title shows the pay date in the reader's format.
+    - Disbursement and batch rows name the method ("Bank file (ACH)") instead of "Ach" or "Nacha".
+    - "1 disbursements" now reads "1 disbursement".
+- **Not fixed, follow-ups**:
+  - Disbursement and check rows show the source kind raw ("PayStatement", "PayrollGarnishment"). Banking needs a display-name extension point for source kinds.
+  - Each editor shows a validation error in the summary and next to its field, as all 40 CrestApps editors and Orchard's do.
+  - The password confirmation's return drops the `#staff-pay` anchor, so My Pay opens at the top of the profile.
+  - Linking a staff member to a user with no display name renames the staff member to the user name.
+  - **Reissue** of a deposit already in a sent bank file is refused only after it is chosen. The bank's return file is the path for it.
+- **Also fixed**: the policy editor's 10-rule limit now lives in `ApprovalPolicyHandler`, so a recipe gets the same check (the validation guard caught it in the driver).
+- **Validation**:
+  - The Release solution build with `-warnaserror` has 0 warnings and 0 errors.
+  - The full test project, voice test included: 16,481 passed and 1 skipped, with one failure, the handler rule above. After the fix, the Validation, Approvals and Architecture namespaces passed: 526 of 526.
+  - `npm run rebuild` wrote 0 changed files.
+  - The manuals check passed: 170 User Manual and 190 Technical Manual pages.
+  - The docs build passes, with its two old minifier warnings.
+
 ### For Mike
 
 What only you can settle before the first live pay:
@@ -1234,5 +1268,5 @@ What only you can settle before the first live pay:
 11. **Follow-ups seen, not in this plan**:
    - Disbursements says only "Choose how the money is sent" when a deposit is made with no ACH provider feature on; a clearer setup hint would help.
    - The Staff module's pages also call the team manager without checking that Teams is on; worth the same guard.
-   - A batch's arrival date comes from the Disbursements toolbar's **Arrives** field, which defaults to today; the pay date may be the better default for payroll deposits.
+   - ~~A batch's arrival date comes from the Disbursements toolbar's **Arrives** field, which defaults to today.~~ Fixed: an empty **Arrives** keeps the payments' own date (see "UX pass with the Payroll sample").
 

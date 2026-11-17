@@ -291,7 +291,7 @@ public sealed class PayStatementCheckVoucherSource : ICheckVoucherSource
         var lines = new List<CheckVoucherLine>();
 
         string Money(decimal value)
-            => string.IsNullOrEmpty(statement.Currency) ? value.ToString("N2", CultureInfo.InvariantCulture) : CurrencyScale.Format(value, statement.Currency);
+            => string.IsNullOrEmpty(statement.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.FormatForDisplay(value, statement.Currency, CultureInfo.CurrentCulture);
 
         foreach (var line in statement.Lines.Where(line => line.Type != PayLineType.Memo))
         {

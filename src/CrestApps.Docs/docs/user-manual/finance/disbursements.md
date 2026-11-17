@@ -34,7 +34,7 @@ Recording the same payment twice gives the same disbursement, so a feature that 
 
 ## Send a batch
 
-1. In **Banking > Disbursements**, tick the pending payments and set **Arrives**: the date the money should reach the payees.
+1. In **Banking > Disbursements**, tick the pending payments. Leave **Arrives** empty to keep their own date, such as a pay run's pay date, or set the date the money should reach the payees. A batch arrives on one day: payments due on different days arrive on the last of them, so batch them apart to keep each day.
 2. Choose **Batch to send by** and how they are sent. Payments sent another way, or from another account, stay pending.
 3. Open **Banking > Disbursement Batches**, and in the batch's menu choose **Release**.
 

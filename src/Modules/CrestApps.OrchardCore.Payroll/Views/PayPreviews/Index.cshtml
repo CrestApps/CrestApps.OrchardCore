@@ -3,7 +3,7 @@
 @using CrestApps.OrchardCore.Currencies
 
 @{
-    string Money(decimal value) => string.IsNullOrEmpty(Model.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.Format(value, Model.Currency) + " " + Model.Currency;
+    string Money(decimal value) => string.IsNullOrEmpty(Model.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.FormatForDisplay(value, Model.Currency) + " " + Model.Currency;
     string TypeName(PayLineType type) => type switch
     {
         PayLineType.Earning => T["Earning"].Value,

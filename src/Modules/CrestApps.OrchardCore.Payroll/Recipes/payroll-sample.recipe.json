@@ -1,7 +1,7 @@
 {
   "name": "PayrollSample",
   "displayName": "Payroll sample",
-  "description": "Sets up a sample payroll to try a pay run: it runs the United States Income Tax: federal rules for 2026 recipe, then adds the employer Contoso in Austin, Texas (federal and Texas registrations, paid from the Contoso operating account at Woodgrove Bank with Bank file (ACH) settings of test values), a check layout, a pay schedule every two weeks paid on Fridays, a 401(k) and a child support pay code, and four staff members with pay profiles: Avery Lee and Riley Chen on a salary, Jordan Smith paid by the hour with overtime, and Sam Rivera on a salary paid by check. Riley saves 5% in the 401(k) with a 50% employer match and has a child support order. The others are paid by direct deposit to verified accounts. Every tax id and bank account number is a test value. Open a pay run of Contoso for the current period under Payroll > Pay Runs, add Jordan's hours (such as 80 regular and 4 overtime) as the run's inputs, and calculate it.",
+  "description": "Sets up a sample payroll to try a pay run: it runs the United States Income Tax: federal rules for 2026 recipe and adds a Texas unemployment rule charged at the employer's own rate, then adds the employer Contoso in Austin, Texas (federal and Texas registrations, paid from the Contoso operating account at Woodgrove Bank with Bank file (ACH) settings of test values), a check layout, a pay schedule every two weeks paid on Fridays, a 401(k) and a child support pay code, and four staff members with pay profiles: Avery Lee and Riley Chen on a salary, Jordan Smith paid by the hour with overtime, and Sam Rivera on a salary paid by check. Riley saves 5% in the 401(k) with a 50% employer match and has a child support order. The others are paid by direct deposit to verified accounts. Every tax id and bank account number is a test value. Open a pay run of Contoso for the current period under Payroll > Pay Runs, add Jordan's hours (such as 80 regular and 4 overtime) as the run's inputs, and calculate it.",
   "author": "CrestApps",
   "website": "https://crestapps.com",
   "version": "1.0.0",
@@ -29,7 +29,8 @@
         "CrestApps.OrchardCore.Banking.DirectDeposit",
         "CrestApps.OrchardCore.Payroll",
         "CrestApps.OrchardCore.Payroll.UnitedStates",
-        "CrestApps.OrchardCore.Payroll.Garnishments"
+        "CrestApps.OrchardCore.Payroll.Garnishments",
+        "CrestApps.OrchardCore.Payroll.SelfService"
       ]
     },
     {
@@ -38,6 +39,27 @@
         {
           "executionid": "PayrollSample",
           "name": "IncomeTaxUnitedStatesFederal2026"
+        }
+      ]
+    },
+    {
+      "name": "IncomeTaxRules",
+      "Rules": [
+        {
+          "ItemId": "4x0fy4thjckfasv743wyggy7fk",
+          "TaxCode": "US-TX-SUI",
+          "Name": "Texas unemployment (SUI)",
+          "Jurisdiction": "US-TX",
+          "Category": "Unemployment",
+          "Payer": "Employer",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "FlatRate",
+          "Method": "Percentage",
+          "Rate": 2.7,
+          "RateFromRegistration": true,
+          "WageBase": 9000
         }
       ]
     },

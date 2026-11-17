@@ -5,7 +5,7 @@
 
 @{
     var run = Model.Run;
-    string Money(decimal value) => string.IsNullOrEmpty(Model.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.Format(value, Model.Currency) + " " + Model.Currency;
+    string Money(decimal value) => string.IsNullOrEmpty(Model.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.FormatForDisplay(value, Model.Currency) + " " + Model.Currency;
     var blockers = Model.Issues.Count(issue => issue.Issue.IsBlocker);
     string StatusText(PayRunStatus status) => status switch
     {
@@ -88,6 +88,32 @@ else if (!string.IsNullOrEmpty(Model.DecideRefusal))
             </div>
         </div>
     </div>
+}
+
+@if (run.Status is PayRunStatus.Paid or PayRunStatus.PartiallyPaid)
+{
+    // Banking sends what processing handed it: deposits wait to be batched into a bank file and checks to be printed.
+    // Each link shows only while its Banking feature is on (its route exists).
+    var disbursementsUrl = Url.RouteUrl("DisbursementsIndex", new { Status = "Pending" });
+    var checksUrl = Url.RouteUrl("ChecksIndex", new { Status = "Issued" });
+
+    if (disbursementsUrl is not null || checksUrl is not null)
+    {
+        <div class="card mb-3">
+            <div class="card-header">@T["Next: send the pay"]</div>
+            <div class="card-body">
+                <p class="mb-2">@T["Deposits wait to be batched into a bank file, and checks wait in the check register to be printed."]</p>
+                @if (disbursementsUrl is not null)
+                {
+                    <a class="btn btn-sm btn-outline-primary me-2" href="@disbursementsUrl"><i class="fa-solid fa-building-columns me-1" aria-hidden="true"></i>@T["Batch the deposits"]</a>
+                }
+                @if (checksUrl is not null)
+                {
+                    <a class="btn btn-sm btn-outline-primary" href="@checksUrl"><i class="fa-solid fa-money-check me-1" aria-hidden="true"></i>@T["Print the checks"]</a>
+                }
+            </div>
+        </div>
+    }
 }
 
 @if (Model.Issues.Count > 0)
@@ -242,7 +268,7 @@ else if (!string.IsNullOrEmpty(Model.DecideRefusal))
         <div class="action-bar-bottom">
             @if (canProcess)
             {
-                <button class="btn btn-success" type="submit" formaction="@Url.Action("Process", new { id = run.ItemId })" data-title="@T["Process and pay"]" data-message="@T["Process the pay run? Its statements become final and net pay is paid: deposits go to the bank file and checks to the check register."]">@(run.Status == PayRunStatus.Approved ? T["Process and pay"] : T["Pay what is left"])</button>
+                <button class="btn btn-success" type="submit" formaction="@Url.Action("Process", new { id = run.ItemId })" data-confirm-submit data-title="@T["Process and pay"]" data-message="@T["Process the pay run? Its statements become final and net pay is paid: deposits go to the bank file and checks to the check register."]">@(run.Status == PayRunStatus.Approved ? T["Process and pay"] : T["Pay what is left"])</button>
             }
             @if (canWork)
             {
@@ -251,15 +277,17 @@ else if (!string.IsNullOrEmpty(Model.DecideRefusal))
                 {
                     @if (Model.Questions.Count > 0)
                     {
-                        <button class="btn btn-success" type="submit" formaction="@Url.Action("Submit", new { id = run.ItemId })" disabled="@(blockers > 0)" data-title="@T["Submit for approval"]" data-message="@T.Plural(Model.Questions.Count, "An employee asked about their pay and it hasn't changed since. Submit the run anyway?", "{0} employees asked about their pay and it hasn't changed since. Submit the run anyway?")">@T["Submit for approval"]</button>
+                        <button class="btn btn-success" type="submit" formaction="@Url.Action("Submit", new { id = run.ItemId })" disabled="@(blockers > 0)" data-confirm-submit data-title="@T["Submit for approval"]" data-message="@T.Plural(Model.Questions.Count, "An employee asked about their pay and it hasn't changed since. Submit the run anyway?", "{0} employees asked about their pay and it hasn't changed since. Submit the run anyway?")">@T["Submit for approval"]</button>
                     }
                     else
                     {
                         <button class="btn btn-success" type="submit" formaction="@Url.Action("Submit", new { id = run.ItemId })" disabled="@(blockers > 0)">@T["Submit for approval"]</button>
                     }
                 }
-                <button class="btn btn-danger action-bar-secondary" type="submit" formaction="@Url.Action("Cancel", new { id = run.ItemId })" data-title="@T["Cancel the run"]" data-message="@T["Cancel the pay run? Its draft statements are removed and it can't be calculated again."]">@T["Cancel the run"]</button>
+                <button class="btn btn-danger action-bar-secondary" type="submit" formaction="@Url.Action("Cancel", new { id = run.ItemId })" data-confirm-submit data-title="@T["Cancel the run"]" data-message="@T["Cancel the pay run? Its draft statements are removed and it can't be calculated again."]">@T["Cancel the run"]</button>
             }
         </div>
     </form>
 }
+
+<partial name="ConfirmSubmitScript" />

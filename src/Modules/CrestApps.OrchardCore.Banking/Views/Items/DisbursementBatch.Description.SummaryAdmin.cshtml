@@ -14,7 +14,7 @@
 }
 
 <div class="admin-list-secondary">
-    @CurrencyScale.Format(batch.TotalAmount, batch.Currency) · @T["arrives {0}", batch.EffectiveDate.ToString("d")]
+    @CurrencyScale.FormatForDisplay(batch.TotalAmount, batch.Currency) @batch.Currency · @T["arrives {0}", batch.EffectiveDate.ToString("d")]
     @if (released is not null)
     {
         <span> · @T["released {0} by {1}", released, batch.ReleasedBy]</span>

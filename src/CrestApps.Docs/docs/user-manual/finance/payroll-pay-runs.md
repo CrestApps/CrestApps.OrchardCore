@@ -18,7 +18,7 @@ A **pay run** pays the people of one employer for one period. Payroll works out 
 
 ## Try it with the sample
 
-To try a pay run without setting everything up, run the **Payroll sample** recipe under **Configuration > Recipes**. It turns on Payroll and Banking, adds the 2026 federal income tax rules, and sets up the employer Contoso (with its bank account, a check layout and a pay schedule every two weeks) and four staff members with pay profiles: two on a salary paid by deposit, one paid by the hour, and one paid by check. One of them saves in a 401(k) and has a child support order. Every tax id and account number in it is made up.
+To try a pay run without setting everything up, run the **Payroll sample** recipe under **Configuration > Recipes**. It turns on Payroll and Banking, adds the 2026 federal income tax rules and Texas unemployment, and sets up the employer Contoso (with its bank account, a check layout and a pay schedule every two weeks) and four staff members with pay profiles: two on a salary paid by deposit, one paid by the hour, and one paid by check. One of them saves in a 401(k) and has a child support order. Every tax id and account number in it is made up.
 
 Then add a pay run for Contoso and leave the period empty to take the current one. Jordan Smith is paid by the hour, so enter Jordan's hours as inputs of the run, such as 80 hours of **REG** and 4 of **OT**, and choose **Calculate**.
 
@@ -26,7 +26,7 @@ Then add a pay run for Contoso and leave the period empty to take the current on
 
 1. Open **Payroll > Pay Runs** and choose **Add pay run**.
 2. Choose the **Employer** and the **Pay schedule**: everyone of the employer with an active pay profile on the schedule is paid.
-3. Choose the **Type**: a regular run pays salaries, hours, pay items and inputs; a supplemental or off-cycle run pays only the inputs you enter, such as bonuses. Choose how bonuses are withheld.
+3. Choose the **Type**: a regular run pays salaries, hours, pay items and inputs; a supplemental or off-cycle run pays only the inputs you enter, such as bonuses, so only the people with inputs get a statement. Choose how bonuses are withheld.
 4. Leave the period and pay date empty to take the schedule's current period, or enter them, and choose **Add**.
 
 ## Enter hours and amounts
@@ -52,9 +52,11 @@ Once the run is approved, someone who processes pay runs for the employer choose
 - a deposit row becomes a payment in **Disbursements** from the employer's funding account (choose it on the employer under **Funding account**). Make the bank file there, as for any other payment;
 - a check row becomes a check in the **Check register**, on the same account, with the statement printed as the stub of the check. Print it there.
 
+The processed run's page then shows **Next: send the pay**, with **Batch the deposits** and **Print the checks** to open those pages. A batch made with **Arrives** left empty arrives on the pay date.
+
 A deposit is paid by check when Banking's Direct Deposit is off and its Checks is on. Payroll has nothing of its own to turn on for either. When a payment can't be made, such as an employer with no funding account, the run is **partly paid** and the statement shows why: fix it and choose **Pay what is left**.
 
-Each person whose staff record has a user is told their statement is ready, by the notification center and the methods they chose (it holds no amount). **Download the stub** on a statement's page gives its PDF.
+Each person whose staff record has a user is told their statement is ready, by the notification center and the methods they chose (it holds no amount). **Download the stub** on a statement's page gives its PDF: a draft is marked DRAFT, and what the employer pays on top of pay (its taxes and contributions) is listed apart under **Paid by your employer**.
 
 ## Void or reissue
 

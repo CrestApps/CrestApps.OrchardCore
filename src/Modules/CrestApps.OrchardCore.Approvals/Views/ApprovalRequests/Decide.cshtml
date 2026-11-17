@@ -40,7 +40,7 @@
                 @if (request.Amount is { } amount && !string.IsNullOrEmpty(request.Currency))
                 {
                     <dt class="col-sm-3">@T["Amount"]</dt>
-                    <dd class="col-sm-9">@CurrencyScale.Format(amount, request.Currency)</dd>
+                    <dd class="col-sm-9">@CurrencyScale.FormatForDisplay(amount, request.Currency) @request.Currency</dd>
                 }
                 @if (Model.DueLocal is { } due)
                 {

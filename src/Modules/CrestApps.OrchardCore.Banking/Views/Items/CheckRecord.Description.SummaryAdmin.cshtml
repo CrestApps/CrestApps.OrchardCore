@@ -6,7 +6,7 @@
 }
 
 <div class="admin-list-secondary">
-    @check.PayeeName · @CurrencyScale.Format(check.Amount, check.Currency) · @check.CheckDate.ToString("d")
+    @check.PayeeName · @CurrencyScale.FormatForDisplay(check.Amount, check.Currency) @check.Currency · @check.CheckDate.ToString("d")
     @if (!string.IsNullOrEmpty(check.Memo))
     {
         <span> · @check.Memo</span>

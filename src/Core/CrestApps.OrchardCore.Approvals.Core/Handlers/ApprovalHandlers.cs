@@ -138,6 +138,11 @@ public sealed class ApprovalPolicyHandler : CatalogEntryHandlerBase<ApprovalPoli
                 context.Result.Fail(new ValidationResult(S["One to ten approvals can be required at stage {0}.", index], [nameof(ApprovalPolicy.RequiredApprovals)]));
             }
 
+            if (stage.Approvers.Count > 10)
+            {
+                context.Result.Fail(new ValidationResult(S["Stage {0} has ten approver rules at most.", index], [nameof(ApprovalPolicy.Approvers)]));
+            }
+
             if (stage.Approvers.Count == 0)
             {
                 context.Result.Fail(new ValidationResult(S["Say who may approve at stage {0}: a permission, a role, named users, the manager or another approver rule.", index], [nameof(ApprovalPolicy.Approvers)]));

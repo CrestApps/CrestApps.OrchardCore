@@ -6,7 +6,7 @@
 @{
     var item = Model.Value;
     var currency = (await Employers.FindByIdAsync(item.EmployerId))?.Currency;
-    string Amount(decimal value) => string.IsNullOrEmpty(currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.Format(value, currency) + " " + currency;
+    string Amount(decimal value) => string.IsNullOrEmpty(currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.FormatForDisplay(value, currency) + " " + currency;
 }
 
 <span class="badge ta-badge fw-normal">@(item.Amount.HasValue ? Amount(item.Amount.Value) : (item.Percent?.ToString("0.##", CultureInfo.CurrentCulture) + " %"))</span>

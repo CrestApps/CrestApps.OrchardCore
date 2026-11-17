@@ -4,7 +4,7 @@
 
 @{
     var statement = Model.Statement;
-    string Money(decimal value) => string.IsNullOrEmpty(statement.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.Format(value, statement.Currency) + " " + statement.Currency;
+    string Money(decimal value) => string.IsNullOrEmpty(statement.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.FormatForDisplay(value, statement.Currency) + " " + statement.Currency;
     string TypeName(PayLineType type) => type switch
     {
         PayLineType.Earning => T["Earning"].Value,

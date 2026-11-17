@@ -59,6 +59,8 @@ public sealed class PayStubService
             Deposit = S["Deposit"],
             Check = S["Check"],
             Voided = S["VOID"],
+            Draft = S["DRAFT"],
+            EmployerPaid = S["Paid by your employer"],
             Balances = S["Balances"],
             HoursUnit = S["hours"],
             DaysUnit = S["days"],

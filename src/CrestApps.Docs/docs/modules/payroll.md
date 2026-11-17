@@ -104,7 +104,7 @@ The `PaySchedules` step (`Schedules`, matched by id then name) and the `PayCodes
 
 Workforce's `WorkforceTimeClock` step still reads its `PayPeriods` and `PayCodes` keys and saves them through these managers, so older recipes keep working. Its deployment step keeps exporting the pay schedules its policies name, and leaves pay codes to the `PayCodes` step.
 
-The **Payroll sample** recipe (`PayrollSample`, `payroll-sample.recipe.json`) sets up a payroll to try a pay run on. It turns on Payroll, United States Payroll Filings, Garnishments and Banking's Bank Accounts, Checks, Disbursements and Direct Deposit, runs the **United States Income Tax: federal rules for 2026** recipe through Orchard's `Recipes` step, and then adds, with fixed ids so a second run updates instead of duplicating:
+The **Payroll sample** recipe (`PayrollSample`, `payroll-sample.recipe.json`) sets up a payroll to try a pay run on. It turns on Payroll, United States Payroll Filings, Garnishments, My Pay and Banking's Bank Accounts, Checks, Disbursements and Direct Deposit, runs the **United States Income Tax: federal rules for 2026** recipe through Orchard's `Recipes` step, adds the income tax rule **Texas unemployment (SUI)** (`US-TX-SUI`: the employer, at the rate of its `US-TX` registration, on the first 9,000 of a year's wages), and then adds, with fixed ids so a second run updates instead of duplicating:
 
 - the employer **Contoso** in Austin, Texas, with its `US` and `US-TX` registrations (the Texas one with a 2.7% rate) and the funding account **Contoso operating account**, a business account with **Bank file (ACH)** settings (`NachaOriginSettings`) of test values;
 - the check layout **Contoso paychecks** (blank stock, check on top, no check line until a font is uploaded);
@@ -247,7 +247,7 @@ Lines are `PayStatementLine`s (type, pay code or tax code and category, hours, r
 
 ## Pay runs
 
-A `PayRun` is one payroll of one employer (`IPayRunManager`): a number from the `Payroll:PayRuns` sequence, a pay schedule (or named people), a type (`Regular`, `Supplemental`, `OffCycle`, `Final`, `Correction`, `Contractor`, and `Reversal` and `Historical` for later slices), a period, a pay date, the supplemental method, the totals and issues of its last calculation, a version stamp, the approval request and a status on `PayRunStatuses.Transitions`: Draft, Calculating, Calculated, PendingApproval, Approved, Processing, Paid, PartiallyPaid, Failed, Canceled. A regular, final or correction run pays salaries, pay items and the pay input sources; the others pay only their own inputs.
+A `PayRun` is one payroll of one employer (`IPayRunManager`): a number from the `Payroll:PayRuns` sequence, a pay schedule (or named people), a type (`Regular`, `Supplemental`, `OffCycle`, `Final`, `Correction`, `Contractor`, and `Reversal` and `Historical` for later slices), a period, a pay date, the supplemental method, the totals and issues of its last calculation, a version stamp, the approval request and a status on `PayRunStatuses.Transitions`: Draft, Calculating, Calculated, PendingApproval, Approved, Processing, Paid, PartiallyPaid, Failed, Canceled. A regular, final or correction run pays salaries, pay items and the pay input sources; the others pay only their own inputs, so unless they name their people they pay only the people with inputs (no empty statements).
 
 `IPayRunService`:
 

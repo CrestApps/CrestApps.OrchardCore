@@ -1,7 +1,12 @@
 @model ShapeViewModel<Disbursement>
+@using CrestApps.OrchardCore.Banking.Disbursements.Services
+@inject IEnumerable<IDisbursementProvider> Providers
 
 @{
     var disbursement = Model.Value;
+
+    // The way it is sent, as the Method filter names it, such as "Bank file (ACH)"; the provider name when it is gone.
+    var method = Providers.FirstOrDefault(provider => string.Equals(provider.Method, disbursement.Method, StringComparison.OrdinalIgnoreCase))?.DisplayName.Value ?? disbursement.Method;
     var (status, icon) = disbursement.Status switch
     {
         DisbursementStatus.Batched => (T["Batched"], "fa-solid fa-layer-group text-info"),
@@ -16,7 +21,7 @@
 }
 
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="@icon me-1" aria-hidden="true"></i>@status</span>
-<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Sent by"]"><i class="fa-solid fa-money-bill-transfer text-secondary me-1" aria-hidden="true"></i>@disbursement.Method</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Sent by"]"><i class="fa-solid fa-money-bill-transfer text-secondary me-1" aria-hidden="true"></i>@method</span>
 @if (disbursement.IsHistorical)
 {
     <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Imported from another system: it is history."]"><i class="fa-solid fa-box-archive text-secondary me-1" aria-hidden="true"></i>@T["History"]</span>

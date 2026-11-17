@@ -7,7 +7,7 @@
 }
 
 <div class="admin-list-secondary">
-    @CurrencyScale.Format(disbursement.Amount, disbursement.Currency)
+    @CurrencyScale.FormatForDisplay(disbursement.Amount, disbursement.Currency) @disbursement.Currency
     @if (disbursement.EffectiveDate is { } date)
     {
         <span> · @T["arrives {0}", date.ToString("d")]</span>

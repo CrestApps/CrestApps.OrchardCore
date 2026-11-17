@@ -206,7 +206,7 @@ public sealed class ApprovalTypesTests
     }
 
     [Fact]
-    public async Task ThePolicyHandler_ChecksEachStage_AndKeepsARuleWhoseProviderIsOff()
+    public async Task ThePolicyHandler_ChecksEachStage_AndKeepsARuleWhoseProviderIsOff_AndCapsTheRules()
     {
         // Arrange
         var handler = new ApprovalPolicyHandler(Mock.Of<IClock>(), [new UsersApproverRuleProvider()], RecipeRoundTrip.Localizer<ApprovalPolicyHandler>());
@@ -218,6 +218,7 @@ public sealed class ApprovalTypesTests
                 new ApprovalStage { Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Users }] },
                 new ApprovalStage { Approvers = [new ApproverRule { Kind = "ProjectLead" }] },
                 new ApprovalStage { Approvers = [] },
+                new ApprovalStage { Approvers = [.. Enumerable.Range(0, 11).Select(_ => new ApproverRule { Kind = ApproverRuleKinds.Manager })] },
             ],
         };
         var context = new ValidatingContext<ApprovalPolicy>(policy);
@@ -231,6 +232,9 @@ public sealed class ApprovalTypesTests
         Assert.Contains("The approver rule Users at stage 1 needs a value.", messages);
         Assert.DoesNotContain(messages, message => message.Contains("ProjectLead", StringComparison.Ordinal));
         Assert.Contains(messages, message => message.StartsWith("Say who may approve at stage 3", StringComparison.Ordinal));
+
+        // The editor's limit holds for a recipe too: ten rules a stage at most.
+        Assert.Contains("Stage 4 has ten approver rules at most.", messages);
     }
 
     [Fact]

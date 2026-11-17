@@ -1,7 +1,12 @@
 @model ShapeViewModel<DisbursementBatch>
+@using CrestApps.OrchardCore.Banking.Disbursements.Services
+@inject IEnumerable<IDisbursementProvider> Providers
 
 @{
     var batch = Model.Value;
+
+    // How it is sent, by the provider's display name, such as "Bank file (ACH)"; its name when the provider is gone.
+    var provider = Providers.FirstOrDefault(entry => string.Equals(entry.Name, batch.Provider, StringComparison.Ordinal))?.DisplayName.Value ?? batch.Provider;
     var (status, icon) = batch.Status switch
     {
         DisbursementBatchStatus.Released => (T["Released"], "fa-solid fa-paper-plane text-info"),
@@ -13,4 +18,4 @@
 }
 
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="@icon me-1" aria-hidden="true"></i>@status</span>
-<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Sent by"]"><i class="fa-solid fa-money-bill-transfer text-secondary me-1" aria-hidden="true"></i>@batch.Provider</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Sent by"]"><i class="fa-solid fa-money-bill-transfer text-secondary me-1" aria-hidden="true"></i>@provider</span>

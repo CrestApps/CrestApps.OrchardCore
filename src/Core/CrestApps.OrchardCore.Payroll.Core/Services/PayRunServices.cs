@@ -562,6 +562,14 @@ public sealed partial class DefaultPayRunService : IPayRunService
             var profiles = await ProfilesAsync(run, cancellationToken);
             var only = staffMemberIds?.ToHashSet(StringComparer.Ordinal);
             var inputs = (await _inputs.ListByRunAsync(run.ItemId, cancellationToken)).ToLookup(input => input.StaffMemberId, StringComparer.Ordinal);
+
+            // A run that pays only its inputs (supplemental, off-cycle, contractors) pays the people who have some, not
+            // everyone on the schedule with an empty statement: unless it names its people.
+            if (!run.IsRegular && run.StaffMemberIds.Count == 0)
+            {
+                profiles = [.. profiles.Where(profile => inputs.Contains(profile.StaffMemberId))];
+            }
+
             var drafts = (await ListStatementsAsync(run, cancellationToken)).Where(statement => statement.Status == PayStatementStatus.Draft).ToList();
             var employer = await _employers.FindByIdAsync(run.EmployerId, cancellationToken);
             var names = await _staff.GetAsync(profiles.Select(profile => profile.StaffMemberId), cancellationToken);
@@ -630,7 +638,13 @@ public sealed partial class DefaultPayRunService : IPayRunService
 
             if (profiles.Count == 0)
             {
-                issues.Add(new PayRunIssue { Message = S["No one is paid by this run: no active pay profile of the employer is on the pay schedule."], IsBlocker = true });
+                issues.Add(new PayRunIssue
+                {
+                    Message = run.IsRegular || run.StaffMemberIds.Count > 0
+                        ? S["No one is paid by this run: no active pay profile of the employer is on the pay schedule."]
+                        : S["No one is paid by this run: it pays only its inputs, and none were added. Add them, then calculate."],
+                    IsBlocker = true,
+                });
             }
 
             run.Totals = Totals(drafts);
@@ -770,7 +784,7 @@ public sealed partial class DefaultPayRunService : IPayRunService
             SubjectId = run.ItemId,
             AccessScope = run.EmployerId,
             SubjectUrl = $"~/Admin/payroll/pay-runs/{run.ItemId}",
-            Title = S["Pay run {0} of {1}, paid {2}", run.Number, employer?.Name ?? run.EmployerId, run.PayDate.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)],
+            Title = S["Pay run {0} of {1}, paid {2}", run.Number, employer?.Name ?? run.EmployerId, run.PayDate.ToString("d", System.Globalization.CultureInfo.CurrentCulture)],
             Amount = run.Totals.CashNeeded,
             Currency = employer?.Currency,
             SubjectVersion = run.Version,

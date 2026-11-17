@@ -4,7 +4,7 @@
 
 @{
     var statement = Model.Statement;
-    string Money(decimal value) => string.IsNullOrEmpty(statement.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.Format(value, statement.Currency) + " " + statement.Currency;
+    string Money(decimal value) => string.IsNullOrEmpty(statement.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.FormatForDisplay(value, statement.Currency) + " " + statement.Currency;
     string StatusName(PayStatement value) => value.VoidOf is not null ? T["Reversal"].Value : value.Status switch
     {
         PayStatementStatus.Draft => T["Draft"].Value,
@@ -121,7 +121,7 @@
                     <input name="reason" class="form-control" placeholder="@T["Why it is voided"]" aria-label="@T["Why it is voided"]" required />
                 </div>
                 <div class="col-12 col-md-auto">
-                    <button type="submit" class="btn btn-danger" data-title="@T["Void the statement"]" data-message="@T["Void this pay statement? This can't be undone."]">@T["Void"]</button>
+                    <button type="submit" class="btn btn-danger" data-confirm-submit data-title="@T["Void the statement"]" data-message="@T["Void this pay statement? This can't be undone."]">@T["Void"]</button>
                 </div>
             </form>
         </div>
@@ -131,3 +131,5 @@
 <div class="mb-3">
     <a class="btn btn-secondary" asp-action="StatementPdf" asp-route-id="@statement.ItemId"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Download the stub"]</a>
 </div>
+
+<partial name="ConfirmSubmitScript" />

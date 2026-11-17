@@ -963,7 +963,7 @@ public sealed class GarnishmentCheckVoucherSource : ICheckVoucherSource
             return null;
         }
 
-        var amount = string.IsNullOrEmpty(check.Currency) ? check.Amount.ToString("N2", CultureInfo.InvariantCulture) : CurrencyScale.Format(check.Amount, check.Currency);
+        var amount = string.IsNullOrEmpty(check.Currency) ? check.Amount.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.FormatForDisplay(check.Amount, check.Currency, CultureInfo.CurrentCulture);
         var lines = new List<CheckVoucherLine>();
 
         void Add(string label, string value)

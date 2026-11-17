@@ -187,16 +187,19 @@ public sealed class EmployerScopeTests
     }
 
     [Fact]
-    public void SampleRolesRecipe_GrantsOnlyPermissionsPayrollDeclares()
+    public void SampleRolesRecipe_GrantsOnlyPermissionsPayrollDeclares_AndTheAdminPanel()
     {
         var path = Path.Combine(FindRepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.Payroll", "Recipes", "payroll-sample-roles.recipe.json");
         var recipe = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
-        var known = PayrollPermissions.Payroll.Append(PayrollPermissions.ManagePaySetup).Select(permission => permission.Name).ToHashSet(StringComparer.Ordinal);
+        var known = PayrollPermissions.Payroll.Append(PayrollPermissions.ManagePaySetup).Append(global::OrchardCore.Admin.AdminPermissions.AccessAdminPanel).Select(permission => permission.Name).ToHashSet(StringComparer.Ordinal);
         var roles = recipe["steps"]!.AsArray().Single(step => step!["name"]!.GetValue<string>() == "Roles")!["Roles"]!.AsArray();
         var clerk = roles.Single(role => role!["Name"]!.GetValue<string>() == "Payroll clerk")!["Permissions"]!.AsArray().Select(node => node!.GetValue<string>());
 
         Assert.All(roles.SelectMany(role => role!["Permissions"]!.AsArray()), permission => Assert.Contains(permission!.GetValue<string>(), known));
         Assert.DoesNotContain(PayrollPermissions.ApprovePayRuns.Name, clerk);
+
+        // Every payroll page is in the admin: a role without the admin panel opens none of them.
+        Assert.All(roles, role => Assert.Contains(global::OrchardCore.Admin.AdminPermissions.AccessAdminPanel.Name, role!["Permissions"]!.AsArray().Select(node => node!.GetValue<string>())));
     }
 
     private static Task<CalendarTestHarness> CreateHarnessAsync(Action<IServiceCollection> configure = null)

@@ -50,6 +50,12 @@ public sealed class PayStubTexts
     /// <summary>Gets or sets the mark of a voided or reversing statement.</summary>
     public string Voided { get; set; } = "VOID";
 
+    /// <summary>Gets or sets the mark of a statement not final yet, which has no number.</summary>
+    public string Draft { get; set; } = "DRAFT";
+
+    /// <summary>Gets or sets the heading of what the employer pays on top of pay, such as its taxes and contributions.</summary>
+    public string EmployerPaid { get; set; } = "Paid by your employer";
+
     /// <summary>Gets or sets the heading of the balances, such as time off.</summary>
     public string Balances { get; set; } = "Balances";
 
@@ -90,8 +96,9 @@ public static class PayStubDocument
         var right = PdfPageSize.Letter.Width - Margin;
         var y = Margin;
 
+        // A stub is read by people: the reader's group and decimal separators, at the currency's precision.
         string Money(decimal value)
-            => string.IsNullOrEmpty(statement.Currency) ? value.ToString("N2", CultureInfo.InvariantCulture) : CurrencyScale.Format(value, statement.Currency);
+            => string.IsNullOrEmpty(statement.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.FormatForDisplay(value, statement.Currency, CultureInfo.CurrentCulture);
 
         void Text(string text, PdfFontFace font, double size, double x, double top)
             => page.DrawText(font.Prepare(PdfText.Clean(text ?? string.Empty)), font, size, x, top, PdfColor.Black);
@@ -113,10 +120,19 @@ public static class PayStubDocument
         {
             TextRight(texts.Voided, bold, 12, right, y);
         }
+        else if (statement.Status == PayStatementStatus.Draft)
+        {
+            // A draft can still change: it says so, and has no number to show.
+            TextRight(texts.Draft, bold, 12, right, y);
+        }
 
         y += LineHeight;
         Text(statement.Snapshot?.EmployeeName, bold, 11, Margin, y);
-        TextRight($"{texts.Number} {statement.Number}", regular, 9, right, y);
+
+        if (!string.IsNullOrEmpty(statement.Number))
+        {
+            TextRight($"{texts.Number} {statement.Number}", regular, 9, right, y);
+        }
         y += LineHeight;
 
         foreach (var line in statement.Snapshot?.EmployeeAddress ?? [])
@@ -136,12 +152,22 @@ public static class PayStubDocument
         Text(string.Empty, bold, 9, Margin, y);
         TextRight(texts.Hours, bold, 9, hoursAt, y);
         TextRight(texts.Current, bold, 9, currentAt, y);
-        TextRight(texts.YearToDate, bold, 9, right, y);
+
+        // A draft is in no year-to-date total yet: no empty column.
+        if (accumulators is not null)
+        {
+            TextRight(texts.YearToDate, bold, 9, right, y);
+        }
         y += 4;
         page.DrawLine(Margin, y + LineHeight - 4, right, y + LineHeight - 4, PdfColor.Black, 0.5);
         y += LineHeight;
 
-        foreach (var line in statement.Lines)
+        // What the employer pays on top of pay (its taxes and contributions) is not taken from the person's pay: it is
+        // listed apart, after net pay, so it isn't read as earnings.
+        static bool PaidByEmployer(PayStatementLine line)
+            => line.Type == PayLineType.EmployerContribution || line.Type == PayLineType.Tax && line.Payer == PayLinePayer.Employer;
+
+        void Line(PayStatementLine line)
         {
             var key = line.Type == PayLineType.Tax ? PayAccumulators.TaxKey(line.TaxCode) : PayAccumulators.CodeKey(line.PayCodeId);
             var code = line.PayCodeId is not null && codes is not null && codes.TryGetValue(line.PayCodeId, out var text) ? text : line.TaxCode;
@@ -151,7 +177,7 @@ public static class PayStubDocument
 
             if (line.Hours is { } hours)
             {
-                TextRight(hours.ToString("0.##", CultureInfo.InvariantCulture), regular, 9, hoursAt, y);
+                TextRight(hours.ToString("0.##", CultureInfo.CurrentCulture), regular, 9, hoursAt, y);
             }
 
             var sign = line.Type is PayLineType.Deduction or PayLineType.Tax && line.Payer == PayLinePayer.Employee ? -1 : 1;
@@ -164,6 +190,11 @@ public static class PayStubDocument
             }
 
             y += LineHeight;
+        }
+
+        foreach (var line in statement.Lines.Where(line => !PaidByEmployer(line)))
+        {
+            Line(line);
 
             if (y > PdfPageSize.Letter.Height - 160)
             {
@@ -197,6 +228,25 @@ public static class PayStubDocument
             }
         }
 
+        var employerPaid = statement.Lines.Where(PaidByEmployer).ToList();
+
+        if (employerPaid.Count > 0 && y < PdfPageSize.Letter.Height - 120)
+        {
+            y += LineHeight / 2;
+            Text(texts.EmployerPaid, bold, 9, Margin, y);
+            y += LineHeight;
+
+            foreach (var line in employerPaid)
+            {
+                Line(line);
+
+                if (y > PdfPageSize.Letter.Height - 80)
+                {
+                    break;
+                }
+            }
+        }
+
         if (statement.Balances.Count > 0)
         {
             y += LineHeight / 2;
@@ -208,7 +258,7 @@ public static class PayStubDocument
                 var unit = balance.Unit == PayStatementBalance.Days ? texts.DaysUnit : texts.HoursUnit;
 
                 Text(PdfText.Fit(PdfText.Clean(balance.Name), regular, 9, currentAt - Margin - 90), regular, 9, Margin, y);
-                TextRight(PdfText.Clean($"{balance.Balance.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} {unit}"), regular, 9, currentAt, y);
+                TextRight(PdfText.Clean($"{balance.Balance.ToString("0.##", CultureInfo.CurrentCulture)} {unit}"), regular, 9, currentAt, y);
                 y += LineHeight;
             }
         }

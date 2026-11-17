@@ -111,7 +111,6 @@ public sealed class DisbursementsController : Controller
             Pager = (IShape)await shapeFactory.PagerAsync(pager, count, routeData),
         };
         filter.CanManage = await _authorizationService.AuthorizeAsync(User, DisbursementsPermissions.ManageDisbursements);
-        filter.EffectiveDate ??= (await GetLocalTodayAsync()).AddDays(1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         filter.StatusOptions = StatusOptions(filter.Status);
         filter.MethodOptions =
         [
@@ -177,7 +176,17 @@ public sealed class DisbursementsController : Controller
 
         if (!DateOnly.TryParseExact(filter?.EffectiveDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var effectiveDate))
         {
-            effectiveDate = (await GetLocalTodayAsync()).AddDays(1);
+            // No date chosen: the payments' own, such as a pay run's pay date, so nobody is paid early. A batch arrives
+            // on one day: of payments due on different days, the last of them, never before tomorrow.
+            var tomorrow = (await GetLocalTodayAsync()).AddDays(1);
+            var dates = disbursements.Select(disbursement => disbursement.EffectiveDate).OfType<DateOnly>().Distinct().ToList();
+
+            effectiveDate = dates.Count == 0 ? tomorrow : dates.Max() < tomorrow ? tomorrow : dates.Max();
+
+            if (dates.Count > 1)
+            {
+                await _notifier.WarningAsync(H["The payments were due on different days, so the batch arrives on {0}, the last of them. Batch them apart to keep each day.", effectiveDate.ToString("d", CultureInfo.CurrentCulture)]);
+            }
         }
 
         var (batch, problems) = await _disbursementService.CreateBatchAsync(filter?.Options?.BulkAction, ids, effectiveDate, HttpContext.RequestAborted);

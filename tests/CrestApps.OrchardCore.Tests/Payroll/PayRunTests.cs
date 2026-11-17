@@ -37,6 +37,61 @@ namespace CrestApps.OrchardCore.Tests.Payroll;
 public sealed class PayRunTests
 {
     [Fact]
+    public async Task ARunThatPaysOnlyItsInputs_PaysOnlyThePeopleWithInputs_NotEveryoneOnTheSchedule()
+    {
+        // Arrange: Lee has the setup's hours; Sam is on the same schedule with none.
+        await using var harness = await CreateHarnessAsync();
+        var setup = await SetUpAsync(harness);
+        var preparer = CalendarTestHarness.User("preparer", PayrollPermissions.PreparePayRuns.Name);
+        var sam = await WorkforceTests.AddWorkerAsync(harness, "Sam Ito", worker =>
+        {
+            worker.EmployeeNumber = "1002";
+            worker.Put(new StaffPayRates { Rates = [new StaffPayRate { EffectiveFrom = new DateOnly(2020, 1, 1), HourlyRate = 20 }] });
+        });
+
+        await harness.RunAsync(async services =>
+        {
+            var run = await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId);
+            var profiles = services.GetRequiredService<IPayProfileManager>();
+            var profile = await profiles.NewAsync();
+
+            profile.StaffMemberId = sam.ItemId;
+            profile.EmployerId = setup.EmployerId;
+            profile.PayScheduleId = run.PayScheduleId;
+            profile.Distribution = [new NetPayRow { Method = NetPayMethod.Check, Split = NetPaySplit.Remainder }];
+            profile.Elections = [new TaxElection { Jurisdiction = "US", EffectiveFrom = new DateOnly(2020, 1, 1) }];
+            await services.GetRequiredService<IPayProfileService>().SetTaxIdAsync(profile, "987654321");
+            await profiles.CreateAsync(profile);
+
+            run.Type = PayRunType.Supplemental;
+            await services.GetRequiredService<IPayRunManager>().UpdateAsync(run);
+        });
+
+        // Act
+        var (supplemental, regular) = await harness.RunAsync(async services =>
+        {
+            var service = services.GetRequiredService<IPayRunService>();
+            var runs = services.GetRequiredService<IPayRunManager>();
+            var run = await runs.FindByIdAsync(setup.RunId);
+
+            Assert.True((await service.CalculateAsync(run, preparer)).Succeeded);
+            var supplemental = (await service.ListStatementsAsync(run)).Select(statement => statement.StaffMemberId).ToList();
+
+            run = await runs.FindByIdAsync(setup.RunId);
+            run.Type = PayRunType.Regular;
+            await runs.UpdateAsync(run);
+            Assert.True((await service.CalculateAsync(run, preparer)).Succeeded);
+
+            return (supplemental, (await service.ListStatementsAsync(run)).Select(statement => statement.StaffMemberId).ToList());
+        });
+
+        // Assert
+        Assert.Equal([setup.StaffMemberId], supplemental);
+        Assert.Equal(2, regular.Count);
+        Assert.Contains(sam.ItemId, regular);
+    }
+
+    [Fact]
     public async Task TheSeededPolicysStage_IsTitledAfterItsRule_UnlessThePolicyWasChanged()
     {
         await using var harness = await CreateHarnessAsync();
