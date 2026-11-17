@@ -252,6 +252,68 @@
 		];
 		const chartCanvasId = /^(?:chat|ci)_chart_\d+$/;
 		const safeStyle = /^[\w\s:;.%#,-]*$/;
+		const allowedStyleProperties = /* @__PURE__ */ new Set([
+			"width",
+			"height",
+			"min-width",
+			"min-height",
+			"max-width",
+			"max-height",
+			"margin",
+			"margin-top",
+			"margin-right",
+			"margin-bottom",
+			"margin-left",
+			"padding",
+			"padding-top",
+			"padding-right",
+			"padding-bottom",
+			"padding-left",
+			"display",
+			"text-align",
+			"vertical-align",
+			"white-space",
+			"word-break",
+			"overflow-wrap",
+			"color",
+			"background-color",
+			"font-size",
+			"font-weight",
+			"font-style",
+			"line-height",
+			"text-decoration"
+		]);
+		const spacingProperty = /^(?:margin|padding)(?:-(?:top|right|bottom|left))?$/;
+		function safeStyleOf(style) {
+			if (typeof style !== "string" || !safeStyle.test(style)) return "";
+			const kept = [];
+			for (const declaration of style.split(";")) {
+				const colon = declaration.indexOf(":");
+				if (colon < 0) continue;
+				const name = declaration.slice(0, colon).trim().toLowerCase();
+				const value = declaration.slice(colon + 1).trim();
+				if (!value || !allowedStyleProperties.has(name)) continue;
+				if (spacingProperty.test(name) && value.indexOf("-") >= 0) continue;
+				kept.push(name + ": " + value + ";");
+			}
+			return kept.join(" ");
+		}
+		const pageReferenceAttributes = [
+			"for",
+			"form",
+			"formaction",
+			"list",
+			"popovertarget",
+			"popovertargetaction",
+			"commandfor",
+			"command"
+		];
+		const formControlTags = [
+			"INPUT",
+			"BUTTON",
+			"SELECT",
+			"TEXTAREA"
+		];
 		function withFetcherLimits(config) {
 			const limited = Object.assign({}, config);
 			limited.FORBID_TAGS = (config && config.FORBID_TAGS ? config.FORBID_TAGS : []).concat(fetchingTags);
@@ -329,18 +391,27 @@
 		function sanitize(purify, html, purifyConfig, options) {
 			const hook = function(node) {
 				if (!node || typeof node.tagName !== "string") return;
-				if (typeof node.getAttribute === "function" && node.getAttribute("style") !== null && !safeStyle.test(node.getAttribute("style"))) node.removeAttribute("style");
-				if (node.tagName.toUpperCase() === "INPUT") {
+				const tagName = node.tagName.toUpperCase();
+				if (typeof node.getAttribute === "function" && node.getAttribute("style") !== null) {
+					const style = safeStyleOf(node.getAttribute("style"));
+					if (style) node.setAttribute("style", style);
+					else node.removeAttribute("style");
+				}
+				if (typeof node.removeAttribute === "function") pageReferenceAttributes.forEach(function(name) {
+					node.removeAttribute(name);
+				});
+				if (formControlTags.indexOf(tagName) >= 0) node.removeAttribute("name");
+				if (tagName === "BUTTON") node.setAttribute("type", "button");
+				if (tagName === "INPUT") {
 					if ((node.getAttribute("type") || "").toLowerCase() !== "checkbox") {
 						node.remove();
 						return;
 					}
 					node.removeAttribute("src");
-					node.removeAttribute("formaction");
-					node.removeAttribute("form");
+					node.setAttribute("disabled", "");
 					return;
 				}
-				if (node.tagName.toUpperCase() !== "IMG") return;
+				if (tagName !== "IMG") return;
 				node.removeAttribute("srcset");
 				const src = node.getAttribute("src");
 				if (!isAllowedSource(src, options)) node.replaceWith(linkElement(src, node.getAttribute("alt")));
@@ -352,7 +423,7 @@
 					if (!(node && typeof node.tagName === "string" && node.tagName.toUpperCase() === "CANVAS" && chartCanvasId.test(data.attrValue))) data.keepAttr = false;
 					return;
 				}
-				if (name.startsWith("data-coreai-") || name.startsWith("data-chat-interaction-")) data.keepAttr = false;
+				if (name.startsWith("data-coreai-") || name.startsWith("data-chat-interaction-") || name.startsWith("data-agui-")) data.keepAttr = false;
 			};
 			purify.addHook(rawImageHook, hook);
 			purify.addHook("uponSanitizeAttribute", attributeHook);
@@ -383,9 +454,20 @@
 				return root !== element && root.contains(element);
 			});
 		}
+		function queryPageElements(selector, scope) {
+			const root = scope || document;
+			return Array.prototype.filter.call(root.querySelectorAll(selector), function(element) {
+				return !isInsideRenderedMessage(element);
+			});
+		}
+		function queryPageElement(selector, scope) {
+			return queryPageElements(selector, scope)[0] || null;
+		}
 		return {
 			registerRoot,
-			isInsideRenderedMessage
+			isInsideRenderedMessage,
+			queryPageElements,
+			queryPageElement
 		};
 	})();
 	//#endregion

@@ -55,10 +55,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 [AllowAnonymous]
 public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 {
-    // The longest text one read-aloud speaks. An answer is read aloud in one call, and without a cap one call could
-    // carry text up to the hub's message size to the text-to-speech provider.
-    private const int MaxReadAloudLength = 10_000;
-
     private readonly IStringLocalizer S;
 
     /// <summary>
@@ -312,9 +308,9 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
             return;
         }
 
-        if (text.Length > MaxReadAloudLength)
+        if (text.Length > MaxSpeechTextLength)
         {
-            await Clients.Caller.ReceiveError(S["This message is too long to read aloud."].Value);
+            await Clients.Caller.ReceiveError(GetSpeechTextTooLongMessage());
 
             return;
         }
@@ -346,7 +342,7 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
                 // the chat views decide when they show the button.
                 profile.TryGetSettings<ChatModeProfileSettings>(out var chatModeSettings);
 
-                if (chatModeSettings?.EnableTextToSpeechPlayback != true && chatModeSettings?.ChatMode != ChatMode.Conversation)
+                if (!await IsSpeechSynthesisEnabledAsync(services, profile))
                 {
                     await Clients.Caller.ReceiveError(GetTtsNotEnabledMessage());
 
@@ -499,6 +495,9 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 
     protected override string GetTtsNotEnabledMessage()
         => S["Text-to-speech is not enabled for this profile."].Value;
+
+    protected override string GetSpeechTextTooLongMessage()
+        => S["This message is too long to read aloud."].Value;
 
     protected override string GetConversationErrorMessage()
         => S["An error occurred during the conversation. Please try again."].Value;

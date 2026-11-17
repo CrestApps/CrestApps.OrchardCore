@@ -494,7 +494,7 @@
 		let _pendingCharts = [];
 		window.__chartConfigs = window.__chartConfigs || {};
 		function createChartHtml(chartId) {
-			return `<div class="chart-container" style="position: relative; width: 100%; max-width: 560px; min-height: 420px;"><canvas id="${chartId}"></canvas></div><div class="mt-2"><button type="button" class="btn btn-sm btn-outline-secondary download-chart-btn" data-chart-id="${chartId}" title="${defaultConfig.downloadChartTitle}"><i class="fa-solid fa-download"></i> ${defaultConfig.downloadChartButtonText}</button></div>`;
+			return `<div class="chart-container" style="width: 100%; max-width: 560px; min-height: 420px;"><canvas id="${chartId}"></canvas></div><div class="mt-2"><button type="button" class="btn btn-sm btn-outline-secondary download-chart-btn" data-chart-id="${chartId}" title="${defaultConfig.downloadChartTitle}"><i class="fa-solid fa-download"></i> ${defaultConfig.downloadChartButtonText}</button></div>`;
 		}
 		const findChartMarker = window.CoreAIChatMarkers.findChartMarker;
 		marked.use({ extensions: [{
@@ -582,6 +582,7 @@
 				cfg.options.responsive = true;
 				cfg.options.maintainAspectRatio = true;
 				cfg.options.aspectRatio ??= 4 / 3;
+				if (canvas.parentElement) canvas.parentElement.style.position = "relative";
 				canvas._chartInstance = new Chart(canvas, cfg);
 				delete window.__chartConfigs[chartId];
 				return true;
@@ -1882,6 +1883,17 @@
 						};
 						(this.pendingSessionPromise ? this.pendingSessionPromise.catch(() => null) : Promise.resolve()).then(() => this.syncPageTools()).then(openStream, openStream);
 					},
+					isRenderedApprovalButton(button, interruptId) {
+						if (!button || button.tagName !== "BUTTON" || !interruptId) return false;
+						const approval = button.parentElement;
+						const toolCall = approval ? approval.parentElement : null;
+						if (!approval || !approval.classList.contains("ai-chat-agui-approval") || !toolCall || !toolCall.classList.contains("ai-chat-agui-tool") || !toolCall.parentElement || !toolCall.parentElement.classList.contains("ai-chat-agui-activity")) return false;
+						for (const message of this.messages) {
+							const call = (message.toolCalls || []).find((c) => c.interruptId === interruptId);
+							if (call) return call.status === "awaitingApproval" && toolCall.getAttribute("data-agui-tool-call") === String(call.id ?? "");
+						}
+						return false;
+					},
 					answerApproval(interruptId, approved) {
 						let target = null;
 						let targetCall = null;
@@ -2521,7 +2533,9 @@
 							const button = event.target && event.target.closest ? event.target.closest("[data-agui-interrupt]") : null;
 							if (!button || !this.chatContainer.contains(button)) return;
 							event.preventDefault();
-							this.answerApproval(button.getAttribute("data-agui-interrupt"), button.getAttribute("data-agui-approved") === "true");
+							const interruptId = button.getAttribute("data-agui-interrupt");
+							if (!this.isRenderedApprovalButton(button, interruptId)) return;
+							this.answerApproval(interruptId, button.getAttribute("data-agui-approved") === "true");
 						});
 						document.addEventListener("selectionchange", () => this.trackPageSelection());
 						const sessionId = this.getSessionId();

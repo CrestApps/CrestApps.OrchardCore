@@ -416,18 +416,23 @@ describe('an answer that reaches the page\'s own form controls (F5 of the fix-ve
         element.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
     }
 
-    it('the stretched label is a working exploit without the guard: a click on it submits the page\'s form and ticks its checkbox', async () => {
+    it('the stretched label is stopped by the package\'s own sanitizer even without the guard (CrestApps.Core #332)', async () => {
+        // Since @crestapps/ai-chat-ui 2.0.0-preview.265 the answer sanitizer drops for, and position, opacity and z-index
+        // from a style, so the guard is a second layer here. The label itself stays; the guard removes it.
         const { window, submitted } = formPage(`Here is the answer.\n\n${overlay}\n`);
 
         window.eval(libraries.aiChat);
         await flush(window);
 
-        click(window, '.overlay-submit');
-        click(window, '.overlay-role');
+        const message = window.document.querySelector('#chat-app .message');
 
-        expect(submitted).toHaveLength(1);
-        expect(submitted[0].id).toBe('page-form');
-        expect(window.document.getElementById('Roles_0__IsSelected').checked).toBe(true);
+        expect(message.querySelector('[for]')).toBeNull();
+        expect(message.querySelector('.overlay-submit').getAttribute('style') ?? '').not.toMatch(/position|opacity|z-index/);
+
+        message.querySelectorAll('*').forEach(element => element.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true })));
+
+        expect(submitted).toHaveLength(0);
+        expect(window.document.getElementById('Roles_0__IsSelected').checked).toBe(false);
     });
 
     it('with the built guard loaded first, the answer keeps no label and no for, and the page\'s controls are untouched', async () => {
@@ -448,13 +453,15 @@ describe('an answer that reaches the page\'s own form controls (F5 of the fix-ve
         expect(window.document.getElementById('Roles_0__IsSelected').checked).toBe(false);
     });
 
-    it('the off-site form survives without the guard', async () => {
+    it('the off-site form survives without the guard, though the package drops its fields\' names (CrestApps.Core #332)', async () => {
+        // The package's sanitizer keeps form elements, so the guard is the only layer that removes them.
         const { window } = formPage(`Here is the answer.\n\n${offSiteForm}\n`);
 
         window.eval(libraries.aiChat);
         await flush(window);
 
-        expect(window.document.querySelector('#chat-app .message form.off-site-form textarea[name="secret"]')).not.toBeNull();
+        expect(window.document.querySelector('#chat-app .message form.off-site-form textarea')).not.toBeNull();
+        expect(window.document.querySelector('#chat-app .message [name]')).toBeNull();
     });
 
     it('with the built guard loaded first, the answer keeps no form, field or submit button, but keeps their text', async () => {
@@ -533,20 +540,18 @@ describe('the vendored chat-interaction.js with an answer that forges its settin
         return (window.__hubCalls || []).filter(call => call[0] === 'SaveSettings').map(call => call[2]);
     }
 
-    it('is a working exploit without the guard: a click on the forged link saves the forged template and an unticked tool', async () => {
+    it('is stopped by the package even without the guard: the forged link saves nothing (CrestApps.Core #332)', async () => {
+        // Since @crestapps/ai-chat-ui 2.0.0-preview.265 the settings collectors skip everything inside a rendered message,
+        // so the guard is a second layer here.
         const window = settingsPage(forgedAnswer);
 
         window.eval(libraries.chatInteraction);
         await flush(window);
 
-        window.document.querySelector('#chat-app .message .forged-add').dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+        window.document.querySelector('#chat-app .message .forged-add')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
         await waitForSave(window);
 
-        const saved = savedSettings(window);
-
-        expect(saved).toHaveLength(1);
-        expect(saved[0].toolNames).toEqual(['deleteContentItem']);
-        expect(saved[0].promptTemplateIds).toEqual(['attacker-template']);
+        expect(savedSettings(window)).toHaveLength(0);
     });
 
     it('with the built guard loaded first, the forged link saves nothing, and a save from the page carries neither', async () => {
