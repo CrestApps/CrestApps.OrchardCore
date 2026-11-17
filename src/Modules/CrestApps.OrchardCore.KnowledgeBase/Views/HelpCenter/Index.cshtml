@@ -58,7 +58,7 @@
             }
             else
             {
-                <h2 class="h6 text-uppercase text-body-secondary">@(searching ? T["Articles found"] : T["Most helpful"])</h2>
+                <h2 class="h6 text-uppercase text-body-secondary">@(!string.IsNullOrWhiteSpace(Model.Query) ? T["Articles found"] : hasCategory ? T["Articles"] : T["Most helpful"])</h2>
                 @if (Model.Articles.Count == 0)
                 {
                     <p class="text-body-secondary">@(searching ? T["No article matches. Try other words."] : T["There are no articles yet."])</p>
