@@ -1,0 +1,78 @@
+@model PayrollFilingsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PayrollFilings" title="@T["Filings"]" />
+</zone>
+
+<form method="get" class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-end">
+            <div class="col-12 col-md-5">
+                <label for="employerId" class="form-label">@T["Employer"]</label>
+                <select id="employerId" name="employerId" asp-items="Model.Employers" class="form-select"><option value="">@T["Choose…"]</option></select>
+            </div>
+            
+            <div class="col-auto">
+                <button type="submit" class="btn btn-secondary">@T["Show"]</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (!string.IsNullOrEmpty(Model.EmployerId))
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Prepare a filing"]</div>
+        <div class="card-body">
+            @if (Model.Forms.Count == 0)
+            {
+                <p class="hint mb-0">@T["The employer files no form yet: turn on a country pack, such as United States Payroll, and register the employer in its jurisdiction."]</p>
+            }
+            else
+            {
+                <form asp-action="Prepare" method="post" class="row g-2 align-items-end">
+                    <input type="hidden" name="employerId" value="@Model.EmployerId" />
+                    <div class="col-12 col-md-5">
+                        <label for="form" class="form-label">@T["Form"]</label>
+                        <select id="form" name="form" asp-items="Model.Forms" class="form-select"></select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label for="prepareYear" class="form-label">@T["Year"]</label>
+                        <input id="prepareYear" name="year" type="number" min="2000" max="2100" value="@Model.Year" class="form-control" />
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label for="quarter" class="form-label">@T["Quarter"]</label>
+                        <select id="quarter" name="quarter" class="form-select">
+                            <option value="0">@T["Whole year"]</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <button type="submit" class="btn btn-secondary w-100">@T["Prepare"]</button>
+                    </div>
+                    <div class="col-12">
+                        <span class="hint">@T["Totals are taken from the final statements with pay dates in the period and the deposits recorded. A draft can be prepared again until it is marked as filed. The business files the form."]</span>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+}
+
+<form method="post" class="no-multisubmit" data-list-management data-client-side-search="true">
+    <admin-list name="PayrollFilings" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> No filing has been prepared yet."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Form"]" />
+            <admin-list-column name="Details" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<script asp-name="list-management-ui" at="Foot"></script>

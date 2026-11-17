@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<PayRunFailedEvent>
+
+<header><h4><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Pay Run Failed"])</h4></header>

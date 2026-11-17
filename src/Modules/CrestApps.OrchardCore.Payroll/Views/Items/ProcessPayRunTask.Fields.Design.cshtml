@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ProcessPayRunTask>
+
+<header><h4><i class="fa-solid fa-gears" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Process Pay Run"])</h4></header>

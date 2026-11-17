@@ -1,0 +1,1566 @@
+{
+  "name": "IncomeTaxCanada2026",
+  "displayName": "Canada Income Tax: 2026 rules",
+  "description": "Adds Canadian source deductions for pay dates in 2026, from the CRA payroll deductions formulas (T4127, 122nd edition effective January 1, 2026, and 123rd edition effective July 1, 2026, for British Columbia, Newfoundland and Labrador and Prince Edward Island) and Revenu Québec's formulas (TP-1015.F, 2026-01): federal tax with TD1 claims and the K credits; provincial and territorial tax for every province and territory, with the Ontario surtax, Ontario Health Premium and Ontario tax reduction, the British Columbia tax reduction, Alberta's supplemental credit and the falling basic amounts of Manitoba and Yukon; Quebec tax and the federal abatement; CPP (5.95% over the 3,500 basic exemption, up to 4,230.45) and CPP2 (4% from 74,600 to 85,000, up to 416), each matched by the employer; EI (1.63%, up to 1,123.07; employer 1.4 times); and in Quebec QPP (6.30%, up to 4,479.30), QPP2, QPIP (0.43%, employer 0.602%) and EI at 1.30%; and the employer's contribution to the Quebec health services fund, at the rate on the employer's CA-QC registration (1.65% when it has none, the lowest rate, for a total payroll of 1 million dollars or less). Federal and provincial taxes apply to employers registered in CA, and the Quebec ones to employers registered in CA-QC. Check the amounts against the CRA's and Revenu Québec's current publications before paying people with them.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "taxation"
+  ],
+  "tags": [
+    "income tax",
+    "payroll",
+    "taxes",
+    "canada",
+    "td1",
+    "cpp",
+    "ei",
+    "quebec"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Taxation.IncomeTax",
+        "CrestApps.OrchardCore.Taxation.IncomeTax.Canada"
+      ]
+    },
+    {
+      "name": "TaxTable",
+      "TaxTables": [
+        {
+          "ItemId": "420k063r1b72gh8gqnehpn093c",
+          "Name": "Canada federal tax 2026 (T4127)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 58523,
+              "Rate": 0.14,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 58523,
+              "Maximum": 117045,
+              "Rate": 0.205,
+              "FixedAmount": -0.005,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 117045,
+              "Maximum": 181440,
+              "Rate": 0.26,
+              "FixedAmount": 0.475,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 181440,
+              "Maximum": 258482,
+              "Rate": 0.29,
+              "FixedAmount": -0.8,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 258482,
+              "Maximum": null,
+              "Rate": 0.33,
+              "FixedAmount": 0.28,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4bqmnnv3x3sv10tnza2n82c8n5",
+          "Name": "Alberta tax 2026 (T4127)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 61200,
+              "Rate": 0.08,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 61200,
+              "Maximum": 154259,
+              "Rate": 0.1,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 154259,
+              "Maximum": 185111,
+              "Rate": 0.12,
+              "FixedAmount": 0.18,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 185111,
+              "Maximum": 246813,
+              "Rate": 0.13,
+              "FixedAmount": 0.11,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 246813,
+              "Maximum": 370220,
+              "Rate": 0.14,
+              "FixedAmount": 0.13,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 370220,
+              "Maximum": null,
+              "Rate": 0.15,
+              "FixedAmount": -0.8,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4dgrb5s4r6nj6y2avyxncy6zk6",
+          "Name": "Manitoba tax 2026 (T4127)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 47000,
+              "Rate": 0.108,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 47000,
+              "Maximum": 100000,
+              "Rate": 0.1275,
+              "FixedAmount": -0.5,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 100000,
+              "Maximum": null,
+              "Rate": 0.174,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4k3cp9nvvdcr5m4yekdej1ntts",
+          "Name": "New Brunswick tax 2026 (T4127)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 52333,
+              "Rate": 0.094,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 52333,
+              "Maximum": 104666,
+              "Rate": 0.14,
+              "FixedAmount": 0.318,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 104666,
+              "Maximum": 193861,
+              "Rate": 0.16,
+              "FixedAmount": -0.68,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 193861,
+              "Maximum": null,
+              "Rate": 0.195,
+              "FixedAmount": 0.135,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4ygv2tr0j2a1kprx83ghe1v4fh",
+          "Name": "Newfoundland and Labrador tax 2026 (T4127)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 44678,
+              "Rate": 0.087,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 44678,
+              "Maximum": 89354,
+              "Rate": 0.145,
+              "FixedAmount": 0.324,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 89354,
+              "Maximum": 159528,
+              "Rate": 0.158,
+              "FixedAmount": -0.398,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 159528,
+              "Maximum": 223340,
+              "Rate": 0.178,
+              "FixedAmount": 0.56,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 223340,
+              "Maximum": 285319,
+              "Rate": 0.198,
+              "FixedAmount": -0.2,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 285319,
+              "Maximum": 570638,
+              "Rate": 0.208,
+              "FixedAmount": 0.19,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 570638,
+              "Maximum": 1141275,
+              "Rate": 0.213,
+              "FixedAmount": -0.81,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 1141275,
+              "Maximum": null,
+              "Rate": 0.218,
+              "FixedAmount": 0.375,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4pk0c4c5522r2bfnnjc56vkdz0",
+          "Name": "Nova Scotia tax 2026 (T4127)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 30995,
+              "Rate": 0.0879,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 30995,
+              "Maximum": 61991,
+              "Rate": 0.1495,
+              "FixedAmount": 0.292,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 61991,
+              "Maximum": 97417,
+              "Rate": 0.1667,
+              "FixedAmount": -0.7548,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 97417,
+              "Maximum": 157124,
+              "Rate": 0.175,
+              "FixedAmount": 0.5611,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 157124,
+              "Maximum": null,
+              "Rate": 0.21,
+              "FixedAmount": 0.34,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "47zypc6gr6zewn0tc4n5pz1y8p",
+          "Name": "Northwest Territories tax 2026 (T4127)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 53003,
+              "Rate": 0.059,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 53003,
+              "Maximum": 106009,
+              "Rate": 0.086,
+              "FixedAmount": 0.081,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 106009,
+              "Maximum": 172346,
+              "Rate": 0.122,
+              "FixedAmount": 0.324,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 172346,
+              "Maximum": null,
+              "Rate": 0.1405,
+              "FixedAmount": -0.599,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4956jwd7nwx1qq2gq1gw1yrvdp",
+          "Name": "Nunavut tax 2026 (T4127)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 55801,
+              "Rate": 0.04,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 55801,
+              "Maximum": 111602,
+              "Rate": 0.07,
+              "FixedAmount": 0.03,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 111602,
+              "Maximum": 181439,
+              "Rate": 0.09,
+              "FixedAmount": 0.04,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 181439,
+              "Maximum": null,
+              "Rate": 0.115,
+              "FixedAmount": -0.025,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "43zcrzf206q9ackrys2bj6zb7g",
+          "Name": "Ontario tax 2026 (T4127)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 53891,
+              "Rate": 0.0505,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 53891,
+              "Maximum": 107785,
+              "Rate": 0.0915,
+              "FixedAmount": -0.469,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 107785,
+              "Maximum": 150000,
+              "Rate": 0.1116,
+              "FixedAmount": 0.4785,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 150000,
+              "Maximum": 220000,
+              "Rate": 0.1216,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 220000,
+              "Maximum": null,
+              "Rate": 0.1316,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4ds3mb45tmnz7jrzw2baw2mqmj",
+          "Name": "Saskatchewan tax 2026 (T4127)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 54532,
+              "Rate": 0.105,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 54532,
+              "Maximum": 155805,
+              "Rate": 0.125,
+              "FixedAmount": -0.36,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 155805,
+              "Maximum": null,
+              "Rate": 0.145,
+              "FixedAmount": 0.1,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4tyf07bb774kp7m6wx8ht487tm",
+          "Name": "Yukon tax 2026 (T4127)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 58523,
+              "Rate": 0.064,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 58523,
+              "Maximum": 117045,
+              "Rate": 0.09,
+              "FixedAmount": -0.402,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 117045,
+              "Maximum": 181440,
+              "Rate": 0.109,
+              "FixedAmount": 0.855,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 181440,
+              "Maximum": 500000,
+              "Rate": 0.128,
+              "FixedAmount": -0.64,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 500000,
+              "Maximum": null,
+              "Rate": 0.15,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4sf08d899w4zwr6m9m70btx1cy",
+          "Name": "British Columbia tax 2026, January to June (T4127, 122nd edition)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-06-30T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 50363,
+              "Rate": 0.0506,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 50363,
+              "Maximum": 100728,
+              "Rate": 0.077,
+              "FixedAmount": -0.4168,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 100728,
+              "Maximum": 115648,
+              "Rate": 0.105,
+              "FixedAmount": 0.384,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 115648,
+              "Maximum": 140430,
+              "Rate": 0.1229,
+              "FixedAmount": 0.0992,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 140430,
+              "Maximum": 190405,
+              "Rate": 0.147,
+              "FixedAmount": 0.363,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 190405,
+              "Maximum": 265545,
+              "Rate": 0.168,
+              "FixedAmount": -0.495,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 265545,
+              "Maximum": null,
+              "Rate": 0.205,
+              "FixedAmount": 0.165,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4t17z0vt2b3nvpkytt44y1ce4f",
+          "Name": "British Columbia tax 2026, July to December (T4127, 123rd edition)",
+          "EffectiveFromUtc": "2026-07-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 50363,
+              "Rate": 0.0614,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 50363,
+              "Maximum": 100728,
+              "Rate": 0.077,
+              "FixedAmount": -0.3372,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 100728,
+              "Maximum": 115648,
+              "Rate": 0.105,
+              "FixedAmount": 0.384,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 115648,
+              "Maximum": 140430,
+              "Rate": 0.1229,
+              "FixedAmount": 0.0992,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 140430,
+              "Maximum": 190405,
+              "Rate": 0.147,
+              "FixedAmount": -0.637,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 190405,
+              "Maximum": 265545,
+              "Rate": 0.168,
+              "FixedAmount": 0.505,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 265545,
+              "Maximum": null,
+              "Rate": 0.205,
+              "FixedAmount": 0.165,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4tdxa7qhn1c78qvkxgxxzp41a8",
+          "Name": "Prince Edward Island tax 2026, January to June (T4127, 122nd edition)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-06-30T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 33928,
+              "Rate": 0.095,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 33928,
+              "Maximum": 65820,
+              "Rate": 0.1347,
+              "FixedAmount": -0.0584,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 65820,
+              "Maximum": 106890,
+              "Rate": 0.166,
+              "FixedAmount": 0.166,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 106890,
+              "Maximum": 142520,
+              "Rate": 0.1762,
+              "FixedAmount": 0.278,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 142520,
+              "Maximum": null,
+              "Rate": 0.19,
+              "FixedAmount": -0.224,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4db0ap7mmmd7f0vf68q9wsz9z3",
+          "Name": "Prince Edward Island tax 2026, July to December (T4127, 123rd edition)",
+          "EffectiveFromUtc": "2026-07-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 33928,
+              "Rate": 0.095,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 33928,
+              "Maximum": 65820,
+              "Rate": 0.1347,
+              "FixedAmount": -0.0584,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 65820,
+              "Maximum": 106890,
+              "Rate": 0.166,
+              "FixedAmount": 0.166,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 106890,
+              "Maximum": 142520,
+              "Rate": 0.1762,
+              "FixedAmount": 0.278,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 142520,
+              "Maximum": 200000,
+              "Rate": 0.19,
+              "FixedAmount": -0.224,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 200000,
+              "Maximum": null,
+              "Rate": 0.21,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4h6dy6g8fe2qfxzxe1drxegxq3",
+          "Name": "Ontario Health Premium 2026 (T4127, V2)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 20000,
+              "Rate": 0,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 20000,
+              "Maximum": 25000,
+              "Rate": 0.06,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 25000,
+              "Maximum": 36000,
+              "Rate": 0,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 36000,
+              "Maximum": 38500,
+              "Rate": 0.06,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 38500,
+              "Maximum": 48000,
+              "Rate": 0,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 48000,
+              "Maximum": 48600,
+              "Rate": 0.25,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 48600,
+              "Maximum": 72000,
+              "Rate": 0,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 72000,
+              "Maximum": 72600,
+              "Rate": 0.25,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 72600,
+              "Maximum": 200000,
+              "Rate": 0,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 200000,
+              "Maximum": 200600,
+              "Rate": 0.25,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 200600,
+              "Maximum": null,
+              "Rate": 0,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4q0krq1xdgxvf5tyw1swz67d26",
+          "Name": "Quebec tax 2026 (TP-1015.F)",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 54345,
+              "Rate": 0.14,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 54345,
+              "Maximum": 108680,
+              "Rate": 0.19,
+              "FixedAmount": 0.25,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 108680,
+              "Maximum": 132245,
+              "Rate": 0.24,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 132245,
+              "Maximum": null,
+              "Rate": 0.2575,
+              "FixedAmount": 0.2875,
+              "BaseAmount": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "IncomeTaxRules",
+      "Rules": [
+        {
+          "ItemId": "49h6m0t7q8zv16r7622ccgcw2r",
+          "TaxCode": "CA-FIT",
+          "Name": "Federal income tax",
+          "Jurisdiction": "CA",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "CanadaFederal",
+          "Method": "CanadaFederal",
+          "ByPlaceOfWork": true,
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "420k063r1b72gh8gqnehpn093c"
+          },
+          "Parameters": {
+            "BasicAmount": 16452,
+            "BasicAmountMinimum": 14829,
+            "BasicAmountReductionStart": 181440,
+            "BasicAmountReductionEnd": 258482,
+            "CanadaEmploymentAmount": 1501,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07,
+            "QppRate": 0.063,
+            "QppBaseRate": 0.053,
+            "QppBaseMaximum": 3768.3,
+            "EiQuebecMaximum": 895.7,
+            "QpipMaximum": 442.9,
+            "QuebecAbatement": 0.165
+          }
+        },
+        {
+          "ItemId": "415207gnp5f4gyg2sfe5gj16jy",
+          "TaxCode": "CA-CPP",
+          "Name": "Canada Pension Plan",
+          "Jurisdiction": "CA",
+          "Category": "SocialInsurance",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "FlatRate",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "ExceptJurisdictions": [
+            "CA-QC"
+          ],
+          "Rate": 5.95,
+          "YearlyExemption": 3500,
+          "YearlyMaximum": 4230.45
+        },
+        {
+          "ItemId": "422nrgsemaccnkmn6waxhyvxaf",
+          "TaxCode": "CA-CPP-ER",
+          "Name": "Canada Pension Plan (employer)",
+          "Jurisdiction": "CA",
+          "Category": "SocialInsurance",
+          "Payer": "Employer",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "ShareOfTax",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "ExceptJurisdictions": [
+            "CA-QC"
+          ],
+          "ShareOfTaxCode": "CA-CPP",
+          "ShareMultiplier": 1,
+          "YearlyMaximum": 4230.45
+        },
+        {
+          "ItemId": "4x173b793py2svnmpk1htsmyr0",
+          "TaxCode": "CA-CPP2",
+          "Name": "Second Canada Pension Plan contribution (CPP2)",
+          "Jurisdiction": "CA",
+          "Category": "SocialInsurance",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "FlatRate",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "ExceptJurisdictions": [
+            "CA-QC"
+          ],
+          "Rate": 4,
+          "WageThreshold": 74600,
+          "YearlyMaximum": 416
+        },
+        {
+          "ItemId": "42bnkx5cx2an1xzhss6a5fy873",
+          "TaxCode": "CA-CPP2-ER",
+          "Name": "Second Canada Pension Plan contribution (employer)",
+          "Jurisdiction": "CA",
+          "Category": "SocialInsurance",
+          "Payer": "Employer",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "ShareOfTax",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "ExceptJurisdictions": [
+            "CA-QC"
+          ],
+          "ShareOfTaxCode": "CA-CPP2",
+          "ShareMultiplier": 1,
+          "YearlyMaximum": 416
+        },
+        {
+          "ItemId": "4zxqe59qzn0c0rva6c5jtbd58c",
+          "TaxCode": "CA-EI",
+          "Name": "Employment Insurance",
+          "Jurisdiction": "CA",
+          "Category": "InsurableEarnings",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "FlatRate",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "ExceptJurisdictions": [
+            "CA-QC"
+          ],
+          "Rate": 1.63,
+          "YearlyMaximum": 1123.07
+        },
+        {
+          "ItemId": "4mcx2d0xnev2mcj0bws72a9n7w",
+          "TaxCode": "CA-EI-ER",
+          "Name": "Employment Insurance (employer)",
+          "Jurisdiction": "CA",
+          "Category": "InsurableEarnings",
+          "Payer": "Employer",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "ShareOfTax",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "ExceptJurisdictions": [
+            "CA-QC"
+          ],
+          "ShareOfTaxCode": "CA-EI",
+          "ShareMultiplier": 1.4,
+          "YearlyMaximum": 1572.3
+        },
+        {
+          "ItemId": "4s7zkgvyxr97mb0cyp8769w55j",
+          "TaxCode": "CA-EI-QC",
+          "Name": "Employment Insurance (Quebec rate)",
+          "Jurisdiction": "CA-QC",
+          "Category": "InsurableEarnings",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "FlatRate",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "Rate": 1.3,
+          "YearlyMaximum": 895.7
+        },
+        {
+          "ItemId": "45wvfag95b54w8z1cnpejzxv90",
+          "TaxCode": "CA-EI-QC-ER",
+          "Name": "Employment Insurance (Quebec rate, employer)",
+          "Jurisdiction": "CA-QC",
+          "Category": "InsurableEarnings",
+          "Payer": "Employer",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "ShareOfTax",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "ShareOfTaxCode": "CA-EI-QC",
+          "ShareMultiplier": 1.4,
+          "YearlyMaximum": 1253.98
+        },
+        {
+          "ItemId": "4ee1fyqzenrjvbhmrh5048d9qr",
+          "TaxCode": "CA-QC-QPP",
+          "Name": "Quebec Pension Plan",
+          "Jurisdiction": "CA-QC",
+          "Category": "SocialInsurance",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "FlatRate",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "Rate": 6.3,
+          "YearlyExemption": 3500,
+          "YearlyMaximum": 4479.3
+        },
+        {
+          "ItemId": "4fn67babyc2dpgcrp55xas68a0",
+          "TaxCode": "CA-QC-QPP-ER",
+          "Name": "Quebec Pension Plan (employer)",
+          "Jurisdiction": "CA-QC",
+          "Category": "SocialInsurance",
+          "Payer": "Employer",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "ShareOfTax",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "ShareOfTaxCode": "CA-QC-QPP",
+          "ShareMultiplier": 1,
+          "YearlyMaximum": 4479.3
+        },
+        {
+          "ItemId": "48kkbtnmqsrx05k1gmt0krebhg",
+          "TaxCode": "CA-QC-QPP2",
+          "Name": "Additional Quebec Pension Plan contribution (QPP2)",
+          "Jurisdiction": "CA-QC",
+          "Category": "SocialInsurance",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "FlatRate",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "Rate": 4,
+          "WageThreshold": 74600,
+          "YearlyMaximum": 416
+        },
+        {
+          "ItemId": "42hnje9dcgs0gq1bkmzwzctnax",
+          "TaxCode": "CA-QC-QPP2-ER",
+          "Name": "Additional Quebec Pension Plan contribution (employer)",
+          "Jurisdiction": "CA-QC",
+          "Category": "SocialInsurance",
+          "Payer": "Employer",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "ShareOfTax",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "ShareOfTaxCode": "CA-QC-QPP2",
+          "ShareMultiplier": 1,
+          "YearlyMaximum": 416
+        },
+        {
+          "ItemId": "45tkg51jp221h5r0xhs1ev3kmq",
+          "TaxCode": "CA-QC-QPIP",
+          "Name": "Quebec Parental Insurance Plan",
+          "Jurisdiction": "CA-QC",
+          "Category": "InsurableEarnings",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "FlatRate",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "Rate": 0.43,
+          "YearlyMaximum": 442.9
+        },
+        {
+          "ItemId": "4jxw67wd7g2he49ssmc4faykbr",
+          "TaxCode": "CA-QC-QPIP-ER",
+          "Name": "Quebec Parental Insurance Plan (employer)",
+          "Jurisdiction": "CA-QC",
+          "Category": "InsurableEarnings",
+          "Payer": "Employer",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "ShareOfTax",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "ShareOfTaxCode": "CA-QC-QPIP",
+          "ShareMultiplier": 1.4,
+          "YearlyMaximum": 620.06
+        },
+        {
+          "ItemId": "4zf442netc4sn8dk2jde86fnd3",
+          "TaxCode": "CA-QC-HSF",
+          "Name": "Quebec health services fund (employer)",
+          "Jurisdiction": "CA-QC",
+          "Category": "IncomeTax",
+          "Payer": "Employer",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "FlatRate",
+          "Method": "Percentage",
+          "ByPlaceOfWork": true,
+          "Rate": 1.65,
+          "RateFromRegistration": true
+        },
+        {
+          "ItemId": "4j6re50cd15r43w8tcd6caqxxw",
+          "TaxCode": "CA-QC-PIT",
+          "Name": "Quebec income tax",
+          "Jurisdiction": "CA-QC",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "QuebecTP1015",
+          "Method": "QuebecTP1015",
+          "ByPlaceOfWork": true,
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4q0krq1xdgxvf5tyw1swz67d26"
+          },
+          "Parameters": {
+            "BasicAmount": 18952,
+            "WorkerDeductionRate": 0.06,
+            "WorkerDeductionMaximum": 1450,
+            "QppRate": 0.063,
+            "QppBaseRate": 0.053,
+            "LumpSumThreshold": 18952,
+            "LumpSumRate": 0.07
+          }
+        },
+        {
+          "ItemId": "4whrm89fcnc65gwdcka41pxgtp",
+          "TaxCode": "CA-AB-PIT",
+          "Name": "Alberta income tax",
+          "Jurisdiction": "CA-AB",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4bqmnnv3x3sv10tnza2n82c8n5"
+          },
+          "Parameters": {
+            "BasicAmount": 22769,
+            "SupplementalCreditThreshold": 4896,
+            "SupplementalCreditRate": 0.25,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "4btfmw2fhvtmb80k2wd0x03tyz",
+          "TaxCode": "CA-BC-PIT",
+          "Name": "British Columbia income tax",
+          "Jurisdiction": "CA-BC",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-06-30",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4sf08d899w4zwr6m9m70btx1cy"
+          },
+          "Parameters": {
+            "BasicAmount": 13216,
+            "IncomeTaxReductionAmount": 575,
+            "IncomeTaxReductionThreshold": 25570,
+            "IncomeTaxReductionRate": 0.0356,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "4evk3th91w936cwyzme3csq432",
+          "TaxCode": "CA-BC-PIT",
+          "Name": "British Columbia income tax",
+          "Jurisdiction": "CA-BC",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-07-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4t17z0vt2b3nvpkytt44y1ce4f"
+          },
+          "Parameters": {
+            "BasicAmount": 13216,
+            "IncomeTaxReductionAmount": 805,
+            "IncomeTaxReductionThreshold": 25570,
+            "IncomeTaxReductionRate": 0.0356,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "4cgxe6fx1anqgf6p2257mk2f7b",
+          "TaxCode": "CA-MB-PIT",
+          "Name": "Manitoba income tax",
+          "Jurisdiction": "CA-MB",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4dgrb5s4r6nj6y2avyxncy6zk6"
+          },
+          "Parameters": {
+            "BasicAmount": 15780,
+            "BasicAmountMinimum": 0,
+            "BasicAmountReductionStart": 200000,
+            "BasicAmountReductionEnd": 400000,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "4vam66rzdkstvhar1sfx7c7f5h",
+          "TaxCode": "CA-NB-PIT",
+          "Name": "New Brunswick income tax",
+          "Jurisdiction": "CA-NB",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4k3cp9nvvdcr5m4yekdej1ntts"
+          },
+          "Parameters": {
+            "BasicAmount": 13664,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "4reqz0sdqhk1zn1kn6p5cz4tjs",
+          "TaxCode": "CA-NL-PIT",
+          "Name": "Newfoundland and Labrador income tax",
+          "Jurisdiction": "CA-NL",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-06-30",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4ygv2tr0j2a1kprx83ghe1v4fh"
+          },
+          "Parameters": {
+            "BasicAmount": 11188,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "42hgpak628w98mt3ybpa6hdnv0",
+          "TaxCode": "CA-NL-PIT",
+          "Name": "Newfoundland and Labrador income tax",
+          "Jurisdiction": "CA-NL",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-07-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4ygv2tr0j2a1kprx83ghe1v4fh"
+          },
+          "Parameters": {
+            "BasicAmount": 15000,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "4bhnkd1psj6k61wbc8v9kzartg",
+          "TaxCode": "CA-NS-PIT",
+          "Name": "Nova Scotia income tax",
+          "Jurisdiction": "CA-NS",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4pk0c4c5522r2bfnnjc56vkdz0"
+          },
+          "Parameters": {
+            "BasicAmount": 11932,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "4fd4drpq9d9a9vcktdb5v9f8st",
+          "TaxCode": "CA-NT-PIT",
+          "Name": "Northwest Territories income tax",
+          "Jurisdiction": "CA-NT",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "47zypc6gr6zewn0tc4n5pz1y8p"
+          },
+          "Parameters": {
+            "BasicAmount": 18198,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "4edg0055nx2tvxys7dwzvgpkw4",
+          "TaxCode": "CA-NU-PIT",
+          "Name": "Nunavut income tax",
+          "Jurisdiction": "CA-NU",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4956jwd7nwx1qq2gq1gw1yrvdp"
+          },
+          "Parameters": {
+            "BasicAmount": 19659,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "4fejpqfjcj0z0f7vgjc7fp03ha",
+          "TaxCode": "CA-ON-PIT",
+          "Name": "Ontario income tax",
+          "Jurisdiction": "CA-ON",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "43zcrzf206q9ackrys2bj6zb7g",
+            "HealthPremium": "4h6dy6g8fe2qfxzxe1drxegxq3"
+          },
+          "Parameters": {
+            "BasicAmount": 12989,
+            "SurtaxThreshold1": 5818,
+            "SurtaxRate1": 0.2,
+            "SurtaxThreshold2": 7446,
+            "SurtaxRate2": 0.36,
+            "DependantTaxReductionBase": 300,
+            "DependantTaxReductionPerDependant": 554,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "4n0r1wnr965kstk0c4zy3r2pna",
+          "TaxCode": "CA-PE-PIT",
+          "Name": "Prince Edward Island income tax",
+          "Jurisdiction": "CA-PE",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-06-30",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4tdxa7qhn1c78qvkxgxxzp41a8"
+          },
+          "Parameters": {
+            "BasicAmount": 15000,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "4t84q0hqxmjasfv88djk9wa5tz",
+          "TaxCode": "CA-PE-PIT",
+          "Name": "Prince Edward Island income tax",
+          "Jurisdiction": "CA-PE",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-07-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4db0ap7mmmd7f0vf68q9wsz9z3"
+          },
+          "Parameters": {
+            "BasicAmount": 15000,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "4sc3eepkd457nd6mbecgp13v6w",
+          "TaxCode": "CA-SK-PIT",
+          "Name": "Saskatchewan income tax",
+          "Jurisdiction": "CA-SK",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4ds3mb45tmnz7jrzw2baw2mqmj"
+          },
+          "Parameters": {
+            "BasicAmount": 20381,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        },
+        {
+          "ItemId": "4skc6n36gvwjpwezgj5v78fj9k",
+          "TaxCode": "CA-YT-PIT",
+          "Name": "Yukon income tax",
+          "Jurisdiction": "CA-YT",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Source": "CanadaProvincial",
+          "Method": "CanadaProvincial",
+          "ByPlaceOfWork": true,
+          "CollectedBy": "CA",
+          "UsesElections": true,
+          "Tables": {
+            "Brackets": "4tyf07bb774kp7m6wx8ht487tm"
+          },
+          "Parameters": {
+            "BasicAmount": 16452,
+            "BasicAmountMinimum": 14829,
+            "BasicAmountReductionStart": 181440,
+            "BasicAmountReductionEnd": 258482,
+            "CanadaEmploymentAmount": 1501,
+            "CppRate": 0.0595,
+            "CppBaseRate": 0.0495,
+            "CppBaseMaximum": 3519.45,
+            "EiMaximum": 1123.07
+          }
+        }
+      ]
+    }
+  ]
+}

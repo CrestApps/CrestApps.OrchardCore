@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 
@@ -160,12 +161,12 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
 
         foreach (var day in input.TimeOff ?? [])
         {
-            Add(day.Date, string.IsNullOrEmpty(day.PayCodeId) ? codes.Of(PayCodeKind.PaidTimeOff) : day.PayCodeId, null, null, TimesheetLineSource.TimeOff, (long)(day.Hours * 3600), [], day.RequestId);
+            Add(day.Date, string.IsNullOrEmpty(day.PayCodeId) ? codes.Of(PayCodeKinds.PaidTimeOff) : day.PayCodeId, null, null, TimesheetLineSource.TimeOff, (long)(day.Hours * 3600), [], day.RequestId);
         }
 
         foreach (var entry in input.PredictabilityPay ?? [])
         {
-            Add(LocalDate(entry.ShiftStartUtc), codes.Of(PayCodeKind.PredictabilityPay), null, null, TimesheetLineSource.PredictabilityPay, (long)(entry.Hours * 3600), [], entry.ItemId);
+            Add(LocalDate(entry.ShiftStartUtc), codes.Of(PayCodeKinds.PredictabilityPay), null, null, TimesheetLineSource.PredictabilityPay, (long)(entry.Hours * 3600), [], entry.ItemId);
         }
 
         foreach (var (key, total) in lines.OrderBy(pair => pair.Key.Item1))
@@ -546,22 +547,22 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
             {
                 var day = days.GetValueOrDefault(segment.Date);
                 var weekRegular = weeks.GetValueOrDefault(week);
-                PayCodeKind kind;
+                string kind;
                 long boundary;
 
                 if (dayDoubleTime.HasValue && day >= dayDoubleTime)
                 {
-                    kind = PayCodeKind.DoubleTime;
+                    kind = PayCodeKinds.DoubleTime;
                     boundary = remaining;
                 }
                 else if ((dayOvertime.HasValue && day >= dayOvertime) || (weeklyOvertime.HasValue && weekRegular >= weeklyOvertime))
                 {
-                    kind = PayCodeKind.Overtime;
+                    kind = PayCodeKinds.Overtime;
                     boundary = dayDoubleTime.HasValue ? dayDoubleTime.Value - day : remaining;
                 }
                 else
                 {
-                    kind = PayCodeKind.Regular;
+                    kind = PayCodeKinds.Regular;
                     boundary = new[]
                     {
                         dayOvertime - day,
@@ -571,15 +572,15 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
                 }
 
                 var take = Math.Min(remaining, Math.Max(1, boundary));
-                var paidAs = kind != PayCodeKind.Regular ? kind
-                    : holidays.Contains(segment.Date) ? PayCodeKind.Holiday
-                    : weekendDays.Contains(segment.Date.DayOfWeek) ? PayCodeKind.Weekend
+                var paidAs = kind != PayCodeKinds.Regular ? kind
+                    : holidays.Contains(segment.Date) ? PayCodeKinds.Holiday
+                    : weekendDays.Contains(segment.Date.DayOfWeek) ? PayCodeKinds.Weekend
                     : kind;
 
                 add(segment.Date, codes.Of(paidAs), segment.ActivityCodeId, segment.Job, TimesheetLineSource.Punches, take, segment.PunchIds, null);
                 days[segment.Date] = day + take;
 
-                if (kind == PayCodeKind.Regular)
+                if (kind == PayCodeKinds.Regular)
                 {
                     weeks[week] = weekRegular + take;
                 }
@@ -595,18 +596,19 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
     private static long DifferentialSeconds(PayCode differential, Segment segment, string zone)
     {
         long total = 0;
+        var window = differential.GetWorkforceSettings();
 
         // A window belongs to the day it starts; one past midnight can reach this day from the day before.
         for (var day = segment.Date.AddDays(-1); day <= segment.Date; day = day.AddDays(1))
         {
-            if (differential.Weekdays.Count > 0 && !differential.Weekdays.Contains(day.DayOfWeek))
+            if (window.Weekdays.Count > 0 && !window.Weekdays.Contains(day.DayOfWeek))
             {
                 continue;
             }
 
-            var start = CalendarTime.ToUtc(day.ToDateTime(differential.WindowStart.Value), zone);
-            var endDay = differential.WindowEnd.Value <= differential.WindowStart.Value ? day.AddDays(1) : day;
-            var end = CalendarTime.ToUtc(endDay.ToDateTime(differential.WindowEnd.Value), zone);
+            var start = CalendarTime.ToUtc(day.ToDateTime(window.WindowStart.Value), zone);
+            var endDay = window.WindowEnd.Value <= window.WindowStart.Value ? day.AddDays(1) : day;
+            var end = CalendarTime.ToUtc(endDay.ToDateTime(window.WindowEnd.Value), zone);
             var overlap = Min(end, segment.End) - Max(start, segment.Start);
 
             if (overlap > TimeSpan.Zero)
@@ -692,15 +694,16 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
     /// </summary>
     private sealed class PayCodes
     {
-        private readonly Dictionary<PayCodeKind, string> _byKind = [];
+        private readonly Dictionary<string, string> _byKind = [];
 
         public PayCodes(IEnumerable<PayCode> codes)
         {
-            foreach (var code in codes.Where(code => code.Enabled))
+            // Only codes that pay or record time: a deduction or a contribution is never a line of hours.
+            foreach (var code in codes.Where(code => code.Enabled && code.Class is PayCodeClass.Earning or PayCodeClass.Memo))
             {
-                if (code.Kind == PayCodeKind.ShiftDifferential)
+                if (code.Kind == PayCodeKinds.ShiftDifferential)
                 {
-                    if (code.WindowStart.HasValue && code.WindowEnd.HasValue)
+                    if (code.GetWorkforceSettings() is { WindowStart: not null, WindowEnd: not null })
                     {
                         Differentials.Add(code);
                     }
@@ -718,7 +721,7 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
         /// Returns the code of a kind, falling back to regular for overtime, double time, holiday and weekend hours
         /// without their own.
         /// </summary>
-        public string Of(PayCodeKind kind)
+        public string Of(string kind)
         {
             if (_byKind.TryGetValue(kind, out var id))
             {
@@ -727,8 +730,8 @@ internal sealed class DefaultTimesheetCalculator : ITimesheetCalculator
 
             return kind switch
             {
-                PayCodeKind.DoubleTime => Of(PayCodeKind.Overtime),
-                PayCodeKind.Overtime or PayCodeKind.PaidTimeOff or PayCodeKind.PredictabilityPay or PayCodeKind.Holiday or PayCodeKind.Weekend => _byKind.GetValueOrDefault(PayCodeKind.Regular),
+                PayCodeKinds.DoubleTime => Of(PayCodeKinds.Overtime),
+                PayCodeKinds.Overtime or PayCodeKinds.PaidTimeOff or PayCodeKinds.PredictabilityPay or PayCodeKinds.Holiday or PayCodeKinds.Weekend => _byKind.GetValueOrDefault(PayCodeKinds.Regular),
                 _ => null,
             };
         }

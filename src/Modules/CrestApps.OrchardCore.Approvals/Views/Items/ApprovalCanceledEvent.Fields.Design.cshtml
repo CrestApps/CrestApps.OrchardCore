@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Approvals.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ApprovalCanceledEvent>
+
+<header><h4><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Approval Canceled"])</h4></header>
+<p class="hint">@T["Starts when an approval request is withdrawn or cancelled; Note is the reason. The workflow's correlation id is the request id. Input: RequestId, SubjectKind, SubjectId, Title, PolicyId, PolicyTitle, Status, Change, RequesterName, ApproverUserNames (comma separated, for Notify User Task), Decider, Note, DueUtc, Stage, Amount and Currency."]</p>
+@if (!string.IsNullOrEmpty(Model.Activity.ApprovalType))
+{
+    <p class="small mb-0">@T["Type: {0}", Model.Activity.ApprovalType]</p>
+}

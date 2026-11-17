@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Approvals.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<RequestApprovalTask>
+
+<header><h4><i class="fa-solid fa-hand" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Request Approval"])</h4></header>
+<p class="hint">@T["Asks for an approval under a policy."]</p>

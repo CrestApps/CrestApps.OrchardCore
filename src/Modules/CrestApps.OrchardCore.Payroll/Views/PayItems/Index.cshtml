@@ -1,0 +1,38 @@
+@model PayItemsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PayrollPayItems" title="@T["Pay items of {0}", Model.StaffName]">
+        <breadcrumb-item id="StaffIndex" action="Index" controller="Staff" area="CrestApps.OrchardCore.Staff">@T["Staff"]</breadcrumb-item>
+        <breadcrumb-item id="PayrollPayProfilesEdit" action="Edit" controller="PayProfiles" area="CrestApps.OrchardCore.Payroll" route-id="@Model.Profile.ItemId">@Model.StaffName</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@* The form is necessary to generate an antiforgery token for delete actions. *@
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-client-side-search="true">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 align-items-center">
+                <div class="col"><span class="text-muted">@Model.EmployerName</span></div>
+                @if (Model.CanManage)
+                {
+                    <div class="col-auto">
+                        <a class="btn btn-secondary create" role="button" asp-action="Create" asp-route-profileId="@Model.Profile.ItemId">@T["Add pay item"]</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="PayrollPayItems" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> No recurring earning or deduction yet, such as a retirement contribution or a loan repayment."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Pay code"]" />
+            <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<script asp-name="list-management-ui" at="Foot"></script>

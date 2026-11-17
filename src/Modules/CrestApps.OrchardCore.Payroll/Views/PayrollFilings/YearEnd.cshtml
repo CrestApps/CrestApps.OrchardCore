@@ -1,0 +1,64 @@
+@model PayrollYearEndViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PayrollYearEnd" title="@T["Year end"]" />
+</zone>
+
+<form method="get" class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-end">
+            <div class="col-12 col-md-5">
+                <label for="employerId" class="form-label">@T["Employer"]</label>
+                <select id="employerId" name="employerId" asp-items="Model.Employers" class="form-select"><option value="">@T["Choose…"]</option></select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="year" class="form-label">@T["Year"]</label>
+                <input id="year" name="year" type="number" min="2000" max="2100" value="@Model.Year" class="form-control" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-secondary">@T["Show"]</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (!string.IsNullOrEmpty(Model.EmployerId))
+{
+    <form asp-action="CloseYear" method="post" class="no-multisubmit">
+        <input type="hidden" name="employerId" value="@Model.EmployerId" />
+        <input type="hidden" name="year" value="@Model.Year" />
+        <div class="card mb-3">
+            <div class="card-header">@T["Close {0}", Model.Year]</div>
+            <div class="card-body">
+                @if (Model.Closed)
+                {
+                    <p>@T["The year is closed: no pay run with a pay date in it is opened, calculated or processed, and no statement of it is voided."]</p>
+                }
+                else if (Model.Blockers.Count > 0)
+                {
+                    <p>@T["The year can't be closed yet:"]</p>
+                    <ul>
+                        @foreach (var blocker in Model.Blockers)
+                        {
+                            <li>@blocker</li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p>@T["Every pay run of the year is paid or cancelled. Closing it prepares the year's wage statements under Filings (file them, then mark them as filed) and stops any change to the year's pay."]</p>
+                }
+            </div>
+        </div>
+        <div class="action-bar-bottom">
+            @if (Model.Closed)
+            {
+                <button type="submit" name="reopen" value="true" class="btn btn-secondary">@T["Reopen the year"]</button>
+            }
+            else
+            {
+                <button type="submit" class="btn btn-primary" disabled="@(Model.Blockers.Count > 0)">@T["Close the year"]</button>
+            }
+        </div>
+    </form>
+}

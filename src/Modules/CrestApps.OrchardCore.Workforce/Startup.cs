@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Workforce.Drivers;
 using CrestApps.OrchardCore.Workforce.Migrations;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Navigation;
+using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -30,6 +31,8 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(WorkforceConstants.CollectionName));
+        services.AddScoped<WorkforceTeamAddressMoveRunner>();
+        services.AddScoped<IModularTenantEvents, WorkforceTeamAddressMoveTenantEvents>();
         services.AddDataMigration<WorkforceMigrations>()
             .AddIndexProvider<ActivityCodeIndexProvider>();
 

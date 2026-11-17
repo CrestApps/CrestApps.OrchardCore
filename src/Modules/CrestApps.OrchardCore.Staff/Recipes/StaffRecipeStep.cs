@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using CrestApps.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Staff.Models;
@@ -16,6 +17,7 @@ namespace CrestApps.OrchardCore.Staff.Recipes;
 /// <summary>
 /// Imports staff members: each is matched by id, then employee number, then user, and created when none matches.
 /// Teams are given by name, the user by user name, and the manager by id or employee number (listed in any order).
+/// <c>pay</c>, when given, replaces the person's pay (Staff Compensation's <see cref="StaffPayRates"/>).
 /// </summary>
 internal sealed class StaffRecipeStep : NamedRecipeStepHandler
 {
@@ -115,6 +117,22 @@ internal sealed class StaffRecipeStep : NamedRecipeStepHandler
             if (node["capabilities"] is JsonArray)
             {
                 staff.Capabilities = values.Capabilities;
+            }
+
+            // Pay (Staff Compensation) is read only when the step gives it, so a recipe without it keeps the stored pay.
+            if (node["pay"] is JsonObject payNode)
+            {
+                var pay = payNode.Deserialize<StaffPayRates>(JsonOptions) ?? new StaffPayRates();
+
+                if (pay.Rates.Any(rate => rate.HourlyRate < 0) || pay.Salaries.Any(salary => salary.AnnualAmount < 0) || pay.HourlyCost < 0 || pay.CommissionRate is < 0 or > 100)
+                {
+                    context.Errors.Add($"{StaffConstants.RecipeStepName}: the pay of '{values.DisplayName ?? staff.DisplayName}' wasn't imported: rates, salaries and the cost can't be negative, and the commission is a percent from 0 to 100.");
+                }
+                else
+                {
+                    pay.Currency = string.IsNullOrWhiteSpace(pay.Currency) ? null : pay.Currency.Trim().ToUpperInvariant();
+                    staff.Put(pay);
+                }
             }
 
             // Team memberships are only read while the Teams module is on.
@@ -243,6 +261,37 @@ internal sealed class StaffRecipeStepSchema : IRecipeStep
     private static JsonSchemaBuilder Text(string description)
         => new JsonSchemaBuilder().Type(SchemaValueType.String).Description(description);
 
+    private static JsonSchemaBuilder Pay()
+    {
+        static JsonSchemaBuilder Number(string description)
+            => new JsonSchemaBuilder().Type(SchemaValueType.Number | SchemaValueType.Null).Description(description);
+
+        return new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("payBasis", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Hourly", "Salary", "PerUnit").Description("How the person is paid.")),
+                ("currency", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The three-letter currency, or empty for the site's.")),
+                ("rates", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .Properties(
+                        ("effectiveFrom", Text("The first day of the rate, yyyy-MM-dd.")),
+                        ("hourlyRate", new JsonSchemaBuilder().Type(SchemaValueType.Number).Description("The rate an hour, or a unit.")),
+                        ("activityCodeId", Text("The kind of work the rate is for; empty for any.")))
+                    .Required("effectiveFrom", "hourlyRate")
+                    .AdditionalProperties(true)).Description("The dated pay rates.")),
+                ("salaries", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .Properties(
+                        ("effectiveFrom", Text("The first day of the salary, yyyy-MM-dd.")),
+                        ("annualAmount", new JsonSchemaBuilder().Type(SchemaValueType.Number).Description("The salary a year.")))
+                    .Required("effectiveFrom", "annualAmount")
+                    .AdditionalProperties(true)).Description("The dated yearly salaries.")),
+                ("hourlyCost", Number("The loaded cost of an hour.")),
+                ("commissionRate", Number("The commission on sales, a percent.")))
+            .AdditionalProperties(true)
+            .Description("The person's pay (Staff Compensation); when given, it replaces the stored pay.");
+    }
+
     private static JsonSchemaBuilder Member()
     {
         return new JsonSchemaBuilder()
@@ -267,6 +316,7 @@ internal sealed class StaffRecipeStepSchema : IRecipeStep
                 ("workLocation", Text("The place they work at.")),
                 ("contractedHoursPerWeek", new JsonSchemaBuilder().Type(SchemaValueType.Number)),
                 ("capabilities", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("Capability keys, such as Technician or one added under Staff > Capabilities.")),
+                ("pay", Pay()),
                 ("teams", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .Properties(

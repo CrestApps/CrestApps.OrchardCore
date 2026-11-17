@@ -1,0 +1,22 @@
+@model ShapeViewModel<BankAccount>
+
+@{
+    var account = Model.Value;
+    var masked = BankAccountNumbers.Masked(account);
+}
+
+<div class="admin-list-secondary">
+    @account.HolderName
+    @if (!string.IsNullOrEmpty(account.BankName))
+    {
+        <span> · @account.BankName</span>
+    }
+    @if (!string.IsNullOrEmpty(masked))
+    {
+        <span> · <span class="font-monospace">@masked</span></span>
+    }
+    else
+    {
+        <span> · @T["No numbers yet"]</span>
+    }
+</div>

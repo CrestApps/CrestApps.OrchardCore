@@ -1,0 +1,5 @@
+@model ShapeViewModel<MyPayComingPayRow>
+@using System.Globalization
+
+<a asp-action="Review" asp-controller="MyPay" asp-area="CrestApps.OrchardCore.Payroll" asp-route-id="@Model.Value.Statement.ItemId">@Model.Value.Statement.PayDate.ToString("d", CultureInfo.CurrentCulture)</a>
+<span class="text-muted small ms-1">@Model.Value.EmployerName</span>

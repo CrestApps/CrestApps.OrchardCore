@@ -1,0 +1,12 @@
+@model CrestApps.OrchardCore.Payroll.Deployments.GarnishmentsDeploymentStepViewModel
+
+<h5>@T["Garnishment orders"]</h5>
+
+<div class="mb-3" asp-validation-class-for="IncludeSensitiveData">
+    <div class="form-check">
+        <input asp-for="IncludeSensitiveData" class="form-check-input" />
+        <label asp-for="IncludeSensitiveData" class="form-check-label">@T["Include case numbers and payee bank accounts"]</label>
+        <span asp-validation-for="IncludeSensitiveData" class="text-danger"></span>
+        <span class="hint dashed">@T["Without it, each order is written without its case number and payee bank account. Keep the file safe and delete it after the import."]</span>
+    </div>
+</div>

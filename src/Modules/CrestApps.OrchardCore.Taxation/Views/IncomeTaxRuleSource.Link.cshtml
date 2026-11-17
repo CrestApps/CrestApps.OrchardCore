@@ -1,0 +1,24 @@
+@using CrestApps.OrchardCore.Taxation.Services
+@using Microsoft.Extensions.Localization
+@using OrchardCore
+
+@inject IStringLocalizerFactory LocalizerFactory
+
+@{
+    IncomeTaxRuleSource source = Model.Source;
+}
+
+<div class="col">
+    <div class="card h-100">
+        <div class="card-body">
+            <h5 class="card-title">@LocalizerFactory.Localize(source.DisplayName).Value</h5>
+            @if (source.Description is not null)
+            {
+                <p class="hint mb-0">@LocalizerFactory.Localize(source.Description).Value</p>
+            }
+        </div>
+        <div class="card-footer text-end">
+            <a class="btn btn-primary btn-sm" asp-action="Create" asp-controller="IncomeTaxRules" asp-area="CrestApps.OrchardCore.Taxation" asp-route-source="@source.Name">@T["Add"]</a>
+        </div>
+    </div>
+</div>

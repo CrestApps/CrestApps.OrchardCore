@@ -1,0 +1,149 @@
+{
+  "name": "PayrollJournalExport",
+  "displayName": "Payroll: export the payroll journal to a CSV file",
+  "description": "Adds a draft data pipeline that writes the payroll journal: the journal entries of the final pay statements, one row per pay date, employer, account and department with the debit and credit, as a CSV file for an accounting system. Set the accounts under Settings > Payroll first. Publish it under Tools > Data Pipelines, add a delivery step (SFTP, web API or email) and schedule it with a workflow timer.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "payroll"
+  ],
+  "tags": [
+    "payroll",
+    "journal",
+    "accounting",
+    "data pipelines"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Payroll",
+        "OrchardCore.DataPipelines"
+      ]
+    },
+    {
+      "name": "DataPipelines",
+      "Pipelines": [
+        {
+          "PipelineId": "payrolljournalexport000001",
+          "Name": "Payroll journal export",
+          "Description": "The payroll journal by pay date, employer, account and department, as a CSV file.",
+          "IsEnabled": true,
+          "Definition": {
+            "Steps": [
+              {
+                "StepId": "entries",
+                "Type": "DataSource",
+                "Title": "Journal entries",
+                "X": 120,
+                "Y": 320,
+                "Properties": {
+                  "DataSourceStepSettings": {
+                    "Source": "Payroll",
+                    "DataSet": "JournalEntries",
+                    "Fields": [
+                      "PayDate",
+                      "EmployerName",
+                      "Account",
+                      "Department",
+                      "Debit",
+                      "Credit",
+                      "Currency"
+                    ]
+                  }
+                }
+              },
+              {
+                "StepId": "group",
+                "Type": "Aggregate",
+                "Title": "A row per pay date, employer, account and department",
+                "X": 380,
+                "Y": 320,
+                "Properties": {
+                  "AggregateStepSettings": {
+                    "GroupBy": [
+                      "PayDate",
+                      "EmployerName",
+                      "Account",
+                      "Department",
+                      "Currency"
+                    ],
+                    "Measures": [
+                      {
+                        "Name": "Debit",
+                        "Function": "Sum",
+                        "Field": "Debit"
+                      },
+                      {
+                        "Name": "Credit",
+                        "Function": "Sum",
+                        "Field": "Credit"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "StepId": "sort",
+                "Type": "Sort",
+                "Title": "By pay date and account",
+                "X": 640,
+                "Y": 320,
+                "Properties": {
+                  "SortStepSettings": {
+                    "Keys": [
+                      {
+                        "Field": "PayDate",
+                        "Descending": false
+                      },
+                      {
+                        "Field": "Account",
+                        "Descending": false
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "StepId": "file",
+                "Type": "CreateFile",
+                "Title": "Journal CSV",
+                "X": 900,
+                "Y": 320,
+                "Properties": {
+                  "CreateFileStepSettings": {
+                    "Format": "csv",
+                    "FileName": "payroll-journal-{Date:yyyyMMdd-HHmmss}",
+                    "UseDisplayNames": false
+                  }
+                }
+              }
+            ],
+            "Connections": [
+              {
+                "SourceStepId": "entries",
+                "SourcePort": "Output",
+                "TargetStepId": "group",
+                "TargetPort": "Input"
+              },
+              {
+                "SourceStepId": "group",
+                "SourcePort": "Output",
+                "TargetStepId": "sort",
+                "TargetPort": "Input"
+              },
+              {
+                "SourceStepId": "sort",
+                "SourcePort": "Output",
+                "TargetStepId": "file",
+                "TargetPort": "Input"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

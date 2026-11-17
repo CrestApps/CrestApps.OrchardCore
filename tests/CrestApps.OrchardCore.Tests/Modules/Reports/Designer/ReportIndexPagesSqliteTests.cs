@@ -33,6 +33,7 @@ public sealed class ReportIndexPagesSqliteTests : IAsyncLifetime
             .Column<string>(nameof(PageRecordIndex.Name))
             .Column<string>(nameof(PageRecordIndex.Channel))
             .Column<int>(nameof(PageRecordIndex.Status))
+            .Column<decimal>(nameof(PageRecordIndex.Amount))
             .Column<DateTime>(nameof(PageRecordIndex.CreatedUtc))
             .Column<DateTime?>(nameof(PageRecordIndex.ClosedUtc), column => column.Nullable()));
 
@@ -69,6 +70,37 @@ public sealed class ReportIndexPagesSqliteTests : IAsyncLifetime
             .Select(number => $"r{number}");
 
         Assert.Equal(expected, names);
+    }
+
+    [Fact]
+    public async Task ReadsDecimalColumnsThatHoldBothWholeAndFractionalValues()
+    {
+        // SQLite keeps 6200 as an integer and 1234.56 as a real number in the same decimal column, and reports each
+        // row's own kind of value, so reading whole index rows failed on the first row of the other kind.
+        await AddAsync(Enumerable.Range(0, ReportIndexPages.PageSize + 10)
+            .Select(number => new PageRecord
+            {
+                Name = $"r{number}",
+                Amount = number % 2 == 0 ? 6200m : 1234.56m,
+                CreatedUtc = _start.AddMinutes(number),
+            }));
+
+        var records = new List<PageRecord>();
+
+        await using (var session = _store.CreateSession())
+        {
+            await foreach (var record in ReportIndexPages.ReadAsync<PageRecord, PageRecordIndex>(
+                session, rows => rows.Where(index => index.Amount > 0), index => index.CreatedUtc, cancellationToken: TestContext.Current.CancellationToken))
+            {
+                records.Add(record);
+            }
+        }
+
+        Assert.Equal(ReportIndexPages.PageSize + 10, records.Count);
+        Assert.Equal(
+            Enumerable.Range(0, ReportIndexPages.PageSize + 10).Reverse().Select(number => $"r{number}"),
+            records.Select(record => record.Name));
+        Assert.Equal((ReportIndexPages.PageSize + 10) / 2, records.Count(record => record.Amount == 1234.56m));
     }
 
     [Fact]
@@ -220,6 +252,8 @@ public sealed class ReportIndexPagesSqliteTests : IAsyncLifetime
 
         public PageStatus Status { get; set; }
 
+        public decimal Amount { get; set; }
+
         public DateTime CreatedUtc { get; set; }
 
         public DateTime? ClosedUtc { get; set; }
@@ -232,6 +266,8 @@ public sealed class ReportIndexPagesSqliteTests : IAsyncLifetime
         public string Channel { get; set; }
 
         public PageStatus Status { get; set; }
+
+        public decimal Amount { get; set; }
 
         public DateTime CreatedUtc { get; set; }
 
@@ -247,6 +283,7 @@ public sealed class ReportIndexPagesSqliteTests : IAsyncLifetime
                 Name = record.Name,
                 Channel = record.Channel,
                 Status = record.Status,
+                Amount = record.Amount,
                 CreatedUtc = record.CreatedUtc,
                 ClosedUtc = record.ClosedUtc,
             });

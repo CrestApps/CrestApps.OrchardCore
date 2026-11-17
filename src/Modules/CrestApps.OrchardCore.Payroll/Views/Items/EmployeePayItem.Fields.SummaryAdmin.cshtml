@@ -1,0 +1,9 @@
+@model ShapeViewModel<EmployeePayItem>
+@inject CrestApps.OrchardCore.Payroll.Services.IPayCodeManager Codes
+
+@{
+    var code = await Codes.FindByIdAsync(Model.Value.PayCodeId);
+}
+
+<a asp-action="Edit" asp-controller="PayItems" asp-route-profileId="@Model.Value.ProfileId" asp-route-id="@Model.Value.ItemId">@(code?.Code ?? Model.Value.PayCodeId)</a>
+<span class="text-muted small ms-1">@code?.Name</span>
