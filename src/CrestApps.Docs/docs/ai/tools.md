@@ -192,6 +192,66 @@ These tools call the content definition service the content type editor calls, s
 
 The scheduled time is acted on by the Publish Later and Archive Later background tasks, which run every minute and must be enabled.
 
+### Address and home page tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Autoroute`
+
+| Function | Description |
+| --- | --- |
+| `findContentItemByHandle` | Finds the content item behind a URL or path, an alias or a handle (`slug:about-us`, `alias:main-menu`, `contentitemid:...`), and returns its ID, type, title and state. A path of `/` returns the current home page. |
+| `setHomepage` | Makes a published content item the site's home page. The content item must have an Autoroute part with a path, and its route must not be disabled. |
+
+`findContentItemByHandle` asks Orchard Core's content handle manager, so a path is matched by the Autoroute feature and an alias by the Alias feature. A full URL is reduced to its path, without the tenant's prefix. It needs **View content** on the content item it finds.
+
+`setHomepage` follows the content editor: it ticks **Set as homepage** on the Autoroute part and publishes the content item, and the Autoroute feature writes the home route. It needs **Set homepage** and **Publish content** on the content item, and it refuses a content item whose latest version is a draft, because that draft would go live. Every visitor sees the new home page at once. The site does not remember the previous home page, so the result names it.
+
+### Menu tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Menu`
+
+| Function | Description |
+| --- | --- |
+| `getMenuTree` | Returns a menu's items as a flat, ordered tree: item ID, type, title, URL or linked content item, parent ID, depth and required permissions. The menu is given by content item ID, alias or title; without one it lists the site's menus. |
+| `saveMenuItem` | Adds an item to a menu, updates an existing item, or moves it under another parent or to another position, leaving the other items untouched. Supports link, content and HTML menu items. |
+| `deleteMenuItem` | Deletes a menu item and all its child items from a menu. Asks for approval. |
+
+`saveMenuItem` and `deleteMenuItem` need **Manage menus**, as the menu editor does. They save the change in a draft of the menu, so the site keeps showing the published menu until the menu is published; pass `publish: true` to publish it in the same call, which also needs **Publish content** on the menu. A URL is checked the way the menu item editor checks it, so a script URL is refused. `permissionNames` hides an item from users who lack the permissions; it does not protect the page the item links to.
+
+### Taxonomy tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Taxonomies`
+
+| Function | Description |
+| --- | --- |
+| `getTaxonomyTerms` | Returns the terms of a taxonomy as a flat, ordered tree: term ID, title, parent ID, depth and full path. The taxonomy is given by content item ID, alias or title; without one it lists the site's taxonomies. |
+| `saveTaxonomyTerm` | Adds a term to a taxonomy, updates an existing term, or moves it under another parent or to another position, without touching the other terms. New terms use the taxonomy's term content type. |
+| `deleteTaxonomyTerm` | Deletes a term and all its child terms from a taxonomy. Content items that reference the term keep the stale ID. Asks for approval. |
+
+`saveTaxonomyTerm` and `deleteTaxonomyTerm` need **Manage taxonomies**. Like the menu tools, they save the change in a draft of the taxonomy unless `publish` is `true`. The other parts and fields of a term go in `content`, in the content item JSON shape, and are checked against the term content type.
+
+### Robots.txt tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Seo`
+
+| Function | Description |
+| --- | --- |
+| `getRobotsTxt` | Returns the robots.txt content the site currently serves, and says whether it comes from the robots settings or from a physical robots.txt file that overrides them. |
+
+It needs **Manage SEO related settings**. Use it to read back the effect of a change to the robots settings.
+
+### Sitemap tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Sitemaps`
+
+| Function | Description |
+| --- | --- |
+| `listSitemaps` | Lists the sitemaps and sitemap indexes with their path, enabled state and sources (content types with frequency and priority, custom paths), and the cached sitemap files. |
+| `saveSitemap` | Creates a sitemap, or updates a sitemap or a sitemap index: name, path, enabled, and the sources of a sitemap. The given source list replaces the existing one; the path must be unique and end in `.xml`. |
+| `deleteSitemap` | Deletes a sitemap or a sitemap index. Indexes that contain the sitemap are not updated. Asks for approval. |
+| `purgeSitemapCache` | Clears the cached sitemap files, one file or all of them, so sitemaps are rebuilt on the next request. |
+
+The four tools need **Manage sitemaps**. `saveSitemap` checks every argument before it changes anything, so a refused call leaves the sitemap as it was. A source listed with its `sourceId` is kept and updated; a stored source that is not listed is removed. The tools cannot create a sitemap index, and they neither list nor change the sitemaps an index contains: that stays on the **Sitemap Indexes** page.
+
 ### Feature management tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Features`
