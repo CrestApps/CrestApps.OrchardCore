@@ -30,6 +30,7 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<KnowledgeBaseMigrations>();
         services.AddScoped<KnowledgeArticleAccess>();
         services.AddScoped<KnowledgeArticleSearch>();
+        services.AddScoped<KnowledgeBaseCategories>();
         services.AddScoped<IAuthorizationHandler, KnowledgeArticleAuthorizationHandler>();
         services.AddPermissionProvider<KnowledgeBasePermissionProvider>();
         services.AddNavigationProvider<KnowledgeBaseAdminMenu>();

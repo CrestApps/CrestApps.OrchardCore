@@ -33,6 +33,7 @@
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Markdown" />
     <PackageReference Include="OrchardCore.Title" />
+    <PackageReference Include="OrchardCore.Taxonomies" />
   </ItemGroup>
 
   <ItemGroup>
@@ -42,6 +43,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.ContentFields.Abstractions\CrestApps.OrchardCore.ContentFields.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

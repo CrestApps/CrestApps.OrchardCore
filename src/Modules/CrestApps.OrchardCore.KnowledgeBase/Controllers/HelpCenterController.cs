@@ -20,17 +20,22 @@ public sealed class HelpCenterController : Controller
 {
     private const string FeedbackCookiePrefix = "kb-feedback-";
 
+    // The articles the home page shows under each category; the category's page lists them all.
+    private const int ArticlesPerGroup = 5;
+
     private readonly KnowledgeArticleSearch _search;
+    private readonly KnowledgeBaseCategories _categories;
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDistributedLock _locks;
     private readonly YesSql.ISession _session;
 
-    public HelpCenterController(KnowledgeArticleSearch search, IContentManager contentManager, IAuthorizationService authorizationService, IDistributedLock locks, YesSql.ISession session)
+    public HelpCenterController(KnowledgeArticleSearch search, KnowledgeBaseCategories categories, IContentManager contentManager, IAuthorizationService authorizationService, IDistributedLock locks, YesSql.ISession session)
     {
         _locks = locks;
         _session = session;
         _search = search;
+        _categories = categories;
         _contentManager = contentManager;
         _authorizationService = authorizationService;
     }
@@ -39,17 +44,43 @@ public sealed class HelpCenterController : Controller
     /// The help center's home, a category or search results.
     /// </summary>
     /// <param name="q">The words searched for.</param>
-    /// <param name="category">The category.</param>
+    /// <param name="category">The category: a term of the categories' taxonomy, whose page lists its articles and those of
+    /// the categories under it.</param>
     /// <returns>The page.</returns>
     [HttpGet("help", Name = KnowledgeBaseConstants.HomeRouteName)]
     public async Task<IActionResult> Index(string q = null, string category = null)
-        => View(new HelpCenterViewModel
+    {
+        var tree = await _categories.GetTreeAsync();
+        var grouped = await _search.ByCategoryAsync(User, ArticlesPerGroup, HttpContext.RequestAborted);
+        var selected = string.IsNullOrWhiteSpace(category) ? null : tree.Find(category.Trim());
+        var searching = !string.IsNullOrWhiteSpace(q) || !string.IsNullOrWhiteSpace(category);
+
+        // A category counts the articles of the categories under it too, as choosing it lists them.
+        int Count(string id)
+            => KnowledgeBaseCategories.WithDescendants(tree, id).Sum(value => grouped.TryGetValue(value, out var group) ? group.Count : 0);
+
+        var model = new HelpCenterViewModel
         {
             Query = q,
-            Category = category,
-            Categories = await _search.CategoriesAsync(User, HttpContext.RequestAborted),
-            Articles = await _search.FindAsync(User, q, category, 30, HttpContext.RequestAborted),
-        });
+            CategoryId = selected?.Id ?? category,
+            CategoryName = selected is null ? null : tree.GetPathText(selected.Id, " › "),
+            Categories = [.. tree.Nodes
+                .Select(node => new HelpCenterCategory(node.Id, node.Name, node.Level, Count(node.Id)))
+                .Where(value => value.Count > 0)],
+            Groups = searching ? [] : [.. tree.Nodes
+                .Where(node => grouped.ContainsKey(node.Id))
+                .Select(node => new HelpCenterGroup(node.Id, tree.GetPathText(node.Id, " › "), grouped[node.Id].Count, grouped[node.Id].Articles))],
+        };
+
+        // A category that isn't one any more finds nothing rather than everything.
+        IReadOnlyCollection<string> categoryIds = string.IsNullOrWhiteSpace(category) ? null : selected is null ? ["-"] : KnowledgeBaseCategories.WithDescendants(tree, selected.Id);
+
+        model.Articles = searching || model.Groups.Count == 0
+            ? await _search.FindAsync(User, q, categoryIds, 30, HttpContext.RequestAborted)
+            : [];
+
+        return View(model);
+    }
 
     /// <summary>
     /// The articles that match what someone is writing, for other modules' forms: title, summary and link.

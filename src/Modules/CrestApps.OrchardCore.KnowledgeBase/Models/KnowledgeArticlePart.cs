@@ -13,11 +13,6 @@ public sealed class KnowledgeArticlePart : ContentPart
     public KnowledgeArticleAudience Audience { get; set; }
 
     /// <summary>
-    /// Gets or sets the article's category, as shown in the help center.
-    /// </summary>
-    public string Category { get; set; }
-
-    /// <summary>
     /// Gets or sets the short summary shown in lists, searches and suggestions.
     /// </summary>
     public string Summary { get; set; }

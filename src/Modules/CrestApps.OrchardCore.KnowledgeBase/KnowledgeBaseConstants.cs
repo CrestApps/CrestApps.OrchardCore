@@ -26,6 +26,16 @@ public static class KnowledgeBaseConstants
     public const string PartName = "KnowledgeArticlePart";
 
     /// <summary>
+    /// The taxonomy field, on the Knowledge Article type, that holds an article's category.
+    /// </summary>
+    public const string CategoryField = "Category";
+
+    /// <summary>
+    /// The content type of the terms of the Knowledge Base Categories taxonomy.
+    /// </summary>
+    public const string CategoryTermType = "KnowledgeCategory";
+
+    /// <summary>
     /// The route of the help center's home.
     /// </summary>
     public const string HomeRouteName = "KnowledgeBaseHome";

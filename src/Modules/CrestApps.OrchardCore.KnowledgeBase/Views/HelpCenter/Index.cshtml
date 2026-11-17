@@ -5,18 +5,19 @@
 </zone>
 
 @{
-    var searching = !string.IsNullOrWhiteSpace(Model.Query) || !string.IsNullOrWhiteSpace(Model.Category);
+    var hasCategory = !string.IsNullOrWhiteSpace(Model.CategoryId);
+    var searching = !string.IsNullOrWhiteSpace(Model.Query) || hasCategory;
 }
 
 <div class="container my-4" style="max-width: 960px;">
-    <h1 class="h3 mb-3">@T["Help center"]</h1>
+    <h1 class="h3 mb-3">@(Model.CategoryName is null ? T["Help center"] : Model.CategoryName)</h1>
 
     <form method="get" asp-route="@KnowledgeBaseConstants.HomeRouteName" class="mb-4" role="search">
         <div class="input-group">
-            <input type="search" name="q" value="@Model.Query" class="form-control" placeholder="@T["Search the articles"]" aria-label="@T["Search the articles"]" />
-            @if (!string.IsNullOrEmpty(Model.Category))
+            <input type="search" name="q" value="@Model.Query" class="form-control" placeholder="@(Model.CategoryName is null ? T["Search the articles"] : T["Search {0}", Model.CategoryName])" aria-label="@T["Search the articles"]" />
+            @if (hasCategory)
             {
-                <input type="hidden" name="category" value="@Model.Category" />
+                <input type="hidden" name="category" value="@Model.CategoryId" />
             }
             <button type="submit" class="btn btn-primary">@T["Search"]</button>
         </div>
@@ -26,35 +27,46 @@
         <div class="col-md-4">
             <h2 class="h6 text-uppercase text-body-secondary">@T["Categories"]</h2>
             <div class="list-group">
-                <a class="list-group-item list-group-item-action@(string.IsNullOrEmpty(Model.Category) ? " active" : null)" href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName)">@T["All articles"]</a>
-                @foreach (var (category, count) in Model.Categories)
+                <a class="list-group-item list-group-item-action@(hasCategory ? null : " active")" href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName)">@T["All articles"]</a>
+                @foreach (var category in Model.Categories)
                 {
-                    <a class="list-group-item list-group-item-action d-flex justify-content-between@(string.Equals(category, Model.Category, StringComparison.OrdinalIgnoreCase) ? " active" : null)" href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName, new { category })">
-                        <span>@category</span><span class="badge text-bg-light">@count</span>
+                    <a class="list-group-item list-group-item-action d-flex justify-content-between@(string.Equals(category.Id, Model.CategoryId, StringComparison.Ordinal) ? " active" : null)"
+                       style="padding-left: @(1 + category.Level)rem;"
+                       href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName, new { category = category.Id })">
+                        <span>@category.Name</span><span class="badge text-bg-light">@category.Count</span>
                     </a>
                 }
             </div>
         </div>
         <div class="col-md-8">
-            <h2 class="h6 text-uppercase text-body-secondary">@(searching ? T["Articles found"] : T["Most helpful"])</h2>
-            @if (Model.Articles.Count == 0)
+            @if (Model.Groups.Count > 0)
             {
-                <p class="text-body-secondary">@(searching ? T["No article matches. Try other words."] : T["There are no articles yet."])</p>
+                @* The home page: each category with its most helpful articles. *@
+                @foreach (var group in Model.Groups)
+                {
+                    <section class="mb-4">
+                        <h2 class="h5 d-flex justify-content-between align-items-baseline">
+                            <a class="text-decoration-none" href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName, new { category = group.Id })">@group.Name</a>
+                            @if (group.Count > group.Articles.Count)
+                            {
+                                <a class="small fw-normal" href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName, new { category = group.Id })">@T["All {0} articles", group.Count]</a>
+                            }
+                        </h2>
+                        <partial name="_HelpCenterArticles" model="group.Articles" />
+                    </section>
+                }
             }
             else
             {
-                <div class="list-group">
-                    @foreach (var article in Model.Articles)
-                    {
-                        <a class="list-group-item list-group-item-action" asp-area="OrchardCore.Contents" asp-controller="Item" asp-action="Display" asp-route-contentItemId="@article.ContentItemId">
-                            <div class="fw-semibold">@article.Title</div>
-                            @if (!string.IsNullOrWhiteSpace(article.Summary))
-                            {
-                                <div class="small text-body-secondary">@article.Summary</div>
-                            }
-                        </a>
-                    }
-                </div>
+                <h2 class="h6 text-uppercase text-body-secondary">@(searching ? T["Articles found"] : T["Most helpful"])</h2>
+                @if (Model.Articles.Count == 0)
+                {
+                    <p class="text-body-secondary">@(searching ? T["No article matches. Try other words."] : T["There are no articles yet."])</p>
+                }
+                else
+                {
+                    <partial name="_HelpCenterArticles" model="Model.Articles" />
+                }
             }
         </div>
     </div>

@@ -19,6 +19,9 @@ public sealed class KnowledgeArticleSearch
         "they", "this", "tried", "want", "were", "what", "when", "where", "which", "will", "with", "would", "your",
     };
 
+    // The most articles the home page groups by category; a help center holds far fewer.
+    private const int MaxGroupedArticles = 1000;
+
     private readonly ISession _session;
     private readonly KnowledgeArticleAccess _access;
 
@@ -34,19 +37,19 @@ public sealed class KnowledgeArticleSearch
     /// </summary>
     /// <param name="user">The reader.</param>
     /// <param name="terms">The words, or none for every article.</param>
-    /// <param name="category">The category, or none.</param>
+    /// <param name="categoryIds">The categories (a category and those under it), or none for every category.</param>
     /// <param name="take">How many to return.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The articles.</returns>
-    public async Task<IReadOnlyList<KnowledgeArticleIndex>> FindAsync(ClaimsPrincipal user, string terms, string category, int take, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<KnowledgeArticleIndex>> FindAsync(ClaimsPrincipal user, string terms, IReadOnlyCollection<string> categoryIds, int take, CancellationToken cancellationToken = default)
     {
         var audiences = (await _access.GetAudiencesAsync(user)).ToArray();
         var query = _session.QueryIndex<KnowledgeArticleIndex>(index => index.Audience.IsIn(audiences));
 
-        if (!string.IsNullOrWhiteSpace(category))
+        if (categoryIds is { Count: > 0 })
         {
-            var name = category.Trim();
-            query = query.Where(index => index.Category == name);
+            var ids = categoryIds.ToArray();
+            query = query.Where(index => index.CategoryId.IsIn(ids));
         }
 
         foreach (var word in Words(terms))
@@ -120,19 +123,27 @@ public sealed class KnowledgeArticleSearch
             .TakeLast(8)];
 
     /// <summary>
-    /// Lists the categories a user can see articles in, with how many each holds.
+    /// Lists the articles a user may read, by category: for each category with articles, how many it holds and its most
+    /// helpful ones. Articles without a category are left out.
     /// </summary>
     /// <param name="user">The reader.</param>
+    /// <param name="perCategory">How many articles to return for each category.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
-    /// <returns>The categories and their counts.</returns>
-    public async Task<IReadOnlyList<(string Category, int Count)>> CategoriesAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    /// <returns>Each category's id, its article count and its most helpful articles.</returns>
+    public async Task<IReadOnlyDictionary<string, (int Count, IReadOnlyList<KnowledgeArticleIndex> Articles)>> ByCategoryAsync(ClaimsPrincipal user, int perCategory, CancellationToken cancellationToken = default)
     {
         var audiences = (await _access.GetAudiencesAsync(user)).ToArray();
-        var rows = await _session.QueryIndex<KnowledgeArticleIndex>(index => index.Audience.IsIn(audiences) && index.Category != null).ListAsync(cancellationToken);
+        var rows = await _session.QueryIndex<KnowledgeArticleIndex>(index => index.Audience.IsIn(audiences) && index.CategoryId != null)
+            .OrderByDescending(index => index.HelpfulCount)
+            .ThenByDescending(index => index.PublishedUtc)
+            .Take(MaxGroupedArticles)
+            .ListAsync(cancellationToken);
 
-        return [.. rows.GroupBy(row => row.Category, StringComparer.OrdinalIgnoreCase)
-            .Select(group => (group.First().Category, group.Count()))
-            .OrderBy(pair => pair.Item1, StringComparer.CurrentCultureIgnoreCase)];
+        return rows.GroupBy(row => row.CategoryId, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => (group.Count(), (IReadOnlyList<KnowledgeArticleIndex>)[.. group.Take(Math.Clamp(perCategory, 1, 50))]),
+                StringComparer.Ordinal);
     }
 
     // At most five words of two letters or more, so a search stays cheap.

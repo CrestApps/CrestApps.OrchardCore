@@ -21,6 +21,9 @@ using OrchardCore.Modules.Manifest;
         OrchardCoreFeatureIds.Autoroute,
         OrchardCoreFeatureIds.Markdown,
 
+        // An article's category is a term of the Knowledge Base Categories taxonomy.
+        OrchardCoreFeatureIds.Taxonomies,
+
         // The anonymous "Was this helpful?" answers are limited through Orchard Core's Rate Limits.
         OrchardCoreFeatureIds.RateLimits,
     ]

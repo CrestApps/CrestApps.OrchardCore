@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.KnowledgeBase;
 using CrestApps.OrchardCore.KnowledgeBase.Indexes;
 using CrestApps.OrchardCore.KnowledgeBase.Models;
@@ -49,7 +50,8 @@ public sealed class KnowledgeBaseTests
                 SignedIn = (await search.FindAsync(CalendarTestHarness.User("dana"), null, null, 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
                 Staff = (await search.FindAsync(CalendarTestHarness.User("staff"), "password", null, 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
                 Words = (await search.FindAsync(CalendarTestHarness.User("staff"), "refund password", null, 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
-                Categories = await search.CategoriesAsync(CalendarTestHarness.User("dana"), ct),
+                Categories = (await search.ByCategoryAsync(CalendarTestHarness.User("dana"), 5, ct)).ToDictionary(pair => pair.Key, pair => (pair.Value.Count, pair.Value.Articles.Select(a => a.ContentItemId).ToList())),
+                InAccounts = (await search.FindAsync(CalendarTestHarness.User("staff"), null, ["Accounts"], 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
                 Suggested = (await search.SuggestAsync(CalendarTestHarness.User("dana"), "Have you tried to reset your password?", 5, ct)).Select(a => a.ContentItemId).ToList(),
             };
         }, commit: false);
@@ -59,7 +61,12 @@ public sealed class KnowledgeBaseTests
         Assert.Equal(["a1", "a2"], found.SignedIn);
         Assert.Equal(["a1", "a3"], found.Staff);
         Assert.Equal(["a3"], found.Words);
-        Assert.Equal([("Accounts", 1), ("Billing", 1)], found.Categories);
+        Assert.Equal(2, found.Categories.Count);
+        Assert.Equal(1, found.Categories["Accounts"].Count);
+        Assert.Equal(["a1"], found.Categories["Accounts"].Item2);
+        Assert.Equal(1, found.Categories["Billing"].Count);
+        Assert.Equal(["a2"], found.Categories["Billing"].Item2);
+        Assert.Equal(["a1", "a3"], found.InAccounts);
         Assert.Equal(["a1"], found.Suggested);
     }
 
@@ -169,7 +176,7 @@ public sealed class KnowledgeBaseTests
                     .Column<string>("ContentItemId", column => column.WithLength(26))
                     .Column<string>("Title", column => column.WithLength(255))
                     .Column<string>("Summary", column => column.WithLength(1000))
-                    .Column<string>("Category", column => column.WithLength(100))
+                    .Column<string>("CategoryId", column => column.Nullable().WithLength(26))
                     .Column<int>("Audience")
                     .Column<DateTime>("PublishedUtc", column => column.Nullable())
                     .Column<int>("HelpfulCount", column => column.Nullable()));
@@ -201,7 +208,16 @@ public sealed class KnowledgeBaseTests
             Latest = true,
             PublishedUtc = published ? CalendarTestHarness.Now : null,
         };
-        item.Apply(new KnowledgeArticlePart { Audience = audience, Category = category, Summary = summary });
+        item.Apply(new KnowledgeArticlePart { Audience = audience, Summary = summary });
+
+        // The category is a term of the categories' taxonomy, in the type's Category field; here its id is the name.
+        if (category is not null)
+        {
+            ((JsonObject)item.Content)[KnowledgeBaseConstants.ArticleType] = new JsonObject
+            {
+                [KnowledgeBaseConstants.CategoryField] = new JsonObject { ["TaxonomyContentItemId"] = "taxonomy", ["TermContentItemIds"] = new JsonArray(category) },
+            };
+        }
 
         return item;
     }

@@ -15,7 +15,6 @@ internal sealed class KnowledgeArticlePartDisplayDriver : ContentPartDisplayDriv
         => Initialize<KnowledgeArticleFeedbackViewModel>("KnowledgeArticleFeedback", model =>
         {
             model.ContentItemId = part.ContentItem.ContentItemId;
-            model.Category = part.Category;
             model.HelpfulCount = part.HelpfulCount;
         }).Location("Detail", "Content:20");
 
@@ -23,7 +22,6 @@ internal sealed class KnowledgeArticlePartDisplayDriver : ContentPartDisplayDriv
         => Initialize<KnowledgeArticlePartViewModel>("KnowledgeArticlePart_Edit", model =>
         {
             model.Audience = part.Audience;
-            model.Category = part.Category;
             model.Summary = part.Summary;
         });
 
@@ -34,7 +32,6 @@ internal sealed class KnowledgeArticlePartDisplayDriver : ContentPartDisplayDriv
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         part.Audience = model.Audience;
-        part.Category = string.IsNullOrWhiteSpace(model.Category) ? null : model.Category.Trim();
         part.Summary = string.IsNullOrWhiteSpace(model.Summary) ? null : model.Summary.Trim();
 
         return Edit(part, context);

@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.KnowledgeBase.Models;
 using OrchardCore.ContentManagement;
 using YesSql.Indexes;
@@ -15,7 +16,7 @@ public sealed class KnowledgeArticleIndex : MapIndex
 
     public string Summary { get; set; }
 
-    public string Category { get; set; }
+    public string CategoryId { get; set; }
 
     public KnowledgeArticleAudience Audience { get; set; }
 
@@ -49,12 +50,23 @@ public sealed class KnowledgeArticleIndexProvider : IndexProvider<ContentItem>
                     ContentItemId = item.ContentItemId,
                     Title = Cut(item.DisplayText, MaxTitleLength),
                     Summary = Cut(part.Summary, MaxSummaryLength),
-                    Category = Cut(part.Category?.Trim(), 100),
+                    CategoryId = CategoryOf(item),
                     Audience = part.Audience,
                     PublishedUtc = item.PublishedUtc,
                     HelpfulCount = part.HelpfulCount,
                 };
             });
+
+    /// <summary>
+    /// Gets the term an article's category taxonomy field holds (the field of its type, <see
+    /// cref="KnowledgeBaseConstants.CategoryField"/>), or <see langword="null"/>.
+    /// </summary>
+    /// <param name="item">The article.</param>
+    /// <returns>The term's content item id.</returns>
+    public static string CategoryOf(ContentItem item)
+        => ((JsonObject)item?.Content)?[item.ContentType]?[KnowledgeBaseConstants.CategoryField]?["TermContentItemIds"] is JsonArray { Count: > 0 } terms
+            ? terms[0]?.GetValue<string>()
+            : null;
 
     private static string Cut(string value, int length)
         => value?.Length > length ? value[..length] : value;
