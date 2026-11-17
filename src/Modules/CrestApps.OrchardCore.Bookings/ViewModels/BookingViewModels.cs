@@ -25,7 +25,7 @@ public class BookingPartViewModel
 
     public int MaxNights { get; set; }
 
-    public string WeekendPrice { get; set; }
+    public decimal? WeekendPrice { get; set; }
 
     public List<BookingHoursViewModel> Hours { get; set; } = [];
 
@@ -33,7 +33,7 @@ public class BookingPartViewModel
 
     public int DaysAhead { get; set; }
 
-    public string DepositPercent { get; set; }
+    public decimal? DepositPercent { get; set; }
 
     public int BalanceDueDaysBefore { get; set; }
 
@@ -58,7 +58,7 @@ public class BookingOccupancyViewModel
 
     public int? People { get; set; }
 
-    public string PriceAdjustment { get; set; }
+    public decimal? PriceAdjustment { get; set; }
 }
 
 public class BookingHoursViewModel
@@ -76,7 +76,7 @@ public class BookingCancellationTierViewModel
 {
     public int? DaysBefore { get; set; }
 
-    public string FeePercent { get; set; }
+    public decimal? FeePercent { get; set; }
 }
 
 /// <summary>
@@ -169,7 +169,7 @@ public class BookingDatesViewModel
 
     public int? NewCapacity { get; set; }
 
-    public string NewPrice { get; set; }
+    public decimal? NewPrice { get; set; }
 }
 
 public class BookingCalendarViewModel

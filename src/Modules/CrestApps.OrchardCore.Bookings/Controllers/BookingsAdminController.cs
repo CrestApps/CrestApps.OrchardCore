@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Bookings.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
@@ -201,7 +202,7 @@ public sealed class BookingsAdminController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> Cancel(string itemId, string refund, string reason)
+    public async Task<IActionResult> Cancel(string itemId, decimal? refund, string reason)
     {
         if (!await _authorizationService.AuthorizeAsync(User, BookingsPermissions.ManageBookings))
         {
@@ -213,21 +214,15 @@ public sealed class BookingsAdminController : Controller
             return NotFound();
         }
 
-        decimal? amount = null;
-
-        if (!string.IsNullOrWhiteSpace(refund))
+        // A refund that isn't a number binds as a model error and a null, which would mean the policy's refund.
+        if (IsInvalid(nameof(refund)) || refund < 0m)
         {
-            if (!decimal.TryParse(refund.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) || parsed < 0m)
-            {
-                await _notifier.ErrorAsync(H["Enter the refund as a number, such as 120.50."]);
+            await _notifier.ErrorAsync(H["Enter the refund as a number, such as 120.50."]);
 
-                return RedirectToAction(nameof(Detail), new { itemId });
-            }
-
-            amount = parsed;
+            return RedirectToAction(nameof(Detail), new { itemId });
         }
 
-        var (succeeded, errors) = await _service.CancelAsync(booking, amount, reason, User.Identity?.Name, HttpContext.RequestAborted);
+        var (succeeded, errors) = await _service.CancelAsync(booking, refund, reason, User.Identity?.Name, HttpContext.RequestAborted);
 
         if (succeeded)
         {
@@ -316,16 +311,10 @@ public sealed class BookingsAdminController : Controller
             ? model.NewDate?.Trim() + "T" + model.NewTime.Trim()
             : model.NewDate?.Trim();
         var startsUtc = BookingSchedule.GetStartUtc(key, await _capacity.GetTimeZoneAsync());
-        decimal? price = null;
 
-        if (!string.IsNullOrWhiteSpace(model.NewPrice))
+        if (model.NewPrice < 0m)
         {
-            if (!decimal.TryParse(model.NewPrice.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) || parsed < 0m)
-            {
-                ModelState.AddModelError(nameof(model.NewPrice), S["Enter the price as a number, such as 1200, or leave it empty for the product's."]);
-            }
-
-            price = parsed;
+            ModelState.AddModelError(nameof(model.NewPrice), S["Enter the price as a number, such as 1200, or leave it empty for the product's."]);
         }
 
         if (startsUtc is null)
@@ -349,7 +338,7 @@ public sealed class BookingsAdminController : Controller
             SlotKey = key,
             StartsUtc = startsUtc.Value,
             Capacity = Math.Max(0, model.NewCapacity ?? part.Capacity),
-            Price = price,
+            Price = model.NewPrice,
             ModifiedUtc = _clock.UtcNow,
         });
 
@@ -359,7 +348,7 @@ public sealed class BookingsAdminController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> UpdateDate(string itemId, int capacity, string price, bool closed)
+    public async Task<IActionResult> UpdateDate(string itemId, int capacity, decimal? price, bool closed)
     {
         if (!await _authorizationService.AuthorizeAsync(User, BookingsPermissions.ManageBookings))
         {
@@ -371,7 +360,8 @@ public sealed class BookingsAdminController : Controller
             return NotFound();
         }
 
-        if (!string.IsNullOrWhiteSpace(price) && (!decimal.TryParse(price.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) || parsed < 0m))
+        // A price that isn't a number binds as a model error and a null, which would clear the date's own price.
+        if (IsInvalid(nameof(price)) || price < 0m)
         {
             await _notifier.ErrorAsync(H["Enter the price as a number, such as 1200, or leave it empty for the product's."]);
 
@@ -380,7 +370,7 @@ public sealed class BookingsAdminController : Controller
 
         // What's booked already stays booked: the capacity can't go below it.
         slot.Capacity = Math.Max(slot.Held + slot.Sold, Math.Max(0, capacity));
-        slot.Price = string.IsNullOrWhiteSpace(price) ? null : decimal.Parse(price.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture);
+        slot.Price = price;
         slot.Closed = closed;
         slot.ModifiedUtc = _clock.UtcNow;
 
@@ -429,6 +419,9 @@ public sealed class BookingsAdminController : Controller
 
         return View(model);
     }
+
+    private bool IsInvalid(string key)
+        => ModelState.GetFieldValidationState(key) == ModelValidationState.Invalid;
 
     private async Task<ContentItem> GetProductAsync(string contentItemId)
         => string.IsNullOrEmpty(contentItemId) || await _contentManager.GetAsync(contentItemId, VersionOptions.Latest) is not { } item || !item.Has<BookingPart>()

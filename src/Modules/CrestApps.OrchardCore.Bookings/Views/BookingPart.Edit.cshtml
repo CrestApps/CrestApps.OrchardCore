@@ -66,7 +66,7 @@
                     <input type="hidden" asp-for="Occupancies[i].Id" />
                     <div class="col-12 col-md-6"><input asp-for="Occupancies[i].Label" class="form-control" maxlength="80" placeholder="@T["Such as Double room or Child"]" aria-label="@T["Option, row {0}", i + 1]" /></div>
                     <div class="col-6 col-md-2"><input asp-for="Occupancies[i].People" type="number" min="1" max="50" class="form-control" placeholder="1" aria-label="@T["People, row {0}", i + 1]" /></div>
-                    <div class="col-6 col-md-4"><input asp-for="Occupancies[i].PriceAdjustment" inputmode="decimal" class="form-control" placeholder="0" aria-label="@T["Price change, row {0}", i + 1]" /></div>
+                    <div class="col-6 col-md-4"><input asp-for="Occupancies[i].PriceAdjustment" type="number" step="0.01" class="form-control" placeholder="0" aria-label="@T["Price change, row {0}", i + 1]" /></div>
                 </div>
             }
             <span class="hint">@T["Optional. What a unit can be, such as a single or a double room, with how many people it's for and what it adds to or takes off the price once, such as a single supplement (300) or a child's price (-150). Clear an option's name to remove it."]</span>
@@ -89,7 +89,7 @@
         <div class="ocat-limited-wrapper">
             <label asp-for="WeekendPrice" class="ocat-label">@T["Friday and Saturday nights ({0})", currency]</label>
             <div class="ocat-limited">
-                <input asp-for="WeekendPrice" inputmode="decimal" class="form-control" />
+                <input asp-for="WeekendPrice" type="number" step="0.01" min="0" class="form-control" />
                 <span class="hint">@T["Optional. The price of a weekend night, in place of the product's."]</span>
             </div>
         </div>
@@ -134,7 +134,7 @@
     <div class="ocat-limited-wrapper">
         <label asp-for="DepositPercent" class="ocat-label">@T["Deposit (%)"]</label>
         <div class="ocat-limited">
-            <input asp-for="DepositPercent" inputmode="decimal" class="form-control" placeholder="@T["Paid in full"]" />
+            <input asp-for="DepositPercent" type="number" step="0.01" min="0" max="99.99" class="form-control" placeholder="@T["Paid in full"]" />
         </div>
     </div>
 
@@ -162,7 +162,7 @@
             {
                 <div class="row g-2 mb-2">
                     <div class="col-6 col-md-4"><input asp-for="CancellationTiers[i].DaysBefore" type="number" min="0" class="form-control" aria-label="@T["Days before, row {0}", i + 1]" /></div>
-                    <div class="col-6 col-md-4"><input asp-for="CancellationTiers[i].FeePercent" inputmode="decimal" class="form-control" aria-label="@T["Fee, row {0}", i + 1]" /></div>
+                    <div class="col-6 col-md-4"><input asp-for="CancellationTiers[i].FeePercent" type="number" step="0.01" min="0" max="100" class="form-control" aria-label="@T["Fee, row {0}", i + 1]" /></div>
                 </div>
             }
             <span class="hint">@T["Optional. What canceling costs, such as 10% at least 60 days before, 50% at least 30 days before, and everything closer than the last rule. With no rules, a booking is canceled for a full refund."]</span>
