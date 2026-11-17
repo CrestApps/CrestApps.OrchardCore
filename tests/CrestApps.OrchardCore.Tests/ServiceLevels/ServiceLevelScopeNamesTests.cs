@@ -12,6 +12,20 @@ namespace CrestApps.OrchardCore.Tests.ServiceLevels;
 public sealed class ServiceLevelScopeNamesTests
 {
     [Fact]
+    public void EachKindOfPolicy_SaysWhatItIsFor_InTheAddPolicyDialog()
+    {
+        // Arrange
+        IServiceLevelScopeProvider[] scopes =
+        [
+            new global::CrestApps.OrchardCore.Tickets.Core.Services.TicketServiceLevelScope(global::Moq.Mock.Of<global::CrestApps.Core.Services.ICatalog<global::CrestApps.OrchardCore.Tickets.Models.TicketPriority>>(), Doubles.RecipeRoundTrip.Localizer<global::CrestApps.OrchardCore.Tickets.Core.Services.TicketServiceLevelScope>()),
+            new global::CrestApps.OrchardCore.WorkOrders.Core.Services.WorkOrderServiceLevelScope(Doubles.RecipeRoundTrip.Localizer<global::CrestApps.OrchardCore.WorkOrders.Core.Services.WorkOrderServiceLevelScope>()),
+        ];
+
+        // Act and assert
+        Assert.All(scopes, scope => Assert.NotNull(scope.Description));
+    }
+
+    [Fact]
     public void AScope_IsShownByItsLocalizedName()
     {
         var name = ServiceLevelScopeNames.Get(new SourceTextLocalizerFactory(), [new TicketsScope()], "tickets");

@@ -27,24 +27,11 @@
                         <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
-                @if (scopes.Count == 1)
+                @if (scopes.Count > 0)
                 {
+                    @* The kinds of policy (one per feature that uses service levels), chosen in a dialog as in the other lists of sources. *@
                     <div class="col-auto">
-                        <a class="btn btn-secondary create" role="button" asp-action="Create" asp-route-scope="@scopes[0].Name">@T["Add Policy"]</a>
-                    </div>
-                }
-                else if (scopes.Count > 1)
-                {
-                    <div class="col-auto">
-                        <div class="dropdown">
-                            <button class="btn btn-secondary dropdown-toggle create" type="button" data-bs-toggle="dropdown" aria-expanded="false">@T["Add Policy"]</button>
-                            <div class="dropdown-menu dropdown-menu-end">
-                                @foreach (var scope in scopes)
-                                {
-                                    <a class="dropdown-item" asp-action="Create" asp-route-scope="@scope.Name">@T["For {0}", scope.DisplayName]</a>
-                                }
-                            </div>
-                        </div>
+                        <button type="button" class="btn btn-secondary create" data-bs-toggle="modal" data-bs-target="#modalAddPolicy">@T["Add Policy"]</button>
                     </div>
                 }
             </div>
@@ -62,5 +49,40 @@
         </admin-list-grid>
     </admin-list>
 </form>
+
+<div class="modal fade" id="modalAddPolicy" tabindex="-1" role="dialog" aria-labelledby="add-policy-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="add-policy-title">@T["Available Policy Types"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row row-cols-1 row-cols-md-3 g-2">
+                    @foreach (var scope in scopes)
+                    {
+                        <div class="col">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h4>@scope.DisplayName</h4>
+                                    @if (!string.IsNullOrEmpty(scope.Description))
+                                    {
+                                        <p class="hint">@scope.Description</p>
+                                    }
+                                </div>
+                                <div class="card-footer text-muted text-sm-end">
+                                    <a class="btn btn-primary btn-sm" asp-action="Create" asp-route-scope="@scope.Name">@T["Add"]</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script asp-name="list-management-ui" at="Foot"></script>

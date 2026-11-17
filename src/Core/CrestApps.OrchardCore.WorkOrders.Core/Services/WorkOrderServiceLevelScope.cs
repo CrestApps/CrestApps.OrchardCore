@@ -32,6 +32,9 @@ public sealed class WorkOrderServiceLevelScope : IServiceLevelScopeProvider
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc/>
+    public LocalizationSource Description { get; } = LocalizationSource.Create<WorkOrderServiceLevelScope>("How fast work orders are responded to and resolved on site, at each priority, with the statuses that pause the clock.");
+
+    /// <inheritdoc/>
     public Task<IReadOnlyList<ServiceLevelOption>> GetMetricsAsync(CancellationToken cancellationToken = default)
     {
         IReadOnlyList<ServiceLevelOption> metrics =

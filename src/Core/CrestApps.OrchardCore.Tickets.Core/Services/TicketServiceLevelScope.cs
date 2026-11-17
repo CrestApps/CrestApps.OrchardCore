@@ -37,6 +37,9 @@ public sealed class TicketServiceLevelScope : IServiceLevelScopeProvider
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc/>
+    public LocalizationSource Description { get; } = LocalizationSource.Create<TicketServiceLevelScope>("How fast tickets get a first response, a next response and a resolution, at each priority, on a desk's business hours.");
+
+    /// <inheritdoc/>
     public Task<IReadOnlyList<ServiceLevelOption>> GetMetricsAsync(CancellationToken cancellationToken = default)
     {
         IReadOnlyList<ServiceLevelOption> metrics =

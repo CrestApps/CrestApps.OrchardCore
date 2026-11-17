@@ -150,7 +150,7 @@ public sealed class PoliciesController : CatalogAdminController<ServiceLevelPoli
         [FromServices] IStringLocalizerFactory localizerFactory)
     {
         ViewData[nameof(ServiceLevelScopeOption)] = _scopes
-            .Select(scope => new ServiceLevelScopeOption(scope.Name, ServiceLevelScopeNames.Get(localizerFactory, _scopes, scope.Name)))
+            .Select(scope => new ServiceLevelScopeOption(scope.Name, ServiceLevelScopeNames.Get(localizerFactory, _scopes, scope.Name), scope.Description is { } description ? localizerFactory.Localize(description).Value : null))
             .OrderBy(scope => scope.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 

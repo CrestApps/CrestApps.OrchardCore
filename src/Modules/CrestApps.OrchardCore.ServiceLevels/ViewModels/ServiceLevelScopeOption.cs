@@ -5,4 +5,5 @@ namespace CrestApps.OrchardCore.ServiceLevels.ViewModels;
 /// </summary>
 /// <param name="Name">The scope's name.</param>
 /// <param name="DisplayName">The scope's name shown to users.</param>
-public sealed record ServiceLevelScopeOption(string Name, string DisplayName);
+/// <param name="Description">What the scope's policies are for, if it says.</param>
+public sealed record ServiceLevelScopeOption(string Name, string DisplayName, string Description = null);

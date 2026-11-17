@@ -22,6 +22,11 @@ public interface IServiceLevelScopeProvider
     LocalizationSource DisplayName { get; }
 
     /// <summary>
+    /// Gets what the scope's policies are for, shown when choosing the kind of a new policy; <see langword="null"/> for none.
+    /// </summary>
+    LocalizationSource Description => null;
+
+    /// <summary>
     /// Gets the metrics the scope measures, in display order.
     /// </summary>
     /// <param name="cancellationToken">A token to cancel the work.</param>
