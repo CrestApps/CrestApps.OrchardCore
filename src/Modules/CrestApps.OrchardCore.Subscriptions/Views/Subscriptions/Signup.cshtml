@@ -1,31 +1,10 @@
-@using System.Globalization
-@using CrestApps.OrchardCore.Subscriptions.Services
-@using CrestApps.OrchardCore.Subscriptions.ViewModels
-@model SubscriptionSignupConfirmViewModel
-@inject SubscriptionDisplayText DisplayText
-
-@* The page a plan's sign-up link opens. Link scanners and mail previews open links too, so only the button below
-   starts a checkout. *@
+@using OrchardCore.DisplayManagement
+@model IShape
 
 <zone Name="Title">
     <breadcrumb name="SubscriptionsSignup" title="@T["Sign up"]" />
 </zone>
 
 <div class="container my-4" style="max-width: 640px;">
-    <h1 class="h3 mb-3">@Model.Title</h1>
-
-    <p class="fs-5">@DisplayText.RecurringPrice(Model.Amount, Model.Currency, Model.BillingDuration, Model.DurationType)</p>
-
-    <form method="post" asp-route="SubscriptionSignup" asp-route-contentItemId="@Model.ContentItemId">
-        @if (!string.IsNullOrEmpty(Model.PriceId))
-        {
-            <input type="hidden" name="priceId" value="@Model.PriceId" />
-        }
-        <input type="hidden" name="quantity" value="@Model.Quantity.ToString(CultureInfo.InvariantCulture)" />
-        @if (Model.CustomAmount.HasValue)
-        {
-            <input type="hidden" name="customAmount" value="@Model.CustomAmount.Value.ToString(CultureInfo.InvariantCulture)" />
-        }
-        <button type="submit" class="btn btn-primary">@T["Continue to checkout"]</button>
-    </form>
+    @await DisplayAsync(Model)
 </div>

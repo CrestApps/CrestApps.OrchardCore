@@ -109,6 +109,7 @@ namespace CrestApps.OrchardCore.Inventory.Core.Models
         public string Name { get; set; }
         public string OwnerId { get; set; }
         public string OwnerKind { get; set; }
+        public bool ShowToShoppers { get; set; }
     }
     public sealed class InventoryPart : OrchardCore.ContentManagement.ContentPart
     {
@@ -252,6 +253,7 @@ namespace CrestApps.OrchardCore.Inventory.Core.Models
         public string OwnerId { get; set; }
         public string OwnerKind { get; set; }
         public int Position { get; set; }
+        public bool ShowToShoppers { get; set; }
     }
     public sealed class StockLocationLevel
     {

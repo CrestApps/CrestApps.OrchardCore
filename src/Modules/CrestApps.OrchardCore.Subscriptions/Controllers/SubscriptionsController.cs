@@ -92,18 +92,19 @@ public sealed class SubscriptionsController : Controller
             return await UnavailableAsync(plan, pricing);
         }
 
-        return View(new SubscriptionSignupConfirmViewModel
+        // A named shape, so a theme can replace the page's content with its own SubscriptionSignupConfirm template.
+        return View(await _shapeFactory.CreateAsync<SubscriptionSignupConfirmViewModel>("SubscriptionSignupConfirm", model =>
         {
-            ContentItemId = plan.ContentItemId,
-            Title = plan.DisplayText,
-            PriceId = selection.PriceId,
-            Quantity = selection.Quantity,
-            CustomAmount = selection.CustomAmount,
-            Amount = pricing.Price.Subtotal,
-            Currency = pricing.Price.Currency,
-            BillingDuration = pricing.Recurrence.BillingDuration,
-            DurationType = pricing.Recurrence.DurationType,
-        });
+            model.ContentItemId = plan.ContentItemId;
+            model.Title = plan.DisplayText;
+            model.PriceId = selection.PriceId;
+            model.Quantity = selection.Quantity;
+            model.CustomAmount = selection.CustomAmount;
+            model.Amount = pricing.Price.Subtotal;
+            model.Currency = pricing.Price.Currency;
+            model.BillingDuration = pricing.Recurrence.BillingDuration;
+            model.DurationType = pricing.Recurrence.DurationType;
+        }));
     }
 
     /// <summary>
