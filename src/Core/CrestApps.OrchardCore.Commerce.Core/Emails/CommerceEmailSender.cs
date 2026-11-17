@@ -85,7 +85,7 @@ public sealed class CommerceEmailSender : ICommerceEmailSender
             {
                 if (_logger.IsEnabled(LogLevel.Warning))
                 {
-                    _logger.LogWarning("The email about '{Reference}' ({Kind}) has an attachment with no file, or with a file name that isn't a name only, so it wasn't sent.", email.Reference.SanitizeLogValue(), email.Kind);
+                    _logger.LogWarning("The email about '{Reference}' has an attachment with no file, or with a file name that isn't a name only, so it wasn't sent.", email.Reference.SanitizeLogValue());
                 }
 
                 return CommerceEmailResult.Failed(S["The attachment '{0}' has no file, or its file name isn't a name only.", attachment?.FileName ?? string.Empty]);
@@ -128,7 +128,7 @@ public sealed class CommerceEmailSender : ICommerceEmailSender
                 {
                     if (_logger.IsEnabled(LogLevel.Warning))
                     {
-                        _logger.LogWarning("The email about '{Reference}' ({Kind}) has an attachment that opened no file, so it wasn't sent.", email.Reference.SanitizeLogValue(), email.Kind);
+                        _logger.LogWarning("The email about '{Reference}' has an attachment that opened no file, so it wasn't sent.", email.Reference.SanitizeLogValue());
                     }
 
                     return CommerceEmailResult.Failed(S["The attachment '{0}' couldn't be opened.", attachment.FileName]);

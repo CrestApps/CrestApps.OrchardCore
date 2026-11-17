@@ -1,3 +1,4 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
@@ -243,7 +244,7 @@ internal sealed class TransactionCreditSettlement
             {
                 if (recorder is null || !await recorder.RecordAsync(issue, cancellationToken))
                 {
-                    _logger.LogError("A customer credit change on transaction '{TransactionId}' could not be reconciled and no payment issue was recorded: {Message}", transactionId, issue.Message);
+                    _logger.LogError("A customer credit change on transaction '{TransactionId}' could not be reconciled and no payment issue was recorded: {Message}", transactionId.SanitizeLogValue(), issue.Message.SanitizeLogValue());
                 }
             }
         }
