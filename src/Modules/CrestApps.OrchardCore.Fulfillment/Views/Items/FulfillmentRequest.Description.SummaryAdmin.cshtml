@@ -1,0 +1,14 @@
+@model ShapeViewModel<FulfillmentRequest>
+@inject FulfillmentRequestText Text
+
+<div class="admin-list-secondary text-break small">
+    @Text.Reason(Model.Value)
+    @if (!string.IsNullOrEmpty(Model.Value.Message))
+    {
+        <span>@T["The partner said: {0}", Model.Value.Message]</span>
+    }
+    @if (Model.Value.Lines.Count > 0)
+    {
+        <div>@string.Join(", ", Model.Value.Lines.Select(line => T["{0} × {1}", line.Quantity, line.Title].Value))</div>
+    }
+</div>

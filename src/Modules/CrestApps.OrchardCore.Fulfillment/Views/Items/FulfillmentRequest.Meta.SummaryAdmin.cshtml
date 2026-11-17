@@ -1,0 +1,11 @@
+@model ShapeViewModel<FulfillmentRequest>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last change"]">
+    <i class="fa-regular fa-calendar text-secondary me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: Model.Value.ModifiedUtc, Format: "g"))
+</span>
+@if (Model.Value.Attempts > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Attempts"]">
+        <i class="fa-solid fa-rotate text-secondary me-1" aria-hidden="true"></i>@T.Plural(Model.Value.Attempts, "1 attempt", "{0} attempts")
+    </span>
+}

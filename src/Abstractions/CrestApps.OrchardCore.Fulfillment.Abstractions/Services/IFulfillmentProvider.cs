@@ -5,8 +5,8 @@ namespace CrestApps.OrchardCore.Fulfillment.Services;
 
 /// <summary>
 /// An outside company that makes and ships a store's products, such as a print-on-demand service. A provider module
-/// implements this contract and registers it as a scoped service; the Fulfillment Partners module lists every
-/// registered provider.
+/// implements this contract and registers it as a scoped service; the Fulfillment Partners engine lists every
+/// registered provider, assigns each order line to at most one of them, and sends each one only its lines.
 /// </summary>
 public interface IFulfillmentProvider
 {
@@ -35,11 +35,26 @@ public interface IFulfillmentProvider
     Task<FulfillmentConnectionResult> TestConnectionAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Sends the lines of a paid order that this partner makes. The partner works out which lines are its own from
-    /// the links the store saved on its products.
+    /// Says which of an order's lines this partner makes, from the store's own data only (such as the links the
+    /// provider keeps on products). It never calls the partner. The engine gives a line claimed by two partners to
+    /// neither and asks a person, and caps a claim to the quantity left to ship.
     /// </summary>
-    /// <param name="order">The order, as the engine describes it.</param>
+    /// <param name="order">The order, with every physical line still to ship.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>How sending ended. A refusal or an outage is a result, not an exception.</returns>
+    /// <returns>The lines this partner makes; empty when it makes none.</returns>
+    Task<IReadOnlyList<FulfillmentLineClaim>> ClaimLinesAsync(FulfillmentOrder order, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends the lines the engine assigned to this partner. The engine has recorded them in a pending shipment before
+    /// this call. The call is cancelled after <see cref="FulfillmentConstants.SubmitTimeout"/>; the engine then treats
+    /// the outcome as unclear.
+    /// </summary>
+    /// <param name="order">The order, holding only the lines assigned to this partner.</param>
+    /// <param name="cancellationToken">The token cancelled at the timeout.</param>
+    /// <returns>
+    /// How sending ended. Return <see cref="FulfillmentSubmitStatus.Refused"/> or
+    /// <see cref="FulfillmentSubmitStatus.RetryLater"/> only when the partner certainly did not create the order. A
+    /// refusal or an outage is a result, not an exception.
+    /// </returns>
     Task<FulfillmentSubmitResult> SubmitAsync(FulfillmentOrder order, CancellationToken cancellationToken = default);
 }

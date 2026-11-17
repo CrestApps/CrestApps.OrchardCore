@@ -3,7 +3,8 @@ using CrestApps.Core.Models;
 namespace CrestApps.OrchardCore.Fulfillment.Core.Models;
 
 /// <summary>
-/// One order sent, or to be sent, to one fulfillment partner.
+/// One order sent, or to be sent, to one fulfillment partner. The units it covers are reserved in a Shipping
+/// shipment, so the order's fulfillment status, the buyer's shipped email and the order's Shipments card all follow it.
 /// </summary>
 public sealed class FulfillmentRequest : CatalogItem
 {
@@ -33,12 +34,34 @@ public sealed class FulfillmentRequest : CatalogItem
     public FulfillmentRequestStatus Status { get; set; }
 
     /// <summary>
+    /// Gets or sets the lines assigned to this partner, as they were sent.
+    /// </summary>
+    public List<FulfillmentRequestLine> Lines { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the identifier of the pending Shipping shipment that reserves these lines while the partner has
+    /// them, or <see langword="null"/> when none is held.
+    /// </summary>
+    public string ShipmentId { get; set; }
+
+    /// <summary>
     /// Gets or sets the partner's identifier of the order, once it accepted it.
     /// </summary>
     public string ExternalOrderId { get; set; }
 
     /// <summary>
-    /// Gets or sets what happened last, in words for the store owner.
+    /// Gets or sets why the request is where it is, as one of the <see cref="FulfillmentReasons"/> codes; the order
+    /// card and the list page turn it into a localized sentence.
+    /// </summary>
+    public string Reason { get; set; }
+
+    /// <summary>
+    /// Gets or sets the values the reason's sentence names, such as the order status or the lines.
+    /// </summary>
+    public List<string> ReasonArguments { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the partner's own message, as the provider returned it.
     /// </summary>
     public string Message { get; set; }
 

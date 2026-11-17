@@ -6,7 +6,7 @@ using YesSql.Sql;
 namespace CrestApps.OrchardCore.Fulfillment.Core.Indexes;
 
 /// <summary>
-/// Finds fulfillment requests by order, by partner and by what is due.
+/// Finds fulfillment requests by order, by partner, by what is due and for the list page.
 /// </summary>
 public sealed class FulfillmentRequestIndex : CatalogItemIndex
 {
@@ -14,6 +14,16 @@ public sealed class FulfillmentRequestIndex : CatalogItemIndex
     /// Gets or sets the order identifier.
     /// </summary>
     public string OrderId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the order number, for searching.
+    /// </summary>
+    public string OrderNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the pending shipment the request holds.
+    /// </summary>
+    public string ShipmentId { get; set; }
 
     /// <summary>
     /// Gets or sets the partner's technical name.
@@ -53,10 +63,14 @@ public sealed class FulfillmentRequestIndexProvider : IndexProvider<FulfillmentR
     public override void Describe(DescribeContext<FulfillmentRequest> context)
     {
         context.For<FulfillmentRequestIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new FulfillmentRequestIndex
             {
                 ItemId = item.ItemId,
                 OrderId = item.OrderId,
+                OrderNumber = item.OrderNumber,
+                ShipmentId = item.ShipmentId,
                 ProviderName = item.ProviderName,
                 Status = item.Status.ToString(),
                 NextAttemptUtc = item.NextAttemptUtc,
@@ -84,6 +98,8 @@ public static class FulfillmentIndexSchema
         await schemaBuilder.CreateMapIndexTableAsync<FulfillmentRequestIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("OrderId", column => column.Nullable().WithLength(26))
+            .Column<string>("OrderNumber", column => column.Nullable().WithLength(64))
+            .Column<string>("ShipmentId", column => column.Nullable().WithLength(26))
             .Column<string>("ProviderName", column => column.Nullable().WithLength(64))
             .Column<string>("Status", column => column.Nullable().WithLength(20))
             .Column<DateTime>("NextAttemptUtc")
@@ -95,6 +111,7 @@ public static class FulfillmentIndexSchema
             table.CreateIndex("IDX_FulfillmentRequestIndex_ItemId", "ItemId");
             table.CreateIndex("IDX_FulfillmentRequestIndex_Order", "OrderId", "ProviderName");
             table.CreateIndex("IDX_FulfillmentRequestIndex_Due", "Status", "NextAttemptUtc");
+            table.CreateIndex("IDX_FulfillmentRequestIndex_List", "ModifiedUtc", "Status");
         }, collection: collection);
     }
 }

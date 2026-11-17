@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Fulfillment.Core.Indexes;
 using CrestApps.OrchardCore.Fulfillment.Core.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Fulfillment.Core.Services;
 
@@ -25,11 +26,27 @@ public sealed class FulfillmentRequestStore : DocumentCatalog<FulfillmentRequest
     protected override bool CheckConcurrency => true;
 
     /// <summary>
+    /// Reads a request again from the database, dropping the copy this session holds, so a decision is made on the
+    /// state another worker may have saved meanwhile.
+    /// </summary>
+    /// <param name="loaded">The copy this session holds.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The stored request, or <see langword="null"/> when it was deleted.</returns>
+    public async Task<FulfillmentRequest> FindCommittedAsync(FulfillmentRequest loaded, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(loaded);
+
+        Session.Detach(loaded, CollectionName);
+
+        return await FindByIdAsync(loaded.ItemId, cancellationToken);
+    }
+
+    /// <summary>
     /// Lists the requests of an order.
     /// </summary>
     /// <param name="orderId">The order identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The requests, one per partner.</returns>
+    /// <returns>The requests, oldest first.</returns>
     public async Task<IReadOnlyList<FulfillmentRequest>> ListByOrderAsync(string orderId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(orderId);
@@ -37,7 +54,7 @@ public sealed class FulfillmentRequestStore : DocumentCatalog<FulfillmentRequest
         var items = await Session.Query<FulfillmentRequest, FulfillmentRequestIndex>(index => index.OrderId == orderId, collection: CollectionName)
             .ListAsync(cancellationToken);
 
-        return items.ToList();
+        return items.OrderBy(item => item.CreatedUtc).ToList();
     }
 
     /// <summary>
@@ -73,6 +90,43 @@ public sealed class FulfillmentRequestStore : DocumentCatalog<FulfillmentRequest
             .ListAsync(cancellationToken);
 
         return items.ToList();
+    }
+
+    /// <summary>
+    /// Lists a page of requests, most recently changed first, for the list page.
+    /// </summary>
+    /// <param name="status">The status to show, or <see langword="null"/> for all.</param>
+    /// <param name="search">Text the order number starts with, or <see langword="null"/>.</param>
+    /// <param name="skip">How many requests to skip.</param>
+    /// <param name="take">How many requests to return.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The page, and how many requests match in all.</returns>
+    public async Task<(IReadOnlyList<FulfillmentRequest> Items, int Total)> ListPageAsync(FulfillmentRequestStatus? status, string search, int skip, int take, CancellationToken cancellationToken = default)
+    {
+        var query = Session.Query<FulfillmentRequest, FulfillmentRequestIndex>(collection: CollectionName);
+
+        if (status is { } wanted)
+        {
+            var name = wanted.ToString();
+
+            query = query.Where(index => index.Status == name);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var text = search.Trim();
+
+            query = query.Where(index => index.OrderNumber.StartsWith(text));
+        }
+
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(index => index.ModifiedUtc)
+            .Skip(skip)
+            .Take(take)
+            .ListAsync(cancellationToken);
+
+        return (items.ToList(), total);
     }
 
     /// <summary>

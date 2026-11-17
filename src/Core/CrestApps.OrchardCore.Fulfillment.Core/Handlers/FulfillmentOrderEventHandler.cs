@@ -2,6 +2,7 @@ using System.Data.Common;
 using CrestApps.OrchardCore.Fulfillment.Core.Models;
 using CrestApps.OrchardCore.Fulfillment.Core.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Settings;
 using YesSql;
@@ -15,22 +16,25 @@ namespace CrestApps.OrchardCore.Fulfillment.Core.Handlers;
 public sealed class FulfillmentOrderEventHandler : OrderEventHandlerBase
 {
     private readonly ISiteService _siteService;
-    private readonly FulfillmentSender _sender;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FulfillmentOrderEventHandler"/> class.
     /// </summary>
     /// <param name="siteService">The site service, for the fulfillment settings.</param>
-    /// <param name="sender">The fulfillment sender.</param>
+    /// <param name="serviceProvider">
+    /// The services, to get the sender only when automatic sending is on: it builds on the order and shipment services,
+    /// which must not be built while an order handler is.
+    /// </param>
     /// <param name="logger">The logger.</param>
     public FulfillmentOrderEventHandler(
         ISiteService siteService,
-        FulfillmentSender sender,
+        IServiceProvider serviceProvider,
         ILogger<FulfillmentOrderEventHandler> logger)
     {
         _siteService = siteService;
-        _sender = sender;
+        _serviceProvider = serviceProvider;
         _logger = logger;
     }
 
@@ -48,7 +52,8 @@ public sealed class FulfillmentOrderEventHandler : OrderEventHandlerBase
                 return;
             }
 
-            await _sender.RecordAsync(context.Order, cancellationToken);
+            // No lock here: nobody else sees the order as paid before the payment is saved.
+            await _serviceProvider.GetRequiredService<FulfillmentSender>().RecordAsync(context.Order, lockAndCommit: false, cancellationToken);
         }
         catch (Exception exception) when (exception is not (OperationCanceledException or ConcurrencyException or DbException))
         {

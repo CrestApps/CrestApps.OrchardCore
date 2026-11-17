@@ -53,9 +53,17 @@ public sealed class FulfillmentSubmitResult
         => new(FulfillmentSubmitStatus.RetryLater, null, message);
 
     /// <summary>
-    /// Creates the result of an order a person must look at.
+    /// Creates the result of an order the partner refused and certainly did not create.
     /// </summary>
-    /// <param name="message">What the person must check or fix.</param>
+    /// <param name="message">What the person must fix.</param>
+    /// <returns>The result.</returns>
+    public static FulfillmentSubmitResult Refused(string message)
+        => new(FulfillmentSubmitStatus.Refused, null, message);
+
+    /// <summary>
+    /// Creates the result of an order the partner may or may not have created; a person must check.
+    /// </summary>
+    /// <param name="message">What the person must check.</param>
     /// <returns>The result.</returns>
     public static FulfillmentSubmitResult NeedsAttention(string message)
         => new(FulfillmentSubmitStatus.NeedsAttention, null, message);

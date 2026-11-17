@@ -1,9 +1,9 @@
-@using CrestApps.OrchardCore.Fulfillment.Core.Models
 @model OrderFulfillmentViewModel
+@inject FulfillmentRequestText Text
 
 @{
     var canRetry = Model.Requests.Any(entry => entry.Request.Status is FulfillmentRequestStatus.NeedsAttention or FulfillmentRequestStatus.NothingToSend or FulfillmentRequestStatus.Pending);
-    var unclear = Model.Requests.Any(entry => entry.Request.Status == FulfillmentRequestStatus.NeedsAttention);
+    var mayAlreadyBeMade = Model.Requests.Any(entry => FulfillmentRequestText.MayAlreadyBeMade(entry.Request));
 }
 
 <div class="card mb-3">
@@ -19,52 +19,61 @@
                 @foreach (var entry in Model.Requests)
                 {
                     var request = entry.Request;
-                    var (badge, label) = request.Status switch
+                    var badge = request.Status switch
                     {
-                        FulfillmentRequestStatus.Sent => ("text-bg-success", T["Sent"].Value),
-                        FulfillmentRequestStatus.NothingToSend => ("text-bg-secondary", T["Nothing to send"].Value),
-                        FulfillmentRequestStatus.NeedsAttention => ("text-bg-danger", T["Needs attention"].Value),
-                        FulfillmentRequestStatus.Sending => ("text-bg-warning", T["Sending"].Value),
-                        _ => ("text-bg-info", T["Waiting to be sent"].Value),
+                        FulfillmentRequestStatus.Sent => "text-bg-success",
+                        FulfillmentRequestStatus.NothingToSend => "text-bg-secondary",
+                        FulfillmentRequestStatus.NeedsAttention => "text-bg-danger",
+                        FulfillmentRequestStatus.Sending => "text-bg-warning",
+                        _ => "text-bg-info",
                     };
 
                     <li class="mb-2">
-                        <span class="badge @badge ta-badge fw-normal">@label</span>
-                        <strong class="ms-1">@entry.DisplayName</strong>
-                        @if (!string.IsNullOrEmpty(request.ExternalOrderId))
-                        {
-                            <span class="ms-1 text-muted">@T["Order {0}", request.ExternalOrderId]</span>
-                        }
+                        <span class="badge @badge ta-badge fw-normal">@Text.Status(request.Status)</span>
+                        <span class="ms-1">@entry.DisplayName</span>
+                        <div class="hint">@Text.Reason(request)</div>
                         @if (!string.IsNullOrEmpty(request.Message))
                         {
-                            <div class="hint">@request.Message</div>
+                            <div class="hint">@T["The partner said: {0}", request.Message]</div>
+                        }
+                        @if (request.Lines.Count > 0)
+                        {
+                            <ul class="small mb-0">
+                                @foreach (var line in request.Lines)
+                                {
+                                    <li>@T["{0} × {1}", line.Quantity, line.Title]</li>
+                                }
+                            </ul>
                         }
                     </li>
                 }
             </ul>
         }
 
-        @if (Model.NotSentYet.Count > 0 || canRetry)
+        @if (Model.CanSend && (Model.NotSentYet.Count > 0 || canRetry))
         {
-            <form method="post" asp-action="Send" asp-controller="FulfillmentAdmin" asp-area="@FulfillmentConstants.Features.Fulfillment" class="d-inline">
+            <form method="post" asp-action="Send" asp-controller="FulfillmentAdmin" asp-area="@FulfillmentConstants.Features.Fulfillment" class="d-inline no-multisubmit">
                 <input type="hidden" name="orderId" value="@Model.OrderId" />
                 <input type="hidden" name="returnUrl" value="@(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString)" />
-                <button type="submit" class="btn btn-primary btn-sm" data-confirm-unclear="@(unclear ? T["Check first that the partner did not already create this order, or it may be made twice. Send again?"].Value : null)">
-                    @(Model.Requests.Count == 0 ? T["Send to fulfillment partners"] : T["Send again"])
-                </button>
+                @if (mayAlreadyBeMade)
+                {
+                    <button type="submit" class="btn btn-primary btn-sm"
+                            data-url-af="RemoveUrl"
+                            data-title="@T["Send again"]"
+                            data-message="@T["A partner may already have this order. Check its dashboard first, or the order may be made twice. Send again?"]"
+                            data-ok-text="@T["Send again"]"
+                            data-ok-class="btn-primary"
+                            data-cancel-text="@T["Cancel"]">
+                        @T["Send again"]
+                    </button>
+                }
+                else
+                {
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        @(Model.Requests.Count == 0 ? T["Send to fulfillment partners"] : T["Send again"])
+                    </button>
+                }
             </form>
-            @if (unclear)
-            {
-                <script at="Foot">
-                    document.querySelectorAll('[data-confirm-unclear]').forEach(function (button) {
-                        button.addEventListener('click', function (event) {
-                            if (!window.confirm(button.getAttribute('data-confirm-unclear'))) {
-                                event.preventDefault();
-                            }
-                        });
-                    });
-                </script>
-            }
         }
     </div>
 </div>

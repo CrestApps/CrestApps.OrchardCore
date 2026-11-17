@@ -11,7 +11,8 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class FulfillmentServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the request store, the sender and the paid-order handler. The module registers the index provider and the migration.
+    /// Registers the request store, the order checks, the line assigner, the sender and the paid-order handler. The
+    /// module registers the index provider and the migration; Shipping registers the shipment services this builds on.
     /// </summary>
     /// <param name="services">The services.</param>
     /// <returns>The services.</returns>
@@ -20,6 +21,8 @@ public static class FulfillmentServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddScoped<FulfillmentRequestStore>();
+        services.TryAddScoped<FulfillmentOrderBuilder>();
+        services.TryAddScoped<FulfillmentLineAssigner>();
         services.TryAddScoped<FulfillmentSender>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrderEventHandler, FulfillmentOrderEventHandler>());
 

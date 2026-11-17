@@ -16,6 +16,11 @@ public class OrderFulfillmentViewModel
     public string OrderNumber { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the order is paid, so it may be sent.
+    /// </summary>
+    public bool CanSend { get; set; }
+
+    /// <summary>
     /// Gets or sets what was sent to each partner.
     /// </summary>
     public IList<OrderFulfillmentEntry> Requests { get; set; } = [];

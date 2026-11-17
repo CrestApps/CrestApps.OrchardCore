@@ -16,6 +16,17 @@ public static class FulfillmentConstants
     public const string CollectionName = "Fulfillment";
 
     /// <summary>
+    /// The notification type raised when a fulfillment request needs a person.
+    /// </summary>
+    public const string NeedsAttentionNotificationType = "FulfillmentNeedsAttention";
+
+    /// <summary>
+    /// How long the engine waits for a partner to answer <see cref="Services.IFulfillmentProvider.SubmitAsync"/> before it
+    /// treats the outcome as unclear.
+    /// </summary>
+    public static readonly TimeSpan SubmitTimeout = TimeSpan.FromMinutes(2);
+
+    /// <summary>
     /// The feature identifiers.
     /// </summary>
     public static class Features

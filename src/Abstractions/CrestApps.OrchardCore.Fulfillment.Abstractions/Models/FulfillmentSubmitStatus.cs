@@ -11,7 +11,7 @@ public enum FulfillmentSubmitStatus
     Sent,
 
     /// <summary>
-    /// None of the order's lines is made by this partner, so nothing was sent.
+    /// None of the lines sent is made by this partner after all, so nothing was created.
     /// </summary>
     NothingToSend,
 
@@ -21,8 +21,14 @@ public enum FulfillmentSubmitStatus
     RetryLater,
 
     /// <summary>
-    /// A person must look at it: the partner refused the order, a line is not linked, or it is not known whether the
-    /// partner created the order. It is never sent again by itself.
+    /// The partner refused the order and certainly did not create it, for example an invalid address or a refused
+    /// access key. A person must fix the cause; the units are released so they can be shipped another way.
+    /// </summary>
+    Refused,
+
+    /// <summary>
+    /// It is not known whether the partner created the order. A person must check with the partner; the units stay
+    /// reserved and the order is never sent again by itself.
     /// </summary>
     NeedsAttention,
 }

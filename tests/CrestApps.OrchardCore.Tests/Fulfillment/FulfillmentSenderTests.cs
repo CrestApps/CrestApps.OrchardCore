@@ -1,324 +1,419 @@
-using CrestApps.OrchardCore.Addresses.Models;
-using CrestApps.OrchardCore.Fulfillment;
-using CrestApps.OrchardCore.Fulfillment.Core.Indexes;
 using CrestApps.OrchardCore.Fulfillment.Core.Models;
 using CrestApps.OrchardCore.Fulfillment.Core.Services;
 using CrestApps.OrchardCore.Fulfillment.Models;
-using CrestApps.OrchardCore.Fulfillment.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
-using CrestApps.OrchardCore.Orders.Core.Services;
-using CrestApps.OrchardCore.Products.Core.Models;
-using CrestApps.OrchardCore.Tests.Utilities;
-using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using OrchardCore.Locking;
-using OrchardCore.Locking.Distributed;
-using OrchardCore.Modules;
-using YesSql;
-using YesSql.Provider.Sqlite;
-using YesSql.Sql;
+using CrestApps.OrchardCore.Shipping.Models;
+using CrestApps.OrchardCore.Shipping.Services;
 
 namespace CrestApps.OrchardCore.Tests.Fulfillment;
 
 /// <summary>
-/// A paid order is sent to a partner once: the request is stored as being sent before the partner is called, a second
-/// record of the same order is never sent, an unclear outcome goes to a person and is not sent again, a busy partner
-/// is tried again later, and a send that was interrupted is flagged.
+/// What is sent to a partner is reserved in one pending Shipping shipment, saved with the Sending status before the
+/// partner is called; only what is left to ship is sent; a refusal frees the units, an unclear outcome keeps them and
+/// asks a person once; and an order is never sent twice.
 /// </summary>
 public sealed class FulfillmentSenderTests : IAsyncLifetime
 {
-    private readonly string _path = Path.Combine(Path.GetTempPath(), $"crestapps-fulfillment-{Guid.NewGuid():N}.db");
-    private readonly FakeProvider _provider = new();
-    private DateTime _now = new(2026, 11, 17, 12, 0, 0, DateTimeKind.Utc);
-    private IStore _store;
-    private Order _order;
+    private const string Partner = "Fake";
+
+    private readonly FulfillmentTestHarness _harness = new();
+    private FulfillmentTestHarness.FakeProvider _provider;
 
     public async ValueTask InitializeAsync()
     {
-        _store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={_path};Pooling=False"));
-        _store.RegisterIndexes([new FulfillmentRequestIndexProvider()]);
-        await _store.InitializeAsync(TestContext.Current.CancellationToken);
-        await _store.InitializeCollectionAsync(FulfillmentConstants.CollectionName, TestContext.Current.CancellationToken);
-
-        await using var session = _store.CreateSession();
-        var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
-
-        await FulfillmentIndexSchema.CreateAsync(new SchemaBuilder(_store.Configuration, transaction));
-        await transaction.CommitAsync(TestContext.Current.CancellationToken);
-
-        _order = PaidOrder();
+        await _harness.InitializeAsync();
+        _provider = _harness.AddProvider(Partner, "l1", "l2");
     }
 
     public ValueTask DisposeAsync()
-    {
-        TemporarySqliteDatabase.DisposeAndDelete(_store, _path);
-
-        return ValueTask.CompletedTask;
-    }
+        => _harness.DisposeAsync();
 
     [Fact]
-    public async Task SendAsync_PartnerAccepts_SendsOnceAndRecordsTheOrder()
+    public async Task SendAsync_PartnerAccepts_ReservesExactlyOnePendingShipmentWithTheSentLines()
     {
         // Arrange
-        await RecordAsync();
+        await _harness.RecordAsync();
 
         // Act
-        var first = await SendOnlyRequestAsync();
-        var second = await SendOnlyRequestAsync();
+        var first = await _harness.SendAsync(Partner);
+        var second = await _harness.SendAsync(Partner);
+        var shipments = await _harness.LoadShipmentsAsync();
 
         // Assert
-        Assert.Equal(FulfillmentRequestStatus.Sent, first.Status);
-        Assert.Equal("partner-1", first.ExternalOrderId);
-        Assert.Equal(FulfillmentRequestStatus.Sent, second.Status);
+        Assert.Equal(FulfillmentRequestStatus.Sent, first.Request.Status);
+        Assert.Equal("partner-1", first.Request.ExternalOrderId);
+        Assert.Equal(FulfillmentRequestStatus.Sent, second.Request.Status);
         Assert.Equal(1, _provider.Calls);
+
+        var shipment = Assert.Single(shipments);
+
+        Assert.Equal(ShipmentStatus.Pending, shipment.Status);
+        Assert.Equal(first.Request.ShipmentId, shipment.ItemId);
+        Assert.Equal("Sent to Fake, order partner-1", shipment.Note);
+        Assert.Equal([("l1", 2), ("l2", 1)], shipment.Lines.Select(line => (line.LineId, line.Quantity)));
+        Assert.Equal([("l1", 2), ("l2", 1)], first.Request.Lines.Select(line => (line.LineId, line.Quantity)));
     }
 
     [Fact]
-    public async Task SendAsync_StoresSendingBeforeThePartnerIsCalled()
+    public async Task SendAsync_SavesTheShipmentWithTheSendingStatusBeforeThePartnerIsCalled()
     {
         // Arrange
-        await RecordAsync();
-        FulfillmentRequestStatus? statusSeenByPartner = null;
+        await _harness.RecordAsync();
+        (FulfillmentRequestStatus Status, string ShipmentId, int Shipments)? seenByPartner = null;
 
-        _provider.OnSubmit = async () =>
+        _provider.OnSubmit = async _ =>
         {
-            await using var other = _store.CreateSession();
-            var stored = await new FulfillmentRequestStore(other).ListByOrderAsync(_order.ItemId, TestContext.Current.CancellationToken);
+            var requests = await _harness.LoadRequestsAsync();
+            var shipments = await _harness.LoadShipmentsAsync();
+            var request = Assert.Single(requests);
 
-            statusSeenByPartner = Assert.Single(stored).Status;
+            seenByPartner = (request.Status, request.ShipmentId, shipments.Count(shipment => shipment.ItemId == request.ShipmentId && shipment.Status == ShipmentStatus.Pending));
 
-            return FulfillmentSubmitResult.Sent("partner-1", "Sent.");
+            return FulfillmentSubmitResult.Sent("partner-1", null);
         };
 
         // Act
-        await SendOnlyRequestAsync();
+        await _harness.SendAsync(Partner);
 
         // Assert
-        Assert.Equal(FulfillmentRequestStatus.Sending, statusSeenByPartner);
+        Assert.NotNull(seenByPartner);
+        Assert.Equal(FulfillmentRequestStatus.Sending, seenByPartner.Value.Status);
+        Assert.False(string.IsNullOrEmpty(seenByPartner.Value.ShipmentId));
+        Assert.Equal(1, seenByPartner.Value.Shipments);
     }
 
     [Fact]
-    public async Task SendAsync_TwoRecordsOfTheSameOrder_OnlyOneIsSent()
+    public async Task ShipAsync_TrackingTypedOnTheReservedShipment_FulfillsTheOrder()
     {
         // Arrange
-        await using (var session = _store.CreateSession())
-        {
-            var store = new FulfillmentRequestStore(session);
+        await _harness.RecordAsync();
+        await _harness.SendAsync(Partner);
 
-            await store.CreateAsync(NewRequest("request-a"), TestContext.Current.CancellationToken);
-            await store.CreateAsync(NewRequest("request-b"), TestContext.Current.CancellationToken);
-            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+        // Act
+        await using (var session = _harness.Store.CreateSession())
+        {
+            var shipment = Assert.Single(await new ShipmentStore(session).ListByOrderAsync(_harness.Order.ItemId, FulfillmentTestHarness.Token));
+            var shipped = await _harness.Shipments(session).ShipAsync(shipment, new ShipmentDetails("UPS", "1Z999", "https://tracking.example.com/1Z999"), FulfillmentTestHarness.Token);
+
+            Assert.True(shipped.Succeeded);
+            await session.SaveChangesAsync(FulfillmentTestHarness.Token);
         }
 
-        // Act
-        var a = await SendAsync("request-a");
-        var b = await SendAsync("request-b");
-
         // Assert
-        Assert.Equal(FulfillmentRequestStatus.Sent, a.Status);
-        Assert.Equal(FulfillmentRequestStatus.NothingToSend, b.Status);
-        Assert.Equal(1, _provider.Calls);
+        Assert.Equal(OrderFulfillmentStatus.Fulfilled, _harness.Order.FulfillmentStatus);
+        Assert.Equal(ShipmentStatus.Shipped, Assert.Single(await _harness.LoadShipmentsAsync()).Status);
     }
 
     [Fact]
-    public async Task SendAsync_PartnerFailsUnexpectedly_AsksAPersonAndIsNotSentAgain()
+    public async Task SendAsync_SomeUnitsAlreadyShipped_SendsOnlyWhatIsLeft()
     {
         // Arrange
-        await RecordAsync();
-        _provider.OnSubmit = () => throw new InvalidOperationException("Connection reset after the request was written.");
+        _harness.Order.Lines[0].Quantity = 3;
+        await _harness.SaveShipmentAsync(new Shipment
+        {
+            ItemId = "shipped-by-hand",
+            OrderId = _harness.Order.ItemId,
+            OrderNumber = _harness.Order.OrderNumber,
+            Number = 1,
+            Status = ShipmentStatus.Shipped,
+            Lines = [new ShipmentLine { LineId = "l1", Title = "Tee", Quantity = 1 }],
+            CreatedUtc = _harness.Now,
+            ModifiedUtc = _harness.Now,
+        });
+        await _harness.RecordAsync();
 
         // Act
-        var result = await SendOnlyRequestAsync();
-        var processed = await ProcessDueAsync();
+        var result = await _harness.SendAsync(Partner);
 
         // Assert
-        Assert.Equal(FulfillmentRequestStatus.NeedsAttention, result.Status);
-        Assert.Contains("not known whether", result.Message, StringComparison.Ordinal);
+        Assert.Equal(FulfillmentRequestStatus.Sent, result.Request.Status);
+        Assert.Equal([("l1", 2), ("l2", 1)], Assert.Single(_provider.Received).Lines.Select(line => (line.LineId, line.Quantity)));
+    }
+
+    [Fact]
+    public async Task SendAsync_PartnerRefuses_FreesTheUnitsAndAsksAPerson()
+    {
+        // Arrange
+        await _harness.RecordAsync();
+        _provider.OnSubmit = _ => Task.FromResult(FulfillmentSubmitResult.Refused("The address is not valid."));
+
+        // Act
+        var result = await _harness.SendAsync(Partner);
+
+        // Assert
+        Assert.Equal(FulfillmentRequestStatus.NeedsAttention, result.Request.Status);
+        Assert.Equal(FulfillmentReasons.Refused, result.Request.Reason);
+        Assert.Equal("The address is not valid.", result.Request.Message);
+        Assert.Null(result.Request.ShipmentId);
+        Assert.Empty(await _harness.LoadShipmentsAsync());
+        Assert.Single(_harness.Attention);
+    }
+
+    [Fact]
+    public async Task SendAsync_PartnerFailsUnexpectedly_KeepsTheShipmentAndSendingAgainReusesIt()
+    {
+        // Arrange
+        await _harness.RecordAsync();
+        _provider.OnSubmit = _ => throw new InvalidOperationException("Connection reset after the request was written.");
+
+        // Act
+        var unclear = await _harness.SendAsync(Partner);
+        var processed = await _harness.ProcessDueAsync();
+        var keptShipment = Assert.Single(await _harness.LoadShipmentsAsync());
+
+        _provider.OnSubmit = _ => Task.FromResult(FulfillmentSubmitResult.Sent("partner-2", null));
+
+        var again = await _harness.SendAsync(Partner);
+
+        // Assert
+        Assert.Equal(FulfillmentRequestStatus.NeedsAttention, unclear.Request.Status);
+        Assert.Equal(FulfillmentReasons.Unclear, unclear.Request.Reason);
         Assert.Equal(0, processed);
-        Assert.Equal(1, _provider.Calls);
+        Assert.Equal(ShipmentStatus.Pending, keptShipment.Status);
+        Assert.Equal(FulfillmentRequestStatus.Sent, again.Request.Status);
+        Assert.Equal(keptShipment.ItemId, again.Request.ShipmentId);
+        Assert.Single(await _harness.LoadShipmentsAsync());
+        Assert.Equal(2, _provider.Calls);
     }
 
     [Fact]
-    public async Task SendAsync_PartnerBusy_WaitsAndTriesAgainLater()
+    public async Task SendAsync_PartnerThrows_OneRequestAndOneNotification_NotRepeatedByTheBackgroundTask()
     {
         // Arrange
-        await RecordAsync();
-        _provider.OnSubmit = () => Task.FromResult(FulfillmentSubmitResult.RetryLater("Busy."));
+        await _harness.RecordAsync();
+        _provider.OnSubmit = _ => throw new HttpRequestException("Gateway timeout.");
 
         // Act
-        var result = await SendOnlyRequestAsync();
-        var tooSoon = await ProcessDueAsync();
-
-        _now = _now.AddMinutes(5);
-        _provider.OnSubmit = () => Task.FromResult(FulfillmentSubmitResult.Sent("partner-2", "Sent."));
-
-        var later = await ProcessDueAsync();
-        var final = await LoadOnlyRequestAsync();
+        await _harness.SendAsync(Partner);
+        await _harness.ProcessDueAsync();
+        _harness.Now = _harness.Now.AddHours(1);
+        await _harness.ProcessDueAsync();
 
         // Assert
-        Assert.Equal(FulfillmentRequestStatus.Pending, result.Status);
+        var request = Assert.Single(await _harness.LoadRequestsAsync());
+        var notified = Assert.Single(_harness.Attention);
+
+        Assert.Equal(request.ItemId, notified.ItemId);
+        Assert.Equal(FulfillmentRequestStatus.NeedsAttention, request.Status);
+        Assert.Equal(1, _provider.Calls);
+
+        await using var session = _harness.Store.CreateSession();
+        var store = new FulfillmentRequestStore(session);
+        var (needsAttention, total) = await store.ListPageAsync(FulfillmentRequestStatus.NeedsAttention, null, 0, 10, FulfillmentTestHarness.Token);
+        var (searched, _) = await store.ListPageAsync(null, "261117", 0, 10, FulfillmentTestHarness.Token);
+        var (sent, _) = await store.ListPageAsync(FulfillmentRequestStatus.Sent, null, 0, 10, FulfillmentTestHarness.Token);
+
+        Assert.Equal(1, total);
+        Assert.Equal(request.ItemId, Assert.Single(needsAttention).ItemId);
+        Assert.Single(searched);
+        Assert.Empty(sent);
+    }
+
+    [Fact]
+    public async Task SendAsync_PartnerDoesNotAnswerInTime_IsUnclearAndKeepsTheShipment()
+    {
+        // Arrange
+        _harness.SubmitTimeout = TimeSpan.FromMilliseconds(100);
+        await _harness.RecordAsync();
+        _provider.OnSubmit = async token =>
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, token);
+
+            return FulfillmentSubmitResult.Sent("never", null);
+        };
+
+        // Act
+        var result = await _harness.SendAsync(Partner);
+
+        // Assert
+        Assert.Equal(FulfillmentRequestStatus.NeedsAttention, result.Request.Status);
+        Assert.Equal(FulfillmentReasons.Unclear, result.Request.Reason);
+        Assert.Equal(ShipmentStatus.Pending, Assert.Single(await _harness.LoadShipmentsAsync()).Status);
+    }
+
+    [Fact]
+    public async Task SendAsync_PartnerBusy_WaitsAndTriesAgainLaterWithTheSameShipment()
+    {
+        // Arrange
+        await _harness.RecordAsync();
+        _provider.OnSubmit = _ => Task.FromResult(FulfillmentSubmitResult.RetryLater("Busy."));
+
+        // Act
+        var busy = await _harness.SendAsync(Partner);
+        var tooSoon = await _harness.ProcessDueAsync();
+
+        _harness.Now = _harness.Now.AddMinutes(5);
+        _provider.OnSubmit = _ => Task.FromResult(FulfillmentSubmitResult.Sent("partner-2", null));
+
+        var later = await _harness.ProcessDueAsync();
+        var final = Assert.Single(await _harness.LoadRequestsAsync());
+
+        // Assert
+        Assert.Equal(FulfillmentRequestStatus.Pending, busy.Request.Status);
         Assert.Equal(0, tooSoon);
         Assert.Equal(1, later);
         Assert.Equal(FulfillmentRequestStatus.Sent, final.Status);
+        Assert.Equal(busy.Request.ShipmentId, final.ShipmentId);
+        Assert.Single(await _harness.LoadShipmentsAsync());
         Assert.Equal(2, _provider.Calls);
+    }
+
+    [Fact]
+    public async Task SendAsync_PartnerBusyThenOrderCanceled_FreesTheUnits()
+    {
+        // Arrange
+        await _harness.RecordAsync();
+        _provider.OnSubmit = _ => Task.FromResult(FulfillmentSubmitResult.RetryLater("Busy."));
+        await _harness.SendAsync(Partner);
+        _harness.Order.Status = OrderStatus.Canceled;
+        _harness.Now = _harness.Now.AddMinutes(5);
+
+        // Act
+        await _harness.ProcessDueAsync();
+
+        // Assert
+        var request = Assert.Single(await _harness.LoadRequestsAsync());
+
+        Assert.Equal(FulfillmentRequestStatus.NeedsAttention, request.Status);
+        Assert.Equal(FulfillmentReasons.NotPaid, request.Reason);
+        Assert.Empty(await _harness.LoadShipmentsAsync());
+        Assert.Equal(1, _provider.Calls);
+    }
+
+    [Fact]
+    public async Task SendAsync_ReservedShipmentShippedByHand_SendsNothing()
+    {
+        // Arrange
+        await _harness.RecordAsync();
+        _provider.OnSubmit = _ => throw new InvalidOperationException("Lost the answer.");
+        await _harness.SendAsync(Partner);
+
+        await using (var session = _harness.Store.CreateSession())
+        {
+            var shipment = Assert.Single(await new ShipmentStore(session).ListByOrderAsync(_harness.Order.ItemId, FulfillmentTestHarness.Token));
+
+            await _harness.Shipments(session).ShipAsync(shipment, new ShipmentDetails("UPS", "1Z1", "https://tracking.example.com/1Z1"), FulfillmentTestHarness.Token);
+            await session.SaveChangesAsync(FulfillmentTestHarness.Token);
+        }
+
+        // Act
+        var result = await _harness.SendAsync(Partner);
+
+        // Assert
+        Assert.Equal(FulfillmentRequestStatus.NothingToSend, result.Request.Status);
+        Assert.Equal(FulfillmentReasons.ShippedByHand, result.Request.Reason);
+        Assert.Equal(1, _provider.Calls);
+    }
+
+    [Fact]
+    public async Task SendAsync_AnotherWorkerHoldsTheOrder_LeavesItAlone()
+    {
+        // Arrange
+        await _harness.RecordAsync();
+        _harness.LockAvailable = false;
+
+        // Act
+        var result = await _harness.SendAsync(Partner);
+
+        // Assert
+        Assert.True(result.TakenByAnotherWorker);
+        Assert.Equal(0, _provider.Calls);
+        Assert.Empty(await _harness.LoadShipmentsAsync());
+    }
+
+    [Fact]
+    public async Task SendAsync_TwoRecordsOfTheSameOrderAndPartner_OnlyOneIsSent()
+    {
+        // Arrange
+        await using (var session = _harness.Store.CreateSession())
+        {
+            var store = new FulfillmentRequestStore(session);
+
+            await store.CreateAsync(_harness.NewRequest("request-a", Partner), FulfillmentTestHarness.Token);
+            await store.CreateAsync(_harness.NewRequest("request-b", Partner), FulfillmentTestHarness.Token);
+            await session.SaveChangesAsync(FulfillmentTestHarness.Token);
+        }
+
+        // Act
+        var a = await _harness.SendByIdAsync("request-a");
+        var b = await _harness.SendByIdAsync("request-b");
+
+        // Assert
+        Assert.Equal(FulfillmentRequestStatus.Sent, a.Request.Status);
+        Assert.Equal(FulfillmentRequestStatus.NothingToSend, b.Request.Status);
+        Assert.Equal(FulfillmentReasons.AlreadySent, b.Request.Reason);
+        Assert.Equal(1, _provider.Calls);
+        Assert.Single(await _harness.LoadShipmentsAsync());
+    }
+
+    [Fact]
+    public async Task RecordAsync_CalledTwice_ReusesTheRequest()
+    {
+        // Act
+        await _harness.RecordAsync();
+        await _harness.RecordAsync();
+
+        // Assert
+        Assert.Single(await _harness.LoadRequestsAsync());
     }
 
     [Fact]
     public async Task SendAsync_OrderNoLongerPaid_AsksAPersonWithoutCallingThePartner()
     {
         // Arrange
-        await RecordAsync();
-        _order.Status = OrderStatus.Canceled;
+        await _harness.RecordAsync();
+        _harness.Order.Status = OrderStatus.Canceled;
 
         // Act
-        var result = await SendOnlyRequestAsync();
+        var result = await _harness.SendAsync(Partner);
 
         // Assert
-        Assert.Equal(FulfillmentRequestStatus.NeedsAttention, result.Status);
+        Assert.Equal(FulfillmentRequestStatus.NeedsAttention, result.Request.Status);
+        Assert.Equal(FulfillmentReasons.NotPaid, result.Request.Reason);
+        Assert.Equal([nameof(OrderStatus.Canceled)], result.Request.ReasonArguments);
         Assert.Equal(0, _provider.Calls);
+        Assert.Empty(await _harness.LoadShipmentsAsync());
     }
 
     [Fact]
-    public async Task FlagStuckAsync_SendInterrupted_AsksAPerson()
+    public async Task FlagStuckAsync_SendInterrupted_AsksAPersonOnceAndKeepsTheShipment()
     {
         // Arrange
-        await using (var session = _store.CreateSession())
+        await using (var session = _harness.Store.CreateSession())
         {
-            var request = NewRequest("request-stuck");
+            var request = _harness.NewRequest("request-stuck", Partner);
 
             request.Status = FulfillmentRequestStatus.Sending;
-            request.ModifiedUtc = _now.AddMinutes(-20);
+            request.ShipmentId = "shipment-stuck";
+            request.ModifiedUtc = _harness.Now.AddMinutes(-20);
 
-            await new FulfillmentRequestStore(session).CreateAsync(request, TestContext.Current.CancellationToken);
-            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            await new FulfillmentRequestStore(session).CreateAsync(request, FulfillmentTestHarness.Token);
+            await session.SaveChangesAsync(FulfillmentTestHarness.Token);
         }
 
         // Act
         int flagged;
+        int flaggedAgain;
 
-        await using (var session = _store.CreateSession())
+        await using (var session = _harness.Store.CreateSession())
         {
-            flagged = await Sender(session).FlagStuckAsync(TestContext.Current.CancellationToken);
+            flagged = await _harness.Sender(session).FlagStuckAsync(FulfillmentTestHarness.Token);
         }
 
-        var result = await LoadOnlyRequestAsync();
+        await using (var session = _harness.Store.CreateSession())
+        {
+            flaggedAgain = await _harness.Sender(session).FlagStuckAsync(FulfillmentTestHarness.Token);
+        }
+
+        var result = Assert.Single(await _harness.LoadRequestsAsync());
 
         // Assert
         Assert.Equal(1, flagged);
+        Assert.Equal(0, flaggedAgain);
         Assert.Equal(FulfillmentRequestStatus.NeedsAttention, result.Status);
+        Assert.Equal(FulfillmentReasons.Interrupted, result.Reason);
+        Assert.Equal("shipment-stuck", result.ShipmentId);
+        Assert.Single(_harness.Attention);
         Assert.Equal(0, _provider.Calls);
-    }
-
-    private async Task RecordAsync()
-    {
-        await using var session = _store.CreateSession();
-
-        await Sender(session).RecordAsync(_order, TestContext.Current.CancellationToken);
-        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
-    }
-
-    private async Task<FulfillmentRequest> SendOnlyRequestAsync()
-    {
-        await using var session = _store.CreateSession();
-        var request = Assert.Single(await new FulfillmentRequestStore(session).ListByOrderAsync(_order.ItemId, TestContext.Current.CancellationToken));
-        var result = await Sender(session).SendAsync(request, TestContext.Current.CancellationToken);
-
-        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        return result;
-    }
-
-    private async Task<FulfillmentRequest> SendAsync(string requestId)
-    {
-        await using var session = _store.CreateSession();
-        var request = await new FulfillmentRequestStore(session).FindByIdAsync(requestId, TestContext.Current.CancellationToken);
-        var result = await Sender(session).SendAsync(request, TestContext.Current.CancellationToken);
-
-        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        return result;
-    }
-
-    private async Task<int> ProcessDueAsync()
-    {
-        await using var session = _store.CreateSession();
-        var processed = await Sender(session).ProcessDueAsync(10, TestContext.Current.CancellationToken);
-
-        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        return processed;
-    }
-
-    private async Task<FulfillmentRequest> LoadOnlyRequestAsync()
-    {
-        await using var session = _store.CreateSession();
-
-        return Assert.Single(await new FulfillmentRequestStore(session).ListByOrderAsync(_order.ItemId, TestContext.Current.CancellationToken));
-    }
-
-    private FulfillmentSender Sender(ISession session)
-    {
-        var orders = new Mock<IOrderStore>();
-        var clock = new Mock<IClock>();
-        var distributedLock = new Mock<IDistributedLock>();
-
-        orders.Setup(o => o.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(() => _order);
-        clock.Setup(c => c.UtcNow).Returns(() => _now);
-        distributedLock
-            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
-            .ReturnsAsync((Mock.Of<ILocker>(), true));
-
-        return new FulfillmentSender(new FulfillmentRequestStore(session), orders.Object, [_provider], clock.Object, distributedLock.Object, NullLogger<FulfillmentSender>.Instance);
-    }
-
-    private FulfillmentRequest NewRequest(string itemId)
-        => new()
-        {
-            ItemId = itemId,
-            OrderId = _order.ItemId,
-            OrderNumber = _order.OrderNumber,
-            ProviderName = FakeProvider.ProviderName,
-            Status = FulfillmentRequestStatus.Pending,
-            NextAttemptUtc = _now,
-            CreatedUtc = _now,
-            ModifiedUtc = _now,
-        };
-
-    private static Order PaidOrder()
-        => new()
-        {
-            ItemId = "order-1",
-            OrderNumber = "261117-ABC",
-            Status = OrderStatus.Paid,
-            CustomerEmail = "test@example.com",
-            ShippingAddress = new Address { Name = "Test Customer", AddressLine1 = "123 Test Street", City = "Cincinnati", Region = "OH", PostalCode = "45202", Country = "US" },
-            Lines = [new OrderLine { LineId = "l1", ContentItemId = "p1", VariantId = "v1", Title = "Tee", Quantity = 1, ProductType = ProductType.Good }],
-        };
-
-    private sealed class FakeProvider : IFulfillmentProvider
-    {
-        public const string ProviderName = "Fake";
-
-        public int Calls { get; private set; }
-
-        public Func<Task<FulfillmentSubmitResult>> OnSubmit { get; set; } = () => Task.FromResult(FulfillmentSubmitResult.Sent("partner-1", "Sent."));
-
-        public string Name => ProviderName;
-
-        public LocalizedString DisplayName => new(ProviderName, ProviderName);
-
-        public Task<bool> IsConnectedAsync()
-            => Task.FromResult(true);
-
-        public Task<FulfillmentConnectionResult> TestConnectionAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(FulfillmentConnectionResult.Success("Connected."));
-
-        public Task<FulfillmentSubmitResult> SubmitAsync(FulfillmentOrder order, CancellationToken cancellationToken = default)
-        {
-            Calls++;
-
-            return OnSubmit();
-        }
     }
 }
