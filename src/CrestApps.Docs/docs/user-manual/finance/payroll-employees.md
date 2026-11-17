@@ -55,4 +55,4 @@ Nobody can change their own pay profile in these pages, even with the permission
 
 ## Confirm your password to see pay
 
-Every page that shows pay statements or pay details, yours or someone else's, first asks for your password, so nobody can read pay at a computer you left signed in. Type your password and choose **Confirm**: pay pages then open without asking again for 10 minutes. A user who signs in only with an outside account (such as Microsoft) sets a password on their profile first.
+Every page that shows pay statements or pay details, yours or someone else's, first asks for your password, so nobody can read pay at a computer you left signed in. Type your password and choose **Confirm**: pay pages then open without asking again for 10 minutes. Your own pay, in your profile's **Pay** section, asks every time you open it. A user who signs in only with an outside account (such as Microsoft) sets a password on their profile first.

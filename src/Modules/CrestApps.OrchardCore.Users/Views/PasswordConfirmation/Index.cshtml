@@ -11,7 +11,7 @@
         <div class="card-body">
             @if (Model.HasPassword)
             {
-                <p class="hint">@T["This page shows private information, such as pay. Enter your password to see it. You won't be asked again for {0} minutes in this browser.", Model.Minutes]</p>
+                <p class="hint">@T["This page shows private information, such as pay. Enter your password to see it. Your own pay asks every time you open it; other private pages won't ask again for {0} minutes in this browser.", Model.Minutes]</p>
                 <div class="ocat-wrapper" asp-validation-class-for="Password">
                     <label asp-for="Password" class="ocat-label ocat-label-required">@T["Your password"]</label>
                     <div class="ocat-end ocat-limited-wrapper">

@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Payroll.Controllers;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Users.Core.Services;
@@ -124,7 +125,56 @@ public sealed class PayPrivacyTests
         Assert.Equal(StaffPayVisibility.Prompt, first);
         Assert.Equal(StaffPayVisibility.Hide, second);
         Assert.Equal(StaffPayVisibility.Show, shown);
-        Assert.Equal("/confirm?returnUrl=/Admin/staff/profile/1", StaffPayPrivacy.ConfirmUrl(unconfirmed));
+        Assert.Equal("/confirm?returnUrl=/Admin/staff/profile/1#staff-pay", StaffPayPrivacy.ConfirmUrl(unconfirmed));
+    }
+
+    [Fact]
+    public async Task APersonsOwnPay_AsksEveryTimeTheProfileOpens_WhileSomeoneElsesHoldsForTheWindow()
+    {
+        // Arrange: Lee confirmed a few minutes ago, but not for this page.
+        var own = new StaffMember { ItemId = "1", UserId = "lee-id" };
+        var colleague = new StaffMember { ItemId = "2", UserId = "sam-id" };
+
+        // Act
+        var ownPay = await StaffPayPrivacy.DecideAsync(Signed(new FakeConfirmation { Confirmed = true }), own);
+        var colleaguePay = await StaffPayPrivacy.DecideAsync(Signed(new FakeConfirmation { Confirmed = true }), colleague);
+        var ownPayJustConfirmed = await StaffPayPrivacy.DecideAsync(Signed(new FakeConfirmation { Confirmed = true, JustConfirmed = true }), own);
+
+        // Assert
+        Assert.Equal(StaffPayVisibility.Prompt, ownPay);
+        Assert.Equal(StaffPayVisibility.Show, colleaguePay);
+        Assert.Equal(StaffPayVisibility.Show, ownPayJustConfirmed);
+    }
+
+    [Fact]
+    public async Task AJustConfirmedPassword_ShowsTheNextPageOnce_ForThePersonWhoTypedIt()
+    {
+        // Arrange: Lee types the password; the next request carries both cookies the response set.
+        var provider = new EphemeralDataProtectionProvider();
+        var lee = User("lee-id");
+        var confirming = new DefaultHttpContext();
+
+        await Service(confirming, provider).ConfirmAsync(lee, TestContext.Current.CancellationToken);
+
+        var cookies = Cookies(confirming);
+        var page = RequestWith(cookies);
+        var service = Service(page, provider);
+
+        // Act: every pay card of the page asks, then the page opens again with the cookie used up.
+        var first = await service.IsJustConfirmedAsync(lee, TestContext.Current.CancellationToken);
+        var sameRequest = await service.IsJustConfirmedAsync(lee, TestContext.Current.CancellationToken);
+        var forSam = await Service(RequestWith(cookies), provider).IsJustConfirmedAsync(User("sam-id"), TestContext.Current.CancellationToken);
+        var openedAgain = await Service(RequestWith(cookies.Where(cookie => cookie.Key != PasswordConfirmation.JustConfirmedCookieName)), provider)
+            .IsJustConfirmedAsync(lee, TestContext.Current.CancellationToken);
+        var stillInWindow = await Service(RequestWith(cookies), provider).IsConfirmedAsync(lee, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(first);
+        Assert.True(sameRequest);
+        Assert.False(forSam);
+        Assert.False(openedAgain);
+        Assert.True(stillInWindow);
+        Assert.Contains(PasswordConfirmation.JustConfirmedCookieName + "=;", page.Response.Headers.SetCookie.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -191,6 +241,20 @@ public sealed class PayPrivacyTests
         return Uri.UnescapeDataString(header[start..header.IndexOf(';')]);
     }
 
+    private static Dictionary<string, string> Cookies(DefaultHttpContext httpContext)
+        => httpContext.Response.Headers.SetCookie
+            .Select(header => header[..header.IndexOf(';')])
+            .ToDictionary(pair => pair[..pair.IndexOf('=')], pair => Uri.UnescapeDataString(pair[(pair.IndexOf('=') + 1)..]));
+
+    private static DefaultHttpContext RequestWith(IEnumerable<KeyValuePair<string, string>> cookies)
+    {
+        var httpContext = new DefaultHttpContext();
+
+        httpContext.Request.Headers.Cookie = string.Join("; ", cookies.Select(cookie => cookie.Key + "=" + Uri.EscapeDataString(cookie.Value)));
+
+        return httpContext;
+    }
+
     private static DefaultHttpContext Request(string cookie)
     {
         var httpContext = new DefaultHttpContext();
@@ -237,8 +301,13 @@ public sealed class PayPrivacyTests
         public TimeSpan Window
             => TimeSpan.FromMinutes(10);
 
+        public bool JustConfirmed { get; set; }
+
         public Task<bool> IsConfirmedAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
             => Task.FromResult(Confirmed);
+
+        public Task<bool> IsJustConfirmedAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+            => Task.FromResult(JustConfirmed);
 
         public Task ConfirmAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
         {

@@ -171,4 +171,4 @@ public sealed class MyPayController : Controller
 }
 ```
 
-A display driver that shows private data on a page others can open checks `IsConfirmedAsync(user)` itself and renders a prompt that links to `GetConfirmationUrl(returnUrl)`. Without the Users feature, `[ConfirmPassword]` refuses the page.
+A display driver that shows private data on a page others can open checks `IsConfirmedAsync(user)` itself and renders a prompt that links to `GetConfirmationUrl(returnUrl)`. A page that must ask every time it is opened, such as a person's own pay, checks `IsJustConfirmedAsync(user)` instead: it is true only on the first page the person opens right after typing their password (a second, one-minute cookie that the check deletes), and every caller in that request gets the same answer. Without the Users feature, `[ConfirmPassword]` refuses the page.

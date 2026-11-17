@@ -18,7 +18,7 @@ technical_manual:
 
 ## Confirm your password
 
-Pay is private: before showing it, the **Pay** section asks for your password. Choose **Confirm your password**, type it and choose **Confirm**. For the next 10 minutes your pay pages open without asking again; after that, or on another browser, you are asked again. If you sign in only with an outside account, set a password on your profile first.
+Pay is private: every time you open your profile's **Pay** section, it asks for your password, so nobody can read your pay at a computer you left signed in. Choose **Confirm your password**, type it and choose **Confirm**: the profile opens at **Pay**. Reopening your profile later asks again. A statement, a stub or your elections opened from **Pay** don't ask again for 10 minutes. If you sign in only with an outside account, set a password on your profile first.
 
 ## See your pay statements
 

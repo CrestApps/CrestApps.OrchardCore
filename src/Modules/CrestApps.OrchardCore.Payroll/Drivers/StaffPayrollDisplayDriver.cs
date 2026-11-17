@@ -47,7 +47,7 @@ internal sealed class StaffPayrollDisplayDriver : DisplayDriver<StaffMember>
         }
 
         // Pay is private: until the viewer confirms their password, the card is the one prompt, or nothing.
-        switch (await StaffPayPrivacy.DecideAsync(_httpContextAccessor.HttpContext))
+        switch (await StaffPayPrivacy.DecideAsync(_httpContextAccessor.HttpContext, staff))
         {
             case StaffPayVisibility.Hide:
                 return null;
