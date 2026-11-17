@@ -41,6 +41,8 @@ public sealed class InvoiceIndexProvider : IndexProvider<Invoice>
     {
         context
             .For<InvoiceIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(invoice => new InvoiceIndex
             {
                 ItemId = invoice.ItemId,

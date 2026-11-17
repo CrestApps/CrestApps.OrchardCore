@@ -41,6 +41,8 @@ namespace CrestApps.OrchardCore.Transactions.Core.Indexes
         {
             context
                 .For<PartyCollectionSettingsIndex>()
+                .ExclusiveToDocumentType()
+                .SingleRecordPerDocument()
                 .Map(settings => new PartyCollectionSettingsIndex
                 {
                     ItemId = settings.ItemId,

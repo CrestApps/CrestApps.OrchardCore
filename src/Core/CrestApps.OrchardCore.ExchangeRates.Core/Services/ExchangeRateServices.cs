@@ -47,6 +47,8 @@ namespace CrestApps.OrchardCore.ExchangeRates.Core.Indexes
         {
             context
                 .For<ExchangeRateIndex>()
+                .ExclusiveToDocumentType()
+                .SingleRecordPerDocument()
                 .Map(rate => new ExchangeRateIndex
                 {
                     ItemId = rate.ItemId,

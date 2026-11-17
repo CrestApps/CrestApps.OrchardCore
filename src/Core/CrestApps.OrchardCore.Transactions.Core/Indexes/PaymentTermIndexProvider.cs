@@ -26,6 +26,8 @@ public sealed class PaymentTermIndexProvider : IndexProvider<PaymentTerm>
     {
         context
             .For<PaymentTermIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(term => new PaymentTermIndex
             {
                 ItemId = term.ItemId,

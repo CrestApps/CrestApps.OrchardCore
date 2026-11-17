@@ -27,6 +27,8 @@ public sealed class TransactionIndexProvider : IndexProvider<Transaction>
     public override void Describe(DescribeContext<Transaction> context)
     {
         context.For<TransactionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(transaction =>
             {
                 // The payer as recorded, or as it follows from the owner for a transaction older than the payer.

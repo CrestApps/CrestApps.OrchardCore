@@ -21,6 +21,8 @@ public sealed class AppointmentTypeIndexProvider : IndexProvider<AppointmentType
     public override void Describe(DescribeContext<AppointmentType> context)
     {
         context.For<AppointmentTypeIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(type => new AppointmentTypeIndex
             {
                 ItemId = type.ItemId,

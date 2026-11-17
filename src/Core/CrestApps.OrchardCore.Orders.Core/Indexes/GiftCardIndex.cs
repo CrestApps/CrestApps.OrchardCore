@@ -47,6 +47,8 @@ public sealed class GiftCardIndexProvider : IndexProvider<GiftCard>
     public override void Describe(DescribeContext<GiftCard> context)
     {
         context.For<GiftCardIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(card => new GiftCardIndex
             {
                 ItemId = card.ItemId,

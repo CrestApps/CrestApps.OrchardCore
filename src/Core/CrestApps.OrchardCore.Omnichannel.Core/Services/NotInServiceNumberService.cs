@@ -211,7 +211,12 @@ public sealed class NotInServiceNumberService : INotInServiceNumberService
 
         var query = string.IsNullOrEmpty(digits)
             ? _session.Query<NotInServiceNumber, NotInServiceNumberIndex>(collection: OmnichannelConstants.CollectionName)
-            : _session.Query<NotInServiceNumber, NotInServiceNumberIndex>(index => index.PhoneNumber.Contains(digits), collection: OmnichannelConstants.CollectionName);
+            : _session.Query<NotInServiceNumber>(collection: OmnichannelConstants.CollectionName)
+
+                // A text can't seek. Without the grouping, the database could walk the index of the detection date
+                // looking for the few numbers that contain the digits, all of it when none does.
+                .NoIndexOptimizations()
+                .With<NotInServiceNumberIndex>(index => index.PhoneNumber.Contains(digits));
 
         var ordered = query.OrderByDescending(index => index.LastDetectedUtc);
         var skip = (Math.Max(page, 1) - 1) * pageSize;

@@ -16,6 +16,8 @@ internal sealed class BusinessDocumentTemplateIndexProvider : IndexProvider<Busi
     {
         context
             .For<BusinessDocumentTemplateIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(template => new BusinessDocumentTemplateIndex
             {
                 ItemId = template.ItemId,

@@ -106,6 +106,8 @@ public sealed class PayProfileIndexProvider : IndexProvider<EmployeePayProfile>
     {
         context
             .For<PayProfileIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new PayProfileIndex
             {
                 ItemId = item.ItemId,
@@ -137,6 +139,8 @@ public sealed class PayItemIndexProvider : IndexProvider<EmployeePayItem>
     {
         context
             .For<PayItemIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new PayItemIndex
             {
                 ItemId = item.ItemId,
@@ -166,6 +170,8 @@ public sealed class EmployerIndexProvider : IndexProvider<Employer>
     {
         context
             .For<EmployerIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new EmployerIndex
             {
                 ItemId = item.ItemId,

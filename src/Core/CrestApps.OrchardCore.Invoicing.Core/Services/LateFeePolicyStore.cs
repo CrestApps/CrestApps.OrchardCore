@@ -44,6 +44,8 @@ namespace CrestApps.OrchardCore.Invoicing.Core.Indexes
         {
             context
                 .For<LateFeePolicyIndex>()
+                .ExclusiveToDocumentType()
+                .SingleRecordPerDocument()
                 .Map(policy => new LateFeePolicyIndex
                 {
                     ItemId = policy.ItemId,

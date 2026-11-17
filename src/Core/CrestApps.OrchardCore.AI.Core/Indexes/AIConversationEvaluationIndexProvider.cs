@@ -24,6 +24,8 @@ public sealed class AIConversationEvaluationIndexProvider : IndexProvider<AIConv
     public override void Describe(DescribeContext<AIConversationEvaluation> context)
     {
         context.For<AIConversationEvaluationIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(evaluation => new AIConversationEvaluationIndex
             {
                 ItemId = evaluation.ItemId,

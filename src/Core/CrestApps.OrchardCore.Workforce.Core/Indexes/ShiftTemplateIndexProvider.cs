@@ -20,6 +20,8 @@ public sealed class ShiftTemplateIndexProvider : IndexProvider<ShiftTemplate>
     public override void Describe(DescribeContext<ShiftTemplate> context)
     {
         context.For<ShiftTemplateIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new ShiftTemplateIndex
             {
                 ItemId = item.ItemId,

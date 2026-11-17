@@ -15,6 +15,8 @@ internal sealed class BankAccountIndexProvider : IndexProvider<BankAccount>
     {
         context
             .For<BankAccountIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(account => new BankAccountIndex
             {
                 ItemId = account.ItemId,

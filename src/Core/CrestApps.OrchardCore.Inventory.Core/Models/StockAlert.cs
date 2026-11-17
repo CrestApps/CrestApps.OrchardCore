@@ -61,14 +61,17 @@ public sealed class StockAlertIndexProvider : IndexProvider<StockAlert>
     }
 
     public override void Describe(DescribeContext<StockAlert> context)
-        => context.For<StockAlertIndex>().Map(alert => new StockAlertIndex
-        {
-            StockItemId = alert.StockItemId,
-            ContentItemId = alert.ContentItemId,
-            VariantId = alert.VariantId,
-            NormalizedEmail = alert.Email?.Trim().ToUpperInvariant(),
-            UserId = alert.UserId,
-            Waiting = alert.SentUtc is null,
-            CreatedUtc = alert.CreatedUtc,
-        });
+        => context.For<StockAlertIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(alert => new StockAlertIndex
+            {
+                StockItemId = alert.StockItemId,
+                ContentItemId = alert.ContentItemId,
+                VariantId = alert.VariantId,
+                NormalizedEmail = alert.Email?.Trim().ToUpperInvariant(),
+                UserId = alert.UserId,
+                Waiting = alert.SentUtc is null,
+                CreatedUtc = alert.CreatedUtc,
+            });
 }

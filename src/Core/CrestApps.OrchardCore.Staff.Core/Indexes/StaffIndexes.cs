@@ -141,6 +141,8 @@ public sealed class StaffMemberIndexProvider : IndexProvider<StaffMember>
     public override void Describe(DescribeContext<StaffMember> context)
     {
         context.For<StaffMemberIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(staff => new StaffMemberIndex
             {
                 ItemId = staff.ItemId,
@@ -156,6 +158,7 @@ public sealed class StaffMemberIndexProvider : IndexProvider<StaffMember>
             });
 
         context.For<StaffTeamMembershipIndex>()
+            .ExclusiveToDocumentType()
             .Map(staff => (staff.TeamMemberships ?? [])
                 .Where(membership => !string.IsNullOrEmpty(membership?.TeamId))
                 .Select(membership => new StaffTeamMembershipIndex
@@ -168,6 +171,7 @@ public sealed class StaffMemberIndexProvider : IndexProvider<StaffMember>
                 }));
 
         context.For<StaffCapabilityIndex>()
+            .ExclusiveToDocumentType()
             .Map(staff => (staff.Capabilities ?? [])
                 .Where(capability => !string.IsNullOrWhiteSpace(capability))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -196,6 +200,8 @@ public sealed class StaffHistoryIndexProvider : IndexProvider<StaffHistoryEntry>
     public override void Describe(DescribeContext<StaffHistoryEntry> context)
     {
         context.For<StaffHistoryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(entry => new StaffHistoryIndex
             {
                 ItemId = entry.ItemId,

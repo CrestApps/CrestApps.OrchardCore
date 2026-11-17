@@ -19,6 +19,8 @@ internal sealed class NotInServiceNumberIndexProvider : IndexProvider<NotInServi
     {
         context
             .For<NotInServiceNumberIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(number => new NotInServiceNumberIndex
             {
                 ItemId = number.ItemId,

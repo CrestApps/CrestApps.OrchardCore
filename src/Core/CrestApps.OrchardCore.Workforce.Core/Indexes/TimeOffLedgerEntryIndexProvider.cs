@@ -20,6 +20,8 @@ public sealed class TimeOffLedgerEntryIndexProvider : IndexProvider<TimeOffLedge
     public override void Describe(DescribeContext<TimeOffLedgerEntry> context)
     {
         context.For<TimeOffLedgerEntryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new TimeOffLedgerEntryIndex
             {
                 ItemId = item.ItemId,

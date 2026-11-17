@@ -47,6 +47,8 @@ public sealed class EstimateIndexProvider : IndexProvider<Estimate>
     {
         context
             .For<EstimateIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(estimate => new EstimateIndex
             {
                 ItemId = estimate.ItemId,

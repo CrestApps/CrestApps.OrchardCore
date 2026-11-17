@@ -20,6 +20,8 @@ public sealed class LaborRuleSetIndexProvider : IndexProvider<LaborRuleSet>
     public override void Describe(DescribeContext<LaborRuleSet> context)
     {
         context.For<LaborRuleSetIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new LaborRuleSetIndex
             {
                 ItemId = item.ItemId,

@@ -20,6 +20,8 @@ public sealed class BlackoutPeriodIndexProvider : IndexProvider<BlackoutPeriod>
     public override void Describe(DescribeContext<BlackoutPeriod> context)
     {
         context.For<BlackoutPeriodIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new BlackoutPeriodIndex
             {
                 ItemId = item.ItemId,

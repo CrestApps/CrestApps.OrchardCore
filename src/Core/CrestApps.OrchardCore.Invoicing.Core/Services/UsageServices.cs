@@ -46,6 +46,8 @@ namespace CrestApps.OrchardCore.Invoicing.Core.Indexes
         {
             context
                 .For<UsageMeterIndex>()
+                .ExclusiveToDocumentType()
+                .SingleRecordPerDocument()
                 .Map(meter => new UsageMeterIndex
                 {
                     ItemId = meter.ItemId,
@@ -92,6 +94,8 @@ namespace CrestApps.OrchardCore.Invoicing.Core.Indexes
         {
             context
                 .For<UsageRecordIndex>()
+                .ExclusiveToDocumentType()
+                .SingleRecordPerDocument()
                 .Map(record => new UsageRecordIndex
                 {
                     ItemId = record.ItemId,

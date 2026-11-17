@@ -65,12 +65,16 @@ public sealed class PayrollFilingIndexProvider : IndexProvider<TaxDeposit>
 
     /// <inheritdoc />
     public override void Describe(DescribeContext<TaxDeposit> context)
-        => context.For<TaxDepositIndex>().Map(deposit => new TaxDepositIndex
-        {
-            ItemId = deposit.ItemId,
-            EmployerId = deposit.EmployerId,
-            PeriodEndDay = PayrollFilingDays.Day(deposit.PeriodEnd),
-        });
+        => context
+            .For<TaxDepositIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(deposit => new TaxDepositIndex
+            {
+                ItemId = deposit.ItemId,
+                EmployerId = deposit.EmployerId,
+                PeriodEndDay = PayrollFilingDays.Day(deposit.PeriodEnd),
+            });
 }
 
 /// <summary>Maps filings to their index rows.</summary>
@@ -84,15 +88,19 @@ public sealed class PayrollFilingRecordIndexProvider : IndexProvider<PayrollFili
 
     /// <inheritdoc />
     public override void Describe(DescribeContext<PayrollFiling> context)
-        => context.For<PayrollFilingIndex>().Map(filing => new PayrollFilingIndex
-        {
-            ItemId = filing.ItemId,
-            EmployerId = filing.EmployerId,
-            Form = filing.Form,
-            Year = filing.Year,
-            Quarter = filing.Quarter,
-            Status = filing.Status.ToString(),
-        });
+        => context
+            .For<PayrollFilingIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(filing => new PayrollFilingIndex
+            {
+                ItemId = filing.ItemId,
+                EmployerId = filing.EmployerId,
+                Form = filing.Form,
+                Year = filing.Year,
+                Quarter = filing.Quarter,
+                Status = filing.Status.ToString(),
+            });
 }
 
 /// <summary>Days as numbers (yyyymmdd), as the statement index keeps them.</summary>

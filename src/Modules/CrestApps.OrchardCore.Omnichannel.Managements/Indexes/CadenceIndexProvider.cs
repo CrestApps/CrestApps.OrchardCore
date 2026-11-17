@@ -19,6 +19,8 @@ internal sealed class CadenceIndexProvider : IndexProvider<Cadence>
     {
         context
             .For<CadenceIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(schedule => new CadenceIndex
             {
                 ItemId = schedule.ItemId,

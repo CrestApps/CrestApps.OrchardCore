@@ -23,6 +23,8 @@ public sealed class ActivityReservationIndexProvider : IndexProvider<ActivityRes
     {
         context
             .For<ActivityReservationIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(reservation => new ActivityReservationIndex
             {
                 ItemId = reservation.ItemId,

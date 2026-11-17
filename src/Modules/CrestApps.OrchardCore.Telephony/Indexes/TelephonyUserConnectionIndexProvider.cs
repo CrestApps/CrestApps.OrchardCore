@@ -27,6 +27,7 @@ public sealed class TelephonyUserConnectionIndexProvider : IndexProvider<User>
     public override void Describe(DescribeContext<User> context)
     {
         context.For<TelephonyUserConnectionIndex>()
+            .ExclusiveToDocumentType()
             .Map(user =>
             {
                 var rows = new List<TelephonyUserConnectionIndex>();

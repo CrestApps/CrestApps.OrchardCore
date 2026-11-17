@@ -71,6 +71,8 @@ public sealed class ReportDesignDraftIndexProvider : IndexProvider<ReportDesignD
     {
         context
             .For<ReportDesignDraftIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(draft => new ReportDesignDraftIndex
             {
                 DesignId = draft.DesignId,
@@ -95,6 +97,8 @@ public sealed class ReportDesignVersionIndexProvider : IndexProvider<ReportDesig
     {
         context
             .For<ReportDesignVersionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(version => new ReportDesignVersionIndex
             {
                 DesignId = version.DesignId,

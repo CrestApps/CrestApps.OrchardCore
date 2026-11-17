@@ -44,6 +44,8 @@ public sealed class BalanceLedgerEntryIndexProvider : IndexProvider<BalanceLedge
     {
         context
             .For<BalanceLedgerEntryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(record => new BalanceLedgerEntryIndex
             {
                 Ledger = record.Ledger,

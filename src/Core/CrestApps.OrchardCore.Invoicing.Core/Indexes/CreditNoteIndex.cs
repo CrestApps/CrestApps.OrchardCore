@@ -58,6 +58,8 @@ public sealed class CreditNoteIndexProvider : IndexProvider<CreditNote>
     {
         context
             .For<CreditNoteIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(note => new CreditNoteIndex
             {
                 ItemId = note.ItemId,

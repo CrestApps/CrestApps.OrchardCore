@@ -55,6 +55,8 @@ namespace CrestApps.OrchardCore.Invoicing.Core.Indexes
         {
             context
                 .For<RecurringPlanIndex>()
+                .ExclusiveToDocumentType()
+                .SingleRecordPerDocument()
                 .Map(plan => new RecurringPlanIndex
                 {
                     ItemId = plan.ItemId,

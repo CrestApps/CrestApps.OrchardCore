@@ -20,6 +20,8 @@ public sealed class ScheduleScenarioIndexProvider : IndexProvider<ScheduleScenar
     public override void Describe(DescribeContext<ScheduleScenario> context)
     {
         context.For<ScheduleScenarioIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new ScheduleScenarioIndex
             {
                 ItemId = item.ItemId,

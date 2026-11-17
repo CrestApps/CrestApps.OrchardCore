@@ -72,6 +72,8 @@ public sealed class TelephonyInteractionIndexProvider : IndexProvider<TelephonyI
     public override void Describe(DescribeContext<TelephonyInteraction> context)
     {
         context.For<TelephonyInteractionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(interaction => new TelephonyInteractionIndex
             {
                 InteractionId = interaction.InteractionId,

@@ -23,6 +23,8 @@ public sealed class MessagingBroadcastIndexProvider : IndexProvider<MessagingBro
     {
         context
             .For<MessagingBroadcastIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(broadcast => new MessagingBroadcastIndex
             {
                 ItemId = broadcast.ItemId,

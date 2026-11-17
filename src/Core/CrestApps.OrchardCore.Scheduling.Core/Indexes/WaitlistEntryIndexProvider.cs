@@ -21,6 +21,8 @@ public sealed class WaitlistEntryIndexProvider : IndexProvider<WaitlistEntry>
     public override void Describe(DescribeContext<WaitlistEntry> context)
     {
         context.For<WaitlistEntryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(entry => new WaitlistEntryIndex
             {
                 ItemId = entry.ItemId,

@@ -16,6 +16,8 @@ internal sealed class CheckRecordIndexProvider : IndexProvider<CheckRecord>
     {
         context
             .For<CheckRecordIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(check => new CheckRecordIndex
             {
                 ItemId = check.ItemId,

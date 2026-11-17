@@ -62,6 +62,8 @@ public sealed class TenantProvisioningJobIndexProvider : IndexProvider<TenantPro
     public override void Describe(DescribeContext<TenantProvisioningJob> context)
     {
         context.For<TenantProvisioningJobIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(job => new TenantProvisioningJobIndex
             {
                 ItemId = job.ItemId,

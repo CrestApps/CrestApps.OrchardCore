@@ -56,6 +56,8 @@ namespace CrestApps.OrchardCore.Invoicing.Core.Indexes
         {
             context
                 .For<BillableItemIndex>()
+                .ExclusiveToDocumentType()
+                .SingleRecordPerDocument()
                 .Map(item => new BillableItemIndex
                 {
                     ItemId = item.ItemId,
