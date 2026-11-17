@@ -196,7 +196,9 @@ public sealed class ShipmentLabelsAdminController : Controller
             return RedirectToAction(nameof(Label), new { shipmentId });
         }
 
-        var label = await carrier.BuyLabelAsync(model.QuoteId, model.RateId, HttpContext.RequestAborted);
+        // From the purchase to the commit, nothing stops for an aborted request: a label the carrier sold is paid for, and
+        // a shipment that didn't record it would be sold a second one.
+        var label = await carrier.BuyLabelAsync(model.QuoteId, model.RateId, CancellationToken.None);
 
         if (!label.Succeeded)
         {
@@ -210,14 +212,14 @@ public sealed class ShipmentLabelsAdminController : Controller
         shipment.LabelCurrency = label.Currency;
 
         // Kept on the shipment even if it can't be shipped below, so the label isn't bought again.
-        await _shipments.UpdateAsync(shipment, HttpContext.RequestAborted);
+        await _shipments.UpdateAsync(shipment, CancellationToken.None);
 
         // The label is paid for, so the shipment is on its way with the carrier's tracking.
-        var shipped = await _shipmentService.ShipAsync(shipment, new ShipmentDetails(label.Carrier, label.TrackingNumber, label.TrackingUrl), HttpContext.RequestAborted);
+        var shipped = await _shipmentService.ShipAsync(shipment, new ShipmentDetails(label.Carrier, label.TrackingNumber, label.TrackingUrl), CancellationToken.None);
 
         try
         {
-            await _session.SaveChangesAsync(HttpContext.RequestAborted);
+            await _session.SaveChangesAsync(CancellationToken.None);
         }
         catch (ConcurrencyException)
         {
