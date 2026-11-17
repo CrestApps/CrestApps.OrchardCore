@@ -184,6 +184,62 @@ public sealed class AIChatHubSynthesizeSpeechVoiceTests
         Assert.True(harness.TextToSpeech.WasCalled);
     }
 
+    // Fix verification Mild: read-aloud is a text-to-speech call on the site's provider for any text the caller sends,
+    // so it is held to the profiles that speak, as the chat views are when they show the button.
+    [Fact]
+    public async Task SynthesizeSpeech_ProfileDoesNotSpeak_SpeaksNothing()
+    {
+        // Arrange
+        var harness = new Harness("en-US-GuyNeural", "en-US-JennyNeural", _azureSpeechVoices, configureProfile: profile =>
+            profile.AlterSettings<ChatModeProfileSettings>(settings =>
+            {
+                settings.EnableTextToSpeechPlayback = false;
+                settings.ChatMode = ChatMode.TextInput;
+            }));
+
+        // Act
+        await harness.Hub.SynthesizeSpeech("profile-1", "session-1", "Hello there.", voiceName: null);
+
+        // Assert
+        Assert.False(harness.TextToSpeech.WasCalled);
+        harness.Caller.Verify(client => client.ReceiveError("Text-to-speech is not enabled for this profile."), Times.Once);
+    }
+
+    [Fact]
+    public async Task SynthesizeSpeech_ProfileIsInConversationMode_Speaks()
+    {
+        // Arrange
+        var harness = new Harness("en-US-GuyNeural", "en-US-JennyNeural", _azureSpeechVoices, configureProfile: profile =>
+            profile.AlterSettings<ChatModeProfileSettings>(settings =>
+            {
+                settings.EnableTextToSpeechPlayback = false;
+                settings.ChatMode = ChatMode.Conversation;
+            }));
+
+        // Act
+        await harness.Hub.SynthesizeSpeech("profile-1", "session-1", "Hello there.", voiceName: null);
+
+        // Assert
+        Assert.True(harness.TextToSpeech.WasCalled);
+    }
+
+    // Fix verification Mild: the message limit counts calls, not characters, and one call could carry text up to the
+    // hub's message size.
+    [Fact]
+    public async Task SynthesizeSpeech_TextIsLongerThanTheCap_SpeaksNothing()
+    {
+        // Arrange
+        var harness = new Harness("en-US-GuyNeural", "en-US-JennyNeural", _azureSpeechVoices);
+
+        // Act
+        await harness.Hub.SynthesizeSpeech("profile-1", "session-1", new string('a', 10_001), voiceName: null);
+        await harness.Hub.SynthesizeSpeech("profile-1", "session-1", new string('b', 10_000), voiceName: null);
+
+        // Assert
+        harness.Caller.Verify(client => client.ReceiveError("This message is too long to read aloud."), Times.Once);
+        Assert.Equal(new string('b', 10_000), harness.TextToSpeech.Text);
+    }
+
     [Fact]
     public async Task SelectVoiceAsync_AskedTwice_FetchesTheVoiceListOnce()
     {
@@ -220,7 +276,11 @@ public sealed class AIChatHubSynthesizeSpeechVoiceTests
             FeatureCollection features = null)
         {
             var profile = new AIProfile { ItemId = "profile-1", Name = "support", Type = AIProfileType.Chat };
-            profile.AlterSettings<ChatModeProfileSettings>(settings => settings.VoiceName = profileVoice);
+            profile.AlterSettings<ChatModeProfileSettings>(settings =>
+            {
+                settings.VoiceName = profileVoice;
+                settings.EnableTextToSpeechPlayback = true;
+            });
             configureProfile?.Invoke(profile);
 
             var profileManager = new Mock<IAIProfileManager>();

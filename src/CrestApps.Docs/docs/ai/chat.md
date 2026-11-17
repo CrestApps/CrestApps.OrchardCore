@@ -117,7 +117,7 @@ TTS playback can be enabled at two levels:
 
 #### Behavior
 
-When a user clicks the playback button on a message, the text is sent to the configured TTS provider and audio is streamed back to the browser. Starting another message's playback stops the current one. See [Listen to an answer](../user-manual/ai/chat.md#listen-to-an-answer) for what the user sees.
+When a user clicks the playback button on a message, the text is sent to the configured TTS provider and audio is streamed back to the browser. Starting another message's playback stops the current one. The chat hub reads aloud only for a profile with **Enable text-to-speech playback** on or in Conversation mode, counts each read-aloud against the profile's message limit, and refuses a text longer than 10,000 characters. See [Listen to an answer](../user-manual/ai/chat.md#listen-to-an-answer) for what the user sees.
 
 ### Session document uploads
 

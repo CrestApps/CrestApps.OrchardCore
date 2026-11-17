@@ -55,6 +55,10 @@ namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 [AllowAnonymous]
 public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 {
+    // The longest text one read-aloud speaks. An answer is read aloud in one call, and without a cap one call could
+    // carry text up to the hub's message size to the text-to-speech provider.
+    private const int MaxReadAloudLength = 10_000;
+
     private readonly IStringLocalizer S;
 
     /// <summary>
@@ -308,6 +312,13 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
             return;
         }
 
+        if (text.Length > MaxReadAloudLength)
+        {
+            await Clients.Caller.ReceiveError(S["This message is too long to read aloud."].Value);
+
+            return;
+        }
+
         var cancellationToken = Context.ConnectionAborted;
 
         try
@@ -331,6 +342,17 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
                     return;
                 }
 
+                // Read-aloud is offered only by a profile that speaks: one with playback on, or in conversation mode, as
+                // the chat views decide when they show the button.
+                profile.TryGetSettings<ChatModeProfileSettings>(out var chatModeSettings);
+
+                if (chatModeSettings?.EnableTextToSpeechPlayback != true && chatModeSettings?.ChatMode != ChatMode.Conversation)
+                {
+                    await Clients.Caller.ReceiveError(GetTtsNotEnabledMessage());
+
+                    return;
+                }
+
                 // Each read-aloud reaches a provider, so it counts against the per-message limit, as in the base hub.
                 var messageLimit = await EvaluateMessageRateLimitAsync(services, profile, sessionId, cancellationToken);
 
@@ -340,8 +362,6 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 
                     return;
                 }
-
-                profile.TryGetSettings<ChatModeProfileSettings>(out var chatModeSettings);
 
                 var deploymentSettings = await GetDeploymentSettingsAsync(services);
 
