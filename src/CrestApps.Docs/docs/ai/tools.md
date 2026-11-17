@@ -807,6 +807,66 @@ The tool needs **Edit content** on the item, as the action buttons are in its ed
 
 The tools need **Manage shared links**. A link's URL holds a token that is only emailed to its recipients and never stored, so no tool returns it; the tools also never return the token hash, the resource ID or the recipients' user IDs. Times are in the user's or the site's time zone.
 
+### AI profile tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI`
+
+| Function | Description |
+| --- | --- |
+| `listAITools` | Lists what can be attached to a profile: registered tools by category (whether they ask for approval and whether they are safe for visitors who are not signed in), tool instances and agent profiles. Only the tools and tool instances the user may use are listed, as in the profile editor. |
+| `saveAIProfile` | Creates a profile or agent, or changes one by ID: title, description, type, instructions, welcome message, initial prompt, deployments, model parameters, persona and SystemPrompt templates. It never changes the profile's tools, agents or connections, its instruction lock or whether it can be deleted, and refuses new instructions on a profile whose instructions are locked. |
+| `setAIProfileCapabilities` | Sets the tools, tool instances and agents a profile can use and, for an agent, whether it is always available and whether it runs its tools. MCP and A2A connections are set on the profile's Capabilities tab. Asks for approval. |
+| `createAIProfileFromTemplate` | Creates a profile from a Profile template, as the **New AI profile** wizard does: a title, a technical name and optionally a chat deployment. It names the features to enable when the template's scenario needs them. |
+| `deleteAIProfile` | Deletes profiles by ID. Profiles marked not removable and the assistant that is running, with its agents, are skipped and reported. Asks for approval. |
+| `listAIProfileVersions` | Lists a profile's saved versions (number, date, author, note), and with `versionId` the settings that differ from the profile as it is now or from another version, as the **Compare** page shows them. |
+| `restoreAIProfileVersion` | Restores a profile to a saved version, saved as a new version so it can be undone. Asks for approval. |
+| `testAIProfile` | Sends one message to a profile with its tools turned off and returns the reply. It makes a paid model call. Asks for approval. |
+
+The tools need **Manage AI profiles**; `testAIProfile` needs **Query any AI profile** on the profile, so a profile-specific grant counts. Every change is saved as a profile version whose note says the AI assistant made it, and for whom.
+
+Until a site-wide guard for AI configuration exists, the tools that change profiles, templates, personas or tool instances apply three rules themselves:
+
+- **An assistant cannot change itself.** From inside a chat, the profile that runs the tool, the chat session's profile, the admin chat widget's profile, the agents those can call (including every always-available agent), and the persona, SystemPrompt templates, speaking styles, guardrail topics and tool instances they use cannot be changed or deleted. The tool refuses and names the admin page where a person can make the change. This is a refusal, not an approval, because an approval can be clicked through and is not asked inside an agent.
+- **No powerful tools on a profile visitors can reach.** A profile is reachable when the Anonymous role may query it, an enabled browser API key names it, a published content item with an AI profile part shows it, or it is an always-available agent. `setAIProfileCapabilities`, `restoreAIProfileVersion`, `createAIProfileFromTemplate` and `saveAIProfile` may then only add tools marked safe for anonymous callers, and no tool instance, MCP or A2A connection or agent that runs tools. Making an agent always available, or letting an always-available agent run its tools, checks all of its tools. Phone numbers and messaging channels are not checked yet.
+- **Only tools the user may use.** Every tool and tool instance a change adds needs the user's own **Access AI tool** permission for it, as the profile editor asks.
+
+### AI profile template tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI`
+
+| Function | Description |
+| --- | --- |
+| `listAIProfileTemplates` | Lists templates with their source (Profile or SystemPrompt), category, title, whether a module ships them (read-only) and, for a Profile template, whether its scenario can be used and which features it still needs. |
+| `getAIProfileTemplate` | Returns one template: its instructions and, for a Profile template, the profile settings, tool and agent names it gives a profile created from it. |
+| `saveAIProfileTemplate` | Creates or changes a stored template, including a speaking style (category `Speaking style`) or a guardrail topic (category `Guardrail topic`), which are created unlisted as their admin pages do. A Profile template's tools and agents are set on its admin page. Shipped templates cannot be changed. |
+| `deleteAIProfileTemplate` | Deletes stored templates by ID; shipped templates are skipped. Asks for approval. |
+
+The tools need **Manage AI profile templates**.
+
+### AI persona tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Personas`
+
+| Function | Description |
+| --- | --- |
+| `listAIPersonas` | Lists the personas, saved and from files, with their assistant name, language, voice and the profiles that link to each. With `name` it returns that persona's instructions too. |
+| `saveAIPersona` | Creates a persona or changes one by ID. The technical name never changes, and saving a persona file saves a copy with the same name, which the linked profiles then use. |
+| `deleteAIPersona` | Deletes saved personas by ID and says how many profiles now run without a persona. Persona files are skipped. Asks for approval. |
+
+The tools need **Manage AI personas**.
+
+### AI tool instance tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.ToolInstances`
+
+| Function | Description |
+| --- | --- |
+| `listAIToolInstances` | Lists tool instances with their source, function name, owner, settings and the profiles that use them. With `includeSources` it lists the sources and the settings each one takes through the tools. |
+| `saveAIToolInstance` | Creates a tool instance from a source or changes one by ID. Asks for approval. |
+| `deleteAIToolInstance` | Deletes tool instances by ID. Asks for approval. |
+
+The tools need **Manage AI tool instances**, and **Manage AI tool instances created by others** for an instance someone else owns, as the admin page does. Credentials (API keys, bearer tokens, passwords, client secrets and OAuth tokens) and default headers are never returned, only whether each is stored, and never accepted: `saveAIToolInstance` saves the rest and returns the admin page where a person enters them. Stored credentials stay when other settings change, and the address an instance with a stored credential calls cannot be changed from a chat. Addresses must be absolute `http` or `https` addresses outside the server and its internal networks; the host name is not resolved, so the request itself must still be guarded. The settings of the Workflow source are set on its admin page.
+
 ### Analytics tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Chat.Analytics`
