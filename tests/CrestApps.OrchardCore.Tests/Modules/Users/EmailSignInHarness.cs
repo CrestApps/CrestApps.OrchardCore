@@ -69,6 +69,16 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
     /// </summary>
     public List<string> Revoked { get; } = [];
 
+    /// <summary>
+    /// The sign-ins the controllers made, with the claims each added (none for a plain sign-in).
+    /// </summary>
+    public List<SignIn> SignIns { get; } = [];
+
+    /// <summary>
+    /// Orchard Core's registration settings, read as the site's settings are.
+    /// </summary>
+    public RegistrationOptions Registration { get; } = new();
+
     public UserCredentialsResets CredentialsResets => new(Cache, new ShellSettings { Name = "Default" }, Options.Create(new SecurityStampValidatorOptions()));
 
     /// <summary>
@@ -198,24 +208,29 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
     /// <summary>
     /// The proof service a request uses.
     /// </summary>
-    public EmailOwnershipProof CreateProof(IServiceProvider requestServices)
+    public EmailOwnershipProof CreateProof(IServiceProvider requestServices, UserCredentialsResets credentialsResets = null)
         => new(
             requestServices.GetRequiredService<UserManager<IUser>>(),
             requestServices.GetRequiredService<ISession>(),
-            CredentialsResets,
+            credentialsResets ?? CredentialsResets,
             [new RecordingRevocation(Revoked)],
             CreateClock(),
             NullLogger<EmailOwnershipProof>.Instance);
 
-    private static SignInManager<IUser> CreateSignInManager(UserManager<IUser> manager)
+    private SignInManager<IUser> CreateSignInManager(UserManager<IUser> manager)
     {
         var signInManager = new Mock<SignInManager<IUser>>(manager, Mock.Of<IHttpContextAccessor>(), Mock.Of<IUserClaimsPrincipalFactory<IUser>>(), null, null, null, null);
-        signInManager.Setup(s => s.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+        signInManager.Setup(s => s.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>()))
+            .Callback((IUser user, bool _, string method) => SignIns.Add(new SignIn(user, method is null ? [] : [new Claim(ClaimTypes.AuthenticationMethod, method)])))
+            .Returns(Task.CompletedTask);
+        signInManager.Setup(s => s.SignInWithClaimsAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<IEnumerable<Claim>>()))
+            .Callback((IUser user, bool _, IEnumerable<Claim> claims) => SignIns.Add(new SignIn(user, [.. claims])))
+            .Returns(Task.CompletedTask);
 
         return signInManager.Object;
     }
 
-    private static ISiteService CreateSiteService()
+    public static ISiteService CreateSiteService()
     {
         var siteService = new Mock<ISiteService>();
         siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(new SiteSettings { SiteName = "Test site" });
@@ -311,6 +326,8 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
     }
 
     public sealed record SentCode(string UserName, string Email, string Code);
+
+    public sealed record SignIn(IUser User, IReadOnlyList<Claim> Claims);
 
     private sealed class RecordingRevocation : IUserSignInRevocation
     {

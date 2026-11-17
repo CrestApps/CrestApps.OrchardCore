@@ -282,10 +282,22 @@ public class EmailSignInViewModel
     public bool HasCredentials { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the request is signed in with the account's password or one of its
-    /// external logins, so confirming keeps them.
+    /// Gets or sets a value indicating whether the request is signed in with the account's password or through one of
+    /// its external logins, which confirming keeps.
     /// </summary>
     public bool CredentialsShown { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the request is signed in with the account's password, which confirming
+    /// keeps, removing the external logins.
+    /// </summary>
+    public bool PasswordShown { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider of the account's external login the request is signed in through, which confirming
+    /// keeps, removing the password and the other logins; or <see langword="null"/>.
+    /// </summary>
+    public string ShownLoginProvider { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the confirmation page offers the password field.

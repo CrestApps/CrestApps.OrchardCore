@@ -19,7 +19,7 @@
             {
                 <label for="email-confirm-password" class="form-label mt-3">@T["Password (optional)"]</label>
                 <input id="email-confirm-password" name="Password" type="password" class="form-control" autocomplete="current-password" data-account-password />
-                <span class="hint">@T["Enter this account's password to keep it and the account's other sign-ins. Leave it empty if you don't know it: they will be removed."]</span>
+                <span class="hint">@T["Enter this account's password to keep it. The account's other sign-ins are removed either way. Leave it empty if you don't know it: the password is removed too."]</span>
                 <span asp-validation-for="Password" class="text-danger small"></span>
             }
         </div>

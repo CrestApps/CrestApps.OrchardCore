@@ -19,11 +19,10 @@ namespace CrestApps.OrchardCore.Users.Controllers;
 
 /// <summary>
 /// Confirming, with a code e-mailed to the account's address, that the person signed in is the one who controls it.
-/// An account that had a password or an external login before anyone proved its address is signed in by a code without
-/// that proof being recorded, because recording it would hand over what belongs to the address (the guest orders placed
-/// with it) while whoever set that password, possibly somebody else, could still sign in. Here the owner asks for it:
-/// the code is checked, the earlier password and external logins are removed and every earlier sign-in ends, and only
-/// then is the address recorded as proved.
+/// An account that had a password or an external login before anyone proved its address gets nothing that belongs to
+/// the address (the guest orders placed with it) until then, because whoever set them, possibly somebody else, could
+/// still sign in. Here the owner asks for it: the code is checked, the credentials this request didn't show are removed
+/// and every earlier sign-in ends, and only then is the address recorded as proved.
 /// </summary>
 [Authorize]
 [Feature(UsersConstants.Feature.EmailCodeSignIn)]
@@ -137,12 +136,14 @@ public sealed class EmailOwnershipController : Controller
             return View(view);
         }
 
-        // The mailbox alone doesn't say whose the account's password and external logins are. They are kept when this
-        // request also shows them: signed in with them, or the password typed here. A wrong password is refused before
-        // the code is looked at, so it never spends the code, and it counts toward the lockout as at sign-in.
-        var credentialsShown = view.CredentialsShown;
+        // The mailbox and one credential don't say whose the others are: a password can be set again with the mailbox
+        // alone, and a login linked from a code session, while somebody else's stays. So only what this request shows
+        // is kept: the password it is signed in with or the one typed here, or the external login it is signed in
+        // through. A wrong password is refused before the code is looked at, so it never spends the code, and it counts
+        // toward the lockout as at sign-in.
+        var passwordShown = view.PasswordShown;
 
-        if (!credentialsShown && !string.IsNullOrEmpty(model.Password))
+        if (!view.CredentialsShown && !string.IsNullOrEmpty(model.Password))
         {
             if (string.IsNullOrEmpty(account.PasswordHash) || !await _userManager.CheckPasswordAsync(account, model.Password))
             {
@@ -152,7 +153,7 @@ public sealed class EmailOwnershipController : Controller
                 return View(view);
             }
 
-            credentialsShown = true;
+            passwordShown = true;
         }
 
         var check = await _codes.CheckAsync(account.UserId, account.Email, model.Code, HttpContext.RequestAborted);
@@ -164,7 +165,7 @@ public sealed class EmailOwnershipController : Controller
         }
 
         var proof = check == EmailSignInCodeCheck.Right
-            ? await _proof.RecordAsync(account, credentialsShown, HttpContext.RequestAborted)
+            ? await _proof.RecordAsync(account, passwordShown, view.ShownLoginProvider, HttpContext.RequestAborted)
             : EmailProofResult.Failed;
 
         if (proof == EmailProofResult.Failed)
@@ -174,27 +175,48 @@ public sealed class EmailOwnershipController : Controller
             return View(view);
         }
 
-        // When the credentials were removed, every earlier sign-in ended with the proof, this browser's too, so it is
+        // A first proof ends every earlier sign-in, this browser's too, whether or not anything was removed, so it is
         // signed in again. Raising the sign-in is what hands over what belongs to the address.
-        if (proof == EmailProofResult.CredentialsRemoved)
+        if (proof is EmailProofResult.CredentialsRemoved or EmailProofResult.SignInsEnded)
         {
             await _signInManager.SignInAsync(account, isPersistent: false);
         }
 
         await _loginFormEvents.InvokeAsync((handler, signedIn) => handler.LoggedInAsync(signedIn), account, _logger);
 
-        await _notifier.SuccessAsync(proof == EmailProofResult.CredentialsRemoved
-            ? H["Your email address is confirmed. The password and other sign-ins this account had before were removed: sign in with a code, or set a new password with \"Forgot your password?\"."]
-            : H["Your email address is confirmed."]);
+        await _notifier.SuccessAsync(ConfirmedMessage(proof, account));
 
         return RedirectToLocal(model.ReturnUrl);
     }
 
-    // What the confirmation pages show: whether this request already shows the account's credentials, and whether the
+    // What the user is told once the address is confirmed: what the account kept, read from the account as saved.
+    private LocalizedHtmlString ConfirmedMessage(EmailProofResult proof, User account)
+    {
+        if (proof != EmailProofResult.CredentialsRemoved)
+        {
+            return H["Your email address is confirmed."];
+        }
+
+        if (!string.IsNullOrEmpty(account.PasswordHash))
+        {
+            return H["Your email address is confirmed. You kept this account's password. Its other sign-ins were removed and its other sessions signed out, because they may not have been yours."];
+        }
+
+        if (account.LoginInfos is { Count: > 0 } logins)
+        {
+            return H["Your email address is confirmed. You kept the {0} sign-in you used. This account's password and other sign-ins were removed and its other sessions signed out, because they may not have been yours.", logins[0].ProviderDisplayName ?? logins[0].LoginProvider];
+        }
+
+        return H["Your email address is confirmed. The password and other sign-ins this account had before were removed: sign in with a code, or set a new password with \"Forgot your password?\"."];
+    }
+
+    // What the confirmation pages show: which of the account's credentials this request already shows, and whether the
     // account has a password to type instead.
     private EmailSignInViewModel CreateView(User account, string returnUrl)
     {
-        var credentialsShown = UserCredentialsProof.ShowsCredentials(User, account);
+        var passwordShown = UserCredentialsProof.ShowsPassword(User, account);
+        var shownLoginProvider = passwordShown ? null : UserCredentialsProof.ShownLoginProvider(User, account);
+        var credentialsShown = passwordShown || shownLoginProvider is not null;
 
         return new EmailSignInViewModel
         {
@@ -202,6 +224,8 @@ public sealed class EmailOwnershipController : Controller
             ReturnUrl = returnUrl,
             HasCredentials = UserCredentialsProof.HasCredentials(account),
             CredentialsShown = credentialsShown,
+            PasswordShown = passwordShown,
+            ShownLoginProvider = shownLoginProvider,
             AsksPassword = !credentialsShown && !string.IsNullOrEmpty(account.PasswordHash),
         };
     }

@@ -4,20 +4,22 @@ using OrchardCore.Users.Models;
 namespace CrestApps.OrchardCore.Users.Core.Services;
 
 /// <summary>
-/// Tells whether an account has credentials of its own, and whether a request shows them.
+/// Tells whether an account has credentials of its own, and which of them a request shows.
 /// </summary>
 /// <remarks>
 /// <para>
 /// A round trip to the mailbox (a confirmation link or an e-mailed code) proves who reads the mail, not who set the
 /// account's password or linked its external logins. Someone can register with another person's address and a password
-/// of their own, so a proof that hands over what belongs to the address (guest orders, for one) is kept with the
-/// account's credentials only when the same request also shows those credentials: the request is signed in to that
-/// account with its password or one of its own external logins, or the password is typed with the proof.
+/// of their own, and a credential can be added with the mailbox alone or from a code session, so showing one credential
+/// says nothing about the others. A proof that hands over what belongs to the address (guest orders, for one) keeps only
+/// the credential the same request shows: the request is signed in to that account with its password or through one of
+/// its own external logins, or the password is typed with the proof.
 /// </para>
 /// <para>
-/// ASP.NET Core Identity marks how a session began: <c>amr=pwd</c> after a password (or passkey) sign-in, <c>amr=mfa</c>
-/// after a two-factor sign-in, and the provider's name in <see cref="ClaimTypes.AuthenticationMethod"/> after an external
-/// login. An e-mailed code and Orchard Core's sign-in after registration add neither, so neither shows the credentials.
+/// ASP.NET Core Identity marks how a session began: <c>amr=pwd</c> after a password sign-in, <c>amr=mfa</c> after a
+/// two-factor sign-in, and the provider's name in <see cref="ClaimTypes.AuthenticationMethod"/> after an external login
+/// (with <c>amr=mfa</c> too when a second factor followed it). An e-mailed code and Orchard Core's sign-in
+/// after registration show neither.
 /// </para>
 /// </remarks>
 public static class UserCredentialsProof
@@ -36,30 +38,50 @@ public static class UserCredentialsProof
 
     /// <summary>
     /// Whether <paramref name="principal"/> is signed in to <paramref name="account"/> with the account's password or
-    /// one of its own external logins.
+    /// through one of its own external logins.
     /// </summary>
     /// <param name="principal">The request's user.</param>
     /// <param name="account">The account.</param>
     public static bool ShowsCredentials(ClaimsPrincipal principal, User account)
-    {
-        if (principal?.Identity?.IsAuthenticated != true ||
-            account is null ||
-            string.IsNullOrEmpty(account.UserId) ||
-            !string.Equals(principal.FindFirstValue(ClaimTypes.NameIdentifier), account.UserId, StringComparison.Ordinal))
-        {
-            return false;
-        }
+        => ShowsPassword(principal, account) || ShownLoginProvider(principal, account) is not null;
 
-        if (!string.IsNullOrEmpty(account.PasswordHash) &&
-            principal.HasClaim(claim => claim.Type == AuthenticationMethodReferenceClaim && (claim.Value == "pwd" || claim.Value == "mfa")))
+    /// <summary>
+    /// Whether <paramref name="principal"/> is signed in to <paramref name="account"/> with the account's password. A
+    /// session an external login began is not, even with <c>amr=mfa</c>.
+    /// </summary>
+    /// <param name="principal">The request's user.</param>
+    /// <param name="account">The account.</param>
+    public static bool ShowsPassword(ClaimsPrincipal principal, User account)
+        => IsSignedInTo(principal, account) &&
+            !string.IsNullOrEmpty(account.PasswordHash) &&
+            string.IsNullOrEmpty(principal.FindFirstValue(ClaimTypes.AuthenticationMethod)) &&
+            principal.HasClaim(claim => claim.Type == AuthenticationMethodReferenceClaim && (claim.Value == "pwd" || claim.Value == "mfa"));
+
+    /// <summary>
+    /// The provider of the account's own external login that <paramref name="principal"/> is signed in through, or
+    /// <see langword="null"/>.
+    /// </summary>
+    /// <param name="principal">The request's user.</param>
+    /// <param name="account">The account.</param>
+    public static string ShownLoginProvider(ClaimsPrincipal principal, User account)
+    {
+        if (!IsSignedInTo(principal, account))
         {
-            return true;
+            return null;
         }
 
         var provider = principal.FindFirstValue(ClaimTypes.AuthenticationMethod);
 
         return !string.IsNullOrEmpty(provider) &&
             account.LoginInfos is { Count: > 0 } logins &&
-            logins.Any(login => string.Equals(login.LoginProvider, provider, StringComparison.Ordinal));
+            logins.Any(login => string.Equals(login.LoginProvider, provider, StringComparison.Ordinal))
+                ? provider
+                : null;
     }
+
+    private static bool IsSignedInTo(ClaimsPrincipal principal, User account)
+        => principal?.Identity?.IsAuthenticated == true &&
+            account is not null &&
+            !string.IsNullOrEmpty(account.UserId) &&
+            string.Equals(principal.FindFirstValue(ClaimTypes.NameIdentifier), account.UserId, StringComparison.Ordinal);
 }

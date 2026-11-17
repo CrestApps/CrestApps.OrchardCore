@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Users.Core.Handlers;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -16,8 +15,9 @@ namespace CrestApps.OrchardCore.Tests.Modules.Users;
 /// <summary>
 /// Owner decision 17: a confirmation link proves who reads the mail, not who set the account's password. Someone can
 /// register with another person's address and a password of their own; when that person follows the "confirm your
-/// account" mail, marking the address as proved would hand them over the guest orders placed with it. An account with
-/// credentials is now marked by a link only when the same request is signed in to it with them.
+/// account" mail, marking the address as proved would hand them over the guest orders placed with it. F1 (third
+/// fix-verification review): showing one credential doesn't say whose the others are either, so a link never marks an
+/// account with credentials; its owner confirms on the "Confirm it's you" page, which keeps only what the request shows.
 /// </summary>
 public sealed class EmailOwnershipConfirmationLinkTests : IAsyncLifetime
 {
@@ -45,16 +45,17 @@ public sealed class EmailOwnershipConfirmationLinkTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ALinkFollowedByTheOwnerSignedInWithThePassword_MarksTheAccount()
+    public async Task ALinkFollowedSignedInWithThePassword_DoesNotMarkAnAccountThatAlsoHasALogin()
     {
         // Arrange
         await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, IsEnabled = true });
 
-        // Act: a session a password began carries amr=pwd.
+        // Act: a session a password began carries amr=pwd; the account's GitHub login may be somebody else's.
         var account = await ConfirmAsync("user-1", SignedIn("user-1", new Claim("amr", "pwd")));
 
-        // Assert
-        Assert.True(UserEmailOwnership.IsVerified(account.Properties, account.Email));
+        // Assert: nothing is handed over while that login stays.
+        Assert.False(UserEmailOwnership.IsVerified(account.Properties, account.Email));
+        Assert.Single(account.LoginInfos);
     }
 
     [Fact]
@@ -71,16 +72,16 @@ public sealed class EmailOwnershipConfirmationLinkTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ALinkFollowedSignedInWithTheAccountsExternalLogin_MarksTheAccount()
+    public async Task ALinkFollowedSignedInWithOneExternalLogin_DoesNotMarkAnAccountThatAlsoHasAPassword()
     {
-        // Arrange: an account that signs in with GitHub only.
-        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, IsEnabled = true }, withPassword: false);
+        // Arrange: the password may be whoever registered with the address.
+        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, IsEnabled = true });
 
         // Act
         var account = await ConfirmAsync("user-1", SignedIn("user-1", new Claim(ClaimTypes.AuthenticationMethod, "GitHub")));
 
         // Assert
-        Assert.True(UserEmailOwnership.IsVerified(account.Properties, account.Email));
+        Assert.False(UserEmailOwnership.IsVerified(account.Properties, account.Email));
     }
 
     [Fact]
@@ -106,8 +107,9 @@ public sealed class EmailOwnershipConfirmationLinkTests : IAsyncLifetime
         await _harness.InRequestAsync(async services =>
         {
             var user = (User)await services.GetRequiredService<UserManager<IUser>>().FindByIdAsync(userId);
-            var accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = principal, RequestServices = services } };
-            var handler = new EmailOwnershipConfirmationHandler(services.GetRequiredService<ISession>(), accessor, Mock.Of<IClock>(clock => clock.UtcNow == DateTime.UtcNow));
+            // The handler no longer reads the request: whatever sign-in it shows, an account with credentials isn't marked.
+            _ = principal;
+            var handler = new EmailOwnershipConfirmationHandler(services.GetRequiredService<ISession>(), Mock.Of<IClock>(clock => clock.UtcNow == DateTime.UtcNow));
 
             await handler.ConfirmedAsync(new UserConfirmContext(user) { ConfirmationType = UserConfirmationType.Email });
 
