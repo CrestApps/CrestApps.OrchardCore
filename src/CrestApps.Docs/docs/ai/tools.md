@@ -645,14 +645,14 @@ The tool needs **Access the Admin Dashboard**. With **Manage the Admin Dashboard
 
 ### Admin menu tools
 
-**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.AdminMenu`
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.AdminMenu` + `OrchardCore.Deployment`
 
 | Function | Description |
 | --- | --- |
 | `listAdminMenus` | Lists the custom admin menus, optionally with the full node tree of each and the node types the site offers. |
 | `saveAdminMenu` | Creates a custom admin menu or replaces one, with its name, enabled state and whole node tree. |
 
-Both tools need **Manage the admin menu**. `listAdminMenus` reads the menus through the admin menu deployment step and returns the nodes in the shape of the `AdminMenu` recipe step, which `saveAdminMenu` runs. A node must have the `$type` of a node type of the site and the fields that type requires. Nodes that are not sent are removed.
+Both tools need **Manage the admin menu**. `listAdminMenus` reads the menus through the admin menu deployment step, which is why the Deployment feature must be on too, and returns the nodes in the shape of the `AdminMenu` recipe step, which `saveAdminMenu` runs. A node must have the `$type` of a node type of the site and the fields that type requires. Nodes that are not sent are removed.
 
 ### Tenant feature profile tools
 
@@ -674,11 +674,8 @@ Both tools need **Manage tenant feature profiles** and work from the Default ten
 | `listDeploymentPlans` | Lists the plans, optionally with the fields of their ordered steps and the step types the site offers. Search text and paging. |
 | `saveDeploymentPlan` | Creates a plan or replaces the steps of the plan with the same name. |
 | `deleteDeploymentPlan` | Deletes a plan. Asks for approval. |
-| `exportDeploymentPlan` | Runs a plan and returns the recipe it builds. Asks for approval. |
 
-`listDeploymentPlans` needs **Manage deployment plans** and **Export Data**, as the **Deployment Plans** page does; `saveDeploymentPlan` and `deleteDeploymentPlan` need **Manage deployment plans**, and `exportDeploymentPlan` needs **Export Data**. `saveDeploymentPlan` runs the `deployment` recipe step and refuses a step type that no enabled feature provides.
-
-`exportDeploymentPlan` runs the plan with the deployment manager in memory and writes nothing to disk. It returns the recipe when it is 100,000 bytes or smaller, and otherwise only its size and the link of the plan page; the recipe is never cut. Other files of the package, such as media files, are listed by name and size only, and the name, description and tags of a Recipe File step are not applied, so the full package is downloaded with **File Download** on the plan page. A plan can export any data of the site, so the tool is used only when the user asks for an export.
+`listDeploymentPlans` needs **Manage deployment plans** and **Export Data**, as the **Deployment Plans** page does; `saveDeploymentPlan` and `deleteDeploymentPlan` need **Manage deployment plans**. `saveDeploymentPlan` runs the `deployment` recipe step and refuses a step type that no enabled feature provides. No tool runs a plan: an export can hold any data of the site, secrets included, so it is downloaded with **File Download** on the plan page.
 
 ### Workflow tools
 

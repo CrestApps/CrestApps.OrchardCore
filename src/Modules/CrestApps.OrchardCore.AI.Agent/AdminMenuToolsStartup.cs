@@ -7,9 +7,10 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the tools that list and save the custom admin menus, when the Admin Menu feature is on.
+/// Registers the tools that list and save the custom admin menus, when the Admin Menu feature is on. The menus are
+/// read through the admin menu deployment step, so the Deployment feature, which runs deployment steps, is needed too.
 /// </summary>
-[RequireFeatures(OrchardCoreFeatureIds.AdminMenu)]
+[RequireFeatures(OrchardCoreFeatureIds.AdminMenu, OrchardCoreFeatureIds.Deployment)]
 public sealed class AdminMenuToolsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;

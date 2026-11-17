@@ -32,7 +32,6 @@ public sealed class SiteAdministrationToolCallerTests
         { ListDeploymentPlansTool.TheName, "ManageDeploymentPlan", null },
         { SaveDeploymentPlanTool.TheName, "ManageDeploymentPlan", null },
         { DeleteDeploymentPlanTool.TheName, "ManageDeploymentPlan", null },
-        { ExportDeploymentPlanTool.TheName, "Export", null },
     };
 
     [Theory]
@@ -111,7 +110,6 @@ public sealed class SiteAdministrationToolCallerTests
             ListDeploymentPlansTool.TheName => (new ListDeploymentPlansTool(), []),
             SaveDeploymentPlanTool.TheName => (new SaveDeploymentPlanTool(), new() { ["name"] = "Plan", ["steps"] = new JsonArray() }),
             DeleteDeploymentPlanTool.TheName => (new DeleteDeploymentPlanTool(), new() { ["id"] = 7 }),
-            ExportDeploymentPlanTool.TheName => (new ExportDeploymentPlanTool(), new() { ["id"] = 7 }),
             _ => throw new ArgumentOutOfRangeException(nameof(toolName), toolName, null),
         };
 }

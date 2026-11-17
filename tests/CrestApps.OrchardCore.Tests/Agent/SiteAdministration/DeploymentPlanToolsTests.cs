@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.Tests.Agent.SiteAdministration;
 
 /// <summary>
 /// The deployment plan tools list the plans with their steps, save a plan through the <c>deployment</c> recipe step,
-/// delete a plan from the session, and export a plan's recipe in memory, naming the other files of the package.
+/// and delete a plan from the session.
 /// </summary>
 public sealed class DeploymentPlanToolsTests
 {
@@ -103,39 +103,5 @@ public sealed class DeploymentPlanToolsTests
         // Assert
         Assert.StartsWith("Nothing was deleted: there is no deployment plan with the ID 99", result);
         Assert.Empty(harness.DeletedPlans);
-    }
-
-    [Fact]
-    public async Task ExportDeploymentPlan_ReturnsTheRecipeAndNamesTheOtherFiles()
-    {
-        // Arrange
-        var harness = new SiteAdministrationToolHarness();
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new ExportDeploymentPlanTool(), services, new() { ["id"] = 7 });
-
-        // Assert
-        var json = AgentToolTestContext.ReadJson(result);
-        var file = Assert.Single(json.GetProperty("otherFiles").EnumerateArray());
-
-        Assert.True(json.GetProperty("exported").GetBoolean());
-        Assert.Equal("Settings", json.GetProperty("recipe").GetProperty("steps")[0].GetProperty("name").GetString());
-        Assert.Equal("media/logo.png", file.GetProperty("path").GetString());
-        Assert.Equal(4, file.GetProperty("size").GetInt64());
-    }
-
-    [Fact]
-    public async Task ExportDeploymentPlan_WhenThePlanIsMissing_ExportsNothing()
-    {
-        // Arrange
-        var harness = new SiteAdministrationToolHarness();
-        using var services = harness.Build();
-
-        // Act
-        var result = await AgentToolTestContext.InvokeAsync(new ExportDeploymentPlanTool(), services, new() { ["id"] = 99 });
-
-        // Assert
-        Assert.StartsWith("Nothing was exported", result);
     }
 }

@@ -7,7 +7,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Agent;
 
 /// <summary>
-/// Registers the tools that list, save, delete and export deployment plans, when the Deployment feature is on.
+/// Registers the tools that list, save and delete deployment plans, when the Deployment feature is on.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Deployment)]
 public sealed class DeploymentToolsStartup : StartupBase
@@ -41,13 +41,6 @@ public sealed class DeploymentToolsStartup : StartupBase
         services.AddCoreAITool<DeleteDeploymentPlanTool>(DeleteDeploymentPlanTool.TheName)
             .WithTitle(S["Delete Deployment Plan"])
             .WithDescription(S["Permanently deletes a deployment plan. It does not touch data already exported."])
-            .WithCategory(S["Deployment"])
-            .RequireApproval()
-            .Selectable();
-
-        services.AddCoreAITool<ExportDeploymentPlanTool>(ExportDeploymentPlanTool.TheName)
-            .WithTitle(S["Export Deployment Plan"])
-            .WithDescription(S["Runs a deployment plan and returns the generated recipe JSON, the same content as the File Download target. The output can contain any site data the plan selects, so use it only when the user asks for an export."])
             .WithCategory(S["Deployment"])
             .RequireApproval()
             .Selectable();

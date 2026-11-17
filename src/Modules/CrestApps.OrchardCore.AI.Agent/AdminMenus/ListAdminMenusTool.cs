@@ -29,6 +29,17 @@ public sealed class ListAdminMenusTool : AIFunction
         "includeNodes": {
           "type": "boolean",
           "description": "Whether to return the full node tree of each menu and the node types this site offers. Ask for it before changing a menu, so the nodes to keep are sent back. The default is false."
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The page to return, starting at 1. The default is 1."
+        },
+        "pageSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "description": "The number of menus on a page. The default is 20 and the most is 50."
         }
       },
       "required": [],
@@ -83,7 +94,12 @@ public sealed class ListAdminMenusTool : AIFunction
             return $"There is no admin menu with the ID '{menuId.Trim()}'. Call listAdminMenus without a menuId to see the menus.";
         }
 
+        var (page, pageSize) = AgentToolResults.ReadPaging(arguments);
+
         var items = selected
+            .OrderBy(menu => AdminMenuToolSupport.Get(menu, "Name")?.ToString(), StringComparer.OrdinalIgnoreCase)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(menu =>
             {
                 var nodes = AdminMenuToolSupport.Get(menu, "MenuItems") as JsonArray;
@@ -102,9 +118,12 @@ public sealed class ListAdminMenusTool : AIFunction
         return AgentToolResults.Json(new
         {
             items,
-            total = items.Count,
-            page = 1,
-            pageSize = items.Count,
+            total = selected.Count,
+            page,
+            pageSize,
+            truncated = selected.Count > page * pageSize
+                ? true
+                : (bool?)null,
             nodeTypes = includeNodes ? await AdminMenuToolSupport.GetNodeTypesAsync(services) : null,
             link = AgentToolLinks.GetAdminPath(services, "OrchardCore.AdminMenu", "Menu", "List"),
             note = includeNodes

@@ -35,7 +35,6 @@ public sealed class OrchardSiteAdministrationToolRegistrationTests
         ListDeploymentPlansTool.TheName,
         SaveDeploymentPlanTool.TheName,
         DeleteDeploymentPlanTool.TheName,
-        ExportDeploymentPlanTool.TheName,
     ];
 
     public static TheoryData<string, bool> Tools => new()
@@ -52,7 +51,6 @@ public sealed class OrchardSiteAdministrationToolRegistrationTests
         { ListDeploymentPlansTool.TheName, false },
         { SaveDeploymentPlanTool.TheName, false },
         { DeleteDeploymentPlanTool.TheName, true },
-        { ExportDeploymentPlanTool.TheName, true },
     };
 
     [Theory]
@@ -83,7 +81,7 @@ public sealed class OrchardSiteAdministrationToolRegistrationTests
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.AdminDashboardToolsStartup), 1)]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.AdminMenuToolsStartup), 2)]
     [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.TenantFeatureProfilesToolsStartup), 2)]
-    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.DeploymentToolsStartup), 4)]
+    [InlineData(typeof(CrestApps.OrchardCore.AI.Agent.DeploymentToolsStartup), 3)]
     public void EachFeatureStartup_RegistersItsTools(Type startupType, int expectedCount)
     {
         // Act
@@ -100,6 +98,7 @@ public sealed class OrchardSiteAdministrationToolRegistrationTests
     [InlineData("updateTenant")]
     [InlineData("getTenantSetupLink")]
     [InlineData("deleteTenantFeatureProfile")]
+    [InlineData("exportDeploymentPlan")]
     public void ADeferredTool_IsNotRegistered(string toolName)
     {
         // Arrange

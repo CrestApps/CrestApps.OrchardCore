@@ -40,7 +40,19 @@ public sealed class ListAdminDashboardWidgetsTool : AIFunction
     """
     {
       "type": "object",
-      "properties": {},
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The page to return, starting at 1. The default is 1."
+        },
+        "pageSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "description": "The number of widgets on a page. The default is 20 and the most is 50."
+        }
+      },
       "required": [],
       "additionalProperties": false
     }
@@ -138,14 +150,18 @@ public sealed class ListAdminDashboardWidgetsTool : AIFunction
             }
         }
 
+        var (page, pageSize) = AgentToolResults.ReadPaging(arguments);
         var ordered = items.OrderBy(item => item.Position).Select(item => item.Item).ToList();
 
         return AgentToolResults.Json(new
         {
-            items = ordered,
+            items = ordered.Skip((page - 1) * pageSize).Take(pageSize).ToList(),
             total = ordered.Count,
-            page = 1,
-            pageSize = ordered.Count,
+            page,
+            pageSize,
+            truncated = ordered.Count > page * pageSize
+                ? true
+                : (bool?)null,
             view = canManage ? "manage" : "dashboard",
             widgetContentTypes = canManage ? creatable : null,
             link = AgentToolLinks.GetAdminPath(services, "OrchardCore.AdminDashboard", "Dashboard", canManage ? "Manage" : "Index"),
