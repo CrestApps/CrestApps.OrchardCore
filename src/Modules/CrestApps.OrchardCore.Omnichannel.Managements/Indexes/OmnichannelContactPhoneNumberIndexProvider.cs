@@ -30,6 +30,7 @@ internal sealed class OmnichannelContactPhoneNumberIndexProvider : IndexProvider
     {
         context
             .For<OmnichannelContactPhoneNumberIndex>()
+            .ExclusiveToDocumentType()
             .Map(CreateIndexes);
     }
 

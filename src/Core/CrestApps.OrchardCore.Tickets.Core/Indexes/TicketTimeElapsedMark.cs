@@ -58,6 +58,8 @@ public sealed class TicketTimeElapsedMarkIndexProvider : IndexProvider<TicketTim
     /// <inheritdoc/>
     public override void Describe(DescribeContext<TicketTimeElapsedMark> context)
         => context.For<TicketTimeElapsedMarkIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(mark => new TicketTimeElapsedMarkIndex
             {
                 StartKey = mark.StartKey,

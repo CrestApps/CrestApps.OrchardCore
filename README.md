@@ -112,6 +112,16 @@ This project is free and open source, built and maintained alongside full-time w
 
 [![Sponsor on GitHub](https://img.shields.io/badge/Sponsor_on_GitHub-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white&style=for-the-badge)](https://github.com/sponsors/MikeAlhayek)
 
+### Our Sponsors
+
+Thank you to the companies that sponsor CrestApps.OrchardCore and make its continued development possible.
+
+<p>
+  <a href="https://lombiq.com" title="Lombiq Technologies">
+    <img src="./.github/images/sponsors/lombiq.webp" alt="Lombiq Technologies" height="60" />
+  </a>
+</p>
+
 ## License
 
 MIT

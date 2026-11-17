@@ -20,6 +20,8 @@ public sealed class CalendarCategoryIndexProvider : IndexProvider<CalendarCatego
     public override void Describe(DescribeContext<CalendarCategory> context)
     {
         context.For<CalendarCategoryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(category => new CalendarCategoryIndex
             {
                 ItemId = category.ItemId,

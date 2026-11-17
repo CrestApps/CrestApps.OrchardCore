@@ -83,16 +83,20 @@ public sealed class PayRunIndexProvider : IndexProvider<PayRun>
 
     /// <inheritdoc />
     public override void Describe(DescribeContext<PayRun> context)
-        => context.For<PayRunIndex>().Map(run => new PayRunIndex
-        {
-            ItemId = run.ItemId,
-            Number = run.Number,
-            EmployerId = run.EmployerId,
-            PayScheduleId = run.PayScheduleId,
-            Type = run.Type.ToString(),
-            Status = run.Status.ToString(),
-            PayDay = PayStatementLineIndex.DayNumber(run.PayDate),
-        });
+        => context
+            .For<PayRunIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(run => new PayRunIndex
+            {
+                ItemId = run.ItemId,
+                Number = run.Number,
+                EmployerId = run.EmployerId,
+                PayScheduleId = run.PayScheduleId,
+                Type = run.Type.ToString(),
+                Status = run.Status.ToString(),
+                PayDay = PayStatementLineIndex.DayNumber(run.PayDate),
+            });
 }
 
 /// <summary>
@@ -110,13 +114,17 @@ public sealed class PayRunInputIndexProvider : IndexProvider<PayRunInput>
 
     /// <inheritdoc />
     public override void Describe(DescribeContext<PayRunInput> context)
-        => context.For<PayRunInputIndex>().Map(input => new PayRunInputIndex
-        {
-            ItemId = input.ItemId,
-            RunId = input.RunId,
-            StaffMemberId = input.StaffMemberId,
-            PayCodeId = input.PayCodeId,
-        });
+        => context
+            .For<PayRunInputIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(input => new PayRunInputIndex
+            {
+                ItemId = input.ItemId,
+                RunId = input.RunId,
+                StaffMemberId = input.StaffMemberId,
+                PayCodeId = input.PayCodeId,
+            });
 }
 
 /// <summary>

@@ -24,6 +24,8 @@ public sealed class DownloadEntitlementIndexProvider : IndexProvider<DownloadEnt
     public override void Describe(DescribeContext<DownloadEntitlement> context)
     {
         context.For<DownloadEntitlementIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(entitlement => new DownloadEntitlementIndex
             {
                 ItemId = entitlement.ItemId,

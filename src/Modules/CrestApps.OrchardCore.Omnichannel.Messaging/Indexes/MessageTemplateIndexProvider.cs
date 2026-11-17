@@ -23,6 +23,8 @@ public sealed class MessageTemplateIndexProvider : IndexProvider<MessageTemplate
     {
         context
             .For<MessageTemplateIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(template => new MessageTemplateIndex
             {
                 ItemId = template.ItemId,

@@ -162,6 +162,8 @@ public sealed class WorkOrderIndexProvider : IndexProvider<WorkOrder>
     public override void Describe(DescribeContext<WorkOrder> context)
     {
         context.For<WorkOrderIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new WorkOrderIndex
             {
                 ItemId = item.ItemId,
@@ -183,6 +185,7 @@ public sealed class WorkOrderIndexProvider : IndexProvider<WorkOrder>
             });
 
         context.For<WorkOrderAssetIndex>()
+            .ExclusiveToDocumentType()
             .Map(item => item.AssetIds.Distinct(StringComparer.Ordinal).Select(assetId => new WorkOrderAssetIndex { WorkOrderId = item.ItemId, AssetId = assetId, Status = item.Status.ToString() }));
     }
 }
@@ -204,6 +207,8 @@ public sealed class WorkOrderTypeIndexProvider : IndexProvider<WorkOrderType>
     public override void Describe(DescribeContext<WorkOrderType> context)
     {
         context.For<WorkOrderTypeIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new WorkOrderTypeIndex { ItemId = item.ItemId, Name = item.Name });
     }
 }
@@ -225,6 +230,8 @@ public sealed class ChecklistTemplateIndexProvider : IndexProvider<ChecklistTemp
     public override void Describe(DescribeContext<ChecklistTemplate> context)
     {
         context.For<ChecklistTemplateIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new ChecklistTemplateIndex { ItemId = item.ItemId, Name = item.Name });
     }
 }
@@ -246,6 +253,8 @@ public sealed class WorkOrderSubStatusIndexProvider : IndexProvider<WorkOrderSub
     public override void Describe(DescribeContext<WorkOrderSubStatus> context)
     {
         context.For<WorkOrderSubStatusIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new WorkOrderSubStatusIndex { ItemId = item.ItemId, Name = item.Name });
     }
 }

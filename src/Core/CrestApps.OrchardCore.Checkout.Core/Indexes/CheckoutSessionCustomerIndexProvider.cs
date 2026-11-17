@@ -19,6 +19,8 @@ public sealed class CheckoutSessionCustomerIndexProvider : IndexProvider<Checkou
     public override void Describe(DescribeContext<CheckoutSession> context)
     {
         context.For<CheckoutSessionCustomerIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(session =>
             {
                 session.TryGet<CheckoutContactInfo>(out var contact);

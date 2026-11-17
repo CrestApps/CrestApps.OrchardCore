@@ -29,6 +29,7 @@ internal sealed class ContentAccessRoleIndexProvider : IndexProvider<ContentItem
 
     public override void Describe(DescribeContext<ContentItem> context)
         => context.For<ContentAccessRoleIndex>()
+            .ExclusiveToDocumentType()
             .Map(async contentItem =>
             {
                 if (!contentItem.Published || _openTypes.Contains(contentItem.ContentType))

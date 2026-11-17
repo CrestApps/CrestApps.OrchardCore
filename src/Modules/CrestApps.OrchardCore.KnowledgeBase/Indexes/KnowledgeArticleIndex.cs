@@ -39,6 +39,8 @@ public sealed class KnowledgeArticleIndexProvider : IndexProvider<ContentItem>
 
     public override void Describe(DescribeContext<ContentItem> context)
         => context.For<KnowledgeArticleIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .When(item => item.Published && item.Has<KnowledgeArticlePart>())
             .Map(item =>
             {

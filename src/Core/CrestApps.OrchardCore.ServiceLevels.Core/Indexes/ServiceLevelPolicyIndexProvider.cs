@@ -20,6 +20,8 @@ public sealed class ServiceLevelPolicyIndexProvider : IndexProvider<ServiceLevel
     public override void Describe(DescribeContext<ServiceLevelPolicy> context)
     {
         context.For<ServiceLevelPolicyIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(policy => new ServiceLevelPolicyIndex
             {
                 ItemId = policy.ItemId,

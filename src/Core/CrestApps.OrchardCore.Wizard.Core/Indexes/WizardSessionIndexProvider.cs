@@ -12,6 +12,8 @@ public sealed class WizardSessionIndexProvider : IndexProvider<WizardSession>
     public override void Describe(DescribeContext<WizardSession> context)
     {
         context.For<WizardSessionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(session => new WizardSessionIndex
             {
                 SessionId = session.SessionId,

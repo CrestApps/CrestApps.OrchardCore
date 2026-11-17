@@ -21,6 +21,8 @@ public sealed class IntervalStatisticsDayIndexProvider : IndexProvider<IntervalS
     {
         context
             .For<IntervalStatisticsDayIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(day => new IntervalStatisticsDayIndex
             {
                 ItemId = day.ItemId,
@@ -51,6 +53,8 @@ public sealed class QueueIntervalStatisticsIndexProvider : IndexProvider<QueueIn
     {
         context
             .For<QueueIntervalStatisticsIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(day => new QueueIntervalStatisticsIndex
             {
                 ItemId = day.ItemId,
@@ -78,6 +82,8 @@ public sealed class AgentIntervalStatisticsIndexProvider : IndexProvider<AgentIn
     {
         context
             .For<AgentIntervalStatisticsIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(day => new AgentIntervalStatisticsIndex
             {
                 ItemId = day.ItemId,

@@ -57,6 +57,8 @@ public sealed class AIApiKeyIndexProvider : IndexProvider<AIApiKey>
     public override void Describe(DescribeContext<AIApiKey> context)
     {
         context.For<AIApiKeyIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(key => new AIApiKeyIndex
             {
                 ItemId = key.ItemId,

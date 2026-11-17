@@ -30,6 +30,8 @@ public sealed class TicketIndexProvider : IndexProvider<ContentItem>
     /// <inheritdoc/>
     public override void Describe(DescribeContext<ContentItem> context)
         => context.For<TicketIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .When(item => item.Latest && item.Has<TicketPart>())
             .Map(item =>
             {

@@ -22,6 +22,8 @@ public sealed class CallQualityRecordIndexProvider : IndexProvider<CallQualityRe
     {
         context
             .For<CallQualityRecordIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(record => new CallQualityRecordIndex
             {
                 ItemId = record.ItemId,

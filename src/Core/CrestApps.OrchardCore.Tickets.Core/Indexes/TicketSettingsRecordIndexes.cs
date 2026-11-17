@@ -68,6 +68,8 @@ public sealed class TicketSettingsRecordIndexProvider<T, TIndex> : IndexProvider
     /// <inheritdoc/>
     public override void Describe(DescribeContext<T> context)
         => context.For<TIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(record => new TIndex
             {
                 ItemId = record.ItemId,

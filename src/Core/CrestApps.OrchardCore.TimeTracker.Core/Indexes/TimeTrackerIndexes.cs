@@ -110,6 +110,8 @@ public sealed class TimeTrackerIndexProvider : IndexProvider<TimeEntry>
     public override void Describe(DescribeContext<TimeEntry> context)
     {
         context.For<TimeEntryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(entry => new TimeEntryIndex
             {
                 ItemId = entry.ItemId,
@@ -141,7 +143,10 @@ public sealed class TimeCategoryIndexProvider : IndexProvider<TimeCategory>
 
     /// <inheritdoc/>
     public override void Describe(DescribeContext<TimeCategory> context)
-        => context.For<TimeCategoryIndex>().Map(item => new TimeCategoryIndex { ItemId = item.ItemId, Name = item.Name, Code = item.Code });
+        => context.For<TimeCategoryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(item => new TimeCategoryIndex { ItemId = item.ItemId, Name = item.Name, Code = item.Code });
 }
 
 /// <summary>
@@ -159,7 +164,10 @@ public sealed class TimeStageIndexProvider : IndexProvider<TimeStage>
 
     /// <inheritdoc/>
     public override void Describe(DescribeContext<TimeStage> context)
-        => context.For<TimeStageIndex>().Map(item => new TimeStageIndex { ItemId = item.ItemId, Name = item.Name, Code = item.Code });
+        => context.For<TimeStageIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(item => new TimeStageIndex { ItemId = item.ItemId, Name = item.Name, Code = item.Code });
 }
 
 /// <summary>

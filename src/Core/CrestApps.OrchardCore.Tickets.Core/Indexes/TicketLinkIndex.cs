@@ -33,6 +33,7 @@ public sealed class TicketLinkIndexProvider : IndexProvider<ContentItem>
 {
     public override void Describe(DescribeContext<ContentItem> context)
         => context.For<TicketLinkIndex>()
+            .ExclusiveToDocumentType()
             .When(item => item.Latest && item.TryGet<TicketPart>(out var part) && part.Links.Count > 0)
             .Map(item => item.GetOrCreate<TicketPart>().Links
                 .Where(link => link.Record.Kind == TicketsConstants.RecordKind && !string.IsNullOrEmpty(link.Record.Id))

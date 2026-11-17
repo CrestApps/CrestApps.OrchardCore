@@ -19,6 +19,8 @@ internal sealed class OmnichannelActivityBatchIndexProvider : IndexProvider<Omni
     {
         context
             .For<OmnichannelActivityBatchIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(batch => new OmnichannelActivityBatchIndex
             {
                 ItemId = batch.ItemId,

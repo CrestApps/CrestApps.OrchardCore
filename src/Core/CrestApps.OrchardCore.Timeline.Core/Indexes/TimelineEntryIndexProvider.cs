@@ -20,6 +20,8 @@ public sealed class TimelineEntryIndexProvider : IndexProvider<TimelineEntry>
     public override void Describe(DescribeContext<TimelineEntry> context)
     {
         context.For<TimelineEntryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(entry => new TimelineEntryIndex
             {
                 ItemId = entry.ItemId,
@@ -37,6 +39,7 @@ public sealed class TimelineEntryIndexProvider : IndexProvider<TimelineEntry>
 
         // One row per file, so a record's files are listed without reading its entries.
         context.For<TimelineAttachmentIndex>()
+            .ExclusiveToDocumentType()
             .Map(entry => (entry.AttachmentIds ?? [])
                 .Where(attachmentId => !string.IsNullOrEmpty(attachmentId))
                 .Distinct(StringComparer.Ordinal)

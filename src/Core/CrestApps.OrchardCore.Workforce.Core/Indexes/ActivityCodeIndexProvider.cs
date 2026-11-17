@@ -20,6 +20,8 @@ public sealed class ActivityCodeIndexProvider : IndexProvider<ActivityCode>
     public override void Describe(DescribeContext<ActivityCode> context)
     {
         context.For<ActivityCodeIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(code => new ActivityCodeIndex
             {
                 ItemId = code.ItemId,

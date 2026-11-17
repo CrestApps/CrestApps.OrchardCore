@@ -28,6 +28,8 @@ public sealed class LoyaltyAccountIndexProvider : IndexProvider<LoyaltyAccount>
     public override void Describe(DescribeContext<LoyaltyAccount> context)
     {
         context.For<LoyaltyAccountIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(account => new LoyaltyAccountIndex
             {
                 ItemId = account.ItemId,

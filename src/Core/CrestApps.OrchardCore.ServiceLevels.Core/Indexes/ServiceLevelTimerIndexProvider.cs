@@ -20,6 +20,8 @@ public sealed class ServiceLevelTimerIndexProvider : IndexProvider<ServiceLevelT
     public override void Describe(DescribeContext<ServiceLevelTimer> context)
     {
         context.For<ServiceLevelTimerIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(timer => new ServiceLevelTimerIndex
             {
                 ItemId = timer.ItemId,

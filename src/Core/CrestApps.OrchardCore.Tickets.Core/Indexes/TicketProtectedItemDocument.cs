@@ -87,6 +87,8 @@ public sealed class TicketProtectedItemIndexProvider : IndexProvider<TicketProte
     /// <inheritdoc/>
     public override void Describe(DescribeContext<TicketProtectedItemDocument> context)
         => context.For<TicketProtectedItemIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new TicketProtectedItemIndex
             {
                 ItemId = item.ItemId,

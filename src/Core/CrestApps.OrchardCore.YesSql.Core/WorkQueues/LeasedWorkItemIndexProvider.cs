@@ -24,6 +24,8 @@ public sealed class LeasedWorkItemIndexProvider<T> : IndexProvider<T>
     {
         context
             .For<LeasedWorkItemIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new LeasedWorkItemIndex
             {
                 ItemId = item.ItemId,

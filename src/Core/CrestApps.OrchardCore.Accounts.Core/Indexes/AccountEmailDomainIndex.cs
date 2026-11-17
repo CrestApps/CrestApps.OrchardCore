@@ -21,6 +21,7 @@ public sealed class AccountEmailDomainIndexProvider : IndexProvider<ContentItem>
 {
     public override void Describe(DescribeContext<ContentItem> context)
         => context.For<AccountEmailDomainIndex>()
+            .ExclusiveToDocumentType()
             .When(item => item.Published && item.Has<AccountEmailDomainsPart>())
             .Map(item => (item.GetOrCreate<AccountEmailDomainsPart>().Domains ?? [])
                 .Select(AccountEmailDomainsNormalizer.Normalize)

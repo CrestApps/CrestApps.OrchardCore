@@ -31,6 +31,8 @@ public sealed class TicketBacklogIndexProvider : IndexProvider<TicketBacklogDay>
     /// <inheritdoc/>
     public override void Describe(DescribeContext<TicketBacklogDay> context)
         => context.For<TicketBacklogIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(day => new TicketBacklogIndex
             {
                 Day = day.Day,

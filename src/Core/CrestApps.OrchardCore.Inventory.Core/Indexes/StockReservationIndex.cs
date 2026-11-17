@@ -25,6 +25,8 @@ public sealed class StockReservationIndexProvider : IndexProvider<StockReservati
     public override void Describe(DescribeContext<StockReservation> context)
     {
         context.For<StockReservationIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(reservation => new StockReservationIndex
             {
                 ItemId = reservation.ItemId,

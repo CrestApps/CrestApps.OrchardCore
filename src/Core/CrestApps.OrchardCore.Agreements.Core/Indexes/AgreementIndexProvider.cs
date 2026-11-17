@@ -19,6 +19,8 @@ public sealed class AgreementIndexProvider : IndexProvider<Agreement>
     /// <inheritdoc/>
     public override void Describe(DescribeContext<Agreement> context)
         => context.For<AgreementIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new AgreementIndex
             {
                 ItemId = item.ItemId,

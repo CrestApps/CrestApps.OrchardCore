@@ -23,6 +23,8 @@ public sealed class QueueItemIndexProvider : IndexProvider<QueueItem>
     {
         context
             .For<QueueItemIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new QueueItemIndex
             {
                 ItemId = item.ItemId,

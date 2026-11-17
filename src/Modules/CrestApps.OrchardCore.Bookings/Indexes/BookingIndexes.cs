@@ -85,6 +85,8 @@ public sealed class BookingSlotIndexProvider : IndexProvider<BookingSlot>
 
     public override void Describe(DescribeContext<BookingSlot> context)
         => context.For<BookingSlotIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(slot => new BookingSlotIndex
             {
                 ItemId = slot.ItemId,
@@ -105,6 +107,8 @@ public sealed class BookingIndexProvider : IndexProvider<Booking>
 
     public override void Describe(DescribeContext<Booking> context)
         => context.For<BookingIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(booking => new BookingIndex
             {
                 ItemId = booking.ItemId,
@@ -131,6 +135,8 @@ public sealed class BookingBalanceIndexProvider : IndexProvider<BookingBalance>
 
     public override void Describe(DescribeContext<BookingBalance> context)
         => context.For<BookingBalanceIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(balance => new BookingBalanceIndex
             {
                 ItemId = balance.ItemId,

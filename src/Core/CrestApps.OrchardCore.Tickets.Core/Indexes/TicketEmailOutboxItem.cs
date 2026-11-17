@@ -103,6 +103,8 @@ public sealed class TicketEmailOutboxIndexProvider : IndexProvider<TicketEmailOu
     /// <inheritdoc/>
     public override void Describe(DescribeContext<TicketEmailOutboxItem> context)
         => context.For<TicketEmailOutboxIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new TicketEmailOutboxIndex
             {
                 TicketId = item.TicketId,

@@ -22,6 +22,8 @@ public sealed class PredictivePacingStateIndexProvider : IndexProvider<Predictiv
     {
         context
             .For<PredictivePacingStateIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(state => new PredictivePacingStateIndex
             {
                 ItemId = state.ItemId,

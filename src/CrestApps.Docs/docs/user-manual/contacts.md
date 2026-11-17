@@ -63,7 +63,7 @@ The screencast below creates a *Lead* type with the **Omnichannel Contact** and 
 <YouTube video="omnichannel-contacts" title="Video of finding a contact by name or phone number" start={152} end={192} />
 
 
-On **Interaction Center > Contacts**, the search box matches a name **or** a phone number, so you can type either one. A number of three digits or more finds contacts whose main cell or home number **begins with** those digits, for example `702555`. To find digits anywhere in the number, such as the last four, use `phone:` or `phone-ends:` below. A search with letters in it, such as `John 2`, matches names only. This only happens on the Contacts list; on other content lists the search box matches names only.
+On **Interaction Center > Contacts**, the search box matches a name **or** a phone number, so you can type either one. A number of three digits or more finds contacts with a number, of any type, that **begins with** those digits, for example `702555` or `(702) 555-0104`. A search written like a number matches numbers only, not names. To find digits anywhere in the number, such as the last four, use `phone:` or `phone-ends:` below. A search with letters in it, such as `John 2`, matches names only. This only happens on the Contacts list; on other content lists the search box matches names only.
 
 You can also use these search terms. The **Filter syntax** entry of the list's **Filters** menu shows them on a **Phone** card.
 

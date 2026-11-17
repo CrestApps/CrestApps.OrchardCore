@@ -20,6 +20,8 @@ public sealed class AttachmentIndexProvider : IndexProvider<Attachment>
     public override void Describe(DescribeContext<Attachment> context)
     {
         context.For<AttachmentIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(attachment => new AttachmentIndex
             {
                 ItemId = attachment.ItemId,
