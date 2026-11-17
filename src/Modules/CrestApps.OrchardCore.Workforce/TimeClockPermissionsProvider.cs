@@ -15,8 +15,7 @@ internal sealed class TimeClockPermissionsProvider : IPermissionProvider
         WorkforcePermissions.ManageTimeClockPolicies,
         WorkforcePermissions.ApproveTimesheets,
         WorkforcePermissions.EditPunches,
-        WorkforcePermissions.ExportPayroll,
-        WorkforcePermissions.ViewPayRates,
+        WorkforcePermissions.LockTimesheets,
         WorkforcePermissions.PunchTime,
     ];
 

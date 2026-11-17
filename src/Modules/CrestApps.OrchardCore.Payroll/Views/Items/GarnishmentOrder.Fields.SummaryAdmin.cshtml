@@ -1,0 +1,4 @@
+@model GarnishmentRowViewModel
+
+<a asp-action="Edit" asp-controller="Garnishments" asp-route-id="@Model.Order.ItemId">@Model.StaffName</a>
+<span class="text-muted small ms-1">@Model.EmployerName</span>

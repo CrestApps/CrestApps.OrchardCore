@@ -26,8 +26,8 @@ Teams are kept by the **Teams** feature, so every feature uses the same tree. Op
 
 | Field | What it does |
 | --- | --- |
-| **Address** | Where the team works, for a site. |
-| **Site coordinates**, **Time clock policy** | Shown when the Time Clock is on. See [Time Clock](./time-clock.md). |
+| **Address** | The team's address, shown from its **Address** card. |
+| **Site coordinates**, **Time clock policy** | Shown when the Time Clock is on. Left empty, the site coordinates are found from the team's address. See [Time Clock](./time-clock.md). |
 | **Open shifts go to**, **Shift trades** | Shown when Shift Planning is on. See [Team settings](./shift-planning.md#team-settings). |
 | **Shifts under approved time off** | Shown when Shift Planning and Time Off are on. |
 

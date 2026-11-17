@@ -1,0 +1,6 @@
+@* The value editor of an approver rule kind without its own: a text box. A module adds ApproverRuleValue.Edit-{Kind}.cshtml (the ApproverRuleValue_Edit__{Kind} alternate) for its kind. *@
+@{
+    ApproverRuleValueEditorViewModel editor = Model.Editor;
+}
+
+<input id="@editor.FieldId" name="@editor.FieldName" value="@editor.Value" class="form-control" aria-label="@T["Value"]" />

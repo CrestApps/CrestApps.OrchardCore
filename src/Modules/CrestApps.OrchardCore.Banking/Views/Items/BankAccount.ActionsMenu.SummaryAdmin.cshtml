@@ -1,0 +1,18 @@
+@model ShapeViewModel<BankAccount>
+
+@{
+    // The same rows list every account for bank administrators and a person's own accounts on My bank accounts.
+    var isOwnList = string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "MyBankAccounts", StringComparison.OrdinalIgnoreCase);
+}
+
+@if (isOwnList)
+{
+    @if (Model.Value.Status != BankAccountStatus.Closed)
+    {
+        <a asp-action="Close" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Close"]" data-message="@T["Close this account? No payment goes to it any more, and it can't be opened again."]" data-url-af="RemoveUrl UnsafeUrl">@T["Close"]</a>
+    }
+}
+else
+{
+    <a asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this bank account? To keep its history, close it instead."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}

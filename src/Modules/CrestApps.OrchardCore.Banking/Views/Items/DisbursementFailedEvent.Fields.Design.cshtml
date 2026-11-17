@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Banking.Disbursements.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<DisbursementFailedEvent>
+
+<header><h4><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Disbursement Failed"])</h4></header>
+<p class="hint">@T["Starts when a disbursement fails, such as when its check can't be issued. A cancelled or reversed disbursement starts Disbursement Canceled or Disbursement Reversed instead. Input: DisbursementId, PayeeName, Amount, Currency, Method, Status, Change, SourceKind, SourceId, BatchId, TraceNumber, FailureCode, FailureReason, IsPrenote and Actor."]</p>

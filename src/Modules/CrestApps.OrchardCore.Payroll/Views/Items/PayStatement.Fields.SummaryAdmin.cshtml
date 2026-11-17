@@ -1,0 +1,7 @@
+@model ShapeViewModel<PayStatement>
+
+<a asp-action="Statement" asp-controller="PayRuns" asp-route-id="@Model.Value.ItemId">@(Model.Value.Snapshot?.EmployeeName ?? Model.Value.StaffMemberId)</a>
+@if (!string.IsNullOrEmpty(Model.Value.Snapshot?.EmployeeNumber))
+{
+    <span class="text-muted small ms-1">@Model.Value.Snapshot.EmployeeNumber</span>
+}

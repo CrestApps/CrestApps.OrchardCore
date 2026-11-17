@@ -1,0 +1,40 @@
+@model CheckReprintViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ChecksReprint" title="@T["Reprint check {0}", Model.Check.Number]">
+        <breadcrumb-item id="Checks" action="Index" controller="Checks" area="CrestApps.OrchardCore.Banking" permission="@ChecksPermissions.ViewCheckRegister.Name">@T["Checks"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="alert alert-warning">
+    @T["Check {0} to {1} for {2} {3} is already printed. Print it again only if the printed one is spoiled or never left the office: the Audit Trail records the reprint and why.", Model.Check.Number, Model.Check.PayeeName, Model.Check.Amount.ToString("N2"), Model.Check.Currency]
+</div>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    <div class="card mb-3">
+        <div class="card-header">@T["Print again"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="LayoutId">
+                <label asp-for="LayoutId" class="ocat-label ocat-label-required">@T["Check layout"]</label>
+                <div class="ocat-end">
+                    <select asp-for="LayoutId" asp-items="Model.LayoutOptions" class="form-select"></select>
+                    <span asp-validation-for="LayoutId" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="Reason">
+                <label asp-for="Reason" class="ocat-label ocat-label-required">@T["Reason"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Reason" class="form-control" maxlength="500" />
+                    <span asp-validation-for="Reason" class="text-danger"></span>
+                    <span class="hint">@T["Such as a printer jam or a misaligned sheet."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Reprint"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

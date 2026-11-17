@@ -1,0 +1,21 @@
+@model PayrollTeamViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Payroll"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="LedgerCode" class="ocat-label">@T["Ledger code"]</label>
+            <div class="ocat-end">
+                <input asp-for="LedgerCode" class="form-control" style="max-width: 14rem" />
+                <span class="hint">@T["The cost center the team's pay costs go to in the payroll journal."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Jurisdictions" class="ocat-label">@T["Tax jurisdictions"]</label>
+            <div class="ocat-end">
+                <input asp-for="Jurisdictions" class="form-control text-uppercase" placeholder="US-CA, US-CA-SF" />
+                <span class="hint">@T["For a work site: where the people who work there are taxed for their work, separated with commas."]</span>
+            </div>
+        </div>
+    </div>
+</div>

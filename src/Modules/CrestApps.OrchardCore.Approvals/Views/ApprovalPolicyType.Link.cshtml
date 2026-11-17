@@ -1,0 +1,24 @@
+@using CrestApps.OrchardCore.Approvals.Services
+@using Microsoft.Extensions.Localization
+@using OrchardCore
+
+@inject IStringLocalizerFactory LocalizerFactory
+
+@{
+    ApprovalType type = Model.Type;
+}
+
+<div class="col">
+    <div class="card h-100">
+        <div class="card-body">
+            <h5 class="card-title">@(type.DisplayName is null ? type.Name : LocalizerFactory.Localize(type.DisplayName).Value)</h5>
+            @if (type.Description is not null)
+            {
+                <p class="hint mb-0">@LocalizerFactory.Localize(type.Description).Value</p>
+            }
+        </div>
+        <div class="card-footer text-end">
+            <a class="btn btn-primary btn-sm" asp-action="Create" asp-controller="ApprovalPolicies" asp-area="CrestApps.OrchardCore.Approvals" asp-route-type="@type.Name">@T["Add"]</a>
+        </div>
+    </div>
+</div>

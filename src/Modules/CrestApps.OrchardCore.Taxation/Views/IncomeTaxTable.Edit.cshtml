@@ -1,0 +1,81 @@
+@model IncomeTaxTableViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Table"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Method">
+            <label asp-for="Method" class="ocat-label">@T["Worked out as"]</label>
+            <div class="ocat-end">
+                <select asp-for="Method" asp-items="Model.Methods" class="form-select" style="max-width: 20rem"></select>
+                <span asp-validation-for="Method" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="TaxTableId">
+            <label asp-for="TaxTableId" class="ocat-label ocat-label-required">@T["Tax table"]</label>
+            <div class="ocat-end">
+                <select asp-for="TaxTableId" asp-items="Model.Tables" class="form-select" style="max-width: 20rem">
+                    <option value="">@T["None"]</option>
+                </select>
+                <span asp-validation-for="TaxTableId" class="text-danger"></span>
+                <span class="hint">@T["A table of Commerce &gt; Taxation &gt; Tables, with rates as fractions (0.1 for 10%)."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="WageBase">
+            <label asp-for="WageBase" class="ocat-label">@T["Wage base"]</label>
+            <div class="ocat-end">
+                <input asp-for="WageBase" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+                <span asp-validation-for="WageBase" class="text-danger"></span>
+                <span class="hint">@T["The most income taxed in a calendar year; empty for no limit."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Annualize" type="checkbox" class="form-check-input" />
+                    <label asp-for="Annualize" class="form-check-label">@T["Work it out on a year's income"]</label>
+                    <span class="hint dashed">@T["The period's income is turned into a year's, the table applied, and the result divided back: how income tax tables are written."]</span>
+                </div>
+                <div class="form-check">
+                    <input asp-for="UsesElections" type="checkbox" class="form-check-input" />
+                    <label asp-for="UsesElections" class="form-check-label">@T["The person's election applies"]</label>
+                    <span class="hint dashed">@T["Exempt withholds nothing, each allowance lowers a year's income by the amount below, and extra withholding is added."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AllowanceAmount">
+            <label asp-for="AllowanceAmount" class="ocat-label">@T["Each allowance"]</label>
+            <div class="ocat-end">
+                <input asp-for="AllowanceAmount" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+                <span asp-validation-for="AllowanceAmount" class="text-danger"></span>
+                <span class="hint">@T["What one allowance on the person's election lowers a year's income by; empty for none."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Bonuses and commissions"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="SupplementalRate">
+            <label asp-for="SupplementalRate" class="ocat-label">@T["Flat rate (%)"]</label>
+            <div class="ocat-end">
+                <input asp-for="SupplementalRate" class="form-control" inputmode="decimal" style="max-width: 8rem" />
+                <span asp-validation-for="SupplementalRate" class="text-danger"></span>
+                <span class="hint">@T["Withheld from bonuses and commissions when a run uses the flat method; empty to withhold them with regular income."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="SupplementalExcessRate">
+            <label asp-for="SupplementalExcessRate" class="ocat-label">@T["Rate over a year's amount (%)"]</label>
+            <div class="ocat-end">
+                <div class="input-group" style="max-width: 24rem">
+                    <input asp-for="SupplementalExcessRate" class="form-control" inputmode="decimal" aria-label="@T["Rate over a year's amount (%)"]" />
+                    <span class="input-group-text">@T["over"]</span>
+                    <input asp-for="SupplementalExcessThreshold" class="form-control" inputmode="decimal" aria-label="@T["Year's amount"]" />
+                </div>
+                <span asp-validation-for="SupplementalExcessRate" class="text-danger"></span>
+                <span asp-validation-for="SupplementalExcessThreshold" class="text-danger"></span>
+                <span class="hint">@T["The rate withheld from the supplemental income a person is paid in a calendar year above the amount, whatever the method and the election; empty for none."]</span>
+            </div>
+        </div>
+    </div>
+</div>

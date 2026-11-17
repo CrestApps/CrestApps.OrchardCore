@@ -1,0 +1,42 @@
+@using CrestApps.OrchardCore.Approvals.Services
+@using Microsoft.Extensions.Localization
+@using OrchardCore
+@inject IEnumerable<IApproverRuleProvider> Providers
+@inject IApprovalTypeCatalog Types
+@inject IStringLocalizerFactory LocalizerFactory
+@model ShapeViewModel<ApprovalPolicy>
+
+@{
+    var policy = Model.Value;
+    var stages = policy.GetStages();
+}
+
+@if (!policy.Enabled)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Only when named"]</span>
+}
+@foreach (var typeName in string.IsNullOrEmpty(policy.Type) ? policy.Types ?? [] : [policy.Type])
+{
+    var type = Types.Find(typeName);
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Approval type"]"><i class="fa-solid fa-tag text-secondary me-1" aria-hidden="true"></i>@(type?.DisplayName is { } name ? LocalizerFactory.Localize(name).Value : typeName)</span>
+}
+@for (var i = 0; i < stages.Count; i++)
+{
+    var stage = stages[i];
+    var who = string.Join(", ", stage.Approvers.Select(rule =>
+    {
+        var provider = Providers.FirstOrDefault(candidate => string.Equals(candidate.Name, rule.Kind, StringComparison.OrdinalIgnoreCase));
+        var kind = provider is null ? rule.Kind : LocalizerFactory.Localize(provider.DisplayName).Value;
+
+        return string.IsNullOrEmpty(rule.Value) ? kind : kind + ": " + rule.Value;
+    }));
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@who"><i class="fa-solid fa-user-check text-secondary me-1" aria-hidden="true"></i>@(stages.Count == 1 ? string.Empty : (stage.Title ?? T.GetString("Stage {0}", i + 1).Value) + " · ")@(stage.RequiredApprovals == 1 ? T["1 approval"] : T["{0} approvals", stage.RequiredApprovals])</span>
+}
+@if (policy.MinimumAmount is not null || policy.MaximumAmount is not null)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Amount"]"><i class="fa-solid fa-coins text-secondary me-1" aria-hidden="true"></i>@(policy.MinimumAmount?.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture) ?? "…") – @(policy.MaximumAmount?.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture) ?? "…") @policy.Currency</span>
+}
+@if (policy.DueAfterHours is { } hours)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Due after"]"><i class="fa-solid fa-clock text-secondary me-1" aria-hidden="true"></i>@(hours == 1 ? T["Due in 1 hour"] : T["Due in {0} hours", hours])</span>
+}

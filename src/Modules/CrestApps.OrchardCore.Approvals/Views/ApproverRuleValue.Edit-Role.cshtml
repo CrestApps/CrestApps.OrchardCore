@@ -1,0 +1,22 @@
+@using OrchardCore.Security.Services
+@inject IServiceProvider Services
+@{
+    ApproverRuleValueEditorViewModel editor = Model.Editor;
+    var roleService = Services.GetService(typeof(IRoleService)) as IRoleService;
+    var roles = roleService is null ? [] : (await roleService.GetRoleNamesAsync()).Order(StringComparer.CurrentCultureIgnoreCase).ToList();
+}
+
+@if (roles.Count == 0)
+{
+    <input id="@editor.FieldId" name="@editor.FieldName" value="@editor.Value" class="form-control" aria-label="@T["Role"]" />
+}
+else
+{
+    <select id="@editor.FieldId" name="@editor.FieldName" class="form-select" aria-label="@T["Role"]">
+        <option value="">@T["Choose a role"]</option>
+        @foreach (var role in roles)
+        {
+            <option value="@role" selected="@(role == editor.Value)">@role</option>
+        }
+    </select>
+}

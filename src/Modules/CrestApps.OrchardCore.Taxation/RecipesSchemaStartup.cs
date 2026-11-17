@@ -19,9 +19,7 @@ public sealed class RecipesSchemaStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, TaxCategoryRecipeStep>();
         services.AddScoped<IRecipeStep, TaxTypeRecipeStep>();
-        services.AddScoped<IRecipeStep, TaxJurisdictionRecipeStep>();
         services.AddScoped<IRecipeStep, TaxRuleRecipeStep>();
-        services.AddScoped<IRecipeStep, TaxTableRecipeStep>();
         services.AddScoped<IRecipeStep, MerchantTaxRegistrationRecipeStepSchema>();
         services.AddScoped<IRecipeStep, ExemptionCertificateRecipeStepSchema>();
         services.AddDeploymentStepSchema<MerchantTaxRegistrationDeploymentStepSchema>();
@@ -42,4 +40,19 @@ public sealed class TaxJarRecipesSchemaStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
         => services.AddScoped<ISiteSettingsSchemaDefinition, TaxJarSettingsSchema>();
+}
+
+/// <summary>
+/// Registers the recipe schemas of tax jurisdictions and tax tables.
+/// </summary>
+[Feature(TaxationConstants.Feature.Tables)]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class TaxTablesRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, TaxJurisdictionRecipeStep>();
+        services.AddScoped<IRecipeStep, TaxTableRecipeStep>();
+    }
 }

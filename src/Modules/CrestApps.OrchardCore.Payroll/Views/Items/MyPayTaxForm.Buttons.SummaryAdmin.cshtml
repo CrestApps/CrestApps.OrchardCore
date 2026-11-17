@@ -1,0 +1,3 @@
+@model ShapeViewModel<MyPayTaxFormViewModel>
+
+<a asp-action="TaxForm" asp-controller="MyPay" asp-route-id="@Model.Value.Filing.ItemId" class="btn btn-primary btn-sm">@T["Download"]</a>

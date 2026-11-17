@@ -198,17 +198,28 @@ internal sealed class StaffMemberCatalogHandler : CatalogEntryHandlerBase<StaffM
             return;
         }
 
-        var name = string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : user.DisplayName;
-
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            staff.DisplayName = name.Trim();
-        }
+        staff.DisplayName = NameFromUser(user.DisplayName, user.UserName, staff.DisplayName);
 
         if (!string.IsNullOrWhiteSpace(user.Email))
         {
             staff.Email = user.Email.Trim();
         }
+    }
+
+    // The name a linked staff member takes from their user. A user without a name of their own shows their user name (the
+    // display name provider falls back to it); that isn't a person's name, so the staff member's own name stays, and the
+    // user name is used only when the staff member has none.
+    internal static string NameFromUser(string userDisplayName, string userName, string staffName)
+    {
+        var hasOwnName = !string.IsNullOrWhiteSpace(userDisplayName)
+            && !string.Equals(userDisplayName.Trim(), userName?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+        if (hasOwnName)
+        {
+            return userDisplayName.Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(staffName) && !string.IsNullOrWhiteSpace(userName) ? userName.Trim() : staffName;
     }
 
     // Walks up from the proposed manager: reaching the person means the manager reports to them.
@@ -271,6 +282,12 @@ internal sealed class StaffMemberCatalogHandler : CatalogEntryHandlerBase<StaffM
             AddIfChanged(StaffHistoryFields.Teams, previous.Teams, current.Teams);
             AddIfChanged(StaffHistoryFields.WorkLocation, previous.WorkLocation, current.WorkLocation);
             AddIfChanged(StaffHistoryFields.TerminationDate, previous.TerminationDate, current.TerminationDate);
+
+            // A record saved before pay was tracked has no pay summary yet; its first save only starts tracking.
+            if (previous.Pay is not null)
+            {
+                AddIfChanged(StaffHistoryFields.Pay, previous.Pay, current.Pay);
+            }
         }
 
         void AddIfChanged(string field, string from, string to)
@@ -377,6 +394,12 @@ public sealed class StaffSavedState
     public string TerminationDate { get; set; }
 
     /// <summary>
+    /// Gets or sets the pay as one line (basis, currency, rates, salaries, cost), so a change is written to the history.
+    /// Empty when the staff member has no pay.
+    /// </summary>
+    public string Pay { get; set; }
+
+    /// <summary>
     /// Reads the values from a staff member.
     /// </summary>
     /// <param name="staff">The staff member.</param>
@@ -395,7 +418,45 @@ public sealed class StaffSavedState
                 .Select(membership => $"{membership.TeamId} {membership.Role} {membership.EffectiveFrom:yyyy-MM-dd}..{membership.EffectiveTo:yyyy-MM-dd}")),
             WorkLocation = staff.WorkLocation,
             TerminationDate = staff.TerminationDate?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            Pay = PaySummary(staff),
         };
+
+    /// <summary>
+    /// Writes a staff member's pay on one line with the invariant culture, such as
+    /// "Hourly USD; rate 2026-01-01 25.5; salary 2026-01-01 52000; cost 38.2".
+    /// </summary>
+    /// <param name="staff">The staff member.</param>
+    /// <returns>The line, or an empty string when there is no pay.</returns>
+    public static string PaySummary(StaffMember staff)
+    {
+        if (!staff.TryGet<StaffPayRates>(out var pay) || pay is null)
+        {
+            return string.Empty;
+        }
+
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        var parts = new List<string> { string.IsNullOrEmpty(pay.Currency) ? pay.PayBasis.ToString() : $"{pay.PayBasis} {pay.Currency}" };
+
+        parts.AddRange(pay.Rates
+            .OrderBy(rate => rate.EffectiveFrom)
+            .ThenBy(rate => rate.ActivityCodeId, StringComparer.Ordinal)
+            .Select(rate => string.Create(culture, $"rate {rate.EffectiveFrom:yyyy-MM-dd} {rate.HourlyRate:0.####}{(string.IsNullOrEmpty(rate.ActivityCodeId) ? string.Empty : " " + rate.ActivityCodeId)}")));
+        parts.AddRange(pay.Salaries
+            .OrderBy(salary => salary.EffectiveFrom)
+            .Select(salary => string.Create(culture, $"salary {salary.EffectiveFrom:yyyy-MM-dd} {salary.AnnualAmount:0.####}")));
+
+        if (pay.AnnualSalary is { } legacy)
+        {
+            parts.Add(string.Create(culture, $"salary {legacy:0.####}"));
+        }
+
+        if (pay.HourlyCost is { } cost)
+        {
+            parts.Add(string.Create(culture, $"cost {cost:0.####}"));
+        }
+
+        return string.Join("; ", parts);
+    }
 }
 
 /// <summary>

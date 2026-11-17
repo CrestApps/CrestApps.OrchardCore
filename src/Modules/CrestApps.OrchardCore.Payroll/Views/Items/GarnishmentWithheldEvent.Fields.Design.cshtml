@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<GarnishmentWithheldEvent>
+
+<header><h4><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Garnishment Withheld"])</h4></header>
+<p class="hint">@T["Starts when a garnishment order withholds from a pay statement and sends it to the payee; Problem says when the payment could not be made. Input: OrderId, EmployerId, StaffMemberId, Type, CaseNumber, Agency, PayeeName, Status, Withheld, TotalOwed, Remaining, StatementId, StatementNumber, PayDate, Amount, Currency, Method, ReferenceId, Reference, Problem and Change."]</p>

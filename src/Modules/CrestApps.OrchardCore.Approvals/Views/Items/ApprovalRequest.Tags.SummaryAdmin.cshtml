@@ -1,0 +1,25 @@
+@using CrestApps.OrchardCore.Approvals.Services
+@inject IApprovalService ApprovalService
+@model ShapeViewModel<ApprovalRequest>
+
+@{
+    var request = Model.Value;
+    var (css, icon, label) = request.Status switch
+    {
+        ApprovalStatus.Approved => ("text-success", "fa-circle-check", T["Approved"]),
+        ApprovalStatus.Rejected => ("text-danger", "fa-circle-xmark", T["Rejected"]),
+        ApprovalStatus.Canceled => ("text-secondary", "fa-ban", T["Withdrawn"]),
+        _ => ("text-warning", "fa-hourglass-half", T["Waiting"]),
+    };
+    var eligibility = request.Status == ApprovalStatus.Pending ? await ApprovalService.GetEligibilityAsync(request, User) : null;
+}
+
+<span class="badge ta-badge fw-normal"><i class="fa-solid @icon @css me-1" aria-hidden="true"></i>@label</span>
+@if (eligibility?.CanDecide == true)
+{
+    <span class="badge text-bg-primary fw-normal">@T["Yours to decide"]</span>
+}
+@if (request.IsHistorical)
+{
+    <span class="badge ta-badge fw-normal">@T["Imported"]</span>
+}
