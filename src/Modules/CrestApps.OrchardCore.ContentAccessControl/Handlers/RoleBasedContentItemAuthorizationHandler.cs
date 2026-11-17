@@ -1,7 +1,7 @@
+using CrestApps.OrchardCore.Roles.Core;
 using CrestApps.OrchardCore.Roles.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
-using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -32,7 +32,7 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
         // included: a restricted item is refused to whoever isn't in its roles, whatever else allowed it.
         var user = context?.User;
 
-        if (user == null || user.IsInRole(OrchardCoreConstants.Roles.Administrator))
+        if (user == null || ContentAccessRoles.SeesEverything(user))
         {
             return;
         }
@@ -103,17 +103,17 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
             }
         }
 
-        foreach (var roleName in roleNames)
+        if (roleNames.Count == 0)
         {
-            if (user.IsInRole(roleName))
-            {
-                context.Succeed(requirement);
-
-                return;
-            }
+            return;
         }
 
-        if (roleNames.Count > 0)
+        // Authenticated stands for anyone signed in and Anonymous for a visitor; neither is ever a role claim.
+        if (ContentAccessRoles.IsInAnyRole(user, roleNames))
+        {
+            context.Succeed(requirement);
+        }
+        else
         {
             context.Fail(new AuthorizationFailureReason(this, "User is not in any of the required roles for this content item."));
         }

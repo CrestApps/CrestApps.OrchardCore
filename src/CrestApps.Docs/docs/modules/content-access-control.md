@@ -37,13 +37,18 @@ The feature registers `RoleBasedContentItemAuthorizationHandler`, an `IAuthoriza
   `IsContentRestricted` set to `true`.
 - If the user is in any of those roles, the requirement succeeds. If roles were collected and the user is in none
   of them, the handler fails the requirement. If no roles were picked, the item is not restricted.
+- **Authenticated** stands for anyone signed in and **Anonymous** for a visitor, though Orchard Core never puts
+  either role in a user's claims: an item restricted to Authenticated opens for every signed-in user, one restricted
+  to Anonymous only for visitors, and one restricted to both for everyone. `ContentAccessRoles` (in
+  `CrestApps.OrchardCore.Roles.Core`) works out a reader's roles this way (`GetReaderRoles`, `IsInAnyRole`), so code
+  that filters restricted content matches the handler.
 - It runs even when another handler already succeeded the requirement, as the permission handler does for everyone
   who has **View content**, anonymous visitors included: a restricted item is refused to whoever isn't in its roles.
   Users in the Administrator role see every item.
 
 You can attach the part and set **Restrict content?** using the content definitions user interface or a migration.
 
-Here is an example of how to create or update a content type named `CustomContentType`, where access to its content items is restricted for all roles **except** "Administrator", "Authenticated", and "Anonymous".
+Here is an example of how to create or update a content type named `CustomContentType`, whose items are restricted to the roles picked on them. "Administrator" is left out of the picker because administrators see every item anyway. Keep "Authenticated" in it to let an editor open an item to everyone signed in.
 
 ```csharp
 internal sealed class CustomContentTypeMigrations : DataMigration
@@ -70,7 +75,7 @@ internal sealed class CustomContentTypeMigrations : DataMigration
                     AllowSelectMultiple = true,
                     Required = true,
                     Hint = "Select one or more roles",
-                    ExcludedRoles = ["Administrator", "Authenticated", "Anonymous"],
+                    ExcludedRoles = ["Administrator"],
                 })
             )
         );
