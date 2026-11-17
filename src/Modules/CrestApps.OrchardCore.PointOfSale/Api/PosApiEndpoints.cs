@@ -1,4 +1,5 @@
 using OrchardCore.RateLimits;
+using System.Globalization;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Api;
@@ -427,11 +428,16 @@ internal static class PosApiEndpoints
         // the sale held before it: another return of the same sale may have given that cash back in between.
         var cashBack = result.ReturnedToBalances.GetValueOrDefault(PosConstants.CashTenderKey);
 
+        List<string> messages = [.. result.Errors, .. result.Messages];
+
         // The drawer movement is recorded whenever cash went back, even when another part of the refund failed, and not
         // with the request's token: the refund doesn't stop for an aborted request, so neither does the record of its cash.
-        if (cashBack > 0m)
+        // The refund committed the session, which no longer tracks the shift read above, so the open shift is read again:
+        // a shift a manager closed meanwhile isn't saved open again. The cash leaves the drawer now, so it goes on the
+        // register's open shift, whichever that is.
+        if (cashBack > 0m && !await shifts.MoveCashAsync(await shiftStore.FindOpenAsync(shift.RegisterId, CancellationToken.None), -cashBack, $"Refund of order {order.OrderNumber}", httpContext.User, CancellationToken.None))
         {
-            await shifts.MoveCashAsync(shift, -cashBack, $"Refund of order {order.OrderNumber}", httpContext.User, CancellationToken.None);
+            messages.Add($"The register's shift was closed while the refund ran, so the {cashBack.ToString("0.00", CultureInfo.InvariantCulture)} {order.Currency} paid out isn't in its count.");
         }
 
         if (!result.Succeeded && cashBack <= 0m)
@@ -439,8 +445,9 @@ internal static class PosApiEndpoints
             return ApiProblems.Conflict(ApiProblems.Codes.NotAvailable, string.Join(" ", result.Errors));
         }
 
-        // A return that gave cash back is answered with it, so the clerk pays it out, and what failed besides is told first.
-        return TypedResults.Ok(new ApiPosReturn(order.ItemId, order.OrderNumber, ApiMoney.From(result.Refunded, order.Currency), ApiMoney.From(cashBack, order.Currency), [.. result.Errors, .. result.Messages]));
+        // A return that gave cash back is answered with it, so the clerk pays it out, and what failed besides is told first
+        // and flagged.
+        return TypedResults.Ok(new ApiPosReturn(order.ItemId, order.OrderNumber, ApiMoney.From(result.Refunded, order.Currency), ApiMoney.From(cashBack, order.Currency), messages, Incomplete: !result.Succeeded));
     }
 
     // A counter sale belongs to the store its register is in.
