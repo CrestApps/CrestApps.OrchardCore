@@ -11,7 +11,7 @@ The **Knowledge Base** is your help center: articles that answer common question
 | | |
 | --- | --- |
 | **Menu** | Service Desk > Knowledge Base > Articles; Service Desk > Knowledge Base > Help center |
-| **Permission** | **List content items** for the menu; the content permissions of the Knowledge Article type to write articles. Who reads each article is its **Role Picker** |
+| **Permission** | **List content items** for the menu; the content permissions of the Knowledge Article type to write articles. Who reads each article is its **Which roles can see this content** |
 | **Feature** | Knowledge Base |
 
 <AskYourAdmin />
@@ -21,7 +21,7 @@ The **Knowledge Base** is your help center: articles that answer common question
 1. Turn on **Knowledge Base** under **Tools > Features**.
 2. Go to **Service Desk > Knowledge Base > Articles** and select **New Knowledge Article**.
 3. Give it a **Title**.
-4. In **Role Picker**, pick who may open it: no role for everyone, **Authenticated** for anyone signed in, or your staff roles.
+4. In **Which roles can see this content**, pick who may open it (it reads **Any role** until you pick one): no role for everyone, **Authenticated** for anyone signed in, or your staff roles.
 5. Write a short **Summary**: one or two sentences shown in lists, searches and suggestions. Search looks at the title and the summary.
 6. Choose its **Category** to list it with similar articles.
 7. Write the body in the editor. Its toolbar formats text, adds links, lists, tables and pictures, and shows a preview.
@@ -36,7 +36,7 @@ The **Knowledge Base** is your help center: articles that answer common question
 | **Authenticated** | Anyone with an account who is signed in |
 | Staff roles, such as **Editor** | People in one of those roles |
 
-Administrators read every article. The **Role Picker** works as [Restrict Content by Role](../administration/content-access-control.md) does for any content, and holds everywhere the article shows: the help center, searches, suggestions and its own page. People outside the picked roles don't find the article, and get *You do not have access to this resource.* if they open its link.
+Administrators read every article. **Which roles can see this content** works as [Restrict Content by Role](../administration/content-access-control.md) does for any content, and holds everywhere the article shows: the help center, searches, suggestions and its own page. People outside the picked roles don't find the article, and get *You do not have access to this resource.* if they open its link.
 
 :::note[Articles written before]
 Articles written when the editor offered *Everyone*, *People who are signed in* and *Staff only* keep who could read them: *Everyone* picks no role, *People who are signed in* picks **Authenticated**, and *Staff only* picks the roles that had the old **View staff-only knowledge articles** permission, and **Administrator**.

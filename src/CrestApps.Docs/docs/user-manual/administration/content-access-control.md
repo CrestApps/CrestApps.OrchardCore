@@ -30,6 +30,7 @@ The restriction uses the **Role Picker** part from [Roles and Permissions](roles
 - Only reading is limited: viewing, previewing and listing the item, including through a content type's own permissions when it has **Securable** ticked. Who can edit, publish or delete the item still follows the normal permissions.
 - People in the **Administrator** role can always view every item, restricted or not.
 - A person who does not hold a picked role is refused: the page shows *You do not have access to this resource.*
+- On the item's editor the picker is labelled **Which roles can see this content**, reads **Any role** while no role is picked, and hints *Leave empty so everyone can see it.*, unless you give the part a name or a hint of your own on the content type.
 
 ## Set up a content type (once)
 
@@ -39,13 +40,13 @@ The restriction uses the **Role Picker** part from [Roles and Permissions](roles
 1. Open **Content > Content Definition > Content Types** and edit the content type.
 2. If it does not have the **Role Picker** part yet, click **Add Parts**, tick **Role Picker**, and save.
 3. Click **Add & Configure** next to **Role Picker**, or edit the **Role Picker** part on the content type.
-   Give it a clear **Display Name**: editors see it above the picker.
+   Leave **Display Name** empty to show editors **Which roles can see this content** above the picker, or give it a name of your own.
 4. Tick **Restrict content?**. Its hint reads: *When checked, only users in the selected roles will be allowed to access this content.*
 5. Set the picker's other options (**Exclude roles**, **Required?**, **Allow multiple?**, **Hint**). They are described on [Roles and Permissions](roles.md#add-the-role-picker-to-a-content-type).
 6. Save.
 
 :::tip
-Give the part a clear name on the content type, such as *Limit access to selected roles*, so editors know what the picker does. Use **Exclude roles** to hide roles that should never be picked, such as **Administrator**, who can view every item anyway.
+Editors see **Which roles can see this content** unless you name the part, so a name is only needed when you want other wording. Use **Exclude roles** to hide roles that should never be picked, such as **Administrator**, who can view every item anyway.
 :::
 
 ## Restrict an item

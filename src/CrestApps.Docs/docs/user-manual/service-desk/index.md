@@ -11,7 +11,7 @@ The **Service Desk** is where your team answers requests. Each request is a **ti
 | | |
 | --- | --- |
 | **Menu** | **Service Desk**: Tickets, Boards and the boards you pinned, Knowledge Base (Articles and Help center), and for those who manage the service desk, Desks, Statuses, Priorities and Views; **Settings > Service Desk** for the notification templates and the AI profile for replies |
-| **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support**; **Manage ticket settings** for the desks, statuses, priorities, views and settings; **Manage shared ticket boards** or **Manage my own ticket boards** to make boards; **View ticket reports** for the reports; **List content items** for the Knowledge Base menu, and each article's **Role Picker** for who reads it |
+| **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support**; **Manage ticket settings** for the desks, statuses, priorities, views and settings; **Manage shared ticket boards** or **Manage my own ticket boards** to make boards; **View ticket reports** for the reports; **List content items** for the Knowledge Base menu, and each article's **Which roles can see this content** for who reads it |
 | **Feature** | Tickets |
 
 <AskYourAdmin />

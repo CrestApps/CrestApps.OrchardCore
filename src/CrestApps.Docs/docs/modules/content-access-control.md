@@ -21,7 +21,10 @@ Provides a way to control who can access content items.
 This feature allows you to restrict access to content items based on user roles. It depends on
 [Enhanced Roles](roles.md) (`CrestApps.OrchardCore.Roles`) and adds a **Restrict content?** setting
 (`RolePickerPartContentAccessControlSettings.IsContentRestricted`) to the `RolePickerPart` settings on a content
-type. When it is `true`, the roles picked on each item decide who may view that item.
+type. When it is `true`, the roles picked on each item decide who may view that item. The item editor then labels
+the picker *Which roles can see this content* (when the part on the type has no display name of its own), shows
+*Any role* while none is picked, and hints *Leave empty so everyone can see it.* (when the part has no hint); every
+other role picker keeps its name, *Role Picker*.
 
 How administrators turn the restriction on for a content type and how editors restrict an item is described in the
 User Manual: [Restrict Content by Role](../user-manual/administration/content-access-control.md).
