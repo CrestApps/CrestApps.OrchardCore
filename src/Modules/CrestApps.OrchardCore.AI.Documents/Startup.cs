@@ -159,10 +159,11 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
         services.Configure<ChatSessionDocumentUploadOptions>(_shellConfiguration.GetSection(ChatSessionDocumentUploadOptions.SectionName));
 
         // CrestApps.Core's upload endpoint caps the documents of a session; the tenant sets that cap under
-        // CrestApps_AI:ChatSessionDocuments:MaxFilesPerSession.
+        // CrestApps_AI:ChatSessionDocuments:MaxFilesPerSession. The package reads 0 or less as "no limit", so a value
+        // below 1 is held at 1 rather than removing the cap.
         services
             .AddOptions<ChatDocumentsOptions>()
-            .Configure<IOptions<ChatSessionDocumentUploadOptions>>((documents, uploads) => documents.MaxDocumentsPerSession = uploads.Value.MaxFilesPerSession);
+            .Configure<IOptions<ChatSessionDocumentUploadOptions>>((documents, uploads) => documents.MaxDocumentsPerSession = Math.Max(1, uploads.Value.MaxFilesPerSession));
 
         // Every upload has a ceiling, a signed-in user's by user and an anonymous visitor's by network; an operator
         // changes it under CrestApps_Throttling:AttemptPolicies:ai-chat-document-uploads.

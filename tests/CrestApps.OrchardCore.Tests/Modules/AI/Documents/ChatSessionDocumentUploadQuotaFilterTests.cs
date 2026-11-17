@@ -147,11 +147,15 @@ public sealed class ChatSessionDocumentUploadQuotaFilterTests
 
     /// <summary>
     /// The package endpoint enforces <see cref="ChatDocumentsOptions.MaxDocumentsPerSession"/>; the tenant's
-    /// <c>CrestApps_AI:ChatSessionDocuments:MaxFilesPerSession</c> sets it, and leaving it out keeps 20.
+    /// <c>CrestApps_AI:ChatSessionDocuments:MaxFilesPerSession</c> sets it, and leaving it out keeps 20. The package reads
+    /// 0 or less as "no limit", so a value below 1 is held at 1 rather than removing the cap.
     /// </summary>
     [Theory]
     [InlineData(null, 20)]
     [InlineData("5", 5)]
+    [InlineData("1", 1)]
+    [InlineData("0", 1)]
+    [InlineData("-3", 1)]
     public void TheTenantSetting_SetsThePackagesDocumentCap(string configured, int expected)
     {
         var settings = new Dictionary<string, string>();
