@@ -131,7 +131,9 @@ internal sealed class GuardedStdioClientTransportProvider : IMcpClientTransportP
 
     private static bool IsAllowedVariable(string name, IReadOnlyCollection<string> allowedVariables)
     {
-        if (string.IsNullOrEmpty(name) || allowedVariables is null)
+        // A name with "=" or a control character is not one name: the child process reads the part before "=" as the
+        // name, so "NODE_OPTIONS=--require" would pass a NODE_* entry and set NODE_OPTIONS.
+        if (string.IsNullOrEmpty(name) || allowedVariables is null || name.Any(character => character == '=' || char.IsControl(character)))
         {
             return false;
         }

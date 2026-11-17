@@ -240,6 +240,22 @@ public sealed class McpStdioTenantGuardTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => provider.GetAsync(connection));
     }
 
+    [Theory]
+    [InlineData("NODE_OPTIONS=--require")]
+    [InlineData("NODE_ENV\0NODE_OPTIONS")]
+    [InlineData("NODE_ENV\nNODE_OPTIONS")]
+    [InlineData("GITHUB_TOKEN=x")]
+    public async Task GetAsync_WithAnAllowlist_RefusesAVariableNameWithAnEqualsSignOrAControlCharacter(string variable)
+    {
+        // Review 7 (Mild): "NODE_OPTIONS=--require" is not exactly NODE_OPTIONS, so the NODE_* entry admitted it, and the
+        // child process reads the part before "=" as the name.
+        var provider = CreateProvider(ShellSettings.DefaultShellName, allowedCommands: ["npx"], allowedVariables: ["NODE_*", "GITHUB_*"]);
+        var connection = CreateConnection("npx");
+        connection.Put(new StdioMcpConnectionMetadata { Command = "npx", Arguments = [], EnvironmentVariables = new() { [variable] = "x" } });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.GetAsync(connection));
+    }
+
     private static GuardedStdioClientTransportProvider CreateProvider(string tenantName, string[] allowedCommands = null, string[] allowedVariables = null)
         => new(
             new ShellSettings { Name = tenantName },
