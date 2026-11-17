@@ -1,6 +1,12 @@
 using CrestApps.OrchardCore.AgenticCommerce.Core;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Indexes;
+using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
+using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
+using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Migrations;
@@ -60,6 +66,53 @@ internal sealed class AgenticCommerceMigrations : DataMigration
             .CreateIndex("IDX_AgentCheckoutIndex_Order", "OrderId", "DocumentId"),
             collection: AgenticCommerceStorage.CollectionName);
 
-        return 1;
+        await AddProfileHostAndOriginAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the normalized host of a platform's profile to the platform index, so a profile saved with capitals or in
+    /// Unicode is found by its host, and the key of an unregistered platform's origin to the checkout index, so the share
+    /// of one origin is counted by 16 bytes of its hash rather than the 3 at the start of the platform id. The records
+    /// saved before this step are indexed again once the tenant has started, outside activation, a page at a time.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await AddProfileHostAndOriginAsync();
+
+        ShellScope.AddDeferredTask(scope => ReindexAsync(scope.ServiceProvider.GetRequiredService<ISession>()));
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Maps the platforms and the checkouts again, a page at a time, so the columns of version 2 are filled in.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    internal static async Task ReindexAsync(ISession session)
+    {
+        await CatalogIndexBackfill.ReindexAsync<AgentPlatform, AgentPlatformIndex>(session, AgenticCommerceStorage.CollectionName);
+        await CatalogIndexBackfill.ReindexAsync<AgentCheckout, AgentCheckoutIndex>(session, AgenticCommerceStorage.CollectionName);
+    }
+
+    private async Task AddProfileHostAndOriginAsync()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<AgentPlatformIndex>(table => table
+            .AddColumn<string>("ProfileHost", column => column.Nullable().WithLength(255)),
+            collection: AgenticCommerceStorage.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<AgentPlatformIndex>(table => table
+            .CreateIndex("IDX_AgentPlatformIndex_ProfileHost", "ProfileHost", "DocumentId"),
+            collection: AgenticCommerceStorage.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<AgentCheckoutIndex>(table => table
+            .AddColumn<string>("PlatformOrigin", column => column.Nullable().WithLength(AgentPlatformAddress.OriginKeyLength)),
+            collection: AgenticCommerceStorage.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<AgentCheckoutIndex>(table => table
+            .CreateIndex("IDX_AgentCheckoutIndex_Origin", "PlatformOrigin", "IsTerminal", "DocumentId"),
+            collection: AgenticCommerceStorage.CollectionName);
     }
 }

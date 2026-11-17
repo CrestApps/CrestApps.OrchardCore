@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.AgenticCommerce.Core;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Indexes;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
+using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Indexes;
@@ -24,6 +25,7 @@ internal sealed class AgentPlatformIndexProvider : IndexProvider<AgentPlatform>
                 ApiKeyHash = platform.ApiKeyHash,
                 OAuthClientId = platform.OAuthClientId,
                 ProfileUrl = platform.ProfileUrl,
+                ProfileHost = AgentPlatformAddress.GetHost(platform.ProfileUrl),
             });
     }
 }

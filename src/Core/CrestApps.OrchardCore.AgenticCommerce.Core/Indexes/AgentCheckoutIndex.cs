@@ -13,6 +13,13 @@ public sealed class AgentCheckoutIndex : CatalogItemIndex
     public string PlatformId { get; set; }
 
     /// <summary>
+    /// Gets or sets the key of the origin of an unregistered platform's profile
+    /// (<see cref="Services.AgentPlatformAddress.GetOriginKey"/>), which the share of the allowance of one origin is
+    /// counted by; <see langword="null"/> for a registered platform.
+    /// </summary>
+    public string PlatformOrigin { get; set; }
+
+    /// <summary>
     /// Gets or sets the protocol it was made through.
     /// </summary>
     public string Protocol { get; set; }

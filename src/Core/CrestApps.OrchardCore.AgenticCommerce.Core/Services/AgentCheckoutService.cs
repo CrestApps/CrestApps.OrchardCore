@@ -146,7 +146,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
 
         var settings = await _siteService.GetSettingsAsync<AgenticCommerceSettings>();
 
-        if (await _store.IsFullAsync(context.PlatformId, settings, cancellationToken))
+        if (await _store.IsFullAsync(context, settings, cancellationToken))
         {
             return AgentCheckoutResult.Fail(AgentCheckoutFailure.TooMany, S["Too many checkouts are open. Complete or cancel some first."]);
         }

@@ -52,23 +52,17 @@ public sealed class AgentPlatformStore : DocumentCatalog<AgentPlatform, AgentPla
     {
         ArgumentException.ThrowIfNullOrEmpty(host);
 
-        // A fully qualified name's trailing dot names the same host, and HttpClient fetches it alike, so it is left out on
-        // both sides. The text search narrows it down; the host itself is compared here, so another host that contains this
-        // one never matches. The pattern is one value: YesSql turns a concatenation in the expression into SQL, not one
-        // parameter.
-        host = host.TrimEnd('.');
+        // The index keeps each profile's host in the same form (punycode, lower case, no trailing dot, which names the
+        // same host and HttpClient fetches alike), so a profile saved with capitals or in Unicode is found on every
+        // database, and another host that contains this one never matches.
+        host = AgentPlatformAddress.NormalizeHost(host);
 
         if (host.Length == 0)
         {
             return null;
         }
 
-        var pattern = "://" + host;
-        var candidates = await Session.Query<AgentPlatform, AgentPlatformIndex>(index => index.ProfileUrl.Contains(pattern), collection: AgenticCommerceStorage.CollectionName)
-            .Take(100)
-            .ListAsync(cancellationToken);
-
-        return candidates.FirstOrDefault(platform =>
-            Uri.TryCreate(platform.ProfileUrl, UriKind.Absolute, out var uri) && string.Equals(uri.IdnHost.TrimEnd('.'), host, StringComparison.OrdinalIgnoreCase));
+        return await Session.Query<AgentPlatform, AgentPlatformIndex>(index => index.ProfileHost == host, collection: AgenticCommerceStorage.CollectionName)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 }

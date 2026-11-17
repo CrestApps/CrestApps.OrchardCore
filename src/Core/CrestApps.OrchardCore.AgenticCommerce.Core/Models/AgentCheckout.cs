@@ -23,6 +23,12 @@ public sealed class AgentCheckout : CatalogItem, IModifiedUtcAwareModel
     public const string CartKind = "cart";
 
     /// <summary>
+    /// The storage key of the address of the UCP profile the platform signed in with. An unregistered platform's share of
+    /// the allowance is counted by its origin (<see cref="Services.AgentPlatformAddress.GetOriginKey"/>).
+    /// </summary>
+    public const string ProfileUrlProperty = "ucp.profile_url";
+
+    /// <summary>
     /// Gets or sets the agent platform that made it.
     /// </summary>
     public string PlatformId { get; set; }

@@ -18,23 +18,31 @@ public static class AgentCheckoutAllowance
     /// together, and those whose profiles share an origin a tenth of it, so one caller can't take the whole allowance.
     /// </summary>
     /// <param name="store">The agent checkout store.</param>
-    /// <param name="platformId">The platform's id.</param>
+    /// <param name="context">Who asks: the platform, and for an unregistered one the profile address it signed in with
+    /// (<see cref="AgentCheckout.ProfileUrlProperty"/>).</param>
     /// <param name="settings">The agentic commerce settings.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public static async Task<bool> IsFullAsync(this IAgentCheckoutStore store, string platformId, AgenticCommerceSettings settings, CancellationToken cancellationToken = default)
+    public static async Task<bool> IsFullAsync(this IAgentCheckoutStore store, AgentCheckoutContext context, AgenticCommerceSettings settings, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(store);
-        ArgumentException.ThrowIfNullOrEmpty(platformId);
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentException.ThrowIfNullOrEmpty(context.PlatformId);
         ArgumentNullException.ThrowIfNull(settings);
 
         var limit = Math.Max(1, settings.MaxOpenCheckoutsPerPlatform);
 
-        if (await store.CountOpenAsync(platformId, cancellationToken) >= limit)
+        if (await store.CountOpenAsync(context.PlatformId, cancellationToken) >= limit)
         {
             return true;
         }
 
-        return platformId.StartsWith(AgentPlatform.UnregisteredIdPrefix, StringComparison.Ordinal) &&
-            await store.CountOpenFromSameOriginAsync(platformId, cancellationToken) >= Math.Max(1, limit / UnregisteredOriginShare);
+        if (!context.PlatformId.StartsWith(AgentPlatform.UnregisteredIdPrefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        // An unregistered platform is known only by its profile's address; without one there is no share to give it.
+        return AgentPlatformAddress.GetOriginKey(context.GetProperty(AgentCheckout.ProfileUrlProperty)) is not { } origin ||
+            await store.CountOpenFromSameOriginAsync(origin, cancellationToken) >= Math.Max(1, limit / UnregisteredOriginShare);
     }
 }

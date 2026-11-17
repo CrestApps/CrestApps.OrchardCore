@@ -177,8 +177,8 @@ public sealed class UcpUnregisteredPlatformTests : IAsyncLifetime, IDisposable
         {
             var checkouts = new AgentCheckoutStore(session);
 
-            await checkouts.CreateAsync(Checkout("c1", UcpProfileClient.GetUnregisteredPlatformId("https://evil.example/a")), TestContext.Current.CancellationToken);
-            await checkouts.CreateAsync(Checkout("c2", UcpProfileClient.GetUnregisteredPlatformId("https://evil.example/b")), TestContext.Current.CancellationToken);
+            await checkouts.CreateAsync(UnregisteredCheckout("c1", "https://evil.example/a"), TestContext.Current.CancellationToken);
+            await checkouts.CreateAsync(UnregisteredCheckout("c2", "https://evil.example/b"), TestContext.Current.CancellationToken);
             await session.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
@@ -187,6 +187,56 @@ public sealed class UcpUnregisteredPlatformTests : IAsyncLifetime, IDisposable
 
         Assert.Equal(StatusCodes.Status429TooManyRequests, StatusCode(refused));
         Assert.Equal(StatusCodes.Status201Created, StatusCode(other));
+    }
+
+    /// <summary>
+    /// The 24-bit share Mild (fix verification): the share of one origin was counted by the first three bytes of its
+    /// hash, the start of the platform id. A host whose hash starts like another's is found offline in seconds, and its
+    /// checkouts then used up the other origin's share. The share is counted by a 16-byte hash in its own column now.
+    /// </summary>
+    [Fact]
+    public async Task TwoOriginsWhoseIdsStartAlike_EachHaveTheirOwnShare()
+    {
+        var (first, second) = FindOriginsWhoseIdsStartAlike();
+
+        await using (var session = _store.CreateSession())
+        {
+            var checkouts = new AgentCheckoutStore(session);
+
+            await checkouts.CreateAsync(UnregisteredCheckout("c1", first + "/a"), TestContext.Current.CancellationToken);
+            await checkouts.CreateAsync(UnregisteredCheckout("c2", first + "/b"), TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var refused = await CreateCartAsync(first + "/c", maxOpen: 20);
+        var other = await CreateCartAsync(second + "/p", maxOpen: 20);
+
+        Assert.Equal(StatusCodes.Status429TooManyRequests, StatusCode(refused));
+        Assert.Equal(StatusCodes.Status201Created, StatusCode(other));
+    }
+
+    /// <summary>
+    /// The registered-host Mild (fix verification): the host search narrowed the platforms in SQL by the lower-case
+    /// punycode host, so a profile address saved in Unicode (or, on PostgreSQL, with capitals) was never a candidate, and a
+    /// disabled platform came back as an unregistered one from its own host.
+    /// </summary>
+    [Theory]
+    [InlineData("https://bücher.example/.well-known/ucp", "https://xn--bcher-kva.example/.well-known/ucp?x=1")]
+    [InlineData("https://Agent.Example/.well-known/ucp", "https://agent.example/.well-known/ucp?x=1")]
+    public async Task AProfileOnTheHostOfARegisteredPlatform_SavedInAnotherForm_IsNotLetInAsAnUnregisteredPlatform(string registered, string signedWith)
+    {
+        await AddPlatformAsync(new AgentPlatform
+        {
+            ItemId = "platform-1",
+            Name = "Agent",
+            Enabled = false,
+            Protocols = [AgenticCommerceConstants.Protocols.Ucp],
+            ProfileUrl = registered,
+        });
+
+        var result = await InvokeSignedAsync(signedWith);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, StatusCode(result));
     }
 
     /// <summary>
@@ -296,6 +346,36 @@ public sealed class UcpUnregisteredPlatformTests : IAsyncLifetime, IDisposable
             ExpiresUtc = _now.AddHours(6),
         };
 
+    // A checkout of the unregistered platform of a profile address, with the address the request filter keeps on it.
+    private static AgentCheckout UnregisteredCheckout(string id, string profileUrl)
+    {
+        var checkout = Checkout(id, UcpProfileClient.GetUnregisteredPlatformId(profileUrl));
+
+        checkout.SetProperty(UcpProfileClient.ProfileUrlProperty, profileUrl);
+
+        return checkout;
+    }
+
+    // Two https origins whose unregistered platform ids start with the same characters: the prefix and three bytes of a
+    // hash, so about four thousand hosts find a pair.
+    private static (string First, string Second) FindOriginsWhoseIdsStartAlike()
+    {
+        var seen = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        for (var i = 0; ; i++)
+        {
+            var origin = $"https://h{i}.example";
+            var start = UcpProfileClient.GetUnregisteredPlatformId(origin + "/p")[..AgentPlatform.UnregisteredOriginKeyLength];
+
+            if (seen.TryGetValue(start, out var first))
+            {
+                return (first, origin);
+            }
+
+            seen[start] = origin;
+        }
+    }
+
     // Creates a cart through the UCP endpoint, as the unregistered platform of a profile address, on the real store.
     private async Task<object> CreateCartAsync(string profileUrl, int maxOpen)
     {
@@ -318,7 +398,11 @@ public sealed class UcpUnregisteredPlatformTests : IAsyncLifetime, IDisposable
             Platform = new AgentPlatform { ItemId = platformId, ProfileUrl = profileUrl },
             Version = "2026-08-25",
             Json = JsonNode.Parse("""{ "line_items": [ { "item": { "id": "mug" }, "quantity": 1 } ] }"""),
-            Context = new AgentCheckoutContext { PlatformId = platformId },
+            Context = new AgentCheckoutContext
+            {
+                PlatformId = platformId,
+                Properties = new Dictionary<string, string> { [UcpProfileClient.ProfileUrlProperty] = profileUrl },
+            },
         }.Set(httpContext);
 
         var method = typeof(UcpCatalogEndpoints).GetMethod("CreateCartAsync", BindingFlags.NonPublic | BindingFlags.Static);

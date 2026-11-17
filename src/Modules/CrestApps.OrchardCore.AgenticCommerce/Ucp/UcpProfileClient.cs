@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
+using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
 using CrestApps.OrchardCore.AgenticCommerce.Endpoints;
 using Microsoft.Extensions.Logging;
 
@@ -164,10 +165,12 @@ public sealed class UcpProfileClient
     }
 
     /// <summary>
-    /// Returns the made-up id an unregistered platform's checkouts are kept under. It starts with a hash of its profile's
-    /// origin (scheme, host without a trailing dot, and port, in lower case), which the allowance of one origin is counted
-    /// by, and ends with a hash of the origin and the profile's path, which every ownership check compares: someone who can
-    /// put a file on the same origin as another platform's profile is still another platform. The query is left out.
+    /// Returns the made-up id an unregistered platform's checkouts are kept under. It starts with a short hash of its
+    /// profile's origin (scheme, host without a trailing dot, and port, in lower case) and ends with a hash of the origin
+    /// and the profile's path, which every ownership check compares: someone who can put a file on the same origin as
+    /// another platform's profile is still another platform. The query is left out. The allowance of one origin isn't
+    /// counted by the id's start, which is too short to tell origins apart, but by
+    /// <see cref="AgentPlatformAddress.GetOriginKey"/>.
     /// </summary>
     /// <param name="profileUrl">The profile's address.</param>
     public static string GetUnregisteredPlatformId(string profileUrl)
@@ -176,6 +179,7 @@ public sealed class UcpProfileClient
         var path = Uri.TryCreate(profileUrl, UriKind.Absolute, out var uri) ? uri.AbsolutePath : string.Empty;
 
         // The id fits the 26 characters the index keeps: the prefix, 3 bytes of the origin's hash and 8 of the owner's.
+        // Existing checkouts keep their ids, so the format stays.
         return AgentPlatform.UnregisteredIdPrefix + Hash(origin, (AgentPlatform.UnregisteredOriginKeyLength - AgentPlatform.UnregisteredIdPrefix.Length) / 2) + Hash(origin + path, 8);
     }
 
@@ -185,7 +189,7 @@ public sealed class UcpProfileClient
     /// </summary>
     /// <param name="url">The address.</param>
     public static string GetOrigin(string url)
-        => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? $"{uri.Scheme}://{uri.IdnHost.TrimEnd('.')}:{uri.Port}".ToLowerInvariant() : null;
+        => AgentPlatformAddress.GetOrigin(url);
 
     private static string Hash(string value, int bytes)
         => Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(value)).AsSpan(0, bytes));
@@ -198,5 +202,5 @@ public sealed class UcpProfileClient
     /// <summary>
     /// The storage key of a UCP platform's profile address, on an agent checkout.
     /// </summary>
-    public const string ProfileUrlProperty = "ucp.profile_url";
+    public const string ProfileUrlProperty = AgentCheckout.ProfileUrlProperty;
 }

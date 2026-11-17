@@ -52,6 +52,13 @@ public sealed class AgentCheckoutContext
     public IDictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();
 
     /// <summary>
+    /// Returns a value of <see cref="Properties"/>, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="name">The value's name.</param>
+    public string GetProperty(string name)
+        => Properties is not null && Properties.TryGetValue(name, out var value) ? value : null;
+
+    /// <summary>
     /// Gets or sets the platform's published profile, when its protocol has one (UCP): the keys its signatures and
     /// payment mandates are checked with.
     /// </summary>

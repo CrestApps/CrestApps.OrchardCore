@@ -16,8 +16,9 @@ public sealed class AgentPlatform : CatalogItem, INameAwareModel, IModifiedUtcAw
     public const string UnregisteredIdPrefix = "ucp-";
 
     /// <summary>
-    /// How many characters at the start of an unregistered platform's id name its profile's origin: the prefix and a hash
-    /// of the origin. The unregistered platforms whose profiles share an origin share a part of the allowance.
+    /// How many characters at the start of an unregistered platform's id are the prefix and a short hash of its profile's
+    /// origin. They are too few to tell origins apart, so the part of the allowance the platforms of one origin share is
+    /// counted by <see cref="Services.AgentPlatformAddress.GetOriginKey"/> instead.
     /// </summary>
     public const int UnregisteredOriginKeyLength = 10;
 

@@ -134,7 +134,7 @@ public static class UcpCatalogEndpoints
         // Carts count against the platform's cap on open checkouts, so an agent can't keep making them without end.
         var settings = await siteService.GetSettingsAsync<AgenticCommerceSettings>();
 
-        if (await store.IsFullAsync(request.Platform.ItemId, settings, httpContext.RequestAborted))
+        if (await store.IsFullAsync(request.Context, settings, httpContext.RequestAborted))
         {
             return UcpResults.Error(StatusCodes.Status429TooManyRequests, "rate_limited", "Too many carts and checkouts are open. Complete or cancel some first.");
         }
@@ -154,6 +154,9 @@ public static class UcpCatalogEndpoints
         };
 
         cart.SetProperty(CartKindProperty, AgentCheckout.CartKind);
+
+        // An unregistered platform's carts count against the share of its profile's origin, which is read from here.
+        cart.SetProperty(AgentCheckout.ProfileUrlProperty, request.Context.GetProperty(AgentCheckout.ProfileUrlProperty));
         await store.CreateAsync(cart, httpContext.RequestAborted);
 
         return UcpResults.Json(await WriteCartAsync(request, cart, checkouts, httpContext.RequestAborted), StatusCodes.Status201Created);

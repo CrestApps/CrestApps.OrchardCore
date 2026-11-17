@@ -40,10 +40,9 @@ public interface IAgentCheckoutStore : ICatalog<AgentCheckout>
     Task<int> CountOpenAsync(string platformId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns how many open agent checkouts the unregistered UCP platforms whose profiles share an origin with this one
-    /// have, this one included. For a registered platform, it is the platform's own count.
+    /// Returns how many open agent checkouts the unregistered UCP platforms whose profiles are on an origin have.
     /// </summary>
-    /// <param name="platformId">The platform's id.</param>
+    /// <param name="platformOrigin">The key of the origin, from <see cref="AgentPlatformAddress.GetOriginKey"/>.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    Task<int> CountOpenFromSameOriginAsync(string platformId, CancellationToken cancellationToken = default);
+    Task<int> CountOpenFromSameOriginAsync(string platformOrigin, CancellationToken cancellationToken = default);
 }
