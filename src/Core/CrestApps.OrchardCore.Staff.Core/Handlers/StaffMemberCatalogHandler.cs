@@ -198,17 +198,28 @@ internal sealed class StaffMemberCatalogHandler : CatalogEntryHandlerBase<StaffM
             return;
         }
 
-        var name = string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : user.DisplayName;
-
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            staff.DisplayName = name.Trim();
-        }
+        staff.DisplayName = NameFromUser(user.DisplayName, user.UserName, staff.DisplayName);
 
         if (!string.IsNullOrWhiteSpace(user.Email))
         {
             staff.Email = user.Email.Trim();
         }
+    }
+
+    // The name a linked staff member takes from their user. A user without a name of their own shows their user name (the
+    // display name provider falls back to it); that isn't a person's name, so the staff member's own name stays, and the
+    // user name is used only when the staff member has none.
+    internal static string NameFromUser(string userDisplayName, string userName, string staffName)
+    {
+        var hasOwnName = !string.IsNullOrWhiteSpace(userDisplayName)
+            && !string.Equals(userDisplayName.Trim(), userName?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+        if (hasOwnName)
+        {
+            return userDisplayName.Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(staffName) && !string.IsNullOrWhiteSpace(userName) ? userName.Trim() : staffName;
     }
 
     // Walks up from the proposed manager: reaching the person means the manager reports to them.

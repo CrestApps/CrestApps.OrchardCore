@@ -3,6 +3,9 @@
 
 @{
     string Amount(decimal? value) => value is null ? "-" : value.Value.ToString("N2") + (string.IsNullOrEmpty(Model.Currency) ? string.Empty : " " + Model.Currency);
+
+    // The rows keep the editor's invariant text; shown here as amounts like the lines above.
+    string RowAmount(string text) => decimal.TryParse(text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var value) ? Amount(value) : text;
 }
 
 <div class="card text-bg-theme mb-3">
@@ -27,7 +30,7 @@
                     <tbody>
                         @foreach (var rate in Model.Rates)
                         {
-                            <tr><td>@rate.EffectiveFrom?.ToString("d")</td><td>@rate.HourlyRate</td></tr>
+                            <tr><td>@rate.EffectiveFrom?.ToString("d")</td><td>@RowAmount(rate.HourlyRate)</td></tr>
                         }
                     </tbody>
                 </table>
@@ -41,7 +44,7 @@
                     <tbody>
                         @foreach (var salary in Model.Salaries)
                         {
-                            <tr><td>@salary.EffectiveFrom?.ToString("d")</td><td>@salary.AnnualAmount</td></tr>
+                            <tr><td>@salary.EffectiveFrom?.ToString("d")</td><td>@RowAmount(salary.AnnualAmount)</td></tr>
                         }
                     </tbody>
                 </table>

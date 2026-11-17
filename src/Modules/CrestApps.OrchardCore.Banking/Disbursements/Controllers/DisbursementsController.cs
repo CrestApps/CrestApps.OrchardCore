@@ -198,7 +198,7 @@ public sealed class DisbursementsController : Controller
 
         if (batch is not null)
         {
-            await _notifier.SuccessAsync(H["A batch of {0} disbursements was made. Release it from Disbursement Batches.", batch.Count]);
+            await _notifier.SuccessAsync(H["A batch of {0} disbursements was made. <a href=\"{1}\">Open Disbursement Batches</a> to release it.", batch.Count, Url.Action(nameof(DisbursementBatchesController.Index), "DisbursementBatches")]);
         }
 
         return RedirectToAction(nameof(Index));

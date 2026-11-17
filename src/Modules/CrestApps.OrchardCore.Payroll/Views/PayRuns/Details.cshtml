@@ -272,7 +272,15 @@ else if (!string.IsNullOrEmpty(Model.DecideRefusal))
             }
             @if (canWork)
             {
-                <button class="btn @(canProcess ? "btn-secondary" : "btn-primary")" type="submit" formaction="@Url.Action("Calculate", new { id = run.ItemId })">@T["Calculate"]</button>
+                @if (run.Status is PayRunStatus.PendingApproval or PayRunStatus.Approved)
+                {
+                    @* An approval is for one calculation: calculating again withdraws it, so it asks first. *@
+                    <button class="btn btn-secondary" type="submit" formaction="@Url.Action("Calculate", new { id = run.ItemId })" data-confirm-submit data-title="@T["Calculate again"]" data-message="@T["Calculate the run again? Its approval is withdrawn, and the run must be submitted for approval again."]">@T["Calculate again"]</button>
+                }
+                else
+                {
+                    <button class="btn @(canProcess ? "btn-secondary" : "btn-primary")" type="submit" formaction="@Url.Action("Calculate", new { id = run.ItemId })">@T["Calculate"]</button>
+                }
                 @if (run.Status == PayRunStatus.Calculated)
                 {
                     @if (Model.Questions.Count > 0)

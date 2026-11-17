@@ -28,5 +28,5 @@
 }
 @if (!string.IsNullOrEmpty(disbursement.SourceKind))
 {
-    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Pays"]"><i class="fa-solid fa-link text-secondary me-1" aria-hidden="true"></i>@disbursement.SourceKind</span>
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Pays"]"><i class="fa-solid fa-link text-secondary me-1" aria-hidden="true"></i>@CrestApps.OrchardCore.Banking.Services.SourceKindText.Describe(disbursement.SourceKind)</span>
 }

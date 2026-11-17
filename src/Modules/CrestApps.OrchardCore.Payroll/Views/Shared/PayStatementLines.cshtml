@@ -15,6 +15,10 @@
         PayLineType.Memo => T["Memo"].Value,
         _ => T["Tax"].Value,
     };
+
+    // A statement of salaried pay has no hours or rates: their columns are left out, so the amounts don't wrap.
+    var showHours = statement.Lines.Any(line => line.Hours.HasValue || line.Rate.HasValue);
+    var labelColumns = showHours ? 5 : 3;
 }
 
 <div class="card mb-3">
@@ -26,8 +30,11 @@
                     <tr>
                         <th scope="col">@T["Line"]</th>
                         <th scope="col">@T["Type"]</th>
-                        <th scope="col" class="text-end">@T["Hours"]</th>
-                        <th scope="col" class="text-end">@T["Rate"]</th>
+                        @if (showHours)
+                        {
+                            <th scope="col" class="text-end">@T["Hours"]</th>
+                            <th scope="col" class="text-end">@T["Rate"]</th>
+                        }
                         <th scope="col" class="text-end">@T["Taxable wages"]</th>
                         <th scope="col" class="text-end">@T["Amount"]</th>
                     </tr>
@@ -44,16 +51,19 @@
                                 }
                             </td>
                             <td>@TypeName(line.Type)@(line.Type == PayLineType.Tax && line.Payer == PayLinePayer.Employer ? " · " + T["employer"].Value : string.Empty)</td>
-                            <td class="text-end">@line.Hours?.ToString("0.##", CultureInfo.CurrentCulture)</td>
-                            <td class="text-end">@line.Rate?.ToString("0.####", CultureInfo.CurrentCulture)</td>
-                            <td class="text-end">@(line.TaxableWages is { } wages ? Money(wages) : null)</td>
-                            <td class="text-end">@Money(line.Amount)</td>
+                            @if (showHours)
+                            {
+                                <td class="text-end">@line.Hours?.ToString("0.##", CultureInfo.CurrentCulture)</td>
+                                <td class="text-end">@line.Rate?.ToString("0.####", CultureInfo.CurrentCulture)</td>
+                            }
+                            <td class="text-end text-nowrap">@(line.TaxableWages is { } wages ? Money(wages) : null)</td>
+                            <td class="text-end text-nowrap">@Money(line.Amount)</td>
                         </tr>
                     }
                 </tbody>
                 <tfoot>
-                    <tr><th scope="row" colspan="5" class="text-end">@T["Gross"]</th><td class="text-end">@Money(statement.Gross)</td></tr>
-                    <tr><th scope="row" colspan="5" class="text-end">@T["Net pay"]</th><td class="text-end fw-bold">@Money(statement.Net)</td></tr>
+                    <tr><th scope="row" colspan="@labelColumns" class="text-end">@T["Gross"]</th><td class="text-end text-nowrap">@Money(statement.Gross)</td></tr>
+                    <tr><th scope="row" colspan="@labelColumns" class="text-end">@T["Net pay"]</th><td class="text-end text-nowrap fw-bold">@Money(statement.Net)</td></tr>
                 </tfoot>
             </table>
         </div>

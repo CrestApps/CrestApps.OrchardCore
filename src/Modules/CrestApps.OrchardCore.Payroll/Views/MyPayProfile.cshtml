@@ -8,7 +8,7 @@
         {
             <h5>@T["Your coming pay"]</h5>
             <form method="get" class="no-multisubmit mb-4" data-list-management data-client-side-search="false">
-                <admin-list name="PayrollMyPayComingPay" context="Model.ComingPay"
+                <admin-list name="PayrollMyPayComingPay" context="Model.ComingPay" show-layout-selector="false"
                             show-select-all="false"
                             empty-message="@T["No pay to review."]">
                     <admin-list-list item-css-class="list-group-item" />
@@ -24,7 +24,7 @@
         {
             <h5>@T["Your pay details"]</h5>
             <form method="get" class="no-multisubmit" data-list-management data-client-side-search="false">
-                <admin-list name="PayrollMyPayDetails" context="Model.PayDetails"
+                <admin-list name="PayrollMyPayDetails" context="Model.PayDetails" show-layout-selector="false"
                             show-select-all="false"
                             empty-message="@T["No employer pays you yet."]">
                     <admin-list-list item-css-class="list-group-item" />
@@ -42,7 +42,7 @@
 
         <h5>@T["Pay statements"]</h5>
         <form method="get" class="no-multisubmit" data-list-management data-client-side-search="false">
-            <admin-list name="PayrollMyPayStatements" context="Model.Statements"
+            <admin-list name="PayrollMyPayStatements" context="Model.Statements" show-layout-selector="false"
                         show-select-all="false"
                         empty-message="@T["No pay statement yet. Your statements show here once your pay is processed."]">
                 <admin-list-list item-css-class="list-group-item" />
@@ -58,7 +58,7 @@
         {
             <h5 class="mt-4">@T["Tax forms"]</h5>
             <form method="get" class="no-multisubmit" data-list-management data-client-side-search="false">
-                <admin-list name="PayrollMyPayTaxForms" context="Model.TaxForms"
+                <admin-list name="PayrollMyPayTaxForms" context="Model.TaxForms" show-layout-selector="false"
                             show-select-all="false"
                             empty-message="@T["No tax form yet."]">
                     <admin-list-list item-css-class="list-group-item" />
