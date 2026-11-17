@@ -303,6 +303,86 @@ It needs **Manage Asset Cache Folder**. It says so when no remote media store is
 
 The list is the catalog the shortcode picker of the HTML and Markdown editors shows. That picker checks no permission, so the tool asks only for a signed-in user. It does not return the Liquid content of a shortcode template.
 
+### Search index tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Indexing`
+
+| Function | Description |
+| --- | --- |
+| `listIndexProfiles` | Lists the search index profiles (name, provider, type, index name, indexed content types, created date) with an optional name or provider filter, and the provider and type combinations a new one can be created for. |
+| `getIndexProfile` | Returns one index profile, by ID or name, with its settings and the names of its indexed fields. |
+| `saveIndexProfile` | Creates an index profile for a provider and type (for example Lucene and Content), or updates the name and the content settings of an existing one. |
+| `synchronizeIndexProfile` | Starts the background synchronization of up to 20 indexes, or with `reset` indexes every item again from the beginning while keeping the entries of the index. |
+| `rebuildIndexProfile` | Deletes and recreates the physical index of up to 20 index profiles and starts indexing again in the background. Asks for approval. |
+| `deleteIndexProfile` | Deletes up to 20 index profiles together with their physical indexes. Asks for approval. |
+
+The six tools need **Manage Indexes**, the permission of the **Search > Indexes** page, and call the index profile manager and the index manager of the provider in the order that page does. A tool takes an index profile by its ID or by its name; both are unique on a site.
+
+`saveIndexProfile` creates an index profile when no profile has the given name: it needs the provider, the type and the index name, validates the profile with the provider's rules, stores it, creates the physical index and starts indexing. When the provider cannot create the index, the profile is removed again. For an existing profile it changes the name (with `id`) and, for a Content index, the indexed content types, the culture and whether the latest or the published version is indexed. The changes are validated before the stored profile is touched, so a refused call leaves it as it was. The provider, the type and the index name cannot be changed, a content type must exist, and the analyzer and the other settings of the provider are changed on the admin page of the index. Items that are already indexed are not indexed again after an update: use `synchronizeIndexProfile` with `reset` for that.
+
+`synchronizeIndexProfile`, `rebuildIndexProfile` and `saveIndexProfile` start indexing in the background and return before it is finished, so their result says what was started. `rebuildIndexProfile` takes the lock the indexing of the index takes, as the rebuild step of a recipe does, and reports an index that is being indexed at that moment as failed. `deleteIndexProfile` keeps the profile when the provider cannot remove the physical index, unless `force` is set, as the force option of the page does. The three tools that take a list do nothing when one of the given indexes does not exist.
+
+`getIndexProfile` returns the analyzer, the default search fields and the names of the indexed fields for Lucene and Elasticsearch indexes. For an index of another provider it returns the general and the content settings only.
+
+### Site search tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Search`
+
+| Function | Description |
+| --- | --- |
+| `searchIndex` | Runs a plain-text search against an index profile, or the default index of the site search settings when none is named, and returns the matching content items with highlights, a page at a time. |
+
+It searches the way the search page of the site does: the search service of the provider of the index runs the terms, and the content items are loaded in the order of the results, published or latest as the index stores them. It checks **Query any index** on the index profile, so the permission to query that one index is enough. It does not call the handlers the search page calls after a search, so a search by the tool is not recorded as a visitor's search. When the provider cannot run the search, because the physical index is missing or the terms are not valid for the index, the tool says so instead of returning no results.
+
+### Search query tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Lucene` or `OrchardCore.Elasticsearch`
+
+| Function | Description |
+| --- | --- |
+| `runSearchQuery` | Runs an ad-hoc JSON query (Elasticsearch-style DSL, Liquid allowed, with optional parameters) against a Lucene or Elasticsearch index profile and returns the matching documents and the number of matches. |
+
+It needs the permission of the **Run Lucene Query** or **Run Elasticsearch Query** page of the provider of the index: **Manage Lucene Indexes** for a Lucene index, **Manage Elasticsearch Indexes** for an Elasticsearch index. The query is not saved. It is run by the query source of the provider, as the query API of the provider runs one, with the query service the "Run query" page uses. The tool refuses an index of another provider (use `searchIndex` for Azure AI Search), an index profile whose physical index does not exist and, for Elasticsearch, a site without an Elasticsearch connection. An invalid query returns the provider's error. Documents are returned a page at a time, as described under [Query tools](#query-tools).
+
+### Query tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Queries`
+
+| Function | Description |
+| --- | --- |
+| `listQueries` | Lists the saved queries with their name, source, template, index, result schema and whether they return content items, with a name filter and paging, and the query sources enabled on the site. |
+| `saveQuery` | Creates or updates a saved Lucene or Elasticsearch query: name, source, template, index, result schema and the return-content-items flag. It can rename a query. Asks for approval. |
+| `deleteQuery` | Deletes up to 50 saved queries by name. Asks for approval. |
+| `runQuery` | Executes a saved query by name with optional parameters and returns its rows or content items. |
+
+`listQueries`, `saveQuery` and `deleteQuery` need **Manage queries**. `runQuery` checks the permission the query API checks for `api/queries/{name}`: **Execute Api** for that query, which **Execute Api - All queries** and **Manage queries** imply. A caller who may not run a query gets the same refusal for a name that exists and for one that does not.
+
+`saveQuery` saves Lucene and Elasticsearch queries with the checks of the **Search > Queries** page: a technical name of letters and digits that no other query has, a template, an index profile of the provider of the source, and a schema that is JSON. Everything is checked before the query is changed. The source of a saved query cannot be changed. It does not save SQL queries, and it does not change a saved SQL query: the page checks the SQL of a query with a parser that only the Queries module can call, so a SQL query is saved on that page. A saved query can be called from Liquid, GraphQL and the query API, which is why the tool asks for approval.
+
+The tools that run a query (`runQuery`, `runSqlQuery` and `runSearchQuery`) bound what they return:
+
+- Rows are returned a page at a time: 20 by default, 50 at most. `total` is the number of rows the query returned, so limit the rows in the query itself.
+- A page stops before about 40000 characters of JSON and says so with `truncated`.
+- A text longer than 2000 characters is shortened, and a list keeps its first 50 values.
+- A content item is returned as its ID, version ID, content type, title and published and latest flags. Read its parts and fields with the content tools.
+- A value whose column or property name says it is a credential (a password, a hash, a token, a secret, a key, a security stamp, a connection string) is replaced with `[redacted]`, also inside a JSON document stored in a text column. This is a safety net that goes by the name: a query that returns a credential under another name still returns it.
+
+When a saved query fails, `runQuery` says that it failed and leaves the error in the log, because the caller may run the query without being allowed to read it.
+
+### SQL query tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Queries.Sql`
+
+| Function | Description |
+| --- | --- |
+| `runSqlQuery` | Runs an ad-hoc read-only SQL SELECT, with optional parameters, against the site's database and returns the rows. Asks for approval. |
+
+It needs **Manage SQL Queries**, the permission of the **Run SQL Query** page, which Orchard Core marks as security critical. The tool opens no database connection: the SQL is the template of an unsaved query that the SQL query source of Orchard Core runs. That source parses the SQL with the parser the page uses, which accepts a SELECT only and applies the table prefix of the tenant, and Liquid in the query is rendered first, as on the page.
+
+The query can read every table of the tenant, including the documents that hold users and settings, and no content permission applies, so attach the tool only to a profile for administrators. Rows are bounded and credentials are left out as described under [Query tools](#query-tools).
+
+The SQL query source logs a query its parser refuses and returns no rows. The tool cannot tell that from a query that matched nothing, so a result without rows says that both are possible and that the site's log has the parse error. An error from the database is returned.
+
 ### Feature management tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Features`
