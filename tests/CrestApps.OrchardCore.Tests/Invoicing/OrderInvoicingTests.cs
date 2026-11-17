@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Orders;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,6 +44,43 @@ public sealed class OrderInvoicingTests
 
         var invoice = await harness.FindInvoiceAsync(draft.ItemId);
         Assert.Equal((InvoiceSettlement.Paid, 0m, 100m), (invoice.Settlement, invoice.AmountDue, invoice.AmountPaid));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("INV-0001")]
+    public async Task AnInvoiceThatTakesOverADebt_GivesTheDebtItsNumber_SoAReminderDrawsNoOther(string earlierNumber)
+    {
+        // Arrange: a $100 debt an order left on the ledger (Pay Later, account terms), perhaps numbered by an earlier
+        // reminder, and a draft that takes it over.
+        await using var harness = await InvoicingTestHarness.CreateAsync();
+        var debt = await CreateDebtAsync(harness, "order-1", 100m);
+
+        if (earlierNumber is not null)
+        {
+            await harness.InScopeAsync(async services =>
+            {
+                var manager = services.GetRequiredService<ITransactionManager>();
+                var numbered = await manager.FindByIdAsync(debt.ItemId, TestContext.Current.CancellationToken);
+
+                numbered.InvoiceNumber = earlierNumber;
+                await manager.UpdateAsync(numbered, data: null, TestContext.Current.CancellationToken);
+
+                return numbered;
+            });
+        }
+
+        var draft = await harness.CreateDraftAsync(invoice => invoice.TransactionId = debt.ItemId);
+
+        // Act
+        var issued = await harness.RunAsync(commands => commands.IssueAsync(draft.ItemId, TestContext.Current.CancellationToken));
+        var transaction = await harness.FindTransactionAsync(debt.ItemId);
+        var reminderNumbered = await new TransactionInvoiceService(harness.Numbers).EnsureInvoiceNumberAsync(transaction, TestContext.Current.CancellationToken);
+
+        // Assert: the reminders and the invoice's PDF show one number, and the sequence skips none.
+        Assert.True(issued.Succeeded, string.Join(" ", issued.Errors));
+        Assert.Equal(issued.Invoice.Number, transaction.InvoiceNumber);
+        Assert.False(reminderNumbered);
     }
 
     [Fact]

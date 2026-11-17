@@ -1043,6 +1043,10 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
         });
         transaction.UpdatedUtc = now;
 
+        // The debt's reminders name the invoice that took it over. Without its number a reminder would draw another one
+        // from the same invoice series, so the customer would read two numbers for one debt and the series would skip one.
+        transaction.InvoiceNumber = invoice.Number;
+
         // The debt reports in the store's currency at the rate the invoice was issued with, unless it had one already.
         if (transaction.ExchangeRate is null && invoice.ExchangeRate is not null)
         {
