@@ -23,6 +23,7 @@ internal sealed class OrderMigrations : DataMigration
             .Column<string>("CheckoutSessionId", column => column.WithLength(26))
             .Column<int>("Status")
             .Column<DateTime>("CreatedUtc")
+            .Column<DateTime>("PaidUtc", column => column.Nullable())
             .Column<DateTime>("AnonymizedUtc", column => column.Nullable())
             .Column<string>("Channel", column => column.Nullable().WithLength(16))
             .Column<string>("LocationId", column => column.Nullable().WithLength(26))
@@ -49,7 +50,7 @@ internal sealed class OrderMigrations : DataMigration
 
         await CreateReportIndexAsync();
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -79,6 +80,21 @@ internal sealed class OrderMigrations : DataMigration
         }, collection: OrderConstants.CollectionName);
 
         return 3;
+    }
+
+    /// <summary>
+    /// Adds when an order was paid to the order index, so a business account's monthly budget counts a paid order in the
+    /// month it was paid. An order indexed before this step has no paid time until it is saved again, and counts by when it
+    /// was placed meanwhile, as every order did before; nothing is backfilled, so the step doesn't read every order.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OrderIndex>(table => table
+            .AddColumn<DateTime>("PaidUtc", column => column.Nullable()),
+            collection: OrderConstants.CollectionName);
+
+        return 4;
     }
 
     private Task<bool> CreateReportIndexAsync()

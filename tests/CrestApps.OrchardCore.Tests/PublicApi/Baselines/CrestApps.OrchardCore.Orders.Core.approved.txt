@@ -51,6 +51,7 @@ namespace CrestApps.OrchardCore.Orders.Core.Indexes
         public string CustomerId { get; set; }
         public string LocationId { get; set; }
         public string OrderNumber { get; set; }
+        public System.DateTime? PaidUtc { get; set; }
         public string PurchaseOrderNumber { get; set; }
         public string ShiftId { get; set; }
         public CrestApps.OrchardCore.Orders.Core.Models.OrderStatus Status { get; set; }
@@ -836,6 +837,7 @@ namespace CrestApps.OrchardCore.Orders.Core.Services
         public bool GuestsOnly { get; set; }
         public string LocationId { get; set; }
         public bool NotAnonymized { get; set; }
+        public System.DateTime? PaidOnOrAfter { get; set; }
         public string Search { get; set; }
         public string ShiftId { get; set; }
         public System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Orders.Core.Models.OrderStatus> Statuses { get; set; }

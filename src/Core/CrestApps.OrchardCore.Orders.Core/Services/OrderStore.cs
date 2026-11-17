@@ -76,6 +76,12 @@ public sealed class OrderQuery
     public DateTime? CreatedOnOrAfter { get; set; }
 
     /// <summary>
+    /// Gets or sets the date on or after which the orders were paid. An order indexed before the index kept when it was
+    /// paid counts by when it was placed until it is saved again.
+    /// </summary>
+    public DateTime? PaidOnOrAfter { get; set; }
+
+    /// <summary>
     /// Gets or sets whether to leave out orders whose personal details were already removed.
     /// </summary>
     public bool NotAnonymized { get; set; }
@@ -201,6 +207,11 @@ public sealed class OrderStore : DocumentCatalog<Order, OrderIndex>, IOrderStore
         if (query.CreatedOnOrAfter is { } createdOnOrAfter)
         {
             orders = orders.Where(index => index.CreatedUtc >= createdOnOrAfter);
+        }
+
+        if (query.PaidOnOrAfter is { } paidOnOrAfter)
+        {
+            orders = orders.Where(index => (index.PaidUtc != null && index.PaidUtc >= paidOnOrAfter) || (index.PaidUtc == null && index.CreatedUtc >= paidOnOrAfter));
         }
 
         if (query.NotAnonymized)

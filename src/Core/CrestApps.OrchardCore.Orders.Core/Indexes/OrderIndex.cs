@@ -25,6 +25,12 @@ public sealed class OrderIndex : CatalogItemIndex
 
     public DateTime CreatedUtc { get; set; }
 
+    /// <summary>
+    /// Gets or sets when the order was paid; <see langword="null"/> until it is, and for an order indexed before this
+    /// column was added and not saved since.
+    /// </summary>
+    public DateTime? PaidUtc { get; set; }
+
     public DateTime? AnonymizedUtc { get; set; }
 
     public string Channel { get; set; }
@@ -60,6 +66,7 @@ public sealed class OrderIndexProvider : IndexProvider<Order>
                 CheckoutSessionId = order.CheckoutSessionId,
                 Status = order.Status,
                 CreatedUtc = order.CreatedUtc,
+                PaidUtc = order.PaidUtc,
                 Channel = order.Channel,
                 LocationId = order.LocationId,
                 ShiftId = order.ShiftId,

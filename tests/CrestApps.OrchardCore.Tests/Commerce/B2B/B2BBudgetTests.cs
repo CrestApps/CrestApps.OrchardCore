@@ -258,7 +258,8 @@ public sealed class B2BBudgetTests
                 matches = [.. _orders.Where(order =>
                     (query.AccountId is null || order.AccountId == query.AccountId) &&
                     (query.Statuses is not { Count: > 0 } || query.Statuses.Contains(order.Status)) &&
-                    (query.CreatedOnOrAfter is null || order.CreatedUtc >= query.CreatedOnOrAfter))];
+                    (query.CreatedOnOrAfter is null || order.CreatedUtc >= query.CreatedOnOrAfter) &&
+                    (query.PaidOnOrAfter is null || (order.PaidUtc ?? order.CreatedUtc) >= query.PaidOnOrAfter))];
             }
 
             return (matches.Length, matches);

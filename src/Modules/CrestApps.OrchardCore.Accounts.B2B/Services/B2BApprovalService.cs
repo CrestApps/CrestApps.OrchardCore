@@ -38,7 +38,7 @@ public sealed class B2BApprovalService
 
     private const string BudgetLockPrefix = "B2B_BUDGET_";
 
-    private static readonly OrderStatus[] _committedStatuses = [OrderStatus.Paid, OrderStatus.AwaitingPayment, OrderStatus.Draft];
+    private static readonly OrderStatus[] _unpaidStatuses = [OrderStatus.AwaitingPayment, OrderStatus.Draft];
 
     private readonly IOrderStore _orders;
     private readonly IOrderService _orderService;
@@ -116,27 +116,37 @@ public sealed class B2BApprovalService
     }
 
     /// <summary>
-    /// Returns what the account's orders this calendar month spent or committed, in the store's currency: paid orders,
-    /// orders waiting for approval or approved but not paid, and orders whose payment began (their budget hold). An open
-    /// checkout that committed nothing doesn't count; the abandoned order sweep cancels it.
+    /// Returns what the account's orders this calendar month (in UTC) spent or committed, in the store's currency: orders
+    /// paid this month, orders asked to be approved this month and waiting or approved but not paid, and orders whose
+    /// payment began this month (their budget hold). An order counts in the month it was paid, asked for or held, not the
+    /// month it was made, so a checkout opened on a month's last day and paid after midnight counts in the new month. An
+    /// open checkout that committed nothing doesn't count; the abandoned order sweep cancels it.
     /// </summary>
     public async Task<decimal> GetSpentThisMonthAsync(B2BAccount account, string storeCurrency, string excludeOrderId = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(account);
 
         var now = _clock.UtcNow;
-        var (_, orders) = await _orders.PageAsync(new OrderQuery
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var (_, paid) = await _orders.PageAsync(new OrderQuery
         {
             AccountId = account.AccountId,
-            Statuses = _committedStatuses,
-            CreatedOnOrAfter = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+            Statuses = [OrderStatus.Paid],
+            PaidOnOrAfter = monthStart,
+        }, 0, 1000, cancellationToken);
+
+        // An unpaid order may have been made in any month; when it was asked for or held decides.
+        var (_, unpaid) = await _orders.PageAsync(new OrderQuery
+        {
+            AccountId = account.AccountId,
+            Statuses = _unpaidStatuses,
         }, 0, 1000, cancellationToken);
 
         var spent = 0m;
 
-        foreach (var order in orders.Where(order => order.ItemId != excludeOrderId))
+        foreach (var order in paid.Concat(unpaid).Where(order => order.ItemId != excludeOrderId))
         {
-            if (GetCommitted(order) is { } committed)
+            if (GetCommitted(order, monthStart) is { } committed)
             {
                 spent += await ToStoreCurrencyAsync(committed.Amount, committed.Currency, storeCurrency, cancellationToken);
             }
@@ -163,9 +173,10 @@ public sealed class B2BApprovalService
         await _orders.UpdateAsync(order, cancellationToken);
     }
 
-    // What an order of the month takes from the budget: a paid order its total, an unpaid one what an admin is asked to
-    // approve (or approved) or what its payment holds, and an open checkout nothing.
-    private static (decimal Amount, string Currency)? GetCommitted(Order order)
+    // What an order takes from the month's budget: a paid order (read by when it was paid) its total; an unpaid one asked
+    // for or held this month what an admin is asked to approve (or approved) or what its payment holds; an open checkout,
+    // or an unpaid order asked for and held only in an earlier month, nothing.
+    private static (decimal Amount, string Currency)? GetCommitted(Order order, DateTime monthStart)
     {
         if (order.Status == OrderStatus.Paid)
         {
@@ -177,16 +188,24 @@ public sealed class B2BApprovalService
             return null;
         }
 
+        var heldThisMonth = order.BudgetHold is { } held && Since(held.HeldUtc, order) >= monthStart;
+
         // What an admin is asked to approve, or approved, covers what its payment can hold.
         if (order.Approval is { Status: OrderApprovalStatus.Pending or OrderApprovalStatus.Approved } approval)
         {
-            return (approval.Amount, approval.Currency ?? order.Currency);
+            return heldThisMonth || Since(approval.RequestedUtc, order) >= monthStart
+                ? (approval.Amount, approval.Currency ?? order.Currency)
+                : null;
         }
 
-        return order.BudgetHold is { } hold
-            ? (hold.Amount, hold.Currency ?? order.Currency)
+        return heldThisMonth
+            ? (order.BudgetHold.Amount, order.BudgetHold.Currency ?? order.Currency)
             : null;
     }
+
+    // A time an order kept, or when it was made for one that didn't keep it.
+    private static DateTime Since(DateTime utc, Order order)
+        => utc == default ? order.CreatedUtc : utc;
 
     /// <summary>
     /// Asks the account's admins to approve the order: it waits, kept as an order to pay, and they're emailed.
