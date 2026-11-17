@@ -109,6 +109,22 @@ When `createOrUpdateContentItem` is available alongside recipe-backed content sc
 
 `createOrUpdateContentItem` must be called for the parent content item only. When the payload contains nested or contained content items such as `BagPart`, `FlowPart`, widgets, or blocks, include those child items inside the parent JSON instead of invoking the tool once per child item. During creation, the tool now initializes each nested content item with Orchard Core's `NewAsync()` flow before merging the authored payload, so nested handlers run for child items too. The tool also rejects payloads when the submitted JSON does not match the expected Orchard Core content-item shape. By default it uses dropped-value detection after `ContentItem` mapping to catch misplaced or unmapped values. If `CrestApps.OrchardCore.Recipes` is enabled, the tool validates the payload against the content type's recipe-backed JSON schema as authored, uses the registered contained-part schema metadata to find nested child payloads recursively, and returns the same schema contract in its corrective guidance so the model can retry with the correct structure.
 
+### Content item list, version and owner tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Contents`
+
+| Function | Description |
+| --- | --- |
+| `listContentItems` | Lists content items with the same filters as the admin Content Items page: text, content types, stereotype, status (latest, published, draft, owned by me, all versions), sort, culture, and paging. It returns summaries with IDs, not full bodies. The `culture` filter needs `OrchardCore.ContentLocalization`. |
+| `listContentItemVersions` | Lists the stored versions of one content item (version ID, created/modified/published dates, author, latest and published flags). Use it before restoring a version. |
+| `restoreContentItemVersion` | Restores an earlier version of a content item as a new draft, keeping the published version live. Takes a content item version ID. Publish the item afterwards to make it live. |
+| `discardContentItemDraft` | Discards the unpublished draft of a content item so the published version becomes the latest again. Asks for approval. |
+| `changeContentItemOwner` | Changes the owner of a content item to another user, given by user name, user ID or email. The author is not changed. Asks for approval. |
+
+`listContentItems` builds the filter text a person types in the search box of the Content Items page (`type:`, `stereotype:`, `status:`, `sort:`, `culture:`) and runs it through the same filter parser and query service as that page, so it lists what the page lists. It does not filter by parent list, taxonomy term or schedule. `searchForContentItems` stays registered beside it.
+
+These tools, and the content type, localization, nested item and scheduling tools below, act for the signed-in person in the chat. Each one checks the Orchard Core permission the matching admin action checks, on the same content item where the admin checks one: `ListContent` and `ViewContent` to list and read, `PublishContent` to restore a version or schedule, `DeleteContent` to discard a draft, `EditContentOwner` to change the owner, `EditContent` to change nested items, `LocalizeContent` to translate, and `EditContentTypes` to change content definitions. A caller who is not signed in, or who does not hold the permission, gets a refusal and nothing is changed. Dates are returned in the user's or the site's time zone, with the zone named.
+
 ### Content definition tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.ContentTypes`
@@ -130,6 +146,51 @@ When `createOrUpdateContentItem` is available alongside recipe-backed content sc
 | `removeContentTypeDefinition` | Removes the content type definition. |
 | `removeContentPartDefinition` | Removes the content part definition. |
 | `applyContentTypeDefinitionFromRecipe` | Creates a new content type definition or updates an existing one. |
+
+### Content type part and field tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.ContentTypes`
+
+| Function | Description |
+| --- | --- |
+| `saveContentTypePart` | Attaches a part to a content type or updates how it is attached: display name and description (named parts), editor, display mode and the part's settings for this type, without resending the whole type definition. |
+| `removeContentTypePart` | Removes a part from a content type. Existing items keep the stored data but it is no longer edited or displayed. Asks for approval. |
+| `saveContentPartField` | Adds a field to a content part (or to a content type's own part) or updates an existing field: display name, field type on creation, editor, display mode and the field's settings. The field type cannot be changed after creation. |
+| `removeContentPartField` | Removes a field from a content part or content type. Existing items keep the stored values but they are no longer edited or displayed. Asks for approval. |
+| `reorderContentTypeElements` | Sets the order of the parts on a content type, or of the fields on a part, from an ordered list that names every part or field once. |
+
+These tools call the content definition service the content type editor calls, so the events of that editor run and a part or field the system defines cannot be removed. Only the arguments given are changed. The `settings` argument is a JSON object keyed by settings class name, the shape a content definition recipe uses (for example `{"AutoroutePartSettings": {"AllowCustomPath": true}}`); it is merged into the stored settings and is not checked by the settings editor of the part or field.
+
+### Content localization tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.ContentLocalization`
+
+| Function | Description |
+| --- | --- |
+| `listContentItemLocalizations` | Lists the translations of a content item: for each site culture, the content item ID, title and published state of its version in that culture, or that it is missing. |
+| `localizeContentItem` | Creates the version of a content item in another culture as a draft copy linked to the same localization set, and returns the new content item ID. Translate the copy with `createOrUpdateContentItem` afterwards. |
+
+### Nested content item tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Flows`
+
+| Function | Description |
+| --- | --- |
+| `listNestedContentItems` | Returns the outline of the items nested in a content item's Flow, Bag and widget-zone parts: for each, its part, zone, position, nested item ID, content type, title and depth. |
+| `saveNestedContentItem` | Adds, updates or moves a single widget or contained item inside a content item's Flow, Bag or widget-zone part without resending the rest of the page. |
+| `removeNestedContentItem` | Deletes one widget or contained item, and everything nested inside it, from a content item's Flow, Bag or widget-zone part. Asks for approval. |
+
+`createOrUpdateContentItem` replaces a nested list whole, so changing one widget means resending every widget of the page. These tools change one nested item and write only the list it is in. A new nested item must be of a content type the part's settings allow, and gets its own ID. The parent content item is saved as a draft unless `isDraft` is `false`; publish it to make the change live.
+
+### Content scheduling tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.PublishLater` or `OrchardCore.ArchiveLater`
+
+| Function | Description |
+| --- | --- |
+| `scheduleContentItem` | Schedules a content item to be published or archived (unpublished) at a date and time given in the site's or the user's time zone, or cancels the schedule. The content type must have the Publish Later or Archive Later part; publishing is scheduled on a draft, archiving on a published item. |
+
+The scheduled time is acted on by the Publish Later and Archive Later background tasks, which run every minute and must be enabled.
 
 ### Feature management tools
 
