@@ -292,11 +292,7 @@
 						var query = panel.querySelector("[data-line-product-query]");
 						if (!panel.hidden && query) {
 							query.focus();
-							search(
-								row,
-								/** @type {HTMLInputElement} */
-								query.value
-							);
+							search(row, query.value);
 						}
 					}
 				} else if (row && button.matches("[data-line-product-id]")) pick(row, button.getAttribute("data-line-product-id"));

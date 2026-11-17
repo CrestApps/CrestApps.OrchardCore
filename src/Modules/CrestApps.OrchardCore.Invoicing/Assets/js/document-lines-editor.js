@@ -416,7 +416,7 @@
         changed();
         button.focus();
       } else if (row && button.matches('[data-line-details]')) {
-        var details = row.querySelector('[data-line-details-field]');
+        var details = /** @type {HTMLElement} */ (row.querySelector('[data-line-details-field]'));
 
         if (details) {
           details.hidden = !details.hidden;
@@ -431,16 +431,16 @@
           }
         }
       } else if (row && button.matches('[data-line-product]')) {
-        var panel = row.querySelector('[data-line-product-panel]');
+        var panel = /** @type {HTMLElement} */ (row.querySelector('[data-line-product-panel]'));
 
         if (panel) {
           panel.hidden = !panel.hidden;
 
-          var query = panel.querySelector('[data-line-product-query]');
+          var query = /** @type {HTMLInputElement} */ (panel.querySelector('[data-line-product-query]'));
 
           if (!panel.hidden && query) {
             query.focus();
-            search(row, /** @type {HTMLInputElement} */ (query).value);
+            search(row, query.value);
           }
         }
       } else if (row && button.matches('[data-line-product-id]')) {
