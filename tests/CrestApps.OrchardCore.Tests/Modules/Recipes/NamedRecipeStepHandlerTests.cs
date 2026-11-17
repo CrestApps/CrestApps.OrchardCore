@@ -9,10 +9,12 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Recipes.Models;
@@ -357,6 +359,8 @@ public sealed class NamedRecipeStepHandlerTests
             "CrestApps.OrchardCore.AI.DataSources.Recipes.AIDataSourceStep, CrestApps.OrchardCore.AI.DataSources",
             manager.Object,
             options,
+            new EphemeralDataProtectionProvider(),
+            Options.Create(new IngestionSourceSecretOptions()),
             null);
 
         var context = CreateContext("AIDataSource", new JsonObject
@@ -406,6 +410,8 @@ public sealed class NamedRecipeStepHandlerTests
             "CrestApps.OrchardCore.AI.DataSources.Recipes.AIDataSourceStep, CrestApps.OrchardCore.AI.DataSources",
             manager.Object,
             options,
+            new EphemeralDataProtectionProvider(),
+            Options.Create(new IngestionSourceSecretOptions()),
             null);
 
         var context = CreateContext("AIDataSource", new JsonObject
