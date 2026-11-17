@@ -168,7 +168,7 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateLookupIndexesAsync();
         await CreateCampaignIndexAsync();
 
-        return 7;
+        return 8;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -292,13 +292,39 @@ internal sealed class MessagingMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom6Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<MessagingConversationIndex>(table => table
-            .AddColumn<string>("CampaignId", column => column.Nullable().WithLength(26)),
-            collection: MessagingStorage.CollectionName);
-
+        await EnsureCampaignColumnAsync();
         await CreateCampaignIndexAsync();
 
         return 7;
+    }
+
+    /// <summary>
+    /// Adds the campaign column and its index where version 7 was recorded without them. Every save of a conversation
+    /// maps the column, so on such a database opening a conversation, receiving a message and every workflow that
+    /// touched one failed with "Invalid column name 'CampaignId'". Both checks find what is already there, so this is a
+    /// no-op wherever version 7 applied.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom7Async()
+    {
+        if (await EnsureCampaignColumnAsync())
+        {
+            _logger.LogWarning(
+                "The messaging conversation index had no 'CampaignId' column although its migration was recorded; the column was added.");
+        }
+
+        await CreateCampaignIndexAsync();
+
+        return 8;
+    }
+
+    private Task<bool> EnsureCampaignColumnAsync()
+    {
+        return IndexTableColumnCreation.AddIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            MessagingStorage.CollectionName,
+            "CampaignId",
+            table => table.AddColumn<string>("CampaignId", column => column.Nullable().WithLength(26)));
     }
 
     private Task<bool> CreateCampaignIndexAsync()

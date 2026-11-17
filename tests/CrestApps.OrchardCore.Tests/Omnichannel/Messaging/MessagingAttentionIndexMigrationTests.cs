@@ -40,7 +40,7 @@ public sealed class MessagingAttentionIndexMigrationTests
         {
             var version = await CreateMigration(store, schemaBuilder).CreateAsync();
 
-            Assert.Equal(7, version);
+            Assert.Equal(8, version);
             Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
             Assert.Equal(_agentAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.AgentAttentionIndexName));
             Assert.Equal(_ownerAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.OwnerAttentionIndexName));
@@ -67,6 +67,53 @@ public sealed class MessagingAttentionIndexMigrationTests
             Assert.Equal(7, await migration.UpdateFrom6Async());
             Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
             Assert.True(string.IsNullOrEmpty(await ScalarAsync(schemaBuilder, $"SELECT CampaignId FROM {TableName(schemaBuilder)} WHERE ItemId = 'c1'")));
+        });
+    }
+
+    // Production, 2026-11-16: version 7 was recorded but the column was missing, so every conversation save failed with
+    // "Invalid column name 'CampaignId'" and agents could not open a conversation.
+    [Fact]
+    public async Task UpdateFrom7Async_WhenVersion7WasRecordedWithoutTheColumn_AddsTheColumnAndIndex()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            await DropIndexAsync(schemaBuilder, CampaignIndexName);
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TableName(schemaBuilder)} DROP COLUMN CampaignId");
+            await ExecuteAsync(schemaBuilder, $"INSERT INTO {TableName(schemaBuilder)} (DocumentId, ItemId, LastMessageUtc, IsRead, UnreadCount) VALUES (1, 'c1', '2026-10-24 05:59:00', 0, 0)");
+
+            Assert.Equal(8, await migration.UpdateFrom7Async());
+            Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
+            Assert.True(string.IsNullOrEmpty(await ScalarAsync(schemaBuilder, $"SELECT CampaignId FROM {TableName(schemaBuilder)} WHERE ItemId = 'c1'")));
+        });
+    }
+
+    // Wherever version 7 applied, the repair finds the column and the index and changes nothing.
+    [Fact]
+    public async Task UpdateFrom7Async_WhenTheColumnAndIndexExist_RecordsTheVersionInsteadOfFailing()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            Assert.Equal(8, await migration.UpdateFrom7Async());
+            Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
+        });
+    }
+
+    // A second instance that activates the tenant at the same time finds the column the first one added.
+    [Fact]
+    public async Task UpdateFrom6Async_WhenTheColumnAlreadyExists_RecordsTheVersionInsteadOfFailing()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            Assert.Equal(7, await migration.UpdateFrom6Async());
         });
     }
 

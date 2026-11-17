@@ -25,7 +25,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
     <!-- Carries the Webhooks feature this feature depends on. -->
-    <ProjectReference Include="..\CrestApps.OrchardCore.Webhooks\CrestApps.OrchardCore.Webhooks.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Webhooks\CrestApps.OrchardCore.Webhooks.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>
