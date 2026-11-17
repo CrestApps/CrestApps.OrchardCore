@@ -169,7 +169,7 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateLookupIndexesAsync();
         await CreateCampaignIndexAsync();
 
-        return 8;
+        return 9;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -293,27 +293,56 @@ internal sealed class MessagingMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom6Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<MessagingConversationIndex>(table => table
-            .AddColumn<string>("CampaignId", column => column.Nullable().WithLength(26)),
-            collection: MessagingStorage.CollectionName);
-
+        await EnsureCampaignColumnAsync();
         await CreateCampaignIndexAsync();
 
         return 7;
     }
 
     /// <summary>
-    /// Adds the scope of a reply template, so a template can be written for another kind of work, such as tickets.
-    /// Existing templates keep an empty scope: the messaging workspace's.
+    /// Adds the campaign column and its index where version 7 was recorded without them. Every save of a conversation
+    /// maps the column, so on such a database opening a conversation, receiving a message and every workflow that
+    /// touched one failed with "Invalid column name 'CampaignId'". Both checks find what is already there, so this is a
+    /// no-op wherever version 7 applied.
     /// </summary>
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom7Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<MessageTemplateIndex>(table => table
-            .AddColumn<string>("Scope", column => column.Nullable().WithLength(MessagingStorage.TemplateScopeLength)),
-            collection: MessagingStorage.CollectionName);
+        if (await EnsureCampaignColumnAsync())
+        {
+            _logger.LogWarning(
+                "The messaging conversation index had no 'CampaignId' column although its migration was recorded; the column was added.");
+        }
+
+        await CreateCampaignIndexAsync();
 
         return 8;
+    }
+
+    /// <summary>
+    /// Adds the scope of a reply template, so a template can be written for another kind of work, such as tickets.
+    /// Existing templates keep an empty scope: the messaging workspace's. A database that already has the column (one
+    /// built while this step was numbered 7 to 8) is left as it is.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom8Async()
+    {
+        await IndexTableColumnCreation.AddIfMissingAsync<MessageTemplateIndex>(
+            SchemaBuilder,
+            MessagingStorage.CollectionName,
+            "Scope",
+            table => table.AddColumn<string>("Scope", column => column.Nullable().WithLength(MessagingStorage.TemplateScopeLength)));
+
+        return 9;
+    }
+
+    private Task<bool> EnsureCampaignColumnAsync()
+    {
+        return IndexTableColumnCreation.AddIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            MessagingStorage.CollectionName,
+            "CampaignId",
+            table => table.AddColumn<string>("CampaignId", column => column.Nullable().WithLength(26)));
     }
 
     private Task<bool> CreateCampaignIndexAsync()

@@ -40,7 +40,7 @@ public sealed class MessagingAttentionIndexMigrationTests
         {
             var version = await CreateMigration(store, schemaBuilder).CreateAsync();
 
-            Assert.Equal(8, version);
+            Assert.Equal(9, version);
             Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
             Assert.Equal("0", await ScalarAsync(schemaBuilder, $"SELECT COUNT(*) FROM {TemplateTableName(schemaBuilder)} WHERE Scope IS NOT NULL"));
             Assert.Equal(_agentAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.AgentAttentionIndexName));
@@ -71,29 +71,88 @@ public sealed class MessagingAttentionIndexMigrationTests
         });
     }
 
-    // A reply template can be written for another kind of work, such as tickets; existing templates stay the workspace's.
-    // Version 7 is the campaign step that main released, so a tenant built from main gets the scope as version 8.
+    // Production, 2026-11-16: version 7 was recorded but the column was missing, so every conversation save failed with
+    // "Invalid column name 'CampaignId'" and agents could not open a conversation.
     [Fact]
-    public async Task UpdateFrom7Async_OnTheVersion7MainReleased_AddsTheTemplateScope()
+    public async Task UpdateFrom7Async_WhenVersion7WasRecordedWithoutTheColumn_AddsTheColumnAndIndex()
     {
         await WithSchemaAsync(async (store, schemaBuilder) =>
         {
             var migration = CreateMigration(store, schemaBuilder);
             await migration.CreateAsync();
 
-            // What version 7 released: the campaign column and index, and the template table without the scope column.
-            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TemplateTableName(schemaBuilder)} DROP COLUMN Scope");
-            await ExecuteAsync(schemaBuilder, $"INSERT INTO {TemplateTableName(schemaBuilder)} (DocumentId, ItemId, Name) VALUES (1, 't1', 'Thanks')");
+            await DropIndexAsync(schemaBuilder, CampaignIndexName);
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TableName(schemaBuilder)} DROP COLUMN CampaignId");
+            await ExecuteAsync(schemaBuilder, $"INSERT INTO {TableName(schemaBuilder)} (DocumentId, ItemId, LastMessageUtc, IsRead, UnreadCount) VALUES (1, 'c1', '2026-10-24 05:59:00', 0, 0)");
 
             Assert.Equal(8, await migration.UpdateFrom7Async());
-            Assert.Equal("1", await ScalarAsync(schemaBuilder, $"SELECT COUNT(*) FROM {TemplateTableName(schemaBuilder)} WHERE ItemId = 't1' AND Scope IS NULL"));
+            Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
+            Assert.True(string.IsNullOrEmpty(await ScalarAsync(schemaBuilder, $"SELECT CampaignId FROM {TableName(schemaBuilder)} WHERE ItemId = 'c1'")));
+        });
+    }
+
+    // Wherever version 7 applied, the repair finds the column and the index and changes nothing.
+    [Fact]
+    public async Task UpdateFrom7Async_WhenTheColumnAndIndexExist_RecordsTheVersionInsteadOfFailing()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            Assert.Equal(8, await migration.UpdateFrom7Async());
             Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
         });
     }
 
-    // A tenant at version 6 runs main's step and then the scope step, and ends where a fresh install does.
+    // A second instance that activates the tenant at the same time finds the column the first one added.
     [Fact]
-    public async Task AVersion6Tenant_RunsBothSteps_AndEndsLikeAFreshInstall()
+    public async Task UpdateFrom6Async_WhenTheColumnAlreadyExists_RecordsTheVersionInsteadOfFailing()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            Assert.Equal(7, await migration.UpdateFrom6Async());
+        });
+    }
+
+    // A reply template can be written for another kind of work, such as tickets; existing templates stay the workspace's.
+    // Version 8 is the campaign repair that main released, so the scope comes as version 9.
+    [Fact]
+    public async Task UpdateFrom8Async_OnTheVersion8MainReleased_AddsTheTemplateScope()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            // What version 8 released: the template table without the scope column.
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TemplateTableName(schemaBuilder)} DROP COLUMN Scope");
+            await ExecuteAsync(schemaBuilder, $"INSERT INTO {TemplateTableName(schemaBuilder)} (DocumentId, ItemId, Name) VALUES (1, 't1', 'Thanks')");
+
+            Assert.Equal(9, await migration.UpdateFrom8Async());
+            Assert.Equal("1", await ScalarAsync(schemaBuilder, $"SELECT COUNT(*) FROM {TemplateTableName(schemaBuilder)} WHERE ItemId = 't1' AND Scope IS NULL"));
+        });
+    }
+
+    // A database built while the scope step was numbered 7 to 8 already has the column; the step records the version.
+    [Fact]
+    public async Task UpdateFrom8Async_WhenTheScopeColumnExists_RecordsTheVersionInsteadOfFailing()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            Assert.Equal(9, await migration.UpdateFrom8Async());
+        });
+    }
+
+    // A tenant at version 6 runs main's steps and then the scope step, and ends where a fresh install does.
+    [Fact]
+    public async Task AVersion6Tenant_RunsEveryStep_AndEndsLikeAFreshInstall()
     {
         await WithSchemaAsync(async (store, schemaBuilder) =>
         {
@@ -106,6 +165,7 @@ public sealed class MessagingAttentionIndexMigrationTests
 
             Assert.Equal(7, await migration.UpdateFrom6Async());
             Assert.Equal(8, await migration.UpdateFrom7Async());
+            Assert.Equal(9, await migration.UpdateFrom8Async());
             Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
             Assert.Equal("0", await ScalarAsync(schemaBuilder, $"SELECT COUNT(*) FROM {TemplateTableName(schemaBuilder)} WHERE Scope IS NOT NULL"));
         });
