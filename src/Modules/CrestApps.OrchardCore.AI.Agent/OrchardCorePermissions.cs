@@ -2,6 +2,7 @@ using OrchardCore.Contents;
 using OrchardCore.Contents.Security;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Agent;
 
@@ -60,4 +61,19 @@ internal static class OrchardCorePermissions
     /// a package this repository does not reference.
     /// </summary>
     public static readonly Permission ManageSqlQueries = new("ManageSqlQueries", LocalizationSource.Create("Manage SQL Queries", typeof(OrchardCorePermissions)), isSecurityCritical: true);
+
+    // The Users module declares this template in its module assembly. As there, the permission to manage users implies it.
+    private static readonly PermissionTemplate _manageOwnCustomUserSettings = new(
+        "ManageOwnCustomUserSettings_{0}",
+        LocalizationSource.Create("Manage Own Custom User Settings - {0}", typeof(OrchardCorePermissions)),
+        UsersPermissions.ManageUsers);
+
+    /// <summary>
+    /// Creates the permission to edit the values of one custom user settings type. Despite its name, the user editor
+    /// checks it for whichever user is edited.
+    /// </summary>
+    /// <param name="settingsType">The technical name of the custom user settings content type.</param>
+    /// <returns>The permission for that settings type.</returns>
+    public static Permission CreateManageOwnCustomUserSettings(string settingsType)
+        => _manageOwnCustomUserSettings.CreateDynamicPermission(settingsType);
 }
