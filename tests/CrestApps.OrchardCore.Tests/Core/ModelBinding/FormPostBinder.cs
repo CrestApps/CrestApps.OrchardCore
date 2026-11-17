@@ -38,6 +38,8 @@ public static class FormPostBinder
     /// <param name="form">The posted fields.</param>
     /// <param name="routeValues">The route values, if any.</param>
     /// <param name="controller">A controller to bind into, so its <see cref="ControllerBase.ModelState"/> is the bound one.</param>
+    /// <param name="configureRequest">Changes the request after the form is set, such as to send a body, headers or a query string.</param>
+    /// <param name="configureServices">Registers more services next to MVC's.</param>
     /// <returns>The bound arguments and the controller context.</returns>
     public static async Task<Result> BindAsync(
         IStartup startup,
@@ -45,7 +47,9 @@ public static class FormPostBinder
         string culture,
         IDictionary<string, StringValues> form,
         IDictionary<string, object> routeValues = null,
-        Controller controller = null)
+        Controller controller = null,
+        Action<HttpRequest> configureRequest = null,
+        Action<IServiceCollection> configureServices = null)
     {
         var previousCulture = CultureInfo.CurrentCulture;
         var previousUICulture = CultureInfo.CurrentUICulture;
@@ -57,6 +61,7 @@ public static class FormPostBinder
         {
             var services = new ServiceCollection().AddLogging().AddMvcCore().Services;
             startup?.ConfigureServices(services);
+            configureServices?.Invoke(services);
 
             var mvc = services.BuildServiceProvider();
 
@@ -64,6 +69,7 @@ public static class FormPostBinder
             httpContext.Request.Method = HttpMethods.Post;
             httpContext.Request.ContentType = "application/x-www-form-urlencoded";
             httpContext.Request.Form = new FormCollection(new Dictionary<string, StringValues>(form));
+            configureRequest?.Invoke(httpContext.Request);
 
             var routeData = new RouteData();
 
