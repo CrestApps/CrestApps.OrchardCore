@@ -6,9 +6,11 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Recipes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Core.ApiKeys;
@@ -40,73 +42,28 @@ public static class AISourceCatalogApi
             .DisableAntiforgery()
             .WithTags("AI Knowledge");
 
-        group.MapGet(string.Empty, async Task<Results<Ok<IReadOnlyList<T>>, ProblemHttpResult>> (string source, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager) =>
-        {
-            if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Knowledge, permission))
-            {
-                return Forbidden();
-            }
-
-            var items = string.IsNullOrWhiteSpace(source)
-                ? await manager.GetAllAsync(httpContext.RequestAborted)
-                : await manager.GetAsync(source, httpContext.RequestAborted);
-
-            return TypedResults.Ok<IReadOnlyList<T>>(items.ToList());
-        })
+        group.MapGet(string.Empty, (string source, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager)
+            => ListAsync(source, httpContext, authorizationService, manager, permission))
             .WithName($"List{entityName}s")
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .WithSummary($"Lists every {displayName}, optionally of one source.");
+            .WithSummary($"Lists every {displayName}, optionally of one source. Secrets are left out.");
 
-        group.MapGet("{id}", async Task<Results<Ok<T>, ProblemHttpResult>> (string id, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager) =>
-        {
-            if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Knowledge, permission))
-            {
-                return Forbidden();
-            }
-
-            var item = await manager.FindByIdAsync(id, httpContext.RequestAborted);
-
-            return item is null ? NotFound() : TypedResults.Ok(item);
-        })
+        group.MapGet("{id}", (string id, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager)
+            => GetAsync(id, httpContext, authorizationService, manager, permission))
             .WithName($"Get{entityName}")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .WithSummary($"Gets a {displayName}.");
+            .WithSummary($"Gets a {displayName}. Secrets are left out.");
 
-        group.MapPost(string.Empty, async Task<Results<Created<T>, ValidationProblem, ProblemHttpResult>> (JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager) =>
-        {
-            if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Knowledge, permission))
-            {
-                return Forbidden();
-            }
-
-            var source = body?["Source"]?.GetValue<string>();
-
-            if (string.IsNullOrWhiteSpace(source))
-            {
-                return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["source"] = [$"Name the {displayName}'s source."] });
-            }
-
-            body.Remove(nameof(CatalogItem.ItemId));
-            var item = await manager.NewAsync(source, body, httpContext.RequestAborted);
-            var validation = await manager.ValidateAsync(item, httpContext.RequestAborted);
-
-            if (!validation.Succeeded)
-            {
-                return Invalid(validation);
-            }
-
-            await manager.CreateAsync(item, httpContext.RequestAborted);
-
-            return TypedResults.Created($"/api/ai/v1/{path}/{item.ItemId}", item);
-        })
+        group.MapPost(string.Empty, (JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, IDataProtectionProvider dataProtectionProvider, IOptions<IngestionSourceSecretOptions> secretOptions)
+            => CreateAsync(body, httpContext, authorizationService, manager, new AISourceSecrets(dataProtectionProvider, secretOptions.Value), path, displayName, permission))
             .WithName($"Create{entityName}")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesValidationProblem()
             .WithSummary($"Creates a {displayName} from the JSON its recipe step takes, with its Source.");
 
-        group.MapPut("{id}", (string id, JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager)
-            => UpdateAsync(id, body, httpContext, authorizationService, manager, permission))
+        group.MapPut("{id}", (string id, JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, IDataProtectionProvider dataProtectionProvider, IOptions<IngestionSourceSecretOptions> secretOptions)
+            => UpdateAsync(id, body, httpContext, authorizationService, manager, new AISourceSecrets(dataProtectionProvider, secretOptions.Value), permission))
             .WithName($"Update{entityName}")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -140,8 +97,81 @@ public static class AISourceCatalogApi
     }
 
     /// <summary>
-    /// Updates a record with the given settings, leaving the rest as they are. A stored secret, such as a data source's
-    /// API key, is kept when the body leaves it out or sends back the protected value a read returned; when the update
+    /// Lists the records, optionally of one source, with their secrets left out.
+    /// </summary>
+    internal static async Task<Results<Ok<IReadOnlyList<T>>, ProblemHttpResult>> ListAsync<T>(string source, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, Permission permission)
+        where T : CatalogItem, ISourceAwareModel
+    {
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Knowledge, permission))
+        {
+            return Forbidden();
+        }
+
+        var items = string.IsNullOrWhiteSpace(source)
+            ? await manager.GetAllAsync(httpContext.RequestAborted)
+            : await manager.GetAsync(source, httpContext.RequestAborted);
+
+        return TypedResults.Ok<IReadOnlyList<T>>(items.Select(WithoutSecrets).ToList());
+    }
+
+    /// <summary>
+    /// Gets a record with its secrets left out.
+    /// </summary>
+    internal static async Task<Results<Ok<T>, ProblemHttpResult>> GetAsync<T>(string id, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, Permission permission)
+        where T : CatalogItem, ISourceAwareModel
+    {
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Knowledge, permission))
+        {
+            return Forbidden();
+        }
+
+        var item = await manager.FindByIdAsync(id, httpContext.RequestAborted);
+
+        return item is null ? NotFound() : TypedResults.Ok(WithoutSecrets(item));
+    }
+
+    /// <summary>
+    /// Creates a record from the JSON its recipe step takes, with its source.
+    /// </summary>
+    internal static async Task<Results<Created<T>, ValidationProblem, ProblemHttpResult>> CreateAsync<T>(JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, AISourceSecrets secrets, string path, string displayName, Permission permission)
+        where T : CatalogItem, ISourceAwareModel
+    {
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Knowledge, permission))
+        {
+            return Forbidden();
+        }
+
+        var source = body?["Source"]?.GetValue<string>();
+
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["source"] = [$"Name the {displayName}'s source."] });
+        }
+
+        body.Remove(nameof(CatalogItem.ItemId));
+
+        if (RefuseProtectedSecrets<T>(body, stored: null, secrets) is { } refused)
+        {
+            return refused;
+        }
+
+        var item = await manager.NewAsync(source, body, httpContext.RequestAborted);
+        var validation = await manager.ValidateAsync(item, httpContext.RequestAborted);
+
+        if (!validation.Succeeded)
+        {
+            return Invalid(validation);
+        }
+
+        await manager.CreateAsync(item, httpContext.RequestAborted);
+
+        return TypedResults.Created($"/api/ai/v1/{path}/{item.ItemId}", item);
+    }
+
+    /// <summary>
+    /// Updates a record with the given settings, leaving the rest, its other properties included, as they are. A secret
+    /// given in clear text is protected; one that is already protected is refused, unless it is the stored one. A stored
+    /// secret, such as a data source's API key, is kept when the body leaves it out or sends it blank; when the update
     /// also moves the record to another address or way of signing in, that kept secret is dropped, as the record's editor
     /// and recipe step drop it, so it must be given again.
     /// </summary>
@@ -151,9 +181,10 @@ public static class AISourceCatalogApi
     /// <param name="httpContext">The request.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="manager">The records' manager.</param>
+    /// <param name="secrets">What protects the secrets the body gives.</param>
     /// <param name="permission">The permission to manage the records.</param>
     /// <returns>The updated record, or why it was not updated.</returns>
-    internal static async Task<Results<Ok<T>, ValidationProblem, ProblemHttpResult>> UpdateAsync<T>(string id, JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, Permission permission)
+    internal static async Task<Results<Ok<T>, ValidationProblem, ProblemHttpResult>> UpdateAsync<T>(string id, JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, AISourceSecrets secrets, Permission permission)
         where T : CatalogItem, ISourceAwareModel
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Knowledge, permission))
@@ -176,6 +207,13 @@ public static class AISourceCatalogApi
         var changes = NormalizeKeys(body, current);
         changes.Remove(nameof(CatalogItem.ItemId));
         changes.Remove("Source");
+
+        if (RefuseProtectedSecrets<T>(changes, current, secrets) is { } refused)
+        {
+            return refused;
+        }
+
+        KeepStoredProperties(changes, current);
 
         // Validate a copy first: the manager saves as it updates. The copy drops the secrets the update would drop, so a
         // required one that must be given again is reported.
@@ -269,6 +307,56 @@ public static class AISourceCatalogApi
             .GroupBy(error => error.MemberNames?.FirstOrDefault() ?? string.Empty)
             .ToDictionary(group => group.Key, group => group.Select(error => error.ErrorMessage).ToArray()));
     }
+
+    // A read leaves the secrets out: the protected value is not bound to a record or an address, so whoever holds it could
+    // give it to another record that sends it to a host they chose (review 7, F9).
+    private static T WithoutSecrets<T>(T item)
+        where T : CatalogItem
+    {
+        var json = JsonSerializer.SerializeToNode(item, item.GetType());
+        IngestionSourceSecrets.Remove(json);
+
+        return (T)json.Deserialize(item.GetType());
+    }
+
+    // A secret the body gives in clear text is protected as the record's editor protects it; one that already reads back
+    // under its purpose is refused, since a caller can only have it from another record.
+    private static ValidationProblem RefuseProtectedSecrets<T>(JsonObject body, JsonObject stored, AISourceSecrets secrets)
+    {
+        var refused = IngestionSourceSecretProtection.Protect(
+            typeof(T),
+            Child(body, nameof(ExtensibleEntity.Properties)),
+            Child(stored, nameof(ExtensibleEntity.Properties)),
+            secrets.Options,
+            secrets.DataProtectionProvider,
+            refuseProtected: true);
+
+        return refused.Count == 0
+            ? null
+            : TypedResults.ValidationProblem(refused.ToDictionary(
+                member => member,
+                member => new[] { "Send the secret itself. A protected value is not accepted: a read never returns one, so it can only come from another record." }));
+    }
+
+    // The package's handler replaces every property with the posted ones, so the posted properties are merged into the
+    // stored ones: what the body leaves out stays, and a secret it leaves out or sends blank keeps the stored one. The rule
+    // that drops a kept secret when the record's address changes then applies to it.
+    private static void KeepStoredProperties(JsonObject changes, JsonObject current)
+    {
+        var key = FindKey(changes, nameof(ExtensibleEntity.Properties));
+
+        if (key is null || changes[key] is not JsonObject posted || Child(current, nameof(ExtensibleEntity.Properties)) is not { } stored)
+        {
+            return;
+        }
+
+        var merged = Merge(stored.DeepClone().AsObject(), posted);
+        IngestionSourceSecrets.KeepStored(merged, stored);
+        changes[key] = merged;
+    }
+
+    private static JsonObject Child(JsonObject node, string name)
+        => FindKey(node, name) is { } key ? node[key] as JsonObject : null;
 
     private static string FindKey(JsonObject node, string key)
     {

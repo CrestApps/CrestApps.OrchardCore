@@ -12,7 +12,9 @@ using CrestApps.OrchardCore.AI.DataSources.Deployments;
 using CrestApps.OrchardCore.AI.DataSources.Recipes;
 using CrestApps.OrchardCore.AI.Deployments.Sources;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
+using CrestApps.OrchardCore.AI.Core.Recipes;
 using CrestApps.OrchardCore.AI.Recipes;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -307,7 +309,7 @@ public sealed class AICatalogRecipeRoundTripTests
         var options = new AIDataSourceSourceOptions();
         options.AddOrUpdate("SearchIndexProfile", new("Search Index Profile", "Search Index Profile"), new("Index profile.", "Index profile."));
         options.AddOrUpdate("AzureAISearch", new("Azure AI Search", "Azure AI Search"), new("Azure AI Search index.", "Azure AI Search index."));
-        var handler = new AIDataSourceStep(manager.Object, Options.Create(options), new PassThroughLocalizer<AIDataSourceStep>());
+        var handler = new AIDataSourceStep(manager.Object, Options.Create(options), new EphemeralDataProtectionProvider(), Options.Create(new IngestionSourceSecretOptions()), new PassThroughLocalizer<AIDataSourceStep>());
 
         // Act
         await source.ProcessDeploymentStepAsync(new AIDataSourceDeploymentStep { IncludeAll = true }, result);

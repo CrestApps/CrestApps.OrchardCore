@@ -8,11 +8,19 @@ using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
+using CrestApps.OrchardCore.AI.Core.Recipes;
+using CrestApps.OrchardCore.AI.DataSources.Recipes;
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Recipes.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Api;
 
@@ -28,6 +36,8 @@ public sealed class AISourceCatalogApiSecretTests
     private const string MetadataName = "AzureAISearchSourceMetadata";
     private const string StoredKey = "CfDJ8-protected-key";
 
+    private readonly EphemeralDataProtectionProvider _protection = new();
+
     [Fact]
     public async Task Update_DropsTheKey_WhenTheBodySendsTheProtectedKeyBackWithAnotherEndpoint()
     {
@@ -36,7 +46,7 @@ public sealed class AISourceCatalogApiSecretTests
         var body = Body("https://attacker.example/", "ApiKey", StoredKey);
 
         // Act
-        var result = await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, AIPermissions.ManageAIDataSources);
+        var result = await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, Secrets(), AIPermissions.ManageAIDataSources);
 
         // Assert
         Assert.IsType<Ok<AIDataSource>>(result.Result);
@@ -57,7 +67,7 @@ public sealed class AISourceCatalogApiSecretTests
         var body = Body("https://search.vendor.example/", "Default", StoredKey);
 
         // Act
-        await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, AIPermissions.ManageAIDataSources);
+        await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, Secrets(), AIPermissions.ManageAIDataSources);
 
         // Assert
         Assert.Null(manager.LastSaved[MetadataName]["ApiKey"]);
@@ -71,7 +81,7 @@ public sealed class AISourceCatalogApiSecretTests
         var body = Body("https://search.vendor.example/v2", "ApiKey", StoredKey);
 
         // Act
-        var result = await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, AIPermissions.ManageAIDataSources);
+        var result = await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, Secrets(), AIPermissions.ManageAIDataSources);
 
         // Assert
         Assert.IsType<Ok<AIDataSource>>(result.Result);
@@ -87,10 +97,10 @@ public sealed class AISourceCatalogApiSecretTests
         var body = Body("https://search.other.example/", "ApiKey", "new-key");
 
         // Act
-        await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, AIPermissions.ManageAIDataSources);
+        await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, Secrets(), AIPermissions.ManageAIDataSources);
 
-        // Assert
-        Assert.Equal("new-key", manager.LastSaved[MetadataName]["ApiKey"].GetValue<string>());
+        // Assert: kept, and protected (F9).
+        Assert.Equal("new-key", Unprotect(manager.LastSaved[MetadataName]["ApiKey"].GetValue<string>()));
     }
 
     [Fact]
@@ -102,7 +112,7 @@ public sealed class AISourceCatalogApiSecretTests
         var body = Body("https://attacker.example/", "ApiKey", StoredKey);
 
         // Act
-        var result = await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, AIPermissions.ManageAIDataSources);
+        var result = await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, Secrets(), AIPermissions.ManageAIDataSources);
 
         // Assert
         var problem = Assert.IsType<ValidationProblem>(result.Result);
@@ -110,6 +120,223 @@ public sealed class AISourceCatalogApiSecretTests
         Assert.Equal(0, manager.Saves);
         Assert.Equal(StoredKey, Metadata(manager.Entries.Single())["ApiKey"].GetValue<string>());
     }
+
+    [Fact]
+    public async Task Get_LeavesTheSecretsOut()
+    {
+        // Arrange (review 7, F9): the protected key a read returned was all a caller needed to send the key elsewhere.
+        var manager = Manager(Stored("https://search.vendor.example/"));
+
+        // Act
+        var result = await AISourceCatalogApi.GetAsync(Id, Context(), Authorization(), manager, AIPermissions.ManageAIDataSources);
+
+        // Assert
+        var read = Assert.IsType<Ok<AIDataSource>>(result.Result).Value;
+        var json = Serialized(read);
+        Assert.DoesNotContain(StoredKey, json, StringComparison.Ordinal);
+        Assert.Contains("https://search.vendor.example/", json, StringComparison.Ordinal);
+        Assert.Equal(StoredKey, Metadata(manager.Entries.Single())["ApiKey"].GetValue<string>());
+    }
+
+    [Fact]
+    public async Task List_LeavesTheSecretsOut()
+    {
+        // Arrange
+        var manager = Manager(Stored("https://search.vendor.example/"));
+
+        // Act
+        var result = await AISourceCatalogApi.ListAsync(null, Context(), Authorization(), manager, AIPermissions.ManageAIDataSources);
+
+        // Assert
+        var read = Assert.IsType<Ok<IReadOnlyList<AIDataSource>>>(result.Result).Value;
+        Assert.DoesNotContain(StoredKey, Serialized(Assert.Single(read)), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Create_RefusesAKeyThatIsAlreadyProtected()
+    {
+        // Arrange (F9): the protected key of one data source, given to a new one that points at the caller's host.
+        var manager = new InMemorySources();
+        var body = Body("https://attacker.example/", "ApiKey", Protected("the-real-key"));
+        body["Source"] = "AzureAISearch";
+        body["DisplayText"] = "Mine";
+
+        // Act
+        var result = await AISourceCatalogApi.CreateAsync(body, Context(), Authorization(), manager, Secrets(), "data-sources", "data source", AIPermissions.ManageAIDataSources);
+
+        // Assert
+        var problem = Assert.IsType<ValidationProblem>(result.Result);
+        Assert.Contains(problem.ProblemDetails.Errors.Keys, key => key.EndsWith("ApiKey", StringComparison.Ordinal));
+        Assert.Empty(manager.Entries);
+    }
+
+    [Fact]
+    public async Task Create_ProtectsAPlainKey()
+    {
+        // Arrange (F9): a key written through the API was stored in clear.
+        var manager = new InMemorySources();
+        var body = Body("https://search.vendor.example/", "ApiKey", "plain-key");
+        body["Source"] = "AzureAISearch";
+        body["DisplayText"] = "Policies";
+
+        // Act
+        var result = await AISourceCatalogApi.CreateAsync(body, Context(), Authorization(), manager, Secrets(), "data-sources", "data source", AIPermissions.ManageAIDataSources);
+
+        // Assert
+        Assert.IsType<Created<AIDataSource>>(result.Result);
+        var stored = Metadata(Assert.Single(manager.Entries))["ApiKey"].GetValue<string>();
+        Assert.NotEqual("plain-key", stored);
+        Assert.Equal("plain-key", Unprotect(stored));
+    }
+
+    [Fact]
+    public async Task Update_RefusesAKeyProtectedForAnotherRecord_AndSavesNothing()
+    {
+        // Arrange (F9): the same works by PUT on any other record, even one that keeps its endpoint.
+        var manager = Manager(Stored("https://search.vendor.example/"));
+        var body = Body("https://search.vendor.example/", "ApiKey", Protected("another-records-key"));
+
+        // Act
+        var result = await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, Secrets(), AIPermissions.ManageAIDataSources);
+
+        // Assert
+        Assert.IsType<ValidationProblem>(result.Result);
+        Assert.Equal(0, manager.Saves);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public async Task Update_KeepsTheStoredKey_WhenTheBodyLeavesItOutOrBlank(string key)
+    {
+        // Arrange (F9): a read no longer returns the key, so an update made from a read sends none. The package's handler
+        // replaces every property with the posted ones.
+        var manager = Manager(Stored("https://search.vendor.example/"));
+        var body = Body("https://search.vendor.example/", "ApiKey", key);
+        body["Properties"][MetadataName]["IndexName"] = "policies-v2";
+
+        if (key is null)
+        {
+            body["Properties"][MetadataName].AsObject().Remove("ApiKey");
+        }
+
+        // Act
+        var result = await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, Secrets(), AIPermissions.ManageAIDataSources);
+
+        // Assert
+        Assert.IsType<Ok<AIDataSource>>(result.Result);
+        Assert.Equal(StoredKey, manager.LastSaved[MetadataName]["ApiKey"].GetValue<string>());
+        Assert.Equal("policies-v2", manager.LastSaved[MetadataName]["IndexName"].GetValue<string>());
+    }
+
+    [Fact]
+    public async Task Update_KeepsTheOtherProperties_WhenTheBodySendsOne()
+    {
+        // Arrange: "leaving the rest as they are" held for the record's own fields only; a body with one metadata object
+        // replaced every other one.
+        var stored = Stored("https://search.vendor.example/");
+        stored.Properties["DataConnectionReference"] = new JsonObject { ["Note"] = "kept" };
+        var manager = Manager(stored);
+        var body = new JsonObject { ["Properties"] = new JsonObject { [MetadataName] = new JsonObject { ["IndexName"] = "policies-v2" } } };
+
+        // Act
+        await AISourceCatalogApi.UpdateAsync(Id, body, Context(), Authorization(), manager, Secrets(), AIPermissions.ManageAIDataSources);
+
+        // Assert
+        Assert.Equal("kept", manager.LastSaved["DataConnectionReference"]["Note"].GetValue<string>());
+        Assert.Equal(StoredKey, manager.LastSaved[MetadataName]["ApiKey"].GetValue<string>());
+        Assert.Equal("https://search.vendor.example/", manager.LastSaved[MetadataName]["Endpoint"].GetValue<string>());
+    }
+
+    [Fact]
+    public async Task RecipeStep_ProtectsAPlainKey()
+    {
+        // Arrange (F9): a key written through the AIDataSource recipe step was stored in clear.
+        var manager = new InMemorySources();
+        var options = new AIDataSourceSourceOptions();
+        options.AddOrUpdate("AzureAISearch", new("Azure AI Search", "Azure AI Search"), new("Azure AI Search index.", "Azure AI Search index."));
+        var step = new AIDataSourceStep(manager, Options.Create(options), _protection, Options.Create(SecretOptions()), new PassThroughStringLocalizer<AIDataSourceStep>());
+        var entry = Body("https://search.vendor.example/", "ApiKey", "plain-key");
+        entry["Source"] = "AzureAISearch";
+        entry["DisplayText"] = "Policies";
+        var context = new RecipeExecutionContext
+        {
+            Name = AIDataSourceStep.StepKey,
+            Step = new JsonObject { ["name"] = AIDataSourceStep.StepKey, ["DataSources"] = new JsonArray(entry) },
+        };
+
+        // Act
+        await step.ExecuteAsync(context);
+
+        // Assert
+        Assert.Empty(context.Errors);
+        var stored = Metadata(Assert.Single(manager.Entries))["ApiKey"].GetValue<string>();
+        Assert.Equal("plain-key", Unprotect(stored));
+    }
+
+    [Fact]
+    public async Task RecipeStep_KeepsAKeyThatIsAlreadyProtected()
+    {
+        // Arrange: a recipe is trusted, and one made on this site may carry the protected value.
+        var manager = new InMemorySources();
+        var options = new AIDataSourceSourceOptions();
+        options.AddOrUpdate("AzureAISearch", new("Azure AI Search", "Azure AI Search"), new("Azure AI Search index.", "Azure AI Search index."));
+        var step = new AIDataSourceStep(manager, Options.Create(options), _protection, Options.Create(SecretOptions()), new PassThroughStringLocalizer<AIDataSourceStep>());
+        var key = Protected("the-key");
+        var entry = Body("https://search.vendor.example/", "ApiKey", key);
+        entry["Source"] = "AzureAISearch";
+        entry["DisplayText"] = "Policies";
+        var context = new RecipeExecutionContext
+        {
+            Name = AIDataSourceStep.StepKey,
+            Step = new JsonObject { ["name"] = AIDataSourceStep.StepKey, ["DataSources"] = new JsonArray(entry) },
+        };
+
+        // Act
+        await step.ExecuteAsync(context);
+
+        // Assert
+        Assert.Equal(key, Metadata(Assert.Single(manager.Entries))["ApiKey"].GetValue<string>());
+    }
+
+    [Fact]
+    public void Startups_RegisterThePurposeOfEachSourcesSecrets()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        new CrestApps.OrchardCore.AI.DataSources.AzureAI.Startup(Mock.Of<IStringLocalizer<CrestApps.OrchardCore.AI.DataSources.AzureAI.Startup>>()).ConfigureServices(services);
+        new CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Startup(Mock.Of<IStringLocalizer<CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Startup>>()).ConfigureServices(services);
+        new CrestApps.OrchardCore.AI.DataSources.PostgreSQL.Startup(Mock.Of<IStringLocalizer<CrestApps.OrchardCore.AI.DataSources.PostgreSQL.Startup>>()).ConfigureServices(services);
+        new CrestApps.OrchardCore.AI.FileSources.Ftp.Startup().ConfigureServices(services);
+        new CrestApps.OrchardCore.AI.FileSources.Sftp.Startup().ConfigureServices(services);
+
+        // Act
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<IngestionSourceSecretOptions>>().Value;
+
+        // Assert
+        Assert.Equal(AIDataSourceProtectionConstants.SourceSecretPurpose, options.GetPurpose(typeof(AIDataSource), "AzureAISearchSourceMetadata"));
+        Assert.Equal(AIDataSourceProtectionConstants.SourceSecretPurpose, options.GetPurpose(typeof(AIDataSource), "ElasticsearchSourceMetadata"));
+        Assert.Equal(AIDataSourceProtectionConstants.SourceSecretPurpose, options.GetPurpose(typeof(AIDataSource), "PostgreSQLSourceMetadata"));
+        Assert.Equal("FtpResourcePassword", options.GetPurpose(typeof(FileSource), "FtpConnectionMetadata"));
+        Assert.Equal("SftpResourceCredentials", options.GetPurpose(typeof(FileSource), "SftpConnectionMetadata"));
+    }
+
+    private string Protected(string key)
+        => _protection.CreateProtector(AIDataSourceProtectionConstants.SourceSecretPurpose).Protect(key);
+
+    private string Unprotect(string key)
+        => _protection.CreateProtector(AIDataSourceProtectionConstants.SourceSecretPurpose).Unprotect(key);
+
+    private AISourceSecrets Secrets()
+        => new(_protection, SecretOptions());
+
+    private static IngestionSourceSecretOptions SecretOptions()
+        => new IngestionSourceSecretOptions().Protect<AIDataSource>(MetadataName, AIDataSourceProtectionConstants.SourceSecretPurpose);
+
+    // The record as the API answers it.
+    private static string Serialized(AIDataSource dataSource)
+        => JsonSerializer.Serialize(dataSource, JsonSerializerOptions.Web);
 
     private static AIDataSource Stored(string endpoint)
     {

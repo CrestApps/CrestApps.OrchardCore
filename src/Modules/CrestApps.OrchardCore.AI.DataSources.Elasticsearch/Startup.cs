@@ -4,6 +4,7 @@ using CrestApps.Core.Elasticsearch;
 using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Recipes;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Drivers;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
@@ -50,6 +51,7 @@ public sealed class Startup : StartupBase
         services.TryAddScoped<AIDataSourceConnectionPicker>();
         services.AddDisplayDriver<AIDataSource, ElasticsearchAIDataSourceDisplayDriver>();
         services.AddAIDataSourceSourceHandler<ElasticsearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.Elasticsearch);
+        services.Configure<IngestionSourceSecretOptions>(options => options.Protect<AIDataSource>(nameof(ElasticsearchSourceMetadata), AIDataSourceProtectionConstants.SourceSecretPurpose));
 
         // This source reads rows it did not shape, and its handler extracts each document by the configured
         // TitleFieldName and ContentFieldName, so it has to ask which field is which.
