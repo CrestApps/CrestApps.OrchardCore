@@ -804,6 +804,12 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "0fd9dcb84ea12ee4",
             "Read-only index existence probe. The statement is picked per dialect from four literal, parameterized 'SELECT COUNT(1)' queries over the engine's catalog (sys.indexes, pg_indexes, information_schema.statistics, sqlite_master), so it cannot create, alter, or drop any object."),
         new ReviewedDynamicSqlEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexTableColumnCreation.cs",
+            "IndexTableColumnCreation",
+            "ExistsAsync",
+            "d4589968ef150a6d",
+            "Read-only column existence probe. The statement is picked per dialect from four literal, parameterized 'SELECT COUNT(1)' queries over the engine's catalog (sys.columns, information_schema.columns, pragma_table_info), so it cannot create, alter, or drop any object."),
+        new ReviewedDynamicSqlEntry(
             "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexMigrationSql.cs",
             "IndexMigrationSql",
             "ExistsAsync",
