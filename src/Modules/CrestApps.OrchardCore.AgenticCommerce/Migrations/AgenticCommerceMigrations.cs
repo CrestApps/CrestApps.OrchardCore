@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
 using YesSql;
@@ -82,19 +83,23 @@ internal sealed class AgenticCommerceMigrations : DataMigration
     {
         await AddProfileHostAndOriginAsync();
 
-        ShellScope.AddDeferredTask(scope => ReindexAsync(scope.ServiceProvider.GetRequiredService<ISession>()));
+        ShellScope.AddDeferredTask(scope => ReindexAsync(
+            scope.ServiceProvider.GetRequiredService<ISession>(),
+            scope.ServiceProvider.GetRequiredService<ILogger<AgenticCommerceMigrations>>()));
 
         return 2;
     }
 
     /// <summary>
-    /// Maps the platforms and the checkouts again, a page at a time, so the columns of version 2 are filled in.
+    /// Maps the platforms and the checkouts again, a page at a time, so the columns of version 2 are filled in. A record
+    /// that can't be mapped again is logged and skipped, and keeps its old index row until it is next saved.
     /// </summary>
     /// <param name="session">The session.</param>
-    internal static async Task ReindexAsync(ISession session)
+    /// <param name="logger">The logger the skipped records are logged to.</param>
+    internal static async Task ReindexAsync(ISession session, ILogger logger)
     {
-        await CatalogIndexBackfill.ReindexAsync<AgentPlatform, AgentPlatformIndex>(session, AgenticCommerceStorage.CollectionName);
-        await CatalogIndexBackfill.ReindexAsync<AgentCheckout, AgentCheckoutIndex>(session, AgenticCommerceStorage.CollectionName);
+        await CatalogIndexBackfill.ReindexAsync<AgentPlatform, AgentPlatformIndex>(session, AgenticCommerceStorage.CollectionName, logger: logger);
+        await CatalogIndexBackfill.ReindexAsync<AgentCheckout, AgentCheckoutIndex>(session, AgenticCommerceStorage.CollectionName, logger: logger);
     }
 
     private async Task AddProfileHostAndOriginAsync()

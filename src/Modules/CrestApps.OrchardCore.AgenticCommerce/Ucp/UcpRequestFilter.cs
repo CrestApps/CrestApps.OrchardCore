@@ -203,7 +203,8 @@ public sealed class UcpRequestFilter : IEndpointFilter
     // the store sells to platforms it doesn't know, an unregistered one known by the profile's address. A profile on the
     // host of a registered platform, with or without a trailing dot, is that platform's or no one's, so a disabled or
     // restricted platform can't come back as an unregistered one by changing the rest of its address. From another host it
-    // controls it can, like any unregistered platform; only turning unregistered platforms off keeps it out.
+    // controls it can, like any unregistered platform; only turning unregistered platforms off keeps it out. A host no DNS
+    // name can have can't be checked against the registered hosts, so it isn't let in.
     private static async Task<AgentPlatform> FindSigningPlatformAsync(IServiceProvider services, string profileUrl, CancellationToken cancellationToken)
     {
         var platforms = services.GetRequiredService<IAgentPlatformStore>();
@@ -214,7 +215,8 @@ public sealed class UcpRequestFilter : IEndpointFilter
         }
 
         if (!(await services.GetRequiredService<ISiteService>().GetSettingsAsync<AgenticCommerceSettings>()).AllowUnregisteredUcpPlatforms ||
-            await platforms.FindByProfileHostAsync(new Uri(profileUrl).IdnHost, cancellationToken) is not null)
+            AgentPlatformAddress.GetHost(profileUrl) is not { } host ||
+            await platforms.FindByProfileHostAsync(host, cancellationToken) is not null)
         {
             return null;
         }

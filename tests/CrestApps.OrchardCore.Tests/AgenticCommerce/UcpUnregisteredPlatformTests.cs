@@ -122,6 +122,19 @@ public sealed class UcpUnregisteredPlatformTests : IAsyncLifetime, IDisposable
     }
 
     /// <summary>
+    /// G14 (fix verification): the registered-host check reads the profile's host through the same helper as the index,
+    /// which has no host for one no DNS name can have (here, over 253 characters). Such a host can't be checked against
+    /// the registered hosts, so it isn't let in. (A Unicode host can't reach this check: the header is ASCII.)
+    /// </summary>
+    [Fact]
+    public async Task AProfileOnAHostNoDnsNameCanHave_IsNotLetInAsAnUnregisteredPlatform()
+    {
+        var result = await InvokeSignedAsync("https://" + string.Join('.', Enumerable.Repeat(new string('a', 60), 5)) + ".example/.well-known/ucp");
+
+        Assert.Equal(StatusCodes.Status403Forbidden, StatusCode(result));
+    }
+
+    /// <summary>
     /// The control for the tests above: a profile on a host no platform has still gets past its signature (and stops at the
     /// profile's unsupported version).
     /// </summary>
