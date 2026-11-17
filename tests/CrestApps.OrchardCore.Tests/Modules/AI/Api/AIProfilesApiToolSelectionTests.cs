@@ -8,6 +8,7 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.Endpoints.Api;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -32,7 +33,7 @@ public sealed class AIProfilesApiToolSelectionTests
         var body = PostSessionTools("sendEmail", "enableFeature");
 
         // Act
-        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances());
 
         // Assert
         var problem = Assert.IsType<ValidationProblem>(result.Result);
@@ -50,7 +51,7 @@ public sealed class AIProfilesApiToolSelectionTests
         body["Name"] = "support";
 
         // Act
-        var result = await AIProfilesApiEndpoints.CreateAsync(body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+        var result = await AIProfilesApiEndpoints.CreateAsync(body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances());
 
         // Assert
         var problem = Assert.IsType<ValidationProblem>(result.Result);
@@ -68,7 +69,7 @@ public sealed class AIProfilesApiToolSelectionTests
         var body = PostSessionTools("sendEmail", "listAIProfiles");
 
         // Act
-        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances());
 
         // Assert
         Assert.IsType<Ok<AIProfile>>(result.Result);
@@ -87,7 +88,7 @@ public sealed class AIProfilesApiToolSelectionTests
         var body = BoundBody($$"""{ "{{settingsKey}}": { "AIProfilePostSessionSettings": { "ToolNames": ["sendEmail"] } } }""");
 
         // Act
-        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances());
 
         // Assert
         var problem = Assert.IsType<ValidationProblem>(result.Result);
@@ -104,7 +105,7 @@ public sealed class AIProfilesApiToolSelectionTests
         var body = BoundBody("""{ "properties": { "FunctionInvocationMetadata": { "Names": ["enableFeature"] } } }""");
 
         // Act
-        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances());
 
         // Assert
         Assert.IsType<ValidationProblem>(result.Result);
@@ -120,7 +121,7 @@ public sealed class AIProfilesApiToolSelectionTests
         var body = BoundBody("""{ "settings": { "AIProfilePostSessionSettings": { "ToolNames": ["listAIProfiles"] } }, "name": "renamed" }""");
 
         // Act
-        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances());
 
         // Assert: saved as checked, and the name, which links point to, stays whatever its case.
         Assert.IsType<Ok<AIProfile>>(result.Result);
@@ -137,7 +138,7 @@ public sealed class AIProfilesApiToolSelectionTests
         var body = BoundBody("""{ "Name": "support", "Properties": { "functioninvocationmetadata": { "Names": ["enableFeature"] } } }""");
 
         // Act
-        var result = await AIProfilesApiEndpoints.CreateAsync(body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+        var result = await AIProfilesApiEndpoints.CreateAsync(body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances());
 
         // Assert
         var problem = Assert.IsType<ValidationProblem>(result.Result);
@@ -154,7 +155,7 @@ public sealed class AIProfilesApiToolSelectionTests
         var body = BoundBody("""{ "settings": { "aiprofilepostsessionsettings": { "EnablePostSessionProcessing": true, "ToolNames": ["enableFeature"] } } }""");
 
         // Act
-        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances());
 
         // Assert: refused, and the profile as the store would read it back has no such tool.
         var problem = Assert.IsType<ValidationProblem>(result.Result);
@@ -174,7 +175,7 @@ public sealed class AIProfilesApiToolSelectionTests
         var body = BoundBody("""{ "Name": "support", "Properties": { "functioninvocationmetadata": { "Names": ["listAIProfiles"] } } }""");
 
         // Act
-        var result = await AIProfilesApiEndpoints.CreateAsync(body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+        var result = await AIProfilesApiEndpoints.CreateAsync(body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances());
 
         // Assert
         Assert.IsType<Created<AIProfile>>(result.Result);
@@ -191,7 +192,7 @@ public sealed class AIProfilesApiToolSelectionTests
         var body = BoundBody("""{ "systemMessage": "Be brief.", "isListable": false }""");
 
         // Act
-        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances());
 
         // Assert
         Assert.IsType<Ok<AIProfile>>(result.Result);
@@ -210,7 +211,7 @@ public sealed class AIProfilesApiToolSelectionTests
         var body = JsonNode.Parse(json)!.AsObject();
 
         // Act
-        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances());
 
         // Assert
         Assert.IsType<Ok<AIProfile>>(result.Result);
@@ -224,6 +225,131 @@ public sealed class AIProfilesApiToolSelectionTests
         var body = BoundBody("""{ "systemMessage": "a", "SystemMessage": "b", "Settings": { "A": 1 }, "settings": { "B": 2 } }""");
 
         Assert.NotNull(body);
+    }
+
+    [Fact]
+    public async Task Create_RefusesAToolInstanceTheCallerMayNotUse()
+    {
+        // Arrange (review 7, F7): the check read only the tool names, so a tool instance the caller may not use was saved
+        // and ran. The editor offers only the instances whose function the caller may use.
+        var manager = HandlerBackedManager(null);
+        var body = BoundBody("""{ "Name": "support", "Properties": { "AIToolInstanceMetadata": { "ToolInstanceNames": ["mailer"] } } }""");
+
+        // Act
+        var result = await AIProfilesApiEndpoints.CreateAsync(body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances("mailer", "lookup"));
+
+        // Assert
+        var problem = Assert.IsType<ValidationProblem>(result.Result);
+        Assert.Contains("mailer", problem.ProblemDetails.Errors["tools"][0], StringComparison.Ordinal);
+        manager.Verify(m => m.CreateAsync(It.IsAny<AIProfile>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("ghost")]
+    [InlineData("tool_instance_lookup")]
+    public async Task Create_RefusesAToolInstanceNameThatIsNoAccessibleInstance(string instanceName)
+    {
+        // Arrange: an unknown name would run once an instance takes it, and a function name is not an instance name.
+        var manager = HandlerBackedManager(null);
+        var body = BoundBody($$"""{ "Name": "support", "Properties": { "AIToolInstanceMetadata": { "ToolInstanceNames": ["{{instanceName}}"] } } }""");
+
+        // Act
+        var result = await AIProfilesApiEndpoints.CreateAsync(body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances("mailer", "lookup"));
+
+        // Assert
+        Assert.IsType<ValidationProblem>(result.Result);
+    }
+
+    [Fact]
+    public async Task Create_SavesAToolInstanceTheCallerMayUse()
+    {
+        // Arrange
+        var manager = HandlerBackedManager(null);
+        AIProfile created = null;
+        manager.Setup(m => m.CreateAsync(It.IsAny<AIProfile>(), It.IsAny<CancellationToken>()))
+            .Callback((AIProfile profile, CancellationToken _) => created = profile)
+            .Returns(ValueTask.CompletedTask);
+        var body = BoundBody("""{ "Name": "support", "Properties": { "AIToolInstanceMetadata": { "ToolInstanceNames": ["lookup"] } } }""");
+
+        // Act
+        var result = await AIProfilesApiEndpoints.CreateAsync(body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances("mailer", "lookup"));
+
+        // Assert
+        Assert.IsType<Created<AIProfile>>(result.Result);
+        Assert.Equal(["lookup"], Reloaded(created).GetOrCreate<AIToolInstanceMetadata>().ToolInstanceNames);
+    }
+
+    [Fact]
+    public async Task Update_RefusesAPostSessionToolInstanceTheCallerMayNotUse()
+    {
+        // Arrange (F7): post-session work runs after the session with no user.
+        var profile = new AIProfile { ItemId = "profile-1", Name = "support" };
+        var manager = HandlerBackedManager(profile);
+        var body = BoundBody("""{ "Settings": { "AIProfilePostSessionSettings": { "ToolInstanceNames": ["mailer"] } } }""");
+
+        // Act
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances("mailer", "lookup"));
+
+        // Assert
+        var problem = Assert.IsType<ValidationProblem>(result.Result);
+        Assert.Contains("mailer", problem.ProblemDetails.Errors["tools"][0], StringComparison.Ordinal);
+        Assert.Empty(Reloaded(profile).GetSettings<AIProfilePostSessionSettings>()?.ToolInstanceNames ?? []);
+    }
+
+    [Fact]
+    public async Task Update_RefusesTheToolsOfAPostSessionTask()
+    {
+        // Arrange (F7): the package unions each task's tools and instances with the profile's post-session ones.
+        var profile = new AIProfile { ItemId = "profile-1", Name = "support" };
+        var manager = HandlerBackedManager(profile);
+        var body = BoundBody("""
+            { "Settings": { "AIProfilePostSessionSettings": { "EnablePostSessionProcessing": true, "PostSessionTasks": [
+                { "Name": "summary", "Type": "Semantic", "Instructions": "Summarize.", "ToolNames": ["sendEmail"], "ToolInstanceNames": ["mailer"] }
+            ] } } }
+            """);
+
+        // Act
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances("mailer", "lookup"));
+
+        // Assert
+        var problem = Assert.IsType<ValidationProblem>(result.Result);
+        Assert.Contains("sendEmail", problem.ProblemDetails.Errors["tools"][0], StringComparison.Ordinal);
+        Assert.Contains("mailer", problem.ProblemDetails.Errors["tools"][0], StringComparison.Ordinal);
+        manager.Verify(m => m.UpdateAsync(It.IsAny<AIProfile>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("AIProfileFunctionInvocationMetadata", "Names")]
+    [InlineData("aiprofilefunctioninvocationmetadata", "names")]
+    public async Task Create_RefusesToolsUnderTheOlderFunctionInvocationKey(string key, string namesKey)
+    {
+        // Arrange (F7): on a profile with no tools the package falls back to this older settings key.
+        var manager = HandlerBackedManager(null);
+        var body = BoundBody($$"""{ "Name": "support", "Settings": { "{{key}}": { "{{namesKey}}": ["enableFeature"] } } }""");
+
+        // Act
+        var result = await AIProfilesApiEndpoints.CreateAsync(body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances());
+
+        // Assert
+        var problem = Assert.IsType<ValidationProblem>(result.Result);
+        Assert.Contains("enableFeature", problem.ProblemDetails.Errors["tools"][0], StringComparison.Ordinal);
+        manager.Verify(m => m.CreateAsync(It.IsAny<AIProfile>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Update_KeepsAToolInstanceTheProfileAlreadyHad_AndAddsOneTheCallerMayUse()
+    {
+        // Arrange: a more powerful user gave the profile the mailer instance; saving it again must not need that right.
+        var profile = new AIProfile { ItemId = "profile-1", Name = "support" };
+        profile.Put(new AIToolInstanceMetadata { ToolInstanceNames = ["mailer"] });
+        var manager = HandlerBackedManager(profile);
+        var body = BoundBody("""{ "Properties": { "AIToolInstanceMetadata": { "ToolInstanceNames": ["mailer", "lookup"] } } }""");
+
+        // Act
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"), Instances("mailer", "lookup"));
+
+        // Assert
+        Assert.IsType<Ok<AIProfile>>(result.Result);
     }
 
     // The profile as the store reads it back: the document's Properties and Settings are rebuilt without regard to case.
@@ -294,6 +420,20 @@ public sealed class AIProfilesApiToolSelectionTests
         manager.Setup(m => m.CreateAsync(It.IsAny<AIProfile>(), It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
 
         return manager;
+    }
+
+    // The real accessor over a catalog of instances, as the editor uses it: an instance is offered when the caller may
+    // use its function, "tool_instance_" and the instance name. The caller may use the lookup instance only.
+    private static DefaultAIToolInstanceAccessor Instances(params string[] names)
+    {
+        var catalog = new Mock<ISourceCatalog<AIToolInstance>>();
+        catalog.Setup(c => c.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => names.Select(name => new AIToolInstance { ItemId = name + "-id", Name = name, Source = "HttpApiRequest" }).ToList());
+
+        return new DefaultAIToolInstanceAccessor(
+            [catalog.Object],
+            Evaluator("listAIProfiles", "tool_instance_lookup"),
+            new HttpContextAccessor { HttpContext = Context() });
     }
 
     private static IAIToolAccessEvaluator Evaluator(params string[] allowed)

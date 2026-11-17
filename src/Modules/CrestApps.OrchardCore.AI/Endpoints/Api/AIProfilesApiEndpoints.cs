@@ -7,6 +7,7 @@ using CrestApps.Core.AI.Services;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -23,7 +24,11 @@ internal static class AIProfilesApiEndpoints
 {
     public const string Tag = "AI Profiles";
 
+    private const string LegacyFunctionInvocationKey = "AIProfileFunctionInvocationMetadata";
+
     private static readonly JsonNodeOptions _caseInsensitive = new() { PropertyNameCaseInsensitive = true };
+
+    private static readonly JsonSerializerOptions _caseInsensitiveJson = new() { PropertyNameCaseInsensitive = true };
 
     public static IEndpointRouteBuilder MapAIProfilesApi(this IEndpointRouteBuilder routes)
     {
@@ -116,7 +121,8 @@ internal static class AIProfilesApiEndpoints
         HttpContext httpContext,
         IAuthorizationService authorizationService,
         IAIProfileManager profileManager,
-        IAIToolAccessEvaluator toolAccessEvaluator)
+        IAIToolAccessEvaluator toolAccessEvaluator,
+        IAIToolInstanceAccessor instanceAccessor)
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Profiles, AIPermissions.ManageAIProfiles))
         {
@@ -140,7 +146,7 @@ internal static class AIProfilesApiEndpoints
 
         var profile = await profileManager.NewAsync(body, httpContext.RequestAborted);
 
-        if (await RefuseUnauthorizedToolsAsync(AsStored(profile), existing: null, httpContext, toolAccessEvaluator) is { } toolsRefused)
+        if (await RefuseUnauthorizedToolsAsync(AsStored(profile), existing: null, httpContext, toolAccessEvaluator, instanceAccessor) is { } toolsRefused)
         {
             return toolsRefused;
         }
@@ -163,7 +169,8 @@ internal static class AIProfilesApiEndpoints
         HttpContext httpContext,
         IAuthorizationService authorizationService,
         IAIProfileManager profileManager,
-        IAIToolAccessEvaluator toolAccessEvaluator)
+        IAIToolAccessEvaluator toolAccessEvaluator,
+        IAIToolInstanceAccessor instanceAccessor)
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Profiles, AIPermissions.ManageAIProfiles))
         {
@@ -198,7 +205,7 @@ internal static class AIProfilesApiEndpoints
         copy.ItemId = profile.ItemId;
         copy.Name = profile.Name;
 
-        if (await RefuseUnauthorizedToolsAsync(AsStored(copy), profile, httpContext, toolAccessEvaluator) is { } toolsRefused)
+        if (await RefuseUnauthorizedToolsAsync(AsStored(copy), profile, httpContext, toolAccessEvaluator, instanceAccessor) is { } toolsRefused)
         {
             return toolsRefused;
         }
@@ -291,25 +298,30 @@ internal static class AIProfilesApiEndpoints
     private static ProblemHttpResult NotFound()
         => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Not found");
 
-    // The editors offer only the tools the caller may use; the API takes raw JSON, so the same rule is applied here to the
-    // profile's tools and to its post-session tools, which run after the session with no user, and a tool the caller may
-    // not use (and the profile did not already have) is a validation error.
+    // The editors offer only the tools and tool instances the caller may use; the API takes raw JSON, so the same rule is
+    // applied to every place a profile gets them: its tools (and the older settings key the package falls back to when
+    // there are none), its tool instances, and the post-session tools and instances of the profile and of each task, which
+    // run after the session with no user. A tool or instance the caller may not use (and the profile did not already
+    // have in the same place) is a validation error. An instance is checked by its function, as the editor offers it.
     private static async Task<ValidationProblem> RefuseUnauthorizedToolsAsync(
         AIProfile profile,
         AIProfile existing,
         HttpContext httpContext,
-        IAIToolAccessEvaluator toolAccessEvaluator)
+        IAIToolAccessEvaluator toolAccessEvaluator,
+        IAIToolInstanceAccessor instanceAccessor)
     {
         Func<string, Task<bool>> isAuthorized = tool => toolAccessEvaluator.IsAuthorizedAsync(httpContext.User, tool);
-        var refusedTools = await AIToolSelectionFilter.GetUnauthorizedAdditionsAsync(
-            profile.GetOrCreate<FunctionInvocationMetadata>().Names,
-            existing?.GetOrCreate<FunctionInvocationMetadata>().Names,
-            isAuthorized);
-        var refusedPostSessionTools = await AIToolSelectionFilter.GetUnauthorizedAdditionsAsync(
-            profile.GetSettings<AIProfilePostSessionSettings>()?.ToolNames,
-            existing?.GetSettings<AIProfilePostSessionSettings>()?.ToolNames,
-            isAuthorized);
-        var refused = refusedTools.Concat(refusedPostSessionTools).Distinct(StringComparer.Ordinal).ToList();
+        var accessibleInstances = (await instanceAccessor.GetAccessibleInstancesAsync(httpContext.RequestAborted))
+            .Select(instance => instance.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Func<string, Task<bool>> isInstanceAuthorized = name => Task.FromResult(accessibleInstances.Contains(name));
+
+        var refused = new List<string>();
+        refused.AddRange(await AIToolSelectionFilter.GetUnauthorizedAdditionsAsync(SessionTools(profile), existing is null ? null : SessionTools(existing), isAuthorized));
+        refused.AddRange(await AIToolSelectionFilter.GetUnauthorizedAdditionsAsync(PostSessionTools(profile), existing is null ? null : PostSessionTools(existing), isAuthorized));
+        refused.AddRange(await AIToolSelectionFilter.GetUnauthorizedAdditionsAsync(profile.GetOrCreate<AIToolInstanceMetadata>().ToolInstanceNames, existing?.GetOrCreate<AIToolInstanceMetadata>().ToolInstanceNames, isInstanceAuthorized));
+        refused.AddRange(await AIToolSelectionFilter.GetUnauthorizedAdditionsAsync(PostSessionInstances(profile), existing is null ? null : PostSessionInstances(existing), isInstanceAuthorized));
+        refused = refused.Distinct(StringComparer.Ordinal).ToList();
 
         return refused.Count == 0
             ? null
@@ -317,5 +329,51 @@ internal static class AIProfilesApiEndpoints
             {
                 ["tools"] = [$"You may not give a profile these tools: {string.Join(", ", refused)}."],
             });
+    }
+
+    private static IEnumerable<string> SessionTools(AIProfile profile)
+        => (profile.GetOrCreate<FunctionInvocationMetadata>().Names ?? []).Concat(LegacyToolNames(profile));
+
+    private static IEnumerable<string> PostSessionTools(AIProfile profile)
+    {
+        var settings = profile.GetSettings<AIProfilePostSessionSettings>();
+
+        return (settings?.ToolNames ?? []).Concat(settings?.PostSessionTasks?.SelectMany(task => task?.ToolNames ?? []) ?? []);
+    }
+
+    private static IEnumerable<string> PostSessionInstances(AIProfile profile)
+    {
+        var settings = profile.GetSettings<AIProfilePostSessionSettings>();
+
+        return (settings?.ToolInstanceNames ?? []).Concat(settings?.PostSessionTasks?.SelectMany(task => task?.ToolInstanceNames ?? []) ?? []);
+    }
+
+    // The package reads the tools of a profile that has none from this older settings key. It is read here in any case
+    // and without regard to the case of its members, so the check covers whatever the package could read.
+    private static IEnumerable<string> LegacyToolNames(AIProfile profile)
+    {
+        foreach (var (key, value) in profile.Settings ?? new Dictionary<string, object>())
+        {
+            if (!string.Equals(key, LegacyFunctionInvocationKey, StringComparison.OrdinalIgnoreCase) || value is null)
+            {
+                continue;
+            }
+
+            FunctionInvocationMetadata metadata;
+
+            try
+            {
+                metadata = JsonSerializer.Deserialize<FunctionInvocationMetadata>(JsonSerializer.Serialize(value), _caseInsensitiveJson);
+            }
+            catch (JsonException)
+            {
+                continue;
+            }
+
+            foreach (var name in metadata?.Names ?? [])
+            {
+                yield return name;
+            }
+        }
     }
 }

@@ -70,6 +70,8 @@ X-Api-Key: cak_1a2b3c4d_...
 
 Every save is a version, so there is no separate publish step: a change is live once saved, and restoring is how an older version goes live again.
 
+A `POST` or `PUT` gives a profile only the tools and tool instances the caller may use, as the editor offers them. That holds in every place a profile gets them: its tools, its tool instances (checked by the instance's function), and the post-session tools and tool instances of the profile and of each post-session task, which run after the conversation with no user. A tool or instance the profile already has in the same place stays. Anything else answers `400` with the names refused. A restore takes back only what an earlier save of the same profile stored.
+
 ## Calls and texts
 
 | Method and path | What it does |
