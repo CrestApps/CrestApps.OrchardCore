@@ -183,7 +183,13 @@ public sealed class EmailSignInController : Controller
         // It is recorded before the login is validated, so Orchard's check that the email is confirmed sees it confirmed.
         var confirmationOffered = false;
 
-        if (user is User account && !UserEmailOwnership.IsVerified(account.Properties, account.Email) && EmailOwnershipProof.HasCredentials(account))
+        // On a site that requires confirmed addresses, though, Orchard refuses every sign-in to an unconfirmed account, so
+        // its password and logins never signed anyone in, and the owner couldn't reset the password either: that account
+        // is proved below like one with no credentials, which removes them.
+        if (user is User account &&
+            !UserEmailOwnership.IsVerified(account.Properties, account.Email) &&
+            EmailOwnershipProof.HasCredentials(account) &&
+            !_proof.CredentialsNeverSignedIn(account))
         {
             // A password or an external login set before anyone proved the address may be somebody else's, and recording
             // the proof hands over what belongs to the address, so it would have to remove them. A code signs the owner in
@@ -202,7 +208,7 @@ public sealed class EmailSignInController : Controller
 
             if (proof == EmailProofResult.CredentialsRemoved)
             {
-                await _notifier.InformationAsync(H["Your email address is confirmed. The password and other sign-ins this account had before were removed. Sign in with a code again, or set a new password with \"Forgot your password?\"."]);
+                await _notifier.InformationAsync(H["Your email address is confirmed. The password and other sign-ins added to this account before it was confirmed were removed, because they may not have been yours. Sign in with a code next time, or set a new password with \"Forgot your password?\"."]);
             }
         }
 

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Users.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
@@ -28,6 +29,7 @@ public sealed class EmailOwnershipProof
     private readonly ISession _session;
     private readonly UserCredentialsResets _credentialsResets;
     private readonly IEnumerable<IUserSignInRevocation> _revocations;
+    private readonly IOptionsMonitor<RegistrationOptions> _registrationOptions;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -36,6 +38,7 @@ public sealed class EmailOwnershipProof
         ISession session,
         UserCredentialsResets credentialsResets,
         IEnumerable<IUserSignInRevocation> revocations,
+        IOptionsMonitor<RegistrationOptions> registrationOptions,
         IClock clock,
         ILogger<EmailOwnershipProof> logger)
     {
@@ -43,6 +46,7 @@ public sealed class EmailOwnershipProof
         _session = session;
         _credentialsResets = credentialsResets;
         _revocations = revocations;
+        _registrationOptions = registrationOptions;
         _clock = clock;
         _logger = logger;
     }
@@ -54,6 +58,14 @@ public sealed class EmailOwnershipProof
     /// <param name="account">The account.</param>
     public static bool HasCredentials(User account)
         => UserCredentialsProof.HasCredentials(account);
+
+    /// <summary>
+    /// Whether the account's password and external logins never signed anyone in: its address is not confirmed, on a
+    /// site that requires confirmed addresses, where Orchard Core refuses every sign-in to it.
+    /// </summary>
+    /// <param name="account">The account.</param>
+    public bool CredentialsNeverSignedIn(User account)
+        => account is { EmailConfirmed: false } && _registrationOptions.CurrentValue.UsersMustValidateEmail;
 
     /// <summary>
     /// Confirms the account's address and records it as proved, removing every credential the account had. Everything

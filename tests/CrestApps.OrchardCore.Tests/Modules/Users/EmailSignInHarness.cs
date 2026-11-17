@@ -214,6 +214,7 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
             requestServices.GetRequiredService<ISession>(),
             credentialsResets ?? CredentialsResets,
             [new RecordingRevocation(Revoked)],
+            new CrestApps.OrchardCore.Tests.Telephony.Doubles.TestOptionsMonitor<RegistrationOptions>(Registration),
             CreateClock(),
             NullLogger<EmailOwnershipProof>.Instance);
 
