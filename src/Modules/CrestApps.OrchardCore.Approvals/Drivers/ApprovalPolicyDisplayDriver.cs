@@ -106,20 +106,18 @@ internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy
                 })],
             })];
 
-            while (model.Stages.Count < ApprovalPolicyViewModel.StageSlots)
+            // The editor shows the stages and rules in use; a new policy starts with one stage of one rule to fill.
+            if (model.Stages.Count == 0)
             {
                 model.Stages.Add(new ApprovalStageViewModel());
             }
 
-            foreach (var stage in model.Stages)
+            foreach (var stage in model.Stages.Where(stage => stage.Approvers.Count == 0))
             {
-                while (stage.Approvers.Count < ApprovalPolicyViewModel.RuleSlots)
-                {
-                    stage.Approvers.Add(new ApproverRuleViewModel());
-                }
+                stage.Approvers.Add(new ApproverRuleViewModel());
             }
 
-            model.KindOptions = [new SelectListItem(S["Not used"], string.Empty), .. _providers
+            model.KindOptions = [new SelectListItem(S["Choose who decides"], string.Empty), .. _providers
                 .OrderBy(provider => provider.Name, StringComparer.Ordinal)
                 .Select(provider => new SelectListItem(Localize(provider.DisplayName) ?? provider.Name, provider.Name))];
         }
@@ -139,6 +137,11 @@ internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy
         policy.AllowRequesterToApprove = model.AllowRequesterToApprove;
         policy.AllowSubjectToDecide = model.AllowSubjectToDecide;
         policy.AllowSamePersonAcrossStages = model.AllowSamePersonAcrossStages;
+
+        if (model.Stages?.Count > ApprovalPolicyViewModel.MaxStages || model.Stages?.Any(stage => stage.Approvers?.Count > ApprovalPolicyViewModel.MaxRules) == true)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Stages), S["A policy has at most {0} stages of {1} rules each.", ApprovalPolicyViewModel.MaxStages, ApprovalPolicyViewModel.MaxRules]);
+        }
 
         // Each rule keeps the value of the provider chosen for it; a stage without rules isn't kept. The stages are
         // the policy's approvers from now on, so the fields of a policy saved before stages are cleared.

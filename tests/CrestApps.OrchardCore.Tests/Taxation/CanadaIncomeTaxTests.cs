@@ -400,6 +400,24 @@ public sealed class CanadaIncomeTaxTests
         Assert.DoesNotContain(errors, error => error.Contains("rate", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task AnEmptyShare_IsNotCalledAShareOfItself()
+    {
+        await using var harness = await CreateHarnessAsync();
+
+        var errors = await ImportRecipeAsync(harness, rules =>
+        {
+            foreach (var rule in rules.Select(node => node!.AsObject()).Where(rule => rule["TaxCode"]!.GetValue<string>() == "CA-EI-ER"))
+            {
+                rule.Remove("ShareOfTaxCode");
+                rule["TaxCode"] = string.Empty;
+            }
+        });
+
+        Assert.Contains(errors, error => error.Contains("Enter the code of the tax this is a share of.", StringComparison.Ordinal));
+        Assert.DoesNotContain(errors, error => error.Contains("share of itself", StringComparison.Ordinal));
+    }
+
     private static async Task<Dictionary<string, decimal>> AmountsAsync(CalendarTestHarness harness, IncomeTaxRequest request)
         => await harness.RunAsync(async services =>
         {

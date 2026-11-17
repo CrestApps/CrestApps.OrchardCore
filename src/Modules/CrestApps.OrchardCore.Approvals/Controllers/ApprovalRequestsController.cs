@@ -93,11 +93,12 @@ public sealed class ApprovalRequestsController : Controller
     {
         filter.CanSeeAll = await _authorizationService.AuthorizeAsync(User, ApprovalsPermissions.ViewApprovalRequests);
 
-        // Who can't see every request has their inbox and their own requests.
+        // The page opens on what waits for the person's decision. Who can't see every request has their inbox and their
+        // own requests.
         if (filter.View is not (ApprovalRequestsIndexViewModel.WaitingView or ApprovalRequestsIndexViewModel.AllView or ApprovalRequestsIndexViewModel.MineView)
             || (filter.View == ApprovalRequestsIndexViewModel.AllView && !filter.CanSeeAll))
         {
-            filter.View = filter.CanSeeAll ? ApprovalRequestsIndexViewModel.AllView : ApprovalRequestsIndexViewModel.WaitingView;
+            filter.View = ApprovalRequestsIndexViewModel.WaitingView;
         }
 
         filter.Status ??= nameof(ApprovalStatus.Pending);

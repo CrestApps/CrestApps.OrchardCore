@@ -51,6 +51,11 @@ public sealed class ApprovalPoliciesController : CatalogAdminController<Approval
     protected override LocalizedHtmlString DeletedNotification
         => H["The approval policy has been removed."];
 
+    /// <inheritdoc/>
+    /// <remarks>People know a policy by its title, such as "Pay run approval"; the technical name is the fallback.</remarks>
+    protected override string GetName(ApprovalPolicy entry)
+        => string.IsNullOrWhiteSpace(entry?.Title) ? base.GetName(entry) : entry.Title;
+
     /// <summary>
     /// The view data key of the approval types "Add approval policy" offers.
     /// </summary>

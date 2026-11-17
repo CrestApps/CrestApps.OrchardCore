@@ -11,14 +11,14 @@ namespace CrestApps.OrchardCore.Approvals.ViewModels;
 public class ApprovalPolicyViewModel
 {
     /// <summary>
-    /// The number of stage cards the editor shows; a stage without approvers isn't saved.
+    /// The most stages a policy can have; the editor and the save both hold to it.
     /// </summary>
-    public const int StageSlots = 3;
+    public const int MaxStages = 10;
 
     /// <summary>
-    /// The number of approver rule rows each stage shows.
+    /// The most approver rules a stage can have; the editor and the save both hold to it.
     /// </summary>
-    public const int RuleSlots = 4;
+    public const int MaxRules = 10;
 
     /// <summary>
     /// Gets or sets the technical name.

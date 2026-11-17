@@ -26,7 +26,7 @@ internal sealed class PayrollMigrations : DataMigration
         await _seeder.SeedAsync();
         await _policySeeder.SeedAsync();
 
-        return 9;
+        return 10;
     }
 
     // Pay profiles and pay items.
@@ -93,5 +93,13 @@ internal sealed class PayrollMigrations : DataMigration
         await _policySeeder.ServePayRunsOnlyAsync();
 
         return 9;
+    }
+
+    // The seeded policy's stage is titled after its rule, "Payroll approver", while it still has the seeded rule.
+    public async Task<int> UpdateFrom9Async()
+    {
+        await _policySeeder.TitleSeededStageAsync();
+
+        return 10;
     }
 }

@@ -284,7 +284,8 @@ public sealed class IncomeTaxRuleHandler : CatalogEntryHandlerBase<IncomeTaxRule
                 context.Result.Fail(new ValidationResult(S["A share of another tax needs a multiplier above zero."], [nameof(IncomeTaxRule.ShareMultiplier)]));
             }
 
-            if (string.Equals(rule.ShareOfTaxCode, rule.TaxCode, StringComparison.Ordinal))
+            // Only when both codes are entered: two empty codes are already reported as missing.
+            if (!string.IsNullOrEmpty(rule.ShareOfTaxCode) && !string.IsNullOrEmpty(rule.TaxCode) && string.Equals(rule.ShareOfTaxCode, rule.TaxCode, StringComparison.Ordinal))
             {
                 context.Result.Fail(new ValidationResult(S["A tax can't be a share of itself."], [nameof(IncomeTaxRule.ShareOfTaxCode)]));
             }

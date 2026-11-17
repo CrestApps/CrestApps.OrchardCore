@@ -1,29 +1,48 @@
+@using Microsoft.Extensions.Localization
+@using OrchardCore.Environment.Extensions
 @using OrchardCore.Security.Permissions
 @inject IEnumerable<IPermissionProvider> PermissionProviders
+@inject ITypeFeatureProvider TypeFeatureProvider
+@inject IStringLocalizerFactory LocalizerFactory
 @{
     ApproverRuleValueEditorViewModel editor = Model.Editor;
-    var permissions = new List<Permission>();
+
+    // Each permission under its category, or the feature that declares it, as the Roles editor groups them. People
+    // pick by the description; the technical name is a search token and the option's subtext.
+    var options = new List<(string Group, string Name, string Text)>();
 
     foreach (var provider in PermissionProviders)
     {
-        permissions.AddRange(await provider.GetPermissionsAsync());
+        var feature = TypeFeatureProvider.GetFeatureForDependency(provider.GetType());
+
+        foreach (var permission in await provider.GetPermissionsAsync())
+        {
+            if (permission.IsSecurityCritical && permission.Name != editor.Value)
+            {
+                continue;
+            }
+
+            var description = permission.Description is null ? null : LocalizerFactory.Localize(permission.Description).Value;
+            var group = !string.IsNullOrWhiteSpace(permission.Category) ? permission.Category : feature?.Name ?? feature?.Id ?? T["Other"].Value;
+
+            options.Add((group, permission.Name, string.IsNullOrWhiteSpace(description) ? permission.Name : description));
+        }
     }
 
-    permissions = permissions.Where(permission => !permission.IsSecurityCritical || permission.Name == editor.Value)
-        .DistinctBy(permission => permission.Name)
-        .OrderBy(permission => permission.Category ?? string.Empty, StringComparer.CurrentCultureIgnoreCase)
-        .ThenBy(permission => permission.Name, StringComparer.Ordinal)
-        .ToList();
+    var groups = options
+        .DistinctBy(option => option.Name)
+        .GroupBy(option => option.Group)
+        .OrderBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase);
 }
 
-<select id="@editor.FieldId" name="@editor.FieldName" class="form-select" aria-label="@T["Permission"]">
+<select id="@editor.FieldId" name="@editor.FieldName" class="selectpicker show-tick" data-live-search="true" data-width="100%" data-size="10" data-live-search-placeholder="@T["Search permissions"]" data-none-results-text="@T["No permission matches {0}"]" title="@T["Choose a permission"]" aria-label="@T["Permission"]">
     <option value="">@T["Choose a permission"]</option>
-    @foreach (var group in permissions.GroupBy(permission => permission.Category ?? string.Empty))
+    @foreach (var group in groups)
     {
         <optgroup label="@group.Key">
-            @foreach (var permission in group)
+            @foreach (var option in group.OrderBy(option => option.Text, StringComparer.CurrentCultureIgnoreCase))
             {
-                <option value="@permission.Name" selected="@(permission.Name == editor.Value)">@permission.Name</option>
+                <option value="@option.Name" data-subtext="@(option.Text == option.Name ? null : option.Name)" data-tokens="@option.Name @group.Key" selected="@(option.Name == editor.Value)">@option.Text</option>
             }
         </optgroup>
     }

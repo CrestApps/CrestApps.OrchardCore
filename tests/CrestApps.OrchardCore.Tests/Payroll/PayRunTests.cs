@@ -37,6 +37,41 @@ namespace CrestApps.OrchardCore.Tests.Payroll;
 public sealed class PayRunTests
 {
     [Fact]
+    public async Task TheSeededPolicysStage_IsTitledAfterItsRule_UnlessThePolicyWasChanged()
+    {
+        await using var harness = await CreateHarnessAsync();
+
+        // A policy seeded before stages had titles: one untitled stage of the seeded rule. A second policy, changed by
+        // someone, has another rule and must keep it.
+        var titles = await harness.RunAsync(async services =>
+        {
+            var policies = services.GetRequiredService<INamedCatalogManager<ApprovalPolicy>>();
+            var seeded = await policies.NewAsync();
+
+            seeded.Name = PayrollConstants.PayRunApprovalPolicy;
+            seeded.Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Permission, Value = PayrollPermissions.ApprovePayRuns.Name }];
+            seeded.RequiredApprovals = 2;
+            await policies.CreateAsync(seeded);
+
+            await ActivatorUtilities.CreateInstance<PayRunApprovalPolicySeeder>(services).TitleSeededStageAsync();
+
+            var stage = Assert.Single((await policies.FindByNameAsync(PayrollConstants.PayRunApprovalPolicy)).GetStages());
+
+            Assert.Equal((PayrollPermissions.ApprovePayRuns.Name, 2), (Assert.Single(stage.Approvers).Value, stage.RequiredApprovals));
+
+            var changed = await policies.FindByNameAsync(PayrollConstants.PayRunApprovalPolicy);
+            changed.Stages = [new ApprovalStage { Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Role, Value = "Finance" }] }];
+            await policies.UpdateAsync(changed);
+
+            await ActivatorUtilities.CreateInstance<PayRunApprovalPolicySeeder>(services).TitleSeededStageAsync();
+
+            return (stage.Title, (await policies.FindByNameAsync(PayrollConstants.PayRunApprovalPolicy)).GetStages()[0].Title);
+        });
+
+        Assert.Equal(("Payroll approver", null), titles);
+    }
+
+    [Fact]
     public async Task Run_IsApprovedByAnotherPerson_NeverByWhoPreparedIt()
     {
         await using var harness = await CreateHarnessAsync();
