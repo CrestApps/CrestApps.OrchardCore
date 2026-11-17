@@ -79,7 +79,7 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
     /// </summary>
     public RegistrationOptions Registration { get; } = new();
 
-    public UserCredentialsResets CredentialsResets => new(Cache, new ShellSettings { Name = "Default" }, Options.Create(new SecurityStampValidatorOptions()));
+    public UserCredentialsResets CredentialsResets => new(Cache, new ShellSettings { Name = "Default" }, Options.Create(new SecurityStampValidatorOptions()), NullLogger<UserCredentialsResets>.Instance);
 
     /// <summary>
     /// The user event handlers Orchard Core's user store raises its events on.

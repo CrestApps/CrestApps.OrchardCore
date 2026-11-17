@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -24,16 +25,30 @@ namespace CrestApps.OrchardCore.Tests.Modules.Users;
 public sealed class CredentialsResetCookieTests : IAsyncDisposable
 {
     private const string UserId = "user-1";
+    private const string StampBeforeTheReset = "stamp-before-the-reset";
+    private const string StampAfterTheReset = "stamp-after-the-reset";
 
-    private readonly ServiceProvider _services;
+    private ServiceProvider _services;
 
     public CredentialsResetCookieTests()
+        => _services = BuildServices(cache: null);
+
+    private static ServiceProvider BuildServices(IDistributedCache cache)
     {
         var services = new ServiceCollection();
 
         services.AddLogging();
         services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
-        services.AddDistributedMemoryCache();
+
+        if (cache is null)
+        {
+            services.AddDistributedMemoryCache();
+        }
+        else
+        {
+            services.AddSingleton(cache);
+        }
+
         services.AddSingleton(new ShellSettings { Name = "Default" });
 
         // What Orchard Core's Users feature registers: Identity, with its application cookie and security stamp check.
@@ -45,7 +60,7 @@ public sealed class CredentialsResetCookieTests : IAsyncDisposable
         services.AddSingleton<UserCredentialsResets>();
         services.AddTransient<IPostConfigureOptions<CookieAuthenticationOptions>, CredentialsResetCookieValidation>();
 
-        _services = services.BuildServiceProvider();
+        return services.BuildServiceProvider();
     }
 
     public ValueTask DisposeAsync()
@@ -57,7 +72,7 @@ public sealed class CredentialsResetCookieTests : IAsyncDisposable
         // Arrange: signed in five minutes ago, well inside the stamp check's 30 minutes; the credentials reset now.
         var now = DateTimeOffset.UtcNow;
         var cookie = Issue(now.AddMinutes(-5));
-        await _services.GetRequiredService<UserCredentialsResets>().PublishAsync(UserId, now.UtcDateTime, TestContext.Current.CancellationToken);
+        await _services.GetRequiredService<UserCredentialsResets>().PublishAsync(UserId, now.UtcDateTime, StampAfterTheReset, TestContext.Current.CancellationToken);
 
         // Act
         var (result, response) = await AuthenticateAsync(cookie);
@@ -72,8 +87,8 @@ public sealed class CredentialsResetCookieTests : IAsyncDisposable
     {
         // Arrange: the reset, then the session it signs in again.
         var now = DateTimeOffset.UtcNow;
-        await _services.GetRequiredService<UserCredentialsResets>().PublishAsync(UserId, now.UtcDateTime, TestContext.Current.CancellationToken);
-        var cookie = Issue(now);
+        await _services.GetRequiredService<UserCredentialsResets>().PublishAsync(UserId, now.UtcDateTime, StampAfterTheReset, TestContext.Current.CancellationToken);
+        var cookie = Issue(now, StampAfterTheReset);
 
         // Act
         var (result, _) = await AuthenticateAsync(cookie);
@@ -81,6 +96,41 @@ public sealed class CredentialsResetCookieTests : IAsyncDisposable
         // Assert
         Assert.True(result.Succeeded);
         Assert.Equal(UserId, result.Principal.FindFirstValue(ClaimTypes.NameIdentifier));
+    }
+
+    // HT2 leftover (third fix-verification review): a cookie keeps its issue time to the second, and the reset was
+    // compared to the second, so a session signed in earlier in the reset's own second passed until the stamp check.
+    [Fact]
+    public async Task ACookieIssuedEarlierInTheResetsOwnSecond_IsRefused()
+    {
+        // Arrange: signed in at the start of a second, before the reset 700 ms into it, so it carries the stamp from
+        // before the reset.
+        var now = DateTimeOffset.UtcNow;
+        var second = new DateTimeOffset(now.Ticks - (now.Ticks % TimeSpan.TicksPerSecond), TimeSpan.Zero);
+        var cookie = Issue(second);
+        await _services.GetRequiredService<UserCredentialsResets>().PublishAsync(UserId, second.AddMilliseconds(700).UtcDateTime, StampAfterTheReset, TestContext.Current.CancellationToken);
+
+        // Act
+        var (result, _) = await AuthenticateAsync(cookie);
+
+        // Assert
+        Assert.False(result.Succeeded);
+    }
+
+    // HT2 leftover: the reset was read from the distributed cache on every signed-in request with no catch, so a Redis
+    // outage failed them all. The session is left to Identity's own stamp check instead.
+    [Fact]
+    public async Task WhenTheCacheCannotBeRead_TheCookieIsLeftToTheStampCheck()
+    {
+        // Arrange
+        await _services.DisposeAsync();
+        _services = BuildServices(new UnavailableCache());
+
+        // Act
+        var (result, _) = await AuthenticateAsync(Issue(DateTimeOffset.UtcNow.AddMinutes(-5)));
+
+        // Assert
+        Assert.True(result.Succeeded);
     }
 
     [Fact]
@@ -97,13 +147,13 @@ public sealed class CredentialsResetCookieTests : IAsyncDisposable
         => _services.GetRequiredService<IOptionsMonitor<CookieAuthenticationOptions>>().Get(IdentityConstants.ApplicationScheme);
 
     // A sign-in cookie, protected the way the handler protects the ones it issues.
-    private string Issue(DateTimeOffset issuedUtc)
+    private string Issue(DateTimeOffset issuedUtc, string securityStamp = StampBeforeTheReset)
     {
         var identity = new ClaimsIdentity(
             [
                 new Claim(ClaimTypes.NameIdentifier, UserId),
                 new Claim(ClaimTypes.Name, "pat"),
-                new Claim(new IdentityOptions().ClaimsIdentity.SecurityStampClaimType, "stamp-before-the-reset"),
+                new Claim(new IdentityOptions().ClaimsIdentity.SecurityStampClaimType, securityStamp),
             ],
             IdentityConstants.ApplicationScheme);
 
@@ -122,5 +172,33 @@ public sealed class CredentialsResetCookieTests : IAsyncDisposable
         var result = await httpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
 
         return (result, httpContext.Response);
+    }
+
+    // A distributed cache whose server can't be reached.
+    private sealed class UnavailableCache : IDistributedCache
+    {
+        public byte[] Get(string key)
+            => throw new InvalidOperationException("The cache server can't be reached.");
+
+        public Task<byte[]> GetAsync(string key, CancellationToken token = default)
+            => throw new InvalidOperationException("The cache server can't be reached.");
+
+        public void Refresh(string key)
+            => throw new InvalidOperationException("The cache server can't be reached.");
+
+        public Task RefreshAsync(string key, CancellationToken token = default)
+            => throw new InvalidOperationException("The cache server can't be reached.");
+
+        public void Remove(string key)
+            => throw new InvalidOperationException("The cache server can't be reached.");
+
+        public Task RemoveAsync(string key, CancellationToken token = default)
+            => throw new InvalidOperationException("The cache server can't be reached.");
+
+        public void Set(string key, byte[] value, DistributedCacheEntryOptions options)
+            => throw new InvalidOperationException("The cache server can't be reached.");
+
+        public Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default)
+            => throw new InvalidOperationException("The cache server can't be reached.");
     }
 }

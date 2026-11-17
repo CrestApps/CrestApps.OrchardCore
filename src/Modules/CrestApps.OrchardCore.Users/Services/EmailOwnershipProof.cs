@@ -170,10 +170,18 @@ public sealed class EmailOwnershipProof
 
     // The new stamp ends earlier sessions only at Identity's next stamp check, up to 30 minutes later by default: the
     // cookie validation refuses them from now on, and tokens an OpenID server issued are revoked. This runs after the
-    // update is saved; a revocation commits the request's session as it goes.
+    // update is saved; a revocation commits the request's session as it goes. A failure here is logged and does not stop
+    // the rest: the stamp check still ends the sessions at its next run.
     private async Task EndEarlierSignInsAsync(User account, DateTime resetUtc, CancellationToken cancellationToken)
     {
-        await _credentialsResets.PublishAsync(account.UserId, resetUtc, cancellationToken);
+        try
+        {
+            await _credentialsResets.PublishAsync(account.UserId, resetUtc, account.SecurityStamp, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogError(exception, "The reset of a user's credentials could not be published, so their earlier sessions end at the next security stamp check.");
+        }
 
         foreach (var revocation in _revocations)
         {

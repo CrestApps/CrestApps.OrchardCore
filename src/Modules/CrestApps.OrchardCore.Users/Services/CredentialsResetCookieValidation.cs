@@ -40,9 +40,11 @@ public sealed class CredentialsResetCookieValidation : IPostConfigureOptions<Coo
 
         options.Events.OnValidatePrincipal = async context =>
         {
-            var userId = context.Principal?.FindFirstValue(_identityOptions.Value.ClaimsIdentity.UserIdClaimType);
+            var claimsIdentity = _identityOptions.Value.ClaimsIdentity;
+            var userId = context.Principal?.FindFirstValue(claimsIdentity.UserIdClaimType);
+            var securityStamp = context.Principal?.FindFirstValue(claimsIdentity.SecurityStampClaimType);
 
-            if (await _resets.IsBeforeResetAsync(userId, context.Properties.IssuedUtc, context.HttpContext.RequestAborted))
+            if (await _resets.IsBeforeResetAsync(userId, context.Properties.IssuedUtc, securityStamp, context.HttpContext.RequestAborted))
             {
                 context.RejectPrincipal();
                 await context.HttpContext.SignOutAsync(context.Scheme.Name);

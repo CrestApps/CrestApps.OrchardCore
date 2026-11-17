@@ -121,7 +121,7 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         // HT2: every earlier sign-in ends now, not at the next stamp check: the reset is on the user, a cookie issued
         // before it is refused, and what an OpenID server issued is revoked.
         Assert.True(account.Properties.ContainsKey(UserCredentialsResets.PropertyName));
-        Assert.True(await _harness.CredentialsResets.IsBeforeResetAsync("user-1", _harness.Now.AddMinutes(-1), TestContext.Current.CancellationToken));
+        Assert.True(await _harness.CredentialsResets.IsBeforeResetAsync("user-1", _harness.Now.AddMinutes(-1), securityStamp: null, TestContext.Current.CancellationToken));
         Assert.Equal(["user-1"], _harness.Revoked);
     }
 
@@ -172,7 +172,7 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         Assert.NotEqual(stampBefore, account.SecurityStamp);
         Assert.True(UserEmailOwnership.IsVerified(account.Properties, account.Email));
         Assert.True(account.Properties.ContainsKey(UserCredentialsResets.PropertyName));
-        Assert.True(await _harness.CredentialsResets.IsBeforeResetAsync("user-1", _harness.Now.AddMinutes(-1), TestContext.Current.CancellationToken));
+        Assert.True(await _harness.CredentialsResets.IsBeforeResetAsync("user-1", _harness.Now.AddMinutes(-1), securityStamp: null, TestContext.Current.CancellationToken));
         Assert.Equal(["user-1"], _harness.Revoked);
         Assert.Equal("user-1", ((User)Assert.Single(_harness.SignIns).User).UserId);
 
@@ -250,7 +250,7 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
 
         // Assert: the reset ended earlier sign-ins, and this browser was signed in again after it.
         Assert.IsType<LocalRedirectResult>(confirmed);
-        Assert.True(await _harness.CredentialsResets.IsBeforeResetAsync("user-1", _harness.Now.AddMinutes(-1), TestContext.Current.CancellationToken));
+        Assert.True(await _harness.CredentialsResets.IsBeforeResetAsync("user-1", _harness.Now.AddMinutes(-1), securityStamp: null, TestContext.Current.CancellationToken));
         Assert.Equal("user-1", ((User)Assert.Single(_harness.SignIns).User).UserId);
     }
 
