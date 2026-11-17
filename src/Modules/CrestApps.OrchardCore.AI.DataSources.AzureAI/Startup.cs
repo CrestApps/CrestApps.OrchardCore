@@ -44,7 +44,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDocumentIndexHandler, DataSourceAzureAISearchDocumentIndexHandler>();
         services.TryAddScoped<AIDataSourceConnectionPicker>();
         services.AddDisplayDriver<AIDataSource, AzureAISearchAIDataSourceDisplayDriver>();
-        services.AddKeyedScoped<IAIDataSourceSourceHandler, AzureAISearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.AzureAISearch);
+        services.AddAIDataSourceSourceHandler<AzureAISearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.AzureAISearch);
 
         // This source reads rows it did not shape, and its handler extracts each document by the configured
         // TitleFieldName and ContentFieldName, so it has to ask which field is which.

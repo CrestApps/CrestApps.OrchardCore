@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
@@ -20,6 +21,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ElasticsearchDataSourceOptions _options;
     private readonly AIDataSourceConnectionPicker _connectionPicker;
+    private readonly IAIEndpointPolicy _endpointPolicy;
 
     internal readonly IStringLocalizer S;
 
@@ -29,16 +31,19 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="options">The global Elasticsearch data source options.</param>
     /// <param name="connectionPicker">The data connection picker.</param>
+    /// <param name="endpointPolicy">The policy for the endpoints AI features call.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ElasticsearchAIDataSourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IOptions<ElasticsearchDataSourceOptions> options,
         AIDataSourceConnectionPicker connectionPicker,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<ElasticsearchAIDataSourceDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _options = options.Value;
         _connectionPicker = connectionPicker;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -133,11 +138,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         var authenticationType = NormalizeAuthenticationType(model.AuthenticationType);
         var existingMetadata = KeptCredentials(dataSource.GetOrCreate<ElasticsearchSourceMetadata>(), environmentType, model.Url, model.CloudId, authenticationType);
 
-        if (string.Equals(environmentType, ElasticsearchSourceMetadata.SelfManagedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
-            string.IsNullOrWhiteSpace(model.Url))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Url), S["Elasticsearch URL is required."]);
-        }
+        ValidateUrl(context, environmentType, model.Url);
 
         if (string.Equals(environmentType, ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
             string.IsNullOrWhiteSpace(model.CloudId))
@@ -227,6 +228,24 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         });
 
         return Edit(dataSource, context);
+    }
+
+    // A self-managed cluster's URL is required, and must not be on the site's own network.
+    private void ValidateUrl(UpdateEditorContext context, string environmentType, string url)
+    {
+        if (!string.Equals(environmentType, ElasticsearchSourceMetadata.SelfManagedEnvironmentType, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(EditElasticsearchAIDataSourceViewModel.Url), S["Elasticsearch URL is required."]);
+        }
+        else if (!_endpointPolicy.IsAllowed(url.Trim()))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(EditElasticsearchAIDataSourceViewModel.Url), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
+        }
     }
 
     // The stored credentials were given for one cluster and one way of signing in; changing either drops them.

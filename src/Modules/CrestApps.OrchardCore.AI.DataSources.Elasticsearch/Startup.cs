@@ -49,7 +49,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDocumentIndexHandler, DataSourceElasticsearchDocumentIndexHandler>();
         services.TryAddScoped<AIDataSourceConnectionPicker>();
         services.AddDisplayDriver<AIDataSource, ElasticsearchAIDataSourceDisplayDriver>();
-        services.AddKeyedScoped<IAIDataSourceSourceHandler, ElasticsearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.Elasticsearch);
+        services.AddAIDataSourceSourceHandler<ElasticsearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.Elasticsearch);
 
         // This source reads rows it did not shape, and its handler extracts each document by the configured
         // TitleFieldName and ContentFieldName, so it has to ask which field is which.
