@@ -67,13 +67,12 @@ internal sealed class AIProtectedConfiguration
     public HashSet<string> ToolInstanceNames { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Gets the IDs of the MCP connections the protected profiles use. No tool of this batch changes a connection
-    /// yet; the set is kept for the tools that will.
+    /// Gets the IDs of the MCP connections the protected profiles and a running chat interaction use.
     /// </summary>
     public HashSet<string> McpConnectionIds { get; } = new(StringComparer.Ordinal);
 
     /// <summary>
-    /// Gets the IDs of the A2A connections the protected profiles use, kept for the same reason.
+    /// Gets the IDs of the A2A connections the protected profiles and a running chat interaction use.
     /// </summary>
     public HashSet<string> A2AConnectionIds { get; } = new(StringComparer.Ordinal);
 
@@ -112,6 +111,22 @@ internal sealed class AIProtectedConfiguration
     /// <returns><see langword="true"/> when it may not be changed or deleted from inside the AI turn.</returns>
     public bool IsProtectedToolInstance(string instanceName)
         => _everything || (!string.IsNullOrEmpty(instanceName) && ToolInstanceNames.Contains(instanceName));
+
+    /// <summary>
+    /// Whether an MCP connection is protected.
+    /// </summary>
+    /// <param name="connectionId">The ID of the connection, which is what profiles use.</param>
+    /// <returns><see langword="true"/> when it may not be changed or deleted from inside the AI turn.</returns>
+    public bool IsProtectedMcpConnection(string connectionId)
+        => _everything || (!string.IsNullOrEmpty(connectionId) && McpConnectionIds.Contains(connectionId));
+
+    /// <summary>
+    /// Whether an A2A connection is protected.
+    /// </summary>
+    /// <param name="connectionId">The ID of the connection, which is what profiles use.</param>
+    /// <returns><see langword="true"/> when it may not be changed or deleted from inside the AI turn.</returns>
+    public bool IsProtectedA2AConnection(string connectionId)
+        => _everything || (!string.IsNullOrEmpty(connectionId) && A2AConnectionIds.Contains(connectionId));
 
     /// <summary>
     /// Adds a profile to the protected set.

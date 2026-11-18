@@ -218,6 +218,23 @@ internal static class AIConfigurationGuard
     }
 
     /// <summary>
+    /// Gets what a profile can already run that callers who are not signed in may not be given: tools not marked safe
+    /// for them, tool instances, MCP and A2A connections, and agents that run tools. A change that makes the profile
+    /// reachable by such callers, such as a browser API key that names it, is refused while this is not empty.
+    /// </summary>
+    /// <param name="services">The services of the tool invocation.</param>
+    /// <param name="profile">The profile.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A phrase per item, such as "the tool 'disableSiteFeature'"; empty when the profile is safe to open.</returns>
+    public static Task<List<string>> GetUnsafeCapabilitiesAsync(IServiceProvider services, AIProfile profile, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(profile);
+
+        return GetUnsafeForUntrustedCallersAsync(services, AIProfileCapabilities.Read(profile).Except(new AIProfileCapabilities()), cancellationToken);
+    }
+
+    /// <summary>
     /// Gets the title of a profile for a message.
     /// </summary>
     /// <param name="profile">The profile.</param>
@@ -464,7 +481,12 @@ internal static class AIConfigurationGuard
         return node?.GetValueKind() == JsonValueKind.String ? node.GetValue<string>() : null;
     }
 
-    private static string Join(List<string> items)
+    /// <summary>
+    /// Joins phrases for a sentence: "a", "a and b", "a, b and c".
+    /// </summary>
+    /// <param name="items">The phrases.</param>
+    /// <returns>The joined phrases.</returns>
+    internal static string Join(List<string> items)
         => items.Count switch
         {
             1 => items[0],
