@@ -35,6 +35,7 @@
     <PackageReference Include="OrchardCore.Contents" />
     <PackageReference Include="OrchardCore.Media" />
     <PackageReference Include="OrchardCore.Email.Abstractions" />
+    <PackageReference Include="OrchardCore.Notifications.Core" />
   </ItemGroup>
 
   <ItemGroup>

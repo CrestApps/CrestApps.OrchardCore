@@ -58,9 +58,9 @@ If a quiz result a completed enrollment rests on is voided or lowered later, the
 
 ## Reminders
 
-Learners get a notice when they are enrolled, a few days before a course is due, and when it is overdue. Each learner can switch each notice off in their notification preferences.
+Learners get a notice when they are enrolled (also when you approve their request), when you decline their request, a few days before a course is due, and when it is overdue. Each learner can switch each notice off, or also get it by e-mail or text message, in their notification preferences.
 
-The notices reach learners by e-mail when your site sends notifications by e-mail. The **Notification Center** is in the admin, which learners do not open, so ask your administrator to turn on e-mail notifications if your learners should read them.
+Learners read their notices on your site, without the admin: the bell at the top of the page shows the unread ones, and **Notifications** in the menu under their name lists them all. Selecting a notice opens what it is about, such as the course, and marks it read.
 
 ## Reports
 

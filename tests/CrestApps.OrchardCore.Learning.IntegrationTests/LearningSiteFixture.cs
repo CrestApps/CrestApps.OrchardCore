@@ -58,6 +58,7 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
         "OrchardCore.Lucene",
         "OrchardCore.Queries.Sql",
         "OrchardCore.Themes",
+        "OrchardCore.Notifications",
         LearningConstants.Features.Learning,
         LearningConstants.Features.LearnerPages,
         LearningConstants.Features.SelfEnrollment,

@@ -115,6 +115,19 @@ The `UserAudiences` recipe step creates or updates defined audiences by name, an
 
 The **My Account** feature (`CrestApps.OrchardCore.Users.Account`, turned on by the modules that need it, such as Commerce and Tickets) is the site's "my account" area: `/account` (route `CommerceAccount`, signed-in users only), a **My account** link in Orchard Core's user menu, and the `commerce-account` navigation menu that modules add their pages to with a `NamedNavigationProvider` (`UsersConstants.Account.MenuName`). Each page renders the `CommerceAccountPage` shape (`UsersConstants.Account.PageShape`), which frames it with the `CommerceAccountNavigation` menu; the home page shows a tile per page (`AccountOverview` shape). The names come from when the area belonged to Commerce and are kept, so themes and modules that use them keep working.
 
+## Site notifications
+
+With Orchard Core's **Notifications** feature on, the module adds the site's **Notifications** page (`/notifications`, route `UserNotifications`, `UsersConstants.Notifications.RouteName`), where a signed-in user reads their own notifications without the admin, where the notification center is. It needs the Notifications module's **Manage notifications** permission, which signed-in users have by default, and is linked as **Notifications** in the user menu on the site's pages and, with My Account on, in the account menu, framed as an account page.
+
+The page is not a second inbox: it uses the Notifications module's own pieces.
+
+- It reads the user's notifications with `INotificationManager`, newest first, all or unread only, a page at a time, and hides those an `INotificationVisibilityHandler` hides.
+- It renders each with the module's `Notification` shape in the `Header` display type, the one of the navbar bell, so a module's display driver or `Notification-{Type}.Header.cshtml` template for its notification type shows there too.
+- Each notification's link is the module's open endpoint (`/Notifications/Open/{id}`), which marks it read and goes to its URL.
+- **Mark all as read** calls `INotificationManager.MarkAsReadAsync` for the user's unread notifications, which also refreshes the navbar's count.
+
+The unread count and the newest unread notifications are the module's own bell in the navbar, on the site's pages too when the theme renders the `Navbar` shape. Users choose how each notification type reaches them in their profile, the module's notification preferences.
+
 ## User Display Name
 
 | | |

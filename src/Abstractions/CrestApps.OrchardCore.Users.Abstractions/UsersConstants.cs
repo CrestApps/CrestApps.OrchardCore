@@ -63,6 +63,23 @@ public static class UsersConstants
     }
 
     /// <summary>
+    /// The site's Notifications page, where a signed-in user reads their Orchard Core notifications without the admin.
+    /// It is on when Orchard Core's Notifications feature is on.
+    /// </summary>
+    public static class Notifications
+    {
+        /// <summary>
+        /// The route name of the page, at <c>/notifications</c>.
+        /// </summary>
+        public const string RouteName = "UserNotifications";
+
+        /// <summary>
+        /// The route name of the form that marks all the user's notifications read.
+        /// </summary>
+        public const string MarkAllReadRouteName = "UserNotificationsMarkAllRead";
+    }
+
+    /// <summary>
     /// The name of the recipe and deployment step of the audiences administrators define.
     /// </summary>
     public const string AudiencesRecipeStepName = "UserAudiences";
