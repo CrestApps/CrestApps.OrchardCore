@@ -10,7 +10,7 @@ Learners take courses on your site, on a phone or a desktop.
 
 | | |
 | --- | --- |
-| **Menu** | My learning in the user menu, or in My account when the store is on |
+| **Menu** | My courses in the user menu; My learning in My account when the store is on |
 | **Permission** | Access learning (every signed-in person by default) |
 | **Feature** | Learner Pages; Self Enrollment for the Enroll button |
 
@@ -37,5 +37,7 @@ Select **Start the course** or **Continue** on the course page, or open the cour
 **Course progress** shows how far you are. When every required lesson is done, the course is completed and the page says when you completed it. You can still review it.
 
 ## My learning and the transcript
+
+**My courses**, in the menu under your name at the top of every page, lists the courses you are taking. Select a course to open it where you left off, or **My courses** (or **See all**, when you take more than five) to open **My learning**.
 
 **My learning** lists the courses you are taking, with your progress and due dates. **My transcript** lists every course you completed, as it was when you completed it, with the date and grade.

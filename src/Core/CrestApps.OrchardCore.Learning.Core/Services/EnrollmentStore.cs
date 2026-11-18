@@ -78,6 +78,30 @@ public sealed class EnrollmentStore : DocumentCatalog<Enrollment, EnrollmentInde
             .ListAsync(cancellationToken)).ToArray();
     }
 
+    /// <summary>
+    /// Lists a learner's active enrollments, newest first, at most <paramref name="take"/>, in one indexed query, such
+    /// as for the courses in the user menu.
+    /// </summary>
+    /// <param name="userId">The learner.</param>
+    /// <param name="take">The most enrollments to read.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The enrollments.</returns>
+    public async Task<IReadOnlyList<Enrollment>> ListActiveForUserAsync(string userId, int take, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(userId) || take <= 0)
+        {
+            return [];
+        }
+
+        return (await Session.Query<Enrollment, EnrollmentIndex>(
+                index => index.UserId == userId && index.IsOpen && index.Status == EnrollmentStatus.Active,
+                collection: CollectionName)
+            .OrderByDescending(index => index.CreatedUtc)
+            .ThenByDescending(index => index.Id)
+            .Take(take)
+            .ListAsync(cancellationToken)).ToArray();
+    }
+
     /// <inheritdoc />
     public async Task<IReadOnlyList<Enrollment>> ListByGrantAsync(string source, string sourceId, CancellationToken cancellationToken = default)
     {

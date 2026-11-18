@@ -32,7 +32,7 @@ It works with other features when they are on:
 | Audit Trail | Changes people make to enrollments by hand, with their reason, and every export of learner records. |
 | Webhooks | `learning.enrollment.created` and `learning.course.completed`. |
 | Staff | The Instructor capability, a **Learning** section on the staff profile and **My learning** on a staff member's page. |
-| Commerce | **My learning** in the storefront account menu (otherwise it is in the user menu). |
+| Commerce | **My learning** in the storefront account menu. |
 | Personal Data | Export and erasure of a person's enrollments and progress. Learning records belong to user accounts, so a request that knows only an e-mail address (such as erasing a customer added by hand on the **Customers** page) reaches the records of the account with that address. |
 | Recipes, Deployment | The `LearningEnrollments` recipe step and deployment step, with their schemas. |
 
@@ -144,6 +144,8 @@ With **Learner Pages** on:
 | My learning | `/learning` |
 | Transcript | `/learning/transcript` |
 | Player | `/learning/courses/{courseId}/play/{itemId}` |
+
+**My courses** is in Orchard Core's user menu, on the site's pages and in the admin, beside **Profile** and **Security**, for people with **Access learning** (`LearningUserMenuDisplayDriver`, the `UserMenuItems__LearningCourses` shape). It links to My learning and lists the learner's active courses, newest enrollment first, each opening the player, with **See all** when there are more than five. The list comes from one indexed query of the learner's active enrollments, capped at six, and one read of their courses. A theme overrides `UserMenuItems-LearningCourses.cshtml` to change it.
 
 The course page itself is the course's content page, with the outline and an **Enroll** or **Continue** button. The player tracks time and video watching with the `learning-player` script and refuses progress for an enrollment that is not the signed-in person's (404).
 
