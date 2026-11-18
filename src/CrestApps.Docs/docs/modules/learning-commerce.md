@@ -77,7 +77,7 @@ A `LicensePool` holds the seats an account bought for one course, under the cour
 
 ## Schema.org
 
-With [Advanced SEO](./advanced-seo) on, the Learning module describes a course as a schema.org `Course` with its summary, `courseCode`, `educationalLevel`, `timeRequired` and the site's publisher as `provider`. It runs after the product provider, so a course sold in the store keeps its `offers`.
+With [Advanced SEO](./advanced-seo) on, the Learning module describes a course as a schema.org `Course` with its summary, `courseCode`, `educationalLevel`, `timeRequired` and the site's publisher as `provider`. It runs after the product provider, so a course sold in the store keeps its `offers`. The `provider` refers to the publisher node the site provider adds (`StructuredDataNodeIds.Publisher`), so `CourseProviderStructuredDataProvider` runs after it (`StructuredDataProviderOrder.Site`); a site whose Advanced SEO settings name no publisher gets no `provider`.
 
 ## Notifications, workflows and data
 

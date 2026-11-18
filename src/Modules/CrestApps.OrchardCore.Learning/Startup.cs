@@ -364,6 +364,7 @@ public sealed class StructuredDataStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IStructuredDataProvider, CourseStructuredDataProvider>();
+        services.AddScoped<IStructuredDataProvider, CourseProviderStructuredDataProvider>();
         services.Configure<StructuredDataOptions>(options => options.SelfDescribingParts.Add(nameof(CoursePart)));
     }
 }

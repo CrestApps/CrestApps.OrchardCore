@@ -44,4 +44,47 @@ public sealed class CourseStructuredDataProviderTests
         Assert.Equal("https://example.com/#publisher", entity["provider"]?["@id"]?.GetValue<string>());
         Assert.NotNull(entity["offers"]);
     }
+
+    [Fact]
+    public async Task ACourse_IsProvidedByTheSitePublisherNode_ThatTheSiteProviderAddsAfterIt()
+    {
+        // Arrange: on a page the publisher is its own graph node, added after the part providers, and a Course is not a
+        // published work, so its entity gets no publisher property to copy.
+        var item = new ContentItem { ContentItemId = "c1", ContentType = "Course", DisplayText = "Safety" };
+
+        item.Apply(new CoursePart { Code = "SAF-101" });
+
+        var context = new StructuredDataContext(item, StructuredDataPurpose.Page, "https://example.com")
+        {
+            MainEntity = new JsonObject { ["@type"] = "Product" },
+        };
+
+        await new CourseStructuredDataProvider().BuildAsync(context);
+        context.Graph.Add(JsonLd.CreateNode("Organization", StructuredDataNodeIds.Publisher(context.BaseUrl)));
+
+        // Act
+        var provider = new CourseProviderStructuredDataProvider();
+        await provider.BuildAsync(context);
+
+        // Assert
+        Assert.True(provider.Order > StructuredDataProviderOrder.Site);
+        Assert.Equal("https://example.com/#publisher", context.MainEntity["provider"]?["@id"]?.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task ACourse_GetsNoProvider_WhenTheSiteHasNoPublisher()
+    {
+        // Arrange
+        var item = new ContentItem { ContentItemId = "c1", ContentType = "Course", DisplayText = "Safety" };
+        var context = new StructuredDataContext(item, StructuredDataPurpose.Page, "https://example.com")
+        {
+            MainEntity = new JsonObject { ["@type"] = "Course" },
+        };
+
+        // Act
+        await new CourseProviderStructuredDataProvider().BuildAsync(context);
+
+        // Assert
+        Assert.Null(context.MainEntity["provider"]);
+    }
 }
