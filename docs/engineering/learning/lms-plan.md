@@ -1070,11 +1070,6 @@ The ten new workflow activities are listed in the workflow designer's activity l
 | Workflow hint shows `{ x }` (Return Coursework For Resubmission) | The Liquid example is an argument of the localized hint. | `aae9c295d` |
 | GET/POST route guard | The coursework grading pages say `HttpGet`. | `ed10335cb` |
 
-| "Grade again" leads a grader to a 403 | The grading form and **Return for resubmission** show on graded work only to someone with Override grades. | `1bc1ae005` |
-| Data sets show raw ids (Submissions) | The course and coursework ids reference their content items, as the learner and grader already referenced the users. | `d108faca0` |
-| Workflow hint shows `{ x }` (Return Coursework For Resubmission) | The Liquid example is an argument of the localized hint. | `381d36df7` |
-| GET/POST route guard | The coursework grading pages say `HttpGet`. | `f67bb7271` |
-
 ### Phase 8, slice 1: SCORM 1.2 (branch `ma/learning-phase-8`, stacked on `ma/learning-phase-7`)
 
 **Built.**
@@ -1345,7 +1340,7 @@ Fixed test first on this branch; the red and green counts are in each commit.
 
 | Bug | Fix | Commit |
 | --- | --- | --- |
-| Review launches report `entry = ab-initio` | A spec bug: SCORM 1.2 and SCORM 2004 give `ab-initio` only for the first launch (of an attempt), `resume` after suspend and empty otherwise. A review now gives the entry of the session it reopens. | `bd8bbcbe8` |
-| The external tools deployment step has no title | `LearningExternalToolsDeploymentStepDisplayDriver` with its views; a guard test fails for any Learning deployment step without a display driver. | `7c8e31164` |
-| Workflow hint shows `{ x }` (Award Credential) | The Liquid example is an argument of the localized hint. | `2d7a73b15` |
-| GET/POST route guard | The credential award, external tool, package upload and statement pages say `HttpGet`. | `8067d6ade` |
+| Review launches report `entry = ab-initio` | A spec bug: SCORM 1.2 and SCORM 2004 give `ab-initio` only for the first launch (of an attempt), `resume` after suspend and empty otherwise. A review now gives the entry of the session it reopens. | `9be0f1384` |
+| The external tools deployment step has no title | `LearningExternalToolsDeploymentStepDisplayDriver` with its views; a guard test fails for any Learning deployment step without a display driver. | `1c1c180b7` |
+| Workflow hint shows `{ x }` (Award Credential) | The Liquid example is an argument of the localized hint. | `d6948f957` |
+| GET/POST route guard | The credential award, external tool, package upload and statement pages say `HttpGet`. | `bef4c4b02` |
