@@ -27,8 +27,7 @@
     var canAdjust = TransactionStateMachine.CanAdjust(transaction);
     var canSendInvoice = TransactionStateMachine.CanSendInvoice(transaction);
 
-    var decimalPlaces = CurrencyScale.GetDecimalPlaces(transaction.Currency);
-    var amountStep = decimalPlaces == 0 ? "1" : "0." + new string('0', decimalPlaces - 1) + "1";
+    var amountStep = CurrencyScale.GetInputStep(transaction.Currency);
 }
 
 <zone Name="Title">

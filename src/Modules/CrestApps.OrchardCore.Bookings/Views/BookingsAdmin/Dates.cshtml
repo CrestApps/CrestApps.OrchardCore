@@ -1,8 +1,12 @@
+@using CrestApps.OrchardCore.Currencies
 @model BookingDatesViewModel
 
 @{
     var culture = System.Globalization.CultureInfo.CurrentCulture;
     var isTime = Model.Part.Kind == BookingKind.TimeSlot;
+
+    // A price can have as many decimals as the product's currency, such as three for KWD.
+    var moneyStep = CurrencyScale.GetInputStep(Model.Currency);
 }
 
 <zone Name="Title">
@@ -43,7 +47,7 @@
             </div>
             <div class="col-6 col-md-3">
                 <label asp-for="NewPrice" class="form-label">@T["Price ({0})", Model.Currency ?? string.Empty]</label>
-                <input asp-for="NewPrice" type="number" step="0.01" min="0" class="form-control" placeholder="@T["The product's"]" />
+                <input asp-for="NewPrice" type="number" step="@moneyStep" min="0" class="form-control" placeholder="@T["The product's"]" />
                 <span asp-validation-for="NewPrice" class="text-danger"></span>
             </div>
             <div class="col-12 col-md-2">
@@ -81,7 +85,7 @@ else
                         <td>@(start is null ? slot.SlotKey : isTime ? start.Value.ToString("f", culture) : start.Value.ToString("D", culture))</td>
                         <td>@T["{0} paid, {1} held", slot.Sold, slot.Held]</td>
                         <td><input form="@formId" name="capacity" type="number" min="@(slot.Held + slot.Sold)" value="@slot.Capacity" class="form-control form-control-sm" style="max-width: 7rem;" aria-label="@T["Capacity"]" /></td>
-                        <td><input form="@formId" name="price" type="number" step="0.01" min="0" value="@slot.Price?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" style="max-width: 8rem;" placeholder="@T["The product's"]" aria-label="@T["Price"]" /></td>
+                        <td><input form="@formId" name="price" type="number" step="@moneyStep" min="0" value="@slot.Price?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" style="max-width: 8rem;" placeholder="@T["The product's"]" aria-label="@T["Price"]" /></td>
                         <td>
                             <div class="form-check">
                                 <input form="@formId" name="closed" type="checkbox" value="true" class="form-check-input" checked="@slot.Closed" id="@(formId)-closed" aria-label="@T["Closed"]" />
