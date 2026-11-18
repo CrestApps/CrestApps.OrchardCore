@@ -11,7 +11,9 @@ namespace CrestApps.OrchardCore.Learning.Assessments.ContentTransfer.Qti;
 
 /// <summary>
 /// Stores the images of an imported QTI item in the media library, in a folder of the import, and writes their addresses
-/// in the prompt and the feedback. A row whose images cannot be stored fails rather than keeping a broken picture.
+/// in the prompt and the feedback. A row whose images cannot be stored fails rather than keeping a broken picture. Only a
+/// row the QTI reader wrote is read: the media column of any other file (a spreadsheet, say) is ignored, and every image
+/// must be of the parser's image types, with the bytes of one.
 /// </summary>
 internal sealed class QtiMediaImportHandler : IContentImportHandler
 {
@@ -24,14 +26,33 @@ internal sealed class QtiMediaImportHandler : IContentImportHandler
 
     private readonly IMediaFileStore _mediaFileStore;
     private readonly MediaOptions _mediaOptions;
+    private readonly IEnumerable<IContentTransferFileFormatProvider> _formats;
 
     internal readonly IStringLocalizer S;
 
-    public QtiMediaImportHandler(IMediaFileStore mediaFileStore, IOptions<MediaOptions> mediaOptions, IStringLocalizer<QtiMediaImportHandler> stringLocalizer)
+    public QtiMediaImportHandler(
+        IMediaFileStore mediaFileStore,
+        IOptions<MediaOptions> mediaOptions,
+        IEnumerable<IContentTransferFileFormatProvider> formats,
+        IStringLocalizer<QtiMediaImportHandler> stringLocalizer)
     {
         _mediaFileStore = mediaFileStore;
         _mediaOptions = mediaOptions.Value;
+        _formats = formats;
         S = stringLocalizer;
+    }
+
+    /// <summary>
+    /// Tells whether an import's file was read by a QTI format: only such rows carry the QTI columns the reader wrote.
+    /// </summary>
+    /// <param name="formats">The file formats.</param>
+    /// <param name="entry">The import.</param>
+    /// <returns><see langword="true"/> for a QTI package or item file.</returns>
+    internal static bool ReadByQti(IEnumerable<IContentTransferFileFormatProvider> formats, ContentTransferEntry entry)
+    {
+        var fileName = string.IsNullOrWhiteSpace(entry?.StoredFileName) ? entry?.UploadedFileName : entry.StoredFileName;
+
+        return !string.IsNullOrWhiteSpace(fileName) && (formats ?? []).OfType<QtiFileFormatProvider>().Any(format => format.CanHandle(fileName));
     }
 
     /// <inheritdoc />
@@ -43,7 +64,7 @@ internal sealed class QtiMediaImportHandler : IContentImportHandler
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (context.Errors.Count > 0 || context.Columns is null || !context.Columns.Contains(QtiColumns.Media))
+        if (context.Errors.Count > 0 || context.Columns is null || !context.Columns.Contains(QtiColumns.Media) || !ReadByQti(_formats, context.Entry))
         {
             return;
         }
@@ -55,7 +76,7 @@ internal sealed class QtiMediaImportHandler : IContentImportHandler
         {
             var path = MediaPath(context.Entry?.EntryId, file.Path);
 
-            if (path is null || !_mediaOptions.AllowedFileExtensions.Contains(Path.GetExtension(path)))
+            if (path is null || !QtiMediaFile.ImageExtensions.Contains(Path.GetExtension(path)) || !_mediaOptions.AllowedFileExtensions.Contains(Path.GetExtension(path)))
             {
                 context.Fail(S["The image {0} is not a kind of file the media library accepts.", file.Path], S["Not imported from QTI"]);
 
@@ -71,6 +92,14 @@ internal sealed class QtiMediaImportHandler : IContentImportHandler
             catch (FormatException)
             {
                 context.Fail(S["The image {0} could not be read.", file.Path], S["Not imported from QTI"]);
+
+                return;
+            }
+
+            // The bytes must be an image of those types too: the extension is the package's word only.
+            if (!QtiMediaFile.HasImageSignature(content))
+            {
+                context.Fail(S["The image {0} is not a PNG, JPEG, GIF or WebP image.", file.Path], S["Not imported from QTI"]);
 
                 return;
             }

@@ -37,7 +37,7 @@ public sealed class QtiMediaImportHandlerTests
             })
             .ReturnsAsync((string path, Stream _, bool _) => path);
         store.Setup(media => media.MapPathToPublicUrl(It.IsAny<string>())).Returns<string>(path => "/media/" + path);
-        var handler = new QtiMediaImportHandler(store.Object, Options.Create(Media()), new Localizer());
+        var handler = new QtiMediaImportHandler(store.Object, Options.Create(Media()), Formats(), new Localizer());
         var context = Context(
             "<p><img src=\"qti-media:items/images/sign.png\" alt=\"Sign\" /></p>",
             [new QtiMediaCell { Path = "items/images/sign.png", Data = Convert.ToBase64String(QtiSamples.Png) }]);
@@ -58,7 +58,7 @@ public sealed class QtiMediaImportHandlerTests
         var store = new Mock<IMediaFileStore>(MockBehavior.Strict);
         var options = Media();
         options.AllowedFileExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg" };
-        var handler = new QtiMediaImportHandler(store.Object, Options.Create(options), new Localizer());
+        var handler = new QtiMediaImportHandler(store.Object, Options.Create(options), Formats(), new Localizer());
         var context = Context("<p><img src=\"qti-media:a.png\" /></p>", [new QtiMediaCell { Path = "a.png", Data = Convert.ToBase64String(QtiSamples.Png) }]);
 
         // Act
@@ -68,6 +68,9 @@ public sealed class QtiMediaImportHandlerTests
         Assert.Single(context.Errors);
         Assert.Equal("Not imported from QTI", context.ErrorCategory);
     }
+
+    private static IContentTransferFileFormatProvider[] Formats()
+        => [new QtiPackageFileFormatProvider(Options.Create(new CrestApps.OrchardCore.Learning.Assessments.QuestionTypeOptions()), Mock.Of<IStringLocalizer<QtiFileFormatProvider>>())];
 
     private static MediaOptions Media()
         => new()

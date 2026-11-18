@@ -64,10 +64,7 @@ internal static class QtiItemParser
         "feedbackBlock", "feedbackInline", "stylesheet", "catalogInfo", "companionMaterialsInfo",
     };
 
-    private static readonly HashSet<string> _imageExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".png", ".jpg", ".jpeg", ".gif", ".webp",
-    };
+    private static readonly IReadOnlySet<string> _imageExtensions = QtiMediaFile.ImageExtensions;
 
     /// <summary>
     /// Reads an item file.

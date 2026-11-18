@@ -116,7 +116,7 @@ public sealed class QuestionColumnHandlersTests
     public async Task TheQtiHandler_FailsARowWithAnError_AndNamesTheUploadedFileInTheSource()
     {
         // Arrange
-        var handler = new QtiQuestionImportHandler(new Localizer<QtiQuestionImportHandler>());
+        var handler = new QtiQuestionImportHandler([new QtiPackageFileFormatProvider(Microsoft.Extensions.Options.Options.Create(new QuestionTypeOptions()), new Localizer<QtiFileFormatProvider>())], new Localizer<QtiQuestionImportHandler>());
         var entry = new ContentTransferEntry { UploadedFileName = "bank.zip" };
         var (refusedItem, refusedTable, refusedRow) = Row(AssessmentsConstants.ContentTypes.EssayQuestion, (QtiColumns.Error, "Item hotspot (hotspot.xml) was not imported."));
         var (item, table, row) = Row(AssessmentsConstants.ContentTypes.EssayQuestion, ("QuestionPart_SourceFile", "items/essay.xml"), (QtiColumns.Error, null));

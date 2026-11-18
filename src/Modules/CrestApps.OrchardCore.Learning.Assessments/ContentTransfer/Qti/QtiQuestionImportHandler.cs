@@ -13,10 +13,13 @@ internal sealed class QtiQuestionImportHandler : ContentImportHandlerBase, ICont
 {
     private const string SourceFileColumn = "QuestionPart_SourceFile";
 
+    private readonly IEnumerable<IContentTransferFileFormatProvider> _formats;
+
     internal readonly IStringLocalizer S;
 
-    public QtiQuestionImportHandler(IStringLocalizer<QtiQuestionImportHandler> stringLocalizer)
+    public QtiQuestionImportHandler(IEnumerable<IContentTransferFileFormatProvider> formats, IStringLocalizer<QtiQuestionImportHandler> stringLocalizer)
     {
+        _formats = formats;
         S = stringLocalizer;
     }
 
@@ -29,8 +32,8 @@ internal sealed class QtiQuestionImportHandler : ContentImportHandlerBase, ICont
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        // Only a row the QTI reader wrote has the error column.
-        if (context.Columns is null || !context.Columns.Contains(QtiColumns.Error))
+        // Only a row the QTI reader wrote has the error column; the same column in another file is ignored.
+        if (context.Columns is null || !context.Columns.Contains(QtiColumns.Error) || !QtiMediaImportHandler.ReadByQti(_formats, context.Entry))
         {
             return Task.CompletedTask;
         }
