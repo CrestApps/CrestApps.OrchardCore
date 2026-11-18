@@ -17,7 +17,9 @@ namespace CrestApps.OrchardCore.Learning.Credentials.Core.Services;
 /// </summary>
 public sealed class DefaultCredentialAwardService : ICredentialAwardService
 {
-    private const string _lockKey = "LearningCredentials:Award";
+    // Awards, revocations and recipe imports take the same lock: status list slots are picked and checked under it.
+    internal const string AwardLockKey = "LearningCredentials:Award";
+    private const string _lockKey = AwardLockKey;
 
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(60);

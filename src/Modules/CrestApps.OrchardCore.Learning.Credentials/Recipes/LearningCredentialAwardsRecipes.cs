@@ -17,6 +17,7 @@ using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Localization;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
@@ -31,6 +32,8 @@ internal sealed class LearningCredentialAwardsRecipeStep : NamedRecipeStepHandle
 {
     private readonly CredentialAwardStore _store;
     private readonly LearnerUserLookup _users;
+    private readonly IDistributedLock _distributedLock;
+    private readonly global::YesSql.ISession _session;
 
     internal readonly IStringLocalizer S;
 
@@ -40,11 +43,13 @@ internal sealed class LearningCredentialAwardsRecipeStep : NamedRecipeStepHandle
     /// <param name="store">The award store.</param>
     /// <param name="users">The user lookup.</param>
     /// <param name="stringLocalizer">The localizer.</param>
-    public LearningCredentialAwardsRecipeStep(CredentialAwardStore store, LearnerUserLookup users, IStringLocalizer<LearningCredentialAwardsRecipeStep> stringLocalizer)
+    public LearningCredentialAwardsRecipeStep(CredentialAwardStore store, LearnerUserLookup users, IDistributedLock distributedLock, global::YesSql.ISession session, IStringLocalizer<LearningCredentialAwardsRecipeStep> stringLocalizer)
         : base(CredentialsConstants.RecipeStepName)
     {
         _store = store;
         _users = users;
+        _distributedLock = distributedLock;
+        _session = session;
         S = stringLocalizer;
     }
 
@@ -86,6 +91,26 @@ internal sealed class LearningCredentialAwardsRecipeStep : NamedRecipeStepHandle
                 }
             }
 
+            // A slot outside its list would make the whole list fail to encode.
+            if (award.StatusListNumber < 1 || award.StatusListIndex < 0 || award.StatusListIndex >= CredentialsConstants.StatusListCapacity)
+            {
+                context.Errors.Add(S["The credential award {0} was skipped: its status list slot ({1}, {2}) is outside the status lists.", award.PublicId, award.StatusListNumber, award.StatusListIndex]);
+
+                continue;
+            }
+
+            // Slots are checked and taken under the lock awards take, so an award made meanwhile cannot take the same one.
+            var (locker, locked) = await _distributedLock.TryAcquireLockAsync(DefaultCredentialAwardService.AwardLockKey, TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(1));
+
+            if (!locked)
+            {
+                context.Errors.Add(S["The credential award {0} was skipped: other awards were being made. Run the step again.", award.PublicId]);
+
+                continue;
+            }
+
+            await using var held = locker;
+
             if (await _store.IsSlotTakenAsync(award.StatusListNumber, award.StatusListIndex))
             {
                 context.Errors.Add(S["The credential award {0} was skipped: another award holds its status list slot ({1}, {2}).", award.PublicId, award.StatusListNumber, award.StatusListIndex]);
@@ -102,6 +127,9 @@ internal sealed class LearningCredentialAwardsRecipeStep : NamedRecipeStepHandle
             }
 
             await _store.CreateAsync(award);
+
+            // Saved before the lock is released, as an award is.
+            await _session.SaveChangesAsync();
         }
     }
 }
