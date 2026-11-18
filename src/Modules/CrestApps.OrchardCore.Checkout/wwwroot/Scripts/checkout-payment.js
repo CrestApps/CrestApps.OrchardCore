@@ -57,6 +57,22 @@
 				var panel = panels[i];
 				panel.classList.toggle("d-none", panel.getAttribute("data-checkout-payment-panel") !== key);
 			}
+			syncDeferredText();
+		}
+		function syncDeferredText() {
+			var checked = document.querySelector("input[name=\"checkout-payment-method\"]:checked");
+			var deferred = !!checked && checked.getAttribute("data-defers-payment") === "true";
+			var label = document.querySelector("#checkout-submit .checkout-submit-label");
+			if (label && config.deferredSubmitLabel) {
+				if (!label.hasAttribute("data-default-text")) label.setAttribute("data-default-text", label.textContent);
+				label.textContent = deferred ? config.deferredSubmitLabel : label.getAttribute("data-default-text");
+			}
+			var dueLabels = document.querySelectorAll("[data-checkout-due-label]");
+			for (var i = 0; i < dueLabels.length; i++) {
+				var dueLabel = dueLabels[i];
+				if (!dueLabel.hasAttribute("data-default-text")) dueLabel.setAttribute("data-default-text", dueLabel.textContent);
+				dueLabel.textContent = deferred ? dueLabel.getAttribute("data-deferred-text") || dueLabel.getAttribute("data-default-text") : dueLabel.getAttribute("data-default-text");
+			}
 		}
 		async function postJson(url, body) {
 			var headers = Object.assign({
@@ -188,6 +204,7 @@
 				maxStatusAttempts: 30,
 				genericErrorMessage: "Your payment could not be completed. Please try again.",
 				selectMethodMessage: "Please choose a payment method.",
+				deferredSubmitLabel: "Place order",
 				stillProcessingMessage: "Your payment is still being processed. You will receive a confirmation once it completes."
 			}, options || {});
 			var radios = document.querySelectorAll("input[name=\"checkout-payment-method\"]");

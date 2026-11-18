@@ -48,4 +48,54 @@ public interface ITransactionEventHandler
     /// <param name="transaction">The overdue transaction, as saved.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task BecameOverdueAsync(Transaction transaction, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Called once per refund after money was given back on a transaction and the refund was recorded on its timeline.
+    /// A refund of everything paid is also reported by <see cref="StatusChangedAsync"/> as the change to
+    /// <see cref="TransactionStatus.Refunded"/>.
+    /// </summary>
+    /// <param name="transaction">The transaction, as saved with the refund.</param>
+    /// <param name="refund">The <see cref="TransactionEventType.Refunded"/> entry on its timeline, whose amount is what this transaction gave back.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <remarks>It does nothing by default, so a handler written before this event existed keeps compiling.</remarks>
+    Task RefundedAsync(Transaction transaction, TransactionEvent refund, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// Called once after an entry on the timeline (a payment recorded by hand or an adjustment) was taken back with a
+    /// reversing entry, so what it paid or took off is owed again. A system that mirrors the payments learns here that
+    /// one was withdrawn.
+    /// </summary>
+    /// <param name="transaction">The transaction, as saved with the reversal.</param>
+    /// <param name="reversal">The <see cref="TransactionEventType.Reversed"/> entry, with the reason and the amount taken back.</param>
+    /// <param name="reversed">The entry that was taken back.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <remarks>It does nothing by default, so a handler written before this event existed keeps compiling.</remarks>
+    Task ReversedAsync(Transaction transaction, TransactionEvent reversal, TransactionEvent reversed, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// Called once when <see cref="ISavedPaymentMethodChargeService"/> stops charging the owner's saved payment method
+    /// and hands the transaction to its owner to pay: the retries ran out, or the card's bank asked the cardholder to
+    /// approve the payment. The module that owns the debt sends its own notice here, such as the invoice with its pay link.
+    /// </summary>
+    /// <param name="transaction">The transaction, as saved without its scheduled charge.</param>
+    /// <param name="reason">Why the last charge was not taken.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <remarks>It does nothing by default, so a handler written before this event existed keeps compiling.</remarks>
+    Task AutoChargeAbandonedAsync(Transaction transaction, string reason, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// Called when <see cref="ISavedPaymentMethodChargeService"/> charged the saved card and it was declined, and a retry
+    /// is scheduled. The module that owns the debt records it and tells the customer when it is charged again. A charge
+    /// that could not be made at all (the provider could not be reached) is tried again soon without this event.
+    /// </summary>
+    /// <param name="transaction">The transaction, as saved with its next charge (<see cref="Transaction.AutoCharge"/>).</param>
+    /// <param name="reason">Why the charge was declined.</param>
+    /// <param name="nextAttemptUtc">When the card is charged again, in UTC.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <remarks>It does nothing by default, so a handler written before this event existed keeps compiling.</remarks>
+    Task AutoChargeDeclinedAsync(Transaction transaction, string reason, DateTime nextAttemptUtc, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

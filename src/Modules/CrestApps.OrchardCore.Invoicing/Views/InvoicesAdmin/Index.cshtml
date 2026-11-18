@@ -1,0 +1,46 @@
+@model InvoicesAdminIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="InvoicesIndex" title="@T["Invoices"]" />
+</zone>
+
+@* The filters render in the list's toolbar, after this form, and name it with their form attribute. *@
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="invoices-filter" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search by number, customer or reference"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                @if (Model.CanCreate)
+                {
+                    <div class="col-auto">
+                        <a asp-action="Create" class="btn btn-secondary create">@T["New invoice"]</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</form>
+
+@* The invoices, the toolbar with the filters and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+<admin-list name="Invoices" context="Model.List" show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> There are no invoices that match the current filter."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Number" position="20" title="@T["Invoice"]" />
+        <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+        <admin-list-column name="BillTo" position="40" title="@T["Billed to"]" width="auto" />
+        <admin-list-column name="Amount" position="50" title="@T["Amount"]" width="auto" />
+        <admin-list-column name="Due" position="60" title="@T["Due"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

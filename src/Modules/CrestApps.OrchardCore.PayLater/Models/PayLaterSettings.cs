@@ -17,4 +17,11 @@ public sealed class PayLaterSettings
     /// drives the reminder cadence. A value of 0 leaves the balance without a due date. Defaults to 30.
     /// </summary>
     public int NetTermDays { get; set; } = 30;
+
+    /// <summary>
+    /// Gets or sets the identifier of the payment term (from the Payment Terms feature) a Pay Later balance follows when
+    /// the payer has no term of their own, such as Net 30 or the end of the month. When set it replaces
+    /// <see cref="NetTermDays"/>; when empty, or when the term is gone or disabled, the number of days applies.
+    /// </summary>
+    public string PaymentTermId { get; set; }
 }

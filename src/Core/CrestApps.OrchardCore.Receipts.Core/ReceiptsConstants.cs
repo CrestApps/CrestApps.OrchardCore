@@ -11,6 +11,11 @@ public static class ReceiptsConstants
     public const string SettingsGroupId = "receipts";
 
     /// <summary>
+    /// The kind of business document a receipt is printed as.
+    /// </summary>
+    public const string BusinessDocumentKind = "Receipt";
+
+    /// <summary>
     /// Contains the feature identifiers exposed by the Receipts module.
     /// </summary>
     public static class Feature

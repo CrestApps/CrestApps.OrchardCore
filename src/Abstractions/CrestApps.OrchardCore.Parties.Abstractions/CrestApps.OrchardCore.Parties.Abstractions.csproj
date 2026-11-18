@@ -8,12 +8,17 @@
 
       Public contracts for parties, the people and organizations a record belongs to: a party reference of an open
       kind (user, customer, account, contact, guest) and an id, the party sources that find and name parties of a kind,
-      and the directory that reads them all.
+      and the directory that reads them all; how to bill a party (its billing profile) and who may act for it (its
+      members), filled by the module that keeps each kind.
     </Description>
     <PackageTags>$(PackageTags) Parties Owners Customers Accounts Abstractions</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Addresses.Abstractions\CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

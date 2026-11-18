@@ -1,0 +1,77 @@
+@model InvoiceScheduleViewModel
+@using CrestApps.OrchardCore.Transactions.Models
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+
+@{
+    var invoice = Model.Invoice;
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Payment schedule"]</div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    @* Due dates are dates, kept as dates: shown as they are. *@
+                    <th scope="col">@T["Due"]</th>
+                    <th scope="col" class="text-end">@T["Amount"]</th>
+                    <th scope="col">@T["Status"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Model.Payments.Count; i++)
+                {
+                    var (part, payment) = Model.Payments[i];
+                    var amount = part.IssuedAmount > 0m ? part.IssuedAmount : part.Amount ?? Math.Round((invoice.Totals?.Total ?? 0m) * (part.Percent ?? 0m) / 100m, 2, MidpointRounding.AwayFromZero);
+                    <tr>
+                        <td>
+                            @if (payment is not null)
+                            {
+                                <a asp-area="CrestApps.OrchardCore.Transactions" asp-controller="Admin" asp-action="Detail" asp-route-itemId="@payment.ItemId">@(i + 1)</a>
+                            }
+                            else
+                            {
+                                @(i + 1)
+                            }
+                        </td>
+                        <td>@part.DueDate.ToString("d")</td>
+                        <td class="text-end">
+                            @MoneyFormatter.Format(amount, invoice.Currency)
+                            @if (part.Percent is { } percent)
+                            {
+                                <span class="text-muted small">(@percent.ToString("0.##")%)</span>
+                            }
+                        </td>
+                        <td>
+                            @if (payment is null)
+                            {
+                                <span class="text-muted">@(invoice.Status == InvoiceStatus.Draft ? T["Split when issued"] : T["Not split"])</span>
+                            }
+                            else if (payment.Status == TransactionStatus.Paid)
+                            {
+                                <span class="badge text-bg-success">@T["Paid"]</span>
+                            }
+                            else if (payment.Status == TransactionStatus.Canceled)
+                            {
+                                <span class="badge text-bg-secondary">@T["Canceled"]</span>
+                            }
+                            else if (payment.Status == TransactionStatus.Pending)
+                            {
+                                <span class="badge text-bg-light">@T["Scheduled"]</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-warning">@T["Due"]</span>
+                            }
+                            @if (payment?.AutoCollection is { } collection)
+                            {
+                                <span class="text-muted small d-block">@T["Charged to {0}", collection.PaymentMethodDescription]</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

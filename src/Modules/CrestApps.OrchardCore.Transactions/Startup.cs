@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.BusinessDocuments;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Commerce.Core;
@@ -21,6 +22,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Recipes;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
@@ -52,7 +54,11 @@ public sealed class Startup : StartupBase
             .AddTransactionsCore()
             .AddCustomersCore()
             .AddDataMigration<TransactionMigrations>()
-            .AddIndexProvider<TransactionIndexProvider>();
+            .AddIndexProvider<TransactionIndexProvider>()
+            .AddIndexProvider<PartyCollectionSettingsIndexProvider>();
+
+        // The ledger travels between sites in the Transactions recipe step.
+        services.AddRecipeExecutionStep<CrestApps.OrchardCore.Transactions.Recipes.TransactionLedgerRecipeStep>();
 
         services
             .AddNavigationProvider<TransactionsAdminMenu>()
@@ -63,10 +69,12 @@ public sealed class Startup : StartupBase
         services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();
         services.AddScoped<TransactionDisplayText>();
         services.AddScoped<ITransactionCommandService, DefaultTransactionCommandService>();
+        services.AddScoped<ISavedPaymentMethodChargeService, DefaultSavedPaymentMethodChargeService>();
 
         // The rows of the transactions report and of the customer's own statement.
         services
             .AddDisplayDriver<Transaction, TransactionDisplayDriver>()
+            .AddDisplayDriver<Transaction, TransactionDetailDisplayDriver>()
             .AddDisplayDriver<CustomerTransaction, CustomerTransactionDisplayDriver>();
         services.AddScoped<IPaymentRefundHandler, TransactionRefundHandler>();
 
@@ -111,7 +119,8 @@ public sealed class NotificationStartup : StartupBase
     {
         services.AddScoped<ITransactionReminderService, DefaultTransactionReminderService>();
         services.AddCommerceEmailSender()
-            .AddCommerceEmailKind(TransactionEmailKinds.PaymentReminder, LocalizationSource.Create<NotificationStartup>("Payment reminder"), LocalizationSource.Create<NotificationStartup>("{{ Transaction }}: the transaction, such as {{ Transaction.Title }}."));
+            .AddCommerceEmailKind(TransactionEmailKinds.PaymentReminder, LocalizationSource.Create<NotificationStartup>("Payment reminder"), LocalizationSource.Create<NotificationStartup>("{{ Transaction }}: the transaction, such as {{ Transaction.Title }}; {{ PayUrl }}, {{ DocumentUrl }}, {{ DocumentNumber }}, {{ AmountDue }} and {{ DueDate }}."))
+            .AddCommerceEmailKind(TransactionEmailKinds.PaymentRequest, LocalizationSource.Create<NotificationStartup>("Payment request (the first notice of a debt)"), LocalizationSource.Create<NotificationStartup>("{{ Transaction }}: the transaction, such as {{ Transaction.Title }}; {{ PayUrl }}, {{ DocumentUrl }}, {{ DocumentNumber }}, {{ AmountDue }} and {{ DueDate }}."));
 
         services
             .AddSiteDisplayDriver<TransactionReminderSettingsDisplayDriver>()
@@ -121,21 +130,26 @@ public sealed class NotificationStartup : StartupBase
         services.AddSiteSettingsPermission(TransactionsConstants.SettingsGroupId, TransactionsPermissions.ManageTransactionSettings);
 
         services.AddSingleton<IBackgroundTask, TransactionReminderBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, SavedPaymentMethodChargeBackgroundTask>();
     }
 }
 
 /// <summary>
-/// Registers the printable receipt of every payment and the printable invoice of a transaction, whenever the
-/// Receipts module is enabled too. They only show what the ledger already holds, so they need no opt-in.
+/// Registers the printable receipt of every payment and the printable payment request (invoice) of a transaction, whenever the
+/// Receipts module is enabled too, and the payment request as a business document kind with its own template. They only
+/// show what the ledger already holds, so they need no opt-in.
 /// </summary>
 [RequireFeatures(ReceiptsConstants.Feature.Area)]
 public sealed class ReceiptPagesStartup : StartupBase
 {
+    private static readonly LocalizationSource _paymentRequestKindTitle = LocalizationSource.Create<ReceiptPagesStartup>("Payment requests");
+
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ITransactionReceiptBuilder, TransactionReceiptBuilder>();
         services.AddScoped<ITransactionInvoiceBuilder, TransactionInvoiceBuilder>();
+        services.AddBusinessDocumentKind(TransactionsConstants.BusinessDocumentKinds.PaymentRequest, _paymentRequestKindTitle);
     }
 }
 

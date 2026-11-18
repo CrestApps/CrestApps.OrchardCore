@@ -1,0 +1,29 @@
+@model OfflinePaymentMethodViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@*
+    How to pay what a checkout completed with Pay Later left owing, on its confirmation.
+*@
+
+<div class="card border-primary-subtle mb-4">
+    <div class="card-header bg-primary-subtle">
+        <span class="fa-solid fa-file-invoice-dollar me-2" aria-hidden="true"></span>@T["Pay later"]
+    </div>
+    <div class="card-body">
+        @if (Model.DueUtc is { } due && !string.IsNullOrEmpty(Model.AmountDue))
+        {
+            <p class="mb-2">@T["{0} is due by {1:D}.", Model.AmountDue, (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(due, DateTimeKind.Utc))).DateTime]</p>
+        }
+        else if (!string.IsNullOrEmpty(Model.AmountDue))
+        {
+            <p class="mb-2">@T["{0} is due later.", Model.AmountDue]</p>
+        }
+
+        <p class="mb-0 small text-body-secondary">@T["We'll email you an invoice, and a reminder before it's due."]</p>
+
+        @if (!string.IsNullOrEmpty(Model.StatementUrl))
+        {
+            <a class="btn btn-outline-primary btn-sm mt-3" href="@Model.StatementUrl">@T["View and pay in your account"]</a>
+        }
+    </div>
+</div>

@@ -1,5 +1,8 @@
+using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
+using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
 using Microsoft.Extensions.Localization;
@@ -46,7 +49,26 @@ internal sealed class TransactionsWorkOrderBilling : IWorkOrderBilling
 
         transaction.Title = S["Work order {0}: {1}", workOrder.Number, workOrder.Summary].Value;
         transaction.Source = Source;
-        transaction.OwnerId = workOrder.CustomerId ?? workOrder.AccountId;
+        // The customer user may pay it themselves; with no user, the contact is reached by e-mail as a guest owner. The
+        // account, when there is one, owes it, so its admins see and pay it; otherwise the customer or the contact does.
+        if (!string.IsNullOrEmpty(workOrder.CustomerId))
+        {
+            transaction.OwnerId = workOrder.CustomerId;
+            transaction.OwnerKind = CustomerOwnerKind.Authenticated;
+        }
+        else
+        {
+            transaction.OwnerId = workOrder.ItemId;
+            transaction.OwnerKind = CustomerOwnerKind.Guest;
+        }
+
+        transaction.SetPayer(WorkOrderService.CreateBillingRequest(workOrder, new WorkOrderType(), amount).Payer);
+
+        if (!string.IsNullOrWhiteSpace(workOrder.Contact?.Name) || !string.IsNullOrWhiteSpace(workOrder.Contact?.Email))
+        {
+            transaction.PayerContact = ContactInfo.From(workOrder.Contact.Name, workOrder.Contact.Email, workOrder.Contact.Phone);
+        }
+
         transaction.GuestContactName = workOrder.Contact?.Name;
         transaction.GuestContactEmail = workOrder.Contact?.Email;
         transaction.ReferenceType = WorkOrdersConstants.ReferenceType;

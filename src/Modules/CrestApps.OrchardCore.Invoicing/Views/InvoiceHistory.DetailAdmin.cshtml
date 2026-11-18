@@ -1,0 +1,30 @@
+@model InvoiceDetailViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@if (Model.Invoice.History.Count > 0)
+{
+    <div class="card">
+        <div class="card-header">@T["History"]</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var entry in Model.Invoice.History.OrderByDescending(entry => entry.CreatedUtc))
+            {
+                <li class="list-group-item">
+                    <div>@entry.Message</div>
+                    <div class="small text-muted">
+                        @((await LocalAsync(entry.CreatedUtc)).ToString("g"))
+                        @if (!string.IsNullOrEmpty(entry.ActorName))
+                        {
+                            <span>· @entry.ActorName</span>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+}

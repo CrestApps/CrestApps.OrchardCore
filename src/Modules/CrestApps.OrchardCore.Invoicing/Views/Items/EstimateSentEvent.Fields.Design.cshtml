@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Invoicing.Estimates
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<EstimateSentEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Estimate Sent"])
+    </h4>
+</header>

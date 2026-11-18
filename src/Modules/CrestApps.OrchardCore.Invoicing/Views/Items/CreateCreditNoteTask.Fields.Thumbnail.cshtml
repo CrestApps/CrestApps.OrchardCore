@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CreateCreditNoteTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-file-circle-minus" aria-hidden="true"></i>
+    @T["Create Credit Note"]
+</h4>
+<p>@T["Credits everything still creditable on an invoice with a credit note, and issues it."]</p>

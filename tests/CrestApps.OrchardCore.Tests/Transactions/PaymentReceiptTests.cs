@@ -67,19 +67,19 @@ public sealed class PaymentReceiptTests
     }
 
     [Fact]
-    public void Render_EncodesEverythingTakenFromTheReceipt()
+    public async Task RenderAsync_EncodesEverythingTakenFromTheReceipt()
     {
         // Arrange
-        var renderer = new DefaultReceiptHtmlRenderer(HtmlEncoder.Default, new PassThroughStringLocalizer<DefaultReceiptHtmlRenderer>());
+        var renderer = ReceiptRenderers.CreateHtmlRenderer();
 
         // Act
-        var html = renderer.Render(new ReceiptDocument
+        var html = await renderer.RenderAsync(new ReceiptDocument
         {
             BusinessName = "<script>alert(1)</script>",
             Currency = "USD",
             Total = 10m,
             LineItems = [new ReceiptLineItem { Description = "<b>Plan</b>", Quantity = 1, Amount = 10m }],
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.DoesNotContain("<script>", html, StringComparison.Ordinal);
@@ -325,7 +325,7 @@ public sealed class PaymentReceiptTests
             new PassThroughStringLocalizer<TransactionReceiptBuilder>());
     }
 
-    private static PaymentReceiptTransactionPaymentHandler CreateHandler(FakeTransactionStore store, INotificationService notifications, IUserService userService, IEmailService email = null, IPaymentAttemptStore attempts = null, IFinancialDocumentNumberGenerator numbers = null)
+    internal static PaymentReceiptTransactionPaymentHandler CreateHandler(FakeTransactionStore store, INotificationService notifications, IUserService userService, IEmailService email = null, IPaymentAttemptStore attempts = null, IFinancialDocumentNumberGenerator numbers = null)
     {
         var services = new ServiceCollection();
 
@@ -346,7 +346,7 @@ public sealed class PaymentReceiptTests
 
         return new PaymentReceiptTransactionPaymentHandler(
             CreateBuilder(),
-            new DefaultReceiptHtmlRenderer(HtmlEncoder.Default, new PassThroughStringLocalizer<DefaultReceiptHtmlRenderer>()),
+            ReceiptRenderers.CreateHtmlRenderer(),
             TransactionManagerFactory.Create(store),
             TestCustomerOwnerNotifier.Create(notifications, userService, services: services.BuildServiceProvider()),
             services.BuildServiceProvider(),

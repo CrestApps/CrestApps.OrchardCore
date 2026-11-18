@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace CrestApps.OrchardCore.Pdf;
 
 /// <summary>
@@ -12,6 +14,50 @@ public readonly record struct PdfColor(byte R, byte G, byte B)
     /// Gets black.
     /// </summary>
     public static PdfColor Black => new(0, 0, 0);
+
+    /// <summary>
+    /// Creates a color from its red, green and blue bytes packed in a number, such as <c>0x2563EB</c>. Higher bits are
+    /// ignored.
+    /// </summary>
+    /// <param name="rgb">The packed color.</param>
+    /// <returns>The color.</returns>
+    public static PdfColor FromRgb(uint rgb)
+    {
+        return new PdfColor((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+    }
+
+    /// <summary>
+    /// Reads a color written as six hexadecimal digits, with or without a leading <c>#</c>, such as <c>#2563EB</c>,
+    /// as a site setting stores a brand color.
+    /// </summary>
+    /// <param name="value">The color.</param>
+    /// <param name="color">The color, when the value is one.</param>
+    /// <returns><see langword="true"/> when the value is a color.</returns>
+    public static bool TryParseHex(string value, out PdfColor color)
+    {
+        color = default;
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var digits = value.AsSpan().Trim();
+
+        if (digits.Length > 0 && digits[0] == '#')
+        {
+            digits = digits[1..];
+        }
+
+        if (digits.Length != 6 || !uint.TryParse(digits, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var number))
+        {
+            return false;
+        }
+
+        color = FromRgb(number);
+
+        return true;
+    }
 
     /// <summary>
     /// Mixes the color with white.

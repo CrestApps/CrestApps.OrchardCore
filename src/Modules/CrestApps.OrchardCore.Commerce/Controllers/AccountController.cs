@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Commerce.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrchardCore.DisplayManagement;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Commerce.Controllers;
@@ -11,6 +12,7 @@ namespace CrestApps.OrchardCore.Commerce.Controllers;
 /// <c>AccountOverview</c> shape, so a theme can override them.
 /// </summary>
 [Authorize]
+[Feature(CommerceConstants.Features.Foundation)]
 public sealed class AccountController : Controller
 {
     // The home page's own menu item, left out of its tiles.

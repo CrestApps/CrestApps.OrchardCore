@@ -1,0 +1,51 @@
+using CrestApps.OrchardCore.Invoicing.Models;
+
+namespace CrestApps.OrchardCore.Invoicing.ViewModels;
+
+/// <summary>
+/// A card of an invoice's page: the invoice, who it is billed to, and what the person viewing it may do.
+/// </summary>
+public class InvoiceDetailViewModel
+{
+    public Invoice Invoice { get; set; }
+
+    public string BillToName { get; set; }
+
+    public bool CanEdit { get; set; }
+
+    public bool CanIssue { get; set; }
+
+    public bool CanVoid { get; set; }
+
+    public bool CanWriteOff { get; set; }
+
+    public bool CanReinstate { get; set; }
+
+    public bool CanDelete { get; set; }
+
+    public bool CanOpenTransaction { get; set; }
+
+    public bool LedgerMissing { get; set; }
+
+    public bool NeedsApproval { get; set; }
+
+    public bool CanSubmit { get; set; }
+
+    public bool CanApprove { get; set; }
+
+    public bool CanRevise { get; set; }
+
+    public Invoice RevisionOf { get; set; }
+
+    public Invoice ReplacedBy { get; set; }
+}
+
+/// <summary>
+/// The payment schedule card of an invoice's page: each part with the payment that collects it, once issued.
+/// </summary>
+public class InvoiceScheduleViewModel
+{
+    public Invoice Invoice { get; set; }
+
+    public List<(InvoiceInstallment Part, CrestApps.OrchardCore.Transactions.Models.Transaction Payment)> Payments { get; } = [];
+}

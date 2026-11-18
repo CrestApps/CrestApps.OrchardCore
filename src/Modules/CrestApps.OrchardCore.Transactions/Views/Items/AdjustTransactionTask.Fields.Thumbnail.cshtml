@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Transactions.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AdjustTransactionTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+    @T["Adjust Transaction"]
+</h4>
+<p>@T["Takes an amount off what is owed on a transaction: a discount, waiver, credit or write-off."]</p>

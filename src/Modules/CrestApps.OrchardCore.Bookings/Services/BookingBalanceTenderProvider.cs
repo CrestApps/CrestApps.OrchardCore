@@ -142,6 +142,7 @@ public sealed class BookingBalanceTenderProvider : DeferredBalanceTenderProvider
             Source = BookingsConstants.TransactionSource,
             DueUtc = dueUtc,
             Message = S["The rest of the bookings' price after the deposit, charged to the card on {0:d}.", (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(dueUtc, DateTimeKind.Utc))).DateTime].Value,
+            AutoCharge = BookingBalanceCharger.NewAutoCharge(session.SessionId, dueUtc),
             State = order,
         };
     }

@@ -68,7 +68,6 @@ public static class TransactionStatusFilterExtensions
             new SelectListItem(S["Paid"], nameof(TransactionStatusFilter.Paid), selected == TransactionStatusFilter.Paid),
             new SelectListItem(S["Canceled"], nameof(TransactionStatusFilter.Canceled), selected == TransactionStatusFilter.Canceled),
             new SelectListItem(S["Failed"], nameof(TransactionStatusFilter.Failed), selected == TransactionStatusFilter.Failed),
-            new SelectListItem(S["Abandoned"], nameof(TransactionStatusFilter.Abandoned), selected == TransactionStatusFilter.Abandoned),
             new SelectListItem(S["Refunded"], nameof(TransactionStatusFilter.Refunded), selected == TransactionStatusFilter.Refunded),
         ];
     }

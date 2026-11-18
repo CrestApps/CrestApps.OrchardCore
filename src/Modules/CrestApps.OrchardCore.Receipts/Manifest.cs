@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.BusinessDocuments;
 using CrestApps.OrchardCore.Receipts.Core;
 using OrchardCore.Modules.Manifest;
 
@@ -14,6 +15,10 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ReceiptsConstants.Feature.Area,
     Name = "Receipts",
-    Description = "Provides the reusable receipt builder, printable receipt view, and receipt branding settings.",
-    Category = "Commerce"
+    Description = "Provides the reusable receipt builder, printable receipt view, and receipt branding settings. Receipts are printed as business documents.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        BusinessDocumentsConstants.Features.Area,
+    ]
 )]

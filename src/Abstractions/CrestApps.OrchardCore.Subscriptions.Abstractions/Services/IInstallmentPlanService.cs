@@ -67,6 +67,59 @@ public interface IInstallmentPlanService
     /// <param name="reason">An optional reason recorded on the plan.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<InstallmentPlanResult> CancelAsync(string planId, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Splits an outstanding transaction into a payment schedule set by staff: amounts and due dates of their own, that
+    /// add up to what the transaction owes. The plan starts at once (there is no down payment), each payment is a
+    /// transaction of its own, due on its date and invoiced to the customer then or charged to their saved card, and the
+    /// transaction is replaced. The plan names the transaction's record as its reference, so its owner finds its
+    /// payments.
+    /// </summary>
+    /// <param name="request">The transaction, the payments and how they are collected.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<InstallmentPlanResult> CreateScheduleAsync(CreateInstallmentScheduleRequest request, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// A payment schedule set by staff for an outstanding transaction.
+/// </summary>
+public sealed class CreateInstallmentScheduleRequest
+{
+    /// <summary>
+    /// Gets or sets the outstanding transaction the schedule replaces.
+    /// </summary>
+    public string TransactionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the plan is called; the transaction's title when empty.
+    /// </summary>
+    public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets the payments, in order of their due dates.
+    /// </summary>
+    public IList<InstallmentScheduleEntry> Payments { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets how the payments are collected: invoiced to the customer on their due dates, or charged to the
+    /// owner's default saved card.
+    /// </summary>
+    public InstallmentCollectionMethod CollectionMethod { get; set; } = InstallmentCollectionMethod.Invoice;
+
+    public string Notes { get; set; }
+}
+
+/// <summary>
+/// One payment of a schedule set by staff.
+/// </summary>
+public sealed class InstallmentScheduleEntry
+{
+    /// <summary>
+    /// Gets or sets when the payment falls due, in UTC.
+    /// </summary>
+    public DateTime DueUtc { get; set; }
+
+    public decimal Amount { get; set; }
 }
 
 /// <summary>

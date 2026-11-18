@@ -30,6 +30,16 @@ public sealed class TransactionIndex : CatalogItemIndex
     public CustomerOwnerKind OwnerKind { get; set; }
 
     /// <summary>
+    /// Gets or sets the kind of party that owes the money.
+    /// </summary>
+    public string PayerKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the party that owes the money.
+    /// </summary>
+    public string PayerId { get; set; }
+
+    /// <summary>
     /// The reference type the transaction is for.
     /// </summary>
     public string ReferenceType { get; set; }
@@ -108,4 +118,15 @@ public sealed class TransactionIndex : CatalogItemIndex
     /// The UTC time the transaction was last updated.
     /// </summary>
     public DateTime UpdatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a timeline entry waits for its customer credit change, so the sweep finds the transactions
+    /// to complete.
+    /// </summary>
+    public bool? PendingCredit { get; set; }
+
+    /// <summary>
+    /// When the scheduled charge of the owner's saved payment method is next made, when one is scheduled.
+    /// </summary>
+    public DateTime? AutoChargeNextAttemptUtc { get; set; }
 }

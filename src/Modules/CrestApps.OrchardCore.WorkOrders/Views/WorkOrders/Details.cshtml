@@ -124,7 +124,13 @@
                         <span class="badge ta-badge fw-normal">@(workOrder.AgreedPrice is > 0 ? T["{0} a visit", workOrder.AgreedPrice.Value.ToString("N2", culture)] : T["Included"])</span>
                     </dd>
                 }
-                @if (!string.IsNullOrEmpty(workOrder.InvoiceTransactionId))
+                @* Billed by Invoicing: the invoice's page, by its route name; otherwise the debt Transactions posted. *@
+                @if (!string.IsNullOrEmpty(workOrder.InvoiceId))
+                {
+                    <dt class="col-4">@T["Invoice"]</dt>
+                    <dd class="col-8"><a href="@Url.RouteUrl("InvoicesDetail", new { itemId = workOrder.InvoiceId })">@T["View the invoice"]</a></dd>
+                }
+                else if (!string.IsNullOrEmpty(workOrder.InvoiceTransactionId))
                 {
                     <dt class="col-4">@T["Invoice"]</dt>
                     <dd class="col-8"><a href="@Url.Action("Detail", "Admin", new { area = "CrestApps.OrchardCore.Transactions", itemId = workOrder.InvoiceTransactionId })">@T["View the invoice"]</a></dd>

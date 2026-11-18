@@ -38,7 +38,9 @@ public sealed class InstallmentPlansAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Subscriptions"], subscriptions => subscriptions
+            // The id is what the Subscriptions icon template is keyed on, whichever feature adds the item.
+            .Add(S["Subscriptions"], S["Subscriptions"].PrefixPosition(), subscriptions => subscriptions
+                .Id("subscriptions")
                 .Add(S["Installment Plans"], S["Installment Plans"].PrefixPosition("3"), plans => plans
                     .Id("installmentPlans")
                     .Action(_routeValues)

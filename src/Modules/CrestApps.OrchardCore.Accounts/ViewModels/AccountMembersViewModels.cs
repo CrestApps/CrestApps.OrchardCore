@@ -50,6 +50,11 @@ public class AccountLocationRowViewModel
     public string Name { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the account's billing documents are addressed to this location.
+    /// </summary>
+    public bool IsBilling { get; set; }
+
+    /// <summary>
     /// Gets or sets the address as the editor posts it, under the row's <c>Address</c> prefix.
     /// </summary>
     public AddressEditorViewModel Address { get; set; } = new();

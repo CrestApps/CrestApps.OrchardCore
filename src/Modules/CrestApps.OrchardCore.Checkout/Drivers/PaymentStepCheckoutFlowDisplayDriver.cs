@@ -80,6 +80,7 @@ public sealed class PaymentStepCheckoutFlowDisplayDriver : CheckoutFlowDisplayDr
                 Key = provider.Key,
                 Title = provider.DisplayName,
                 HasProcessor = CheckoutPaymentMethodSelector.IsGateway(provider),
+                DefersPayment = provider.Capabilities?.DefersPayment == true,
                 IsDefault = string.Equals(provider.Key, selected, StringComparison.OrdinalIgnoreCase),
                 Description = provider is ICheckoutPaymentProviderDescription described && !string.IsNullOrEmpty(described.Description)
                     ? described.Description
