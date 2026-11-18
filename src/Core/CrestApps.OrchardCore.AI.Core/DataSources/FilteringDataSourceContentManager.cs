@@ -9,7 +9,9 @@ namespace CrestApps.OrchardCore.AI.Core.DataSources;
 
 /// <summary>
 /// Wraps a provider's data source content manager so that every search passes its chunks through the registered
-/// <see cref="IAIDataSourceResultFilter"/> instances. With no filter registered it is a pass-through.
+/// <see cref="IAIDataSourceResultFilter"/> instances. With no filter registered it is a pass-through. The searches of a
+/// question's phrases run at once on the same instance, but the filters run one at a time: a filter may use the
+/// request's database session, which takes one command at a time.
 /// </summary>
 public sealed class FilteringDataSourceContentManager : IDataSourceContentManager
 {
@@ -17,6 +19,7 @@ public sealed class FilteringDataSourceContentManager : IDataSourceContentManage
     private readonly IAIDataSourceResultFilter[] _filters;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AIDataSourceResultFilterOptions _options;
+    private readonly SemaphoreSlim _filtering = new(1, 1);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FilteringDataSourceContentManager"/> class.
@@ -102,14 +105,30 @@ public sealed class FilteringDataSourceContentManager : IDataSourceContentManage
     {
         IReadOnlyList<DataSourceSearchResult> kept = results?.Where(result => result is not null).ToList() ?? [];
 
-        foreach (var filter in _filters)
+        if (kept.Count == 0)
         {
-            if (kept.Count == 0)
-            {
-                break;
-            }
+            return kept;
+        }
 
-            kept = await filter.FilterAsync(context, kept) ?? [];
+        // CrestApps.Core searches every phrase at once on this instance (Task.WhenAll). The index searches stay
+        // parallel; the filters, which may read the request's YesSql session and connection, run one at a time.
+        await _filtering.WaitAsync(context.CancellationToken);
+
+        try
+        {
+            foreach (var filter in _filters)
+            {
+                if (kept.Count == 0)
+                {
+                    break;
+                }
+
+                kept = await filter.FilterAsync(context, kept) ?? [];
+            }
+        }
+        finally
+        {
+            _filtering.Release();
         }
 
         return kept;

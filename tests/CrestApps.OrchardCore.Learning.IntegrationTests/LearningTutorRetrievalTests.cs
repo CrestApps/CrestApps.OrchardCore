@@ -1,5 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.OrchardCore.AI.Core.DataSources;
 using CrestApps.OrchardCore.Learning.AI.Models;
@@ -73,6 +75,85 @@ public sealed class LearningTutorRetrievalTests
         Assert.DoesNotContain(kept, chunk => chunk.ReferenceId == setup.NotEnrolledLessonId);
         Assert.DoesNotContain(kept, chunk => chunk.ReferenceId == "not-a-content-item");
         Assert.Empty(stranger);
+    }
+
+    [Fact]
+    public async Task Round9H6_SeveralPhrasesSearchedAtOnce_AreFilteredOneAtATime_OnTheSitesStore()
+    {
+        // Arrange: the knowledge base search wrapped as AI Data Sources wraps it, with every filter of the site and a
+        // probe that records how many filter runs overlap. CrestApps.Core searches each phrase of a question at once
+        // (Task.WhenAll on the same content manager); the Learning filter reads the request's YesSql session.
+        var setup = await _site.InTenantAsync(SetUpAsync);
+
+        // Act
+        var (results, overlap) = await _site.InTenantAsync(async services =>
+        {
+            var userManager = services.GetRequiredService<UserManager<IUser>>();
+            var principal = await services.GetRequiredService<IUserClaimsPrincipalFactory<IUser>>().CreateAsync(await userManager.FindByNameAsync(setup.LearnerName));
+            var accessor = services.GetRequiredService<IHttpContextAccessor>();
+            accessor.HttpContext.User = principal;
+
+            var probe = new OverlapProbe();
+            var search = new FilteringDataSourceContentManager(
+                new FixedSearch(setup.Chunks),
+                [probe, .. services.GetServices<IAIDataSourceResultFilter>()],
+                accessor,
+                new AIDataSourceResultFilterOptions());
+
+            var phrases = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => search.SearchAsync(null, [1f], "learning-kb", 10, null, TestContext.Current.CancellationToken)));
+
+            return (phrases.Select(found => found.Select(chunk => chunk.ReferenceId).ToArray()).ToArray(), probe.MaxOverlap);
+        });
+
+        // Assert: one filter run at a time, and every phrase got the same, filtered, chunks.
+        Assert.Equal(1, overlap);
+        Assert.All(results, ids => Assert.Equal(results[0], ids));
+        Assert.Contains(setup.EnabledLessonId, results[0]);
+        Assert.DoesNotContain(results[0], id => setup.ExamIds.Contains(id));
+    }
+
+    private sealed class OverlapProbe : IAIDataSourceResultFilter
+    {
+        private int _current;
+
+        public int MaxOverlap { get; private set; }
+
+        public async Task<IReadOnlyList<DataSourceSearchResult>> FilterAsync(AIDataSourceResultFilterContext context, IReadOnlyList<DataSourceSearchResult> results)
+        {
+            var now = Interlocked.Increment(ref _current);
+
+            lock (this)
+            {
+                MaxOverlap = Math.Max(MaxOverlap, now);
+            }
+
+            await Task.Delay(50, context.CancellationToken);
+            Interlocked.Decrement(ref _current);
+
+            return results;
+        }
+    }
+
+    private sealed class FixedSearch : IDataSourceContentManager
+    {
+        private readonly IReadOnlyList<DataSourceSearchResult> _results;
+
+        public FixedSearch(IReadOnlyList<DataSourceSearchResult> results)
+        {
+            _results = results;
+        }
+
+        public Task<IEnumerable<DataSourceSearchResult>> SearchAsync(IIndexProfileInfo indexProfile, float[] embedding, string dataSourceId, int topN, string filter = null, CancellationToken cancellationToken = default)
+            => Task.FromResult<IEnumerable<DataSourceSearchResult>>(_results.ToList());
+
+        public Task<DataSourceSearchOutcome> TrySearchAsync(IIndexProfileInfo indexProfile, float[] embedding, string dataSourceId, int topN, string filter = null, CancellationToken cancellationToken = default)
+            => Task.FromResult(DataSourceSearchOutcome.Success(_results.ToList()));
+
+        public Task<long> DeleteByDataSourceIdAsync(IIndexProfileInfo indexProfile, string dataSourceId, CancellationToken cancellationToken = default)
+            => Task.FromResult(0L);
+
+        public Task<bool> DeleteByReferenceIdsAsync(IIndexProfileInfo profile, string dataSourceId, IReadOnlyCollection<string> referenceIds, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
     }
 
     private static AIProfile Tutor()
