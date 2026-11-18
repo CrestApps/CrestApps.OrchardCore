@@ -83,7 +83,7 @@ public sealed class XapiStatementService
             return XapiWriteResult.Fail(403, "The credential may not store statements.");
         }
 
-        var prepared = await PrepareAsync(statements, attachments ?? [], credential.Launch, cancellationToken);
+        var prepared = await PrepareAsync(statements, attachments ?? [], credential, cancellationToken);
 
         if (prepared.Error is not null)
         {
@@ -157,7 +157,7 @@ public sealed class XapiStatementService
         ArgumentNullException.ThrowIfNull(statements);
         ArgumentNullException.ThrowIfNull(authority);
 
-        var prepared = await PrepareAsync(statements, [], launch: null, cancellationToken);
+        var prepared = await PrepareAsync(statements, [], credential: null, cancellationToken);
 
         if (prepared.Error is not null)
         {
@@ -427,8 +427,11 @@ public sealed class XapiStatementService
             : null;
     }
 
-    private async Task<PreparedWrite> PrepareAsync(IReadOnlyList<JsonObject> statements, IReadOnlyList<XapiAttachmentContent> attachments, XapiLaunchScope launch, CancellationToken cancellationToken)
+    // The credential is null for the module's own trusted writes, which may void anything.
+    private async Task<PreparedWrite> PrepareAsync(IReadOnlyList<JsonObject> statements, IReadOnlyList<XapiAttachmentContent> attachments, XapiCredential credential, CancellationToken cancellationToken)
     {
+        var launch = credential?.Launch;
+
         if (statements.Count == 0)
         {
             return PreparedWrite.Fail(400, "No statement was sent.");
@@ -521,9 +524,16 @@ public sealed class XapiStatementService
         {
             var targetId = statement["object"]["id"].GetValue<string>();
 
-            if (voidingInRequest.Contains(targetId) || (await _store.FindByStatementIdAsync(targetId, cancellationToken))?.IsVoiding == true)
+            var target = await _store.FindByStatementIdAsync(targetId, cancellationToken);
+
+            if (voidingInRequest.Contains(targetId) || target?.IsVoiding == true)
             {
                 return PreparedWrite.Fail(400, $"The statement {targetId} voids another statement, and a voiding statement cannot be voided.");
+            }
+
+            if (credential is not null && target is not null && !MayVoid(credential, target))
+            {
+                return PreparedWrite.Fail(403, $"The credential may not void the statement {targetId}.");
             }
         }
 
@@ -534,6 +544,21 @@ public sealed class XapiStatementService
             Existing = existingIds,
             Attachments = attachments,
         };
+    }
+
+    // A client that reads every statement may void any; any other client only a statement it stored itself (its own
+    // read scope); a launch only a statement of its own actor and registration that a launch stored, so never one the
+    // LMS stored with its own authority, such as satisfied or launched.
+    private static bool MayVoid(XapiCredential credential, XapiStatementRecord target)
+    {
+        if (credential.Launch is { } launch)
+        {
+            return string.Equals(target.AuthorityKey, credential.AuthorityKey, StringComparison.Ordinal) &&
+                string.Equals(target.ActorKey, launch.ActorKey, StringComparison.Ordinal) &&
+                string.Equals(target.Registration, launch.Registration, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return credential.CanReadAllStatements || string.Equals(target.AuthorityKey, credential.AuthorityKey, StringComparison.Ordinal);
     }
 
     private static (int Status, string Message)? CheckAttachments(List<JsonObject> statements, IReadOnlyList<XapiAttachmentContent> parts)
