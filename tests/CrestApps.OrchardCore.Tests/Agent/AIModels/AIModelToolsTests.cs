@@ -38,6 +38,25 @@ public sealed class AIModelToolsTests
     }
 
     [Fact]
+    public async Task ListAIProviderConnectionsAndDeployments_AFilterThatMatchesNothingIsEmpty()
+    {
+        // Arrange
+        var harness = new AIModelToolHarness();
+        harness.AddConnection("connection-1", AIModelToolHarness.OpenAI, "openai");
+        harness.AddDeployment("deployment-1", AIModelToolHarness.OpenAI, "gpt-4o", "openai");
+
+        using var services = harness.Build();
+
+        // Act
+        var connections = await AgentToolTestContext.InvokeAsync(new ListAIProviderConnectionsTool(), services, new() { ["provider"] = AIModelToolHarness.Azure });
+        var deployments = await AgentToolTestContext.InvokeAsync(new ListAIDeploymentsTool(), services, new() { ["capability"] = "realtime" });
+
+        // Assert
+        Assert.Equal(0, AgentToolTestContext.ReadJson(connections).GetProperty("total").GetInt32());
+        Assert.Empty(AgentToolTestContext.ReadJson(deployments).GetProperty("items").EnumerateArray());
+    }
+
+    [Fact]
     public async Task SaveAIProviderConnection_CreatesAManagedIdentityConnectionAndReloadsTheSite()
     {
         // Arrange

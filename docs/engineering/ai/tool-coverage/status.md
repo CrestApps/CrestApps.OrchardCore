@@ -126,7 +126,7 @@ Keys are never accepted or returned, which is stricter than the catalog rows of 
 | `listAITestRuns` | For a test case (no batch), the pass rate and pending count are over the page shown, as on the Runs page |
 | `saveAIAlertRule` | Email addresses are checked as addresses, which the editor does not do |
 
-The quality tools needed one extraction (commit e2d901cca): the range checks of `AITestCaseDisplayDriver`, `AIAlertRuleDisplayDriver` and `AIQACohortDisplayDriver` moved unchanged, with their sentences, into `AITestCaseValidator`, `AIAlertRuleValidator` and `AIQACohortValidator` in `AI.Core/Conversations`, which the drivers now call after applying the form. The alert rule's "checked again at once when what it watches changes" moved there too. One difference: the QA cohort driver used to accept a selection of only blank profile IDs and save a cohort with no profile; it is now refused.
+The quality tools needed one extraction (commit e2d901cca): the range checks of `AITestCaseDisplayDriver`, `AIAlertRuleDisplayDriver` and `AIQACohortDisplayDriver` moved unchanged, with their sentences, into `AITestCaseValidator`, `AIAlertRuleValidator` and `AIQACohortValidator` in `AI.Core/Conversations`, which the drivers now call after applying the form. The alert rule's "checked again at once when what it watches changes" moved there too. One difference: a selection of only blank profile IDs, which the driver used to accept, is now refused; the editor's multi-select has no blank option, so the form cannot post one.
 
 ## Notes for the maintainer
 

@@ -265,12 +265,14 @@ public sealed class AIQualityToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIAlertRuleTool(), services, new() { ["ruleIds"] = new[] { "rule-1" } });
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIAlertRuleTool(), services, new() { ["ruleIds"] = new[] { "rule-1", "missing" } });
 
         // Assert
-        var deleted = Assert.Single(AgentToolTestContext.ReadJson(result).GetProperty("deleted").EnumerateArray());
+        var json = AgentToolTestContext.ReadJson(result);
+        var deleted = Assert.Single(json.GetProperty("deleted").EnumerateArray());
 
         Assert.Equal(1, deleted.GetProperty("incidentsDeleted").GetInt32());
+        Assert.Equal("missing", Assert.Single(json.GetProperty("skipped").EnumerateArray()).GetProperty("id").GetString());
         Assert.Empty(harness.Rules);
     }
 
@@ -345,11 +347,33 @@ public sealed class AIQualityToolsTests
         using var services = harness.Build();
 
         // Act
-        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIQACohortTool(), services, new() { ["cohortIds"] = new[] { "cohort-1" } });
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIQACohortTool(), services, new() { ["cohortIds"] = new[] { "cohort-1", "missing" } });
 
         // Assert
-        Assert.Single(AgentToolTestContext.ReadJson(result).GetProperty("deleted").EnumerateArray());
+        var json = AgentToolTestContext.ReadJson(result);
+
+        Assert.Single(json.GetProperty("deleted").EnumerateArray());
+        Assert.Equal("missing", Assert.Single(json.GetProperty("skipped").EnumerateArray()).GetProperty("id").GetString());
         Assert.Empty(harness.Cohorts);
+    }
+
+    [Fact]
+    public async Task ListAIQACohorts_APagePastTheEndIsEmpty()
+    {
+        // Arrange
+        var harness = CreateHarness();
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new ListAIQACohortsTool(), services, new() { ["page"] = 3 });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+
+        Assert.Empty(json.GetProperty("items").EnumerateArray());
+        Assert.Equal(1, json.GetProperty("total").GetInt32());
+        Assert.False(json.GetProperty("truncated").GetBoolean());
     }
 
     private static AIQualityToolHarness CreateHarness()

@@ -49,7 +49,7 @@ public sealed class AIDeploymentsToolsStartup : StartupBase
 
         services.AddCoreAITool<DeleteAIDeploymentTool>(DeleteAIDeploymentTool.TheName)
             .WithTitle(S["Delete AI Deployments"])
-            .WithDescription(S["Deletes deployments by id. Profiles and site defaults that named a deleted deployment fall back or stop working. Deployments from configuration are skipped."])
+            .WithDescription(S["Deletes deployments by id. Profiles that named a deleted deployment fall back or stop working. Deployments from configuration and the site's default deployments are skipped."])
             .WithCategory(S["AI Models"])
             .RequireApproval()
             .Selectable();

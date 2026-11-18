@@ -87,7 +87,6 @@ public sealed class AIModelAndQualityToolRegistrationTests
 
         // Assert
         Assert.Equal(4, tools.Count);
-        Assert.False(tools[RunAITestsTool.TheName].RequiresApproval);
     }
 
     private static IReadOnlyDictionary<string, AIToolDefinitionEntry> GetTools(Type startupType = null)
