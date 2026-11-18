@@ -1396,3 +1396,9 @@ Fixed test first on this branch; the red and green counts are in each commit.
 | Round 10, item 1: coursework AI-assisted mark | The submission records which grader got a suggestion (`Submission.ScoringHelpGivenTo`, `ISubmissionService.RecordScoringHelpAsync`); the mark comes from that, the same score keeps it, and `GradeSubmissionRequest.AIAssisted` is not read. | `fb5c690d1` |
 | Round 10, item 4: M13 test | A question type registered with `AddQuestionType` without `QuestionPart` is exam content and reaches no profile (unit test with a test question type). | `1b49f4d78` |
 | Low, post-search filtering | Kept as the check after the search. Filtering in the index (each chunk's course id indexed, a filter passed to the provider search) needs an extension point in CrestApps.Core's `DataSourceRetrieval` and the preemptive handler, which live in another repository: **Core follow-up**. No query was saved in this repository: the content items of a search are already read in one batch (M13 adds one batched read of the latest versions), course switches are cached per course, and the per-item cost left is the access decision (`ICourseAccessService` for tutors, `ViewContent` for other profiles). | |
+
+**Browser pass 2026-11-18.** Fixed test first on this branch.
+
+| Bug | Fix | Commit |
+| --- | --- | --- |
+| GET/POST route guard | `AuthoringController.Index` says `HttpGet`; every routed Learning action now declares its HTTP method. | `2fdc59d48` |
