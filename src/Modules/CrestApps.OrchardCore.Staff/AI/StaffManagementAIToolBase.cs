@@ -126,24 +126,28 @@ internal abstract class StaffManagementAIToolBase : AIFunction
     /// </summary>
     /// <param name="arguments">The arguments.</param>
     /// <param name="services">The services.</param>
+    /// <param name="canSee">Whether the caller may see a staff member. People the caller may not see are never named or
+    /// listed, and the answer is the same whether such a person exists or not.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The staff member, or the sentence that explains why none was found.</returns>
-    protected static async Task<(StaffMember Staff, string Error)> FindStaffAsync(AIFunctionArguments arguments, IServiceProvider services, CancellationToken cancellationToken)
+    protected static async Task<(StaffMember Staff, string Error)> FindStaffAsync(AIFunctionArguments arguments, IServiceProvider services, Func<StaffMember, Task<bool>> canSee, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(canSee);
+
         var manager = services.GetRequiredService<IStaffMemberManager>();
 
         if (ReadString(arguments, "staffMemberId") is { } id)
         {
-            return await manager.FindByIdAsync(id, cancellationToken) is { } byId
+            return await manager.FindByIdAsync(id, cancellationToken) is { } byId && await canSee(byId)
                 ? (byId, null)
-                : (null, $"There is no staff member with the id '{id}'. Use getStaffMember with a name to find them.");
+                : (null, $"No staff member you may see has the id '{id}'. Use getStaffMember with a name to find them.");
         }
 
         if (ReadString(arguments, "employeeNumber") is { } number)
         {
-            return await manager.FindByEmployeeNumberAsync(number, cancellationToken) is { } byNumber
+            return await manager.FindByEmployeeNumberAsync(number, cancellationToken) is { } byNumber && await canSee(byNumber)
                 ? (byNumber, null)
-                : (null, $"There is no staff member with the employee number '{number}'.");
+                : (null, $"No staff member you may see has the employee number '{number}'.");
         }
 
         if (ReadString(arguments, "name") is not { } name)
@@ -151,7 +155,17 @@ internal abstract class StaffManagementAIToolBase : AIFunction
             return (null, "Give the staffMemberId, the employeeNumber or the name of the staff member.");
         }
 
-        var (count, matches) = await manager.SearchAsync(new StaffQuery { Search = name }, 0, 10, cancellationToken);
+        var (_, found) = await manager.SearchAsync(new StaffQuery { Search = name }, 0, MaxPageSize, cancellationToken);
+        var matches = new List<StaffMember>();
+
+        foreach (var staff in found)
+        {
+            if (await canSee(staff))
+            {
+                matches.Add(staff);
+            }
+        }
+
         var exact = matches.Where(staff => string.Equals(staff.DisplayName, name, StringComparison.OrdinalIgnoreCase)).ToArray();
 
         if (exact.Length == 1)
@@ -159,17 +173,17 @@ internal abstract class StaffManagementAIToolBase : AIFunction
             return (exact[0], null);
         }
 
-        if (count == 1)
+        if (matches.Count == 1)
         {
             return (matches[0], null);
         }
 
-        if (count == 0)
+        if (matches.Count == 0)
         {
-            return (null, $"Nobody called '{name}' works here.");
+            return (null, $"No staff member you may see matches '{name}'.");
         }
 
-        var candidates = (exact.Length > 1 ? exact : matches).Select(staff => $"{staff.DisplayName} ({staff.JobTitle ?? "no job title"}, id {staff.ItemId})");
+        var candidates = (exact.Length > 1 ? exact : matches.Take(10)).Select(staff => $"{staff.DisplayName} ({staff.JobTitle ?? "no job title"}, id {staff.ItemId})");
 
         return (null, $"Several staff members match '{name}': {string.Join("; ", candidates)}. Give the staffMemberId of the one you mean.");
     }

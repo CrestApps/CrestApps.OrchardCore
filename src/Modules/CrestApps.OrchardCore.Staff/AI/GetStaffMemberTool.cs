@@ -79,20 +79,22 @@ internal sealed class GetStaffMemberTool : StaffManagementAIToolBase
     /// <inheritdoc/>
     protected override async Task<object> InvokeAsync(AIFunctionArguments arguments, IServiceProvider services, ClaimsPrincipal caller, CancellationToken cancellationToken)
     {
-        var (staff, error) = await FindStaffAsync(arguments, services, cancellationToken);
+        // As the profile page: those who may see staff, the people who manage the person, and the person themselves.
+        // Nobody else is found, named or listed.
+        var canSeeEveryone = await HasAsync(services, caller, StaffPermissions.ViewStaff);
+        var scopeService = services.GetRequiredService<IStaffScopeService>();
+        var callerId = caller.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        async Task<bool> CanSeeAsync(StaffMember person)
+            => canSeeEveryone
+                || (!string.IsNullOrEmpty(person.UserId) && person.UserId == callerId)
+                || await scopeService.CanManageAsync(caller, person, cancellationToken);
+
+        var (staff, error) = await FindStaffAsync(arguments, services, CanSeeAsync, cancellationToken);
 
         if (error is not null)
         {
             return error;
-        }
-
-        var isSelf = !string.IsNullOrEmpty(staff.UserId) && staff.UserId == caller.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        if (!isSelf
-            && !await HasAsync(services, caller, StaffPermissions.ViewStaff)
-            && !await services.GetRequiredService<IStaffScopeService>().CanManageAsync(caller, staff, cancellationToken))
-        {
-            return $"You are not allowed to see {staff.DisplayName}'s record: they are not among the people you manage.";
         }
 
         var directory = services.GetRequiredService<IStaffDirectory>();

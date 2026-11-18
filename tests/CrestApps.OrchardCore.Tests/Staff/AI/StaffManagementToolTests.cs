@@ -225,7 +225,53 @@ public sealed class StaffManagementToolTests
         // Assert
         Assert.StartsWith("Several staff members match 'Lee':", ambiguous, StringComparison.Ordinal);
         Assert.Equal("Stranger", managerView.GetProperty("displayName").GetString());
-        Assert.StartsWith("You are not allowed to see Stranger's record", selfOnly, StringComparison.Ordinal);
+        Assert.Equal($"No staff member you may see has the id '{stranger.ItemId}'. Use getStaffMember with a name to find them.", selfOnly);
+    }
+
+    [Fact]
+    public async Task GetStaffMember_NeverNamesOrListsPeople_ThatACallerWhoMaySeeOnlyThemselvesCannotSee()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        await WorkforceTests.AddWorkerAsync(harness, "Lee Park");
+        await WorkforceTests.AddWorkerAsync(harness, "Lee Chan");
+        await WorkforceTests.AddWorkerAsync(harness, "Lee Self", staff => staff.UserId = "lee-self");
+        var self = CalendarTestHarness.User("lee-self", StaffPermissions.ViewOwnStaffProfile.Name);
+        var other = CalendarTestHarness.User("other", StaffPermissions.ViewOwnStaffProfile.Name);
+
+        // Act
+        var own = AgentToolTestContext.ReadJson(await InvokeAsync(harness, self, new GetStaffMemberTool(), new() { ["name"] = "Lee" }));
+        var nobody = await InvokeAsync(harness, other, new GetStaffMemberTool(), new() { ["name"] = "Lee" });
+        var missing = await InvokeAsync(harness, other, new GetStaffMemberTool(), new() { ["name"] = "Ghost" });
+
+        // Assert
+        Assert.Equal("Lee Self", own.GetProperty("displayName").GetString());
+        Assert.Equal("No staff member you may see matches 'Lee'.", nobody);
+        Assert.Equal("No staff member you may see matches 'Ghost'.", missing);
+        Assert.DoesNotContain("Park", nobody, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(SaveStaffMemberTool.TheName, false)]
+    [InlineData(DeleteStaffMemberTool.TheName, true)]
+    [InlineData(SetStaffBadgePinTool.TheName, false)]
+    [InlineData(SaveStaffCapabilityTool.TheName, true)]
+    [InlineData(DeleteStaffCapabilityTool.TheName, true)]
+    public async Task ChangeTool_RefusesACallerWhoMayOnlyViewStaff(string toolName, bool asksForManageStaff)
+    {
+        // Arrange
+        var services = RefusalServices(signedIn: true, authorize: permission => permission.Name == StaffPermissions.ViewStaff.Name);
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(Create(toolName), services, new() { ["staffMemberId"] = "x", ["name"] = "x" });
+
+        // Assert
+        Assert.Equal(StaffManagementAIToolBase.NotAllowedMessage, result);
+
+        if (asksForManageStaff)
+        {
+            Assert.Contains(services.GetRequiredService<FakeAuthorizationService>().Checks, check => check.Permission == StaffPermissions.ManageStaff.Name);
+        }
     }
 
     [Fact]
@@ -411,9 +457,9 @@ public sealed class StaffManagementToolTests
             configure?.Invoke(services);
         });
 
-    private static ServiceProvider RefusalServices(bool signedIn)
+    private static ServiceProvider RefusalServices(bool signedIn, Func<global::OrchardCore.Security.Permissions.Permission, bool> authorize = null)
     {
-        var services = AgentToolTestContext.CreateServices(signedIn, authorize: (_, _) => false);
+        var services = AgentToolTestContext.CreateServices(signedIn, authorize: (permission, _) => authorize?.Invoke(permission) ?? false);
         var scope = new Mock<IStaffScopeService>();
 
         scope.Setup(service => service.GetScopeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<CancellationToken>())).ReturnsAsync(StaffScope.None);
