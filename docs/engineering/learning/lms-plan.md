@@ -1002,3 +1002,13 @@ The ten new workflow activities are listed in the workflow designer's activity l
 - The invitation e-mail carried a relative link when the site has no base URL: it now falls back to the address of the request that sent it.
 - A pool was named after the product sold (such as a team pack) rather than the course; it now takes the course's title.
 - The seats page's member picker shrank to one letter in a narrow front-end theme: the forms are stacked with labels. The storefront pages declare breadcrumbs, so their browser titles are set.
+
+**Browser pass 2026-11-18.** Fixed test first on this branch; the red and green counts are in each commit.
+
+| Bug | Fix | Commit |
+| --- | --- | --- |
+| Security: a key course was bought, and enrolled the buyer, without the key | A course in the Key or Approval mode is not sold, as a course or as seats, unless the product's `EnrollsWithoutKeyOrApproval` says buying it is the way in; the cart refuses it and the fulfilment fails the purchase if the mode changed meanwhile. Closed courses stay sellable (a purchase is one of the sources that mode allows). | `e9af640e1` |
+| Every course requires a price; a priced learning path has no price or Add to cart | Products' `ProductPartSettings.PriceOptional`: an item without a price is not for sale. Courses and paths get it and the product page details through migration step 3, the create step and `LearningPathProductMigrations` (paths made in the same pass or later). | `9e2885ff0` |
+| Data sets show raw ids | The pool's course, the accounts and a seat's pool reference what they identify, so reports join them for names. | `97c5068d3` |
+| No `provider` in the course JSON-LD | `CourseProviderStructuredDataProvider` runs after the site provider and refers to the publisher node; Seo.Abstractions gains `StructuredDataProviderOrder.Site` and `StructuredDataNodeIds`. | `adbdea1b6` |
+| Workflow hint shows `{ x }` (Give Course Seat) | The Liquid example is an argument of the localized hint. | `9b95e8d2e` |
