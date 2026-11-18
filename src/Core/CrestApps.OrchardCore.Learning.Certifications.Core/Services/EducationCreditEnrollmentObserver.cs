@@ -10,7 +10,10 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Learning.Certifications.Core.Services;
 
 /// <summary>
-/// Awards the education credits of a course when an enrollment completes it, once per enrollment.
+/// Awards the education credits of a course when an enrollment completes it, once per enrollment, and only when the
+/// completion supports what is issued on it (<see cref="CompletionEvidence.SupportsIssuing"/>): credits meet the credits
+/// requirement of a certification, so a failed completion, one under review or one resting on a result the browser
+/// reported earns none.
 /// </summary>
 public sealed class EducationCreditEnrollmentObserver : IEnrollmentObserver
 {
@@ -26,6 +29,11 @@ public sealed class EducationCreditEnrollmentObserver : IEnrollmentObserver
     /// <inheritdoc/>
     public async Task CompletedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
     {
+        if (!CompletionEvidence.SupportsIssuing(enrollment))
+        {
+            return;
+        }
+
         try
         {
             var course = await _services.GetRequiredService<IContentManager>().GetAsync(enrollment.CourseId, VersionOptions.Published);
