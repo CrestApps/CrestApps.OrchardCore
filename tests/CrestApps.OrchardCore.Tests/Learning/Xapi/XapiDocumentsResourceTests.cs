@@ -33,7 +33,7 @@ public sealed class XapiDocumentsResourceTests
         Assert.Equal(["bookmark", "progress"], JsonNode.Parse(list.Text).AsArray().Select(id => id.GetValue<string>()));
         Assert.Equal(["progress"], JsonNode.Parse(since.Text).AsArray().Select(id => id.GetValue<string>()));
         Assert.Equal("plain text", text.Text);
-        Assert.Equal("text/plain", text.ContentType);
+        Assert.Equal("application/octet-stream", text.ContentType);
         Assert.StartsWith("\"", read.Headers["ETag"]);
 
         Assert.Equal(204, (await lrs.DocumentAsync("DELETE", "activities/state", State("bookmark"))).Status);
@@ -141,6 +141,29 @@ public sealed class XapiDocumentsResourceTests
         Assert.Equal(403, (await lrs.DocumentAsync("GET", "activities/state", State("suspend"), credential: launch)).Status);
         Assert.Equal(403, (await lrs.DocumentAsync("GET", "activities/state", new Dictionary<string, string> { ["activityId"] = XapiSamples.Course, ["agent"] = Agent, ["registration"] = XapiSamples.Registration, ["stateId"] = "s" }, credential: launch)).Status);
         Assert.Equal(413, (await lrs.DocumentAsync("PUT", "activities/state", State("big"), Encoding.UTF8.GetBytes(new string('x', 32)), contentType: "text/plain")).Status);
+    }
+
+    [Fact]
+    public async Task Round9H1_ADocumentStoredAsHtml_IsServedAsASandboxedAttachment()
+    {
+        await using var lrs = await XapiTestHarness.CreateAsync();
+        var profile = new Dictionary<string, string> { ["agent"] = Agent, ["profileId"] = "page" };
+
+        await lrs.DocumentAsync("PUT", "agents/profile", profile, "<script>alert(document.cookie)</script>", contentType: "text/html", headers: new Dictionary<string, string> { ["If-None-Match"] = "*" });
+        await lrs.DocumentAsync("PUT", "activities/state", State("json"), new JsonObject { ["a"] = 1 });
+
+        var html = await lrs.DocumentAsync("GET", "agents/profile", profile);
+        var json = await lrs.DocumentAsync("GET", "activities/state", State("json"));
+
+        Assert.Equal(200, html.Status);
+        Assert.Equal("application/octet-stream", html.ContentType);
+        Assert.Equal("sandbox", html.Headers["Content-Security-Policy"]);
+        Assert.StartsWith("attachment", html.Headers["Content-Disposition"]);
+        Assert.Equal("<script>alert(document.cookie)</script>", html.Text);
+
+        Assert.StartsWith("application/json", json.ContentType);
+        Assert.Equal("sandbox", json.Headers["Content-Security-Policy"]);
+        Assert.StartsWith("attachment", json.Headers["Content-Disposition"]);
     }
 
     private static Dictionary<string, string> State(string stateId, string registration = null)

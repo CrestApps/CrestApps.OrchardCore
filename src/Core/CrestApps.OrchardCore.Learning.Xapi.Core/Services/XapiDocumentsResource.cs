@@ -18,7 +18,9 @@ namespace CrestApps.OrchardCore.Learning.Xapi.Core.Services;
 /// document exists), read one at a time or as a list of ids (with <c>since</c>), and deleted one at a time or, for
 /// states, all at once. Every document has an ETag; <c>If-Match</c> and <c>If-None-Match</c> are honored on every
 /// write (412 when they do not hold), and a <c>PUT</c> to an existing profile without either header is a conflict
-/// (409), as the concurrency rules require.
+/// (409), as the concurrency rules require. A document is served as JSON when it was stored as JSON and as an
+/// <c>application/octet-stream</c> attachment otherwise, always with <c>Content-Security-Policy: sandbox</c>, because
+/// its content is whatever the writer sent.
 /// </summary>
 public sealed class XapiDocumentsResource
 {
@@ -232,13 +234,17 @@ public sealed class XapiDocumentsResource
             return XapiResponse.Error(404, "There is no such document.");
         }
 
+        // A document is whatever its writer sent, so it is never served as something a browser renders on the site's
+        // origin: JSON keeps its type, anything else is a download, and the sandbox policy stops any script in it.
         var response = new XapiResponse
         {
             Status = 200,
-            ContentType = found.ContentType,
+            ContentType = IsJson(found.ContentType ?? string.Empty) ? found.ContentType : "application/octet-stream",
             Body = found.Content ?? [],
         };
 
+        response.Headers["Content-Security-Policy"] = "sandbox";
+        response.Headers["Content-Disposition"] = "attachment";
         response.Headers["ETag"] = found.ETag;
         response.Headers["Last-Modified"] = DateTime.SpecifyKind(found.UpdatedUtc, DateTimeKind.Utc).ToString("R", CultureInfo.InvariantCulture);
 

@@ -26,7 +26,7 @@ The LRS is at `/learning/xapi/` on the tenant (for example `https://example.com/
 | `agents` | GET, HEAD | The Person object of an agent. The LRS does not join agents into persons: the person is the agent asked for. |
 | `about` | GET, HEAD | The versions the LRS accepts. It needs no credential. |
 
-Every request but `about` needs `X-Experience-API-Version` with a 1.0 version. A parameter a resource does not define is refused with 400. The alternate request syntax works: a POST whose only query parameter is `method` (GET, HEAD, PUT, POST or DELETE), with the headers (`Authorization`, `X-Experience-API-Version`, `Content-Type`, `If-Match`, `If-None-Match`), the body as `content` and the other parameters in an `application/x-www-form-urlencoded` form. Attachments cannot be sent that way.
+Every request but `about` needs `X-Experience-API-Version` with a 1.0 version. A parameter a resource does not define is refused with 400. The alternate request syntax works for writes: a POST whose only query parameter is `method` (PUT, POST or DELETE), with the headers (`Authorization`, `X-Experience-API-Version`, `Content-Type`, `If-Match`, `If-None-Match`), the body as `content` and the other parameters in an `application/x-www-form-urlencoded` form. Attachments cannot be sent that way. A GET or HEAD in that syntax is refused with 400: any page can post a form as a top-level navigation, so a read must send `Authorization` and `X-Experience-API-Version` as real headers.
 
 ## Credentials
 
@@ -67,7 +67,7 @@ Content often runs on another origin, and cmi5 content of a package runs in a sa
 
 ## Documents
 
-State, activity profile and agent profile documents are stored by PUT, joined by POST (when a document exists, both it and the request must be JSON objects, and their top-level properties are merged; anything else is 400), read one at a time (with `ETag` and `Last-Modified`) or as a list of ids (with `since`), and deleted one at a time or, for states, all states of an activity, agent and registration. `If-Match` and `If-None-Match` are honored on every write (412 when they do not hold); a PUT to an existing activity or agent profile without either header is a conflict (409). States are kept per registration.
+State, activity profile and agent profile documents are stored by PUT, joined by POST (when a document exists, both it and the request must be JSON objects, and their top-level properties are merged; anything else is 400), read one at a time (with `ETag` and `Last-Modified`; a document stored as `application/json` comes back as JSON, anything else as an `application/octet-stream` attachment, and every document with `Content-Security-Policy: sandbox`, because its content is whatever the writer sent) or as a list of ids (with `since`), and deleted one at a time or, for states, all states of an activity, agent and registration. `If-Match` and `If-None-Match` are honored on every write (412 when they do not hold); a PUT to an existing activity or agent profile without either header is a conflict (409). States are kept per registration.
 
 ## In the admin
 

@@ -82,7 +82,8 @@ public static class XapiHttp
 
     /// <summary>
     /// Unwraps a request in the alternate request syntax: a <c>POST</c> whose only query parameter is <c>method</c>,
-    /// with a form body holding the headers, the <c>content</c> and the other parameters.
+    /// with a form body holding the headers, the <c>content</c> and the other parameters. Only writes (<c>PUT</c>,
+    /// <c>POST</c> and <c>DELETE</c>) are accepted this way; <c>GET</c> and <c>HEAD</c> are refused.
     /// </summary>
     /// <param name="request">The request as received.</param>
     /// <param name="method">The method it stands for.</param>
@@ -96,6 +97,13 @@ public static class XapiHttp
         if (Array.IndexOf(_alternateMethods, target) < 0)
         {
             return (null, XapiResponse.Error(400, "The method parameter of the alternate request syntax must be GET, HEAD, PUT, POST or DELETE."));
+        }
+
+        // A form can post this syntax from any page as a top-level navigation, carrying a credential as a field. A read
+        // through it would render the answer on the site's origin, so reads must send their headers as headers.
+        if (target is "GET" or "HEAD")
+        {
+            return (null, XapiResponse.Error(400, "The alternate request syntax is not accepted for GET and HEAD: send the request with its Authorization and X-Experience-API-Version headers."));
         }
 
         if (request.Query.Count != 1)

@@ -117,7 +117,7 @@ public sealed class LearningRecordStoreTests
     }
 
     [Fact]
-    public async Task AlternateRequestSyntax_IsUnwrapped()
+    public async Task AlternateRequestSyntax_IsUnwrappedForWrites_AndRefusedForReads()
     {
         // Arrange
         await EnsureClientAsync();
@@ -141,10 +141,15 @@ public sealed class LearningRecordStoreTests
 
         // Act
         var stored = await anonymous.PostAsync("learning/xapi/statements?method=PUT", put, TestContext.Current.CancellationToken);
-        var read = await anonymous.PostAsync("learning/xapi/statements?method=GET", get, TestContext.Current.CancellationToken);
+        var formRead = await anonymous.PostAsync("learning/xapi/statements?method=GET", get, TestContext.Current.CancellationToken);
+        using var headerRead = new HttpRequestMessage(HttpMethod.Get, "learning/xapi/statements?statementId=" + id);
+        headerRead.Headers.TryAddWithoutValidation("Authorization", authorization);
+        headerRead.Headers.Add(XapiConstants.Headers.Version, "1.0.3");
+        var read = await anonymous.SendAsync(headerRead, TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert: writes may use the form; reads must send their headers (review round 9, H1).
         Assert.Equal(HttpStatusCode.NoContent, stored.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, formRead.StatusCode);
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);
         Assert.Equal(id, JsonNode.Parse(await read.Content.ReadAsStringAsync(TestContext.Current.CancellationToken))!["id"]!.GetValue<string>());
     }

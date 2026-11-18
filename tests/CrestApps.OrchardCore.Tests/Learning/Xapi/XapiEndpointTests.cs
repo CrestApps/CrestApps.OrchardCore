@@ -117,6 +117,27 @@ public sealed class XapiEndpointTests
         Assert.Equal(400, badMethod.Status);
     }
 
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("HEAD")]
+    public async Task Round9H1_AFormPostStandingForAGetOrHead_IsRefused(string method)
+    {
+        var form = "X-Experience-API-Version=1.0.3&Authorization=" + Uri.EscapeDataString("Bearer launch-token") +
+            "&agent=" + Uri.EscapeDataString("""{ "mbox": "mailto:learner@example.com" }""") + "&profileId=page";
+        var httpContext = new DefaultHttpContext();
+
+        httpContext.Request.Method = "POST";
+        httpContext.Request.QueryString = new QueryString("?method=" + method);
+        httpContext.Request.ContentType = "application/x-www-form-urlencoded";
+        httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(form));
+
+        var (request, error) = await XapiHttp.ReadAsync(httpContext, "agents/profile", "/learning/xapi", 4096);
+
+        Assert.Null(request);
+        Assert.NotNull(error);
+        Assert.Equal(400, error.Status);
+    }
+
     [Fact]
     public async Task Http_ReadsTheRequest_AndWritesTheVersionAndCorsHeaders()
     {
