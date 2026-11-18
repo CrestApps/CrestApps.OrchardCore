@@ -1038,10 +1038,6 @@ The ten new workflow activities are listed in the workflow designer's activity l
 | Class sessions appear on no attendee's calendar | `ClassSessionCalendarEventSource` (a Calendars event source) shows each meeting of a confirmed or attended place on the learner's own calendar, room or no room. | `5de8929ef` |
 | GET/POST route guard | The class session pages say `HttpGet`. | `192b6e824` |
 
-| Cancelling a session tells nobody, although the page says it does | `ClassSessionCancelledObserver` sends each learner whose place went with the cancelled session a **Class session cancelled** notification with the reason; a place given up by the learner or an ending enrollment tells nobody. | `58cc71a47` |
-| Class sessions appear on no attendee's calendar | `ClassSessionCalendarEventSource` (a Calendars event source) shows each meeting of a confirmed or attended place on the learner's own calendar, room or no room. | `32c1238cf` |
-| GET/POST route guard | The class session pages say `HttpGet`. | `9058f9654` |
-
 ### Phase 7: Coursework (branch `ma/learning-phase-7`, stacked on `ma/learning-phase-6`)
 
 **Built.**
@@ -1069,7 +1065,7 @@ The ten new workflow activities are listed in the workflow designer's activity l
 
 | Bug | Fix | Commit |
 | --- | --- | --- |
-| "Grade again" leads a grader to a 403 | The grading form and **Return for resubmission** show on graded work only to someone with Override grades. | `926a4a0ab` |
-| Data sets show raw ids (Submissions) | The course and coursework ids reference their content items, as the learner and grader already referenced the users. | `35fa42159` |
-| Workflow hint shows `{ x }` (Return Coursework For Resubmission) | The Liquid example is an argument of the localized hint. | `7c4f3eca6` |
-| GET/POST route guard | The coursework grading pages say `HttpGet`. | `66015a23a` |
+| "Grade again" leads a grader to a 403 | The grading form and **Return for resubmission** show on graded work only to someone with Override grades. | `88174beeb` |
+| Data sets show raw ids (Submissions) | The course and coursework ids reference their content items, as the learner and grader already referenced the users. | `88746a66e` |
+| Workflow hint shows `{ x }` (Return Coursework For Resubmission) | The Liquid example is an argument of the localized hint. | `aae9c295d` |
+| GET/POST route guard | The coursework grading pages say `HttpGet`. | `ed10335cb` |
