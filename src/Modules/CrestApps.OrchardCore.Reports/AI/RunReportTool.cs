@@ -168,26 +168,16 @@ public sealed class RunReportTool : ReportsAIToolBase
             await services.GetRequiredService<ReportDisplayValueResolver>().ResolveAsync(result.Document);
         }
 
-        var (columns, rows, truncated) = ReportToolResults.ToRows(result.Columns, result.Rows, maxRows);
-        var metrics = (result.Document?.Sections ?? [])
-            .Where(section => section?.Kind == ReportSectionKind.Metrics)
-            .SelectMany(section => section.Metrics)
-            .Where(metric => metric is not null)
-            .Select(metric => new
-            {
-                label = ReportValue.GetText(metric.Label),
-                value = ReportValue.GetText(metric.Value),
-            })
-            .ToArray();
+        // Only what the report's visuals show, as on its page and in its export: the report reads with its owner's
+        // access, so a column of the query that no visual shows is not for its viewers.
+        var (sections, truncated) = ReportToolResults.FlattenSections(result.Document, maxRows);
 
         return Json(new
         {
             id = design.ItemId,
             kind = ReportToolCatalog.Designed,
             title = design.DisplayText,
-            metrics = metrics.Length > 0 ? metrics : null,
-            columns,
-            rows,
+            sections,
             rowCount = result.RowCount,
             truncated = truncated ? true : (bool?)null,
             filters = result.Filters.Select(filter => new

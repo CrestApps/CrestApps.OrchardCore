@@ -211,10 +211,33 @@ public sealed class ReportsAIToolTests : IAsyncLifetime
         // Act
         var json = AgentToolTestContext.ReadJson(await InvokeAsync(RunReportTool.TheName, services, new() { ["id"] = "r1" }));
 
-        // Assert
+        // Assert: a report without visuals shows one table of every column.
         Assert.Equal("designed", json.GetProperty("kind").GetString());
         Assert.Equal(3, json.GetProperty("rowCount").GetInt32());
-        Assert.Equal(2, json.GetProperty("columns").GetArrayLength());
+        var table = json.GetProperty("sections")[0];
+        Assert.Equal("table", table.GetProperty("kind").GetString());
+        Assert.Equal(2, table.GetProperty("columns").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task RunReport_ReturnsOnlyWhatADesignedReportsVisualsShow()
+    {
+        // Arrange: the query reads the totals, but the report's only table shows the names.
+        var report = ReportToolHarness.Report();
+        report.SharedRoles = ["Authenticated"];
+        report.Visuals = [new ReportVisualDefinition { Id = "names", Type = ReportVisualType.Table, ColumnIds = ["name"] }];
+        await _harness.Designs.UpdateAsync(report, TestContext.Current.CancellationToken);
+        var services = _harness.Build();
+
+        // Act
+        var result = await InvokeAsync(RunReportTool.TheName, services, new() { ["id"] = "r1" });
+
+        // Assert
+        var table = AgentToolTestContext.ReadJson(result).GetProperty("sections")[0];
+        Assert.Equal(1, table.GetProperty("columns").GetArrayLength());
+        Assert.Contains("Acme", result);
+        Assert.DoesNotContain("300", result);
+        Assert.DoesNotContain("150", result);
     }
 
     [Fact]
