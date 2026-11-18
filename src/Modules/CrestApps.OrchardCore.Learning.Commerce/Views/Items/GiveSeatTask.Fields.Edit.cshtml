@@ -5,7 +5,7 @@
 <div class="mb-3">
     <label asp-for="PoolId" class="form-label">@T["Licence pool id"]</label>
     <input asp-for="PoolId" class="form-control code" />
-    <span class="hint">@T["Liquid is allowed, such as {{ Workflow.Input.PoolId }}."]</span>
+    <span class="hint">@T["Liquid is allowed, such as {0}.", "{{ Workflow.Input.PoolId }}"]</span>
 </div>
 <div class="mb-3">
     <label asp-for="UserId" class="form-label">@T["User id"]</label>
