@@ -1441,6 +1441,49 @@ Store credit and points are money. The two adjustment tools pass the balance car
 
 The tools need **Manage teams**, as the Teams pages do. They write through the team manager, so its rules apply: a name is required, the parent must exist, a team cannot be placed under itself or one of its sub-teams, and the time zone must be a valid IANA id. `saveTeam` changes the core fields only; the cards other modules add to the team editor, such as Workforce or Contact Center settings, keep their values. Team memberships are set on the staff member.
 
+### Skill and certificate tools
+
+**Available when:** `CrestApps.OrchardCore.Skills` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listSkills` | Lists the skill catalog with category, required certification and whether each skill is enabled; filter by name. |
+| `saveSkill` | Creates or updates a skill in the catalog: name, category, description, the certification it requires and enabled. Only the fields given change. |
+| `deleteSkill` | Deletes a skill from the catalog; nobody holds it any more afterwards. Disable it instead when people still hold it. Asks for approval. |
+| `listCertificationTypes` | Lists the certification types people can hold, with issuer, validity in months, reminder days and whether a document is required. |
+| `saveCertificationType` | Creates or updates a certification type: name, issuer, validity in months, reminder days before expiry, document required and enabled. |
+| `deleteCertificationType` | Deletes a certification type; the certificates of this type are kept. Asks for approval. |
+| `getSubjectSkills` | Returns the skills a person holds (proficiency, effective dates and whether each counts today) and their certificates, for a user or a staff member. |
+| `saveSkillAssignment` | Gives a user or staff member a skill, or changes its proficiency (1 to 5) and effective dates. A skill that requires a certification does not count until the person holds a valid certificate of it; the result says whether it counts today. |
+| `removeSkillAssignment` | Takes a skill away from a user or staff member. |
+| `findSkillHolders` | Finds the people who hold a skill at or above a proficiency on a date. |
+| `listCertificates` | Lists the certificates people hold, filtered by person, certification type, status or expiring within a number of days, with paging. |
+| `saveCertificate` | Records a certificate for a user or staff member, or updates one: certification type, number, issued and expiry dates, document path and notes. A new certificate is pending. |
+| `setCertificateStatus` | Verifies a pending certificate or revokes one with a reason. |
+| `deleteCertificate` | Deletes a certificate record. Use revoke instead to keep the history. Asks for approval. |
+
+Reading needs **View skills and certifications**, the catalog changes need **Manage skills and certifications**, and changing what a person holds needs **Assign skills and record certifications**, as on the Skills pages and the Skills cards of the user and staff editors. A person is named by `subjectKind` (`User` or `Staff`) and `subjectId`: a user id, user name or email, or a staff member id from `getStaffMember`. Changing a staff member's skills or certificates also needs the person to be among the people the caller manages, as on the staff editor.
+
+The tools write through the Skills services, so their rules apply: unique names, a validity of at least one month, reminders of one day or more, a proficiency from 1 to 5, an expiry worked out from the issue date and the type's validity, and no valid certificate without the copy its type requires. The copy of a certificate is a path to a file already in the media library, never the file itself.
+
+### Staff tools
+
+**Available when:** `CrestApps.OrchardCore.Staff` with `CrestApps.OrchardCore.AI` on; `setStaffBadgePin` with `CrestApps.OrchardCore.Staff.Badges`
+
+| Function | Description |
+| --- | --- |
+| `getStaffMember` | Returns one staff member's record with their id, found by id, employee number or name: employment details, manager, direct reports, team memberships, capabilities, linked user, employment history and, when you may see them, date of birth and pay. |
+| `saveStaffMember` | Creates a staff member or updates one: job title, employment type, status, dates, manager, time zone, locations, contracted hours, capabilities and team memberships; can link a user account once. Setting a termination date or status Terminated starts offboarding in other modules. |
+| `deleteStaffMember` | Deletes a staff record. It is refused while people still report to them. Asks for approval. |
+| `setStaffBadgePin` | Clears the PIN a staff member uses at time clocks and registers, or says whether one is set. A PIN is never taken or returned. Asks for approval. |
+| `listStaffCapabilities` | Lists the kinds of work staff can be given, built-in and custom, with whether each is enabled. |
+| `saveStaffCapability` | Creates a custom capability or changes the display name, description, position and enabled flag of any capability. |
+| `deleteStaffCapability` | Deletes a custom capability, or resets a built-in one to its defaults. Asks for approval. |
+
+`getStaffMember` answers the people the staff profile shows a record to: those with **View staff**, the people who manage the person, and the person themselves. The date of birth needs **View sensitive staff data** and pay needs **Manage staff pay rates**; the home base address and the badge are never returned. `saveStaffMember` and `setStaffBadgePin` need the person to be in the caller's staff scope (**Manage staff**, or **Manage the staff you manage** for one's reports and teams), and a manager can only add people to the teams they manage. `deleteStaffMember` and the capability changes need **Manage staff**; `listStaffCapabilities` needs **View staff**.
+
+`saveStaffMember` writes through the staff manager, so its checks apply (unique employee number and user, known teams and time zone, a manager who exists and is not in a loop). A person with a user account takes their name and e-mail from it, and the account can't be changed once linked. Pay, the badge, skills and the cards other modules add to the staff editor are not changed. A new PIN is set on the staff editor, whose address `setStaffBadgePin` returns. A capability added or changed in a message can be given to staff from the next reply.
+
 ## Tool permissions
 
 Tool permissions decide who may **attach** a tool, and, for chat interactions, who may **use** it. They do not limit who may use the tools of an AI profile: for a profile, the profile itself is the authorization boundary.
