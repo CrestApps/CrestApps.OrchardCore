@@ -16,8 +16,10 @@ namespace CrestApps.OrchardCore.Learning.AI.Services;
 
 /// <summary>
 /// The enrollment retrieval filter: trims every data source search with <see cref="LearningRetrievalPolicy"/>. It loads
-/// the published content item of each chunk once, asks the Learning access decision for a tutor and Orchard Core's
-/// View content permission for any other profile, and drops exam content whoever asks.
+/// the latest and the published version of each chunk's content item once, classifies the item from either (so a draft
+/// in an index set to the latest version is classified too), asks the Learning access decision for a tutor and Orchard
+/// Core's View content permission for any other profile, and drops exam content whoever asks. A course item or exam item
+/// with no published version reaches no model.
 /// </summary>
 internal sealed class LearningRetrievalFilter : IAIDataSourceResultFilter
 {
@@ -30,6 +32,7 @@ internal sealed class LearningRetrievalFilter : IAIDataSourceResultFilter
     private readonly IAuthorizationService _authorizationService;
     private readonly LearningTutorProfiles _tutorProfiles;
     private readonly LearningAIOptions _options;
+    private readonly QuestionTypeOptions _questionTypes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningRetrievalFilter"/> class.
@@ -41,8 +44,10 @@ internal sealed class LearningRetrievalFilter : IAIDataSourceResultFilter
         ICourseStructureService courseStructure,
         IAuthorizationService authorizationService,
         LearningTutorProfiles tutorProfiles,
-        IOptions<LearningAIOptions> options)
+        IOptions<LearningAIOptions> options,
+        IOptions<QuestionTypeOptions> questionTypes)
     {
+        _questionTypes = questionTypes.Value;
         _contentManager = contentManager;
         _contentDefinitionManager = contentDefinitionManager;
         _courseAccessService = courseAccessService;
@@ -72,6 +77,12 @@ internal sealed class LearningRetrievalFilter : IAIDataSourceResultFilter
         var items = (await _contentManager.GetAsync(ids, VersionOptions.Published))
             .GroupBy(item => item.ContentItemId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+
+        // The latest versions classify what has no published version yet, such as a draft an index set to the latest
+        // version holds.
+        var latest = (await _contentManager.GetAsync(ids, VersionOptions.Latest))
+            .GroupBy(item => item.ContentItemId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
         var decisions = new Dictionary<string, bool>(StringComparer.Ordinal);
         var courses = new Dictionary<string, bool>(StringComparer.Ordinal);
         var kept = new List<DataSourceSearchResult>(results.Count);
@@ -82,7 +93,7 @@ internal sealed class LearningRetrievalFilter : IAIDataSourceResultFilter
 
             if (!decisions.TryGetValue(key, out var keep))
             {
-                var candidate = await DescribeAsync(items.GetValueOrDefault(key), isTutor, user, courses);
+                var candidate = await DescribeAsync(items.GetValueOrDefault(key), latest.GetValueOrDefault(key), isTutor, user, courses);
                 keep = LearningRetrievalPolicy.Keep(candidate, isTutor, _options.TutorLessonKinds);
                 decisions[key] = keep;
             }
@@ -102,23 +113,39 @@ internal sealed class LearningRetrievalFilter : IAIDataSourceResultFilter
     /// </summary>
     /// <param name="item">The content item.</param>
     /// <returns><see langword="true"/> for exam content.</returns>
-    internal static bool IsExamContent(ContentItem item)
+    internal bool IsExamContent(ContentItem item)
+        => IsExamContent(item, _questionTypes);
+
+    /// <summary>
+    /// Gets whether a content item is exam content: a question type registered with <c>AddQuestionType</c> (as the
+    /// question access handler decides), a question bank or a quiz, whose text may hold answer keys.
+    /// </summary>
+    /// <param name="item">The content item.</param>
+    /// <param name="questionTypes">The question types.</param>
+    /// <returns><see langword="true"/> for exam content.</returns>
+    internal static bool IsExamContent(ContentItem item, QuestionTypeOptions questionTypes)
         => string.Equals(item.ContentType, AssessmentsConstants.ContentTypes.QuestionBank, StringComparison.Ordinal)
             || string.Equals(item.ContentType, AssessmentsConstants.ContentTypes.Quiz, StringComparison.Ordinal)
+            || questionTypes?.IsQuestion(item.ContentType) == true
             || item.Has<QuestionPart>()
             || item.Has<QuizPart>()
             || string.Equals(item.Get<CourseItemPart>(nameof(CourseItemPart))?.Kind, AssessmentsConstants.QuizKind, StringComparison.Ordinal);
 
-    private async Task<LearningRetrievalCandidate> DescribeAsync(ContentItem item, bool isTutor, ClaimsPrincipal user, Dictionary<string, bool> courses)
+    private async Task<LearningRetrievalCandidate> DescribeAsync(ContentItem item, ContentItem latest, bool isTutor, ClaimsPrincipal user, Dictionary<string, bool> courses)
     {
-        if (item is null)
-        {
-            return new LearningRetrievalCandidate { Found = false };
-        }
-
-        if (IsExamContent(item))
+        // Exam content in either version is exam content.
+        if ((item is not null && IsExamContent(item)) || (latest is not null && IsExamContent(latest)))
         {
             return new LearningRetrievalCandidate { Found = true, IsExamContent = true };
+        }
+
+        if (item is null)
+        {
+            // A course item with no published version is not open to anyone yet: it reaches no model. Content that is
+            // not a course item is left to the profile, as before.
+            return latest?.Get<CourseItemPart>(nameof(CourseItemPart)) is not null
+                ? new LearningRetrievalCandidate { Found = true, IsCourseItem = true }
+                : new LearningRetrievalCandidate { Found = false };
         }
 
         var part = item.Get<CourseItemPart>(nameof(CourseItemPart));

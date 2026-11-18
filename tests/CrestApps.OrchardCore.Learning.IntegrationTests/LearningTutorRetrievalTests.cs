@@ -116,6 +116,38 @@ public sealed class LearningTutorRetrievalTests
     }
 
     [Fact]
+    public async Task Round9M13_ADraftQuizOrLesson_NeverPublished_ReachesNoProfile()
+    {
+        // Arrange: an index set to the latest version holds drafts, such as the authoring assistant makes.
+        var setup = await _site.InTenantAsync(SetUpAsync);
+        var drafts = await _site.InTenantAsync(async services =>
+        {
+            var contentManager = services.GetRequiredService<IContentManager>();
+            var quiz = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.Quiz);
+            quiz.DisplayText = "Draft quiz";
+            quiz.Alter<TitlePart>(part => part.Title = quiz.DisplayText);
+            await contentManager.CreateAsync(quiz, VersionOptions.Draft);
+
+            var lesson = await contentManager.NewAsync(LearningConstants.ContentTypes.PageLesson);
+            lesson.DisplayText = "Draft lesson";
+            lesson.Alter<TitlePart>(part => part.Title = lesson.DisplayText);
+            lesson.Alter<HtmlBodyPart>(part => part.Html = "<p>Not published yet.</p>");
+            await contentManager.CreateAsync(lesson, VersionOptions.Draft);
+
+            return new[] { quiz.ContentItemId, lesson.ContentItemId };
+        });
+
+        var chunks = setup.Chunks.Concat(drafts.Select(id => Chunk(id, "Draft. " + AnswerKey))).ToList();
+
+        // Act: a profile that is not a tutor, as NLWeb's anonymous endpoint uses, and the admin.
+        var kept = await _site.InTenantAsync(services => FilterAsync(services, "admin", new AIProfile { ItemId = "plain" }, chunks));
+
+        // Assert
+        Assert.DoesNotContain(kept, chunk => drafts.Contains(chunk.ReferenceId));
+        Assert.Contains(kept, chunk => chunk.ReferenceId == "not-a-content-item");
+    }
+
+    [Fact]
     public async Task Round9H6_SeveralPhrasesSearchedAtOnce_AreFilteredOneAtATime_OnTheSitesStore()
     {
         // Arrange: the knowledge base search wrapped as AI Data Sources wraps it, with every filter of the site and a
