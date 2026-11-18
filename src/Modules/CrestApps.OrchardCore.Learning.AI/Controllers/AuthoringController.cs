@@ -73,6 +73,7 @@ public sealed class AuthoringController : Controller
     /// Shows the author prompts.
     /// </summary>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/ai/authoring", "LearningAIAuthoring")]
     public async Task<IActionResult> Index()
     {
