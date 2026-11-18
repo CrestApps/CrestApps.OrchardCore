@@ -903,3 +903,12 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 - Orchard gives every display driver of a model the model's name as its prefix, so the path card's "Enabled" posted over the certification's: the two added cards build their own prefix.
 - The verification page's status badge was invisible on a front-end theme with Bootstrap 5.1 (no `text-bg-*`): the front-end views use classes that exist there.
 - An issued certificate's row still linked to the hand-record editor: the link and the editor now refuse it, as the save already did.
+
+**Browser pass 2026-11-18.** Fixed test first on this branch; the red and green counts are in each commit.
+
+| Bug | Fix | Commit |
+| --- | --- | --- |
+| `CertificationUpkeepBackgroundTask` fails on SQLite (Double to Int64 on `Percent`) | `ListPassedUserIdsSinceAsync` selects only the row id and user id; a typed read of whole index rows breaks when SQLite returns 100 as an integer and 90.91 as a real. Found, not changed: the Reports building block's `ReportIndexPages` maps whole index rows, so the attempts, attempt answers and submissions data sets have the same trap. | `ee8a61366` |
+| The certificate background image never prints | The media field is read from the item's content as a `JsonObject`; the dynamic indexer never gave a `JsonArray`. | `ef80e9e4f` |
+| Workflow hints show `{ x }` instead of `{{ x }}` | Liquid examples are arguments of the localized hint; a view lint guards every Learning view. | `ab8d4ae85` |
+| GET/POST route guard | `CertificationPathsController.People` says `HttpGet`. | `9c2bd7bd3` |
