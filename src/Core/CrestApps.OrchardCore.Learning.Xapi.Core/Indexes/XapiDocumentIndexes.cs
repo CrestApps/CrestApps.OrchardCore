@@ -22,6 +22,12 @@ public sealed class XapiDocumentIndex : CatalogItemIndex
     /// <summary>Gets or sets the registration.</summary>
     public string Registration { get; set; }
 
+    /// <summary>
+    /// Gets or sets the account name of the agent, whatever its home page, so that a person's documents are found after
+    /// the site's address changed.
+    /// </summary>
+    public string AccountName { get; set; }
+
     /// <summary>Gets or sets the hash of the state id or profile id.</summary>
     public string DocumentHash { get; set; }
 
@@ -61,6 +67,7 @@ public sealed class XapiDocumentIndexProvider : IndexProvider<XapiDocument>
                 ActivityHash = XapiAgents.Hash(document.ActivityId),
                 AgentHash = XapiAgents.Hash(document.AgentKey),
                 Registration = document.Registration,
+                AccountName = XapiAgents.AccountName(document.Agent) is { Length: <= 255 } accountName ? accountName : null,
                 DocumentHash = XapiAgents.Hash(document.DocumentId),
                 UpdatedUtc = document.UpdatedUtc,
             });
@@ -111,6 +118,7 @@ public static class XapiDocumentIndexSchema
             .Column<string>("ActivityHash", column => column.Nullable().WithLength(64))
             .Column<string>("AgentHash", column => column.Nullable().WithLength(64))
             .Column<string>("Registration", column => column.Nullable().WithLength(36))
+            .Column<string>("AccountName", column => column.Nullable().WithLength(255))
             .Column<string>("DocumentHash", column => column.WithLength(64))
             .Column<DateTime>("UpdatedUtc"),
             collection: collection);
@@ -120,6 +128,7 @@ public static class XapiDocumentIndexSchema
             table.CreateIndex("IDX_LearningXapi_Document_ItemId", "ItemId");
             table.CreateIndex("IDX_LearningXapi_Document_Key", "Kind", "ActivityHash", "AgentHash", "DocumentHash");
             table.CreateIndex("IDX_LearningXapi_Document_Agent", "AgentHash");
+            table.CreateIndex("IDX_LearningXapi_Document_Account", "AccountName");
         }, collection: collection);
 
         await schemaBuilder.CreateMapIndexTableAsync<XapiActivityIndex>(table => table
@@ -129,5 +138,21 @@ public static class XapiDocumentIndexSchema
 
         await schemaBuilder.AlterIndexTableAsync<XapiActivityIndex>(table => table
             .CreateIndex("IDX_LearningXapi_Activity_Hash", "ActivityHash"), collection: collection);
+    }
+
+    /// <summary>
+    /// Adds the account name column of the document index to a table made before it existed.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddAccountNameAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.AlterIndexTableAsync<XapiDocumentIndex>(table =>
+        {
+            table.AddColumn<string>("AccountName", column => column.Nullable().WithLength(255));
+            table.CreateIndex("IDX_LearningXapi_Document_Account", "AccountName");
+        }, collection: XapiConstants.CollectionName);
     }
 }

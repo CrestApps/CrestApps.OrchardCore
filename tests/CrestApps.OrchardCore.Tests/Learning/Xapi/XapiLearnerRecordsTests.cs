@@ -36,6 +36,43 @@ public sealed class XapiLearnerRecordsTests
     private static readonly ClaimsPrincipal _reporter = CalendarTestHarness.User("reporter", LearningPermissions.ViewLearningReports.Name);
 
     [Fact]
+    public async Task Round9M2_ErasureRemovesThePersonsDocuments_WhateverTheHomePageOfTheirAccount()
+    {
+        // Arrange: documents written while the site had another address (or none, so a request host named it).
+        await using var lrs = await XapiTestHarness.CreateAsync();
+        var oldAgent = XapiAgents.Account("https://old-address.example.com", "ana-id").ToJsonString();
+        var otherAgent = XapiAgents.Account("https://old-address.example.com", "bob-id").ToJsonString();
+        var state = new Dictionary<string, string> { ["activityId"] = XapiSamples.Activity, ["agent"] = oldAgent, ["stateId"] = "bookmark" };
+
+        await lrs.DocumentAsync("PUT", "activities/state", state, new JsonObject { ["page"] = 4 });
+        await lrs.DocumentAsync("PUT", "agents/profile", new Dictionary<string, string> { ["agent"] = oldAgent, ["profileId"] = "prefs" }, new JsonObject { ["name"] = "Ana" });
+        await lrs.DocumentAsync("PUT", "agents/profile", new Dictionary<string, string> { ["agent"] = otherAgent, ["profileId"] = "prefs" }, new JsonObject { ["name"] = "Bob" });
+
+        // Act
+        var export = new PersonalDataExport();
+        var result = new PersonalDataAnonymizeResult();
+
+        await lrs.RunAsync(async services =>
+        {
+            await ActivatorUtilities.CreateInstance<XapiPersonalDataContributor>(services).ExportAsync(new PersonalDataExportContext(new PersonalDataSubject(userId: "ana-id", email: "ana@example.com"), export));
+
+            return true;
+        });
+        await lrs.RunAsync(async services =>
+        {
+            await ActivatorUtilities.CreateInstance<XapiPersonalDataContributor>(services).AnonymizeAsync(new PersonalDataAnonymizeContext(new PersonalDataSubject(userId: "ana-id", email: "ana@example.com"), null, result));
+
+            return true;
+        });
+
+        // Assert
+        Assert.Equal(2, export.Records.Count(record => record.Kind == XapiPersonalDataContributor.DocumentKind));
+        Assert.Equal(2, result.Records.TryGetValue(XapiPersonalDataContributor.DocumentKind, out var erased) ? erased : 0);
+        Assert.Equal(404, (await lrs.DocumentAsync("GET", "activities/state", state)).Status);
+        Assert.Equal(200, (await lrs.DocumentAsync("GET", "agents/profile", new Dictionary<string, string> { ["agent"] = otherAgent, ["profileId"] = "prefs" })).Status);
+    }
+
+    [Fact]
     public async Task DataSet_HasOneRowPerStatement_WithoutAnyEmailAddress()
     {
         await using var lrs = await XapiTestHarness.CreateAsync(AddDataSource);

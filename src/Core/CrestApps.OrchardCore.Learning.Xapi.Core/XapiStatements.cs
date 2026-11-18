@@ -58,6 +58,28 @@ public static class XapiAgents
         => "account:" + homePage + "|" + name;
 
     /// <summary>
+    /// Gets the account name of an agent given as JSON text, such as the <c>agent</c> parameter of a document.
+    /// </summary>
+    /// <param name="agentJson">The agent, as JSON text.</param>
+    /// <returns>The account name, or <see langword="null"/> when the agent has no account.</returns>
+    public static string AccountName(string agentJson)
+    {
+        if (string.IsNullOrEmpty(agentJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonNode.Parse(agentJson) is JsonObject agent && agent["account"] is JsonObject account ? Text(account["name"]) : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Gets the SHA-256 hash of a key or an IRI, in lower case hex, as the indexes keep it.
     /// </summary>
     /// <param name="value">The value.</param>

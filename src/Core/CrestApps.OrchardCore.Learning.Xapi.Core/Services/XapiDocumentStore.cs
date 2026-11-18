@@ -116,18 +116,29 @@ public sealed class XapiDocumentStore : DocumentCatalog<XapiDocument, XapiDocume
     }
 
     /// <summary>
-    /// Lists the documents of agents, for personal data.
+    /// Lists the documents of agents, for personal data: by agent key, and by account name on any home page.
     /// </summary>
     /// <param name="agentKeys">The agent keys.</param>
+    /// <param name="accountNames">The account names, matched whatever the home page of the account.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The documents.</returns>
-    public async Task<IReadOnlyList<XapiDocument>> ListByAgentsAsync(IEnumerable<string> agentKeys, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<XapiDocument>> ListByAgentsAsync(IEnumerable<string> agentKeys, IEnumerable<string> accountNames = null, CancellationToken cancellationToken = default)
     {
         var hashes = agentKeys.Where(key => !string.IsNullOrEmpty(key)).Select(XapiAgents.Hash).Distinct(StringComparer.Ordinal).ToArray();
+        var names = (accountNames ?? []).Where(name => !string.IsNullOrEmpty(name)).Distinct(StringComparer.Ordinal).ToArray();
 
-        return hashes.Length == 0
-            ? []
-            : (await Session.Query<XapiDocument, XapiDocumentIndex>(index => index.AgentHash.IsIn(hashes), collection: CollectionName).ListAsync(cancellationToken)).ToArray();
+        if (hashes.Length == 0 && names.Length == 0)
+        {
+            return [];
+        }
+
+        var query = names.Length == 0
+            ? Session.Query<XapiDocument, XapiDocumentIndex>(index => index.AgentHash.IsIn(hashes), collection: CollectionName)
+            : hashes.Length == 0
+                ? Session.Query<XapiDocument, XapiDocumentIndex>(index => index.AccountName.IsIn(names), collection: CollectionName)
+                : Session.Query<XapiDocument, XapiDocumentIndex>(index => index.AgentHash.IsIn(hashes) || index.AccountName.IsIn(names), collection: CollectionName);
+
+        return (await query.ListAsync(cancellationToken)).ToArray();
     }
 
     private IQuery<XapiDocument, XapiDocumentIndex> Query(XapiDocumentScope scope)

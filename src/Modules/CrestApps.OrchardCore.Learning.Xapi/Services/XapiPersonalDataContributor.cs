@@ -10,7 +10,8 @@ namespace CrestApps.OrchardCore.Learning.Xapi.Services;
 /// <summary>
 /// Exports and erases a person's records in the Learning Record Store: the statements whose actor is the person's
 /// account (the account a launched course gave the user, on any home page) or mailbox (mbox or mbox_sha1sum of an
-/// e-mail address of the person), and the state and agent profile documents of those agents. Erasure deletes them with
+/// e-mail address of the person), and the state and agent profile documents of those agents (an account on any home
+/// page, as for statements, so a changed or missing site address leaves nothing behind). Erasure deletes them with
 /// their attachments: a statement cannot be changed, and Learning keeps the completion on its own records.
 /// </summary>
 internal sealed class XapiPersonalDataContributor : IPersonalDataContributor
@@ -47,7 +48,7 @@ internal sealed class XapiPersonalDataContributor : IPersonalDataContributor
             item.Fields["Statement"] = record.Statement;
         }
 
-        foreach (var document in await _documents.ListByAgentsAsync(await AgentKeysAsync(context.Subject), cancellationToken))
+        foreach (var document in await _documents.ListByAgentsAsync(await AgentKeysAsync(context.Subject), context.Subject.UserIds, cancellationToken))
         {
             var item = context.Add(DocumentKind, document.ItemId, document.DocumentId, document.UpdatedUtc);
 
@@ -70,7 +71,7 @@ internal sealed class XapiPersonalDataContributor : IPersonalDataContributor
             context.Result.Count(StatementKind);
         }
 
-        foreach (var document in await _documents.ListByAgentsAsync(await AgentKeysAsync(context.Subject), cancellationToken))
+        foreach (var document in await _documents.ListByAgentsAsync(await AgentKeysAsync(context.Subject), context.Subject.UserIds, cancellationToken))
         {
             await _documents.DeleteAsync(document, cancellationToken);
             context.Result.Count(DocumentKind);
