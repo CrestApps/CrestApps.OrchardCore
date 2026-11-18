@@ -53,6 +53,22 @@ public static class CourseworkConstants
     /// </summary>
     public const int MaxReasonLength = 500;
 
+    /// <summary>
+    /// The notification types of coursework notices to learners.
+    /// </summary>
+    public static class NotificationTypes
+    {
+        /// <summary>
+        /// A submission was graded, or graded again.
+        /// </summary>
+        public const string Graded = "LearningCourseworkGraded";
+
+        /// <summary>
+        /// A submission was returned for the learner to submit again.
+        /// </summary>
+        public const string Returned = "LearningCourseworkReturned";
+    }
+
     public static class ContentTypes
     {
         /// <summary>

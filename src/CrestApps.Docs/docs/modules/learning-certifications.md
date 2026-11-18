@@ -81,7 +81,7 @@ Education credits are kept in the module too. An **education credit type** (`Edu
 
 | | |
 | --- | --- |
-| Notifications | Certificate issued (and renewed), Certificate expiring (from the Skills reminder days), Certificate renewal open, Certificate lapsed. |
+| Notifications | Certificate issued (and renewed), Certificate expiring (from the Skills reminder days), Certificate renewal open, Certificate lapsed, Certificate revoked. |
 | Workflows | Certification Renewal Opened and Certification Lapsed events; Start Certification Path task. Skills adds Certificate Issued, Renewed, Revoked, Expiring and Expired. |
 | Reports | **Certification compliance**: who is valid, renewal open, expiring within 30 days, lapsed and in progress, per certification. |
 | Data source | `LearningCertifications` with the `LearningCertificationProgress` data set. |

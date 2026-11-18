@@ -132,6 +132,7 @@ public sealed class NotificationsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddNotificationType(CredentialsConstants.NotificationType, LocalizationSource.Create<NotificationsStartup>("Credential awarded"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When you earn a digital credential."));
+        services.AddNotificationType(CredentialsConstants.RevokedNotificationType, LocalizationSource.Create<NotificationsStartup>("Credential revoked"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When a digital credential you earned is revoked."));
         services.AddCredentialAwardObserver<CredentialNotificationObserver>();
     }
 }

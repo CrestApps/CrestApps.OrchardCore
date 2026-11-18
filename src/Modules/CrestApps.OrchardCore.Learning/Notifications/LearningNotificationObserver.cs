@@ -1,36 +1,31 @@
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
-using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Notifications;
-using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Learning.Notifications;
 
 /// <summary>
-/// Tells learners, through Orchard Core notifications, that they are enrolled, that a course is due soon and that it is
-/// overdue. Each notice is a registered notification type, so a learner or the site can switch it off; it is sent after
+/// Tells learners, through Orchard Core notifications, that they are enrolled (also when a request is approved), that a
+/// request was declined, that a course is due soon and that it is overdue, and tells instructors a completion needs
+/// review. Each notice is a registered notification type, so a learner or the site can switch it off; it is sent after
 /// the change is committed.
 /// </summary>
 internal sealed class LearningNotificationObserver : IEnrollmentObserver
 {
     private readonly ICourseStructureService _courseStructure;
-    private readonly ShellSettings _shellSettings;
+    private readonly ILearningNotificationSender _sender;
 
     internal readonly IStringLocalizer S;
 
     public LearningNotificationObserver(
         ICourseStructureService courseStructure,
-        ShellSettings shellSettings,
+        ILearningNotificationSender sender,
         IStringLocalizer<LearningNotificationObserver> stringLocalizer)
     {
         _courseStructure = courseStructure;
-        _shellSettings = shellSettings;
+        _sender = sender;
         S = stringLocalizer;
     }
 
@@ -39,6 +34,19 @@ internal sealed class LearningNotificationObserver : IEnrollmentObserver
         var title = await TitleAsync(enrollment);
 
         Send(enrollment, LearningConstants.NotificationTypes.Enrolled, S["You are enrolled in {0}", title], S["You can start the course {0} now.", title]);
+    }
+
+    public async Task StatusChangedAsync(Enrollment enrollment, EnrollmentStatus previous, CancellationToken cancellationToken = default)
+    {
+        // Only a declined request is told here; an approved one is told as an enrollment.
+        if (previous != EnrollmentStatus.Pending || enrollment.Status != EnrollmentStatus.Withdrawn)
+        {
+            return;
+        }
+
+        var title = await TitleAsync(enrollment);
+
+        Send(enrollment, LearningConstants.NotificationTypes.EnrollmentDeclined, S["Your request to enroll in {0} was declined", title], S["Your request to enroll in the course {0} was declined. Open My learning to see your courses.", title], enrollment.UserId, "~/learning");
     }
 
     public async Task DueSoonAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
@@ -67,7 +75,7 @@ internal sealed class LearningNotificationObserver : IEnrollmentObserver
 
         foreach (var instructor in instructors)
         {
-            Send(enrollment, LearningConstants.NotificationTypes.ReviewNeeded, S["A completion in {0} needs review", title], S["A result a completed enrollment in {0} rests on changed after completion. Open the enrollment to decide what follows.", title], instructor, $"/Admin/learning/enrollments/{enrollment.ItemId}");
+            Send(enrollment, LearningConstants.NotificationTypes.ReviewNeeded, S["A completion in {0} needs review", title], S["A result a completed enrollment in {0} rests on changed after completion. Open the enrollment to decide what follows.", title], instructor, $"~/Admin/learning/enrollments/{enrollment.ItemId}");
         }
     }
 
@@ -75,30 +83,16 @@ internal sealed class LearningNotificationObserver : IEnrollmentObserver
         => (await _courseStructure.GetCourseAsync(enrollment.CourseId))?.DisplayText ?? enrollment.Completion?.CourseTitle ?? S["your course"].Value;
 
     private void Send(Enrollment enrollment, string type, string subject, string body)
-        => Send(enrollment, type, subject, body, enrollment.UserId, $"/learning/courses/{enrollment.CourseId}/play");
+        => Send(enrollment, type, subject, body, enrollment.UserId, $"~/learning/courses/{enrollment.CourseId}/play");
 
-    private void Send(Enrollment enrollment, string type, string subject, string body, string userId, string path)
-    {
-        var prefix = string.IsNullOrEmpty(_shellSettings.RequestUrlPrefix) ? string.Empty : "/" + _shellSettings.RequestUrlPrefix;
-        var message = new LearningNotificationMessage
+    private void Send(Enrollment enrollment, string type, string subject, string body, string userId, string url)
+        => _sender.Send(userId, new LearningNotificationMessage
         {
             Subject = subject,
             Summary = body,
             TextBody = body,
             Type = type,
             ReferenceId = enrollment.ItemId,
-            Url = prefix + path,
-        };
-
-        ShellScope.AddDeferredTask(async scope =>
-        {
-            var services = scope.ServiceProvider;
-            var user = await services.GetRequiredService<UserManager<IUser>>().FindByIdAsync(userId);
-
-            if (user is not null)
-            {
-                await services.GetRequiredService<INotificationService>().SendAsync(user, message);
-            }
+            Url = url,
         });
-    }
 }

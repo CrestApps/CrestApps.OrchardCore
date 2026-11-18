@@ -1,3 +1,4 @@
+using System.Net;
 using OrchardCore.Notifications;
 
 namespace CrestApps.OrchardCore.Learning.Core.Services;
@@ -10,8 +11,18 @@ public sealed class LearningNotificationMessage : INotificationMessage
     /// <inheritdoc />
     public string Subject { get; init; }
 
-    /// <inheritdoc />
-    public string Summary { get; init; }
+    private readonly string _summary;
+
+    /// <summary>
+    /// Gets the short text shown in the notification list. It is given as plain text and kept HTML-encoded, because
+    /// Notifications shows a summary as (sanitized) HTML, so a course title such as <c>Fire &amp; &lt;b&gt;Safety&lt;/b&gt;</c>
+    /// shows as written.
+    /// </summary>
+    public string Summary
+    {
+        get => _summary;
+        init => _summary = value is null ? null : WebUtility.HtmlEncode(value);
+    }
 
     /// <inheritdoc />
     public string TextBody { get; init; }

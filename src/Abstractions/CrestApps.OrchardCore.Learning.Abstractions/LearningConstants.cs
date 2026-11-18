@@ -223,6 +223,12 @@ public static class LearningConstants
         public const string Enrolled = "LearningEnrolled";
 
         /// <summary>
+        /// A request to enroll in a course that needs approval was declined. An approved request is told with
+        /// <see cref="Enrolled"/>.
+        /// </summary>
+        public const string EnrollmentDeclined = "LearningEnrollmentDeclined";
+
+        /// <summary>
         /// A course is due soon.
         /// </summary>
         public const string DueSoon = "LearningDueSoon";

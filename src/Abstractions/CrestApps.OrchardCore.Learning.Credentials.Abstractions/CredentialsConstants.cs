@@ -31,6 +31,11 @@ public static class CredentialsConstants
     public const string NotificationType = "LearningCredentialAwarded";
 
     /// <summary>
+    /// The notification type of a credential of the person that was revoked.
+    /// </summary>
+    public const string RevokedNotificationType = "LearningCredentialRevoked";
+
+    /// <summary>
     /// The number of entries in one status list: the Bitstring Status List minimum of 16 KB (131,072 bits), so a list
     /// says little about how many credentials the site issued.
     /// </summary>

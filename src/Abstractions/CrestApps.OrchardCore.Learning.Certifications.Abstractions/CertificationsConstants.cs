@@ -69,6 +69,11 @@ public static class CertificationsConstants
         /// A certificate lapsed.
         /// </summary>
         public const string Lapsed = "LearningCertificationLapsed";
+
+        /// <summary>
+        /// A certificate was revoked.
+        /// </summary>
+        public const string Revoked = "LearningCertificateRevoked";
     }
 
     /// <summary>

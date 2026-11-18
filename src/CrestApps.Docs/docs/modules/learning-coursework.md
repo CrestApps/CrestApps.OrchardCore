@@ -107,8 +107,12 @@ Coursework adds no permission of its own. Grading uses the rule of the quiz grad
 | Hand in work | `/learning/coursework/{courseworkId}/submit` (POST) | The enrolled learner |
 | A submitted file | `/learning/coursework/submissions/{id}/files/{fileId}` | The learner and their graders |
 
+## Notifications
+
+With the Orchard Core **Notifications** feature on, the learner gets **Coursework graded** (`CourseworkConstants.NotificationTypes.Graded`) when a submission is graded or graded again, and **Coursework returned** (`CourseworkConstants.NotificationTypes.Returned`) when it is returned for another submission. Each links to the coursework in the player.
+
 ## Not in this version
 
 - Holding grades until an instructor posts them.
-- Notifications, Audit Trail events and webhooks for coursework.
+- Audit Trail events and webhooks for coursework.
 - Group work and peer review.

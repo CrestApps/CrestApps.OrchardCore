@@ -32,6 +32,22 @@ public static class ClassesConstants
     public const string SessionCancelledNotificationType = "LearningClassSessionCancelled";
 
     /// <summary>
+    /// The notification types of class notices to learners, besides <see cref="SessionCancelledNotificationType"/>.
+    /// </summary>
+    public static class NotificationTypes
+    {
+        /// <summary>
+        /// Staff, or a workflow, gave the learner a place in a class session.
+        /// </summary>
+        public const string Registered = "LearningClassRegistered";
+
+        /// <summary>
+        /// A place freed up in a full session the learner waits for: it is held for them, or free to take.
+        /// </summary>
+        public const string PlaceOffered = "LearningClassPlaceOffered";
+    }
+
+    /// <summary>
     /// The content types Learning classes adds.
     /// </summary>
     public static class ContentTypes

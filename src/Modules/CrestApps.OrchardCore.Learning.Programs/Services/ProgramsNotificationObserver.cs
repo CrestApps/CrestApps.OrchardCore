@@ -4,9 +4,6 @@ using CrestApps.OrchardCore.Learning.Programs.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Notifications;
 using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Learning.Programs.Services;
@@ -17,15 +14,15 @@ namespace CrestApps.OrchardCore.Learning.Programs.Services;
 /// </summary>
 internal sealed class ProgramsNotificationObserver : IRequiredLearningObserver, ILearningPathObserver
 {
-    private readonly ShellSettings _shellSettings;
     private readonly IServiceProvider _services;
+    private readonly ILearningNotificationSender _sender;
 
     internal readonly IStringLocalizer S;
 
-    public ProgramsNotificationObserver(ShellSettings shellSettings, IServiceProvider services, IStringLocalizer<ProgramsNotificationObserver> stringLocalizer)
+    public ProgramsNotificationObserver(IServiceProvider services, ILearningNotificationSender sender, IStringLocalizer<ProgramsNotificationObserver> stringLocalizer)
     {
-        _shellSettings = shellSettings;
         _services = services;
+        _sender = sender;
         S = stringLocalizer;
     }
 
@@ -66,7 +63,7 @@ internal sealed class ProgramsNotificationObserver : IRequiredLearningObserver, 
             Notify(managerId, assignment.ItemId, ProgramsConstants.NotificationTypes.Overdue,
                 S["Required learning of {0} is overdue", person?.UserName ?? assignment.UserId],
                 S["{0}, which is required of {1}, is overdue. Open Team learning to see where your team stands.", name, person?.UserName ?? assignment.UserId],
-                url: "/Admin/learning/team");
+                url: "~/Admin/learning/team");
         }
     }
 
@@ -86,28 +83,14 @@ internal sealed class ProgramsNotificationObserver : IRequiredLearningObserver, 
         return (target is null ? null : await target.GetDisplayTextAsync(requirement.TargetId, cancellationToken)) ?? requirement?.Name ?? string.Empty;
     }
 
-    private void Notify(string userId, string referenceId, string type, string subject, string body, string url = "/learning/required")
-    {
-        var prefix = string.IsNullOrEmpty(_shellSettings.RequestUrlPrefix) ? string.Empty : "/" + _shellSettings.RequestUrlPrefix;
-        var message = new LearningNotificationMessage
+    private void Notify(string userId, string referenceId, string type, string subject, string body, string url = "~/learning/required")
+        => _sender.Send(userId, new LearningNotificationMessage
         {
             Subject = subject,
             Summary = body,
             TextBody = body,
             Type = type,
             ReferenceId = referenceId,
-            Url = prefix + url,
-        };
-
-        ShellScope.AddDeferredTask(async scope =>
-        {
-            var services = scope.ServiceProvider;
-            var user = await services.GetRequiredService<UserManager<IUser>>().FindByIdAsync(userId);
-
-            if (user is not null)
-            {
-                await services.GetRequiredService<INotificationService>().SendAsync(user, message);
-            }
+            Url = url,
         });
-    }
 }

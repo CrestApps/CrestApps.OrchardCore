@@ -20,6 +20,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DataSources;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Recipes;
 using OrchardCore.Workflows.Helpers;
@@ -49,6 +50,21 @@ public sealed class Startup : StartupBase
         services.AddScoped<CourseworkLearnerResolver>();
         services.AddDisplayDriver<SubmissionRow, SubmissionRowDisplayDriver>();
         services.AddPersonalDataContributor<CourseworkPersonalDataContributor>();
+    }
+}
+
+/// <summary>
+/// Tells learners when their coursework is graded or returned, through the Notifications module.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
+public sealed class NotificationsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNotificationType(CourseworkConstants.NotificationTypes.Graded, LocalizationSource.Create<NotificationsStartup>("Coursework graded"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When coursework you submitted is graded, or graded again."));
+        services.AddNotificationType(CourseworkConstants.NotificationTypes.Returned, LocalizationSource.Create<NotificationsStartup>("Coursework returned"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When coursework you submitted is returned for you to submit again."));
+        services.AddSubmissionObserver<CourseworkNotificationObserver>();
     }
 }
 

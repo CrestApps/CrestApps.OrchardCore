@@ -1,13 +1,7 @@
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Core.Services;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Notifications;
-using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Notifications;
 
@@ -17,13 +11,13 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Notifications;
 /// </summary>
 internal sealed class AssessmentsNotificationObserver : IAttemptObserver
 {
-    private readonly ShellSettings _shellSettings;
+    private readonly ILearningNotificationSender _sender;
 
     internal readonly IStringLocalizer S;
 
-    public AssessmentsNotificationObserver(ShellSettings shellSettings, IStringLocalizer<AssessmentsNotificationObserver> stringLocalizer)
+    public AssessmentsNotificationObserver(ILearningNotificationSender sender, IStringLocalizer<AssessmentsNotificationObserver> stringLocalizer)
     {
-        _shellSettings = shellSettings;
+        _sender = sender;
         S = stringLocalizer;
     }
 
@@ -34,28 +28,16 @@ internal sealed class AssessmentsNotificationObserver : IAttemptObserver
             return Task.CompletedTask;
         }
 
-        var prefix = string.IsNullOrEmpty(_shellSettings.RequestUrlPrefix) ? string.Empty : "/" + _shellSettings.RequestUrlPrefix;
         var title = string.IsNullOrWhiteSpace(attempt.QuizTitle) ? S["your quiz"].Value : attempt.QuizTitle;
-        var message = new LearningNotificationMessage
+
+        _sender.Send(attempt.UserId, new LearningNotificationMessage
         {
             Subject = S["{0} is graded", title],
             Summary = S["Your attempt at {0} is graded. Open it to see your result.", title],
             TextBody = S["Your attempt at {0} is graded. Open it to see your result.", title],
             Type = AssessmentsConstants.NotificationTypes.Graded,
             ReferenceId = attempt.ItemId,
-            Url = $"{prefix}/learning/attempts/{attempt.ItemId}",
-        };
-        var userId = attempt.UserId;
-
-        ShellScope.AddDeferredTask(async scope =>
-        {
-            var services = scope.ServiceProvider;
-            var user = await services.GetRequiredService<UserManager<IUser>>().FindByIdAsync(userId);
-
-            if (user is not null)
-            {
-                await services.GetRequiredService<INotificationService>().SendAsync(user, message);
-            }
+            Url = $"~/learning/attempts/{attempt.ItemId}",
         });
 
         return Task.CompletedTask;

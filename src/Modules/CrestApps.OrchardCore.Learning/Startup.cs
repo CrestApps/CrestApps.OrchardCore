@@ -262,7 +262,8 @@ public sealed class DataSourcesStartup : StartupBase
 }
 
 /// <summary>
-/// Tells learners they are enrolled, and that a course is due soon or overdue, through Orchard Core notifications.
+/// Tells learners they are enrolled, that a request was declined, and that a course is due soon or overdue, and tells
+/// instructors a completion needs review, through Orchard Core notifications.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Notifications)]
 public sealed class NotificationsStartup : StartupBase
@@ -271,6 +272,7 @@ public sealed class NotificationsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddNotificationType(LearningConstants.NotificationTypes.Enrolled, LocalizationSource.Create<NotificationsStartup>("Enrolled in a course"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When you are enrolled in a course."));
+        services.AddNotificationType(LearningConstants.NotificationTypes.EnrollmentDeclined, LocalizationSource.Create<NotificationsStartup>("Enrollment request declined"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When your request to enroll in a course that needs approval is declined."));
         services.AddNotificationType(LearningConstants.NotificationTypes.DueSoon, LocalizationSource.Create<NotificationsStartup>("Course due soon"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("A few days before a course you are taking is due."));
         services.AddNotificationType(LearningConstants.NotificationTypes.ReviewNeeded, LocalizationSource.Create<NotificationsStartup>("Completion needs review"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When a result a completed enrollment in a course you teach rests on changes after completion."));
         services.AddNotificationType(LearningConstants.NotificationTypes.Overdue, LocalizationSource.Create<NotificationsStartup>("Course overdue"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When a course you are taking passes its due date."));

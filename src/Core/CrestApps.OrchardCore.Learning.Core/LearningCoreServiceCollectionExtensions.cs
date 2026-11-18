@@ -25,6 +25,7 @@ public static class LearningCoreServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddScoped<CourseLookup>();
+        services.TryAddScoped<ILearningNotificationSender, LearningNotificationSender>();
 
         services.TryAddScoped<EnrollmentStore>();
         services.TryAddScoped<IEnrollmentStore>(sp => sp.GetRequiredService<EnrollmentStore>());

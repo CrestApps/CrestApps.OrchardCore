@@ -54,7 +54,7 @@ Learners open **My credentials** from the account menu or the user menu. For eac
 - Copy the **Share link**, the credential's verification page.
 - **Show my name** or **Hide my name** on the verification page. The name is hidden until the learner shows it.
 
-The site sends a **Credential awarded** notification when a learner earns one.
+The site sends a **Credential awarded** notification when a learner earns one, and a **Credential revoked** notification when one is revoked.
 
 ## The verification page
 

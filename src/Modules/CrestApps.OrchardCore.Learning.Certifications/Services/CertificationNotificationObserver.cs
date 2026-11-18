@@ -4,31 +4,26 @@ using CrestApps.OrchardCore.Learning.Certifications.Services;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Notifications;
-using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Learning.Certifications.Services;
 
 /// <summary>
-/// Tells the holder when a certificate a certification path earned is issued or renewed, when it expires soon, when
-/// renewal opens and when it lapsed.
+/// Tells the holder when a certificate a certification path earned is issued, renewed or revoked, when it expires soon,
+/// when renewal opens and when it lapsed.
 /// </summary>
 internal sealed class CertificationNotificationObserver : ICertificationRecordObserver, ICertificationExpiryObserver, ICertificationPathObserver
 {
-    private readonly ShellSettings _shellSettings;
     private readonly IServiceProvider _services;
+    private readonly ILearningNotificationSender _sender;
 
     internal readonly IStringLocalizer S;
 
-    public CertificationNotificationObserver(ShellSettings shellSettings, IServiceProvider services, IStringLocalizer<CertificationNotificationObserver> stringLocalizer)
+    public CertificationNotificationObserver(IServiceProvider services, ILearningNotificationSender sender, IStringLocalizer<CertificationNotificationObserver> stringLocalizer)
     {
-        _shellSettings = shellSettings;
         _services = services;
+        _sender = sender;
         S = stringLocalizer;
     }
 
@@ -41,6 +36,11 @@ internal sealed class CertificationNotificationObserver : ICertificationRecordOb
         => NotifyHolderAsync(context.Record, CertificationsConstants.NotificationTypes.Issued,
             S["Your {0} certificate is renewed", context.Certification?.Name ?? string.Empty],
             S["Your {0} certificate is renewed. Open My certifications to see the new certificate.", context.Certification?.Name ?? string.Empty]);
+
+    public Task RevokedAsync(CertificationRecordContext context, CancellationToken cancellationToken = default)
+        => NotifyHolderAsync(context.Record, CertificationsConstants.NotificationTypes.Revoked,
+            S["Your {0} certificate was revoked", context.Certification?.Name ?? string.Empty],
+            S["Your {0} certificate was revoked. Open My certifications to see your certificates.", context.Certification?.Name ?? string.Empty]);
 
     public Task ExpiringAsync(CertificationRecord record, Certification certification, int daysBefore, CancellationToken cancellationToken = default)
         => NotifyHolderAsync(record, CertificationsConstants.NotificationTypes.Expiring,
@@ -78,26 +78,14 @@ internal sealed class CertificationNotificationObserver : ICertificationRecordOb
 
     private Task NotifyAsync(string userId, string referenceId, string type, string subject, string body)
     {
-        var prefix = string.IsNullOrEmpty(_shellSettings.RequestUrlPrefix) ? string.Empty : "/" + _shellSettings.RequestUrlPrefix;
-        var message = new LearningNotificationMessage
+        _sender.Send(userId, new LearningNotificationMessage
         {
             Subject = subject,
             Summary = body,
             TextBody = body,
             Type = type,
             ReferenceId = referenceId,
-            Url = $"{prefix}/learning/certifications",
-        };
-
-        ShellScope.AddDeferredTask(async scope =>
-        {
-            var services = scope.ServiceProvider;
-            var user = await services.GetRequiredService<UserManager<IUser>>().FindByIdAsync(userId);
-
-            if (user is not null)
-            {
-                await services.GetRequiredService<INotificationService>().SendAsync(user, message);
-            }
+            Url = "~/learning/certifications",
         });
 
         return Task.CompletedTask;

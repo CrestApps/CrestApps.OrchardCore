@@ -67,7 +67,7 @@ public sealed class WorkforceStartup : StartupBase
 }
 
 /// <summary>
-/// The notification type that tells learners their class session was cancelled.
+/// The notification types of class notices: a cancelled session, a place someone else gave, a freed place.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Notifications)]
 public sealed class NotificationsStartup : StartupBase
@@ -76,5 +76,8 @@ public sealed class NotificationsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddNotificationType(ClassesConstants.SessionCancelledNotificationType, LocalizationSource.Create<NotificationsStartup>("Class session cancelled"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When staff cancel a class session you had a place in."));
+        services.AddNotificationType(ClassesConstants.NotificationTypes.Registered, LocalizationSource.Create<NotificationsStartup>("Class place given"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When someone else gives you a place in a class session."));
+        services.AddNotificationType(ClassesConstants.NotificationTypes.PlaceOffered, LocalizationSource.Create<NotificationsStartup>("Class place free"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When a place frees up in a full class session you wait for."));
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAppointmentObserver, ClassNotificationObserver>());
     }
 }
