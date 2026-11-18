@@ -843,13 +843,13 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/CatalogIndexBackfill.cs",
             "CatalogIndexBackfill",
             "ReindexPageAsync",
-            "2baac19176e438e7",
-            "Not SQL text at all: a YesSql LINQ query that reads one page of a catalog's documents, optionally narrowed by an index predicate, and saves each one again through a new session, so YesSql maps its index rows again. It only reads documents and rewrites index rows for them; it never creates, alters or drops a schema object."),
+            "1c51664dea261123",
+            "Not SQL text at all: a YesSql LINQ query that reads one page of a catalog's documents, after the last item ID of the page before and optionally narrowed by an index predicate, and saves each one again with its version check through a new session, so YesSql maps its index rows again. It only reads documents and rewrites index rows for them; it never creates, alters or drops a schema object."),
         new ReviewedDynamicSqlEntry(
             "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/CatalogIndexBackfill.cs",
             "CatalogIndexBackfill",
             "ReindexOneAsync",
-            "2baac19176e438e7",
+            "1c51664dea261123",
             "Not SQL text at all: a YesSql LINQ query that reads one catalog document by its item ID and saves it again through a new session, after its page failed, so YesSql maps its index rows again. It only reads a document and rewrites its index rows; it never creates, alters or drops a schema object."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",
