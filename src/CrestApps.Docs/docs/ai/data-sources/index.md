@@ -219,6 +219,10 @@ Synchronizing a **source** index profile from **Search > Indexing** also queues 
 
 For manual recovery or one-off reprocessing of a single mapping, use the **Sync index** action in the data source's **Actions** menu under **Artificial Intelligence > Data Sources**.
 
+### Restricted content stays out
+
+A knowledge base answers anyone allowed to query its profiles, without the source's own access checks, so `DataSourceIndexingService` copies only documents everyone may read. Before indexing a source document, in a full sync and in a targeted one, it asks every `IIndexedDocumentVisibility` (`CrestApps.OrchardCore.Indexing`, registered with `AddIndexedDocumentVisibility<T>()`) whether the record is for everyone; one that isn't is skipped and its chunks are deleted, so a record restricted after it was indexed leaves at its next sync. Content Access Control registers one for content items: an item restricted to roles that leave out `Anonymous` isn't for everyone. The check uses the reference id, so for a content index keep the key field as the content item id.
+
 ### Deletion cleanup
 
 When a data source is deleted (via the admin UI or programmatically), all of its document chunks are automatically removed from the master knowledge base index. The system uses `IDataSourceContentManager.DeleteByDataSourceIdAsync` of the knowledge base index provider, which leverages provider-native capabilities (Elasticsearch `DeleteByQuery`, Azure AI Search filter+batch delete) for efficient bulk removal. Cleanup is queued asynchronously so it does not block the admin UI.

@@ -56,4 +56,4 @@ The help center's page shows the zones `KnowledgeBaseTop`, `KnowledgeBaseSidebar
 
 ## AI answers
 
-Articles are content items, so an [AI data source](../ai/data-sources) that indexes the `KnowledgeArticle` type lets AI profiles answer from them. Index only articles for everyone (no role picked) for a public chat.
+Articles are content items, so an [AI data source](../ai/data-sources) over a content index of the `KnowledgeArticle` type lets AI profiles answer from them, with sources that link to the articles. Only articles for everyone (no role picked) reach the AI knowledge base: Content Access Control's `IIndexedDocumentVisibility` keeps restricted ones out. See [AI search](./knowledge-base/ai-search).

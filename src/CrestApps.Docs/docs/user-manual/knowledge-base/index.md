@@ -26,6 +26,7 @@ It stands on its own. A site can have a knowledge base without the [Service Desk
 | Administrators | Add and arrange the categories | [Categories](./categories.md) |
 | Administrators | Set up the help center's search, categories and related articles | [The help center](./help-center.md) |
 | Everyone who looks after the articles | See which articles help and what was missing | [Feedback](./feedback.md) |
+| Administrators | Let an AI assistant answer from the articles, on the website or in the admin | [AI search](./ai-search.md) |
 
 ## Get started
 
@@ -35,3 +36,5 @@ It stands on its own. A site can have a knowledge base without the [Service Desk
 4. Open `/help` on your site to see your help center as readers do.
 
 You can also turn on **Knowledge Base** alone under **Tools > Features**. The help center then shows its own search box and categories, and articles show without the widgets until you add them.
+
+To let readers ask an AI assistant instead of searching, see [Let AI answer from your Knowledge Base](./ai-search.md).

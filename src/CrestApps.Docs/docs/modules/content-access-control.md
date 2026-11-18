@@ -81,6 +81,14 @@ never be found. The [Knowledge Base](knowledge-base.md) filters the help center,
 way. A module that depends on the index declares the `CrestApps.OrchardCore.ContentAccessControl` feature
 (`ContentAccessControlConstants.Feature`) as a dependency.
 
+## AI knowledge bases
+
+An AI knowledge base built from a content index answers anyone allowed to query its profile, without this module's
+checks. So the module registers `ContentAccessIndexedDocumentVisibility` as an `IIndexedDocumentVisibility`: the AI data
+source sync leaves out every item restricted to roles that leave out `Anonymous`, and removes one restricted after it was
+indexed. Items with no role picked, and items of types without a restricting role picker, stay in. See
+[Restricted content stays out](../ai/data-sources/index.md#restricted-content-stays-out).
+
 ## Restrict a content type in code
 
 You can attach the part and set **Restrict content?** using the content definitions user interface or a migration.

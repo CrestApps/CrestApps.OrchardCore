@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.ContentAccessControl.Handlers;
 using CrestApps.OrchardCore.ContentAccessControl.Indexes;
 using CrestApps.OrchardCore.ContentAccessControl.Migrations;
 using CrestApps.OrchardCore.ContentAccessControl.Schemas;
+using CrestApps.OrchardCore.ContentAccessControl.Services;
+using CrestApps.OrchardCore.Indexing;
 using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +28,9 @@ public sealed class Startup : StartupBase
 
         services.AddScopedIndexProvider<ContentAccessRoleIndexProvider>();
         services.AddDataMigration<ContentAccessControlMigrations>();
+
+        // So an AI knowledge base, which answers anyone allowed to chat, leaves restricted items out.
+        services.AddIndexedDocumentVisibility<ContentAccessIndexedDocumentVisibility>();
     }
 }
 

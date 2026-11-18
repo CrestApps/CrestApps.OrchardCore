@@ -220,6 +220,7 @@ const sidebars = {
                 'user-manual/knowledge-base/categories',
                 'user-manual/knowledge-base/help-center',
                 'user-manual/knowledge-base/feedback',
+                'user-manual/knowledge-base/ai-search',
             ],
         },
         {
@@ -576,6 +577,7 @@ const sidebars = {
             items: [
                 'modules/knowledge-base/widgets-and-recipe',
                 'modules/knowledge-base/feedback',
+                'modules/knowledge-base/ai-search',
             ],
         },
         {
