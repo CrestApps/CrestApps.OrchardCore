@@ -56,10 +56,10 @@ internal sealed class ClassSessionCancelledObserver : IAppointmentObserver
             }
 
             var title = string.IsNullOrWhiteSpace(session.Title) ? S["your class"].Value : session.Title;
-            var reason = string.IsNullOrWhiteSpace(appointment.CancelReason) ? S["No reason was given."].Value : appointment.CancelReason;
+            var reason = string.IsNullOrWhiteSpace(appointment.CancelReason) ? S["No reason was given"].Value : appointment.CancelReason.Trim().TrimEnd('.');
             var urlPrefix = _services.GetService<ShellSettings>()?.RequestUrlPrefix;
             var prefix = string.IsNullOrEmpty(urlPrefix) ? string.Empty : "/" + urlPrefix;
-            var text = S["The session of {0} you had a place in was cancelled. Reason: {1} Open the course to choose another session.", title, reason].Value;
+            var text = S["The session of {0} you had a place in was cancelled. Reason: {1}. Open the course to choose another session.", title, reason].Value;
 
             await notifications.SendAsync(user, new LearningNotificationMessage
             {
