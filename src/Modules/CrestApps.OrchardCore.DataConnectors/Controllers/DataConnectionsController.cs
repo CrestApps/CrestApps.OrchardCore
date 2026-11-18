@@ -31,7 +31,7 @@ public sealed class DataConnectionsController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<DataConnection> _displayManager;
     private readonly IDataConnectionStore _connectionStore;
-    private readonly IConnectedDataSetStore _dataSetStore;
+    private readonly DataConnectorCommands _commands;
     private readonly IDataConnectorManager _connectorManager;
     private readonly ConnectedDataReader _reader;
     private readonly INotifier _notifier;
@@ -48,7 +48,7 @@ public sealed class DataConnectionsController : Controller
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="displayManager">The connections' display manager.</param>
     /// <param name="connectionStore">The connections.</param>
-    /// <param name="dataSetStore">The data sets.</param>
+    /// <param name="commands">The actions that change connections and data sets.</param>
     /// <param name="connectorManager">The registered connectors.</param>
     /// <param name="reader">The reader of external systems.</param>
     /// <param name="notifier">The notifier.</param>
@@ -61,7 +61,7 @@ public sealed class DataConnectionsController : Controller
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<DataConnection> displayManager,
         IDataConnectionStore connectionStore,
-        IConnectedDataSetStore dataSetStore,
+        DataConnectorCommands commands,
         IDataConnectorManager connectorManager,
         ConnectedDataReader reader,
         INotifier notifier,
@@ -74,7 +74,7 @@ public sealed class DataConnectionsController : Controller
         _updateModelAccessor = updateModelAccessor;
         _displayManager = displayManager;
         _connectionStore = connectionStore;
-        _dataSetStore = dataSetStore;
+        _commands = commands;
         _connectorManager = connectorManager;
         _reader = reader;
         _notifier = notifier;
@@ -346,7 +346,7 @@ public sealed class DataConnectionsController : Controller
             return NotFound();
         }
 
-        var dataSets = await _dataSetStore.ListByConnectionAsync(connection.ItemId, HttpContext.RequestAborted);
+        var dataSets = await _commands.DeleteConnectionAsync(connection, HttpContext.RequestAborted);
 
         if (dataSets.Count > 0)
         {
@@ -355,7 +355,6 @@ public sealed class DataConnectionsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        await _connectionStore.DeleteAsync(connection, HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["The connection was deleted."]);
 
         return RedirectToAction(nameof(Index));

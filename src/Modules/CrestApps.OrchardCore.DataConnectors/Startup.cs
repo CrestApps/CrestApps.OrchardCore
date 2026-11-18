@@ -52,6 +52,9 @@ public sealed class Startup : StartupBase
 
         services.AddDataConnectorsCore();
         services.AddScoped<DataSetConnectionResolver>();
+        services.AddScoped<DataConnectionEditor>();
+        services.AddScoped<ConnectedDataSetEditor>();
+        services.AddScoped<DataConnectorCommands>();
         services.Configure<DataConnectorsOptions>(_shellConfiguration.GetSection("CrestApps:DataConnectors"));
         services.Configure<DataConnectorNetworkOptions>(_shellConfiguration.GetSection("CrestApps:DataConnectors:Network"));
 

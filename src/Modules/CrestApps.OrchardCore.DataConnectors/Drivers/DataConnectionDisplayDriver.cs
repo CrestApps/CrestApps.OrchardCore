@@ -2,7 +2,6 @@ using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.DataConnectors.Models;
 using CrestApps.OrchardCore.DataConnectors.Services;
 using CrestApps.OrchardCore.DataConnectors.ViewModels;
-using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
@@ -17,19 +16,15 @@ namespace CrestApps.OrchardCore.DataConnectors.Drivers;
 /// </summary>
 internal sealed partial class DataConnectionDisplayDriver : DisplayDriver<DataConnection>
 {
-    private readonly IDataConnectionStore _connectionStore;
     private readonly IDataConnectorManager _connectorManager;
-
-    internal readonly IStringLocalizer S;
+    private readonly DataConnectionEditor _editor;
 
     public DataConnectionDisplayDriver(
-        IDataConnectionStore connectionStore,
         IDataConnectorManager connectorManager,
-        IStringLocalizer<DataConnectionDisplayDriver> stringLocalizer)
+        DataConnectionEditor editor)
     {
-        _connectionStore = connectionStore;
         _connectorManager = connectorManager;
-        S = stringLocalizer;
+        _editor = editor;
     }
 
     public override Task<IDisplayResult> DisplayAsync(DataConnection connection, BuildDisplayContext context)
@@ -83,28 +78,7 @@ internal sealed partial class DataConnectionDisplayDriver : DisplayDriver<DataCo
         var model = new DataConnectionFieldsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
-        if (string.IsNullOrWhiteSpace(model.DisplayText))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The name is required."]);
-        }
-
-        var name = string.IsNullOrWhiteSpace(model.Name)
-            ? (string.IsNullOrWhiteSpace(model.DisplayText) ? null : ConnectedDataSetFields.ToFieldName(model.DisplayText))
-            : model.Name.Trim();
-
-        if (string.IsNullOrEmpty(name) || !TechnicalName().IsMatch(name))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["The technical name must start with a letter and hold only letters, digits and underscores."]);
-        }
-        else if (await _connectionStore.FindByNameAsync(name) is { } existing && existing.ItemId != connection.ItemId)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Another connection already has the technical name '{0}'.", name]);
-        }
-
-        connection.DisplayText = model.DisplayText?.Trim();
-        connection.Name = name;
-        connection.Description = string.IsNullOrWhiteSpace(model.Description) ? null : model.Description.Trim();
+        await _editor.ApplyNamesAsync(connection, model, (key, message) => context.Updater.ModelState.AddModelError(Prefix, key, message));
 
         return Edit(connection, context);
     }
