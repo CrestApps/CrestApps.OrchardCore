@@ -194,7 +194,9 @@ public sealed class CertificateDocumentBuilder
 
     private async Task<byte[]> ReadBackgroundAsync(ContentItem templateItem)
     {
-        var path = (templateItem?.Content["CertificateTemplatePart"]?["BackgroundImage"]?["Paths"] as JsonArray)?.FirstOrDefault()?.GetValue<string>();
+        // Read the media field from the item as JSON: indexing the dynamic Content hands back a wrapper, never a JsonArray.
+        var content = templateItem is null ? null : (JsonObject)templateItem.Content;
+        var path = (content?["CertificateTemplatePart"]?["BackgroundImage"]?["Paths"] as JsonArray)?.FirstOrDefault()?.GetValue<string>();
 
         if (string.IsNullOrWhiteSpace(path))
         {

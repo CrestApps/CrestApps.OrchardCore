@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Pdf;
 using CrestApps.OrchardCore.Skills.IssuedCertificates;
 using CrestApps.OrchardCore.Skills.IssuedCertificates.Models;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement;
+using OrchardCore.FileStorage;
 using OrchardCore.Media;
 using OrchardCore.Settings;
 using UglyToad.PdfPig;
@@ -152,6 +154,51 @@ public sealed class IssuedCertificateDocumentTests
         });
     }
 
+    [Fact]
+    public async Task BuildAsync_WithATemplateBackgroundImage_PrintsTheImageBehindThePage()
+    {
+        // Arrange: the template's Background image media field, as the media picker saves it.
+        var jpeg = CreateJpegHeader(8, 6);
+        var entry = new Mock<IFileStoreEntry>();
+
+        entry.SetupGet(file => file.Length).Returns(jpeg.Length);
+        entry.SetupGet(file => file.Path).Returns("bp-cert-bg.jpg");
+
+        var media = new Mock<IMediaFileStore>();
+
+        media.Setup(store => store.GetFileInfoAsync("bp-cert-bg.jpg")).ReturnsAsync(entry.Object);
+        media.Setup(store => store.GetFileStreamAsync(entry.Object)).ReturnsAsync(() => new MemoryStream(jpeg));
+
+        var builder = CreateBuilder(new CertificateTemplatePart(), media.Object, item =>
+            item.Content.CertificateTemplatePart.BackgroundImage = new JsonObject { ["Paths"] = new JsonArray("bp-cert-bg.jpg") });
+
+        // Act
+        using var document = PdfDocument.Open(await builder.BuildAsync(Issued(), _cpr, "https://example.com/v"));
+        var images = document.GetPage(1).GetImages().ToList();
+
+        // Assert
+        var background = Assert.Single(images);
+        Assert.Equal(8, background.WidthInSamples);
+    }
+
+    // The start of a baseline JPEG: PdfPig reads the size and the color components from the frame header and embeds
+    // the file as it is, for the reader to decode.
+    private static byte[] CreateJpegHeader(int width, int height)
+    {
+        return
+        [
+            0xFF, 0xD8,
+            0xFF, 0xC0, 0x00, 0x11, 0x08,
+            (byte)(height >> 8), (byte)height,
+            (byte)(width >> 8), (byte)width,
+            0x03,
+            0x01, 0x11, 0x00,
+            0x02, 0x11, 0x01,
+            0x03, 0x11, 0x01,
+            0xFF, 0xD9,
+        ];
+    }
+
     private static CertificationRecord Issued()
     {
         return new CertificationRecord
@@ -168,7 +215,7 @@ public sealed class IssuedCertificateDocumentTests
         };
     }
 
-    private static CertificateDocumentBuilder CreateBuilder(CertificateTemplatePart template)
+    private static CertificateDocumentBuilder CreateBuilder(CertificateTemplatePart template, IMediaFileStore mediaFileStore = null, Action<ContentItem> alter = null)
     {
         var contentManager = new Mock<IContentManager>();
 
@@ -177,6 +224,7 @@ public sealed class IssuedCertificateDocumentTests
             var item = new ContentItem { ContentItemId = "template", ContentType = "CertificateTemplate" };
 
             item.Weld(template);
+            alter?.Invoke(item);
             contentManager.Setup(manager => manager.GetAsync("template", It.IsAny<VersionOptions>())).ReturnsAsync(item);
             _cpr.CertificateTemplateId = "template";
         }
@@ -196,7 +244,7 @@ public sealed class IssuedCertificateDocumentTests
         return new CertificateDocumentBuilder(
             contentManager.Object,
             LiquidDoubles.Manager(),
-            Mock.Of<IMediaFileStore>(),
+            mediaFileStore ?? Mock.Of<IMediaFileStore>(),
             new PdfDocumentRenderer(),
             siteService.Object,
             Options.Create(TemplateOptions.Default),
