@@ -14,7 +14,7 @@ public class VendorPartViewModel
 
 public class MarketplaceSettingsViewModel
 {
-    public string CommissionPercent { get; set; }
+    public decimal? CommissionPercent { get; set; }
 
     public int HoldDays { get; set; }
 
@@ -39,7 +39,7 @@ public class VendorsIndexViewModel
 }
 
 /// <summary>
-/// A vendor's editor. The commission is text, read in the invariant culture.
+/// A vendor's editor. The commission is bound by the invariant number binder; empty means the store's.
 /// </summary>
 public class VendorEditViewModel
 {
@@ -52,7 +52,7 @@ public class VendorEditViewModel
     /// </summary>
     public string UserNames { get; set; }
 
-    public string CommissionPercent { get; set; }
+    public decimal? CommissionPercent { get; set; }
 
     public string Country { get; set; }
 

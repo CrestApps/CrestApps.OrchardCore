@@ -1,4 +1,3 @@
-using System.Globalization;
 using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Marketplace.Services;
@@ -120,7 +119,7 @@ internal sealed class MarketplaceSettingsDisplayDriver : SiteDisplayDriver<Marke
     public override IDisplayResult Edit(ISite site, MarketplaceSettings settings, BuildEditorContext context)
         => Initialize<MarketplaceSettingsViewModel>("MarketplaceSettings_Edit", model =>
         {
-            model.CommissionPercent = settings.CommissionPercent.ToString(CultureInfo.InvariantCulture);
+            model.CommissionPercent = settings.CommissionPercent;
             model.HoldDays = settings.HoldDays;
             model.ReleaseOnFulfillment = settings.ReleaseOnFulfillment;
             model.AutomaticPayouts = settings.AutomaticPayouts;
@@ -142,13 +141,14 @@ internal sealed class MarketplaceSettingsDisplayDriver : SiteDisplayDriver<Marke
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (!decimal.TryParse(model.CommissionPercent?.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var commission) || commission is < 0m or > 100m)
+        // Empty, out of range or unreadable (a model error from the binder) keeps the stored commission.
+        if (model.CommissionPercent is not (>= 0m and <= 100m))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.CommissionPercent), S["Enter the commission as a percent from 0 to 100, such as 10 or 12.5."]);
         }
         else
         {
-            settings.CommissionPercent = commission;
+            settings.CommissionPercent = model.CommissionPercent.Value;
         }
 
         settings.HoldDays = Math.Clamp(model.HoldDays, 0, 365);

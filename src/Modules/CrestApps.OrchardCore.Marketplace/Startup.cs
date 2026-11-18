@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Banking.Disbursements.Services;
 using CrestApps.OrchardCore.Marketplace.BackgroundTasks;
@@ -42,6 +43,8 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<VendorEarningIndexProvider>()
             .AddIndexProvider<VendorPayoutIndexProvider>();
         services.AddScoped<IVendorStore, VendorStore>();
+        // The vendor and settings editors post the commission from a number input.
+        services.AddInvariantNumberInputs();
         services.AddScoped<ICommercePersonalDataContributor, VendorPersonalDataContributor>();
         services.AddScoped<IVendorEarningStore, VendorEarningStore>();
         services.AddScoped<IVendorPayoutStore, VendorPayoutStore>();

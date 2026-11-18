@@ -3,7 +3,7 @@
 <div class="ocat-limited-wrapper" asp-validation-class-for="CommissionPercent">
     <label asp-for="CommissionPercent" class="ocat-label ocat-label-required">@T["Commission (%)"]</label>
     <div class="ocat-limited">
-        <input asp-for="CommissionPercent" inputmode="decimal" class="form-control" />
+        <input asp-for="CommissionPercent" type="number" step="0.01" min="0" max="100" class="form-control" required />
         <span class="hint">@T["What the store keeps of each vendor's sale, after discounts. A vendor can have its own."]</span>
         <span asp-validation-for="CommissionPercent" class="text-danger"></span>
     </div>
