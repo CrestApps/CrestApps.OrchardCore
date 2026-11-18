@@ -862,3 +862,12 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 
 - In the browser: the exam player with a sequential quiz, the gradebook pages, the workflow activity editors and the ContentTransfer import screen were not walked; they are covered by unit and integration tests only.
 - The docs site was not built.
+
+**Browser pass 2026-11-18.** Fixed test first on this branch; the red and green counts are in each commit.
+
+| Bug | Fix | Commit |
+| --- | --- | --- |
+| Quiz overrides never save; a new grade scale throws `ArgumentNullException('id')` | `GradingController.Overrides` and `GradeScalesController.Edit` (and every other routed page action of Assessments) say `HttpGet`, so the page's admin route no longer takes the form's post. The integration site turns on Gradebook. | `e36ad0946` |
+| Grading and Gradebook missing from course staff's menu | Each item asks for the permission the person holds, else Manage own courses. | `4a9a291f6` |
+| The quiz player shows "Due 12:00 PM" with no date | The deadline is shown with its date and time. | `d44bdfd3d` |
+| Moving a quiz's close date does not move the review of attempts already taken | `QuizCloseDateHandler` and `IAssessmentAttemptService.MoveQuizCloseAsync` move the close date attempts kept, after the commit and under each attempt's lock; an override's own date stays. | `e8334edc4` |
