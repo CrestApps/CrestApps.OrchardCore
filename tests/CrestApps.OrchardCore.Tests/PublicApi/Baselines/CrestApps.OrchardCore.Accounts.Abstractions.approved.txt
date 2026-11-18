@@ -30,6 +30,7 @@ namespace CrestApps.OrchardCore.Accounts
     {
         public const string EmailDomainsFeature = "CrestApps.OrchardCore.Accounts.EmailDomains";
         public const string Feature = "CrestApps.OrchardCore.Accounts";
+        public const string InvitationsCollectionName = "AccountInvitations";
         public const string LocationsFeature = "CrestApps.OrchardCore.Accounts.Locations";
         public const string MembersFeature = "CrestApps.OrchardCore.Accounts.Members";
         public const string TeamFeature = "CrestApps.OrchardCore.Accounts.Team";
@@ -69,6 +70,32 @@ namespace CrestApps.OrchardCore.Accounts.Models
     {
         public AccountEmailDomainsPart() { }
         public System.Collections.Generic.List<string> Domains { get; set; }
+    }
+    public sealed class AccountInvitation : CrestApps.Core.Models.CatalogItem
+    {
+        public AccountInvitation() { }
+        public string AcceptedUserId { get; set; }
+        public System.DateTime? AcceptedUtc { get; set; }
+        public string AccountId { get; set; }
+        public string Email { get; set; }
+        public System.DateTime ExpiresUtc { get; set; }
+        public string InvitedBy { get; set; }
+        public System.DateTime InvitedUtc { get; set; }
+        public string Message { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public long PageRowId { get; set; }
+        public CrestApps.OrchardCore.Accounts.Models.AccountMemberRole Role { get; set; }
+        public string Source { get; set; }
+        public string SourceId { get; set; }
+        public CrestApps.OrchardCore.Accounts.Models.AccountInvitationState State { get; set; }
+        public string TokenHash { get; set; }
+    }
+    public enum AccountInvitationState
+    {
+        Pending = 0,
+        Accepted = 1,
+        Revoked = 2,
+        Expired = 3,
     }
     public sealed class AccountLocation
     {
@@ -123,6 +150,27 @@ namespace CrestApps.OrchardCore.Accounts.Models
 }
 namespace CrestApps.OrchardCore.Accounts.Services
 {
+    public sealed class AccountInvitationRequest
+    {
+        public AccountInvitationRequest() { }
+        public string AccountId { get; set; }
+        public string Email { get; set; }
+        public string InvitedBy { get; set; }
+        public System.TimeSpan? Lifetime { get; set; }
+        public string Message { get; set; }
+        public CrestApps.OrchardCore.Accounts.Models.AccountMemberRole Role { get; set; }
+        public string Source { get; set; }
+        public string SourceId { get; set; }
+    }
+    public sealed class AccountInvitationResult
+    {
+        public AccountInvitationResult() { }
+        public string Error { get; set; }
+        public CrestApps.OrchardCore.Accounts.Models.AccountInvitation Invitation { get; set; }
+        public bool NeedsEmailConfirmation { get; set; }
+        public bool Succeeded { get; }
+        public string Token { get; set; }
+    }
     public static class AccountRecordKinds
     {
         public static bool HasPart(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition, string partName) { }
@@ -149,6 +197,24 @@ namespace CrestApps.OrchardCore.Accounts.Services
     {
         System.Threading.Tasks.Task<string> FindAccountIdAsync(string email, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, string>> FindClaimsAsync(System.Collections.Generic.IEnumerable<string> domains, string exceptAccountId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAccountInvitationObserver
+    {
+        System.Threading.Tasks.Task AcceptedAsync(CrestApps.OrchardCore.Accounts.Models.AccountInvitation invitation, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task ExpiredAsync(CrestApps.OrchardCore.Accounts.Models.AccountInvitation invitation, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task InvitedAsync(CrestApps.OrchardCore.Accounts.Models.AccountInvitation invitation, string token, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RevokedAsync(CrestApps.OrchardCore.Accounts.Models.AccountInvitation invitation, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAccountInvitationService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Accounts.Services.AccountInvitationResult> AcceptAsync(string token, string userId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> ExpireDueAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Accounts.Models.AccountInvitation> FindByIdAsync(string invitationId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Accounts.Models.AccountInvitation> FindByTokenAsync(string token, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Accounts.Services.AccountInvitationResult> InviteAsync(CrestApps.OrchardCore.Accounts.Services.AccountInvitationRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Accounts.Models.AccountInvitation>> ListForAccountAsync(string accountId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Accounts.Models.AccountInvitation>> ListForPeopleAsync(System.Collections.Generic.IReadOnlyCollection<string> emails, System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Accounts.Models.AccountInvitation> RevokeAsync(string invitationId, string actor, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAccountMemberService
     {

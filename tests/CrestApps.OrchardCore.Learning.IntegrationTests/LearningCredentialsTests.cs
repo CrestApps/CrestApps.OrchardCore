@@ -91,7 +91,8 @@ public sealed class LearningCredentialsTests
             return result.Enrollment.ItemId;
         });
 
-        var award = Assert.Single(await _fixture.InTenantAsync(services => services.GetRequiredService<ICredentialAwardService>().ListForUserAsync(userId)), candidate => candidate.SourceId == enrollmentId);
+        // Other tests leave definitions on the same course, so only this definition's award is used.
+        var award = Assert.Single(await _fixture.InTenantAsync(services => services.GetRequiredService<ICredentialAwardService>().ListForUserAsync(userId)), candidate => candidate.SourceId == enrollmentId && candidate.DefinitionId == definitionId);
 
         await _fixture.InTenantAsync(async services =>
         {

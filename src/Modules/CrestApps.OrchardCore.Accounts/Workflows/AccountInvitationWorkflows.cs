@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Accounts.Services;
+using CrestApps.OrchardCore.Accounts.ViewModels;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using Json.Schema;
 using Microsoft.Extensions.DependencyInjection;
@@ -116,15 +117,6 @@ public sealed class InviteToAccountTask : TaskActivity<InviteToAccountTask>
 
     private async Task<string> EvaluateAsync(string expression, WorkflowExecutionContext workflowContext)
         => string.IsNullOrWhiteSpace(expression) ? null : (await _expressionEvaluator.EvaluateAsync(new WorkflowExpression<string>(expression), workflowContext, null))?.Trim();
-}
-
-public class InviteToAccountTaskViewModel
-{
-    public string AccountId { get; set; }
-
-    public string Email { get; set; }
-
-    public AccountMemberRole Role { get; set; }
 }
 
 public sealed class AccountInvitationSentEventDisplayDriver : ActivityDisplayDriver<AccountInvitationSentEvent>

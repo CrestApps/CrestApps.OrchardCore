@@ -54,6 +54,31 @@ namespace CrestApps.OrchardCore.Accounts
         public EmailDomainsStartup(OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Members")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "OrchardCore.Email"})]
+    public sealed class InvitationEmailStartup : OrchardCore.Modules.StartupBase
+    {
+        public InvitationEmailStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Members")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Recipes",
+            "OrchardCore.Workflows"})]
+    public sealed class InvitationWorkflowsSchemaStartup : OrchardCore.Modules.StartupBase
+    {
+        public InvitationWorkflowsSchemaStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Members")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "OrchardCore.Workflows"})]
+    public sealed class InvitationWorkflowsStartup : OrchardCore.Modules.StartupBase
+    {
+        public InvitationWorkflowsStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Locations")]
     [OrchardCore.Modules.RequireFeatures(new string[] {
             "CrestApps.OrchardCore.Recipes"})]
@@ -124,6 +149,30 @@ namespace CrestApps.OrchardCore.Accounts
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
 }
+namespace CrestApps.OrchardCore.Accounts.Controllers
+{
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Members")]
+    public sealed class AccountInvitationsController : Microsoft.AspNetCore.Mvc.Controller
+    {
+        public AccountInvitationsController(CrestApps.OrchardCore.Accounts.Services.IAccountInvitationService invitations, CrestApps.OrchardCore.Accounts.Services.IAccountMemberService members, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, OrchardCore.Modules.IClock clock, Microsoft.AspNetCore.Identity.UserManager<OrchardCore.Users.IUser> userManager, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Accounts.Controllers.AccountInvitationsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Accounts.Controllers.AccountInvitationsController> stringLocalizer) { }
+        [Microsoft.AspNetCore.Mvc.HttpPost("account/invitations/{token}")]
+        [Microsoft.AspNetCore.Mvc.ValidateAntiForgeryToken]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Accept(string token) { }
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        [Microsoft.AspNetCore.Mvc.HttpPost("account/members/invite")]
+        [Microsoft.AspNetCore.Mvc.ValidateAntiForgeryToken]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Invite(string email, CrestApps.OrchardCore.Accounts.Models.AccountMemberRole role, string message) { }
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        [Microsoft.AspNetCore.Mvc.HttpGet("account/members", Name="AccountMembers")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Members() { }
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        [Microsoft.AspNetCore.Mvc.HttpPost("account/members/invitations/{id}/revoke")]
+        [Microsoft.AspNetCore.Mvc.ValidateAntiForgeryToken]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Revoke(string id) { }
+        [Microsoft.AspNetCore.Mvc.HttpGet("account/invitations/{token}", Name="AccountInvitation")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Show(string token) { }
+    }
+}
 namespace CrestApps.OrchardCore.Accounts.Deployments
 {
     public sealed class AccountsDeploymentStep : OrchardCore.Deployment.DeploymentStep
@@ -137,12 +186,30 @@ namespace CrestApps.OrchardCore.Accounts.Deployments
         public override OrchardCore.Localization.LocalizationSource Title { get; }
     }
 }
+namespace CrestApps.OrchardCore.Accounts.Navigation
+{
+    public sealed class AccountMembersAccountMenu : OrchardCore.Navigation.NamedNavigationProvider
+    {
+        public AccountMembersAccountMenu(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Accounts.Navigation.AccountMembersAccountMenu> stringLocalizer) { }
+        protected override System.Threading.Tasks.ValueTask BuildAsync(OrchardCore.Navigation.NavigationBuilder builder) { }
+    }
+}
 namespace CrestApps.OrchardCore.Accounts.ViewModels
 {
     public class AccountEmailDomainsPartViewModel
     {
         public AccountEmailDomainsPartViewModel() { }
         public string Domains { get; set; }
+    }
+    public class AccountInvitationViewModel
+    {
+        public AccountInvitationViewModel() { }
+        public string AccountName { get; set; }
+        public CrestApps.OrchardCore.Accounts.Models.AccountInvitation Invitation { get; set; }
+        public bool IsExpired { get; set; }
+        public bool IsValid { get; set; }
+        public bool NeedsEmailConfirmation { get; set; }
+        public string Token { get; set; }
     }
     public class AccountLocationRowViewModel
     {
@@ -172,6 +239,14 @@ namespace CrestApps.OrchardCore.Accounts.ViewModels
         public AccountMembersPartViewModel() { }
         public System.Collections.Generic.List<CrestApps.OrchardCore.Accounts.ViewModels.AccountMemberRowViewModel> Members { get; set; }
     }
+    public class AccountMembersViewModel
+    {
+        public AccountMembersViewModel() { }
+        public string AccountName { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Accounts.Models.AccountInvitation> Invitations { get; set; }
+        public bool IsAdmin { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Accounts.Models.AccountMember> Members { get; set; }
+    }
     public class AccountPickerViewModel
     {
         public AccountPickerViewModel() { }
@@ -197,5 +272,60 @@ namespace CrestApps.OrchardCore.Accounts.ViewModels
     {
         public AccountsDeploymentStepViewModel() { }
         public bool IncludeRecords { get; set; }
+    }
+    public class InviteToAccountTaskViewModel
+    {
+        public InviteToAccountTaskViewModel() { }
+        public string AccountId { get; set; }
+        public string Email { get; set; }
+        public CrestApps.OrchardCore.Accounts.Models.AccountMemberRole Role { get; set; }
+    }
+}
+namespace CrestApps.OrchardCore.Accounts.Workflows
+{
+    public sealed class AccountInvitationAcceptedEvent : OrchardCore.Workflows.Activities.EventActivity
+    {
+        public AccountInvitationAcceptedEvent(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Accounts.Workflows.AccountInvitationAcceptedEvent> stringLocalizer) { }
+        public override Microsoft.Extensions.Localization.LocalizedString Category { get; }
+        public override Microsoft.Extensions.Localization.LocalizedString DisplayText { get; }
+        public override string Name { get; }
+        public override OrchardCore.Workflows.Activities.ActivityExecutionResult Execute(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+        public override System.Collections.Generic.IEnumerable<OrchardCore.Workflows.Abstractions.Models.Outcome> GetPossibleOutcomes(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+        public override OrchardCore.Workflows.Activities.ActivityExecutionResult Resume(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+    }
+    public sealed class AccountInvitationAcceptedEventDisplayDriver : OrchardCore.Workflows.Display.ActivityDisplayDriver<CrestApps.OrchardCore.Accounts.Workflows.AccountInvitationAcceptedEvent>
+    {
+        public AccountInvitationAcceptedEventDisplayDriver() { }
+    }
+    public sealed class AccountInvitationSentEvent : OrchardCore.Workflows.Activities.EventActivity
+    {
+        public AccountInvitationSentEvent(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Accounts.Workflows.AccountInvitationSentEvent> stringLocalizer) { }
+        public override Microsoft.Extensions.Localization.LocalizedString Category { get; }
+        public override Microsoft.Extensions.Localization.LocalizedString DisplayText { get; }
+        public override string Name { get; }
+        public override OrchardCore.Workflows.Activities.ActivityExecutionResult Execute(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+        public override System.Collections.Generic.IEnumerable<OrchardCore.Workflows.Abstractions.Models.Outcome> GetPossibleOutcomes(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+        public override OrchardCore.Workflows.Activities.ActivityExecutionResult Resume(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+    }
+    public sealed class AccountInvitationSentEventDisplayDriver : OrchardCore.Workflows.Display.ActivityDisplayDriver<CrestApps.OrchardCore.Accounts.Workflows.AccountInvitationSentEvent>
+    {
+        public AccountInvitationSentEventDisplayDriver() { }
+    }
+    public sealed class InviteToAccountTask : OrchardCore.Workflows.Activities.TaskActivity<CrestApps.OrchardCore.Accounts.Workflows.InviteToAccountTask>
+    {
+        public InviteToAccountTask(OrchardCore.Workflows.Services.IWorkflowExpressionEvaluator expressionEvaluator, CrestApps.OrchardCore.Accounts.Services.IAccountInvitationService invitations, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Accounts.Workflows.InviteToAccountTask> stringLocalizer) { }
+        public string AccountId { get; set; }
+        public override Microsoft.Extensions.Localization.LocalizedString Category { get; }
+        public override Microsoft.Extensions.Localization.LocalizedString DisplayText { get; }
+        public string Email { get; set; }
+        public CrestApps.OrchardCore.Accounts.Models.AccountMemberRole Role { get; set; }
+        public override System.Threading.Tasks.Task<OrchardCore.Workflows.Activities.ActivityExecutionResult> ExecuteAsync(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+        public override System.Collections.Generic.IEnumerable<OrchardCore.Workflows.Abstractions.Models.Outcome> GetPossibleOutcomes(OrchardCore.Workflows.Models.WorkflowExecutionContext workflowContext, OrchardCore.Workflows.Models.ActivityContext activityContext) { }
+    }
+    public sealed class InviteToAccountTaskDisplayDriver : OrchardCore.Workflows.Display.ActivityDisplayDriver<CrestApps.OrchardCore.Accounts.Workflows.InviteToAccountTask, CrestApps.OrchardCore.Accounts.ViewModels.InviteToAccountTaskViewModel>
+    {
+        public InviteToAccountTaskDisplayDriver() { }
+        protected override void EditActivity(CrestApps.OrchardCore.Accounts.Workflows.InviteToAccountTask activity, CrestApps.OrchardCore.Accounts.ViewModels.InviteToAccountTaskViewModel model) { }
+        protected override void UpdateActivity(CrestApps.OrchardCore.Accounts.ViewModels.InviteToAccountTaskViewModel model, CrestApps.OrchardCore.Accounts.Workflows.InviteToAccountTask activity) { }
     }
 }

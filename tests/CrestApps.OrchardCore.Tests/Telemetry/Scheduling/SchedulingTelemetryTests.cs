@@ -37,7 +37,12 @@ public sealed class SchedulingTelemetryTests
         using var capture = new TelemetryCapture();
         var appointments = new Mock<IAppointmentService>();
         appointments.Setup(service => service.ExpireHoldsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(3);
-        using var services = new ServiceCollection().AddSingleton(appointments.Object).BuildServiceProvider();
+        var sessions = new Mock<ISchedulingSessionService>();
+        sessions.Setup(service => service.ExpireOffersAsync(It.IsAny<CancellationToken>())).ReturnsAsync(2);
+        using var services = new ServiceCollection()
+            .AddSingleton(appointments.Object)
+            .AddSingleton(sessions.Object)
+            .BuildServiceProvider();
 
         // Act
         await new AppointmentHoldsBackgroundTask().DoWorkAsync(services, TestContext.Current.CancellationToken);
@@ -45,6 +50,7 @@ public sealed class SchedulingTelemetryTests
         // Assert
         var items = capture.Find("crestapps.background_task.items", CrestAppsOrchardCoreTelemetry.TaskTag, nameof(AppointmentHoldsBackgroundTask));
         Assert.Contains(items, item => Equals(item.Tags[CrestAppsOrchardCoreTelemetry.ResultTag], "expired") && item.Value == 3);
+        Assert.Contains(items, item => Equals(item.Tags[CrestAppsOrchardCoreTelemetry.ResultTag], "offers passed on") && item.Value == 2);
         Assert.Empty(capture.FindBannedTagKeys());
     }
 
