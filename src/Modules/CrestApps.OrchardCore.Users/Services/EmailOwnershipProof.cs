@@ -13,10 +13,10 @@ namespace CrestApps.OrchardCore.Users.Services;
 
 /// <summary>
 /// Records that the holder of a code e-mailed to an account's address proved they control it. Whatever could sign in to
-/// the account before the first proof of its address, a password, an external login or a session, was set before
-/// anyone proved the address, and may be somebody else's: whoever registered with it, or changed their email to it. So
-/// the first proof keeps only the credential the same request showed (signed in with the password or through one of the
-/// external logins, or the password typed with the code, see <see cref="UserCredentialsProof"/>), removes the rest,
+/// the account before the first proof of its address, a password, an external login, a passkey or a session, was set
+/// before anyone proved the address, and may be somebody else's: whoever registered with it, or changed their email to
+/// it. So the first proof keeps only the credential the same request showed (the password typed with the code, or the
+/// external login signed in through again, see <see cref="UserCredentialsProof"/>; never a passkey), removes the rest,
 /// rotates the security stamp and ends every earlier sign-in, in the same update that records the address as proved,
 /// which is what hands over what belongs to it (the guest orders placed with it).
 /// </summary>
@@ -28,8 +28,8 @@ namespace CrestApps.OrchardCore.Users.Services;
 public sealed class EmailOwnershipProof
 {
     /// <summary>
-    /// The step a right code establishes on the code page for an account that signs in only through external logins
-    /// whose address isn't proved: the owner still chooses to remove them (K4).
+    /// The step a right code establishes on the code page for an account without a password that signs in only through
+    /// external logins or passkeys, whose address isn't proved: the owner still chooses to remove them (K4).
     /// </summary>
     public const string TakeBackStep = "take-back";
 
@@ -156,8 +156,8 @@ public sealed class EmailOwnershipProof
             string.Equals(read.SecurityStamp, account.SecurityStamp, StringComparison.Ordinal);
 
     /// <summary>
-    /// Whether the account has a password or an external login, which the first proof of its address removes unless the
-    /// request shows it.
+    /// Whether the account has a password, an external login or a passkey, which the first proof of its address removes
+    /// unless the request shows it.
     /// </summary>
     /// <param name="account">The account.</param>
     public static bool HasCredentials(User account)
@@ -235,6 +235,8 @@ public sealed class EmailOwnershipProof
     // Keeps the password only when it was shown, and an external login only when the flow signed in through it again at
     // its provider, matched by provider and key: a session's cookie names the provider, not which of its accounts was
     // used, and can be older than the account's logins (G1, K5). The tokens a removed login stored go with it.
+    // Passkeys always go: a session never says which passkey it used, nothing on the confirmation page asks for one, and
+    // one somebody else registered before the proof would otherwise sign them in for good. The owner adds theirs again.
     private static bool RemoveWhatWasNotShown(User account, bool passwordShown, UserLoginInfo shownLogin)
     {
         var removed = false;
@@ -242,6 +244,12 @@ public sealed class EmailOwnershipProof
         if (!passwordShown && !string.IsNullOrEmpty(account.PasswordHash))
         {
             account.PasswordHash = null;
+            removed = true;
+        }
+
+        if (account.Passkeys is { Count: > 0 } passkeys)
+        {
+            passkeys.Clear();
             removed = true;
         }
 

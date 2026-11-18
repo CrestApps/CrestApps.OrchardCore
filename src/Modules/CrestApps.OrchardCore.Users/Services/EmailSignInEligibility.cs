@@ -14,7 +14,10 @@ namespace CrestApps.OrchardCore.Users.Services;
 /// it back: the owner chooses to remove its logins and use their email, and only then is anything removed and the
 /// address proved (see <see cref="Controllers.EmailSignInController"/>). A code never signs in to it with its logins
 /// kept. An external sign-in whose provider asserted the same address as verified proves it
-/// (<see cref="EmailOwnershipExternalLoginHandler"/>), so such an account gets no code at all.
+/// (<see cref="EmailOwnershipExternalLoginHandler"/>), so such an account gets no code at all. An account without a
+/// password that signs in with passkeys is served like one with a password once its address is proved (a passkey is a
+/// local credential, and the code is mailed to the proved owner), and like an external-only one until then: a right code
+/// only offers to remove its passkeys.
 /// </summary>
 public sealed class EmailSignInEligibility
 {

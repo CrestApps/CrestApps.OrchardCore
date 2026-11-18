@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Users.Services;
 
 /// <summary>
 /// Tells a user, once at sign-in, that their account's address isn't proved and it has more than one way to sign in (a
-/// password and an external login, or several logins), some of which somebody else may have added, with the link to
+/// password, external logins and passkeys, counted each), some of which somebody else may have added, with the link to
 /// "Confirm it's you". That is every account with both a password and a login until its address is proved, which is
 /// why it is said at sign-in and not on every page: only a session an e-mailed code began, and every session of an
 /// account whose credentials changed in such a session, are told on every page (<see cref="Filters.EmailOwnershipNoticeFilter"/>),

@@ -11,6 +11,14 @@
     {
         <p class="text-muted">@T["Confirming removes the sign-ins this account had before its email was confirmed, and signs out its other sessions, because they may not be yours. You keep only what you show here: the password, if you type it with the code, and a sign-in you use again below."]</p>
     }
+    @if (Model.Passkeys == 1)
+    {
+        <p class="text-muted">@T["This account's passkey is removed too, since it can't be shown here. Add yours again from your account's security settings once your email is confirmed."]</p>
+    }
+    else if (Model.Passkeys > 1)
+    {
+        <p class="text-muted">@T["This account's {0} passkeys are removed too, since they can't be shown here. Add yours again from your account's security settings once your email is confirmed.", Model.Passkeys]</p>
+    }
     @if (Model.KeptLoginProvider is not null)
     {
         <div class="alert alert-success">@T["You signed in with {0} again, so that sign-in stays.", Model.KeptLoginProvider]</div>

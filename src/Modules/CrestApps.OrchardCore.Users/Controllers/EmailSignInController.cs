@@ -184,8 +184,9 @@ public sealed class EmailSignInController : Controller
         return await SignInWithRightCodeAsync(user, model);
     }
 
-    // K4: the choice the code page offers an account that signs in only through external logins and whose address isn't
-    // proved, posted with the protected step the right code left. Nothing was removed before this.
+    // K4: the choice the code page offers an account without a password that signs in only through external logins or
+    // passkeys and whose address isn't proved, posted with the protected step the right code left. Nothing was removed
+    // before this.
     [HttpPost("sign-in/email/take-back", Name = "EmailSignInTakeBack")]
     [ValidateAntiForgeryToken]
     [RateLimitGroup(EmailSignInCodes.RateLimitGroup)]
@@ -201,7 +202,7 @@ public sealed class EmailSignInController : Controller
         if (_proof.ReadStepUserId(EmailOwnershipProof.TakeBackStep, model.Token) is not { } userId ||
             await _userManager.FindByIdAsync(userId) is not User account ||
             !_proof.IsStepFor(EmailOwnershipProof.TakeBackStep, model.Token, account) ||
-            !IsExternalOnlyTakeBack(account) ||
+            !IsTakeBack(account) ||
             !await _eligibility.AllowsAsync(account))
         {
             ModelState.AddModelError(nameof(model.Email), S["That took too long, or the account changed. Ask for a new code."]);
@@ -210,6 +211,7 @@ public sealed class EmailSignInController : Controller
         }
 
         var providers = LoginProviderNames(account);
+        var hadPasskeys = UserCredentialsProof.HasPasskeys(account);
         var proof = await _proof.RecordAsync(account, HttpContext.RequestAborted);
 
         if (proof == EmailProofResult.Failed)
@@ -219,7 +221,17 @@ public sealed class EmailSignInController : Controller
             return View(nameof(Index), new EmailSignInViewModel { ReturnUrl = model.ReturnUrl });
         }
 
-        await _notifier.InformationAsync(H["Your email address is confirmed, and {0} was removed from this account. Sign in with a code next time, or link {0} again from your account's external logins.", providers]);
+        if (!string.IsNullOrEmpty(providers))
+        {
+            await _notifier.InformationAsync(H["Your email address is confirmed, and {0} was removed from this account. Sign in with a code next time, or link {0} again from your account's external logins.", providers]);
+        }
+
+        if (hadPasskeys)
+        {
+            await _notifier.InformationAsync(string.IsNullOrEmpty(providers)
+                ? H["Your email address is confirmed, and this account's passkeys were removed. Sign in with a code next time, or add a passkey again from your account's security settings."]
+                : H["This account's passkeys were removed too. You can add a passkey again from your account's security settings."]);
+        }
 
         return await CompleteSignInAsync(account, credentialsInDoubt: false, model.ReturnUrl);
     }
@@ -245,21 +257,25 @@ public sealed class EmailSignInController : Controller
             // begun with an e-mailed code, so every page tells them so until then (EmailOwnershipNoticeFilter).
             credentialsInDoubt = true;
         }
-        else if (user is User external && IsExternalOnlyTakeBack(external))
+        else if (user is User external && IsTakeBack(external))
         {
-            // G5 and K4: an account that signs in only through external logins and whose address isn't proved. A code never
-            // signs in to one with its logins kept, which would get around the provider's checks, and it may be the owner's
-            // own passwordless account, so nothing is removed until they choose to remove the logins and use their email.
+            // G5 and K4: an account without a password that signs in only through external logins or passkeys and whose
+            // address isn't proved. A code never signs in to one with them kept: that would get around the provider's
+            // checks, or let in a passkey whoever registered with the address added. And it may be the owner's own
+            // passwordless account, so nothing is removed until they choose to remove them and use their email.
             return View("TakeBack", new EmailSignInViewModel
             {
                 Email = model.Email,
                 ReturnUrl = model.ReturnUrl,
                 Token = _proof.ProtectStep(EmailOwnershipProof.TakeBackStep, external),
                 LoginProviders = LoginProviderNames(external),
+                Passkeys = external.Passkeys?.Count ?? 0,
+                SignInMethods = SignInMethodNames(external),
             });
         }
         else if (user is User proved && (!proved.EmailConfirmed || !UserEmailOwnership.IsVerified(proved.Properties, proved.Email)))
         {
+            var hadPasskeys = !UserEmailOwnership.IsVerified(proved.Properties, proved.Email) && UserCredentialsProof.HasPasskeys(proved);
             var proof = await _proof.RecordAsync(proved, HttpContext.RequestAborted);
 
             if (proof == EmailProofResult.Failed)
@@ -270,6 +286,11 @@ public sealed class EmailSignInController : Controller
             if (proof == EmailProofResult.CredentialsRemoved)
             {
                 await _notifier.InformationAsync(H["Your email address is confirmed. The password and other sign-ins added to this account before it was confirmed were removed, because they may not have been yours. Sign in with a code next time, or set a new password with \"Forgot your password?\"."]);
+            }
+
+            if (hadPasskeys)
+            {
+                await _notifier.InformationAsync(H["This account's passkeys were removed too. You can add a passkey again from your account's security settings."]);
             }
         }
 
@@ -311,16 +332,33 @@ public sealed class EmailSignInController : Controller
             : LocalRedirect(Url.Content("~/"));
     }
 
-    // An account with only external logins, whose address isn't proved, whose logins could sign in (see
-    // EmailOwnershipProof.CredentialsNeverSignedIn): a code reaches it only to take it back, by the owner's choice.
-    private bool IsExternalOnlyTakeBack(User account)
+    // An account without a password, with external logins or passkeys, whose address isn't proved, whose credentials
+    // could sign in (see EmailOwnershipProof.CredentialsNeverSignedIn; Orchard Core's passkey sign-in runs the same email
+    // confirmation check): a code reaches it only to take it back, by the owner's choice.
+    private bool IsTakeBack(User account)
         => string.IsNullOrEmpty(account.PasswordHash) &&
-            account.LoginInfos is { Count: > 0 } &&
+            (account.LoginInfos is { Count: > 0 } || UserCredentialsProof.HasPasskeys(account)) &&
             !UserEmailOwnership.IsVerified(account.Properties, account.Email) &&
             !_proof.CredentialsNeverSignedIn(account);
 
     private static string LoginProviderNames(User account)
         => string.Join(", ", (account.LoginInfos ?? []).Select(login => login.ProviderDisplayName ?? login.LoginProvider).Distinct(StringComparer.Ordinal));
+
+    // What the take-back page names: the providers, then the passkeys ("GitHub", "a passkey", "GitHub and 2 passkeys").
+    private string SignInMethodNames(User account)
+    {
+        var providers = LoginProviderNames(account);
+        var count = account.Passkeys?.Count ?? 0;
+
+        if (count == 0)
+        {
+            return providers;
+        }
+
+        var passkeys = count == 1 ? S["a passkey"].Value : S["{0} passkeys", count].Value;
+
+        return string.IsNullOrEmpty(providers) ? passkeys : S["{0} and {1}", providers, passkeys].Value;
+    }
 
     // An account a code can sign in to, with its id and its own address.
     private sealed record CodeAccount(IUser User, string UserId, string Email);
@@ -373,6 +411,16 @@ public class EmailSignInViewModel
     /// Gets or sets the names of the providers the account signs in with.
     /// </summary>
     public string LoginProviders { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many passkeys the account has, which taking it back or confirming its address removes.
+    /// </summary>
+    public int Passkeys { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the account signs in with, as the take-back page names it: its providers and its passkeys.
+    /// </summary>
+    public string SignInMethods { get; set; }
 
     /// <summary>
     /// Gets or sets the account's password, typed on the confirmation page by an owner who knows it, so it is kept.

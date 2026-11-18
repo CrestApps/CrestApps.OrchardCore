@@ -134,6 +134,49 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
     }
 
     /// <summary>
+    /// Registers a passkey on the account through ASP.NET Core Identity's user manager, as Orchard Core's passkey page
+    /// does once the browser's attestation is verified, in a request signed in as <paramref name="session"/> when given.
+    /// Returns the passkey's credential id.
+    /// </summary>
+    public Task<byte[]> AddPasskeyAsync(string userId, byte id = 1, ClaimsPrincipal session = null)
+        => InRequestAsync(async services =>
+        {
+            if (session is not null)
+            {
+                services.GetRequiredService<IHttpContextAccessor>().HttpContext = new DefaultHttpContext { User = session };
+            }
+
+            var manager = services.GetRequiredService<UserManager<IUser>>();
+            var credentialId = new byte[] { 0x50, 0x4b, id };
+            var passkey = new UserPasskeyInfo(credentialId, [1, 2, 3], new DateTimeOffset(Now), 0, ["internal"], isUserVerified: true, isBackupEligible: false, isBackedUp: false, [4], [5])
+            {
+                Name = "Passkey " + id,
+            };
+            var added = await manager.AddOrUpdatePasskeyAsync(await manager.FindByIdAsync(userId), passkey);
+
+            Assert.True(added.Succeeded, string.Join(", ", added.Errors.Select(error => error.Description)));
+
+            return credentialId;
+        });
+
+    /// <summary>
+    /// Removes a passkey of the account through ASP.NET Core Identity's user manager, as Orchard Core's passkey page does,
+    /// in a request signed in as <paramref name="session"/> when given.
+    /// </summary>
+    public Task<IdentityResult> RemovePasskeyAsync(string userId, byte[] credentialId, ClaimsPrincipal session = null)
+        => InRequestAsync(async services =>
+        {
+            if (session is not null)
+            {
+                services.GetRequiredService<IHttpContextAccessor>().HttpContext = new DefaultHttpContext { User = session };
+            }
+
+            var manager = services.GetRequiredService<UserManager<IUser>>();
+
+            return await manager.RemovePasskeyAsync(await manager.FindByIdAsync(userId), credentialId);
+        });
+
+    /// <summary>
     /// The claims a sign-in to the account puts in its cookie now, after the user id: what Orchard Core's claims
     /// principal factory makes of the account as saved (its security stamp included), and the claims the sign-in adds
     /// (<c>amr=pwd</c> for a password, the provider's name for an external login, <c>amr=otp</c> for an e-mailed code).

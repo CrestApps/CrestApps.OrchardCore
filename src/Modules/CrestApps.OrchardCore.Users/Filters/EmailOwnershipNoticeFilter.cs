@@ -12,10 +12,10 @@ using OrchardCore.Users.Models;
 namespace CrestApps.OrchardCore.Users.Filters;
 
 /// <summary>
-/// Tells a user whose account's address isn't proved, and has a password or an external login their session does not
-/// show (<see cref="UserCredentialsProof.HasCredentialsNotShown"/>, which counts a credential as shown only while the
-/// session's cookie carries the account's current security stamp), on every page they open, that somebody else may hold
-/// them, and how to remove them: "Confirm it's you". That is said on every page to a session an e-mailed code began,
+/// Tells a user whose account's address isn't proved, and has a password, an external login or a passkey their session
+/// does not show (<see cref="UserCredentialsProof.HasCredentialsNotShown"/>, which counts a credential as shown only while
+/// the session's cookie carries the account's current security stamp, and never a passkey), on every page they open,
+/// that somebody else may hold them, and how to remove them: "Confirm it's you". That is said on every page to a session an e-mailed code began,
 /// and to every session of an account whose credentials changed in such a session
 /// (<see cref="UserCredentialsProof.ChangedInCodeSessionPropertyName"/>): the owner linked or removed a login from it,
 /// which signs the browser in again without the code's mark, next to a credential somebody else may hold. Any other

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Users.Core.Services;
 using Microsoft.AspNetCore.Http;
 using OrchardCore.Modules;
 using OrchardCore.Users;
@@ -20,8 +21,8 @@ namespace CrestApps.OrchardCore.Users.Services;
 /// <para>
 /// The proof keeps whatever the account has, so it is recorded only when nothing else could sign in to it: the account
 /// was created in this request (its password and the login were set together by whoever holds the provider's account),
-/// or it has no password and this login is its only one (matched by the provider's subject, the login's key). An
-/// account with a password or other logins set earlier keeps waiting for "Confirm it's you".
+/// or it has no password, no passkey and this login is its only one (matched by the provider's subject, the login's
+/// key). An account with a password, a passkey or other logins set earlier keeps waiting for "Confirm it's you".
 /// </para>
 /// <para>
 /// A provider that sends no verified flag (ASP.NET Core's Google, Microsoft Account, Facebook and GitHub handlers map
@@ -93,7 +94,9 @@ public sealed class EmailOwnershipExternalLoginHandler : IExternalLoginEventHand
     {
         var logins = account.LoginInfos ?? [];
 
-        if (logins.Count != 1 ||
+        // A passkey signs in too, and the provider's assertion says nothing about who added it.
+        if (UserCredentialsProof.HasPasskeys(account) ||
+            logins.Count != 1 ||
             !string.Equals(logins[0].LoginProvider, loginProvider, StringComparison.Ordinal) ||
             !string.Equals(logins[0].ProviderKey, providerKey, StringComparison.Ordinal))
         {

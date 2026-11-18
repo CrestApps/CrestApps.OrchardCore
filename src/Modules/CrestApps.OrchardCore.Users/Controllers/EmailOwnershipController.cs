@@ -168,6 +168,8 @@ public sealed class EmailOwnershipController : Controller
             await _userManager.AccessFailedAsync(account);
         }
 
+        // A first proof removes every passkey: none can be shown here (see EmailOwnershipProof).
+        var hadPasskeys = UserCredentialsProof.HasPasskeys(account);
         var proof = check == EmailSignInCodeCheck.Right
             ? await _proof.RecordAsync(account, passwordShown, keptLogin, HttpContext.RequestAborted)
             : EmailProofResult.Failed;
@@ -189,6 +191,11 @@ public sealed class EmailOwnershipController : Controller
         await _loginFormEvents.InvokeAsync((handler, signedIn) => handler.LoggedInAsync(signedIn), account, _logger);
 
         await _notifier.SuccessAsync(ConfirmedMessage(proof, account));
+
+        if (hadPasskeys && proof == EmailProofResult.CredentialsRemoved)
+        {
+            await _notifier.InformationAsync(H["This account's passkeys were removed too. You can add a passkey again from your account's security settings."]);
+        }
 
         return RedirectToLocal(model.ReturnUrl);
     }
@@ -271,7 +278,8 @@ public sealed class EmailOwnershipController : Controller
     }
 
     // What the confirmation pages show: the external login the owner just signed in through again (kept), the account's
-    // other logins they can sign in through to keep instead, and whether the account has a password to type.
+    // other logins they can sign in through to keep instead, whether the account has a password to type, and how many
+    // passkeys confirming removes.
     private static EmailSignInViewModel CreateView(User account, string returnUrl, UserLoginInfo keptLogin = null, string token = null)
         => new()
         {
@@ -284,6 +292,7 @@ public sealed class EmailOwnershipController : Controller
                 .DistinctBy(login => login.LoginProvider, StringComparer.Ordinal)
                 .ToDictionary(login => login.LoginProvider, login => login.ProviderDisplayName ?? login.LoginProvider, StringComparer.Ordinal),
             AsksPassword = !string.IsNullOrEmpty(account.PasswordHash),
+            Passkeys = account.Passkeys?.Count ?? 0,
         };
 
     // The signed-in account, when a code can confirm its address: the accounts code sign-in serves, and one that signs

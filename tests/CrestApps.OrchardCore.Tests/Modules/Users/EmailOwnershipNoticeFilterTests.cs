@@ -135,6 +135,53 @@ public sealed class EmailOwnershipNoticeFilterTests : IAsyncLifetime
         Assert.Single(await RenderPageAsync(await SessionAsync()));
     }
 
+    // A passkey added from a code session marks the account like a linked login: ASP.NET Core Identity keeps the
+    // security stamp when it adds one, and the passkey may be the owner's next to a password somebody else holds.
+    [Fact]
+    public async Task ACodeSessionThatAddsAPasskey_MarksTheAccount()
+    {
+        // Arrange
+        await CreateAccountAsync(withLogin: false);
+
+        // Act
+        await _harness.AddPasskeyAsync("user-1", session: await CodeSessionAsync());
+
+        // Assert
+        Assert.True(await ChangedInCodeSessionAsync());
+        // A later passkey session shows neither the password nor which passkey it used, so it is told.
+        Assert.Single(await RenderPageAsync(await SessionAsync(new Claim("amr", "pop"))));
+    }
+
+    // Removing a passkey keeps the stamp too.
+    [Fact]
+    public async Task ACodeSessionThatRemovesAPasskey_MarksTheAccount()
+    {
+        // Arrange
+        await CreateAccountAsync(withLogin: false);
+        var credentialId = await _harness.AddPasskeyAsync("user-1");
+        var codeSession = await CodeSessionAsync();
+
+        // Act
+        var removed = await _harness.RemovePasskeyAsync("user-1", credentialId, codeSession);
+
+        // Assert
+        Assert.True(removed.Succeeded);
+        Assert.True(await ChangedInCodeSessionAsync());
+    }
+
+    // Orchard Core signs a passkey in with amr=mfa when the site requires user verification, the value a password session
+    // with a second factor carries. On a marked account with a password, that session doesn't show the password.
+    [Fact]
+    public async Task APasskeySessionWithMfa_OnAMarkedAccountWithAPassword_IsTold()
+    {
+        // Arrange
+        await CreateAccountAsync(withLogin: false);
+        await _harness.AddPasskeyAsync("user-1", session: await CodeSessionAsync());
+
+        // Act and assert
+        Assert.Single(await RenderPageAsync(await SessionAsync(new Claim("amr", "mfa"))));
+    }
+
     // An ordinary save in a code session (a profile edit) changes no credential, so it marks nothing.
     [Fact]
     public async Task ACodeSessionThatChangesNoCredential_DoesNotMarkTheAccount()

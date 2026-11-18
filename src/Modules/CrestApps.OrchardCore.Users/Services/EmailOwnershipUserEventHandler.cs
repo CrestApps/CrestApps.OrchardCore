@@ -10,10 +10,11 @@ namespace CrestApps.OrchardCore.Users.Services;
 /// <summary>
 /// Notices, as Orchard Core's user store saves an account, two things the Confirm email ownership feature needs:
 /// <list type="bullet">
-/// <item>a password or an external login added, changed or removed from a session an e-mailed code began, while the
-/// address isn't proved (<see cref="UserCredentialsProof.ChangedInCodeSessionPropertyName"/>): the owner linked their
-/// own login, or removed one, next to credentials somebody else may hold, and Orchard Core then signs the browser in
-/// again without the code's mark. Every session of that account is told on every page from then on
+/// <item>a password, an external login or a passkey added, changed or removed from a session an e-mailed code began,
+/// while the address isn't proved (<see cref="UserCredentialsProof.ChangedInCodeSessionPropertyName"/>): the owner linked
+/// their own login, added their passkey, or removed one, next to credentials somebody else may hold, and Orchard Core
+/// then signs the browser in again without the code's mark (ASP.NET Core Identity keeps the security stamp when a
+/// passkey is added or removed, so the session's digest counts the passkeys themselves). Every session of that account is told on every page from then on
 /// (<see cref="Filters.EmailOwnershipNoticeFilter"/>);</item>
 /// <item>an account created in the current request, so an external registration whose provider asserted the same
 /// address as verified can record it as proved (<see cref="EmailOwnershipExternalLoginHandler"/>).</item>

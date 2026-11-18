@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Users.Core.Handlers;
 
 /// <summary>
 /// Records the address as proved (<see cref="UserEmailOwnership"/>) when a user follows the link e-mailed to confirm
-/// it, on an account with no password and no external login: the link is a round trip to the mailbox. With
+/// it, on an account with no password, no external login and no passkey: the link is a round trip to the mailbox. With
 /// <see cref="Services.EmailBoundConfirmationTokenProvider"/> in place, a link only confirms the address it was sent to.
 /// </summary>
 /// <remarks>

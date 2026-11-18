@@ -39,6 +39,22 @@ public sealed class EmailOwnershipLoginFormEventTests
     public async Task AnAccountWithOneWayToSignIn_IsNotTold(bool withPassword, int logins)
         => Assert.Empty(await SignInAsync(Account(withPassword, logins)));
 
+    // A passkey is a way to sign in, like a password or a login: a password and a passkey, or two passkeys, are told.
+    [Theory]
+    [InlineData(true, 1)]
+    [InlineData(false, 2)]
+    public async Task AnAccountWithAPasskeyAndAnotherWayToSignIn_IsToldOnceAtSignIn(bool withPassword, int passkeys)
+    {
+        var account = Account(withPassword, logins: 0);
+
+        for (var i = 0; i < passkeys; i++)
+        {
+            account.Passkeys.Add(new UserPasskey { CredentialId = [(byte)i], Name = "Passkey " + i, CreatedUtc = DateTime.UtcNow });
+        }
+
+        Assert.Single(await SignInAsync(account));
+    }
+
     [Fact]
     public async Task AnAccountWhoseAddressIsProved_IsNotTold()
     {

@@ -8,7 +8,8 @@ using OrchardCore.Users.Models;
 namespace CrestApps.OrchardCore.Users.Core.Services;
 
 /// <summary>
-/// Tells whether an account has credentials of its own, and which of them a request shows.
+/// Tells whether an account has credentials of its own (a password, external logins, passkeys), and which of them a
+/// request shows.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -23,7 +24,10 @@ namespace CrestApps.OrchardCore.Users.Core.Services;
 /// ASP.NET Core Identity marks how a session began: <c>amr=pwd</c> after a password sign-in, <c>amr=mfa</c> after a
 /// two-factor sign-in, and the provider's name in <see cref="ClaimTypes.AuthenticationMethod"/> after an external login
 /// (with <c>amr=mfa</c> too when a second factor followed it). An e-mailed code (<c>amr=otp</c>, see
-/// <see cref="EmailedCodeMethod"/>) and Orchard Core's sign-in after registration show neither.
+/// <see cref="EmailedCodeMethod"/>) and Orchard Core's sign-in after registration show neither. Orchard Core signs a
+/// passkey in with <c>amr=pop</c>, or <c>amr=mfa</c> when the site requires user verification, and no provider name.
+/// A session that says <c>amr=mfa</c> may be a passkey's, not a password's, so only <c>amr=pwd</c> shows the
+/// password; and no session shows a passkey, since none says which passkey it used: the first proof removes them all.
 /// </para>
 /// <para>
 /// Those marks say how the session began, not that the credential is still the one it began with: the cookie can be
@@ -77,11 +81,24 @@ public static class UserCredentialsProof
     public const string EmailedCodeMethod = "otp";
 
     /// <summary>
-    /// Whether the account can be signed in to without its mailbox: it has a password or an external login.
+    /// The <see cref="AuthenticationMethodReferenceClaim"/> value ASP.NET Core Identity writes after a password sign-in.
+    /// </summary>
+    public const string PasswordMethod = "pwd";
+
+    /// <summary>
+    /// Whether the account can be signed in to without its mailbox: it has a password, an external login or a passkey.
     /// </summary>
     /// <param name="account">The account.</param>
     public static bool HasCredentials(User account)
-        => !string.IsNullOrEmpty(account?.PasswordHash) || account?.LoginInfos is { Count: > 0 };
+        => !string.IsNullOrEmpty(account?.PasswordHash) || account?.LoginInfos is { Count: > 0 } || HasPasskeys(account);
+
+    /// <summary>
+    /// Whether the account has a passkey, which signs in like a password and which no session shows (see
+    /// <see cref="HasCredentialsNotShown"/>).
+    /// </summary>
+    /// <param name="account">The account.</param>
+    public static bool HasPasskeys(User account)
+        => account?.Passkeys is { Count: > 0 };
 
     /// <summary>
     /// Whether <paramref name="principal"/> is signed in to <paramref name="account"/> with the account's password or
@@ -93,8 +110,10 @@ public static class UserCredentialsProof
         => ShowsPassword(principal, account) || ShownLoginProvider(principal, account) is not null;
 
     /// <summary>
-    /// Whether <paramref name="principal"/> is signed in to <paramref name="account"/> with the account's password. A
-    /// session an external login began is not, even with <c>amr=mfa</c>.
+    /// Whether <paramref name="principal"/> is signed in to <paramref name="account"/> with the account's password
+    /// (<c>amr=pwd</c>). A session an external login or a passkey began is not, and neither is one that says only
+    /// <c>amr=mfa</c>: Orchard Core writes that for a passkey when the site requires user verification, and a password
+    /// with a second factor is never one a code serves (two-factor accounts are excluded).
     /// </summary>
     /// <param name="principal">The request's user.</param>
     /// <param name="account">The account.</param>
@@ -103,7 +122,7 @@ public static class UserCredentialsProof
             !string.IsNullOrEmpty(account.PasswordHash) &&
             HasCurrentSecurityStamp(principal, account) &&
             string.IsNullOrEmpty(principal.FindFirstValue(ClaimTypes.AuthenticationMethod)) &&
-            principal.HasClaim(claim => claim.Type == AuthenticationMethodReferenceClaim && (claim.Value == "pwd" || claim.Value == "mfa"));
+            principal.HasClaim(claim => claim.Type == AuthenticationMethodReferenceClaim && claim.Value == PasswordMethod);
 
     /// <summary>
     /// The provider of the account's own external login that <paramref name="principal"/> is signed in through, or
@@ -128,19 +147,19 @@ public static class UserCredentialsProof
     }
 
     /// <summary>
-    /// Whether the account's address isn't proved and it has a password or an external login: credentials somebody else
-    /// may hold, which the first proof of the address removes unless the request shows them.
+    /// Whether the account's address isn't proved and it has a password, an external login or a passkey: credentials
+    /// somebody else may hold, which the first proof of the address removes unless the request shows them.
     /// </summary>
     /// <param name="account">The account.</param>
     public static bool HasCredentialsInDoubt(User account)
         => HasCredentials(account) && !UserEmailOwnership.IsVerified(account.Properties, account.Email);
 
     /// <summary>
-    /// How many credentials the account has: its password and each external login.
+    /// How many credentials the account has: its password, each external login and each passkey.
     /// </summary>
     /// <param name="account">The account.</param>
     public static int CountCredentials(User account)
-        => (string.IsNullOrEmpty(account?.PasswordHash) ? 0 : 1) + (account?.LoginInfos?.Count ?? 0);
+        => (string.IsNullOrEmpty(account?.PasswordHash) ? 0 : 1) + (account?.LoginInfos?.Count ?? 0) + (account?.Passkeys?.Count ?? 0);
 
     /// <summary>
     /// Whether a credential of the account changed in a session an e-mailed code began while its address wasn't proved
@@ -171,8 +190,10 @@ public static class UserCredentialsProof
 
     /// <summary>
     /// A short digest of what can sign in to the account without its mailbox: its security stamp, which Identity rotates
-    /// when a password is set, changed or reset and when a login is removed, and its external logins, since adding one
-    /// keeps the stamp. Nothing of the password itself goes in.
+    /// when a password is set, changed or reset and when a login is removed, its external logins, since adding one keeps
+    /// the stamp, and its passkeys' credential ids, since Identity keeps the stamp when it adds or removes one. A passkey's
+    /// use (its signature counter, its name) changes nothing, and an account without passkeys has the digest it had
+    /// before they were counted. Nothing of the password itself goes in.
     /// </summary>
     /// <param name="account">The account.</param>
     public static string CredentialsFingerprint(User account)
@@ -182,7 +203,10 @@ public static class UserCredentialsProof
         var logins = (account.LoginInfos ?? [])
             .Select(login => login.LoginProvider + "\n" + login.ProviderKey)
             .Order(StringComparer.Ordinal);
-        var text = string.Join("\n\n", [account.SecurityStamp ?? string.Empty, .. logins]);
+        var passkeys = (account.Passkeys ?? [])
+            .Select(passkey => "passkey\n" + Convert.ToBase64String(passkey.CredentialId ?? []))
+            .Order(StringComparer.Ordinal);
+        var text = string.Join("\n\n", [account.SecurityStamp ?? string.Empty, .. logins, .. passkeys]);
 
         return Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(text)), 0, 16);
     }
@@ -198,9 +222,9 @@ public static class UserCredentialsProof
             (principal.HasClaim(claim => claim.Type == CredentialsInDoubtClaim) || SignedInWithEmailedCode(principal));
 
     /// <summary>
-    /// Whether <paramref name="account"/> has a password or an external login that <paramref name="principal"/> does not
-    /// show, which the first proof of its address would remove: anything but the password the session shows, or the
-    /// account's only login of the provider it shows.
+    /// Whether <paramref name="account"/> has a password, an external login or a passkey that <paramref name="principal"/>
+    /// does not show, which the first proof of its address would remove: anything but the password the session shows, or
+    /// the account's only login of the provider it shows. A passkey is never shown (see <see cref="UserCredentialsProof"/>).
     /// </summary>
     /// <param name="principal">The request's user.</param>
     /// <param name="account">The account.</param>
@@ -209,6 +233,11 @@ public static class UserCredentialsProof
         if (!HasCredentials(account))
         {
             return false;
+        }
+
+        if (HasPasskeys(account))
+        {
+            return true;
         }
 
         var passwordShown = ShowsPassword(principal, account);

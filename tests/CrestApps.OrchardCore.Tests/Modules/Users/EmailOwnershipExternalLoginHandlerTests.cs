@@ -77,6 +77,16 @@ public sealed class EmailOwnershipExternalLoginHandlerTests : IAsyncLifetime
         Assert.False(await SignInThroughGitHubAsync(Claims(Email, "true")));
     }
 
+    // A passkey added before, by whoever it was, signs in too: the provider's assertion proves nothing about it.
+    [Fact]
+    public async Task AnAccountWithAPasskey_IsNotProved()
+    {
+        await CreateAccountAsync(withPassword: false);
+        await _harness.AddPasskeyAsync("user-1");
+
+        Assert.False(await SignInThroughGitHubAsync(Claims(Email, "true")));
+    }
+
     // K3 too: Orchard Core's default external registration asks for a password. Registered in one request, the password
     // and the login are the same person's, so the provider's assertion proves the account and nobody is told anything.
     [Fact]
