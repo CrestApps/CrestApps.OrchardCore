@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -70,9 +71,9 @@ public sealed class UserMemoryController : Controller
 
         var isOtherUser = !IsCurrentUser(userId);
         var safeReturnUrl = GetSafeReturnUrl(returnUrl);
-        var memoryCount = await _memoryStore.CountByUserAsync(userId);
+        var result = await AIUserMemoryCleaner.ClearAsync(_memoryStore, _memoryManager, userId);
 
-        if (memoryCount == 0)
+        if (result.Found == 0)
         {
             await _notifier.WarningAsync(
                 isOtherUser
@@ -82,29 +83,7 @@ public sealed class UserMemoryController : Controller
             return Redirect(safeReturnUrl);
         }
 
-        var memories = (await _memoryStore.GetAllAsync())
-            .Where(memory => string.Equals(memory.UserId, userId, StringComparison.Ordinal))
-            .ToArray();
-
-        if (memories.Length == 0)
-        {
-            await _notifier.WarningAsync(
-                isOtherUser
-                    ? H["No saved AI memory was found for this user."]
-                    : H["No saved AI memory was found for your account."]);
-
-            return Redirect(safeReturnUrl);
-        }
-
-        var removedCount = 0;
-
-        foreach (var memory in memories)
-        {
-            if (await _memoryManager.DeleteAsync(memory))
-            {
-                removedCount++;
-            }
-        }
+        var removedCount = result.Removed;
 
         if (removedCount == 0)
         {
@@ -113,7 +92,7 @@ public sealed class UserMemoryController : Controller
                     ? H["Unable to remove the saved AI memory for this user."]
                     : H["Unable to remove the saved AI memory for your account."]);
         }
-        else if (removedCount == memories.Length)
+        else if (removedCount == result.Found)
         {
             await _notifier.SuccessAsync(
                 isOtherUser
