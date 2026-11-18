@@ -1040,6 +1040,6 @@ The ten new workflow activities are listed in the workflow designer's activity l
 
 | Bug | Fix | Commit |
 | --- | --- | --- |
-| Cancelling a session tells nobody, although the page says it does | `ClassSessionCancelledObserver` sends each learner whose place went with the cancelled session a **Class session cancelled** notification with the reason; a place given up by the learner or an ending enrollment tells nobody. | `58cc71a47` |
-| Class sessions appear on no attendee's calendar | `ClassSessionCalendarEventSource` (a Calendars event source) shows each meeting of a confirmed or attended place on the learner's own calendar, room or no room. | `32c1238cf` |
-| GET/POST route guard | The class session pages say `HttpGet`. | `9058f9654` |
+| Cancelling a session tells nobody, although the page says it does | `ClassSessionCancelledObserver` sends each learner whose place went with the cancelled session a **Class session cancelled** notification with the reason; a place given up by the learner or an ending enrollment tells nobody. | `9acd7c2fc` |
+| Class sessions appear on no attendee's calendar | `ClassSessionCalendarEventSource` (a Calendars event source) shows each meeting of a confirmed or attended place on the learner's own calendar, room or no room. | `695e57d1a` |
+| GET/POST route guard | The class session pages say `HttpGet`. | `4ed60e225` |
