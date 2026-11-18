@@ -10,7 +10,7 @@ Most questions are scored automatically. Essays need a person, and any graded at
 
 | | |
 | --- | --- |
-| **Menu** | Learning > Grading; a course's Gradebook |
+| **Menu** | Learning > Grading; Learning > Gradebook. Course staff with Manage own courses see both, for their own courses. |
 | **Permission** | Grade assessments, or Manage own courses for a course's graders, instructors and assistants |
 | **Feature** | Learning Assessments; Learning Gradebook for the gradebook |
 

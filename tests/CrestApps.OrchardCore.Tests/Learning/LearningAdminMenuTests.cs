@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Learning;
+using CrestApps.OrchardCore.Learning.Assessments.Navigation;
 using CrestApps.OrchardCore.Learning.Navigation;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -33,6 +34,27 @@ public sealed class LearningAdminMenuTests
         // Assert
         var learning = Assert.Single(menu, item => item.Text.Value == "Learning");
         Assert.Equal(["Courses", "Enrollments"], learning.Items.Select(item => item.Text.Value).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task CourseStaff_SeeGradingAndGradebook_InTheLearningMenu()
+    {
+        // Arrange: a grader of a course holds Manage own courses, not the site-wide grading and records permissions.
+        var permissions = new[] { LearningPermissions.ManageOwnCourses.Name };
+        var authorizationService = new FakeAuthorizationService(permissions);
+        INavigationProvider[] providers =
+        [
+            new LearningAdminMenu(StaffContext(), authorizationService, new PassThroughStringLocalizer<LearningAdminMenu>()),
+            new AssessmentsAdminMenu(StaffContext(), authorizationService, new PassThroughStringLocalizer<AssessmentsAdminMenu>()),
+            new GradebookAdminMenu(StaffContext(), authorizationService, new PassThroughStringLocalizer<GradebookAdminMenu>()),
+        ];
+
+        // Act
+        var menu = await BuildAsync(providers, permissions);
+
+        // Assert
+        var learning = Assert.Single(menu, item => item.Text.Value == "Learning");
+        Assert.Equal(["Courses", "Enrollments", "Gradebook", "Grading"], learning.Items.Select(item => item.Text.Value).Order(StringComparer.Ordinal));
     }
 
     internal static IHttpContextAccessor StaffContext()
