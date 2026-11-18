@@ -95,7 +95,6 @@
     <PackageVersion Include="OrchardCore.Queries.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ReCaptcha.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.OpenId.Core" Version="$(OrchardCoreVersion)" />
-    <PackageVersion Include="OrchardCore.Secrets.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.RateLimits.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Recipes.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Redis" Version="$(OrchardCoreVersion)" />

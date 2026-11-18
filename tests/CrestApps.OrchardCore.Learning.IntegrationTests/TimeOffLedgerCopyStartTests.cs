@@ -66,7 +66,7 @@ public sealed class TimeOffLedgerCopyStartTests
                     .QueryIndex<QuantityLedgerEntryIndex>(index => index.ItemId == id, collection: WorkforceConstants.TimeOffLedgerCollectionName)
                     .ListAsync();
 
-                return (rows.Any(), await services.GetRequiredService<TimeOffLedgerCopy>().IsCompleteAsync());
+                return (rows.Count > 0, await services.GetRequiredService<TimeOffLedgerCopy>().IsCompleteAsync());
             });
 
             if (!(copied && complete))

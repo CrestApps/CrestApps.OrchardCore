@@ -37,6 +37,12 @@ namespace CrestApps.OrchardCore.Tests.Learning.Commerce;
 /// </summary>
 public sealed class LearningCommerceRound7Tests
 {
+    // The order notes each test's order received (orders keep notes on their timeline, which these tests do not run).
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Order, List<string>> _notes = new();
+
+    private static List<string> NotesOf(Order order)
+        => _notes.TryGetValue(order, out var notes) ? notes : [];
+
     [Fact]
     public async Task APaidOrder_CommitsNothingInsideTheCheckout_SoARolledBackCheckoutLeavesNoGrant()
     {
@@ -144,7 +150,7 @@ public sealed class LearningCommerceRound7Tests
 
         // Assert
         Assert.Single(purchases);
-        Assert.Single(order.Notes ?? []);
+        Assert.Single(NotesOf(order));
     }
 
     [Fact]
@@ -193,7 +199,7 @@ public sealed class LearningCommerceRound7Tests
 
         // Assert
         Assert.Single(purchases);
-        Assert.Single(order.Notes ?? []);
+        Assert.Single(NotesOf(order));
     }
 
     [Fact]
@@ -248,7 +254,7 @@ public sealed class LearningCommerceRound7Tests
         // Assert
         Assert.Empty(enrollments);
         Assert.Equal(LearningPurchaseState.Failed, Assert.Single(purchases).State);
-        Assert.Single(order.Notes ?? []);
+        Assert.Single(NotesOf(order));
     }
 
     [Fact]
@@ -504,7 +510,7 @@ public sealed class LearningCommerceRound7Tests
                 var orders = new Mock<IOrderService>();
 
                 orders.Setup(service => service.AddNoteAsync(It.IsAny<Order>(), It.IsAny<string>(), It.IsAny<OrderNoteKind>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                    .Callback((Order target, string text, OrderNoteKind kind, string author, CancellationToken _) => (target.Notes ??= []).Add(new OrderNote { Text = text, Kind = kind, AuthorName = author }))
+                    .Callback((Order target, string text, OrderNoteKind kind, string author, CancellationToken _) => _notes.GetOrCreateValue(target).Add(text))
                     .ReturnsAsync(Array.Empty<string>());
 
                 services.RemoveAll<IContentManager>();

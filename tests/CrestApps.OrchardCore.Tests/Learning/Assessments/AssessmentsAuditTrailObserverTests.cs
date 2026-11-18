@@ -25,10 +25,10 @@ public sealed class AssessmentsAuditTrailObserverTests
         var graded = new AssessmentAttempt { ItemId = "a2", UserId = "learner", QuizId = "quiz", Score = 4, GradedBy = "grader" };
 
         // Act
-        await observer.GradedAsync(automatic);
-        await observer.GradedAsync(graded);
-        await observer.ScoreChangedAsync(graded, new AttemptScoreChange { Kind = "Voided", Actor = "manager", From = 4, Reason = "Copied answers" });
-        await observer.OverrideGrantedAsync(new AssessmentOverride { ItemId = "o1", UserId = "learner", QuizId = "quiz", ExtraMinutes = 15, Actor = "manager", Reason = "Reading support" });
+        await observer.GradedAsync(automatic, TestContext.Current.CancellationToken);
+        await observer.GradedAsync(graded, TestContext.Current.CancellationToken);
+        await observer.ScoreChangedAsync(graded, new AttemptScoreChange { Kind = "Voided", Actor = "manager", From = 4, Reason = "Copied answers" }, TestContext.Current.CancellationToken);
+        await observer.OverrideGrantedAsync(new AssessmentOverride { ItemId = "o1", UserId = "learner", QuizId = "quiz", ExtraMinutes = 15, Actor = "manager", Reason = "Reading support" }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal([AssessmentsAuditTrailEvents.Graded, AssessmentsAuditTrailEvents.ScoreChanged, AssessmentsAuditTrailEvents.OverrideGranted], recorded.Select(context => context.Name));

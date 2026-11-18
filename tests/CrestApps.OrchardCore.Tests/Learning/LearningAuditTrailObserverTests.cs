@@ -25,12 +25,12 @@ public sealed class LearningAuditTrailObserverTests
         var onItsOwn = Enrollment(new EnrollmentStatusChange { From = EnrollmentStatus.Active, To = EnrollmentStatus.Completed, Actor = "learner" });
 
         // Act
-        await observer.StatusChangedAsync(byHand, EnrollmentStatus.Active);
-        await observer.StatusChangedAsync(onItsOwn, EnrollmentStatus.Active);
-        await observer.ItemCompletedAsync(byHand, new CourseItemProgress { ContentItemId = "lesson", CompletedBy = "manager", CompletionReason = "Done on paper" });
-        await observer.ItemCompletedAsync(byHand, new CourseItemProgress { ContentItemId = "lesson2" });
-        await observer.ExtendedAsync(byHand, "manager", "More time");
-        await observer.ExportedAsync("LearningEnrollments", 12, "admin", "course1");
+        await observer.StatusChangedAsync(byHand, EnrollmentStatus.Active, TestContext.Current.CancellationToken);
+        await observer.StatusChangedAsync(onItsOwn, EnrollmentStatus.Active, TestContext.Current.CancellationToken);
+        await observer.ItemCompletedAsync(byHand, new CourseItemProgress { ContentItemId = "lesson", CompletedBy = "manager", CompletionReason = "Done on paper" }, TestContext.Current.CancellationToken);
+        await observer.ItemCompletedAsync(byHand, new CourseItemProgress { ContentItemId = "lesson2" }, TestContext.Current.CancellationToken);
+        await observer.ExtendedAsync(byHand, "manager", "More time", TestContext.Current.CancellationToken);
+        await observer.ExportedAsync("LearningEnrollments", 12, "admin", "course1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(
