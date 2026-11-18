@@ -1089,6 +1089,44 @@ The connection tools need **Manage data connections**, the data set tools **Mana
 
 The tools check the permissions of the Import and Export pages per content type: **Import content items from file** for imports, **Export content items from file** for exports, **List content transfer entries** for the import list and **Delete content transfer entries** for a delete. An export is shown and deleted only for the user who made it. An import that is still processing, running or stalled, is resumed from the Import list. Imports and exports are started on the Import and Export pages.
 
+### Report tools
+
+**Available when:** `CrestApps.OrchardCore.Reports` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listReports` | Lists the reports the user may open: built-in reports with their category, and, when the Report Builder is on, designed reports with their group and owner. Text search and a category or group filter. |
+| `getReport` | Describes one report: its filters, default period, export formats and whether the user may export. For a designed report, on request, its definition, versions and share links. |
+| `runReport` | Runs a report for a period (and, for a designed report, filter values) and returns its headline numbers and tables, 200 rows per table by default, at most 1,000, and about 60,000 characters. |
+| `exportReport` | Returns the download link of a CSV, Excel or PDF export with its file name. The file is built when the link is opened. |
+
+One set of tools serves every report a module registers and every designed report. A built-in report needs its own permission, and its export permission to export, as on the Reports page. A designed report must be one the user may view (its owner, the people and roles it is shared with, and **View all custom reports**), and runs with its owner's access, as on its page; exporting it needs the report to allow export or the right to change it. A built-in report takes only a period (`from`, `to` as days in the user's time zone, or `allTime` when the report offers it): its other filters, such as an AI profile or a queue, are set on its page, because they bind from the page's form. The download link is the report page's own export address, so whoever opens it is checked again and nothing is stored. Dates in results are in the user's or the site's time zone.
+
+### Report Builder tools
+
+**Available when:** `CrestApps.OrchardCore.Reports.Builder` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listReportDataSets` | Lists the data sources and the data sets the user may read, for one source or matching a text. |
+| `getReportDataSetSchema` | Returns the fields of one data set and the formula functions for calculated fields. |
+| `queryReportData` | Runs an ad hoc query (data sets, joins, calculated fields, filters, grouping, aggregates, sorts, limit) with the user's own access and returns rows. Nothing is saved. |
+| `saveReportDesign` | Creates and publishes a designed report, or publishes a change to one by ID: title, description, group, query, visuals, admin menu and export options. Never changes who the report is shared with. |
+| `shareReportDesign` | Sets the users and roles a designed report is shared with. Asks for approval. |
+| `restoreReportDesignVersion` | Restores and publishes an earlier version of a designed report; who it is shared with does not change. |
+| `deleteReportDesign` | Deletes a designed report with its draft, versions and share links, or a report that was never published. Asks for approval. |
+| `createReportShareLink` | Creates a share link for named users of the site and emails it to them. The link is never returned. Asks for approval. |
+| `revokeReportShareLink` | Revokes one share link of a designed report. Asks for approval. |
+| `listReportViews` | Lists the saved report views with owner, refresh interval and snapshot state, or one view with its query and the reports and views that read it. |
+| `saveReportView` | Creates a report view from a query, or updates one by ID, with an optional refresh interval. |
+| `refreshReportView` | Recomputes the stored rows of a scheduled view now. |
+| `deleteReportView` | Deletes a report view that no report or view reads. Asks for approval. |
+| `listReportGroups` | Lists the report groups as a tree with the number of groups and reports in each. |
+| `saveReportGroup` | Creates a report group under a parent, or renames, moves or reorders one by ID. |
+| `deleteReportGroup` | Deletes an empty report group; a group that holds groups or reports is kept. Asks for approval. |
+
+The data set, query and view tools and creating a report need **Build reports and manage own custom reports and views**; changing, sharing, restoring or deleting a report or view needs **Manage all custom reports and views** on it, which its owner holds; share links also need **Share custom reports publicly and through share links**, and so does sharing with the Anonymous role; the group tools need **Manage report groups**. A report that has unpublished changes in the Report Builder is not published over: the tool names who changed it and asks to publish or discard the draft first. Every user and role a report is shared with must exist. A group is given by its path, such as `Sales / Regional`, and must exist. A share link's address holds a secret token, so `createReportShareLink` emails it to its recipients and returns only its ID, recipients and expiry; the Report Builder shows the address once. A report, view or group changed earlier in the same chat message is changed again only in the next reply, because the change is saved when the reply ends.
+
 ### Analytics tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Chat.Analytics`

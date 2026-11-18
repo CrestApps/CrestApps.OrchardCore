@@ -29,6 +29,7 @@ Tools that run Orchard Core's settings display drivers (`getSiteSettings`, `upda
 | 13 | AI API keys, conversations, usage, chat interactions, MCP connections, MCP server, A2A connections, AI memory | [20](20-crestapps-ai-core.md) | 21 | 21 | 0 | aa0aade44..caedc8999 |
 | 14 | AI data sources, AI documents, AI file sources, AI web crawlers | [21](21-crestapps-ai-knowledge-reports-data.md) | 16 | 14 | 2 | c914acfdc..d289a346e |
 | 15 | Data connectors, content transfer | [21](21-crestapps-ai-knowledge-reports-data.md) | 18 | 16 | 2 | 1497ca6f7..c9ae99e26 |
+| 16 | Reports, Report Builder | [21](21-crestapps-ai-knowledge-reports-data.md) | 20 | 20 | 0 | 315b52b64..76768d140 |
 
 Orchard Core part (batches 1 to 10): 189 planned new tools, 132 built, 57 deferred. Left out on purpose: the four template tools (`listTemplates`, `getTemplate`, `saveTemplate`, `deleteTemplate`), because pull request 1321 adds shape template tools; and the six "existing, improve" rows (`listWorkflowTypes`, `getWorkflowType`, `listWorkflowActivities` and three AI tools), because phase 1 does not change existing tools.
 
@@ -95,6 +96,13 @@ Almost every deferral has one cause: the service the admin page uses exists only
 | `listContentTransferEntries` | 15 | No content type filter: the list's filter parser has only `status` and `sort` terms |
 | `setContentImportState` | 15 | Does not resume an import still marked processing (running or stalled): telling them apart takes the import's lock, done by the Import list; a resumed import waits for the Imported Files Processor instead of being started at once |
 | `deleteContentTransferEntry` | 15 | Stricter than the list's single Delete action: an export must be the caller's own. Queues the deletion with `DeferredWork`; the queued path is not covered by a test |
+| `getReport`, `runReport`, `exportReport` | 16 | A built-in report takes only a period (`from`, `to`, `allTime`); its other filters (AI profile, usage grouping, contact center, omnichannel, hours by category, QA cohort) bind only from the report page's form. A filter-description contract would touch the filter drivers of five modules, so it was not added; `getReport` lists the names a report declares through `IReportFilterMetadata` and says they are set on the page |
+| `runReport` | 16 | For a designed report, the main query's rows (hidden columns left out) and the metrics, not the charts or the other queries' visuals; 200 rows by default, at most 1,000, and about 60,000 characters |
+| `exportReport` | 16 | Returns the report page's own export address (which checks the permissions again and builds the file when opened), not a file. A designed report whose first exposed date filter is a relative date ("last N days") cannot take a period in the address |
+| `createReportShareLink` | 16 | Always emails the link and never returns its address, which holds the link's secret token (the catalog row says "optionally an email" and "Returns the link"); the registration's description says so. Recipients the email did not reach are listed, with the advice to revoke and create the link again |
+| `saveReportDesign` | 16 | Publishes changes to a published report only (a report that was never published is published in the builder); refused while the report has unpublished changes in the builder; the group must exist (no group is created); named queries and containers are kept as stored |
+| `shareReportDesign`, `restoreReportDesignVersion` | 16 | Refused while the report has unpublished changes in the builder. Restoring copies the version into the draft and publishes it at once, with the report's current sharing, not the version's |
+| Report Builder tools | 16 | A report, view or group created, changed or deleted earlier in the same chat message is not read or changed again until the next reply, because the report, view and group catalogs read the cached document until the scope commits (`ReportToolScopeChanges`); lists say so. Report groups keep their own scoped record, so group tools see each other's changes |
 
 ## Batch 11: the AI configuration guard inside the tools
 
@@ -207,6 +215,22 @@ Credentials: no API key, password, bearer token, client secret or SQL Server pas
 Queueing from a chat: the admin pages queue refreshes, resumed imports and deletions with `HttpBackgroundJob.ExecuteAfterEndOfRequestAsync`, which waits for the request's `HttpContext` to be released and gives up after 60 seconds; from a hub connection that request lasts as long as the connection, so the job would be skipped (read from the package's source, not run). The refresh tool records the request for the refresh task, the resume tool leaves the import to the Imported Files Processor, and the delete tool queues `IContentTransferEntryManager.DeleteAsync` with `DeferredWork` before marking the entry (nothing else sweeps entries marked as deleting). The Content Transfer controller keeps its private triggers; it was not touched.
 
 The data connector tests use in-memory stores, the real secret manager, reader and editors, and a test connector; the content transfer tests use a real SQLite database with the module's migration, the real entry manager, filter parser and list query. No HTTP, Elasticsearch or SQL Server system was reached.
+
+## Batch 16: reports and the Report Builder
+
+No tool of batch 16 was deferred. The Reports module did not reference `AI.Core`, so it has its own base class, `ReportsAIToolBase`, and now references the `CrestApps.Core.AI` package. Two startups register the tools: `AIToolsStartup` (feature `CrestApps.OrchardCore.Reports`) for `listReports`, `getReport`, `runReport` and `exportReport`, which reach designed reports only when the Report Builder's services are registered, and `BuilderAIToolsStartup` (feature `CrestApps.OrchardCore.Reports.Builder`) for the other sixteen. `listReportDataSets` and `getReportDataSetSchema` overlap batch 10's `listDataSets` and `getDataSetSchema`, which need **Manage data pipelines**; these need the report designer's permission and add the formula functions.
+
+Extractions (behavior-preserving; the admin code calls them now, commit 315b52b64):
+
+- `ReportDateRangeResolver` (Reports module): the period resolution of `ReportDateRangeFilterDisplayDriver` (`NormalizeAsync`, the default ranges), plus `ResolveDaysAsync` for whole days in the user's time zone. The driver keeps an internal `NormalizeAsync` that forwards to it, for its tests.
+- `ReportShareLinkService` (Reports module): the list, create and revoke actions of `ReportDesignerApiController`, with their log lines; `ReportShareLinkRequest` moved with it.
+- `DesignedReportPresenter.GetFileName`: the designed export's file name, so the tool names the file the link will download.
+
+Permissions are checked as the pages check them, with the report or view as the resource, so `ReportDesignAuthorizationHandler` grants a report to its owner and the people and roles it is shared with. Reading a report's share links also needs **Share custom reports publicly**, as the designer's link list does. A designed report runs with its owner's access, as on its page; `queryReportData` runs with the caller's access, as the designer's preview does.
+
+Sharing: publishing a report saves the sharing lists of what is published, so `saveReportDesign` starts from the stored report and `restoreReportDesignVersion` replaces the version's lists with the current ones; only `shareReportDesign`, which asks for approval, changes them. It refuses a user or role that does not exist (the service would store any name) and the Anonymous role without **Share custom reports publicly**.
+
+The tests run the tools on the real report services: the catalogs over an in-memory document manager, drafts, versions and snapshots in a SQLite database the module's migrations create, the sales test data source, the report authorization handler and an in-memory share link manager. The coded report filter drivers of other modules, the email of share links and a view's snapshot refresh (only the live-view answer) were not run.
 
 ## Notes for the maintainer
 
