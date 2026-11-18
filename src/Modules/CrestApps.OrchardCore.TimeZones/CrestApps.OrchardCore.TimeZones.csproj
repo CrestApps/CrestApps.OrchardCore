@@ -25,6 +25,11 @@
     <PackageReference Include="OrchardCore.Recipes.Abstractions" />
     <PackageReference Include="OrchardCore.Deployment.Abstractions" />
     <PackageReference Include="NodaTime" />
+    <PackageReference Include="CrestApps.Core.AI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
   </ItemGroup>
 
   <ItemGroup>
