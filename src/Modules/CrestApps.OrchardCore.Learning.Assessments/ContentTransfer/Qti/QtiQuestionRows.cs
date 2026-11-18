@@ -195,6 +195,7 @@ public static class QtiQuestionRows
             QtiRefusals.SeveralInteractions => S["it has interactions of several kinds, or more than one, and a question holds one"],
             QtiRefusals.NoCorrectResponse => S["it has no correct response to score by"],
             QtiRefusals.CustomScoring => S["its response processing is not a standard template and uses {0}", item.RefusalDetail],
+            QtiRefusals.UnsupportedScoring => S["its scoring cannot be kept by the question type: {0}", item.RefusalDetail],
             QtiRefusals.MarkupInText => S["a choice, an answer or a blank holds {0}, where the question type keeps plain text", item.RefusalDetail],
             QtiRefusals.UnsupportedAnswer => S["the accepted answer \"{0}\" holds a character a blank cannot keep (| [ or ])", item.RefusalDetail],
             QtiRefusals.MissingMedia => S["it refers to {0}, which the package does not have", item.RefusalDetail],

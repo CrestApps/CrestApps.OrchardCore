@@ -160,12 +160,13 @@ An item that cannot be imported is a failed row of the import, with the reason, 
 - Interactions no question type can hold: hotspot, select point, graphic order, graphic associate, graphic gap match, position object, slider, drawing, upload, media, hottext, gap match, inline choice, end attempt, custom and portable custom interactions (PCI).
 - Adaptive items and templates (template declarations, processing and blocks).
 - Items with interactions of several kinds or more than one block interaction.
-- Response processing other than the two templates and their rules (`map_response_point`, custom operators and the like).
+- Response processing other than the two templates (`map_response_point`, custom operators and the like), and inline rules beyond the standard shapes (the two templates written out, a mapped response, or a sum of mapped blanks).
+- Scoring a question type cannot keep (`UnsupportedScoring`): mapped answers worth different points, negative mapped values or a negative default (penalties), and a single choice with several right answers. These are refused with the reason rather than graded another way.
 - Choices, answers or blanks that hold markup the question type keeps as plain text (an image, math, a table); a blank answer with `|`, `[` or `]`.
 - Matching distractors (a target that matches no source), a source matched to several targets, and an order of only some choices.
 - Math, audio, video, objects and other content outside the HTML allow-list; images outside the package, SVG images, or images the package lacks.
 
-Not kept: per-choice weights of `map_response` (a partly right answer earns its share as the question type scores it), `fixed` choices in a shuffled list, `minChoices`, expected lengths and pattern masks, conditional feedback beyond the per-choice and single general feedback, stimuli and shared passages, assessment tests and sections, and item metadata. There is no QTI export.
+Not kept: `fixed` choices in a shuffled list, `minChoices`, expected lengths and pattern masks, conditional feedback beyond the per-choice and single general feedback, stimuli and shared passages, assessment tests and sections, and item metadata. There is no QTI export.
 
 ### Conformance
 

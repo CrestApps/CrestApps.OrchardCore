@@ -271,7 +271,15 @@ internal static class QtiItemParser
         }
 
         var maxChoices = int.TryParse(Attribute(interaction, "maxChoices"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var max) ? max : 1;
-        var multiple = string.Equals(declaration.Cardinality, "multiple", StringComparison.Ordinal) || maxChoices != 1 || question.Options.Count(option => option.Correct) > 1;
+        var multiple = string.Equals(declaration.Cardinality, "multiple", StringComparison.Ordinal) || maxChoices != 1;
+
+        // One choice to pick, with several worth points: either is right, which no question type scores that way.
+        if (!multiple && question.Options.Count(option => option.Correct) > 1)
+        {
+            throw new RefusedException(QtiRefusals.UnsupportedScoring, "several right answers for a single choice");
+        }
+
+        CheckMapping(declaration, scoring);
 
         question.Shuffle = string.Equals(Attribute(interaction, "shuffle"), "true", StringComparison.OrdinalIgnoreCase);
 
@@ -310,6 +318,7 @@ internal static class QtiItemParser
                 throw new RefusedException(QtiRefusals.NoCorrectResponse);
             }
 
+            CheckMapping(firstDeclaration, scoring);
             question.NumericAnswer = number;
             question.Tolerance = scoring.Tolerance(number);
             question.Points = scoring.Kind == ScoringKind.MapResponse ? firstDeclaration.MappedMaximum() : 1;
@@ -329,6 +338,7 @@ internal static class QtiItemParser
         if (standalone)
         {
             question.QuestionType = AssessmentsConstants.QuestionTypes.ShortText;
+            CheckMapping(firstDeclaration, scoring);
             question.AcceptedAnswers = firstDeclaration.Accepted(scoring);
 
             if (question.AcceptedAnswers.Count == 0)
@@ -354,6 +364,7 @@ internal static class QtiItemParser
         foreach (var interaction in interactions)
         {
             var declaration = Declaration(interaction, declarations);
+            CheckMapping(declaration, scoring);
             var answers = declaration.Accepted(scoring);
 
             if (answers.Count == 0)
@@ -386,6 +397,8 @@ internal static class QtiItemParser
     {
         var declaration = Declaration(interaction, declarations);
         scoring.Require(declaration);
+
+        CheckMapping(declaration, scoring);
 
         var sets = interaction.Elements("simpleMatchSet").ToList();
 
@@ -427,6 +440,8 @@ internal static class QtiItemParser
     {
         var declaration = Declaration(interaction, declarations);
         scoring.Require(declaration);
+
+        CheckMapping(declaration, scoring);
 
         var choices = interaction.Elements("simpleAssociableChoice").ToDictionary(choice => Attribute(choice, "identifier") ?? string.Empty, PlainText, StringComparer.Ordinal);
         var pairs = declaration.Pairs(scoring);
@@ -918,6 +933,13 @@ internal static class QtiItemParser
                 throw new RefusedException(QtiRefusals.CustomScoring, unknown.Name.LocalName);
             }
 
+            // Known elements alone are not enough: only the shapes of the standard templates (and a sum of mapped blanks)
+            // score the way the question types do; any other rule would be collapsed into one of them.
+            if (!IsStandardShape(processing))
+            {
+                throw new RefusedException(QtiRefusals.CustomScoring, "inline rules");
+            }
+
             scoring.Kind = processing.Descendants("mapResponse").Any() ? ScoringKind.MapResponse : ScoringKind.MatchCorrect;
 
             if (processing.Descendants("equal").FirstOrDefault(equal => Attribute(equal, "toleranceMode") is "absolute" or "relative") is { } comparison)
@@ -944,6 +966,22 @@ internal static class QtiItemParser
             }
 
             return scoring;
+        }
+
+        private static readonly string[] _standardShapes =
+        [
+            "responseProcessing,responseCondition,responseIf,match,variable,correct,setOutcomeValue,baseValue,responseElse,setOutcomeValue,baseValue",
+            "responseProcessing,responseCondition,responseIf,equal,variable,correct,setOutcomeValue,baseValue,responseElse,setOutcomeValue,baseValue",
+            "responseProcessing,responseCondition,responseIf,isNull,variable,setOutcomeValue,baseValue,responseElse,setOutcomeValue,mapResponse",
+            "responseProcessing,setOutcomeValue,mapResponse",
+        ];
+
+        private static bool IsStandardShape(XElement processing)
+        {
+            var shape = string.Join(',', processing.DescendantsAndSelf().Select(element => element.Name.LocalName));
+
+            return Array.IndexOf(_standardShapes, shape) >= 0 ||
+                System.Text.RegularExpressions.Regex.IsMatch(shape, "^responseProcessing,setOutcomeValue,sum(,mapResponse){2,}$");
         }
 
         public decimal Tolerance(decimal answer)
@@ -974,6 +1012,8 @@ internal static class QtiItemParser
 
         public decimal? UpperBound { get; private init; }
 
+        public decimal DefaultValue { get; private init; }
+
         public static ResponseDeclaration Read(XElement element)
         {
             var mapping = element.Element("mapping");
@@ -992,6 +1032,7 @@ internal static class QtiItemParser
                     .Where(entry => entry.Key.Length > 0)
                     .ToList() ?? [],
                 UpperBound = mapping is not null && decimal.TryParse(Attribute(mapping, "upperBound"), NumberStyles.Float, CultureInfo.InvariantCulture, out var upper) ? upper : null,
+                DefaultValue = mapping is not null && decimal.TryParse(Attribute(mapping, "defaultValue"), NumberStyles.Float, CultureInfo.InvariantCulture, out var defaultValue) ? defaultValue : 0,
             };
         }
 
@@ -1051,6 +1092,26 @@ internal static class QtiItemParser
             var maximum = Mapping.Count == 0 ? 1 : Mapping.Max(entry => entry.Value);
 
             return UpperBound is { } upper && upper > 0 ? Math.Min(maximum, upper) : maximum;
+        }
+    }
+
+    // A mapped response is kept only when the question type scores it the same way: every answer worth points is worth
+    // the same (a type gives full or proportional credit, never a weight per answer), and nothing takes points away.
+    private static void CheckMapping(ResponseDeclaration declaration, Scoring scoring)
+    {
+        if (scoring.Kind != ScoringKind.MapResponse || declaration is null)
+        {
+            return;
+        }
+
+        if (declaration.DefaultValue < 0 || declaration.Mapping.Any(entry => entry.Value < 0))
+        {
+            throw new RefusedException(QtiRefusals.UnsupportedScoring, "mapped values that take points away");
+        }
+
+        if (declaration.Mapping.Where(entry => entry.Value > 0).Select(entry => entry.Value).Distinct().Skip(1).Any())
+        {
+            throw new RefusedException(QtiRefusals.UnsupportedScoring, "answers worth different points");
         }
     }
 

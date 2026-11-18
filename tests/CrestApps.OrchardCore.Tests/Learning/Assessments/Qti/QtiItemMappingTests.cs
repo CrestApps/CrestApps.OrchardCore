@@ -35,14 +35,14 @@ public sealed class QtiItemMappingTests
     public void AMultipleChoice21WithMapResponse_IsMultipleChoiceWithPartialCredit_AndPointsFromTheMapping()
     {
         // Arrange
-        // The choice_multiple.xml example of QTI 2.1: two right options worth 1 each, and wrong options worth -2.
+        // The choice_multiple.xml example of QTI 2.1 without its penalties (round 9, M10 refuses negative mapped
+        // values): two right options worth 1 each.
         var item = QtiSamples.Item21("choiceMultiple", "Composition of Water", """
             <responseDeclaration identifier="RESPONSE" cardinality="multiple" baseType="identifier">
               <correctResponse><value>H</value><value>O</value></correctResponse>
-              <mapping lowerBound="0" upperBound="2" defaultValue="-2">
+              <mapping lowerBound="0" upperBound="2" defaultValue="0">
                 <mapEntry mapKey="H" mappedValue="1"/>
                 <mapEntry mapKey="O" mappedValue="1"/>
-                <mapEntry mapKey="Cl" mappedValue="-1"/>
               </mapping>
             </responseDeclaration>
             <outcomeDeclaration identifier="SCORE" cardinality="single" baseType="float"/>
@@ -109,7 +109,7 @@ public sealed class QtiItemMappingTests
               <qti-correct-response><qti-value>Paris</qti-value></qti-correct-response>
               <qti-mapping default-value="0">
                 <qti-map-entry map-key="Paris" mapped-value="2" case-sensitive="false"/>
-                <qti-map-entry map-key="Lutetia" mapped-value="1" case-sensitive="false"/>
+                <qti-map-entry map-key="Lutetia" mapped-value="2" case-sensitive="false"/>
               </qti-mapping>
             </qti-response-declaration>
             <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
@@ -235,7 +235,7 @@ public sealed class QtiItemMappingTests
               <qti-correct-response><qti-value>A P</qti-value><qti-value>C M</qti-value></qti-correct-response>
               <qti-mapping default-value="0">
                 <qti-map-entry map-key="A P" mapped-value="2"/>
-                <qti-map-entry map-key="C M" mapped-value="1"/>
+                <qti-map-entry map-key="C M" mapped-value="2"/>
               </qti-mapping>
             </qti-response-declaration>
             <qti-outcome-declaration identifier="SCORE" cardinality="single" base-type="float"/>
@@ -256,7 +256,7 @@ public sealed class QtiItemMappingTests
         Assert.Equal(AssessmentsConstants.QuestionTypes.Matching, question.QuestionType);
         Assert.Equal([("Antonio", "Prospero"), ("Capulet", "Montague")], question.Pairs);
         Assert.True(question.PartialCredit);
-        Assert.Equal(3, question.Points);
+        Assert.Equal(4, question.Points);
     }
 
     [Fact]
@@ -295,7 +295,7 @@ public sealed class QtiItemMappingTests
               <correctResponse><value>York</value></correctResponse>
               <mapping defaultValue="0">
                 <mapEntry mapKey="York" mappedValue="1"/>
-                <mapEntry mapKey="york" mappedValue="0.5"/>
+                <mapEntry mapKey="york" mappedValue="1"/>
               </mapping>
             </responseDeclaration>
             <responseDeclaration identifier="RESPONSE2" cardinality="single" baseType="string">

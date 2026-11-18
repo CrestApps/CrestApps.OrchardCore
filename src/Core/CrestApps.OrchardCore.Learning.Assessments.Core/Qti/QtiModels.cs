@@ -59,6 +59,12 @@ public static class QtiRefusals
     /// <summary>The response processing is not a standard template and not one this import recognizes.</summary>
     public const string CustomScoring = "CustomScoring";
 
+    /// <summary>
+    /// The item's scoring cannot be kept by the question type (mapped values that differ, penalties, a single choice with
+    /// several right answers); the detail names it.
+    /// </summary>
+    public const string UnsupportedScoring = "UnsupportedScoring";
+
     /// <summary>A choice, an answer or a blank holds markup (an image, math, a table) where the question type keeps plain text; the detail names it.</summary>
     public const string MarkupInText = "MarkupInText";
 
