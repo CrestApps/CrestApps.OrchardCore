@@ -967,9 +967,6 @@ The ten new workflow activities are listed in the workflow designer's activity l
 | Workflow hints show `{ x }` instead of `{{ x }}` (Award Education Credits, Grant Required Learning Exemption, Require Learning) | The Liquid example is an argument of the localized hint. | `c5b40693e` |
 | GET/POST route guard | The credit type, external learning, My education credits, learning path people, required learning, My required learning and Team learning pages say `HttpGet`. | `0b81e9d51` |
 
-| Workflow hints show `{ x }` instead of `{{ x }}` (Award Education Credits, Grant Required Learning Exemption, Require Learning) | The Liquid example is an argument of the localized hint. | `6c6eb87a5` |
-| GET/POST route guard | The credit type, external learning, My education credits, learning path people, required learning, My required learning and Team learning pages say `HttpGet`. | `c17b16ff0` |
-
 ### Phase 5: Commerce and organizations (branch `ma/learning-phase-5`, stacked on `ma/learning-phase-4`)
 
 **Built.**
