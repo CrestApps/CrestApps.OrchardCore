@@ -1,9 +1,15 @@
+@using CrestApps.OrchardCore.Currencies
 @model FundraisingCampaignPartViewModel
+
+@{
+    // An amount can have as many decimals as the product's currency, such as three for KWD.
+    var moneyStep = CurrencyScale.GetInputStep(Model.Currency);
+}
 
 <div class="ocat-limited-wrapper" asp-validation-class-for="Goal">
     <label asp-for="Goal" class="ocat-label">@T["Goal"]</label>
     <div class="ocat-limited">
-        <input asp-for="Goal" inputmode="decimal" class="form-control" />
+        <input asp-for="Goal" type="number" step="@moneyStep" min="0" class="form-control" />
         <span class="hint">@T["What the campaign raises toward, in the product's currency. Leave it empty for no goal."]</span>
         <span asp-validation-for="Goal" class="text-danger"></span>
     </div>
@@ -21,7 +27,7 @@
 <div class="ocat-limited-wrapper" asp-validation-class-for="MinimumAmount">
     <label asp-for="MinimumAmount" class="ocat-label">@T["Least donation"]</label>
     <div class="ocat-limited">
-        <input asp-for="MinimumAmount" inputmode="decimal" class="form-control" />
+        <input asp-for="MinimumAmount" type="number" step="@moneyStep" min="0" class="form-control" />
         <span asp-validation-for="MinimumAmount" class="text-danger"></span>
     </div>
 </div>

@@ -5,20 +5,25 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 namespace CrestApps.OrchardCore.Fundraising.ViewModels;
 
 /// <summary>
-/// The Fundraising campaign part's editor. Amounts are text, read in the invariant culture.
+/// The Fundraising campaign part's editor. The goal and least donation are bound by the invariant number binder; the
+/// suggested amounts are text, read in the invariant culture.
 /// </summary>
 public class FundraisingCampaignPartViewModel
 {
-    public string Goal { get; set; }
+    public decimal? Goal { get; set; }
 
     // In the site's time zone; the part keeps it in UTC.
     public DateTime? Ends { get; set; }
 
     public string SuggestedAmounts { get; set; }
 
-    public string MinimumAmount { get; set; }
+    public decimal? MinimumAmount { get; set; }
 
     public bool TaxDeductible { get; set; }
+
+    // The product's currency, when known, which sets the amount inputs' step.
+    [BindNever]
+    public string Currency { get; set; }
 }
 
 public class CampaignProgressViewModel
