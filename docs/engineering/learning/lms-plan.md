@@ -1296,3 +1296,31 @@ cmi5: Conformance suite / certification: not run. The suite is ADL's cmi5 test s
 **Suites.** Unit (Learning, Skills, Workforce, Users, Architecture, Validation, Recipes, Framework, ContentTransfer modules and telemetry, Products, SigningKeys, AgenticCommerce): `Total: 3210, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0` (run before the 6c follow-up). Learning integration, full run: `Total: 78, Errors: 0, Failed: 0, Skipped: 0, Not Run: 0`. After the follow-up, QtiImportTests 1/1. `node scripts/check-manuals.mjs` passes (167 User Manual pages, 197 Technical Manual pages). The Docusaurus build was not run.
 
 **Honest notes.** The integration test imports an entry through ContentTransfer's `ProcessEntriesAsync` for that entry (by reflection, as the upload's deferred task does); the scheduled `ImportFilesBackgroundTask.DoWorkAsync` did not process the entry in the test, and why was not investigated (the upload path, used in the browser, does). After 6a's green run I changed two lines for CA1859 warnings and committed without building again; one of them broke the build (CS0411), so commit 6a does not build on its own; 6b's first build caught it and 6b carries the fix. The re-import updates questions with the pictures of the new import's folder; the earlier folder's files stay.
+
+### Phase 8: review round 9 (branch `ma/learning-phase-8`)
+
+Every finding was fixed test first on this branch (or is explained), one commit each; review-round-9.md ticks them. H5 sits here, not on `ma/learning-phase-4` where its observer was written, because the evidence API it needs (`CompletionEvidence`, `ResultSelfReported`) only exists from Phase 8.
+
+| Finding | Fix | Commit |
+| --- | --- | --- |
+| H1 Stored XSS through LRS documents | Documents are served as JSON only when stored as JSON, else as an `application/octet-stream` attachment, always with `Content-Security-Policy: sandbox`; the alternate request syntax is refused for GET and HEAD. | `2a890a031` |
+| H2 External tools could take over an OpenID application | The editor refuses a client id of an application External Tools did not make; `SyncAsync` never changes such an application. | `6b7742704` |
+| H3 Path credential with no evidence checks | `CompletionEvidence.SupportsIssuing` and `ILearningPathService.SupportsIssuingAsync`, one rule used by the path credential and path credits (and so by path certification evidence). | `4b32fd338` |
+| H4 Credentials never revoked | `CredentialSourceRevoker`: a revoked certificate, a voided attempt or one no longer passed revokes what it awarded; an enrollment under review offers the revocation on its review card (`IEnrollmentReviewActionProvider`). | `563553b99` |
+| H5 Credits for a browser-reported completion | `EducationCreditEnrollmentObserver` awards only when the completion supports issuing. | `ce9a58665` |
+| M1 Voiding without a target check | A launch voids only statements a launch of its actor and registration stored; another client only what it may read. | `11d193e06` |
+| M2 Erasure left documents | The document index keeps the account name; erasure matches it on any home page; migration step 2 maps existing documents again. | `c86fb2f86`, `d1fc2c976` |
+| M3 A commit lost to the finish | The player queues and numbers its runtime calls; the server applies nothing at or below the last number of the launch. | `4c532d245` |
+| M4 Unbounded runtime state | SCORM 2004 minimum list sizes and a 1 MB state limit, with the standards' error codes. | `4ec0a064e` |
+| M5 LTI replay window | Client assertions need `iat` and at most five minutes; nonces and data ids are remembered until they expire, checked and set under a lock. | `692ecde51` |
+| M6 Key set fetch without the egress guard | `EgressNetwork.AddEgressGuardedHttpClient`. | `c17b218e2` |
+| M7 Issuer from a spoofed Host | The issuer is the site's base URL only; the awards page warns when it is missing. | `358c3546d` |
+| M8 Spreadsheet rows writing media | Only rows the QTI reader read write media, and only PNG, JPEG, GIF or WebP by extension and bytes. | `74bf736ae` |
+| M9 Re-import overwriting other questions | Matches need the chosen bank, the same source file and edit rights of the importer. | `a32164af8` |
+| M10 Scoring mis-graded instead of refused | Unequal, partial or negative mapped values, a single choice with several right answers and inline rules beyond the standard shapes are refused with a reason. | `e748598e7` |
+| Low, LRS | User bearer tokens refused; keyset paging; a lock per document write; `MaxAttachmentBytes` enforced. | `d3ffc4795` |
+| Low, cmi5 | A launch writes only into its own session; another client only about the registration's learner. Launch tokens are not revoked when the session ends: with the session bound they reach only their ended session (documents of the registration stay open to them). | `5ca7d98cb` |
+| Low, LTI | Tool addresses must be https (http to this machine in Development). The key ring finding does not hold: a key imported in a request signs in that request on the real Secrets store (integration test, passes unchanged); no change. | `679167e14` |
+| Low, SCORM | Recipe states checked (enrollment of the person and course, status words); package file type allow-list; page size checked before reading. | `1a074f2c0` |
+| Low, credentials | An imported award's status slot must be inside its list; recipe imports take the award lock and save inside it. | `ac92a2249` |
+| Not done | The AGS re-check of a line item's resource link (no unit harness for `LtiAgsService`; an integration test would have to move the shared tool item), the "result not recorded" flag for a Busy finish of a SCORM 2004 attempt, and keeping QTI feedback images apart from prompt images. | |
