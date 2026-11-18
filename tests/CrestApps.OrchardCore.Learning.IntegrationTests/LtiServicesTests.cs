@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Learning.IntegrationTests;
 
@@ -152,6 +153,73 @@ public sealed class LtiServicesTests
         Assert.Equal(80, item.Score);
         Assert.Equal(CourseItemState.Completed, item.State);
         Assert.False(item.ResultSelfReported);
+    }
+
+    [Fact]
+    public async Task Round9Low_AScoreOnALineItem_WhoseLinkMovedToAnotherTool_IsRefused()
+    {
+        // Arrange: an External tool item of this tool, made for this test (the shared item stays as it is), and a line
+        // item on it; then the item is moved to another tool.
+        await LtiLaunchTests.EnsureToolAndItemAsync(_fixture);
+        var itemId = await _fixture.InTenantAsync(async services =>
+        {
+            var tool = await services.GetRequiredService<IExternalToolStore>().FindByClientIdAsync(LtiLaunchTests.ClientId, TestContext.Current.CancellationToken);
+            var contentManager = services.GetRequiredService<global::OrchardCore.ContentManagement.IContentManager>();
+            var item = await contentManager.NewAsync(LtiConstants.ContentTypes.ExternalToolItem);
+
+            item.DisplayText = "Round 9 moved tool item";
+            item.Alter<global::OrchardCore.Lists.Models.ContainedPart>(part =>
+            {
+                part.ListContentItemId = _fixture.CourseId;
+                part.ListContentType = LearningConstants.ContentTypes.Course;
+            });
+            item.Alter<CrestApps.OrchardCore.Learning.Lti.Models.ExternalToolItemPart>(part =>
+            {
+                part.ToolId = tool.ItemId;
+                part.TargetLinkUri = "https://tool.example.com/lti/launch/moved";
+                part.ScoreMaximum = 50;
+            });
+            item.Alter<CourseItemPart>(part =>
+            {
+                part.Kind = LtiConstants.ExternalToolKind;
+                part.CompletionMode = CompletionModes.Graded;
+                part.Gradable = true;
+            });
+
+            await contentManager.CreateAsync(item, global::OrchardCore.ContentManagement.VersionOptions.Published);
+
+            return item.ContentItemId;
+        });
+
+        using var http = await ServiceClientAsync(string.Join(' ', LtiConstants.Scopes.LineItem, LtiConstants.Scopes.ResultReadOnly, LtiConstants.Scopes.Score));
+        var learner = await SubjectAsync(_fixture.EnrolledUserId);
+        var created = await http.PostAsync($"learning/lti/ags/{_fixture.CourseId}/lineitems", Json(new JsonObject
+        {
+            ["scoreMaximum"] = 50,
+            ["label"] = "Round 9 moved",
+            ["resourceLinkId"] = itemId,
+        }, LtiConstants.MediaTypes.LineItem), TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var lineItemUrl = JsonNode.Parse(await created.Content.ReadAsStringAsync(TestContext.Current.CancellationToken))!["id"]!.GetValue<string>();
+
+        await _fixture.InTenantAsync(async services =>
+        {
+            var contentManager = services.GetRequiredService<global::OrchardCore.ContentManagement.IContentManager>();
+            var item = await contentManager.GetAsync(itemId, global::OrchardCore.ContentManagement.VersionOptions.Latest);
+            item.Alter<CrestApps.OrchardCore.Learning.Lti.Models.ExternalToolItemPart>(part => part.ToolId = "round9-tool-b");
+            await contentManager.UpdateAsync(item);
+            await contentManager.PublishAsync(item);
+        });
+
+        // Act
+        var scored = await http.PostAsync(lineItemUrl + "/scores", Json(Score(learner, 40, "2030-03-01T10:00:00Z"), LtiConstants.MediaTypes.Score), TestContext.Current.CancellationToken);
+        var results = JsonNode.Parse(await http.GetStringAsync(lineItemUrl + "/results", TestContext.Current.CancellationToken))!.AsArray();
+        var progress = await _fixture.InTenantAsync(services => services.GetRequiredService<ILearnerProgressService>().GetAsync(_fixture.EnrollmentId, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, scored.StatusCode);
+        Assert.Empty(results);
+        Assert.Null(progress.Find(itemId)?.Score);
     }
 
     [Fact]

@@ -147,7 +147,9 @@ public sealed class LtiAgsService
     }
 
     /// <summary>
-    /// Stores a score. A score whose timestamp is not later than the stored one is refused, as the specification allows.
+    /// Stores a score. A score whose timestamp is not later than the stored one is refused, as the specification allows,
+    /// and so is a score on a line item whose resource link no longer launches this tool in its course: a tool switched
+    /// off an item never writes the new tool's result.
     /// </summary>
     /// <returns>What happened.</returns>
     public async Task<LtiScoreOutcome> PostScoreAsync(ExternalTool tool, LtiLineItem lineItem, LtiScoreInput input, CancellationToken cancellationToken = default)
@@ -155,6 +157,11 @@ public sealed class LtiAgsService
         ArgumentNullException.ThrowIfNull(tool);
         ArgumentNullException.ThrowIfNull(lineItem);
         ArgumentNullException.ThrowIfNull(input);
+
+        if (!await IsResourceLinkOfToolAsync(tool, lineItem.CourseId, lineItem.ResourceLinkId))
+        {
+            return LtiScoreOutcome.LinkNotOfTool;
+        }
 
         var userId = await _members.FindUserIdAsync(tool, lineItem.CourseId, input.UserId, cancellationToken);
 

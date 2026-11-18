@@ -95,7 +95,7 @@ A tool gets a token from the OpenID server's token endpoint with the client cred
 ### Assignment and Grade Services 2.0
 
 - **Line items**: list (with `resource_link_id`, `resource_id`, `tag` and `limit`), get, create (201), update and delete. A line item belongs to one tool and one course; one the platform made for an External tool item is bound to it through `resourceLinkId`.
-- **Scores**: `POST .../lineitems/{id}/scores` with `application/vnd.ims.lis.v1.score+json`. `userId`, `activityProgress`, `gradingProgress` and an ISO 8601 `timestamp` are required, `scoreMaximum` is required with `scoreGiven`, and the `userId` must be a member of the course. A score whose timestamp is not later than the last one stored for that person is refused with 409. The answer is 204.
+- **Scores**: `POST .../lineitems/{id}/scores` with `application/vnd.ims.lis.v1.score+json`. `userId`, `activityProgress`, `gradingProgress` and an ISO 8601 `timestamp` are required, `scoreMaximum` is required with `scoreGiven`, and the `userId` must be a member of the course. A score whose timestamp is not later than the last one stored for that person is refused with 409. A score on a line item whose resource link is no longer an External tool item of this tool in the course (the item was moved to another tool) is refused with 403. The answer is 204.
 - **Results**: `GET .../results`, with `user_id` and `limit`.
 
 A `FullyGraded` score on a line item bound to an External tool item becomes that item's result in the learner's progress, as a percentage of the line item's maximum, marked as sent by the server (not reported by the browser). The gradebook and completion rules use it like any other item result.

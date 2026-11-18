@@ -248,6 +248,7 @@ public sealed class LtiServicesController : Controller
         {
             LtiScoreOutcome.UnknownUser => Error(StatusCodes.Status400BadRequest, "userId is not a member of this course for this tool."),
             LtiScoreOutcome.NotLater => Error(StatusCodes.Status409Conflict, "The timestamp is not later than the score already stored for this user."),
+            LtiScoreOutcome.LinkNotOfTool => Error(StatusCodes.Status403Forbidden, "The line item's resourceLinkId is no longer an External tool item of this tool in this course."),
             _ => NoContent(),
         };
     }
