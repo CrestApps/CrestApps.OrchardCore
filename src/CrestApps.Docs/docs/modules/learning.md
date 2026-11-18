@@ -33,7 +33,7 @@ It works with other features when they are on:
 | Webhooks | `learning.enrollment.created` and `learning.course.completed`. |
 | Staff | The Instructor capability, a **Learning** section on the staff profile and **My learning** on a staff member's page. |
 | Commerce | **My learning** in the storefront account menu (otherwise it is in the user menu). |
-| Personal Data | Export and erasure of a person's enrollments and progress. |
+| Personal Data | Export and erasure of a person's enrollments and progress. Learning records belong to user accounts, so a request that knows only an e-mail address (such as erasing a customer added by hand on the **Customers** page) reaches the records of the account with that address. |
 | Recipes, Deployment | The `LearningEnrollments` recipe step and deployment step, with their schemas. |
 
 ## Content types

@@ -2,6 +2,8 @@ using System.Globalization;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.PersonalData;
+using Microsoft.AspNetCore.Identity;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Learning.Services;
 
@@ -9,6 +11,8 @@ namespace CrestApps.OrchardCore.Learning.Services;
 /// Exports a person's enrollments and progress, and erases them on request. A completed enrollment proves training and
 /// is a compliance record, so erasure keeps it with its progress (the confirmations it holds are evidence) and reports
 /// it as a warning; an administrator decides whether to remove it. Every other enrollment and its progress are deleted.
+/// Learning records belong to user accounts, so a request that knows only the person's e-mail address (such as one made
+/// from a customer added by hand) reaches the records of the account with that address.
 /// </summary>
 internal sealed class LearningPersonalDataContributor : IPersonalDataContributor
 {
@@ -17,13 +21,31 @@ internal sealed class LearningPersonalDataContributor : IPersonalDataContributor
 
     private readonly EnrollmentStore _enrollmentStore;
     private readonly EnrollmentProgressStore _progressStore;
+    private readonly UserManager<IUser> _userManager;
 
     public LearningPersonalDataContributor(
         EnrollmentStore enrollmentStore,
-        EnrollmentProgressStore progressStore)
+        EnrollmentProgressStore progressStore,
+        UserManager<IUser> userManager)
     {
         _enrollmentStore = enrollmentStore;
         _progressStore = progressStore;
+        _userManager = userManager;
+    }
+
+    public async Task IdentifyAsync(PersonalDataSubject subject, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(subject);
+
+        // An account's e-mail address is unique and belongs to the account's owner, unlike an address typed on a record,
+        // so the account found by the request's own address is the person beyond doubt.
+        foreach (var email in subject.Emails.ToArray())
+        {
+            if (await _userManager.FindByEmailAsync(email) is { } user && await _userManager.GetUserIdAsync(user) is { Length: > 0 } userId)
+            {
+                subject.AddUserId(userId);
+            }
+        }
     }
 
     public async Task ExportAsync(PersonalDataExportContext context, CancellationToken cancellationToken = default)
