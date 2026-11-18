@@ -61,9 +61,6 @@ public sealed class Startup : StartupBase
 }
 
 /// <summary>
-/// Tells a person a seat was given to them.
-/// </summary>
-/// <summary>
 /// Sells learning paths on their pages when Learning Paths is turned on, also after Learning Commerce.
 /// </summary>
 [RequireFeatures(ProgramsConstants.Features.Paths)]
@@ -76,6 +73,9 @@ public sealed class LearningPathsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Tells a person a seat was given to them.
+/// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Notifications)]
 public sealed class NotificationsStartup : StartupBase
 {
