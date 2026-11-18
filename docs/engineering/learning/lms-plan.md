@@ -960,5 +960,5 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 
 | Bug | Fix | Commit |
 | --- | --- | --- |
-| Workflow hints show `{ x }` instead of `{{ x }}` (Award Education Credits, Grant Required Learning Exemption, Require Learning) | The Liquid example is an argument of the localized hint. | `6c6eb87a5` |
-| GET/POST route guard | The credit type, external learning, My education credits, learning path people, required learning, My required learning and Team learning pages say `HttpGet`. | `c17b16ff0` |
+| Workflow hints show `{ x }` instead of `{{ x }}` (Award Education Credits, Grant Required Learning Exemption, Require Learning) | The Liquid example is an argument of the localized hint. | `c5b40693e` |
+| GET/POST route guard | The credit type, external learning, My education credits, learning path people, required learning, My required learning and Team learning pages say `HttpGet`. | `0b81e9d51` |
