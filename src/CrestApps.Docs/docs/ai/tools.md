@@ -1055,6 +1055,40 @@ The tools need **Manage file sources**. No FTP or SFTP password, private key, pa
 
 The tools need **Manage web crawlers**. Addresses are checked as the crawler editor and the sitemap strategy check them: each given base or sitemap URL must be absolute, at least one of them must use `http` or `https`, and the URL patterns must be valid regular expressions. Nothing stops a crawler from reaching an address on the server's own network, so confirm the address before approving. From inside a chat, a crawler that feeds a data source the running assistant answers from cannot be saved or deleted.
 
+### Data connector tools
+
+**Available when:** `CrestApps.OrchardCore.DataConnectors` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listDataConnections` | Lists the connections to external systems with their connector and non-secret settings, with name search, or one connection by ID. Also returns the connectors enabled on the site. |
+| `saveDataConnection` | Creates an HTTP API, Elasticsearch or media files connection, or updates one by ID: name, description and the connector's settings. Credentials are entered on the connection's page. Asks for approval. |
+| `testDataConnection` | Checks that a saved connection reaches its system and returns success or the error. |
+| `deleteDataConnection` | Deletes a connection and its stored credentials; refused while a data set reads it. Asks for approval. |
+| `listDataConnectionResources` | Lists what a connection offers to read, such as tables and views, with search and paging. |
+| `listConnectedDataSets` | Lists the connected data sets with connection, resource, access mode, enabled state, row count and refresh state. |
+| `getConnectedDataSet` | Returns one data set in full: fields, refresh settings, import state, connector settings and, on request, its latest refreshes. |
+| `saveConnectedDataSet` | Creates a data set on a connection, or updates one by ID: resource, live or imported, fields, default date field and refresh schedule. |
+| `refreshConnectedDataSet` | Requests a refresh of an imported data set; the refresh task starts it within about a minute. |
+| `previewConnectedDataSet` | Returns the first rows of a data set, at most 20 and about 40,000 characters. |
+| `deleteConnectedDataSet` | Deletes a data set with its imported rows and refresh history. Asks for approval. |
+
+The connection tools need **Manage data connections**, the data set tools **Manage connected data sets**, `refreshConnectedDataSet` needs **Refresh imported data sets**, and `previewConnectedDataSet` also needs the data set's read permission (`ReadConnectedDataSet_{name}`). No tool returns or takes an API key, password, bearer token, client secret or header value: the list reports whether a secret is stored (`hasApiKey`, `hasPassword`, `hasBearerToken`, `hasClientSecret`) and a header by its name only, and `saveDataConnection` saves the rest and links to the page where a person enters the credential. While a connection stores a credential or headers, its server cannot be moved to another host, and while it stores a credential, its authentication type, grant, token endpoint host and issuer host cannot change. SQL Server connections are never created by a tool, because they sign in with a password or with the identity of the site's host; only their name and description can be changed. The editors' checks apply, and connections are reached through the same reader as the admin pages, so the network rules of `CrestApps:DataConnectors:Network` apply. A new imported data set has its first import requested when the user may refresh data sets. The connector's own settings of a data set (an HTTP request, a query) are set on its page.
+
+### Content transfer tools
+
+**Available when:** `CrestApps.OrchardCore.ContentTransfer` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listContentTransferTypes` | Lists the content types the user may bulk import or export, the file formats enabled, and the import and export columns of one content type. |
+| `listContentTransferEntries` | Lists bulk imports, or the user's own exports, with status, file, progress, author and dates, filtered by status, newest first. |
+| `getContentTransferEntry` | Returns one entry with its progress, its first 50 failed rows with their errors, and the download link of a completed export. |
+| `setContentImportState` | Pauses a processing import, or resumes a pending, paused or failed one; the Imported Files Processor continues it within about a minute. |
+| `deleteContentTransferEntry` | Deletes an entry and its stored file in the background after the reply. Content items already imported stay. Asks for approval. |
+
+The tools check the permissions of the Import and Export pages per content type: **Import content items from file** for imports, **Export content items from file** for exports, **List content transfer entries** for the import list and **Delete content transfer entries** for a delete. An export is shown and deleted only for the user who made it. An import that is still processing, running or stalled, is resumed from the Import list. Imports and exports are started on the Import and Export pages.
+
 ### Analytics tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Chat.Analytics`

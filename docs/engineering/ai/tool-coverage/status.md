@@ -28,6 +28,7 @@ Tools that run Orchard Core's settings display drivers (`getSiteSettings`, `upda
 | 12 | AI provider connections, deployments and pricing, voice library, AI quality | [20](20-crestapps-ai-core.md) | 18 | 18 | 0 | e2d901cca..41cba0083 |
 | 13 | AI API keys, conversations, usage, chat interactions, MCP connections, MCP server, A2A connections, AI memory | [20](20-crestapps-ai-core.md) | 21 | 21 | 0 | aa0aade44..caedc8999 |
 | 14 | AI data sources, AI documents, AI file sources, AI web crawlers | [21](21-crestapps-ai-knowledge-reports-data.md) | 16 | 14 | 2 | c914acfdc..d289a346e |
+| 15 | Data connectors, content transfer | [21](21-crestapps-ai-knowledge-reports-data.md) | 18 | 16 | 2 | BATCH15_RANGE |
 
 Orchard Core part (batches 1 to 10): 189 planned new tools, 132 built, 57 deferred. Left out on purpose: the four template tools (`listTemplates`, `getTemplate`, `saveTemplate`, `deleteTemplate`), because pull request 1321 adds shape template tools; and the six "existing, improve" rows (`listWorkflowTypes`, `getWorkflowType`, `listWorkflowActivities` and three AI tools), because phase 1 does not change existing tools.
 
@@ -60,6 +61,8 @@ Almost every deferral has one cause: the service the admin page uses exists only
 | `updateWorkflowDraft`, `publishWorkflowType`, `discardWorkflowDraft` | 9 | `IWorkflowTypeDraftManager` (Workflows module) |
 | `listDataPipelines`, `getDataPipeline`, `saveDataPipeline`, `updateDataPipelineDraft`, `previewDataPipelineStep`, `publishDataPipeline`, `discardDataPipelineDraft`, `enableDataPipeline`, `disableDataPipeline`, `resetDataPipelineState`, `deleteDataPipeline`, `runDataPipeline`, `listDataPipelineRuns`, `getDataPipelineRun`, `cancelDataPipelineRun` | 10 | The pipeline, version and run documents and every manager are in the DataPipelines module |
 | `addAIProfileDocument`, `removeAIProfileDocument` | 14 | The add and remove logic is inline twice, with different messages, in `AIProfileDocumentsDisplayDriver.UpdateAsync` and `AIProfileDocumentsApiEndpoints`, and its pieces (`ProfileDocumentChunkIndexer`, the deferred chunk removal) are internal to the Documents module, while the guard that keeps the running assistant's documents unchanged is internal to AI.Agent. A tool needs a new service contract in AI.Core with its implementation in the Documents module, both callers moved onto it, and a media-file wrapper for `ProcessFileAsync(IFormFile)`; not a small move |
+| `exportContentItems` | 15 | Creating an export entry (the count, the queue decision, the filters and the `IDisplayDriver<ExportRequest>` options other modules contribute, which bind from the form) exists only in `AdminController.DownloadExport`, and the Content Transfer controllers are off limits while another pull request changes them. The download itself is safe: `DownloadExportFile` checks the permission and the owner, and `getContentTransferEntry` links to it |
+| `importContentItems` | 15 | Creating an import entry exists only inside the chunked upload of `AdminController.ImportPOST` (store the file, build the entry, copy the `ImportContent` options bound by `ImportContentDisplayDriver`, trigger processing), which is off limits for the same reason. A tool needs that moved into a service that takes a stream, plus a media library file source |
 
 ## Built, but narrower than the catalog
 
@@ -86,6 +89,12 @@ Almost every deferral has one cause: the service the admin page uses exists only
 | `saveWorkflowType` | 9 | Creates only; saves the published version directly, so it asks for approval; HTTP Request URLs are generated in the designer |
 | `listWorkflowTypeVersions`, `listWorkflowInstances` | 9 | No compare or draft state; no status or date filters |
 | `getDataSetSchema`, `listDataPipelineStepTypes` | 10 | No parameters; no settings schema per step type |
+| `saveDataConnection` | 15 | Never takes a credential or a header (saves the rest, returns `missingCredentials` and the page link); creates HTTP API, Elasticsearch and media files connections only; a SQL Server connection is never created and only its name and description change (SEC-A8); a connector from another module gets names only. Will not move a stored credential or header to another host, sign-in type, grant, token endpoint or issuer |
+| `saveConnectedDataSet` | 15 | No connector settings (HTTP method, body, records path, paging, Elasticsearch or SQL query, file delimiter); fields are replaced as a whole and lose their description, as in the editor; the connection and technical name cannot change |
+| `refreshConnectedDataSet` | 15 | Records the request and lets the every-minute refresh task run it (the admin page also starts it after its request, which a chat has no end of); refuses a disabled data set, which the task skips |
+| `listContentTransferEntries` | 15 | No content type filter: the list's filter parser has only `status` and `sort` terms |
+| `setContentImportState` | 15 | Does not resume an import still marked processing (running or stalled): telling them apart takes the import's lock, done by the Import list; a resumed import waits for the Imported Files Processor instead of being started at once |
+| `deleteContentTransferEntry` | 15 | Stricter than the list's single Delete action: an export must be the caller's own. Queues the deletion with `DeferredWork`; the queued path is not covered by a test |
 
 ## Batch 11: the AI configuration guard inside the tools
 
@@ -182,6 +191,22 @@ The tests use doubles of the catalog managers, so the Core catalog handlers, the
 | `runAIFileSource` | Queues the run instead of running it; the summary is read later from `listAIFileSources`. The queued path is not covered by a test |
 | `saveAIWebCrawler` | Asks for approval, unlike the catalog row |
 | `deleteAIDataSource`, `deleteAIFileSource`, `deleteAIWebCrawler` | Whether a delete removes the indexed documents is up to the catalog handlers, which were not run |
+
+## Batch 15: data connectors and content transfer
+
+The first batch in modules that do not reference `AI.Core`. `AIFeatureIds.Area` was added to `CrestApps.OrchardCore.Abstractions` for `[RequireFeatures]`; a test checks it equals `AIConstants.Feature.Area`. Each module has its own base class (`DataConnectorAIToolBase`, `ContentTransferAIToolBase`): caller from `IUserAccessor` then `HttpContext`, permission check, JSON, paging, local times, admin links. Both modules now reference the `CrestApps.Core.AI` package.
+
+Extractions (behavior-preserving; the admin code calls them now):
+
+- `DataConnectionEditor` (Data Connectors module): the name, HTTP settings and media folder checks and mapping of `DataConnectionDisplayDriver`, `HttpConnectionDisplayDriver` and `MediaFilesConnectionDisplayDriver`. The required-secret checks stay in the HTTP driver.
+- `ConnectedDataSetEditor`: the checks and mapping of `ConnectedDataSetDisplayDriver.UpdateAsync`.
+- `DataConnectorCommands`: deleting a connection unless a data set reads it, deleting a data set with its rows and refreshes, and recording a refresh request; both controllers call it. Moving the strings changed their localization context.
+
+Credentials: no API key, password, bearer token, client secret or SQL Server password is returned (`hasX` only), and header values are never returned. Any argument named `apiKey`, `password`, `bearerToken`, `clientSecret`, `token`, `accessToken`, `secret`, `secrets`, `connectionString` or `headers`, at any depth and in any case, is refused; names are matched whole, so `apiKeyName`, `apiKeyPrefix` and `tokenUrl` are accepted. Canary tests cover each secret and the header value. SQL Server settings are read by name (`SqlServerConnectionSettings`), with `usesHostIdentity`, and a test pins the names to the SQL Server module.
+
+Queueing from a chat: the admin pages queue refreshes, resumed imports and deletions with `HttpBackgroundJob.ExecuteAfterEndOfRequestAsync`, which waits for the request's `HttpContext` to be released and gives up after 60 seconds; from a hub connection that request lasts as long as the connection, so the job would be skipped (read from the package's source, not run). The refresh tool records the request for the refresh task, the resume tool leaves the import to the Imported Files Processor, and the delete tool queues `IContentTransferEntryManager.DeleteAsync` with `DeferredWork` before marking the entry (nothing else sweeps entries marked as deleting). The Content Transfer controller keeps its private triggers; it was not touched.
+
+The data connector tests use in-memory stores, the real secret manager, reader and editors, and a test connector; the content transfer tests use a real SQLite database with the module's migration, the real entry manager, filter parser and list query. No HTTP, Elasticsearch or SQL Server system was reached.
 
 ## Notes for the maintainer
 
