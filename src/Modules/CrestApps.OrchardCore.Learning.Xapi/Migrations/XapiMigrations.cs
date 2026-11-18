@@ -1,9 +1,7 @@
 using CrestApps.OrchardCore.Learning.Xapi.Core.Indexes;
-using CrestApps.OrchardCore.Learning.Xapi.Models;
-using Microsoft.Extensions.DependencyInjection;
+using CrestApps.OrchardCore.Learning.Xapi.Core.Services;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
-using YesSql;
 
 namespace CrestApps.OrchardCore.Learning.Xapi.Migrations;
 
@@ -25,17 +23,7 @@ internal sealed class XapiMigrations : DataMigration
         await XapiDocumentIndexSchema.AddAccountNameAsync(SchemaBuilder);
 
         // The documents are mapped again once the migration is done, in a scope of their own.
-        ShellScope.AddDeferredTask(async scope =>
-        {
-            var session = scope.ServiceProvider.GetRequiredService<ISession>();
-
-            foreach (var document in await session.Query<XapiDocument>(collection: XapiConstants.CollectionName).ListAsync())
-            {
-                await session.SaveAsync(document, false, XapiConstants.CollectionName);
-            }
-
-            await session.SaveChangesAsync();
-        });
+        ShellScope.AddDeferredTask(scope => XapiDocumentStore.MapAllAgainAsync(scope.ServiceProvider));
 
         return 2;
     }

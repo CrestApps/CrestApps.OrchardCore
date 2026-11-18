@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Learning.Xapi.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Xapi.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using YesSql;
 using YesSql.Services;
 
@@ -113,6 +114,25 @@ public sealed class XapiDocumentStore : DocumentCatalog<XapiDocument, XapiDocume
         }
 
         return (await query.OrderBy(index => index.Id).ListAsync(cancellationToken)).Where(document => Matches(document, scope)).ToArray();
+    }
+
+    /// <summary>
+    /// Saves every document again, so that its index rows are mapped again, as after a new index column.
+    /// </summary>
+    /// <param name="services">The services of a scope of its own.</param>
+    /// <returns>A task.</returns>
+    public static async Task MapAllAgainAsync(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var session = services.GetRequiredService<ISession>();
+
+        foreach (var document in await session.Query<XapiDocument>(collection: XapiConstants.CollectionName).ListAsync())
+        {
+            await session.SaveAsync(document, false, XapiConstants.CollectionName);
+        }
+
+        await session.SaveChangesAsync();
     }
 
     /// <summary>
