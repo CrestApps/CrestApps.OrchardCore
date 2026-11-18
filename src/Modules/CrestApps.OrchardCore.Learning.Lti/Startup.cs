@@ -82,7 +82,7 @@ public sealed class DeploymentStartup : StartupBase
 {
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddDeployment<LearningExternalToolsDeploymentSource, LearningExternalToolsDeploymentStep>();
+        => services.AddDeployment<LearningExternalToolsDeploymentSource, LearningExternalToolsDeploymentStep, LearningExternalToolsDeploymentStepDisplayDriver>();
 }
 
 /// <summary>

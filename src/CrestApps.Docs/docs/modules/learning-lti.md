@@ -102,7 +102,7 @@ A `FullyGraded` score on a line item bound to an External tool item becomes that
 
 ## Data portability, personal data and workflows
 
-- **Recipe and deployment.** The `LearningExternalTools` step moves the tools' settings (`Tools`, by id), including the subject salt, so the ids a tool knows people by do not change. The tools' OpenID applications move with Orchard Core's OpenID applications step. Scores are not exported.
+- **Recipe and deployment.** The `LearningExternalTools` step moves the tools' settings (`Tools`, by id), including the subject salt, so the ids a tool knows people by do not change. In a deployment plan the step is listed as **External tools** under Learning. The tools' OpenID applications move with Orchard Core's OpenID applications step. Scores are not exported.
 - **Personal data.** The export lists, for each tool, the id it knows the person by and the privacy level, and every score a tool posted for the person. Erasure deletes the scores and warns that the tools keep their own records, which the person must ask each tool's provider to erase. A result already in the learner's progress stays, as Learning keeps it.
 - **Workflow.** The **External Score Received** event starts when a tool's score is stored, for every grading progress or the ones listed, with the score id as the correlation id. Its input holds `ToolId`, `ToolName`, `ClientId`, `CourseId`, `CourseItemId`, `LineItemId`, `LineItemLabel`, `UserId`, `ScoreGiven`, `ScoreMaximum`, `Percent`, `ActivityProgress`, `GradingProgress`, `RecordedInProgress` and `TimestampUtc`.
 
