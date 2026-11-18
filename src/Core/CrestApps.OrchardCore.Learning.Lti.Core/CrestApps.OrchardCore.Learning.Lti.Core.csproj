@@ -39,6 +39,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Lti.Abstractions\CrestApps.OrchardCore.Learning.Lti.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.SigningKeys.Abstractions\CrestApps.OrchardCore.SigningKeys.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
   </ItemGroup>
 

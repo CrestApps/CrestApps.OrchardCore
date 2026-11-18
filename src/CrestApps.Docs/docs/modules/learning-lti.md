@@ -32,7 +32,7 @@ The feature's migration adds the five LTI service scopes to the OpenID scopes.
 | Redirect URIs | Where the tool receives launches, one a line. A launch to any other address is refused. |
 | Target link URI | The default launch URL; a course item can name another. |
 | Deep Linking URL | Where course staff pick content in the tool. Empty when the tool has no Deep Linking. |
-| Tool's JWKS URL, or the tool's key set | The tool's public keys, as a URL (read when the tool is saved and again when the tool signs with a key id the site does not know) or a pasted JSON Web Key Set. They verify the tool's Deep Linking responses and client assertions. |
+| Tool's JWKS URL, or the tool's key set | The tool's public keys, as a URL (read when the tool is saved and again when the tool signs with a key id the site does not know) or a pasted JSON Web Key Set. They verify the tool's Deep Linking responses and client assertions. The URL is read through the egress guard (`EgressNetwork`): no redirect is followed and no address of the site's own network is reached (this machine only in Development). |
 | Custom parameters | `name=value` lines added to every launch; a course item's win over the tool's. |
 | What the tool learns | The privacy level: an anonymous id only, the id and the person's name, or the id, the name and the e-mail address. It applies to launches, custom parameters and the roster. |
 | May read the course roster / May post grades | Turn on Names and Role Provisioning Services and Assignment and Grade Services for the tool. |

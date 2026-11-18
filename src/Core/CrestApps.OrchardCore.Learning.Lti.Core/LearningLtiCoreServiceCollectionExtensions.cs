@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Learning.Lti;
 using CrestApps.OrchardCore.Learning.Lti.Core.DeepLinking;
 using CrestApps.OrchardCore.Learning.Lti.Core.Launch;
@@ -68,7 +69,9 @@ public static class LearningLtiCoreServiceCollectionExtensions
             kind.Icon = "fa-solid fa-plug";
         });
 
-        services.AddHttpClient(LtiToolDirectory.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10));
+        // The JWKS URL is entered by an admin: the client goes through the egress guard, which follows no redirect and
+        // never connects to the site's own network (this machine only while developing).
+        services.AddEgressGuardedHttpClient(LtiToolDirectory.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10));
 
         return services;
     }
