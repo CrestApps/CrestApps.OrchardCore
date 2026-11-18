@@ -241,12 +241,21 @@ public sealed class DesignedReportPresenter
         return new ReportExportFile(
             ReportTelemetry.Serialize(_exportManager.GetFormat(descriptor.Name), descriptor, run.Document, source ?? ReportRunSources.Workflow),
             descriptor.ContentType,
-            $"{FileName(design.DisplayText)}-{_clock.UtcNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}{descriptor.Extension}")
+            GetFileName(design.DisplayText, _clock.UtcNow) + descriptor.Extension)
         {
             Format = descriptor.Name,
             RowCount = run.RowCount,
         };
     }
+
+    /// <summary>
+    /// Gets the name an export of a report is downloaded as, without its extension: the report's title and the day.
+    /// </summary>
+    /// <param name="title">The report's title.</param>
+    /// <param name="utcNow">The current time, in UTC.</param>
+    /// <returns>The file name without its extension.</returns>
+    internal static string GetFileName(string title, DateTime utcNow)
+        => $"{FileName(title)}-{utcNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}";
 
     private static string FileName(string title)
     {

@@ -20,7 +20,8 @@ public sealed class Startup : StartupBase
         services
             .AddScoped<IReportManager, ReportManager>()
             .AddScoped<IReportExportManager, ReportExportManager>()
-            .AddScoped<ReportDisplayValueResolver>();
+            .AddScoped<ReportDisplayValueResolver>()
+            .AddScoped<ReportDateRangeResolver>();
 
         services.AddReportExportFormat<CsvReportExportFormat>();
 
