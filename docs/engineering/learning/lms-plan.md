@@ -956,3 +956,9 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 
 **Left for the release that drops the old time-off table (review round 6, item 3).** The copy still reads every ledger index row of the time-off collection at each start; once the old table is dropped the copy goes away. Until then a large ledger pays one index read per start.
 
+**Browser pass 2026-11-18.** Fixed test first on this branch; the red and green counts are in each commit.
+
+| Bug | Fix | Commit |
+| --- | --- | --- |
+| Workflow hints show `{ x }` instead of `{{ x }}` (Award Education Credits, Grant Required Learning Exemption, Require Learning) | The Liquid example is an argument of the localized hint. | `6c6eb87a5` |
+| GET/POST route guard | The credit type, external learning, My education credits, learning path people, required learning, My required learning and Team learning pages say `HttpGet`. | `c17b16ff0` |
