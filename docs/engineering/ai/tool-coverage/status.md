@@ -27,6 +27,7 @@ Tools that run Orchard Core's settings display drivers (`getSiteSettings`, `upda
 | 11 | AI profiles and agents, profile templates, personas, tool instances | [20](20-crestapps-ai-core.md) | 18 | 18 | 0 | 40fdee087..a97e4d4f1 |
 | 12 | AI provider connections, deployments and pricing, voice library, AI quality | [20](20-crestapps-ai-core.md) | 18 | 18 | 0 | e2d901cca..41cba0083 |
 | 13 | AI API keys, conversations, usage, chat interactions, MCP connections, MCP server, A2A connections, AI memory | [20](20-crestapps-ai-core.md) | 21 | 21 | 0 | aa0aade44..caedc8999 |
+| 14 | AI data sources, AI documents, AI file sources, AI web crawlers | [21](21-crestapps-ai-knowledge-reports-data.md) | 16 | 14 | 2 | c914acfdc..71d81938c |
 
 Orchard Core part (batches 1 to 10): 189 planned new tools, 132 built, 57 deferred. Left out on purpose: the four template tools (`listTemplates`, `getTemplate`, `saveTemplate`, `deleteTemplate`), because pull request 1321 adds shape template tools; and the six "existing, improve" rows (`listWorkflowTypes`, `getWorkflowType`, `listWorkflowActivities` and three AI tools), because phase 1 does not change existing tools.
 
@@ -58,6 +59,7 @@ Almost every deferral has one cause: the service the admin page uses exists only
 | `saveBackgroundTaskSettings` | 8 | `BackgroundTaskManager` (BackgroundTasks module) |
 | `updateWorkflowDraft`, `publishWorkflowType`, `discardWorkflowDraft` | 9 | `IWorkflowTypeDraftManager` (Workflows module) |
 | `listDataPipelines`, `getDataPipeline`, `saveDataPipeline`, `updateDataPipelineDraft`, `previewDataPipelineStep`, `publishDataPipeline`, `discardDataPipelineDraft`, `enableDataPipeline`, `disableDataPipeline`, `resetDataPipelineState`, `deleteDataPipeline`, `runDataPipeline`, `listDataPipelineRuns`, `getDataPipelineRun`, `cancelDataPipelineRun` | 10 | The pipeline, version and run documents and every manager are in the DataPipelines module |
+| `addAIProfileDocument`, `removeAIProfileDocument` | 14 | The add and remove logic is inline twice, with different messages, in `AIProfileDocumentsDisplayDriver.UpdateAsync` and `AIProfileDocumentsApiEndpoints`, and its pieces (`ProfileDocumentChunkIndexer`, the deferred chunk removal) are internal to the Documents module, while the guard that keeps the running assistant's documents unchanged is internal to AI.Agent. A tool needs a new service contract in AI.Core with its implementation in the Documents module, both callers moved onto it, and a media-file wrapper for `ProcessFileAsync(IFormFile)`; not a small move |
 
 ## Built, but narrower than the catalog
 
@@ -154,8 +156,37 @@ The batch 11 narrowings of `setAIProfileCapabilities` and `listAITools` ("their 
 | `saveMcpResource` | FTP and SFTP resources are not created, and their connection is not changed |
 | `clearAIUserMemory` | Checks **Clear AI memory for others** on its own for another user. `UserMemoryController.Clear` checks only `ClearAIMemory` with the user ID as resource; Orchard's role handler grants that permission without looking at the resource, so a role with only **Clear AI memory** may clear anyone's memory on that page. Not fixed here (it is admin code) |
 
+## Batch 14: AI data sources, documents, file sources and web crawlers
+
+The first CrestApps knowledge-module batch. The four modules already reference `AI.Core`, so their startups use `[RequireFeatures(AIConstants.Feature.Area)]` and no new feature-id constant was needed in `CrestApps.OrchardCore.Abstractions`.
+
+Placement:
+
+- `listAIDataSources`, `syncAIDataSource` and `searchAIDataSource` are in the Data Sources module; `listAIProfileDocuments` in the Documents module (feature `...Documents.Profiles`); the file source and web crawler tools in their own modules.
+- `saveAIDataSource` and `deleteAIDataSource` are in `AI.Agent` (`AIDataSourcesToolsStartup`, gated on `AIConstants.Feature.DataSources`): they must refuse to change the running assistant's data source, and `AIConfigurationGuard` is internal to `AI.Agent`; the Data Sources module cannot use a type from that module.
+- Shared plumbing is one new file in `AI.Core`, `AIModuleTools` (caller from `IUserAccessor` then `HttpContext`, permission check, JSON, paging, local times, admin links, secret-argument refusal), instead of one base class per module. `AIDataSourceToolDescriptions` in `AI.Core` builds the data source result for both assemblies.
+
+Rule A now covers data sources: `AIProtectedConfiguration.DataSourceIds` holds the `DataSourceMetadata.DataSourceId` of every protected profile and of a running chat interaction, and the data source of every protected data source search tool instance. File sources and web crawlers that feed a protected data source are not protected; saving or running one still asks for approval.
+
+Cost and approval: the Core catalog handlers queue a full synchronization of the data source when a data source, a file source or a web crawler is created, updated or deleted, and a Web data source's synchronization re-crawls every enabled crawler. So `saveAIWebCrawler` asks for approval, which the catalog row does not, and every save and delete result says a synchronization was queued, not run. `runAIFileSource` queues the run with `DeferredWork` after the turn (the admin Run button runs it inline); without a shell scope it says it could not queue. `runAIWebCrawler` reads the sitemap during the call, as the Sync button does, and queues the indexing.
+
+Credentials: no Azure AI Search API key, Elasticsearch password, API key or Base64 API key, PostgreSQL connection string, FTP password or SFTP password, private key, passphrase or proxy password is returned (`hasX` only) or accepted; any argument whose name marks a secret, at any depth and in any case, is refused with the admin link (`IngestionSourceSecrets.IsSecret`). Canary tests cover each field. A file source's FTP or SFTP host or port, or SFTP proxy host or port, cannot change while a credential for it is stored. Addresses are checked as the editors check them and no more: crawler base and sitemap URLs must be absolute (and the crawl strategy wants one of them `http` or `https`), FTP and SFTP need a host and a port from 1 to 65535. Nothing blocks internal hosts.
+
+The tests use doubles of the catalog managers, so the Core catalog handlers, the source handlers, the ingestion run service and the crawl planner did not run.
+
+| Tool | What it does not do |
+| --- | --- |
+| `saveAIDataSource` | Creates Azure AI Search and Elasticsearch data sources only on a data connection (their own endpoint, keys and the Elasticsearch default connection are set on the page); PostgreSQL only on the site's connection string. An update changes the name, and the mapping only while the configuration is not locked; connection settings are never changed. The suggested field mapping (`GetDataSourceFieldsEndpoint`) was not extracted, so the tool does not default it or list the index's fields |
+| `searchAIDataSource` | Returns the retrieval text an assistant would receive, through `DataSourceSearchToolFunction`; `DataSourceRetrieval` is internal to CrestApps.Core, so there are no separate scores. Covered by refusal and failure tests only |
+| `saveAIFileSource` | Never creates an SFTP file source (its editor needs a password or a private key); FTP and SFTP settings are written by name (`FtpConnectionMetadata`, `SftpConnectionMetadata`) because the module does not reference those packages; no SFTP host key fingerprint, no maximum file sizes. A connector added by another module gets only the common fields |
+| `runAIFileSource` | Queues the run instead of running it; the summary is read later from `listAIFileSources`. The queued path is not covered by a test |
+| `saveAIWebCrawler` | Asks for approval, unlike the catalog row |
+| `deleteAIDataSource`, `deleteAIFileSource`, `deleteAIWebCrawler` | Whether a delete removes the indexed documents is up to the catalog handlers, which were not run |
+
 ## Notes for the maintainer
 
 - `EgressNetwork.IsInternal` does not classify NAT64 (`64:ff9b::/96`) or `198.18.0.0/15`, which the Tenant Hierarchy classifier does. `importMediaFromUrl` relies on it.
 - All tool calls of one chat message share one service scope, so Orchard Core's immutable document reads stay stale until the scope commits. The URL rewriting and translation tools handle it (commit 8bf806dfe); any later tool that writes through a document manager and reads it back in the same message needs the same care.
 - `AI.Agent` now references the Lucene and Elasticsearch core packages, which pulls Lucene.Net and the Elasticsearch client in for every site that installs it.
+- Web crawlers fetch any address the server can reach: neither the crawler editor, the sitemap strategy nor the crawler's `HttpClient` blocks internal or loopback hosts. The crawler tools check what the editor checks and say so; an egress check belongs in the crawler's HTTP client.
+- On this machine the shared compiler server produced bogus Razor errors (tag helpers not found) in batch 14; building with `-p:UseSharedCompilation=false -p:UseRazorBuildServer=false` worked.

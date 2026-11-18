@@ -1005,6 +1005,56 @@ The tools need **Manage Agent-to-Agent connections** and handle credentials as t
 
 The tool needs **Clear AI memory** for the user's own memory and **Clear AI memory for other users** for anyone else's, checked separately, as the Clear AI memory action of a user's page does. Each memory is deleted through the memory manager, so it leaves the memory index too.
 
+### AI data source tools
+
+**Available when:** `CrestApps.OrchardCore.AI.DataSources` with `CrestApps.OrchardCore.AI` on. `saveAIDataSource` and `deleteAIDataSource` also need `CrestApps.OrchardCore.AI.Agent`.
+
+| Function | Description |
+| --- | --- |
+| `listAIDataSources` | Lists the AI data sources (knowledge bases) with their source type, destination index and field mapping, with name search, a source type filter and paging, or one data source by ID. Also returns the source types that can be created and the AI knowledge base indexes. |
+| `saveAIDataSource` | Creates a data source of a source type, or renames and remaps one by ID. A data source whose configuration is locked can only be renamed. Azure AI Search and Elasticsearch data sources are created on a data connection, PostgreSQL ones on the site's connection string. Asks for approval. |
+| `deleteAIDataSource` | Deletes a data source, queues the removal of its knowledge base documents and names the profiles that used it. Asks for approval. |
+| `syncAIDataSource` | Queues a full synchronization of one data source into its knowledge base index, as **Sync index** on the Data Sources page does. It spends embedding tokens. Asks for approval. |
+| `searchAIDataSource` | Runs a test search of one data source for a phrase and returns what an assistant using it would receive. It makes one embedding call. |
+
+The tools need **Manage AI data sources**, and picking a data connection also needs **Manage data connections**. No tool returns or takes an API key, a password or a connection string: the list reports only whether one is stored (`hasApiKey`, `hasPassword`, `hasConnectionString`), and their own endpoint and credentials are entered on the data source's page. Saving a data source queues a full synchronization, as the editor does. From inside a chat, the data sources the running assistant answers from (through its profile, a chat interaction or a data source search tool instance) cannot be changed or deleted.
+
+### AI profile document tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Documents.Profiles` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listAIProfileDocuments` | Lists the documents an AI profile answers from, with file name, type and size, and the profile's document retrieval settings. |
+
+The tool needs **Manage AI profiles**. Documents are added and removed on the profile's **Knowledge** tab.
+
+### AI file source tools
+
+**Available when:** `CrestApps.OrchardCore.AI.FileSources` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listAIFileSources` | Lists the file sources that feed File data sources, with connector, data source, schedule, connector settings and the last run, or one file source by ID. Also returns the connectors enabled on the site. |
+| `saveAIFileSource` | Creates a file source for this tenant's folder or an FTP server, or updates one by ID: name, data source, schedule, figure settings and connector settings. Asks for approval. |
+| `deleteAIFileSource` | Deletes a file source and queues the removal of what it ingested. Asks for approval. |
+| `runAIFileSource` | Queues a run that reads the folder or server and ingests new and changed files after the reply; `listAIFileSources` shows its result once it has run. Asks for approval. |
+
+The tools need **Manage file sources**. No FTP or SFTP password, private key, passphrase or proxy password is returned or taken: the list reports whether one is stored, and the save result links to the page where a person enters it. A folder can only be inside the tenant's own `file-sources` folder. Hosts and ports are checked as the editors check them (a host, and a port from 1 to 65535), and a host or port cannot change while a credential is stored for it. An SFTP file source needs a password or a private key, so it is created on its page. Saving or deleting a file source queues a full synchronization of its data source.
+
+### AI web crawler tools
+
+**Available when:** `CrestApps.OrchardCore.AI.WebCrawlers` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listAIWebCrawlers` | Lists the web crawlers that feed Web data sources, with site, sitemap, limits, URL patterns, data source, enabled state and schedule, or one crawler by ID. Also returns the crawl strategies. |
+| `saveAIWebCrawler` | Creates a web crawler for a website, or updates one by ID. Asks for approval, because saving queues a full synchronization of the data source, which crawls the site. |
+| `deleteAIWebCrawler` | Deletes a web crawler; its pages stop being refreshed. Asks for approval. |
+| `runAIWebCrawler` | Re-crawls one website now and queues its new, changed and removed pages for indexing, returning the counts. Asks for approval. |
+
+The tools need **Manage web crawlers**. Addresses are checked as the crawler editor checks them: an absolute `http` or `https` base or sitemap URL, and valid regular expressions for the URL patterns. Nothing stops a crawler from reaching an address on the server's own network, so confirm the address before approving.
+
 ### Analytics tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Chat.Analytics`
