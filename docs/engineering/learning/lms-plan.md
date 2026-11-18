@@ -1010,12 +1010,6 @@ The ten new workflow activities are listed in the workflow designer's activity l
 | No `provider` in the course JSON-LD | `CourseProviderStructuredDataProvider` runs after the site provider and refers to the publisher node; Seo.Abstractions gains `StructuredDataProviderOrder.Site` and `StructuredDataNodeIds`. | `e7e6118d9` |
 | Workflow hint shows `{ x }` (Give Course Seat) | The Liquid example is an argument of the localized hint. | `bd7fad9bd` |
 
-| Security: a key course was bought, and enrolled the buyer, without the key | A course in the Key or Approval mode is not sold, as a course or as seats, unless the product's `EnrollsWithoutKeyOrApproval` says buying it is the way in; the cart refuses it and the fulfilment fails the purchase if the mode changed meanwhile. Closed courses stay sellable (a purchase is one of the sources that mode allows). | `e9af640e1` |
-| Every course requires a price; a priced learning path has no price or Add to cart | Products' `ProductPartSettings.PriceOptional`: an item without a price is not for sale. Courses and paths get it and the product page details through migration step 3, the create step and `LearningPathProductMigrations` (paths made in the same pass or later). | `9e2885ff0` |
-| Data sets show raw ids | The pool's course, the accounts and a seat's pool reference what they identify, so reports join them for names. | `97c5068d3` |
-| No `provider` in the course JSON-LD | `CourseProviderStructuredDataProvider` runs after the site provider and refers to the publisher node; Seo.Abstractions gains `StructuredDataProviderOrder.Site` and `StructuredDataNodeIds`. | `adbdea1b6` |
-| Workflow hint shows `{ x }` (Give Course Seat) | The Liquid example is an argument of the localized hint. | `9b95e8d2e` |
-
 ### Phase 6: Classes (branch `ma/learning-phase-6`, stacked on `ma/learning-phase-5`)
 
 **Built.**
@@ -1040,6 +1034,6 @@ The ten new workflow activities are listed in the workflow designer's activity l
 
 | Bug | Fix | Commit |
 | --- | --- | --- |
-| Cancelling a session tells nobody, although the page says it does | `ClassSessionCancelledObserver` sends each learner whose place went with the cancelled session a **Class session cancelled** notification with the reason; a place given up by the learner or an ending enrollment tells nobody. | `9acd7c2fc` |
-| Class sessions appear on no attendee's calendar | `ClassSessionCalendarEventSource` (a Calendars event source) shows each meeting of a confirmed or attended place on the learner's own calendar, room or no room. | `695e57d1a` |
-| GET/POST route guard | The class session pages say `HttpGet`. | `4ed60e225` |
+| Cancelling a session tells nobody, although the page says it does | `ClassSessionCancelledObserver` sends each learner whose place went with the cancelled session a **Class session cancelled** notification with the reason; a place given up by the learner or an ending enrollment tells nobody. | `c6803c463` |
+| Class sessions appear on no attendee's calendar | `ClassSessionCalendarEventSource` (a Calendars event source) shows each meeting of a confirmed or attended place on the learner's own calendar, room or no room. | `5de8929ef` |
+| GET/POST route guard | The class session pages say `HttpGet`. | `192b6e824` |
