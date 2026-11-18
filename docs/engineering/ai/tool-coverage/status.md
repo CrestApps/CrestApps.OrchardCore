@@ -141,6 +141,10 @@ Extractions (behavior-preserving; the admin code calls them now):
 
 Credentials: no MCP or A2A credential (API key, password, OAuth secret, private key, certificate, header value, environment variable value) is returned or accepted, and stdio arguments are returned as a count only. A new connection is anonymous. `saveMcpConnection` and `saveA2AConnection` may switch a connection to anonymous access (which clears its credentials, as the editor does) and change the non-secret fields of its current authentication; choosing an authentication that needs a credential is refused with the admin link. A connection that stores a credential cannot be moved to another host (endpoint or OAuth token endpoint), since the credential would be sent there. Rule A protects the MCP and A2A connections of the running assistant; deleting a stdio connection is allowed.
 
+Catalog handlers: `saveMcpConnection` updates with no data, as the MCP Hosts editor does, because CrestApps.Core's `SseMcpConnectionSettingsHandler` rebuilds a connection's authentication from any data object (it would clear the non-secret fields and protect the stored secrets a second time). The Orchard `McpConnectionHandler` then logs a null-data error that `HandlerExtensions.InvokeAsync` swallows, as it does for the editor. The A2A, prompt and resource tools pass an empty object, which their handlers ignore. The tests use doubles of the managers, so none of this was run against the real handlers.
+
+The batch 11 narrowings of `setAIProfileCapabilities` and `listAITools` ("their metadata types are in packages this module does not reference") are out of date: `AI.Agent` now references both packages. The tools were not changed, as phase 1 does not change built tools.
+
 | Tool | What it does not do |
 | --- | --- |
 | `saveAIApiKey` | Never creates a key (a new key's value is shown once): it returns the API keys page link. Roles must exist and cannot be Anonymous, which the editor's list also leaves out |

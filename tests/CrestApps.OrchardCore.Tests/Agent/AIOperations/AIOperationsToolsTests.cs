@@ -479,6 +479,9 @@ public sealed class AIOperationsToolsTests
         Assert.Equal(ClientAuthenticationType.Anonymous, metadata.AuthenticationType);
         Assert.Null(metadata.ApiKey);
         Assert.DoesNotContain("SECRET", result, StringComparison.Ordinal);
+
+        // As the editor does, no data is passed: the connection settings handler would rebuild the authentication from it.
+        Assert.Null(Assert.Single(harness.McpConnectionUpdateData));
     }
 
     [Fact]
@@ -750,5 +753,61 @@ public sealed class AIOperationsToolsTests
         // Assert
         Assert.Equal(["a2a-1"], harness.A2AConnections.Select(c => c.ItemId));
         Assert.Equal(1, AgentToolTestContext.ReadJson(result).GetProperty("deleted").GetArrayLength());
+    }
+
+    [Theory]
+    [InlineData(ListChatInteractionsTool.TheName)]
+    [InlineData(ListMcpConnectionsTool.TheName)]
+    [InlineData(ListMcpPromptsTool.TheName)]
+    [InlineData(ListMcpResourcesTool.TheName)]
+    [InlineData(ListA2AConnectionsTool.TheName)]
+    public async Task ListTools_WithASearchThatMatchesNothing_ReturnAnEmptyPageWithACappedPageSize(string toolName)
+    {
+        // Arrange
+        var harness = new AIOperationsToolHarness();
+        harness.Interactions.Add(new ChatInteraction { ItemId = "interaction-1", OwnerId = AgentToolTestContext.UserId, Title = "Draft" });
+        harness.AddSseConnection("mcp-1", "GitHub");
+        harness.Prompts.Add(new McpPrompt { ItemId = "prompt-1", Name = "summarize", Prompt = new Prompt { Name = "summarize", Title = "Summarize" } });
+        harness.Resources.Add(new McpResource { ItemId = "resource-1", Source = "file", DisplayText = "Docs", Resource = new Resource { Uri = "file://resource-1", Name = "docs" } });
+        harness.AddA2AConnection("a2a-1", "Partner");
+        using var services = harness.Build();
+
+        Microsoft.Extensions.AI.AIFunction tool = toolName switch
+        {
+            ListChatInteractionsTool.TheName => new ListChatInteractionsTool(),
+            ListMcpConnectionsTool.TheName => new ListMcpConnectionsTool(),
+            ListMcpPromptsTool.TheName => new ListMcpPromptsTool(),
+            ListMcpResourcesTool.TheName => new ListMcpResourcesTool(),
+            _ => new ListA2AConnectionsTool(),
+        };
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(tool, services, new() { ["search"] = "no such thing", ["pageSize"] = 500 });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+        Assert.Equal(0, json.GetProperty("total").GetInt32());
+        Assert.Equal(0, json.GetProperty("items").GetArrayLength());
+        Assert.Equal(50, json.GetProperty("pageSize").GetInt32());
+        Assert.False(json.GetProperty("truncated").GetBoolean());
+    }
+
+    [Fact]
+    public async Task DeleteMcpResource_WithAnUnknownId_SkipsItAndDeletesNothing()
+    {
+        // Arrange
+        var harness = new AIOperationsToolHarness();
+        harness.Resources.Add(new McpResource { ItemId = "resource-1", Source = "file", DisplayText = "Docs" });
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteMcpResourceTool(), services, new() { ["resourceIds"] = new[] { "missing" } });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+        Assert.Equal(0, json.GetProperty("deleted").GetArrayLength());
+        Assert.Equal(1, json.GetProperty("skipped").GetArrayLength());
+        Assert.Single(harness.Resources);
+        Assert.Empty(harness.Deleted);
     }
 }

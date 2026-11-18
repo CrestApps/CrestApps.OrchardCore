@@ -233,7 +233,9 @@ public sealed class SaveMcpConnectionTool : AIFunction
         }
         else
         {
-            await manager.UpdateAsync(connection, new JsonObject(), cancellationToken);
+            // No data, as the editor passes: the connection settings handler rebuilds the authentication from any data
+            // object it is given, which would clear the fields set above and protect the stored secrets again.
+            await manager.UpdateAsync(connection, data: null, cancellationToken);
         }
 
         return AgentToolResults.Json(new

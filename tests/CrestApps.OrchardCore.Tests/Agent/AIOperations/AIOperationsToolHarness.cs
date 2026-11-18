@@ -85,6 +85,8 @@ internal sealed class AIOperationsToolHarness
 
     public List<object> Saved { get; } = [];
 
+    public List<JsonNode> McpConnectionUpdateData { get; } = [];
+
     public List<object> Deleted { get; } = [];
 
     public ServiceProvider Build()
@@ -338,7 +340,12 @@ internal sealed class AIOperationsToolHarness
         manager.Setup(m => m.ValidateAsync(It.IsAny<McpConnection>(), It.IsAny<CancellationToken>()))
             .Returns((McpConnection connection, CancellationToken _) => ValueTask.FromResult(Require(connection.DisplayText, "DisplayText is required field.")));
         manager.Setup(m => m.CreateAsync(It.IsAny<McpConnection>(), It.IsAny<CancellationToken>())).Returns((McpConnection connection, CancellationToken _) => Add(McpConnections, connection));
-        manager.Setup(m => m.UpdateAsync(It.IsAny<McpConnection>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>())).Returns((McpConnection connection, JsonNode _, CancellationToken _) => Track(connection));
+        manager.Setup(m => m.UpdateAsync(It.IsAny<McpConnection>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>())).Returns((McpConnection connection, JsonNode data, CancellationToken _) =>
+        {
+            McpConnectionUpdateData.Add(data);
+
+            return Track(connection);
+        });
         manager.Setup(m => m.DeleteAsync(It.IsAny<McpConnection>(), It.IsAny<CancellationToken>())).Returns((McpConnection connection, CancellationToken _) => Remove(McpConnections, connection));
 
         return manager.Object;
