@@ -690,7 +690,7 @@ If the budget runs out, the cycle logs a warning naming the entities that still 
 
 ### Tables that are deliberately never purged
 
-Configuration and reference data — queues, queue groups, skills, entry points, dialer profiles, business-hours calendars, agent profiles, agent queue memberships and reason codes — are bounded by tenant setup rather than by traffic, so ageing them out would delete a working configuration. Projection checkpoints hold one row per handler, and deleting one replays that projection from the beginning.
+Configuration and reference data — queues, queue groups, skills, entry points, dialer profiles, agent profiles, agent queue memberships and reason codes — are bounded by tenant setup rather than by traffic, so ageing them out would delete a working configuration. Projection checkpoints hold one row per handler, and deleting one replays that projection from the beginning.
 
 Each exemption is recorded with its reason, so every table is either covered by a policy or exempted on purpose.
 
@@ -768,7 +768,7 @@ Because the SMS/email, voice, and AI providers process and may retain customer c
 
 ## Configuration portability and preview data
 
-Contact Center configuration — queues, queue groups, skills, routing entry points, dialer profiles, business-hours calendars, and agent state reason codes — is exported and imported through the standard Orchard Core **Deployment** and **Recipes** mechanisms, exactly like every other tenant setting. Each operator-authored data set has a dedicated deployment step (for example the queue, skill, entry point, dialer profile, business-hours calendar, queue-group, and reason-code steps), so an operator builds a deployment plan, exports it, and replays it as a recipe on another tenant. There is no bespoke Contact Center export format to learn or maintain, and no parallel import path: the sanctioned Orchard pipeline is the single source of truth for configuration portability.
+Contact Center configuration — queues, queue groups, skills, routing entry points, dialer profiles, and agent state reason codes (business hours travel as Business Hours schedules) — is exported and imported through the standard Orchard Core **Deployment** and **Recipes** mechanisms, exactly like every other tenant setting. Each operator-authored data set has a dedicated deployment step (for example the queue, skill, entry point, dialer profile, queue-group, and reason-code steps), so an operator builds a deployment plan, exports it, and replays it as a recipe on another tenant. There is no bespoke Contact Center export format to learn or maintain, and no parallel import path: the sanctioned Orchard pipeline is the single source of truth for configuration portability.
 
 Operational data — interactions, activities, assignments, agent sessions, dialer records, and the event/metric ledgers — is **not** configuration and is deliberately excluded from Deployment/Recipes. Its lifecycle is governed two ways:
 
@@ -817,7 +817,7 @@ The contribution table is drained rather than accumulated, so it is sized by one
 
 ### Routing configuration cache
 
-Some tables are cheap to read but read constantly. Enabled queues, skills, business-hours calendars, and entry points are small and change rarely, yet they sit on the hot inbound-routing path — an entry point is resolved once per inbound call, and queues and skills are read again while the call is placed — so a fresh query per read let routing throughput fall as configuration grew even though a query plan for any one of them was never the problem. These four collections are served from a shared per-tenant cache (`IContactCenterConfigurationCache`): the first read after a change loads an enabled snapshot, and every routing decision afterward reads it without touching the database.
+Some tables are cheap to read but read constantly. Enabled queues, skills, and entry points are small and change rarely, yet they sit on the hot inbound-routing path — an entry point is resolved once per inbound call, and queues and skills are read again while the call is placed — so a fresh query per read let routing throughput fall as configuration grew even though a query plan for any one of them was never the problem. These three collections are served from a shared per-tenant cache (`IContactCenterConfigurationCache`): the first read after a change loads an enabled snapshot, and every routing decision afterward reads it without touching the database.
 
 Three properties make the cache safe to trust on the routing path. **A change invalidates only the collection it touched.** Each of the four types already has a catalog entry handler that runs on every write, whether an administrator edits the entry or a recipe imports it; a generic invalidation handler registered alongside it signals that one collection's change token on create, update, and delete. **The invalidation lands after the write commits.** The signal is raised through a deferred task that runs once the writing transaction has committed, so a concurrent read cannot repopulate the cache with a value the database has not yet made durable. **A write during a load is not lost.** The change token is captured before the snapshot is loaded, so a write that commits while the load is in flight marks the just-stored snapshot stale and forces the next read to reload rather than serve it.
 

@@ -1,4 +1,5 @@
 using System.Net;
+using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Commerce.Api;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -177,6 +178,9 @@ public sealed class IdempotencyHardeningTests
         httpContext.Request.Path = "/api/commerce/v1/checkout";
         httpContext.Request.Headers[CommerceApi.IdempotencyKeyHeader] = "key-1";
         httpContext.Connection.RemoteIpAddress = IPAddress.Parse(address);
+
+        // The commerce API's endpoints name the guest headers a caller is known by.
+        httpContext.SetEndpoint(new Endpoint(null, new EndpointMetadataCollection(CommerceApi.GuestHeaders), "commerce"));
 
         if (cartToken is not null)
         {

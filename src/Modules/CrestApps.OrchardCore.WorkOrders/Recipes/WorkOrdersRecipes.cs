@@ -1,7 +1,10 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using CrestApps.Core;
 using CrestApps.OrchardCore.Core.Recipes;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
+using CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using Json.Schema;
@@ -16,7 +19,9 @@ using OrchardCore.Recipes.Services;
 namespace CrestApps.OrchardCore.WorkOrders.Recipes;
 
 /// <summary>
-/// Imports the WorkOrders step: Checklists, ServiceLevels, SubStatuses, Types, Agreements, each created or updated by ItemId with the same checks as the admin.
+/// Imports the WorkOrders step: Checklists, SubStatuses, Types, Agreements, each created or updated by ItemId with the same checks as the admin.
+/// The ServiceLevels section of older recipes is copied to the shared service level policies; new recipes use the
+/// ServiceLevelPolicies step.
 /// </summary>
 internal sealed class WorkOrdersRecipeStep : NamedRecipeStepHandler
 {
@@ -36,18 +41,89 @@ internal sealed class WorkOrdersRecipeStep : NamedRecipeStepHandler
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
         await CatalogRecipeSections.ImportAsync(context, "Checklists", _services.GetRequiredService<WorkOrderSettingManager<ChecklistTemplate>>(), "checklist");
-        await CatalogRecipeSections.ImportAsync(context, "ServiceLevels", _services.GetRequiredService<WorkOrderSettingManager<ServiceLevelPolicy>>(), "service level");
+        await ImportLegacyServiceLevelsAsync(context);
         await CatalogRecipeSections.ImportAsync(context, "SubStatuses", _services.GetRequiredService<WorkOrderSettingManager<WorkOrderSubStatus>>(), "sub-status");
         await CatalogRecipeSections.ImportAsync(context, "Types", _services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>(), "work order type");
-        if (_services.GetService<ServiceAgreementManager>() is { } agreements)
+        await ImportAgreementsAsync(context);
+    }
+
+    // Agreements with visits are agreements of the Agreements module; this section, in Work Orders' own form, makes them
+    // with their visits as Work Orders terms.
+    private async Task ImportAgreementsAsync(RecipeExecutionContext context)
+    {
+        if (context.Step["Agreements"] is not JsonArray items || _services.GetService<CrestApps.OrchardCore.WorkOrders.Core.Legacy.ServiceAgreementUpgrade>() is not { } upgrade)
         {
-            await CatalogRecipeSections.ImportAsync(context, "Agreements", agreements, "service agreement");
+            return;
+        }
+
+        var manager = _services.GetRequiredService<CrestApps.OrchardCore.Agreements.Services.IAgreementManager>();
+
+        foreach (var node in items.OfType<JsonObject>())
+        {
+            if (await upgrade.FromRecipeAsync(node) is not { } converted)
+            {
+                context.Errors.Add("A service agreement in the WorkOrders step has no name.");
+
+                continue;
+            }
+
+            var validation = await manager.ValidateAsync(converted.Agreement);
+
+            if (!validation.Succeeded)
+            {
+                context.Errors.Add($"The service agreement \"{converted.Agreement.Name}\" in the WorkOrders step was refused: {string.Join(" ", validation.Errors.Select(error => error.ErrorMessage))}");
+
+                continue;
+            }
+
+            if (converted.IsNew)
+            {
+                await manager.CreateAsync(converted.Agreement);
+            }
+            else
+            {
+                await manager.UpdateAsync(converted.Agreement);
+            }
+        }
+    }
+
+    // Older recipes carried Work Orders' own policies; each one becomes a shared policy with the same id.
+    private async Task ImportLegacyServiceLevelsAsync(RecipeExecutionContext context)
+    {
+        if (context.Step["ServiceLevels"] is not JsonArray policies)
+        {
+            return;
+        }
+
+        var upgrade = _services.GetRequiredService<WorkOrderServiceLevelUpgrade>();
+
+        // One set of schedule names for the whole step, so two policies of one name get a schedule each.
+        var scheduleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var node in policies.OfType<JsonObject>())
+        {
+            var legacy = node.Deserialize<LegacyServiceLevelPolicy>(JOptions.Default);
+
+            if (legacy is null || string.IsNullOrWhiteSpace(legacy.Name))
+            {
+                context.Errors.Add($"A service level in the WorkOrders step has no name.");
+
+                continue;
+            }
+
+            var (_, errors) = await upgrade.ImportAsync(legacy, scheduleNames);
+
+            if (errors.Count > 0)
+            {
+                context.Errors.Add($"The service level \"{legacy.Name}\" in the WorkOrders step was refused: {string.Join(" ", errors)}");
+            }
         }
     }
 }
 
 /// <summary>
-/// Exports work order types, checklists, service levels and sub-statuses, and service agreements when asked.
+/// Exports work order types, checklists and sub-statuses, and service agreements when asked. Service level policies are
+/// exported by the ServiceLevelPolicies step.
 /// </summary>
 public sealed class WorkOrdersDeploymentStep : DeploymentStep
 {
@@ -84,15 +160,59 @@ internal sealed class WorkOrdersDeploymentSource : DeploymentSourceBase<WorkOrde
         var node = new JsonObject { ["name"] = step.Name };
 
         node["Checklists"] = CatalogRecipeSections.Export((await _services.GetRequiredService<WorkOrderSettingManager<ChecklistTemplate>>().GetAllAsync()));
-        node["ServiceLevels"] = CatalogRecipeSections.Export((await _services.GetRequiredService<WorkOrderSettingManager<ServiceLevelPolicy>>().GetAllAsync()));
         node["SubStatuses"] = CatalogRecipeSections.Export((await _services.GetRequiredService<WorkOrderSettingManager<WorkOrderSubStatus>>().GetAllAsync()));
         node["Types"] = CatalogRecipeSections.Export((await _services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>().GetAllAsync()));
         if (step.IncludeAgreements)
         {
-            node["Agreements"] = CatalogRecipeSections.Export((_services.GetService<ServiceAgreementManager>() is { } managerAgreements ? await managerAgreements.GetAllAsync() : Enumerable.Empty<ServiceAgreement>()));
+            node["Agreements"] = await ExportAgreementsAsync();
         }
 
         result.Steps.Add(node);
+    }
+
+    // The agreements with visits, in Work Orders' own form, which the WorkOrders step reads back.
+    private async Task<JsonArray> ExportAgreementsAsync()
+    {
+        var array = new JsonArray();
+
+        if (_services.GetService<CrestApps.OrchardCore.Agreements.Services.IAgreementManager>() is not { } manager)
+        {
+            return array;
+        }
+
+        foreach (var agreement in await manager.GetAllAsync())
+        {
+            if (!CrestApps.Core.ExtensibleEntityExtensions.TryGet<WorkOrderAgreementTerms>(agreement, out var terms) || terms is null)
+            {
+                continue;
+            }
+
+            array.Add(JsonSerializer.SerializeToNode(new CrestApps.OrchardCore.WorkOrders.Core.Legacy.LegacyServiceAgreement
+            {
+                ItemId = agreement.ItemId,
+                Number = agreement.Number,
+                Name = agreement.Name,
+                Status = agreement.Status.ToString(),
+                CustomerId = terms.CustomerId,
+                AccountId = agreement.AccountId,
+                Contact = terms.Contact,
+                ServiceAddress = terms.ServiceAddress,
+                AccessNotes = terms.AccessNotes,
+                AssetIds = terms.AssetIds,
+                StartDate = agreement.StartDate,
+                EndDate = agreement.EndDate,
+                TimeZoneId = agreement.TimeZoneId,
+                Schedules = terms.Schedules,
+                Pricing = terms.Pricing,
+                PricePerVisit = terms.PricePerVisit,
+                ExpiringNoticeDays = agreement.ExpiringNoticeDays,
+                ExpiringNotifiedUtc = agreement.ExpiringNotifiedUtc,
+                Notes = agreement.Notes,
+                CreatedUtc = agreement.CreatedUtc,
+            }, JOptions.Default));
+        }
+
+        return array;
     }
 }
 

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.BusinessHours;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Skills;
@@ -62,8 +63,12 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.BusinessHours,
     Name = "Contact Center Business Hours",
-    Description = "Adds business-hours calendars, their administration, and the evaluation service used to gate work distribution and automated Omnichannel sends. Enabled on its own or pulled in by any feature that needs it.",
-    Category = "Contact Center"
+    Description = "Gates work distribution, entry points, the dialer and automated Omnichannel sends by business hours. The hours are Business Hours schedules, edited under Content > Business Hours. Enabled on its own or pulled in by any feature that needs it.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        BusinessHoursConstants.Features.BusinessHours,
+    ]
 )]
 
 [assembly: Feature(

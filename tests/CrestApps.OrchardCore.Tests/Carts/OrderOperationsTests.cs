@@ -1,11 +1,15 @@
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Tests.Customers;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Timeline;
+using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
@@ -27,6 +31,7 @@ public sealed class OrderOperationsTests
 
     private readonly InMemoryOrderStore _orders = new();
     private readonly global::OrchardCore.Locking.Distributed.IDistributedLock _locks = new global::OrchardCore.Locking.LocalLock(NullLogger<global::OrchardCore.Locking.LocalLock>.Instance);
+    private readonly InMemoryTimelineService _timeline = new();
     private readonly RecordingHandler _handler = new();
 
     [Fact]
@@ -177,9 +182,9 @@ public sealed class OrderOperationsTests
         Assert.Equal("Out of stock", order.CancelNote);
         commands.Verify(value => value.CancelAsync("tx-1", "Out of stock", It.IsAny<CancellationToken>()), Times.Once);
 
-        var note = Assert.Single(order.Notes);
+        var note = Assert.Single(_timeline.Of(new RecordRef(OrderConstants.RecordKind, order.ItemId)));
         Assert.Equal("admin", note.AuthorName);
-        Assert.Contains("Out of stock", note.Text, StringComparison.Ordinal);
+        Assert.Contains("Out of stock", note.Body, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -210,14 +215,15 @@ public sealed class OrderOperationsTests
         Assert.Equal(50m, Assert.Single(order.Refunds).Amount);
         Assert.Equal(OrderRefundStatus.PartiallyRefunded, order.RefundStatus);
 
-        var note = Assert.Single(order.Notes);
+        var note = Assert.Single(_timeline.Of(new RecordRef(OrderConstants.RecordKind, order.ItemId)));
         Assert.Equal("admin", note.AuthorName);
-        Assert.Equal(OrderNoteKind.Event, note.Kind);
-        Assert.Contains("Scratched strap", note.Text, StringComparison.Ordinal);
+        Assert.Equal(TimelineConstants.Kinds.Event, note.Kind);
+        Assert.Equal(TimelineVisibility.Internal, note.Visibility);
+        Assert.Contains("Scratched strap", note.Body, StringComparison.Ordinal);
     }
 
     private OrderService OrderService()
-        => new(_orders, [_handler], new InMemoryNumberSequence(), Clock(), NullLogger<OrderService>.Instance);
+        => new(_orders, [_handler], new InMemoryNumberSequence(), _timeline, Clock(), NullLogger<OrderService>.Instance);
 
     private OrderOperationsService Operations(IServiceProvider services)
         => new(

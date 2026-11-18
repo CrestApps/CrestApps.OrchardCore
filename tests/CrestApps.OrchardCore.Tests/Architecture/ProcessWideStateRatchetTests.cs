@@ -39,6 +39,10 @@ public sealed partial class ProcessWideStateRatchetTests
         // remove as it is paid down.
         ["src/Abstractions/CrestApps.OrchardCore.Abstractions/Currencies/CurrencyFormat.cs"] = 1,
         ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/InvoiceLedgerAvailability.cs"] = 1,
+
+        // Existing debt from main's #1330 (help desk), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Abstractions/CrestApps.OrchardCore.Tickets.Abstractions/TicketsPermissions.cs"] = 1,
     };
 
     [Fact]

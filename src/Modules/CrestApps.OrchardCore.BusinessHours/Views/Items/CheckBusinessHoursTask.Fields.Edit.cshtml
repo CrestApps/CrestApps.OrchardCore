@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.BusinessHours.Workflows
+
+@model CheckBusinessHoursTaskViewModel
+
+<div class="mb-3">
+    <label for="@Html.IdFor(model => model.ScheduleId)" class="form-label">@T["Schedule"]</label>
+    @await Component.InvokeAsync("HoursSchedulePicker", new { name = Html.NameFor(model => model.ScheduleId).ToString(), selectedValue = Model.ScheduleId, required = true })
+    <span class="hint">@T["The schedule to check. The task takes the Unknown outcome when the schedule is disabled or deleted."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="TimeZoneExpression" class="form-label">@T["Time zone"]</label>
+    <input asp-for="TimeZoneExpression" class="form-control code" />
+    <span class="hint">@T["Optional. A time zone to read the schedule in instead of its own, such as the contact's. Liquid is allowed."]</span>
+</div>

@@ -91,7 +91,6 @@ public sealed partial class ContactCenterConfigurationPortabilityTests
             [
                 new ConfigurationCatalog(ContactCenterDeploymentSteps.Skill, "Skills", typeof(ContactCenterSkill), typeof(IContactCenterSkillManager), static () => new ContactCenterSkillDeploymentStep()),
                 new ConfigurationCatalog(ContactCenterDeploymentSteps.QueueGroup, "QueueGroups", typeof(ActivityQueueGroup), typeof(IActivityQueueGroupManager), static () => new ContactCenterQueueGroupDeploymentStep()),
-                new ConfigurationCatalog(ContactCenterDeploymentSteps.BusinessHoursCalendar, "Calendars", typeof(BusinessHoursCalendar), typeof(IBusinessHoursCalendarManager), static () => new ContactCenterBusinessHoursCalendarDeploymentStep()),
                 new ConfigurationCatalog(ContactCenterDeploymentSteps.Queue, "Queues", typeof(ActivityQueue), typeof(IActivityQueueManager), static () => new ContactCenterQueueDeploymentStep()),
                 new ConfigurationCatalog(ContactCenterDeploymentSteps.EntryPoint, "EntryPoints", typeof(ContactCenterEntryPoint), typeof(IContactCenterEntryPointManager), static () => new ContactCenterEntryPointDeploymentStep()),
                 new ConfigurationCatalog(ContactCenterDeploymentSteps.DialerProfile, "DialerProfiles", typeof(DialerProfile), typeof(IDialerProfileManager), static () => new ContactCenterDialerProfileDeploymentStep()),

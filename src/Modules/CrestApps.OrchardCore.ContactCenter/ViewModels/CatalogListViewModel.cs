@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 /// <summary>
 /// View model for the shared <c>_CatalogList</c> partial that renders the near-identical Contact Center
 /// catalog list screens (queues, skills, entry points, dialer profiles, queue groups, agent state reason
-/// codes, business-hours calendars, and voice media). Per-type screens supply only the labels, the list name, the
+/// codes, and voice media). Per-type screens supply only the labels, the list name, the
 /// columns particular to the catalog, and the admin list context; the markup lives in one place.
 /// </summary>
 public class CatalogListViewModel

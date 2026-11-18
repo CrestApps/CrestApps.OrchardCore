@@ -150,7 +150,7 @@ public sealed class PartiesStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPartySource, StaffPartySource>());
+        services.AddPartySource<StaffPartySource>(StaffConstants.PartyKind, LocalizationSource.Create<Startup>("Staff member"), StaffPermissions.ViewStaff);
         services.AddUserPartySource<StaffUserPartySource>();
     }
 }

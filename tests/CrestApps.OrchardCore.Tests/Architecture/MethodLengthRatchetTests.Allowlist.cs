@@ -9,8 +9,8 @@ public sealed partial class MethodLengthRatchetTests
     private static readonly Dictionary<string, int> _known = new(StringComparer.Ordinal)
     {
         ["src/Abstractions/CrestApps.OrchardCore.Calendars.Abstractions/Recurrence/RecurrenceRule.cs: TryParse"] = 207,
-        ["src/Core/CrestApps.OrchardCore.AI.Core/Services/DataSourceIndexingService.cs: IndexSpecificDocumentsCoreAsync"] = 161,
-        ["src/Core/CrestApps.OrchardCore.AI.Core/Services/DataSourceIndexingService.cs: SyncDataSourceDocumentsAsync"] = 187,
+        ["src/Core/CrestApps.OrchardCore.AI.Core/Services/DataSourceIndexingService.cs: IndexSpecificDocumentsCoreAsync"] = 170, // raised for main's #1330 when PR #1319 merged main; lower as it is paid down
+        ["src/Core/CrestApps.OrchardCore.AI.Core/Services/DataSourceIndexingService.cs: SyncDataSourceDocumentsAsync"] = 196, // raised for main's #1330 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.AgenticCommerce.Core/Services/AgentCheckoutService.cs: PayAsync"] = 166,
         ["src/Core/CrestApps.OrchardCore.Calendars.Core/ICalendar/ICalendarReader.cs: Read"] = 171,
         ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs: BeginObligationAsync"] = 153,
@@ -45,7 +45,7 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/DefaultInstallmentPlanService.cs: CreatePlanAsync"] = 217,
         ["src/Core/CrestApps.OrchardCore.Telnyx.Core/Services/TelnyxContactCenterVoiceProvider.cs: ConnectToAgentAsync"] = 153,
         ["src/Core/CrestApps.OrchardCore.Telnyx.Core/Services/TelnyxOutboundBridgeOrchestrator.cs: AdvanceAsync"] = 295,
-        ["src/Core/CrestApps.OrchardCore.TimeTracker.Core/Services/DefaultTimeTrackerService.cs: SyncAsync"] = 165,
+        ["src/Core/CrestApps.OrchardCore.TimeTracker.Core/Services/DefaultTimeTrackerService.cs: SyncAsync"] = 170, // raised for main's #1330 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultSchedulePlanningService.cs: PublishAsync"] = 202,
         ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultTimeClockService.cs: PunchAsync"] = 167,
         ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultTimesheetCalculator.cs: Calculate"] = 204,
@@ -98,7 +98,7 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/OmnichannelActivitiesStartup.cs: ConfigureServices"] = 221,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Services/DefaultContactActivityBatchLoader.cs: LoadAsync"] = 815,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Services/MessagingWorkspaceBuilder.cs: BuildInboxAsync"] = 157,
-        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Startup.cs: ConfigureServices"] = 200,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Startup.cs: ConfigureServices"] = 201, // raised for main's #1330 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/BackgroundTasks/SmsReEngagementBackgroundTask.cs: TryReEngageAsync"] = 278,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Handlers/SmsOmnichannelEventHandler.cs: HandleAsync"] = 857,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Services/SmsOmnichannelProcessor.cs: StartCoreAsync"] = 151,
@@ -130,5 +130,12 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultRecurringPlanService.cs: RunOccurrenceAsync"] = 191,
         ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/DefaultInstallmentPlanService.cs: CreateScheduleAsync"] = 156,
         ["src/Modules/CrestApps.OrchardCore.Transactions/Services/TransactionCreditSettlement.cs: SettleAsync"] = 185,
+
+        // Existing debt from main's #1330 (help desk), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketService.cs: ApplyAsync"] = 161,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketService.cs: CreateAsync"] = 224,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketService.cs: ReplyAsync"] = 194,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Reports/TicketAccountHealthReport.cs: RunAsync"] = 154,
     };
 }

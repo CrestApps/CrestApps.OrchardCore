@@ -170,6 +170,8 @@ namespace CrestApps.OrchardCore.Orders.Core.Models
         public System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.OrderLine> Lines { get; set; }
         public string LocationId { get; set; }
         public System.DateTime ModifiedUtc { get; set; }
+        [System.Obsolete("Notes and history are on the order\'s timeline. Only the upgrade that moves the st" +
+            "ored ones reads this.")]
         public System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.OrderNote> Notes { get; set; }
         public string OrderNumber { get; set; }
         public System.DateTime? PaidUtc { get; set; }
@@ -522,6 +524,7 @@ namespace CrestApps.OrchardCore.Orders.Core
         public const string FindRateLimitGroup = "find-order";
         public const string GiftCardContentType = "GiftCard";
         public const string GiftCardTenderKey = "gift-card";
+        public const string RecordKind = "Order";
         public const string ReturnsSettingsGroupId = "returns";
         public const string SettingsGroupId = "orders";
         public static class AttemptPolicies
@@ -687,7 +690,7 @@ namespace CrestApps.OrchardCore.Orders.Core.Services
     }
     public interface IOrderService
     {
-        System.Threading.Tasks.Task AddNoteAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, string text, CrestApps.OrchardCore.Orders.Core.Models.OrderNoteKind kind, string authorName, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> AddNoteAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, string text, CrestApps.OrchardCore.Orders.Core.Models.OrderNoteKind kind, string authorName, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> CancelAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason reason, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> CancelAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason reason, bool restock, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Services.OrderCreationResult> CreateFromCartAsync(CrestApps.OrchardCore.Carts.Core.Models.CartPricing pricing, System.Threading.CancellationToken cancellationToken = default);
@@ -700,6 +703,7 @@ namespace CrestApps.OrchardCore.Orders.Core.Services
         System.Threading.Tasks.ValueTask CreateAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.Orders.Core.Models.Order> FindByIdAsync(string orderId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Models.Order> FindByNumberAsync(string orderNumber, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Orders.Core.Models.Order>> GetAsync(System.Collections.Generic.IEnumerable<string> ids, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.Order>> ListUnpaidByCartAsync(string cartId, System.Threading.CancellationToken cancellationToken = default);
         [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
                 "Count",
@@ -839,6 +843,18 @@ namespace CrestApps.OrchardCore.Orders.Core.Services
         public System.Collections.Generic.IReadOnlyList<string> Problems { get; }
         public void Refuse(string problem) { }
     }
+    public sealed class OrderNotesStep : CrestApps.OrchardCore.YesSql.Core.Upgrades.IResumableStep
+    {
+        public const string StepName = "Orders.Notes";
+        public OrderNotesStep(CrestApps.OrchardCore.Orders.Core.Services.OrderNotesUpgrade upgrade) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<bool> RunAsync(CrestApps.OrchardCore.YesSql.Core.Upgrades.ResumableStepContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class OrderNotesUpgrade
+    {
+        public OrderNotesUpgrade(YesSql.ISession session, CrestApps.OrchardCore.Timeline.Services.ITimelineService timeline, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Orders.Core.Services.OrderNotesUpgrade> logger) { }
+        public System.Threading.Tasks.Task<int> RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class OrderOperationScope
     {
         public OrderOperationScope() { }
@@ -868,6 +884,15 @@ namespace CrestApps.OrchardCore.Orders.Core.Services
         public string ShiftId { get; set; }
         public System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Orders.Core.Models.OrderStatus> Statuses { get; set; }
         public string UserId { get; set; }
+    }
+    public sealed class OrderRecordSource : CrestApps.OrchardCore.Records.IRecordSource
+    {
+        public OrderRecordSource(CrestApps.OrchardCore.Orders.Core.Services.IOrderStore orderStore, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, Microsoft.AspNetCore.Routing.LinkGenerator linkGenerator, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Orders.Core.Services.OrderRecordSource> stringLocalizer) { }
+        public OrchardCore.Localization.LocalizationSource DisplayName { get; }
+        public string Kind { get; }
+        public System.Threading.Tasks.Task<bool> CanSearchAsync(System.Security.Claims.ClaimsPrincipal user, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, CrestApps.OrchardCore.Records.RecordSummary>> GetSummariesAsync(System.Collections.Generic.IReadOnlyCollection<string> ids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Records.RecordSummary>> SearchAsync(CrestApps.OrchardCore.Records.RecordSearch search, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class OrderRefundedContext
     {
@@ -928,8 +953,8 @@ namespace CrestApps.OrchardCore.Orders.Core.Services
     public sealed class OrderService : CrestApps.OrchardCore.Orders.Core.Services.IOrderService
     {
         public const string OrderNumberSeries = "Orders.Order";
-        public OrderService(CrestApps.OrchardCore.Orders.Core.Services.IOrderStore store, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Orders.Core.Services.IOrderEventHandler> handlers, CrestApps.OrchardCore.Numbering.INumberSequence numberSequence, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Orders.Core.Services.OrderService> logger) { }
-        public System.Threading.Tasks.Task AddNoteAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, string text, CrestApps.OrchardCore.Orders.Core.Models.OrderNoteKind kind, string authorName, System.Threading.CancellationToken cancellationToken = default) { }
+        public OrderService(CrestApps.OrchardCore.Orders.Core.Services.IOrderStore store, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Orders.Core.Services.IOrderEventHandler> handlers, CrestApps.OrchardCore.Numbering.INumberSequence numberSequence, CrestApps.OrchardCore.Timeline.Services.ITimelineService timeline, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Orders.Core.Services.OrderService> logger) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> AddNoteAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, string text, CrestApps.OrchardCore.Orders.Core.Models.OrderNoteKind kind, string authorName, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> CancelAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason reason, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> CancelAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason reason, bool restock, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Services.OrderCreationResult> CreateFromCartAsync(CrestApps.OrchardCore.Carts.Core.Models.CartPricing pricing, System.Threading.CancellationToken cancellationToken = default) { }

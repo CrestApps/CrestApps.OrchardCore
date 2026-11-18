@@ -1,4 +1,5 @@
 using System.Net;
+using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
@@ -30,7 +31,7 @@ public sealed class MessagingInboundMediaIngestorTests
 
         var attachment = Assert.Single(message.GetAttachments());
 
-        Assert.Equal(MessagingFileFormats.Png.ContentType, attachment.ContentType);
+        Assert.Equal(FileFormats.Png.ContentType, attachment.ContentType);
         Assert.Equal(TestImages.Png, store.Items[attachment.Id]);
         Assert.Equal(0, message.GetSkippedAttachmentCount());
     }

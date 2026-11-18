@@ -42,6 +42,8 @@ using OrchardCore.Users;
 using OrchardCore.Users.Handlers;
 using OrchardCore.Users.Models;
 using OrchardCore.Users.Services;
+using CrestApps.OrchardCore.Parties.Models;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Users;
 
@@ -56,7 +58,7 @@ public sealed class Startup : StartupBase
         services.TryAddBasicDisplayNameProvider();
         services.AddUserSearchService();
         services.AddPasswordConfirmation();
-        services.AddPartySource<UserPartySource>();
+        services.AddPartySource<UserPartySource>(PartyKinds.User, LocalizationSource.Create<Startup>("User"), UserSearchPermissions.SearchUsers);
 
         // A user is billed under their display name at their e-mail address, and acts for themselves.
         services.AddPartyBillingProfileSource<UserBillingProfileSource>();
@@ -99,6 +101,19 @@ public sealed class CachingStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the DisplayName feature.
 /// </summary>
+/// <summary>
+/// Registers the "my account" area: its home page's menu item and the user menu's link to it.
+/// </summary>
+[Feature(UsersConstants.Feature.Account)]
+public sealed class AccountStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNavigationProvider<Navigation.AccountHomeMenu>();
+        services.AddDisplayDriver<UserMenu, AccountUserMenuDisplayDriver>();
+    }
+}
+
 [Feature(UsersConstants.Feature.DisplayName)]
 public sealed class DisplayNameStartup : StartupBase
 {

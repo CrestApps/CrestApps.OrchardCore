@@ -53,7 +53,7 @@ public sealed class B2BBudgetMonthTests : IAsyncLifetime
         await using var session = _store.CreateSession();
         var transaction = await session.BeginTransactionAsync(cancellationToken);
 
-        await new OrderMigrations { SchemaBuilder = new SchemaBuilder(_store.Configuration, transaction) }.CreateAsync();
+        await new OrderMigrations(steps: null) { SchemaBuilder = new SchemaBuilder(_store.Configuration, transaction) }.CreateAsync();
         await transaction.CommitAsync(cancellationToken);
     }
 

@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.BusinessHours.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -23,7 +24,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     private readonly IActivityQueueManager _queueManager;
     private readonly IActivityQueueGroupManager _queueGroupManager;
     private readonly IContactCenterSkillManager _skillManager;
-    private readonly IBusinessHoursCalendarManager _calendarManager;
+    private readonly IOpenHoursService _openHoursService;
     private readonly IOmnichannelChannelEndpointManager _channelEndpointManager;
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IEnumerable<IContactCenterVoiceProvider> _voiceProviders;
@@ -39,7 +40,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     /// <param name="queueManager">The activity queue manager.</param>
     /// <param name="queueGroupManager">The activity queue-group manager.</param>
     /// <param name="skillManager">The Contact Center skill manager.</param>
-    /// <param name="calendarManager">The business-hours calendar manager.</param>
+    /// <param name="openHoursService">The shared open-hours service, which lists the Business Hours schedules.</param>
     /// <param name="channelEndpointManager">The omnichannel channel endpoint manager.</param>
     /// <param name="agentProfileManager">The agent profile manager.</param>
     /// <param name="voiceProviders">The registered voice call providers.</param>
@@ -50,7 +51,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
         IActivityQueueManager queueManager,
         IActivityQueueGroupManager queueGroupManager,
         IContactCenterSkillManager skillManager,
-        IBusinessHoursCalendarManager calendarManager,
+        IOpenHoursService openHoursService,
         IOmnichannelChannelEndpointManager channelEndpointManager,
         IAgentProfileManager agentProfileManager,
         IEnumerable<IContactCenterVoiceProvider> voiceProviders,
@@ -64,7 +65,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
         _queueManager = queueManager;
         _queueGroupManager = queueGroupManager;
         _skillManager = skillManager;
-        _calendarManager = calendarManager;
+        _openHoursService = openHoursService;
         _channelEndpointManager = channelEndpointManager;
         _agentProfileManager = agentProfileManager;
         _voiceProviders = voiceProviders;
@@ -229,11 +230,12 @@ public sealed class ContactCenterAdminFormOptionsProvider
     internal async Task<IList<SelectListItem>> GetBusinessHoursCalendarOptionsAsync(string selectedCalendarId)
     {
         var selected = CreateSelectedSet([selectedCalendarId], StringComparer.Ordinal);
-        var calendars = await _calendarManager.GetAllAsync();
+        var schedules = await _openHoursService.ListSchedulesAsync();
 
-        var options = calendars
-            .OrderBy(calendar => calendar.Name, StringComparer.CurrentCultureIgnoreCase)
-            .Select(calendar => new SelectListItem(calendar.Name ?? calendar.ItemId, calendar.ItemId, selected.Contains(calendar.ItemId)))
+        // The schedules come ordered by name; a disabled or deleted schedule that is still selected stays listed, so saving
+        // does not silently clear it.
+        var options = schedules
+            .Select(schedule => new SelectListItem(schedule.Name, schedule.Id, selected.Contains(schedule.Id)))
             .ToList();
 
         AddMissingSelectedOptions(options, selected, StringComparer.Ordinal);

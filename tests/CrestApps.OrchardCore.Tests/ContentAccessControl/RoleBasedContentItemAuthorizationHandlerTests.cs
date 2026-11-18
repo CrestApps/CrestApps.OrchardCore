@@ -1,0 +1,235 @@
+using System.Security.Claims;
+using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.ContentAccessControl.Handlers;
+using CrestApps.OrchardCore.Roles.Core.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.Contents;
+using OrchardCore.Security;
+
+namespace CrestApps.OrchardCore.Tests.ContentAccessControl;
+
+/// <summary>
+/// An item restricted to roles opens only for people in one of them. The Authenticated role stands for anyone signed
+/// in and the Anonymous role for visitors, though neither is ever a role claim.
+/// </summary>
+public sealed class RoleBasedContentItemAuthorizationHandlerTests
+{
+    private const string ContentType = "Handbook";
+
+    [Fact]
+    public async Task AnItemForAuthenticated_OpensForAnyoneSignedIn_WithoutARoleClaim()
+    {
+        // Arrange
+        var item = Item("Authenticated");
+
+        // Act
+        var context = await AuthorizeAsync(SignedIn(), item);
+
+        // Assert
+        Assert.True(context.HasSucceeded);
+        Assert.False(context.HasFailed);
+    }
+
+    [Fact]
+    public async Task AnItemForAuthenticated_IsRefusedToAVisitor()
+    {
+        // Arrange
+        var item = Item("Authenticated");
+
+        // Act
+        var context = await AuthorizeAsync(Visitor(), item, succeededBefore: true);
+
+        // Assert
+        Assert.True(context.HasFailed);
+    }
+
+    [Fact]
+    public async Task AnItemForAnonymous_OpensForAVisitor()
+    {
+        // Arrange
+        var item = Item("Anonymous");
+
+        // Act
+        var context = await AuthorizeAsync(Visitor(), item);
+
+        // Assert
+        Assert.True(context.HasSucceeded);
+        Assert.False(context.HasFailed);
+    }
+
+    [Fact]
+    public async Task AnItemForAnonymous_IsRefusedToSomeoneSignedIn()
+    {
+        // Arrange
+        var item = Item("Anonymous");
+
+        // Act
+        var context = await AuthorizeAsync(SignedIn(), item, succeededBefore: true);
+
+        // Assert
+        Assert.True(context.HasFailed);
+    }
+
+    [Fact]
+    public async Task AnItemForAnonymousAndAuthenticated_OpensForEveryone()
+    {
+        // Arrange
+        var item = Item("Anonymous", "Authenticated");
+
+        // Act
+        var visitor = await AuthorizeAsync(Visitor(), item);
+        var signedIn = await AuthorizeAsync(SignedIn(), item);
+
+        // Assert
+        Assert.True(visitor.HasSucceeded);
+        Assert.True(signedIn.HasSucceeded);
+    }
+
+    [Fact]
+    public async Task AnItemForAnotherRole_IsStillRefusedToSomeoneSignedIn_WithoutIt()
+    {
+        // Arrange
+        var item = Item("Member");
+
+        // Act
+        var context = await AuthorizeAsync(SignedIn(), item, succeededBefore: true);
+
+        // Assert
+        Assert.True(context.HasFailed);
+    }
+
+    [Theory]
+    [InlineData("ViewContent_Handbook")]
+    [InlineData("ViewOwnContent_Handbook")]
+    [InlineData("PreviewContent_Handbook")]
+    [InlineData("PreviewOwnContent")]
+    [InlineData("ListContent")]
+    public async Task ARestrictedItem_OnASecurableType_StaysRestricted_ForEveryPermissionThatReadsIt(string permission)
+    {
+        // Arrange: a securable type is also checked with its own view permission, which a visitor may hold through the type.
+        var item = Item("Member");
+
+        // Act
+        var visitor = await AuthorizeAsync(Visitor(), item, succeededBefore: true, permission: Permission(permission));
+        var signedIn = await AuthorizeAsync(SignedIn(), item, succeededBefore: true, permission: Permission(permission));
+
+        // Assert
+        Assert.True(visitor.HasFailed);
+        Assert.True(signedIn.HasFailed);
+    }
+
+    [Fact]
+    public async Task AMember_OpensARestrictedItem_ThroughTheTypesOwnViewPermission()
+    {
+        // Arrange
+        var item = Item("Member");
+
+        // Act
+        var context = await AuthorizeAsync(SignedIn("Member"), item, permission: Permission("ViewContent_Handbook"));
+
+        // Assert
+        Assert.True(context.HasSucceeded);
+        Assert.False(context.HasFailed);
+    }
+
+    [Theory]
+    [InlineData("ListContent")]
+    [InlineData("PreviewContent_Handbook")]
+    [InlineData("ViewOwnContent_Handbook")]
+    public async Task BeingInAPickedRole_DoesNotGrantListingOrPreviewing(string permission)
+    {
+        // Arrange: a picked role only lets its people view the item; listing and previewing still need their permission.
+        var item = Item("Authenticated");
+
+        // Act
+        var context = await AuthorizeAsync(SignedIn(), item, permission: Permission(permission));
+
+        // Assert
+        Assert.False(context.HasSucceeded);
+        Assert.False(context.HasFailed);
+    }
+
+    [Theory]
+    [InlineData("EditContent")]
+    [InlineData("EditContent_Handbook")]
+    [InlineData("PublishContent_Handbook")]
+    [InlineData("DeleteOwnContent")]
+    public async Task ARestriction_LeavesPermissionsThatDoNotReadTheItemAlone(string permission)
+    {
+        // Arrange
+        var item = Item("Member");
+
+        // Act
+        var context = await AuthorizeAsync(SignedIn(), item, permission: Permission(permission));
+
+        // Assert
+        Assert.False(context.HasFailed);
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory]
+    [InlineData("ViewContent", true)]
+    [InlineData("ViewContent_KnowledgeArticle", true)]
+    [InlineData("ViewOwnContent_KnowledgeArticle", true)]
+    [InlineData("PreviewContent", true)]
+    [InlineData("PreviewOwnContent_KnowledgeArticle", true)]
+    [InlineData("ListContent", true)]
+    [InlineData("EditContent", false)]
+    [InlineData("PublishContent_KnowledgeArticle", false)]
+    [InlineData("ViewContentTypes", false)]
+    [InlineData(null, false)]
+    public void ReadingPermissions_AreMatchedByName_InGeneralOrForAType(string permission, bool reading)
+        => Assert.Equal(reading, RoleBasedContentItemAuthorizationHandler.IsReading(permission));
+
+    private static global::OrchardCore.Security.Permissions.Permission Permission(string name)
+        => new(name, global::OrchardCore.Localization.LocalizationSource.Create<RoleBasedContentItemAuthorizationHandlerTests>("Test permission"));
+
+    internal static ClaimsPrincipal Visitor()
+        => new(new ClaimsIdentity());
+
+    internal static ClaimsPrincipal SignedIn(params string[] roles)
+        => new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "dana"), .. roles.Select(role => new Claim(ClaimTypes.Role, role))], "Test"));
+
+    internal static ContentItem Item(params string[] roles)
+    {
+        var item = new ContentItem { ContentItemId = "handbook", ContentType = ContentType, Published = true, Latest = true };
+
+        item.Weld(new RolePickerPart { RoleNames = roles });
+
+        return item;
+    }
+
+    internal static IServiceProvider Services(bool restricted = true)
+    {
+        var settings = new JsonObject
+        {
+            [nameof(RolePickerPartContentAccessControlSettings)] = new JsonObject { [nameof(RolePickerPartContentAccessControlSettings.IsContentRestricted)] = restricted },
+        };
+        var type = new ContentTypeDefinition(ContentType, "Handbook", [new ContentTypePartDefinition(nameof(RolePickerPart), new ContentPartDefinition(nameof(RolePickerPart)), settings)], new JsonObject());
+        var definitions = new Mock<IContentDefinitionManager>();
+
+        definitions.Setup(manager => manager.GetTypeDefinitionAsync(ContentType)).ReturnsAsync(type);
+
+        return new ServiceCollection().AddSingleton(definitions.Object).BuildServiceProvider();
+    }
+
+    internal static async Task<AuthorizationHandlerContext> AuthorizeAsync(ClaimsPrincipal user, ContentItem item, bool succeededBefore = false, global::OrchardCore.Security.Permissions.Permission permission = null)
+    {
+        var requirement = new PermissionRequirement(permission ?? CommonPermissions.ViewContent);
+        var context = new AuthorizationHandlerContext([requirement], user, item);
+
+        if (succeededBefore)
+        {
+            context.Succeed(requirement);
+        }
+
+        await new RoleBasedContentItemAuthorizationHandler(Services()).HandleAsync(context);
+
+        return context;
+    }
+}

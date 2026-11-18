@@ -1,0 +1,10 @@
+@model ShapeViewModel<Agreement>
+
+<a asp-action="Clone"
+   asp-route-id="@Model.Value.ItemId"
+   class="dropdown-item"
+   data-url-af="RemoveUrl UnsafeUrl"
+   data-title="@T["Copy"]"
+   data-message="@T["Create a draft copy of this agreement?"]"
+   data-ok-text="@T["Yes"]"
+   data-cancel-text="@T["Cancel"]">@T["Copy as a draft"]</a>

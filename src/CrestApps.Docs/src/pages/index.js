@@ -84,6 +84,21 @@ const AREAS = [
     technical: '/docs/telephony',
   },
   {
+    title: 'Service Desk',
+    inHero: true,
+    icon: 'life-buoy',
+    text: 'Tickets for customers and employees, desks, service levels, boards, a customer portal and a knowledge base.',
+    user: '/docs/user-manual/service-desk',
+    technical: '/docs/modules/tickets',
+  },
+  {
+    title: 'Knowledge Base',
+    icon: 'book-a',
+    text: 'A help center at /help: articles in categories, who can read each one, search, related articles and what readers found helpful.',
+    user: '/docs/user-manual/knowledge-base',
+    technical: '/docs/modules/knowledge-base',
+  },
+  {
     title: 'Payroll',
     inHero: true,
     icon: 'banknote',
@@ -118,8 +133,8 @@ function HomepageHeader() {
         </Heading>
         <p className={clsx('hero__subtitle', styles.heroDefinition)}>
           Open-source modules that turn an Orchard Core site into a business application: an AI assistant
-          suite, a CRM, a contact center with phones and a dialer, omnichannel messaging, payroll, and invoicing
-          and billing, all managed from the site's admin.
+          suite, a CRM, a contact center with phones and a dialer, omnichannel messaging, a service desk, payroll,
+          and invoicing and billing, all managed from the site's admin.
         </p>
         <ul className={styles.heroFacts}>
           {AREAS.filter((area) => area.inHero).map((area) => (
@@ -205,7 +220,7 @@ export default function Home() {
   return (
     <Layout
       title="Documentation"
-      description="The User Manual and the Technical Manual for the CrestApps Orchard Core modules: AI, CRM, Contact Center, Messaging, Phone, Payroll, and Invoicing & Billing.">
+      description="The User Manual and the Technical Manual for the CrestApps Orchard Core modules: AI, CRM, Contact Center, Messaging, Phone, Service Desk, Payroll, and Invoicing & Billing.">
       <HomepageHeader />
       <main>
         <div className={clsx('container', styles.cards)}>

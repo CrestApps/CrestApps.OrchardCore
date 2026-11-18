@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.WorkOrders
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CreateTicketWorkOrderTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+    @T["Create Work Order From Ticket"]
+</h4>
+<p>@T["Creates a work order from a ticket and links the ticket to it."]</p>

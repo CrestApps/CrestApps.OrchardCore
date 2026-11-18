@@ -1,0 +1,658 @@
+// @ts-check
+/*
+ * The ticket board.
+ *
+ * Shows a board's columns and the tickets in them as cards. A card is dragged to another column (or moved from its
+ * menu, with the keyboard or on a touch screen) to change the ticket's status: the server sets the status through the
+ * ticket service and answers with the card as it is now, with the statuses to choose from when the column has several
+ * and no default, or with the reason the move was refused, in which case the card goes back. With SignalR on, the board
+ * is pinged when tickets change and loads its data again at once; otherwise (or while the connection is down) it loads
+ * again every 20 seconds while the page is visible, so a card moves when its status changes elsewhere.
+ *
+ * The drag code knows nothing of tickets beyond the data contract: columns with statuses, cards with a status, and a
+ * move endpoint.
+ */
+(function () {
+    'use strict';
+
+    const refreshMs = 20000;
+
+    // Replaces {0}, {1}... in a localized text.
+    function format(text, ...values) {
+        return values.reduce((result, value, index) => result.split(`{${index}}`).join(String(value)), text || '');
+    }
+
+    // The column that shows a status, or null.
+    function columnOf(columns, statusId) {
+        return (columns || []).find((column) => (column.statuses || []).some((status) => status.id === statusId)) || null;
+    }
+
+    // Whether a card may be dropped on a column: the user may move it, it isn't in the column yet, and the life cycle lets
+    // its status category move to at least one of the column's statuses. The server decides; this only greys out the
+    // columns a drag can't reach.
+    function canDrop(card, column, transitions) {
+        if (!card || !column || !card.canMove) {
+            return false;
+        }
+
+        const statuses = column.statuses || [];
+
+        if (statuses.some((status) => status.id === card.statusId)) {
+            return true;
+        }
+
+        const next = (transitions && transitions[card.category]) || [];
+
+        return statuses.some((status) => next.includes(status.category));
+    }
+
+    // The count a column header shows, and whether the column holds more than its limit.
+    function countOf(column) {
+        const shown = (column.cards || []).length;
+        const total = typeof column.total === 'number' ? column.total : shown;
+
+        return {
+            shown,
+            total,
+            partial: total > shown,
+            overLimit: typeof column.limit === 'number' && column.limit > 0 && total > column.limit,
+        };
+    }
+
+    // A time as "3 hours ago" in the page's language, from now.
+    function relativeTime(iso, now, locale) {
+        const then = new Date(iso).getTime();
+
+        if (Number.isNaN(then)) {
+            return '';
+        }
+
+        const seconds = Math.round((then - now) / 1000);
+        const units = /** @type {Array<[string, number]>} */ ([['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]]);
+        const formatter = new Intl.RelativeTimeFormat(locale || undefined, { numeric: 'auto' });
+
+        for (const [unit, size] of units) {
+            if (Math.abs(seconds) >= size) {
+                return formatter.format(Math.round(seconds / size), /** @type {Intl.RelativeTimeFormatUnit} */ (unit));
+            }
+        }
+
+        return formatter.format(0, 'minute');
+    }
+
+    // Takes a moved card out of the columns and puts it, as the server now has it, at the top of its new column.
+    function placeCard(columns, card) {
+        let moved = false;
+
+        const result = (columns || []).map((column) => {
+            const cards = (column.cards || []).filter((item) => item.id !== card.id);
+            const removed = cards.length !== (column.cards || []).length;
+
+            return { ...column, cards, total: removed ? Math.max(0, (column.total || 0) - 1) : column.total };
+        });
+
+        const target = columnOf(result, card.statusId);
+
+        if (target) {
+            target.cards = [card, ...target.cards];
+            target.total = (target.total || 0) + 1;
+            moved = true;
+        }
+
+        return { columns: result, placed: moved };
+    }
+
+    // Connects to the hub that pings boards when tickets change: onPing on each ping, and onConnected(true) once the board
+    // has joined (false while the connection is down), so the board polls only while it isn't connected.
+    async function connectLive(hubUrl, signalR, onPing, onConnected) {
+        if (!hubUrl || !signalR) {
+            onConnected(false);
+
+            return null;
+        }
+
+        const connection = new signalR.HubConnectionBuilder().withUrl(hubUrl).withAutomaticReconnect().build();
+
+        connection.on('TicketsChanged', onPing);
+        connection.onreconnecting(() => onConnected(false));
+        connection.onreconnected(async () => {
+            onConnected(Boolean(await connection.invoke('Subscribe')));
+            onPing();
+        });
+        connection.onclose(() => onConnected(false));
+
+        try {
+            await connection.start();
+            onConnected(Boolean(await connection.invoke('Subscribe')));
+        } catch {
+            onConnected(false);
+        }
+
+        return connection;
+    }
+
+    globalThis.CrestAppsTicketBoard = { format, columnOf, canDrop, countOf, relativeTime, placeCard, connectLive };
+
+    if (typeof document === 'undefined' || !document.getElementById) {
+        return;
+    }
+
+    function start() {
+        const root = document.getElementById('ticket-board');
+
+        if (!root) {
+            return;
+        }
+
+        const texts = JSON.parse(root.dataset.texts || '{}');
+        const board = /** @type {HTMLElement} */ (root.querySelector('[data-board-columns]'));
+        const message = /** @type {HTMLElement} */ (root.querySelector('[data-board-message]'));
+        const hiddenStatuses = /** @type {HTMLElement} */ (root.querySelector('[data-board-hidden-statuses]'));
+        const live = /** @type {HTMLElement} */ (root.querySelector('[data-board-live]'));
+        const dialogElement = /** @type {HTMLElement} */ (root.querySelector('[data-board-dialog]'));
+        const dialogTitle = /** @type {HTMLElement} */ (root.querySelector('[data-board-dialog-title]'));
+        const dialogBody = /** @type {HTMLElement} */ (root.querySelector('[data-board-dialog-body]'));
+        const search = /** @type {HTMLInputElement} */ (document.querySelector('[data-board-search]'));
+        const assignee = /** @type {HTMLSelectElement} */ (document.querySelector('[data-board-assignee]'));
+        const token = /** @type {HTMLInputElement} */ (root.querySelector('input[name="__RequestVerificationToken"]'));
+        const locale = document.documentElement.lang || undefined;
+        const dialog = globalThis.bootstrap && dialogElement ? globalThis.bootstrap.Modal.getOrCreateInstance(dialogElement) : null;
+
+        let data = null;
+        let dragging = false;
+        let busy = false;
+        let searchTimer = 0;
+        let loadVersion = 0;
+
+        // The filters live in the address, so a filtered board can be shared or reloaded.
+        const query = new URLSearchParams(window.location.search);
+        search.value = query.get('q') || '';
+        assignee.value = query.get('assignee') || '';
+
+        const element = (tag, className, text) => {
+            const node = document.createElement(tag);
+
+            if (className) {
+                node.className = className;
+            }
+
+            if (text !== undefined && text !== null) {
+                node.textContent = text;
+            }
+
+            return node;
+        };
+
+        const badge = (iconClass, text, title, color) => {
+            const node = element('span', 'badge ta-badge fw-normal');
+            const icon = element('i', `${iconClass} me-1`);
+
+            icon.setAttribute('aria-hidden', 'true');
+
+            if (color) {
+                icon.style.color = color;
+            }
+
+            node.append(icon, document.createTextNode(text));
+
+            if (title) {
+                node.title = title;
+            }
+
+            return node;
+        };
+
+        const showMessage = (text, kind) => {
+            message.textContent = text || '';
+            message.className = `alert alert-${kind || 'warning'}${text ? '' : ' d-none'}`;
+        };
+
+        const announce = (text) => {
+            live.textContent = text;
+        };
+
+        const renderCard = (card, column) => {
+            const node = element('article', 'card ticket-board-card');
+            const body = element('div', 'card-body p-2');
+            const top = element('div', 'd-flex justify-content-between align-items-start gap-1');
+            const number = element('a', 'small text-muted text-decoration-none', card.number);
+            const title = element('a', 'd-block fw-semibold ticket-board-card-title', card.subject);
+            const tags = element('div', 'ticket-board-card-tags');
+            const meta = element('div', 'ticket-board-card-meta small text-muted');
+
+            node.dataset.ticketId = card.id;
+            node.dataset.canMove = card.canMove ? 'true' : 'false';
+            number.href = card.url;
+            title.href = card.url;
+
+            top.append(number);
+
+            if (card.canMove) {
+                const menu = element('button', 'btn btn-sm btn-link text-muted p-0 ticket-board-card-move');
+                const icon = element('i', 'fa-solid fa-ellipsis-vertical');
+
+                menu.type = 'button';
+                menu.title = format(texts.moveTo, card.number);
+                menu.setAttribute('aria-label', format(texts.moveTo, card.number));
+                icon.setAttribute('aria-hidden', 'true');
+                menu.append(icon);
+                menu.addEventListener('click', () => chooseColumn(card));
+                top.append(menu);
+            } else {
+                node.title = texts.cannotMove;
+            }
+
+            // A column with several statuses says which one the ticket is in.
+            if ((column.statuses || []).length > 1 && card.statusName) {
+                tags.append(badge('fa-solid fa-circle', card.statusName, texts.status, card.statusColor));
+            }
+
+            if (card.priorityName) {
+                tags.append(badge('fa-solid fa-flag', card.priorityName, texts.priority, card.priorityColor));
+            }
+
+            if (card.overdue) {
+                const overdue = element('span', 'badge text-bg-danger fw-normal', texts.overdue);
+                tags.append(overdue);
+            } else if (card.dueText) {
+                tags.append(badge('fa-regular fa-clock', format(texts.due, card.dueText)));
+            }
+
+            const people = [];
+
+            if (card.requesterName) {
+                people.push(badge('fa-solid fa-user', card.requesterName, texts.requester));
+            }
+
+            people.push(card.assigneeName
+                ? badge('fa-solid fa-user-check', card.assigneeName, texts.assignee)
+                : badge('fa-solid fa-user-slash', texts.unassigned, texts.assignee));
+
+            if (card.teamName) {
+                people.push(badge('fa-solid fa-people-group', card.teamName, texts.team));
+            }
+
+            if (card.deskName) {
+                people.push(badge('fa-solid fa-inbox', card.deskName, texts.desk));
+            }
+
+            const updated = element('span', 'w-100 mt-1', format(texts.updated, relativeTime(card.updatedUtc, Date.now(), locale)));
+            updated.title = card.updatedText || '';
+            meta.append(...people, updated);
+
+            body.append(top, title);
+
+            if (tags.childElementCount > 0) {
+                body.append(tags);
+            }
+
+            body.append(meta);
+            node.append(body);
+
+            return node;
+        };
+
+        const render = () => {
+            board.replaceChildren();
+            board.removeAttribute('aria-busy');
+
+            for (const column of data.columns) {
+                const section = element('section', 'card ticket-board-column');
+                const header = element('header', 'card-header d-flex align-items-center gap-2');
+                const heading = element('h2', 'h6 mb-0 flex-grow-1', column.name);
+                const count = countOf(column);
+                const counter = element('span', `badge rounded-pill ${count.overLimit ? 'text-bg-danger' : 'text-bg-secondary'}`, String(count.total));
+                const list = element('div', 'card-body ticket-board-cards');
+                const headingId = `ticket-board-column-${column.id}`;
+
+                section.dataset.columnId = column.id;
+                heading.id = headingId;
+                section.setAttribute('aria-labelledby', headingId);
+                list.dataset.columnId = column.id;
+
+                if (count.overLimit) {
+                    counter.title = format(texts.overLimit, column.limit);
+                    section.classList.add('is-over-limit');
+                }
+
+                header.append(heading, counter);
+
+                for (const card of column.cards) {
+                    list.append(renderCard(card, column));
+                }
+
+                if (column.cards.length === 0) {
+                    list.append(element('p', 'text-muted small mb-0 ticket-board-empty', texts.empty));
+                }
+
+                section.append(header, list);
+
+                if (count.partial) {
+                    section.append(element('footer', 'card-footer small text-muted', format(texts.shownOf, count.shown, count.total)));
+                }
+
+                board.append(section);
+                enableDrag(list);
+            }
+
+            hiddenStatuses.textContent = texts.hiddenStatuses;
+            hiddenStatuses.classList.toggle('d-none', !data.hasHiddenStatuses);
+        };
+
+        const cardOf = (ticketId) => {
+            for (const column of data.columns) {
+                const card = column.cards.find((item) => item.id === ticketId);
+
+                if (card) {
+                    return card;
+                }
+            }
+
+            return null;
+        };
+
+        const columnById = (columnId) => data.columns.find((column) => column.id === columnId) || null;
+
+        const enableDrag = (list) => {
+            if (typeof globalThis.Sortable === 'undefined') {
+                return;
+            }
+
+            globalThis.Sortable.create(list, {
+                group: 'ticket-board',
+                // Pointer events rather than the browser's own drag and drop: the same on every browser and on touch
+                // screens, and a card can be dropped anywhere on a column.
+                forceFallback: true,
+                fallbackOnBody: true,
+                emptyInsertThreshold: 40,
+                draggable: '.ticket-board-card[data-can-move="true"]',
+                filter: '.ticket-board-card-move, a',
+                preventOnFilter: false,
+                animation: 150,
+                ghostClass: 'ticket-board-ghost',
+                chosenClass: 'ticket-board-chosen',
+                onStart: (event) => {
+                    dragging = true;
+                    const card = cardOf(event.item.dataset.ticketId);
+
+                    for (const section of board.querySelectorAll('.ticket-board-column')) {
+                        const column = columnById(section.getAttribute('data-column-id'));
+                        section.classList.toggle('is-blocked', !canDrop(card, column, data.transitions));
+                    }
+                },
+                onMove: (event) => {
+                    const card = cardOf(event.dragged.dataset.ticketId);
+                    const column = columnById(event.to.dataset.columnId);
+
+                    return canDrop(card, column, data.transitions);
+                },
+                onEnd: (event) => {
+                    dragging = false;
+
+                    for (const section of board.querySelectorAll('.ticket-board-column')) {
+                        section.classList.remove('is-blocked');
+                    }
+
+                    const ticketId = event.item.dataset.ticketId;
+                    const to = event.to.dataset.columnId;
+
+                    // The order inside a column is the board's sort, so a card dropped in its own column goes back.
+                    if (event.from === event.to) {
+                        render();
+
+                        return;
+                    }
+
+                    move(ticketId, to, null);
+                },
+            });
+        };
+
+        const post = async (fields) => {
+            const body = new FormData();
+
+            for (const [key, value] of Object.entries(fields)) {
+                if (value) {
+                    body.append(key, value);
+                }
+            }
+
+            if (token) {
+                body.append('__RequestVerificationToken', token.value);
+            }
+
+            const response = await fetch(root.dataset.moveUrl, { method: 'POST', body, credentials: 'same-origin' });
+
+            if (!response.ok) {
+                throw new Error(String(response.status));
+            }
+
+            return response.json();
+        };
+
+        const move = async (ticketId, columnId, statusId) => {
+            const card = cardOf(ticketId);
+
+            if (!card || busy) {
+                render();
+
+                return;
+            }
+
+            busy = true;
+
+            try {
+                const result = await post({ ticketId, columnId, statusId, shownStatusId: card.statusId });
+
+                if (result.choices && result.choices.length > 0) {
+                    render();
+                    chooseStatus(card, columnId, result.choices);
+
+                    return;
+                }
+
+                if (!result.succeeded) {
+                    showMessage((result.errors || []).join(' ') || texts.moveFailed, 'warning');
+                    render();
+
+                    // The ticket changed elsewhere: show it as it is now.
+                    if (result.stale) {
+                        await load(true);
+                    }
+
+                    return;
+                }
+
+                showMessage('');
+
+                if (result.changed && result.card) {
+                    const placed = placeCard(data.columns, result.card);
+                    data.columns = placed.columns;
+                    announce(format(texts.moved, result.card.number, result.card.statusName));
+                }
+
+                render();
+            } catch (error) {
+                showMessage(texts.moveFailed, 'danger');
+                render();
+            } finally {
+                busy = false;
+            }
+        };
+
+        const openDialog = (title, groups) => {
+            dialogTitle.textContent = title;
+            dialogBody.replaceChildren();
+
+            for (const group of groups) {
+                if (group.label) {
+                    dialogBody.append(element('h3', 'h6 mt-2', group.label));
+                }
+
+                const list = element('div', 'd-grid gap-2 mb-2');
+
+                for (const option of group.options) {
+                    const button = element('button', 'btn btn-outline-primary text-start');
+                    const icon = element('i', 'fa-solid fa-circle me-2');
+
+                    button.type = 'button';
+                    icon.setAttribute('aria-hidden', 'true');
+
+                    if (option.color) {
+                        icon.style.color = option.color;
+                    }
+
+                    button.append(icon, document.createTextNode(option.current ? `${option.name} ${texts.current}` : option.name));
+                    button.disabled = Boolean(option.current);
+                    button.addEventListener('click', () => {
+                        if (dialog) {
+                            dialog.hide();
+                        }
+
+                        option.choose();
+                    });
+                    list.append(button);
+                }
+
+                dialogBody.append(list);
+            }
+
+            if (dialog) {
+                dialog.show();
+            }
+        };
+
+        // A column with several statuses and no default: which one?
+        const chooseStatus = (card, columnId, choices) => {
+            openDialog(format(texts.chooseTitle, card.number), [{
+                options: choices.map((status) => ({
+                    name: status.name,
+                    color: status.color,
+                    choose: () => move(card.id, columnId, status.id),
+                })),
+            }]);
+        };
+
+        // The keyboard and touch way to move a card: every status of every column it may move to.
+        const chooseColumn = (card) => {
+            openDialog(format(texts.moveTitle, card.number), data.columns
+                .filter((column) => canDrop(card, column, data.transitions))
+                .map((column) => ({
+                    label: column.name,
+                    options: column.statuses.map((status) => ({
+                        name: status.name,
+                        color: status.color,
+                        current: status.id === card.statusId,
+                        choose: () => move(card.id, column.id, status.id),
+                    })),
+                })));
+        };
+
+        // A load from a move in progress passes force, since the move itself is what is busy.
+        const load = async (force) => {
+            const version = ++loadVersion;
+            const url = new URL(root.dataset.dataUrl, window.location.origin);
+
+            if (search.value.trim()) {
+                url.searchParams.set('q', search.value.trim());
+            }
+
+            if (assignee.value) {
+                url.searchParams.set('assignee', assignee.value);
+            }
+
+            try {
+                const response = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+
+                if (!response.ok) {
+                    throw new Error(String(response.status));
+                }
+
+                const next = await response.json();
+
+                // A slower, older answer never replaces a newer one, and a drag or a choice in progress isn't disturbed.
+                if (version !== loadVersion || dragging || (busy && !force)) {
+                    return;
+                }
+
+                data = next;
+
+                if (message.classList.contains('alert-danger')) {
+                    showMessage('');
+                }
+
+                render();
+            } catch (error) {
+                if (!data) {
+                    board.replaceChildren(element('p', 'text-muted', texts.loadFailed));
+                }
+
+                showMessage(texts.loadFailed, 'danger');
+            }
+        };
+
+        const filtersChanged = () => {
+            const address = new URL(window.location.href);
+
+            address.searchParams.delete('q');
+            address.searchParams.delete('assignee');
+
+            if (search.value.trim()) {
+                address.searchParams.set('q', search.value.trim());
+            }
+
+            if (assignee.value) {
+                address.searchParams.set('assignee', assignee.value);
+            }
+
+            window.history.replaceState(null, '', address);
+            load();
+        };
+
+        search.addEventListener('input', () => {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(filtersChanged, 300);
+        });
+        assignee.addEventListener('change', filtersChanged);
+
+        const dialogOpen = () => dialogElement && dialogElement.classList.contains('show');
+
+        // Pinged by the server when tickets change; the poll below covers a board that isn't connected.
+        let connected = false;
+        let pingTimer = 0;
+
+        const reloadSoon = () => {
+            window.clearTimeout(pingTimer);
+            pingTimer = window.setTimeout(() => {
+                if (document.visibilityState === 'visible' && !dragging && !busy && !dialogOpen()) {
+                    load();
+                }
+            }, 500);
+        };
+
+        const connect = () => connectLive(root.dataset.hubUrl, /** @type {any} */ (window).signalR, reloadSoon, (value) => {
+            connected = value;
+        });
+
+        window.setInterval(() => {
+            if (!connected && document.visibilityState === 'visible' && !dragging && !busy && !dialogOpen()) {
+                load();
+            }
+        }, refreshMs);
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && !dragging && !busy) {
+                load();
+            }
+        });
+
+        load();
+        connect();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+    } else {
+        start();
+    }
+})();

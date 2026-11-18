@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Tickets</RootNamespace>
+    <Title>CrestApps OrchardCore Tickets Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts for tickets: the ticket part, statuses, priorities, desks and saved views, the ticket service,
+      the observer every integration listens through, and the per-desk permissions and access service.
+    </Description>
+    <PackageTags>$(PackageTags) Tickets HelpDesk Support Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Addresses.Abstractions\CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Parties.Abstractions\CrestApps.OrchardCore.Parties.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Skills.Abstractions\CrestApps.OrchardCore.Skills.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Timeline.Abstractions\CrestApps.OrchardCore.Timeline.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

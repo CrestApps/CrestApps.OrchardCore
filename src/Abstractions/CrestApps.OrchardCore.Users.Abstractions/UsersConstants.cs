@@ -24,5 +24,41 @@ public static class UsersConstants
         public const string EmailOwnership = "CrestApps.OrchardCore.Users.EmailOwnership";
 
         public const string Avatars = "CrestApps.OrchardCore.Users.Avatars";
+
+        /// <summary>
+        /// The "my account" area on the site: <c>/account</c>, its menu and the frame of its pages, which modules add
+        /// their pages to (orders, tickets, subscriptions...).
+        /// </summary>
+        public const string Account = "CrestApps.OrchardCore.Users.Account";
+    }
+
+    /// <summary>
+    /// The "my account" area. The names predate the area's move from Commerce to Users and are kept, so themes and
+    /// modules that use them keep working.
+    /// </summary>
+    public static class Account
+    {
+        /// <summary>
+        /// The name of the navigation menu that lists the account's pages. A module adds a page with a
+        /// <c>NamedNavigationProvider</c> for this menu.
+        /// </summary>
+        public const string MenuName = "commerce-account";
+
+        /// <summary>
+        /// The route name of the account's home page, at <c>/account</c>.
+        /// </summary>
+        public const string HomeRouteName = "CommerceAccount";
+
+        /// <summary>
+        /// The shape that renders the account menu beside an account page.
+        /// </summary>
+        public const string NavigationShape = "CommerceAccountNavigation";
+
+        /// <summary>
+        /// The shape that frames an account page: the account menu beside the page's heading and content. A page renders
+        /// it with its <c>Title</c>, its <c>Content</c> (a shape or HTML) and, optionally, <c>Actions</c> beside the
+        /// heading, and keeps its own breadcrumb. A theme overrides it to change every account page.
+        /// </summary>
+        public const string PageShape = "CommerceAccountPage";
     }
 }

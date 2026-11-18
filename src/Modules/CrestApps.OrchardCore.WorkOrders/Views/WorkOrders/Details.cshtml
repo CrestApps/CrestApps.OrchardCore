@@ -330,7 +330,8 @@
                     var field = WorkOrdersController.AnswerField(question);
                     var answer = checklist.Answers.FirstOrDefault(item => item.QuestionId == question.Id)?.Value;
                     var editable = Model.CanManage && open;
-                    var conditional = question.ShowWhen is { QuestionId.Length: > 0 } ? checklist.Questions.FirstOrDefault(item => item.Id == question.ShowWhen.QuestionId) : null;
+                    var showWhen = question.GetRule()?.Conditions.FirstOrDefault();
+                    var conditional = showWhen is { Source.Length: > 0 } ? checklist.Questions.FirstOrDefault(item => item.Id == showWhen.Source) : null;
                     <div class="row g-2 mb-2 align-items-center">
                         <label class="col-12 col-md-6 col-form-label col-form-label-sm" for="@field">
                             @question.Text@(question.Required ? " *" : null)
@@ -340,7 +341,7 @@
                             }
                             @if (conditional is not null)
                             {
-                                <span class="hint d-block">@T["Only when \"{0}\" is {1}.", conditional.Text, question.ShowWhen.EqualsValue]</span>
+                                <span class="hint d-block">@T["Only when \"{0}\" is {1}.", conditional.Text, showWhen.Values.FirstOrDefault()]</span>
                             }
                         </label>
                         <div class="col-12 col-md-6">
@@ -483,19 +484,4 @@
     </div>
 </div>
 
-<div class="card mb-3"><div class="card-body">
-    <h2 class="h6">@T["Notes and history"]</h2>
-    @if (Model.CanManage)
-    {
-        <form asp-action="Note" asp-route-id="@workOrder.ItemId" method="post" class="d-flex gap-2 mb-3">
-            <input name="text" class="form-control form-control-sm" placeholder="@T["Add a note"]" aria-label="@T["Add a note"]" required />
-            <button type="submit" class="btn btn-secondary btn-sm">@T["Add"]</button>
-        </form>
-    }
-    <ul class="list-unstyled small mb-0">
-        @foreach (var note in workOrder.Notes.AsEnumerable().Reverse())
-        {
-            <li class="mb-1"><span class="text-muted">@await DisplayAsync(await New.DateTime(Utc: note.Utc, Format: "g"))@(string.IsNullOrEmpty(note.By) ? null : $" · {note.By}")</span> @note.Text</li>
-        }
-    </ul>
-</div></div>
+@await Component.InvokeAsync("Timeline", new { subject = $"{WorkOrdersConstants.RecordKind}:{workOrder.ItemId}", title = T["Notes and history"].Value })

@@ -36,6 +36,22 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.0");
 
         _manifest
+            .DefineScript("file-drop")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/file-drop.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/file-drop.js"
+                )
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineStyle("file-drop")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/styles/file-drop.min.css",
+                "~/CrestApps.OrchardCore.Resources/styles/file-drop.css"
+                )
+            .SetVersion("1.0.0");
+
+        _manifest
             .DefineStyle("item-selector")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/styles/item-selector.min.css",

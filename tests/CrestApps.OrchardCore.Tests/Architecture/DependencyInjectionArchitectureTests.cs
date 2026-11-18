@@ -102,6 +102,12 @@ public sealed class DependencyInjectionArchitectureTests
             "ContactCenterActivityOwnershipAuthorizationHandler",
             "An authorization handler that injected the authorization service would close a service-to-handler construction cycle, since the service constructs every handler; it resolves the service only when it checks the user's own-activity permission, and the interaction and agent managers only when the work state names nobody and the call has to say who handled it."),
         new DependencyInjectionException(
+            "TicketQueueRouter",
+            "A ticket observer: the ticket service constructs every observer, so injecting the ticket service would close a service-to-observer construction cycle, and so would the queue and withdrawal services (they publish events through the outbox, which constructs every event handler, and the ticket offer handler uses the ticket service). It resolves those when it uses them, and the queue manager with them (only a new ticket on a desk with a queue needs it); the activity manager is injected."),
+        new DependencyInjectionException(
+            "TicketOfferAcceptedHandler",
+            "A Contact Center event handler: the outbox constructs every event handler, and the withdrawal service publishes through the outbox, so injecting it would close a construction cycle; it resolves the withdrawal service only when the accepting agent didn't get the ticket."),
+        new DependencyInjectionException(
             "ContactActivityExportHandler",
             "An import handler that injected the import manager would close a manager-to-handler construction cycle."),
         new DependencyInjectionException(
@@ -317,6 +323,46 @@ public sealed class DependencyInjectionArchitectureTests
         ["src/Modules/CrestApps.OrchardCore.Transactions/Services/DefaultSavedPaymentMethodChargeService.cs: DefaultSavedPaymentMethodChargeService"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Transactions/Services/TransactionCreditSettlement.cs: TransactionCreditSettlement"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Transactions/Services/TransactionPayLinkService.cs: TransactionPayLinkService"] = 1,
+
+        // Existing debt from main's #1330 (help desk), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Handlers/TicketSettingsRecordHandler.cs: TicketSettingsRecordHandler"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketAccessService.cs: DefaultTicketAccessService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketService.cs: DefaultTicketService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/TicketApprovalStarter.cs: TicketApprovalStarter"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/TicketEmailObserver.cs: TicketEmailObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/TicketProblemObserver.cs: TicketProblemObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/TicketRecordSource.cs: TicketRecordSource"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/TicketServiceLevelObserver.cs: TicketServiceLevelObserver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Agreements/Services/AgreementAccountManagerNotifier.cs: AgreementAccountManagerNotifier"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.ContentAccessControl/Indexes/ContentAccessRoleIndexProvider.cs: ContentAccessRoleIndexProvider"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.KnowledgeBase/Migrations/KnowledgeBaseMigrations.cs: KnowledgeBaseMigrations"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/AI/TicketAssistant.cs: TicketAssistant"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/AI/TriageTicketTask.cs: TriageTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Controllers/TicketBoardsController.cs: TicketBoardsController"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Controllers/TicketsController.cs: TicketsController"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Drivers/TicketPartDisplayDriver.cs: TicketPartDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Drivers/TicketPartSettingsDisplayDriver.cs: TicketPartSettingsDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Integrations/TicketPersonalDataContributor.cs: TicketPersonalDataContributor"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Notifications/TicketNotificationObserver.cs: TicketNotificationObserver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Portal/TicketPortalAccess.cs: TicketPortalAccess"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Reports/TicketAccountHealthReport.cs: TicketAccountHealthReport"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Reports/TicketReportData.cs: TicketReportData"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Services/TicketFilesViewComponent.cs: TicketFilesViewComponent"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/WorkOrders/CreateTicketWorkOrderTask.cs: CreateTicketWorkOrderTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: AddTicketNoteTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: AddTicketReplyTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: AssignTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: CheckTicketServiceLevelTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: CreateTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: EscalateTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: FindTicketsTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: GetTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: LinkTicketsTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: NotifyTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: UpdateTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketWorkflowServices.cs: TicketTimeElapsedScanner"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.WorkOrders/Migrations/ServiceAgreementsMoveStep.cs: ServiceAgreementsMoveStep"] = 1,
     };
 
     /// <summary>

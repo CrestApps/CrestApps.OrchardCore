@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.WorkOrders.Core;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
@@ -39,7 +40,7 @@ public sealed class WorkOrdersController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly WorkOrderService _service;
     private readonly WorkOrderSettingManager<WorkOrderType> _types;
-    private readonly WorkOrderSettingManager<ServiceLevelPolicy> _policies;
+    private readonly IServiceLevelPolicyManager _policies;
     private readonly WorkOrderSettingManager<WorkOrderSubStatus> _subStatuses;
     private readonly WorkOrderLookups _lookups;
     private readonly ISession _session;
@@ -71,7 +72,7 @@ public sealed class WorkOrdersController : Controller
         IAuthorizationService authorizationService,
         WorkOrderService service,
         WorkOrderSettingManager<WorkOrderType> types,
-        WorkOrderSettingManager<ServiceLevelPolicy> policies,
+        IServiceLevelPolicyManager policies,
         WorkOrderSettingManager<WorkOrderSubStatus> subStatuses,
         WorkOrderLookups lookups,
         ISession session,

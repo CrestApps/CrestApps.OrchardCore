@@ -21,7 +21,7 @@
                     data-selected-text-format="count > 2"
                     data-count-selected-text="@T["{0} roles selected", "{0}"]"
                     data-none-selected-text="@T["No roles selected"]"
-                    title="@Model.DisplayName">
+                    title="@Model.Placeholder">
             </select>
         }
         else
@@ -31,15 +31,15 @@
                     class="selectpicker"
                     data-live-search="true"
                     data-none-selected-text="@T["No role selected"]"
-                    title="@Model.DisplayName">
+                    title="@Model.Placeholder">
             </select>
         }
 
         <span asp-validation-for="Roles"></span>
 
-        @if (!string.IsNullOrEmpty(Model.Settings?.Hint))
+        @if (!string.IsNullOrEmpty(Model.Hint))
         {
-            <span class="hint">@Model.Settings.Hint</span>
+            <span class="hint">@Model.Hint</span>
         }
     </div>
 </div>

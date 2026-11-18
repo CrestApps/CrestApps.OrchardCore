@@ -24,6 +24,7 @@ public sealed partial class IndexDeclarationArchitectureTests
     /// </summary>
     private static readonly HashSet<string> _multipleRowIndexes = new(StringComparer.Ordinal)
     {
+        "AccountEmailDomainIndex",
         "AccountMemberIndex",
         "AgentAllowedQueueIndex",
         "AgentQueueMembershipIndex",
@@ -31,6 +32,7 @@ public sealed partial class IndexDeclarationArchitectureTests
         "CalendarEventAttendeeIndex",
         "CalendarShareIndex",
         "CallSessionLegIndex",
+        "ContentAccessRoleIndex",
         "DialerDecisionAgentIndex",
         "LeadImportIndex",
         "OmnichannelContactPhoneNumberIndex",
@@ -41,6 +43,8 @@ public sealed partial class IndexDeclarationArchitectureTests
         "StaffCapabilityIndex",
         "StaffTeamMembershipIndex",
         "TelephonyUserConnectionIndex",
+        "TicketLinkIndex",
+        "TimelineAttachmentIndex",
         "TimeOffPolicyAssignmentIndex",
         "VendorUserIndex",
         "VisitWorkerIndex",

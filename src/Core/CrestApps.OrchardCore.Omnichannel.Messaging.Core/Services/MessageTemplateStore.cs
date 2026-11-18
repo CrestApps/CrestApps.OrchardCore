@@ -19,4 +19,14 @@ public sealed class MessageTemplateStore : DocumentCatalog<MessageTemplate, Mess
     {
         CollectionName = MessagingStorage.CollectionName;
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<MessageTemplate>> ListByScopeAsync(string scope, CancellationToken cancellationToken = default)
+    {
+        var query = string.IsNullOrEmpty(scope)
+            ? Session.Query<MessageTemplate, MessageTemplateIndex>(index => index.Scope == null || index.Scope == string.Empty, collection: CollectionName)
+            : Session.Query<MessageTemplate, MessageTemplateIndex>(index => index.Scope == scope, collection: CollectionName);
+
+        return (await query.OrderBy(index => index.Name).ListAsync(cancellationToken)).ToArray();
+    }
 }

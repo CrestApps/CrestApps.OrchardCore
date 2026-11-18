@@ -98,7 +98,6 @@ public sealed class DuplicatePatternRatchetTests
     {
         ["GetTimeZones() in a select list"] = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["src/Modules/CrestApps.OrchardCore.ContactCenter/Drivers/BusinessHoursCalendarDisplayDriver.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.TimeZones/Drivers/TimeZoneMapDisplayDriver.cs"] = 1,
         },
         ["TimeZoneInfo.ConvertTimeToUtc"] = new(StringComparer.OrdinalIgnoreCase)
@@ -135,7 +134,6 @@ public sealed class DuplicatePatternRatchetTests
         {
             ["src/Core/CrestApps.OrchardCore.AgenticCommerce.Core/Services/MerchantSigningKeyService.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.Calendars.Core/Services/CalendarFeedTokens.cs"] = 3,
-            ["src/Core/CrestApps.OrchardCore.Commerce.Api.Core/IdempotencyEndpointFilter.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core/Twilio/TwilioWebhookEndpoint.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/SecureKeypadCaptureStore.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Handlers/UserRegistrationCheckoutHandler.cs"] = 1,
@@ -191,6 +189,10 @@ public sealed class DuplicatePatternRatchetTests
             ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayProfileServices.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.Users.Core/Services/PasswordConfirmation.cs"] = 2,
             ["src/Modules/CrestApps.OrchardCore.Payroll/DataSources/FileTaxIds.cs"] = 2,
+
+            // Existing debt from main's #1330 (help desk), baselined when PR #1319 merged main;
+            // remove as it is paid down.
+            ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketProtectedInformation.cs"] = 1,
         },
         ["time-limited protector by hand"] = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -208,9 +210,10 @@ public sealed class DuplicatePatternRatchetTests
         },
         ["Status429TooManyRequests"] = new(StringComparer.OrdinalIgnoreCase)
         {
-            // The API's problem helpers and the idempotency filter's "already in progress".
-            ["src/Core/CrestApps.OrchardCore.Commerce.Api.Core/ApiProblems.cs"] = 1,
-            ["src/Core/CrestApps.OrchardCore.Commerce.Api.Core/IdempotencyEndpointFilter.cs"] = 1,
+            // The API's problem helpers and the idempotency filter's "already in progress" (moved from Commerce to Core by
+            // main's #1330).
+            ["src/Core/CrestApps.OrchardCore.Core/Api/ApiProblems.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Core/Api/IdempotencyEndpointFilter.cs"] = 1,
 
             // The agent protocols' own error shapes.
             ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Acp/AcpCheckoutOperations.cs"] = 1,

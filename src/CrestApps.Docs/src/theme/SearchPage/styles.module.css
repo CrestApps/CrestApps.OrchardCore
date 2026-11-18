@@ -7,6 +7,12 @@
   display: none;
 }
 
+.scopes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+}
+
 .scope {
   display: inline-flex;
   align-items: center;
@@ -23,4 +29,8 @@
   margin: 0;
   accent-color: var(--crestapps-manual-user);
   cursor: pointer;
+}
+
+.scope input.technical {
+  accent-color: var(--crestapps-manual-technical);
 }

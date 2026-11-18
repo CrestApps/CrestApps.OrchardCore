@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Commerce.Drivers;
 using CrestApps.OrchardCore.Commerce.Navigation;
 using CrestApps.OrchardCore.Commerce.Services;
 using CrestApps.OrchardCore.Core.ModelBinding;
@@ -8,18 +7,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement;
-using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Commerce;
 
 /// <summary>
 /// The Commerce Foundation feature: the shared Commerce admin menu that owns the top-level Commerce node and its icon,
-/// the customer account, the pieces shared by the commerce admin lists, the access customers need to the admin pages of
+/// the pieces shared by the commerce admin lists (the customer's My Account area is the Users module's), the access customers need to the admin pages of
 /// their own data, and the export and anonymization of a person's commerce data. Billing turns it on without the store.
 /// </summary>
 [Feature(CommerceConstants.Features.Foundation)]
@@ -31,8 +28,6 @@ public sealed class FoundationStartup : StartupBase
         services.AddInvariantNumberInputs();
 
         services.AddNavigationProvider<CommerceAdminMenu>();
-        services.AddNavigationProvider<CommerceAccountMenu>();
-        services.AddDisplayDriver<UserMenu, CommerceAccountUserMenuDisplayDriver>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, CommerceResourceManagementOptionsConfiguration>();
         services.AddScoped<IAuthorizationHandler, CustomerAdminPageAuthorizationHandler>();
         services.AddShapeTableProvider<AdminListFiltersShapeTableProvider>();
@@ -57,6 +52,9 @@ public sealed class Startup : StartupBase
     {
         services.AddNavigationProvider<StoreSetupAdminMenu>();
         services.AddPermissionProvider<CommercePermissionProvider>();
+
+        // A tenant that ran Commerce before My Account moved to Users gets that feature turned on when it starts.
+        services.AddScoped<IModularTenantEvents, CommerceAccountFeatureUpgrade>();
     }
 }
 

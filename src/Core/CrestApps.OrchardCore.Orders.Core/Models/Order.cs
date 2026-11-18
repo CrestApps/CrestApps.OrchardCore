@@ -252,8 +252,10 @@ public sealed class Order : CatalogItem
     public string CancelNote { get; set; }
 
     /// <summary>
-    /// Gets or sets the notes on the order, oldest first: what the store wrote, and what happened, such as a refund.
+    /// Gets or sets the notes stored on the order before they moved to its timeline. Only the upgrade reads them; read
+    /// and write notes through <see cref="Services.IOrderService.AddNoteAsync"/> and the order's timeline.
     /// </summary>
+    [Obsolete("Notes and history are on the order's timeline. Only the upgrade that moves the stored ones reads this.")]
     public List<OrderNote> Notes { get; set; } = [];
 
     /// <summary>
@@ -420,7 +422,7 @@ public sealed class OrderLine
 /// Where an order is in its life.
 /// </summary>
 /// <summary>
-/// A note on an order.
+/// A note as orders stored them before notes moved to the order's timeline.
 /// </summary>
 public sealed class OrderNote
 {

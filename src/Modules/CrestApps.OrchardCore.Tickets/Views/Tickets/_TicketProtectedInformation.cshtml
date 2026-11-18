@@ -1,0 +1,98 @@
+@model TicketPageViewModel
+
+@{
+    var ticketId = Model.Ticket.ContentItemId;
+    var shown = Model.ProtectedValues?.ToDictionary(value => value.ItemId, value => value.Value, StringComparer.Ordinal);
+}
+
+@if (Model.ProtectedItems.Count > 0 || Model.CanAddProtected)
+{
+    <div class="card mb-3" id="ticket-protected">
+        <div class="card-header d-flex align-items-center gap-2">
+            <i class="fa-solid fa-lock" aria-hidden="true"></i>
+            <span class="me-auto">@T["Protected information"]</span>
+            @if (shown is not null)
+            {
+                <form asp-action="HideProtected" asp-route-id="@ticketId" method="post">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Hide"]</button>
+                </form>
+            }
+        </div>
+        <div class="card-body">
+            @if (Model.ProtectedItems.Count == 0)
+            {
+                <p class="small text-muted">@T["Nothing yet. Logins and other secrets given here are kept encrypted and shown only after a password."]</p>
+            }
+            else
+            {
+                <ul class="list-unstyled mb-3">
+                    @foreach (var item in Model.ProtectedItems)
+                    {
+                        <li class="mb-2">
+                            <div class="d-flex align-items-start gap-2">
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="fw-semibold text-break">@item.Label</div>
+                                    @if (shown is not null && shown.TryGetValue(item.ItemId, out var value))
+                                    {
+                                        <code class="d-block text-break user-select-all">@value</code>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted" aria-label="@T["Hidden"]">••••••••</span>
+                                    }
+                                    <div class="small text-muted">@(item.FromRequester ? T["From the requester"] : T["Added by {0}", item.CreatedByName ?? T["the site"].Value]), @await DisplayAsync(await New.DateTime(Utc: item.CreatedUtc, Format: "g"))</div>
+                                </div>
+                                @if (Model.CanViewProtected)
+                                {
+                                    <form asp-action="RemoveProtected" asp-route-id="@ticketId" method="post">
+                                        <input type="hidden" name="itemId" value="@item.ItemId" />
+                                        <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="@T["Remove {0}", item.Label]" aria-label="@T["Remove {0}", item.Label]"
+                                                data-url-af="RemoveUrl" data-confirm-title="@T["Remove"]" data-confirm="@T["Remove {0}? It can't be brought back.", item.Label]">
+                                            <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+
+                @if (Model.CanViewProtected && shown is null)
+                {
+                    <form asp-action="ShowProtected" asp-route-id="@ticketId" method="post" class="mb-3">
+                        <label for="ticket-protected-password" class="form-label small">@T["Your password, to show it"]</label>
+                        <div class="input-group input-group-sm">
+                            <input id="ticket-protected-password" name="password" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" required />
+                            <button type="submit" class="btn btn-secondary"><i class="fa-solid fa-eye me-1" aria-hidden="true"></i>@T["Show"]</button>
+                        </div>
+                        <span class="hint">@T["It shows for {0} minutes. Showing it, and each wrong password, is noted on the ticket's history.", (int)CrestApps.OrchardCore.Tickets.Services.TicketProtectedReveals.Window.TotalMinutes]</span>
+                    </form>
+                }
+                else if (!Model.CanViewProtected)
+                {
+                    <p class="small text-muted">@T["You may not show protected information on this desk."]</p>
+                }
+            }
+
+            @if (Model.CanAddProtected)
+            {
+                <details>
+                    <summary class="small">@T["Add protected information"]</summary>
+                    <form asp-action="AddProtected" asp-route-id="@ticketId" method="post" class="mt-2" autocomplete="off">
+                        <div class="mb-2">
+                            <label for="ticket-protected-label" class="form-label small">@T["Label"]</label>
+                            <input id="ticket-protected-label" name="label" class="form-control form-control-sm" maxlength="@CrestApps.OrchardCore.Tickets.Services.ITicketProtectedInformation.MaxLabelLength" placeholder="@T["Such as VPN login"]" required />
+                        </div>
+                        <div class="mb-2">
+                            <label for="ticket-protected-value" class="form-label small">@T["Value"]</label>
+                            <input id="ticket-protected-value" name="value" type="password" class="form-control form-control-sm" maxlength="@CrestApps.OrchardCore.Tickets.Services.ITicketProtectedInformation.MaxValueLength" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" required />
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-primary">@T["Add"]</button>
+                    </form>
+                </details>
+            }
+        </div>
+    </div>
+}
+
+<script asp-name="crestapps-browser" at="Foot"></script>

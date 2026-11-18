@@ -26,5 +26,9 @@ using OrchardCore.Modules.Manifest;
     Id = CommerceConstants.Features.Foundation,
     Description = "What billing and the store share: the Commerce admin menu and its icon, the customer account, the commerce admin list helpers, customers' access to their own admin pages, and the export and anonymization of a person's commerce data.",
     Category = "Commerce",
+    Dependencies =
+    [
+        CrestApps.OrchardCore.Users.UsersConstants.Feature.Account,
+    ],
     EnabledByDependencyOnly = true
 )]

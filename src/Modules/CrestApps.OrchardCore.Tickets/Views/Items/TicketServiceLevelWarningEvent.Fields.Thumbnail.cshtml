@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketServiceLevelWarningEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
+    @T["Ticket Service Level Warning"]
+</h4>
+<p>@T["Starts when a ticket is close to missing a service-level target."]</p>

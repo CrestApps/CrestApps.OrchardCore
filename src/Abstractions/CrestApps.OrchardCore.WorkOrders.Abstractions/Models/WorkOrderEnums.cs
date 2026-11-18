@@ -158,6 +158,11 @@ public enum WorkOrderSource
     /// A workflow.
     /// </summary>
     Workflow,
+
+    /// <summary>
+    /// A help desk ticket.
+    /// </summary>
+    Ticket,
 }
 
 /// <summary>

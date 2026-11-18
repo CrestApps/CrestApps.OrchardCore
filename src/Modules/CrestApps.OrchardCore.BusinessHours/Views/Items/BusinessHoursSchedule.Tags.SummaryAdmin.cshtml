@@ -1,0 +1,25 @@
+@model ShapeViewModel<BusinessHoursSchedule>
+
+@{
+    var hours = Model.Value.Hours ?? new HoursSchedule();
+    var openDays = hours.Windows.Select(window => window.Day).Distinct().Count();
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Days of the week the schedule is open"]">
+    <i class="fa-solid fa-calendar-week text-secondary me-1" aria-hidden="true"></i>@T.Plural(openDays, "Open 1 day a week", "Open {0} days a week")
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The time zone the hours are in"]">
+    <i class="fa-solid fa-globe text-secondary me-1" aria-hidden="true"></i>@(string.IsNullOrEmpty(hours.TimeZoneId) ? T["UTC"].Value : hours.TimeZoneId)
+</span>
+@if (hours.DateExceptions.Count > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Holidays and days with special hours"]">
+        <i class="fa-solid fa-umbrella-beach text-secondary me-1" aria-hidden="true"></i>@T.Plural(hours.DateExceptions.Count, "1 special day", "{0} special days")
+    </span>
+}
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["A disabled schedule is not used; records that use it count around the clock."]">
+        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}

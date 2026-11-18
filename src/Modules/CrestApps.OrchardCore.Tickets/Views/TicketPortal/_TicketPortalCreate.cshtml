@@ -1,0 +1,84 @@
+@using CrestApps.OrchardCore.Tickets.Portal
+@model TicketPortalCreateViewModel
+
+@if (string.IsNullOrEmpty(Model.ContentType))
+{
+    @* The service catalog: what a customer can ask for. *@
+    <p class="text-body-secondary">@T["What do you need help with?"]</p>
+    <div class="row row-cols-1 row-cols-md-2 g-3">
+        @foreach (var type in Model.Types)
+        {
+            <div class="col">
+                <a class="card h-100 text-decoration-none text-reset" href="@Url.RouteUrl("TicketPortalCreate", new { contentType = type.Name })">
+                    <div class="card-body">
+                        <h2 class="h6 card-title mb-1">@type.DisplayName</h2>
+                        @if (!string.IsNullOrWhiteSpace(type.Description))
+                        {
+                            <p class="card-text small text-body-secondary mb-0">@type.Description</p>
+                        }
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <form method="post" asp-route="TicketPortalCreate" enctype="multipart/form-data" class="no-multisubmit">
+        @Html.ValidationSummary(excludePropertyErrors: true, message: null, htmlAttributes: new { @class = "text-danger" })
+        <input type="hidden" asp-for="ContentType" />
+
+        @if (Model.Desks.Count > 1)
+        {
+            <div class="mb-3">
+                <label asp-for="DeskId" class="form-label">@T["It's about"]</label>
+                <select asp-for="DeskId" asp-items="Model.Desks" class="form-select">
+                    <option value="">@T["Choose one"]</option>
+                </select>
+                <span asp-validation-for="DeskId" class="text-danger"></span>
+            </div>
+        }
+        else
+        {
+            <input type="hidden" asp-for="DeskId" />
+        }
+
+        @if (Model.Categories.Count > 0)
+        {
+            <div class="mb-3">
+                <label for="CategoryId" class="form-label">@T["What is it about?"]</label>
+                @await DisplayAsync(await New.TaxonomyCascadingPicker(InputName: "CategoryId", InputId: "CategoryId", Choices: Model.Categories, SelectedId: Model.CategoryId, Required: Model.CategoryRequired, EmptyText: T["Choose one"].Value))
+                <span asp-validation-for="CategoryId" class="text-danger"></span>
+            </div>
+        }
+
+        @* The ticket type's own form: its title (the subject) and its fields. *@
+        @if (Model.Editor is not null)
+        {
+            Model.Editor.Properties.Remove("Actions");
+            @await DisplayAsync(Model.Editor)
+        }
+
+        <div class="mb-3">
+            <label asp-for="Body" class="form-label">@T["Describe your request"]</label>
+            <textarea asp-for="Body" class="form-control" rows="6"></textarea>
+            <span asp-validation-for="Body" class="text-danger"></span>
+        </div>
+
+        @* What they write may already be answered in the help center. *@
+        <partial name="_TicketArticleSuggestions" model="(Html.IdFor(m => m.Body).ToString(), string.Empty, false, (string)null)" />
+
+        @if (Model.CanAttach)
+        {
+            <div class="mb-3">
+                <label for="request-files" class="form-label">@T["Files"]</label>
+                @await DisplayAsync(await New.FileDropInput(InputName: "files", InputId: "request-files", Target: "form"))
+            </div>
+        }
+
+        <partial name="_TicketProtectedInputs" />
+
+        <button type="submit" class="btn btn-primary">@T["Send request"]</button>
+        <a class="btn btn-link" href="@Url.RouteUrl("TicketPortal")">@T["Cancel"]</a>
+    </form>
+}

@@ -40,6 +40,7 @@ public sealed partial class MessagingWorkspaceBuilder
     private readonly IMessagingChannelResolver _channelResolver;
     private readonly IOmnichannelChannelEndpointManager _endpointManager;
     private readonly IMessageTemplateManager _templateManager;
+    private readonly IMessageTemplateRenderer _templateRenderer;
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IAgentEntitlementPolicy _entitlementPolicy;
     private readonly IMessagingAvailabilityService _availabilityService;
@@ -63,6 +64,7 @@ public sealed partial class MessagingWorkspaceBuilder
         IMessagingChannelResolver channelResolver,
         IOmnichannelChannelEndpointManager endpointManager,
         IMessageTemplateManager templateManager,
+        IMessageTemplateRenderer templateRenderer,
         IAgentProfileManager agentProfileManager,
         IAgentEntitlementPolicy entitlementPolicy,
         IMessagingAvailabilityService availabilityService,
@@ -85,6 +87,7 @@ public sealed partial class MessagingWorkspaceBuilder
         _channelResolver = channelResolver;
         _endpointManager = endpointManager;
         _templateManager = templateManager;
+        _templateRenderer = templateRenderer;
         _agentProfileManager = agentProfileManager;
         _entitlementPolicy = entitlementPolicy;
         _availabilityService = availabilityService;
@@ -482,7 +485,7 @@ public sealed partial class MessagingWorkspaceBuilder
             Attachments = channel?.Capabilities.Attachments ?? MessagingAttachmentCapabilities.None,
             Messages = messages,
             Events = ThreadTimeline.ForPage(conversation.History, messages, beforeUtc, hasEarlierMessages),
-            Templates = (await _templateManager.GetAllAsync(cancellationToken)).ToArray(),
+            Templates = await GetTemplatesAsync(titleContact?.DisplayName, cancellationToken),
             ContactDisplayText = titleContact?.DisplayName,
             Contacts = contacts,
             AgentNames = await ResolveAgentNamesAsync(messages),

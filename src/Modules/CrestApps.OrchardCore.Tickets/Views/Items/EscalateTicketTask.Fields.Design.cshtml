@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<EscalateTicketTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Escalate Ticket"])
+    </h4>
+</header>

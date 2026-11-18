@@ -665,6 +665,7 @@ namespace CrestApps.OrchardCore.Transactions
     {
         public const string CollectionName = "Transaction";
         public const string CustomerPagesConfigurationSection = "CrestApps:Transactions:CustomerPages";
+        public const string RecordKind = "Transaction";
         public const string SettingsGroupId = "transactions";
         public const string SettlementStepKey = "TransactionSettlement";
         public static class BusinessDocumentKinds

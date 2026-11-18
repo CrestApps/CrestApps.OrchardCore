@@ -1,0 +1,5 @@
+@using CrestApps.OrchardCore.Timeline
+@using OrchardCore.ContentManagement
+@model ShapeViewModel<ContentItem>
+
+@await Component.InvokeAsync("Timeline", new { subject = $"{TimelineConstants.ContentItemKind}:{Model.Value.ContentItemId}", title = T["Notes"].Value })

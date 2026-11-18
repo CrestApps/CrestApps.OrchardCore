@@ -1,0 +1,126 @@
+@using CrestApps.OrchardCore.Timeline
+@using CrestApps.OrchardCore.Timeline.Models
+@using CrestApps.OrchardCore.Timeline.ViewModels
+
+@model TimelineViewModel
+
+<div class="card mb-3 crestapps-timeline">
+    <div class="card-header d-flex align-items-center">
+        <span>@(string.IsNullOrEmpty(Model.Title) ? T["Notes"].Value : Model.Title)</span>
+        @if (Model.Total > 0)
+        {
+            <span class="badge ta-badge fw-normal ms-2" title="@T["Entries on this timeline"]">@Model.Total</span>
+        }
+    </div>
+    <div class="card-body">
+        @if (Model.Composer.Count > 0)
+        {
+            // A shape, so a module can offer its own composer on its records (TimelineComposer__{Kind}).
+            var composer = await New.TimelineComposer(Timeline: Model);
+            composer.Metadata.Alternates.Add("TimelineComposer__" + Model.SubjectKind);
+
+            @await DisplayAsync(composer)
+        }
+
+        @if (Model.Entries.Count == 0)
+        {
+            <p class="text-muted mb-0">@T["Nothing here yet."]</p>
+        }
+        else
+        {
+            @* A link to an entry (such as from a record's files) lands on it, below the sticky header, and shows which one. *@
+            <style>.timeline-entry { scroll-margin-top: 6rem; } .timeline-entry:target { background-color: var(--bs-warning-bg-subtle); border-radius: var(--bs-border-radius); }</style>
+            <ul class="list-unstyled mb-0">
+                @foreach (var item in Model.Entries)
+                {
+                    var entry = item.Entry;
+                    var icon = entry.Kind switch
+                    {
+                        TimelineConstants.Kinds.Event => "fa-solid fa-bolt",
+                        TimelineConstants.Kinds.Comment => "fa-regular fa-comment",
+                        _ => "fa-regular fa-note-sticky",
+                    };
+
+                    <li class="border-top pt-2 mt-2 timeline-entry" id="@CrestApps.OrchardCore.Timeline.Controllers.TimelineController.EntryAnchor(entry.ItemId)">
+                        <div class="small text-muted d-flex flex-wrap align-items-center gap-1">
+                            <i class="@icon" aria-hidden="true"></i>
+                            @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(entry.CreatedUtc, DateTimeKind.Utc), Format: "g"))
+                            <span>·</span>
+                            <span>@(string.IsNullOrEmpty(item.AuthorName) ? T["The site"].Value : item.AuthorName)</span>
+                            @if (entry.Visibility == TimelineVisibility.Internal)
+                            {
+                                <span class="badge ta-badge fw-normal" title="@T["Seen only by the people who work on the record"]"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Internal"]</span>
+                            }
+                            @if (!string.IsNullOrEmpty(entry.Channel))
+                            {
+                                <span class="badge ta-badge fw-normal" title="@T["The channel it came in or went out on"]">@entry.Channel</span>
+                            }
+                            @if (entry.Properties is not null && entry.Properties.TryGetValue(TimelineConstants.Properties.Notice, out var notice) && notice?.ToString() is { Length: > 0 } noticeText)
+                            {
+                                <span class="badge text-bg-warning fw-normal text-wrap text-start"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@noticeText</span>
+                            }
+                            @if (Model.CanRedact && entry.RedactedUtc is null && (!string.IsNullOrEmpty(entry.Body) || item.Attachments.Count > 0))
+                            {
+                                <form asp-area="CrestApps.OrchardCore.Timeline" asp-controller="Timeline" asp-action="Redact" asp-route-id="@entry.ItemId" method="post" class="ms-auto">
+                                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                                    <button type="submit" class="btn btn-link btn-sm p-0 text-danger" data-url-af="RemoveUrl" data-title="@T["Redact"]" data-message="@T["Remove the text and files of this entry? This can't be undone."]">@T["Redact"]</button>
+                                </form>
+                            }
+                        </div>
+                        @if (entry.RedactedUtc is not null)
+                        {
+                            <div class="fst-italic text-muted">@T["The entry was redacted."]</div>
+                        }
+                        else if (!string.IsNullOrEmpty(entry.Body))
+                        {
+                            <div style="white-space: pre-line">@entry.Body</div>
+                        }
+                        @if (item.Attachments.Count > 0)
+                        {
+                            <ul class="list-inline small mb-0 mt-1">
+                                @foreach (var file in item.Attachments)
+                                {
+                                    var fileUrl = Url.Content("~/attachments/" + Uri.EscapeDataString(file.Id));
+
+                                    <li class="list-inline-item">
+                                        <a href="@fileUrl" target="_blank" rel="noopener">
+                                            <i class="@(file.IsImage ? "fa-regular fa-image" : "fa-solid fa-paperclip") me-1" aria-hidden="true"></i>@file.FileName
+                                        </a>
+                                        <span class="text-muted">(@(file.Length < 1024 * 1024 ? T.GetString("{0} KB", Math.Max(1, file.Length / 1024)).Value : T.GetString("{0:0.#} MB", file.Length / 1048576d).Value))</span>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        @if (entry.Changes.Count > 0)
+                        {
+                            <ul class="small mb-0 ps-3">
+                                @foreach (var change in entry.Changes)
+                                {
+                                    <li>@T["{0}: {1} → {2}", change.Field, string.IsNullOrEmpty(change.From) ? T["(empty)"].Value : change.From, string.IsNullOrEmpty(change.To) ? T["(empty)"].Value : change.To]</li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (Model.NewerUrl is not null || Model.OlderUrl is not null)
+        {
+            <nav class="d-flex justify-content-between mt-3" aria-label="@T["Timeline pages"]">
+                @if (Model.NewerUrl is not null)
+                {
+                    <a class="btn btn-sm btn-outline-secondary" href="@Model.NewerUrl"><i class="fa-solid fa-angle-left me-1" aria-hidden="true"></i>@T["Newer"]</a>
+                }
+                else
+                {
+                    <span></span>
+                }
+                @if (Model.OlderUrl is not null)
+                {
+                    <a class="btn btn-sm btn-outline-secondary" href="@Model.OlderUrl">@T["Older"]<i class="fa-solid fa-angle-right ms-1" aria-hidden="true"></i></a>
+                }
+            </nav>
+        }
+    </div>
+</div>

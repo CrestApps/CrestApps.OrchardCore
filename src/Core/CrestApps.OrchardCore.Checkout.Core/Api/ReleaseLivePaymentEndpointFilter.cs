@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Commerce.Api;
 using Microsoft.AspNetCore.Http;
@@ -33,7 +34,7 @@ public sealed class ReleaseLivePaymentEndpointFilter : IEndpointFilter
             if (await releaser.ReleaseAsync(sessionId, httpContext.RequestAborted) == CheckoutPaymentReleaseResult.PaymentInProgress)
             {
                 return ApiProblems.Conflict(
-                    ApiProblems.Codes.PaymentInProgress,
+                    CommerceProblemCodes.PaymentInProgress,
                     "A payment for this checkout is in progress. Wait for it to finish before changing the checkout.");
             }
         }

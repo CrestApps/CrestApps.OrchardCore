@@ -1,12 +1,19 @@
+using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Commerce.Api;
+using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
+using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Timeline;
+using CrestApps.OrchardCore.Timeline.Models;
+using CrestApps.OrchardCore.Timeline.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Orders.Api;
 
@@ -213,7 +220,41 @@ internal static class OrderAdminApiEndpoints
             ApiMoney.From(money.Refundable, money.Currency ?? order.Currency),
             ApiMoney.From(money.Outstanding, money.Currency ?? order.Currency),
             money.CanRefundAsStoreCredit,
-            order.Notes.Select(note => new ApiOrderNote(note.Text, OrderApiMapper.ToCamel(note.Kind.ToString()), note.AuthorName, note.CreatedUtc)).ToList());
+            await ReadNotesAsync(order, httpContext));
+    }
+
+    // The notes and history of the order, oldest first, from its timeline: every one of them, as the API returned before
+    // the notes moved to the timeline, read a page at a time.
+    private static async Task<List<ApiOrderNote>> ReadNotesAsync(Order order, HttpContext httpContext)
+    {
+        const int pageSize = 500;
+
+        var timeline = httpContext.RequestServices.GetRequiredService<ITimelineService>();
+        var entries = new List<TimelineEntry>();
+
+        while (true)
+        {
+            var page = await timeline.ListAsync(new TimelineQuery
+            {
+                Subject = new RecordRef(OrderConstants.RecordKind, order.ItemId),
+                IncludeInternal = true,
+                Skip = entries.Count,
+                Take = pageSize,
+            }, httpContext.RequestAborted);
+
+            entries.AddRange(page.Entries);
+
+            if (page.Entries.Count < pageSize || entries.Count >= page.Total)
+            {
+                break;
+            }
+        }
+
+        return [.. entries
+            .Where(entry => !string.IsNullOrEmpty(entry.Body))
+            .AsEnumerable()
+            .Reverse()
+            .Select(entry => new ApiOrderNote(entry.Body, OrderApiMapper.ToCamel(entry.Kind == TimelineConstants.Kinds.Event ? nameof(OrderNoteKind.Event) : nameof(OrderNoteKind.Note)), entry.AuthorName, entry.CreatedUtc))];
     }
 
     // Who did it, for the order's history: the signed-in user, or the client application a back-office system signs

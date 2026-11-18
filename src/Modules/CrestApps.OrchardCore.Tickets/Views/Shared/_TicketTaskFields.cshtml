@@ -1,0 +1,45 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@model TicketTaskViewModel
+
+@if (Model.NeedsTicket)
+{
+    <div class="mb-3">
+        <label asp-for="TicketIdExpression" class="form-label">@T["Ticket"]</label>
+        <input asp-for="TicketIdExpression" class="form-control code" />
+        <span class="hint">@T["Liquid giving the ticket's id. The default is the ticket of the event that started the workflow."]</span>
+    </div>
+}
+
+@for (var i = 0; i < Model.Fields.Count; i++)
+{
+    var field = Model.Fields[i];
+    <input type="hidden" name="@Html.NameFor(m => m.Fields[i].Name)" value="@field.Name" />
+    <div class="mb-3">
+        <label for="@Html.IdFor(m => m.Fields[i].Value)" class="form-label">@field.Label</label>
+        @switch (field.Kind)
+        {
+            case TicketTaskFieldKind.LiquidMultiline:
+                <textarea id="@Html.IdFor(m => m.Fields[i].Value)" name="@Html.NameFor(m => m.Fields[i].Value)" class="form-control code" rows="4">@field.Value</textarea>
+                break;
+            case TicketTaskFieldKind.Liquid:
+                <input id="@Html.IdFor(m => m.Fields[i].Value)" name="@Html.NameFor(m => m.Fields[i].Value)" value="@field.Value" class="form-control code" />
+                break;
+            default:
+                <select id="@Html.IdFor(m => m.Fields[i].Value)" name="@Html.NameFor(m => m.Fields[i].Value)" class="form-select">
+                    @if (field.Kind != TicketTaskFieldKind.Choice)
+                    {
+                        <option value="">@T["No change"]</option>
+                    }
+                    @foreach (var option in field.Options)
+                    {
+                        <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                    }
+                </select>
+                break;
+        }
+        @if (!string.IsNullOrEmpty(field.Hint))
+        {
+            <span class="hint">@field.Hint</span>
+        }
+    </div>
+}

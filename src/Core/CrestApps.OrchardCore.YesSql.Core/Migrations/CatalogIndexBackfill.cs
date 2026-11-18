@@ -13,13 +13,14 @@ namespace CrestApps.OrchardCore.YesSql.Core.Migrations;
 /// index table are filled in for the records saved before it.
 /// </summary>
 /// <remarks>
-/// Run it from a deferred task (<c>ShellScope.AddDeferredTask</c>) scheduled by the migration that adds the columns,
-/// not inside the migration: mapping every record again during activation would hold up the tenant. Records are saved
-/// straight through a session of the store rather than through their store, so no store handler runs. Each page is saved
-/// in a session of its own: a record that fails to be mapped again cancels only its page's session, and that page is then
-/// saved again one record at a time, so the failing record is logged and skipped and every other record is still indexed.
-/// Records are saved with YesSql's version check, so a record live traffic saved after the backfill read it is never
-/// overwritten with the older copy; that save already mapped its index rows again, so the record is skipped.
+/// Run it from an <see cref="Upgrades.IResumableStep"/> the migration that adds the columns requests through
+/// <see cref="Upgrades.ResumableSteps"/>, not inside the migration (mapping every record again during activation would
+/// hold up the tenant) and not from a deferred task (a failure there is swallowed and nothing runs it again). Records are
+/// saved straight through a session of the store rather than through their store, so no store handler runs. Each page is
+/// saved in a session of its own: a record that fails to be mapped again cancels only its page's session, and that page is
+/// then saved again one record at a time, so the failing record is logged and skipped and every other record is still
+/// indexed. Records are saved with YesSql's version check, so a record live traffic saved after the backfill read it is
+/// never overwritten with the older copy; that save already mapped its index rows again, so the record is skipped.
 /// </remarks>
 public static class CatalogIndexBackfill
 {

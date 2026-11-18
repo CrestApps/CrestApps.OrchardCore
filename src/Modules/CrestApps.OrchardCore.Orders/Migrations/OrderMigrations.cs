@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
@@ -16,6 +18,13 @@ namespace CrestApps.OrchardCore.Orders.Migrations;
 /// </summary>
 internal sealed class OrderMigrations : DataMigration
 {
+    private readonly ResumableSteps _steps;
+
+    public OrderMigrations(ResumableSteps steps)
+    {
+        _steps = steps;
+    }
+
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<OrderIndex>(table => table
@@ -56,7 +65,7 @@ internal sealed class OrderMigrations : DataMigration
 
         await CreateReportIndexAsync();
 
-        return 5;
+        return 6;
     }
 
     /// <summary>
@@ -89,18 +98,30 @@ internal sealed class OrderMigrations : DataMigration
     }
 
     /// <summary>
+    /// Moves the notes stored on orders to their timelines, which this feature depends on. The move runs in the background,
+    /// a few batches a minute until none is left, after the Timeline tables created in the same activation have committed.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await _steps.RequestAsync(OrderNotesStep.StepName);
+
+        return 4;
+    }
+
+    /// <summary>
     /// Adds when an order was paid to the order index, so a business account's monthly budget counts a paid order in the
     /// month it was paid. An order indexed before this step has no paid time until it is saved again, and counts by when it
     /// was placed meanwhile, as every order did before; nothing is backfilled, so the step doesn't read every order.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom3Async()
+    public async Task<int> UpdateFrom4Async()
     {
         await SchemaBuilder.AlterIndexTableAsync<OrderIndex>(table => table
             .AddColumn<DateTime>("PaidUtc", column => column.Nullable()),
             collection: OrderConstants.CollectionName);
 
-        return 4;
+        return 5;
     }
 
     /// <summary>
@@ -110,7 +131,7 @@ internal sealed class OrderMigrations : DataMigration
     /// keeps them few.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom4Async()
+    public async Task<int> UpdateFrom5Async()
     {
         await SchemaBuilder.AlterIndexTableAsync<OrderIndex>(table => table
             .AddColumn<DateTime>("BudgetCommittedUtc", column => column.Nullable()),
@@ -120,7 +141,7 @@ internal sealed class OrderMigrations : DataMigration
             scope.ServiceProvider.GetRequiredService<ISession>(),
             scope.ServiceProvider.GetRequiredService<ILogger<OrderMigrations>>()));
 
-        return 5;
+        return 6;
     }
 
     /// <summary>

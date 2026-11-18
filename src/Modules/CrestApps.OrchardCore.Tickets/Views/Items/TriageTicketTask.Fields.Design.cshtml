@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Tickets.AI
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TriageTicketTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Triage Ticket With AI"])
+    </h4>
+</header>

@@ -40,7 +40,7 @@ public sealed class OrderUnpaidBackfillTests : IAsyncLifetime
         var transaction = await session.BeginTransactionAsync(cancellationToken);
         var schemaBuilder = new SchemaBuilder(_store.Configuration, transaction);
 
-        await new OrderMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
+        await new OrderMigrations(steps: null) { SchemaBuilder = schemaBuilder }.CreateAsync();
         await schemaBuilder.CreateMapIndexTableAsync<ConcurrentSaveIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26)),
             collection: OrderConstants.CollectionName);

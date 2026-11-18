@@ -211,5 +211,22 @@ public sealed partial class InterfaceCancellationTokenRatchetTests
         // remove as it is paid down.
         ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/BalanceLedgerArchive.cs: IBalanceLedgerArchive.ArchiveAsync"] = 1,
         ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/BalanceLedgerArchive.cs: IBalanceLedgerArchive.SaveAsync"] = 1,
+
+        // Existing debt from main's #1330 (help desk), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Abstractions/CrestApps.OrchardCore.ContentFields.Abstractions/Conditions/IContentConditionSource.cs: IContentConditionSource.DescribeAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.ContentFields.Abstractions/Conditions/IContentConditionSource.cs: IContentConditionSource.ReadAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.ContentFields.Abstractions/Conditions/IContentFieldStateService.cs: IContentFieldStateService.GetStatesAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.ContentFields.Abstractions/Conditions/IContentFieldValueReader.cs: IContentFieldValueReader.DescribeAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.ContentFields.Abstractions/Conditions/IContentFieldValueReader.cs: IContentFieldValueReader.ReadAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.ContentFields.Abstractions/Conditions/IContentFieldVisibilityProvider.cs: IContentFieldVisibilityProvider.GetHiddenFieldsAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Tickets.Abstractions/Services/ITicketBoardService.cs: ITicketBoardService.CanCreateAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Tickets.Abstractions/Services/ITicketBoardService.cs: ITicketBoardService.CanManageAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Tickets.Abstractions/Services/ITicketBoardService.cs: ITicketBoardService.CanShareAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Tickets.Abstractions/Services/ITicketService.cs: ITicketService.FindByNumberAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Tickets.Abstractions/Services/ITicketService.cs: ITicketService.GetAsync"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.ContactCenter/Legacy/IBusinessHoursCalendarUpgrade.cs: IBusinessHoursCalendarUpgrade.GrantSchedulePermissionsAfterCommitAsync"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Services/TicketProtectedReveals.cs: ITicketPasswordConfirmation.CheckAsync"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/WebForm/TicketFormGuard.cs: ITicketFormChallenge.VerifyAsync"] = 1,
     };
 }

@@ -46,6 +46,10 @@ public static class CommerceConstants
     /// more. Each module adds its pages to the account menu with a <c>NamedNavigationProvider</c> created for
     /// <see cref="MenuName"/>.
     /// </summary>
+    /// <remarks>
+    /// The account area moved to the Users module (<c>UsersConstants.Account</c>); these keep the same values so code
+    /// that uses them keeps working. A test pins the two together.
+    /// </remarks>
     public static class Account
     {
         /// <summary>

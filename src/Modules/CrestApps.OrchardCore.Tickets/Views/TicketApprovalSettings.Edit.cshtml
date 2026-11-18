@@ -1,0 +1,41 @@
+@model TicketApprovalSettingsViewModel
+
+<h3 class="h6 mt-3">@T["Approval"]</h3>
+<p class="hint">@T["A new ticket of this type waits for these steps, one after the other, before work goes on. One approver of a step approves it; one refusal solves the ticket and tells the requester why. Leave every step empty for no approval."]</p>
+
+<div class="mb-2">
+    <label asp-for="WaitingStatusId" class="form-label small">@T["Status while waiting"]</label>
+    <select asp-for="WaitingStatusId" asp-items="Model.Statuses" class="form-select form-select-sm">
+        <option value="">@T["The first waiting status"]</option>
+    </select>
+    <span class="hint">@T["Such as a Waiting for approval status; add one under Tickets, Statuses."]</span>
+</div>
+
+@for (var i = 0; i < Model.Steps.Count; i++)
+{
+    <div class="row g-2 align-items-start mb-2">
+        <div class="col-md-3">
+            <label asp-for="Steps[i].Name" class="form-label small">@T["Step {0}", i + 1]</label>
+            <input asp-for="Steps[i].Name" class="form-control form-control-sm" placeholder="@T["Such as Manager or Finance"]" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small">@T["Approvers"]</label>
+            @await Component.InvokeAsync("UserPicker", new
+            {
+                name = Html.NameFor(m => m.Steps[i].ApproverIds).ToString(),
+                selectedValues = Model.Steps[i].ApproverIds,
+                valueType = "userId",
+                multiple = true,
+                buttonText = T["Choose approvers"].Value,
+                searchPlaceholder = T["Search users"].Value,
+            })
+        </div>
+        <div class="col-md-3">
+            <div class="form-check mt-md-4">
+                <input type="checkbox" class="form-check-input" asp-for="Steps[i].RequesterManager" />
+                <label class="form-check-label small" asp-for="Steps[i].RequesterManager">@T["The requester's manager"]</label>
+                <span class="hint dashed">@T["From the requester's staff record, with Staff on."]</span>
+            </div>
+        </div>
+    </div>
+}

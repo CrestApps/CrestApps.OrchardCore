@@ -181,7 +181,7 @@ request.Headers.Add("Timestamp", timestamp);
 
 ## Idempotency
 
-The checkout and cart endpoints that change something take an `Idempotency-Key` header, through `WithIdempotency(IdempotencyPolicy)` from `CrestApps.OrchardCore.Commerce.Api.Core`. Keys are kept for each platform.
+The checkout and cart endpoints that change something take an `Idempotency-Key` header, through `WithIdempotency(IdempotencyPolicy)` from `CrestApps.OrchardCore.Api` (in `CrestApps.OrchardCore.Core`). Keys are kept for each platform.
 
 | | UCP | ACP |
 | --- | --- | --- |
@@ -510,7 +510,7 @@ The module has no `appsettings.json` configuration of its own.
 | `IAgentOrderPublisher` | AgenticCommerce (module) | Send a protocol's order updates. |
 | `IWebhookOutbox`, `IWebhookDeliveryFormatter` | Webhooks.Abstractions | Queue a signed delivery to one receiver, and sign it the way its protocol asks. See [Direct deliveries](webhooks.md#direct-deliveries). |
 | `ICheckoutContactStep`, `ICheckoutFulfillmentStep` | Checkout.Abstractions | Fill the Contact and Shipping steps from code. See [Checkout](checkout.md#filling-steps-from-code). |
-| `IdempotencyPolicy` | Commerce.Api.Core | Keep a protocol's own idempotency rules. |
+| `IdempotencyPolicy` | `CrestApps.OrchardCore.Core` (`CrestApps.OrchardCore.Api`) | Keep a protocol's own idempotency rules. |
 
 ### Add a payment handler
 

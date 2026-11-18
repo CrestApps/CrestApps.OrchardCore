@@ -62,7 +62,7 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Drivers/OmnichannelActivityDisplayDriver.cs: OmnichannelActivityDisplayDriver"] = 15,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Services/DefaultContactActivityBatchLoader.cs: DefaultContactActivityBatchLoader"] = 16,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Controllers/AdminController.cs: AdminController"] = 17,
-        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Services/MessagingWorkspaceBuilder.cs: MessagingWorkspaceBuilder"] = 21,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Services/MessagingWorkspaceBuilder.cs: MessagingWorkspaceBuilder"] = 22, // raised for main's #1330 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Handlers/SmsOmnichannelEventHandler.cs: SmsOmnichannelEventHandler"] = 28,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Services/SmsEntryPointAIConversationStarter.cs: SmsEntryPointAIConversationStarter"] = 15,
         ["src/Modules/CrestApps.OrchardCore.Orders/Controllers/ReturnsAdminController.cs: ReturnsAdminController"] = 13,
@@ -71,7 +71,6 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Products/Services/ProductListingService.cs: ProductListingService"] = 19,
         ["src/Modules/CrestApps.OrchardCore.Staff/Controllers/StaffController.cs: StaffController"] = 14,
         ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Services/ChildTenantManager.cs: ChildTenantManager"] = 15,
-        ["src/Modules/CrestApps.OrchardCore.WorkOrders/Controllers/WorkOrderSettingsController.cs: WorkOrderSettingsController"] = 14,
         ["src/Modules/CrestApps.OrchardCore.WorkOrders/Controllers/WorkOrdersController.cs: WorkOrdersController"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/MyTeamController.cs: MyTeamController"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/MyWorkController.cs: MyWorkController"] = 18,
@@ -97,5 +96,13 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultInvoiceCommandService.cs: DefaultInvoiceCommandService"] = 15,
         ["src/Modules/CrestApps.OrchardCore.Invoicing/Controllers/InvoicesAdminController.cs: InvoicesAdminController"] = 14,
         ["src/Modules/CrestApps.OrchardCore.Transactions/Controllers/AdminController.cs: AdminController"] = 15,
+
+        // Existing debt from main's #1330 (help desk), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketService.cs: DefaultTicketService"] = 16,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Controllers/TicketBoardsController.cs: TicketBoardsController"] = 15,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Controllers/TicketsController.cs: TicketsController"] = 19,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Drivers/TicketPartDisplayDriver.cs: TicketPartDisplayDriver"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Portal/TicketPortalController.cs: TicketPortalController"] = 15,
     };
 }

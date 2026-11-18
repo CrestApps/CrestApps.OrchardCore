@@ -21,6 +21,9 @@ const sourceRoot = join(repositoryRoot, 'src');
 // DisbursementsFilters and NachaOriginSettings.Edit, Payroll MyPay/Statement, and Plaid BankAccountLink_Plaid.
 // Existing debt from main's #1331 (Invoicing and Billing), baselined when PR #1319 merged main; remove as it is paid down:
 // BusinessDocuments NumberSeriesSettings.Edit and Transactions PaymentTermFields.Edit.
+// Existing debt from main's #1330 (help desk), baselined when PR #1319 merged main; remove as it is paid down:
+// ContentFields ConditionalFieldSettings.Edit and Tickets _TicketArticleSuggestions, TicketPart.Assistant,
+// TicketPart.Links and Tickets/Display.
 const baselinePath = join(__dirname, 'inline-scripts-ratchet.baseline.json');
 
 // A <script> element with its attributes and body. Razor writes these as plain HTML, so a regular expression is enough.

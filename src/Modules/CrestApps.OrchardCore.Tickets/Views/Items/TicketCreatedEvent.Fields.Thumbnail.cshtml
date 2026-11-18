@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketCreatedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-ticket" aria-hidden="true"></i>
+    @T["Ticket Created"]
+</h4>
+<p>@T["Starts when a ticket is created."]</p>

@@ -5,6 +5,10 @@ using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Telemetry;
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Timeline;
+using CrestApps.OrchardCore.Timeline.Models;
+using CrestApps.OrchardCore.Timeline.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -51,9 +55,10 @@ public interface IOrderService
     Task<bool> RecordRefundAsync(Order order, OrderRefund refund, bool restock, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Adds a note to the order.
+    /// Adds a note to the order's timeline and saves the order.
     /// </summary>
-    Task AddNoteAsync(Order order, string text, OrderNoteKind kind, string authorName, CancellationToken cancellationToken = default);
+    /// <returns>Why the note wasn't stored, or nothing when it was.</returns>
+    Task<IReadOnlyList<string>> AddNoteAsync(Order order, string text, OrderNoteKind kind, string authorName, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Replaces the lines of an order not paid or checked out yet with the cart's, such as a store's draft being
@@ -73,6 +78,7 @@ public sealed class OrderService : IOrderService
 
     private const int OrderCodeLength = 6;
 
+    private readonly ITimelineService _timeline;
     private readonly IOrderStore _store;
     private readonly IEnumerable<IOrderEventHandler> _handlers;
     private readonly IClock _clock;
@@ -83,10 +89,12 @@ public sealed class OrderService : IOrderService
         IOrderStore store,
         IEnumerable<IOrderEventHandler> handlers,
         INumberSequence numberSequence,
+        ITimelineService timeline,
         IClock clock,
         ILogger<OrderService> logger)
     {
         _store = store;
+        _timeline = timeline;
         _numberSequence = numberSequence;
         _handlers = handlers;
         _clock = clock;
@@ -264,29 +272,32 @@ public sealed class OrderService : IOrderService
         return true;
     }
 
-    public async Task AddNoteAsync(Order order, string text, OrderNoteKind kind, string authorName, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> AddNoteAsync(Order order, string text, OrderNoteKind kind, string authorName, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(order);
 
         if (string.IsNullOrWhiteSpace(text))
         {
-            return;
+            return [];
         }
 
-        var now = _clock.UtcNow;
-
-        order.Notes ??= [];
-        order.Notes.Add(new OrderNote
+        // The notes and history of an order are entries on its timeline, seen only by the store.
+        var result = await _timeline.AddAsync(new TimelineEntry
         {
-            Id = UniqueId.GenerateId(),
-            Text = text.Trim(),
-            Kind = kind,
+            Subject = new RecordRef(OrderConstants.RecordKind, order.ItemId),
+            Kind = kind == OrderNoteKind.Event ? TimelineConstants.Kinds.Event : TimelineConstants.Kinds.Note,
+            Visibility = TimelineVisibility.Internal,
             AuthorName = string.IsNullOrWhiteSpace(authorName) ? null : authorName.Trim(),
-            CreatedUtc = now,
-        });
-        order.ModifiedUtc = now;
+            Body = text.Trim(),
+            CreatedUtc = _clock.UtcNow,
+        }, cancellationToken);
+
+        // Callers rely on the note saving the order they changed with it.
+        order.ModifiedUtc = _clock.UtcNow;
 
         await _store.UpdateAsync(order, cancellationToken);
+
+        return result.Errors;
     }
 
     /// <summary>

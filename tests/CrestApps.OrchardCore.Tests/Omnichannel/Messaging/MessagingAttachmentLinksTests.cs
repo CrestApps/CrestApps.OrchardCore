@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
@@ -86,7 +87,7 @@ public sealed class MessagingAttachmentLinksTests
 
             var onDisk = await File.ReadAllBytesAsync(Assert.Single(Directory.GetFiles(folder)), TestContext.Current.CancellationToken);
 
-            Assert.Null(MessagingFileFormats.Detect(onDisk, "in-1.png", null, MessagingFileFormats.All));
+            Assert.Null(FileFormats.Detect(onDisk, "in-1.png", null, FileFormats.All));
             Assert.Equal(TestImages.Png, await store.ReadAsync("in-1", TestContext.Current.CancellationToken));
             Assert.True(await store.DeleteAsync("in-1", TestContext.Current.CancellationToken));
             Assert.Null(await store.ReadAsync("in-1", TestContext.Current.CancellationToken));

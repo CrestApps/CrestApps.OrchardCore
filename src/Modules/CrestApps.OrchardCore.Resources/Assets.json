@@ -31,6 +31,18 @@
   },
   {
     "action": "vite",
+    "name": "file-drop.js",
+    "source": "Assets/js/file-drop.js",
+    "dest": "wwwroot/scripts/file-drop.js"
+  },
+  {
+    "action": "vite",
+    "name": "file-drop.css",
+    "source": "Assets/css/file-drop.css",
+    "dest": "wwwroot/styles/file-drop.css"
+  },
+  {
+    "action": "vite",
     "name": "item-selector.css",
     "source": "Assets/css/item-selector.css",
     "dest": "wwwroot/styles/item-selector.css"

@@ -1,8 +1,13 @@
 using System.Globalization;
+using CrestApps.Core;
+using CrestApps.OrchardCore.Agreements;
+using CrestApps.OrchardCore.Agreements.Core.Indexes;
+using CrestApps.OrchardCore.Agreements.Core.Services;
+using CrestApps.OrchardCore.Agreements.Models;
+using CrestApps.OrchardCore.Agreements.Services;
 using CrestApps.OrchardCore.Calendars.Recurrence;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Models;
-using CrestApps.OrchardCore.WorkOrders.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using NodaTime;
@@ -13,8 +18,9 @@ using IClock = OrchardCore.Modules.IClock;
 namespace CrestApps.OrchardCore.WorkOrders.Core.Services;
 
 /// <summary>
-/// Makes the work orders of active service agreements ahead of their visits, once each, expires agreements past their
-/// end, and starts the expiring event once within the notice.
+/// Makes the work orders of the visits of active agreements ahead of time, once each. The agreements are kept by the
+/// Agreements module, which also expires them and tells when one is about to end; the visits are the agreement's Work
+/// Orders terms.
 /// </summary>
 public sealed class ServiceAgreementScheduler
 {
@@ -24,9 +30,8 @@ public sealed class ServiceAgreementScheduler
     public const string Actor = "Service agreement";
 
     private readonly ISession _session;
-    private readonly ServiceAgreementManager _agreements;
+    private readonly IAgreementManager _agreements;
     private readonly WorkOrderService _workOrders;
-    private readonly IEnumerable<IServiceAgreementObserver> _observers;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -35,18 +40,10 @@ public sealed class ServiceAgreementScheduler
     /// <summary>
     /// Initializes a new instance of the <see cref="ServiceAgreementScheduler"/> class.
     /// </summary>
-    /// <param name="session">The session.</param>
-    /// <param name="agreements">The agreements.</param>
-    /// <param name="workOrders">The work order service.</param>
-    /// <param name="observers">The agreement observers.</param>
-    /// <param name="clock">The clock.</param>
-    /// <param name="logger">The logger.</param>
-    /// <param name="stringLocalizer">The string localizer.</param>
     public ServiceAgreementScheduler(
         ISession session,
-        ServiceAgreementManager agreements,
+        IAgreementManager agreements,
         WorkOrderService workOrders,
-        IEnumerable<IServiceAgreementObserver> observers,
         IClock clock,
         ILogger<ServiceAgreementScheduler> logger,
         IStringLocalizer<ServiceAgreementScheduler> stringLocalizer)
@@ -54,21 +51,20 @@ public sealed class ServiceAgreementScheduler
         _session = session;
         _agreements = agreements;
         _workOrders = workOrders;
-        _observers = observers;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
     }
 
     /// <summary>
-    /// Runs every active agreement.
+    /// Runs every active agreement with visits.
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>How many work orders were made.</returns>
     public async Task<int> RunAsync(CancellationToken cancellationToken = default)
     {
-        var active = nameof(ServiceAgreementStatus.Active);
-        var ids = (await _session.QueryIndex<ServiceAgreementIndex>(index => index.Status == active, collection: WorkOrdersConstants.CollectionName).ListAsync(cancellationToken))
+        var active = nameof(AgreementStatus.Active);
+        var ids = (await _session.QueryIndex<AgreementIndex>(index => index.Status == active, collection: AgreementsConstants.CollectionName).ListAsync(cancellationToken))
             .Select(index => index.ItemId)
             .ToList();
         var made = 0;
@@ -88,7 +84,7 @@ public sealed class ServiceAgreementScheduler
             }
             catch (Exception ex) when (!ex.IsFatal())
             {
-                _logger.LogError(ex, "The service agreement {AgreementId} couldn't make its work orders.", id);
+                _logger.LogError(ex, "The agreement {AgreementId} couldn't make its work orders.", id);
             }
         }
 
@@ -96,51 +92,30 @@ public sealed class ServiceAgreementScheduler
     }
 
     /// <summary>
-    /// Runs one agreement: expires it past its end, starts the expiring event within the notice, and makes the work
-    /// orders of its visits due within each schedule's lead time that don't exist yet.
+    /// Runs one agreement: makes the work orders of its visits due within each schedule's lead time that don't exist
+    /// yet, while it is in force.
     /// </summary>
     /// <param name="agreement">The agreement.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The work orders made.</returns>
-    public async Task<IReadOnlyList<WorkOrder>> RunAsync(ServiceAgreement agreement, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<WorkOrder>> RunAsync(Agreement agreement, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(agreement);
 
         var made = new List<WorkOrder>();
-
-        if (agreement.Status != ServiceAgreementStatus.Active)
-        {
-            return made;
-        }
-
         var zone = ZoneOf(agreement.TimeZoneId);
         var today = Instant.FromDateTimeUtc(DateTime.SpecifyKind(_clock.UtcNow, DateTimeKind.Utc)).InZone(zone).Date;
-        var end = agreement.EndDate is { } endDate ? LocalDate.FromDateOnly(endDate) : (LocalDate?)null;
 
-        if (end < today)
+        if (!agreement.IsInForceOn(today.ToDateOnly())
+            || !agreement.TryGet<WorkOrderAgreementTerms>(out var terms)
+            || terms?.Schedules is not { Count: > 0 })
         {
-            agreement.Status = ServiceAgreementStatus.Expired;
-            await _agreements.UpdateAsync(agreement, null, cancellationToken);
-
             return made;
-        }
-
-        var changed = false;
-
-        if (end is { } last && agreement.ExpiringNotifiedUtc is null && today.PlusDays(agreement.ExpiringNoticeDays) >= last)
-        {
-            agreement.ExpiringNotifiedUtc = _clock.UtcNow;
-            changed = true;
-
-            foreach (var observer in _observers)
-            {
-                await observer.OnExpiringAsync(agreement, cancellationToken);
-            }
         }
 
         var source = nameof(WorkOrderSource.Agreement);
 
-        foreach (var schedule in agreement.Schedules)
+        foreach (var schedule in terms.Schedules)
         {
             foreach (var date in Occurrences(agreement, schedule, zone, today, today.PlusDays(Math.Max(0, schedule.LeadDays))))
             {
@@ -155,7 +130,7 @@ public sealed class ServiceAgreementScheduler
 
                 if (workOrder is null)
                 {
-                    _logger.LogWarning("The service agreement {AgreementId} has a schedule whose work order type {TypeId} doesn't exist.", agreement.ItemId, schedule.TypeId);
+                    _logger.LogWarning("The agreement {AgreementId} has a schedule whose work order type {TypeId} doesn't exist.", agreement.ItemId, schedule.TypeId);
 
                     break;
                 }
@@ -163,18 +138,18 @@ public sealed class ServiceAgreementScheduler
                 var (startUtc, endUtc) = DayOf(date, zone);
 
                 workOrder.Summary = S["{0} ({1})", string.IsNullOrWhiteSpace(schedule.Name) ? agreement.Name : schedule.Name, agreement.Number];
-                workOrder.CustomerId = agreement.CustomerId;
+                workOrder.CustomerId = terms.CustomerId;
                 workOrder.AccountId = agreement.AccountId;
-                workOrder.Contact = new WorkOrderContact { Name = agreement.Contact?.Name, Phone = agreement.Contact?.Phone, Email = agreement.Contact?.Email };
-                workOrder.ServiceAddress = agreement.ServiceAddress;
-                workOrder.AccessNotes = agreement.AccessNotes;
-                workOrder.AssetIds = [.. schedule.AssetIds.Count > 0 ? schedule.AssetIds : agreement.AssetIds];
+                workOrder.Contact = new WorkOrderContact { Name = terms.Contact?.Name, Phone = terms.Contact?.Phone, Email = terms.Contact?.Email };
+                workOrder.ServiceAddress = terms.ServiceAddress;
+                workOrder.AccessNotes = terms.AccessNotes;
+                workOrder.AssetIds = [.. schedule.AssetIds.Count > 0 ? schedule.AssetIds : terms.AssetIds];
                 workOrder.EarliestUtc = startUtc;
                 workOrder.LatestUtc = endUtc;
                 workOrder.Source = WorkOrderSource.Agreement;
                 workOrder.SourceId = key;
                 workOrder.AgreementId = agreement.ItemId;
-                workOrder.AgreedPrice = agreement.Pricing == AgreementPricing.Included ? 0m : agreement.PricePerVisit;
+                workOrder.AgreedPrice = terms.Pricing == AgreementPricing.Included ? 0m : terms.PricePerVisit;
 
                 var result = await _workOrders.CreateAsync(workOrder, Actor, cancellationToken);
 
@@ -184,14 +159,9 @@ public sealed class ServiceAgreementScheduler
                 }
                 else
                 {
-                    _logger.LogWarning("The service agreement {AgreementId} couldn't make the work order of {Date}: {Errors}", agreement.ItemId, date.ToString("R", CultureInfo.InvariantCulture), string.Join(" ", result.Errors));
+                    _logger.LogWarning("The agreement {AgreementId} couldn't make the work order of {Date}: {Errors}", agreement.ItemId, date.ToString("R", CultureInfo.InvariantCulture), string.Join(" ", result.Errors));
                 }
             }
-        }
-
-        if (changed)
-        {
-            await _agreements.UpdateAsync(agreement, null, cancellationToken);
         }
 
         return made;
@@ -206,7 +176,7 @@ public sealed class ServiceAgreementScheduler
     /// <param name="from">The first day.</param>
     /// <param name="to">The last day.</param>
     /// <returns>The days, in order.</returns>
-    public static IEnumerable<LocalDate> Occurrences(ServiceAgreement agreement, AgreementSchedule schedule, DateTimeZone zone, LocalDate from, LocalDate to)
+    public static IEnumerable<LocalDate> Occurrences(Agreement agreement, AgreementSchedule schedule, DateTimeZone zone, LocalDate from, LocalDate to)
     {
         ArgumentNullException.ThrowIfNull(agreement);
         ArgumentNullException.ThrowIfNull(schedule);
@@ -262,5 +232,5 @@ public sealed class ServiceAgreementScheduler
     /// <param name="timeZoneId">The time zone.</param>
     /// <returns>The time zone.</returns>
     public static DateTimeZone ZoneOf(string timeZoneId)
-        => string.IsNullOrEmpty(timeZoneId) ? DateTimeZone.Utc : DateTimeZoneProviders.Tzdb.GetZoneOrNull(timeZoneId) ?? DateTimeZone.Utc;
+        => AgreementPeriods.ZoneOf(timeZoneId);
 }

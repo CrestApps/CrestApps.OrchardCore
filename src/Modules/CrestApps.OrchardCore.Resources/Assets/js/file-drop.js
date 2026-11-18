@@ -1,0 +1,295 @@
+// A file picker that takes files dropped on it, or pasted, as well as picked: the files of each drop or pick add up
+// (as in the AI chat) instead of replacing the ones already chosen, and each chosen file is listed with a button that
+// removes it. The files stay in the form's own file input, so the form posts them as before.
+//
+// The FileDropInput shape renders the markup: a container with data-file-drop, the native input, a hidden drop zone
+// and an empty list. Without this script, or in a browser that can't set an input's files, the native input stays as
+// it is.
+(function () {
+    'use strict';
+
+    const initializedAttribute = 'data-file-drop-initialized';
+
+    const ready = (callback) => {
+        if (document.readyState !== 'loading') {
+            callback();
+
+            return;
+        }
+
+        document.addEventListener('DOMContentLoaded', callback, { once: true });
+    };
+
+    const extension = (name) => {
+        const dot = name.lastIndexOf('.');
+
+        return dot < 0 ? '' : name.slice(dot).toLowerCase();
+    };
+
+    // Whether a file matches an accept attribute: extensions (".pdf"), media types ("image/png") and families
+    // ("image/*"). An empty attribute accepts every file.
+    const accepts = (file, accept) => {
+        const patterns = (accept || '').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean);
+
+        if (patterns.length === 0) {
+            return true;
+        }
+
+        const type = (file.type || '').toLowerCase();
+        const fileExtension = extension(file.name || '');
+
+        return patterns.some((pattern) => {
+            if (pattern.startsWith('.')) {
+                return pattern === fileExtension;
+            }
+
+            if (pattern.endsWith('/*')) {
+                return type.startsWith(pattern.slice(0, -1));
+            }
+
+            return pattern === type;
+        });
+    };
+
+    const sameFile = (a, b) => a.name === b.name && a.size === b.size && a.lastModified === b.lastModified;
+
+    // The files chosen after a drop or a pick: the ones already chosen and the new ones the picker accepts, without a
+    // file twice; a picker that takes one file keeps the last.
+    const merge = (chosen, incoming, options) => {
+        const accepted = Array.from(incoming).filter((file) => accepts(file, options.accept));
+
+        if (!options.multiple) {
+            return accepted.length > 0 ? [accepted[accepted.length - 1]] : Array.from(chosen);
+        }
+
+        const files = Array.from(chosen);
+
+        accepted.forEach((file) => {
+            if (!files.some((existing) => sameFile(existing, file))) {
+                files.push(file);
+            }
+        });
+
+        return files;
+    };
+
+    const formatSize = (bytes) => {
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let size = bytes;
+        let unit = 0;
+
+        while (size >= 1024 && unit < units.length - 1) {
+            size /= 1024;
+            unit++;
+        }
+
+        const rounded = unit === 0 ? size : Math.round(size * 10) / 10;
+
+        return rounded + ' ' + units[unit];
+    };
+
+    const format = (text, value) => (text || '').replace('{0}', value);
+
+    const hasFiles = (event) => Array.from(event.dataTransfer?.types || []).includes('Files');
+
+    const canSetFiles = () => {
+        try {
+            return typeof DataTransfer !== 'undefined' && !!new DataTransfer().items;
+        } catch {
+            return false;
+        }
+    };
+
+    const initialize = (container) => {
+        if (container.hasAttribute(initializedAttribute)) {
+            return;
+        }
+
+        const input = container.querySelector('input[type="file"]');
+        const zone = container.querySelector('[data-file-drop-zone]');
+        const list = container.querySelector('[data-file-drop-list]');
+        const message = container.querySelector('[data-file-drop-message]');
+
+        if (!input || !zone || !list || !canSetFiles()) {
+            return;
+        }
+
+        container.setAttribute(initializedAttribute, 'true');
+
+        const options = { multiple: input.multiple, accept: input.accept };
+        const targetSelector = container.getAttribute('data-file-drop-target');
+        const target = (targetSelector && container.closest(targetSelector)) || container;
+        let chosen = [];
+        let depth = 0;
+
+        // The native input stays in the form (it posts the files) but the zone takes its place on the page.
+        input.classList.add('visually-hidden');
+        input.tabIndex = -1;
+        zone.classList.remove('d-none');
+
+        const showMessage = (text) => {
+            if (!message) {
+                return;
+            }
+
+            message.textContent = text || '';
+            message.classList.toggle('d-none', !text);
+        };
+
+        const render = () => {
+            list.replaceChildren(...chosen.map((file, index) => {
+                const item = document.createElement('li');
+                item.className = 'file-drop-item';
+
+                const icon = document.createElement('i');
+                icon.className = (file.type || '').startsWith('image/') ? 'fa-regular fa-image' : 'fa-regular fa-file';
+                icon.setAttribute('aria-hidden', 'true');
+
+                const name = document.createElement('span');
+                name.className = 'file-drop-name text-truncate';
+                name.textContent = file.name;
+                name.title = file.name;
+
+                const size = document.createElement('span');
+                size.className = 'file-drop-size';
+                size.textContent = formatSize(file.size);
+
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'btn btn-sm btn-link file-drop-remove';
+                remove.setAttribute('aria-label', format(container.getAttribute('data-remove-text'), file.name));
+                remove.title = remove.getAttribute('aria-label');
+                remove.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
+                remove.addEventListener('click', () => {
+                    chosen = chosen.filter((_, position) => position !== index);
+                    sync();
+                    zone.focus();
+                });
+
+                item.append(icon, name, size, remove);
+
+                return item;
+            }));
+
+            list.classList.toggle('d-none', chosen.length === 0);
+            container.classList.toggle('file-drop-has-files', chosen.length > 0);
+        };
+
+        const sync = () => {
+            const transfer = new DataTransfer();
+            chosen.forEach((file) => transfer.items.add(file));
+            input.files = transfer.files;
+            render();
+            input.dispatchEvent(new CustomEvent('filedrop:change', { bubbles: true, detail: { files: chosen.slice() } }));
+        };
+
+        const add = (files) => {
+            const incoming = Array.from(files || []);
+
+            if (incoming.length === 0) {
+                return;
+            }
+
+            const rejected = incoming.filter((file) => !accepts(file, options.accept));
+            chosen = merge(chosen, incoming, options);
+            showMessage(rejected.length > 0 ? format(container.getAttribute('data-rejected-text'), rejected.map((file) => file.name).join(', ')) : '');
+            sync();
+        };
+
+        const setActive = (active) => {
+            container.classList.toggle('file-drop-active', active);
+
+            if (target !== container) {
+                target.classList.toggle('file-drop-target-active', active);
+            }
+        };
+
+        // A pick through the native dialog replaces the input's files; they join the chosen ones and the input gets
+        // them all back (setting its files raises no change event). A cancelled dialog leaves the chosen files.
+        input.addEventListener('change', () => {
+            const picked = Array.from(input.files || []);
+
+            if (picked.length > 0) {
+                add(picked);
+            } else {
+                sync();
+            }
+        });
+
+        zone.addEventListener('click', () => input.click());
+        zone.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                input.click();
+            }
+        });
+
+        target.addEventListener('dragenter', (event) => {
+            if (!hasFiles(event)) {
+                return;
+            }
+
+            event.preventDefault();
+            depth++;
+            setActive(true);
+        });
+
+        target.addEventListener('dragover', (event) => {
+            if (!hasFiles(event)) {
+                return;
+            }
+
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'copy';
+        });
+
+        target.addEventListener('dragleave', (event) => {
+            if (!hasFiles(event)) {
+                return;
+            }
+
+            depth = Math.max(0, depth - 1);
+
+            if (depth === 0) {
+                setActive(false);
+            }
+        });
+
+        target.addEventListener('drop', (event) => {
+            if (!hasFiles(event)) {
+                return;
+            }
+
+            event.preventDefault();
+            depth = 0;
+            setActive(false);
+            add(event.dataTransfer.files);
+        });
+
+        // Files pasted into the area (a screenshot, say) are attached; pasted text is left to the text box.
+        target.addEventListener('paste', (event) => {
+            const files = Array.from(event.clipboardData?.files || []);
+
+            if (files.length > 0) {
+                event.preventDefault();
+                add(files);
+            }
+        });
+
+        input.form?.addEventListener('reset', () => {
+            chosen = [];
+            showMessage('');
+            render();
+        });
+
+        render();
+    };
+
+    const initializeAll = (root) => {
+        (root || document).querySelectorAll('[data-file-drop]').forEach(initialize);
+    };
+
+    globalThis.CrestAppsFileDrop = { accepts, merge, formatSize, initialize, initializeAll };
+
+    ready(() => initializeAll(document));
+})();

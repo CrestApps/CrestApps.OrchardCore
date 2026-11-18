@@ -111,7 +111,7 @@ Keep `.AddClass("commerce").Id("commerce")` on the node: the icon is attached to
 
 ### Storefront account
 
-Commerce Foundation serves the buyer's account at `account` (route `CommerceAccount`, signed-in users only) and adds **Account** to Orchard Core's user menu, on the site's pages and in the admin, beside **Profile** and **Security** (`CommerceAccountUserMenuDisplayDriver`, the `UserMenuItems__CommerceAccount` shape). The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with a `NamedNavigationProvider` created for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
+The buyer's account is the [Users](./users#my-account) module's **My Account** feature, which the Commerce feature depends on: it serves `account` (route `CommerceAccount`, signed-in users only) and adds **Account** to Orchard Core's user menu, on the site's pages and in the admin, beside **Profile** and **Security** (`AccountUserMenuDisplayDriver`, the `UserMenuItems__CommerceAccount` shape). Commerce Foundation, which Billing turns on without the store, depends on it too. The names didn't change when it moved out of Commerce, and `CommerceConstants.Account` keeps them beside `UsersConstants.Account`. The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with a `NamedNavigationProvider` created for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
 
 ```csharp
 public sealed class MyAccountMenu : INavigationProvider

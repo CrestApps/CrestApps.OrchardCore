@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketUpdatedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-pen" aria-hidden="true"></i>
+    @T["Ticket Updated"]
+</h4>
+<p>@T["Starts when a ticket's values or fields change."]</p>

@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.TimeTracker.Models;
 
 namespace CrestApps.OrchardCore.TimeTracker.Services;
@@ -48,6 +49,19 @@ public interface ITimeTrackerService
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The outcome.</returns>
     Task<TimeTrackerResult> AddAsync(TimeEntry entry, string actor, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records an entry that has already ended over the person's other time kept here, such as work logged on a record
+    /// after the fact: the time it covers is cut around it (an entry it falls inside becomes two), so the person keeps
+    /// one entry at a time and their total doesn't change. Time from the entry's own source and time another clock
+    /// keeps are never cut; an entry overlapping them is refused. Each cut entry keeps what it was and the reason.
+    /// </summary>
+    /// <param name="entry">The entry, with its stage, start and end.</param>
+    /// <param name="actor">Who records it.</param>
+    /// <param name="reason">Why, kept with the entries it cuts.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The outcome, with the new entry.</returns>
+    Task<TimeTrackerResult> InsertAsync(TimeEntry entry, string actor, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Changes an entry's stage, times or note; the change and the reason are kept with it.
@@ -143,6 +157,24 @@ public interface IExternalTimeClock
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The clock, or <see langword="null"/> when it isn't this one.</returns>
     Task<ExternalTimeClockInfo> FindByIdAsync(string id, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Says what record new time counts against, such as the support agreement of the ticket it was logged on. The time
+/// tracker asks while it creates an entry that has a source, inside the same lock and save, and never again: time
+/// already logged stays where it was charged when the source record changes later.
+/// </summary>
+public interface ITimeEntryChargeResolver
+{
+    /// <summary>
+    /// Finds what an entry counts against.
+    /// </summary>
+    /// <param name="entry">The entry being created, with its <see cref="TimeEntry.Source"/> and
+    /// <see cref="TimeEntry.SourceRef"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The record, or an empty reference when this resolver doesn't know the entry's source or it counts
+    /// against nothing.</returns>
+    Task<RecordRef> ResolveAsync(TimeEntry entry, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Migrations;
 using CrestApps.OrchardCore.Orders.Services;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
@@ -47,6 +48,7 @@ public sealed class OrderRefundConcurrencyTests : IAsyncLifetime
 
     private readonly string _databasePath = Path.Combine(Path.GetTempPath(), $"order-refund-{Guid.NewGuid():N}.db");
     private readonly IDistributedLock _locks = new LocalLock(NullLogger<LocalLock>.Instance);
+    private readonly InMemoryTimelineService _timeline = new();
     private readonly GiftCardTenderProvider _giftCards = new();
     private IStore _store;
     private int _credited;
@@ -65,7 +67,7 @@ public sealed class OrderRefundConcurrencyTests : IAsyncLifetime
         await using (var session = _store.CreateSession())
         {
             var transaction = await session.BeginTransactionAsync(cancellationToken);
-            await new OrderMigrations { SchemaBuilder = new SchemaBuilder(_store.Configuration, transaction) }.CreateAsync();
+            await new OrderMigrations(steps: null) { SchemaBuilder = new SchemaBuilder(_store.Configuration, transaction) }.CreateAsync();
             await new CheckoutTenderMigrations { SchemaBuilder = new SchemaBuilder(_store.Configuration, transaction) }.CreateAsync();
             await transaction.CommitAsync(cancellationToken);
         }
@@ -169,7 +171,7 @@ public sealed class OrderRefundConcurrencyTests : IAsyncLifetime
             var clock = Mock.Of<IClock>(value => value.UtcNow == _now);
 
             // A handler of the refund that reads the database with the request's token, as the booking's handler does.
-            var orderService = new OrderService(orders, [new TokenObservingHandler()], new InMemoryNumberSequence(), clock, NullLogger<OrderService>.Instance);
+            var orderService = new OrderService(orders, [new TokenObservingHandler()], new InMemoryNumberSequence(), _timeline, clock, NullLogger<OrderService>.Instance);
             var order = await orders.FindByIdAsync("order-1", cancellationToken);
 
             // Act: the request is aborted just after the credit was given.
@@ -221,8 +223,10 @@ public sealed class OrderRefundConcurrencyTests : IAsyncLifetime
         var order = await new OrderStore(check).FindByIdAsync("order-1", cancellationToken);
 
         Assert.Equal(236.50m, Assert.Single(order.Refunds).Amount);
-        Assert.Contains(order.Notes, note => note.Text.StartsWith("Refunded", StringComparison.Ordinal));
-        Assert.Contains(order.Notes, note => note.Text.Contains("canceled", StringComparison.Ordinal));
+        var notes = _timeline.Of(new RecordRef(OrderConstants.RecordKind, "order-1"));
+
+        Assert.Contains(notes, note => note.Body.StartsWith("Refunded", StringComparison.Ordinal));
+        Assert.Contains(notes, note => note.Body.Contains("canceled", StringComparison.Ordinal));
     }
 
     // The booking service over the real order refund: the order's refund operation, and a payment refund that, like the
@@ -231,7 +235,7 @@ public sealed class OrderRefundConcurrencyTests : IAsyncLifetime
     {
         var orders = new OrderStore(session);
         var clock = Mock.Of<IClock>(value => value.UtcNow == _now);
-        var orderService = new OrderService(orders, [], new InMemoryNumberSequence(), clock, NullLogger<OrderService>.Instance);
+        var orderService = new OrderService(orders, [], new InMemoryNumberSequence(), _timeline, clock, NullLogger<OrderService>.Instance);
         var scope = new OrderOperationScope();
 
         var sessions = new Mock<ICheckoutSessionStore>();
@@ -341,7 +345,7 @@ public sealed class OrderRefundConcurrencyTests : IAsyncLifetime
 
         return new OrderOperationsService(
             orders,
-            orderService ?? new OrderService(orders, [], new InMemoryNumberSequence(), clock, NullLogger<OrderService>.Instance),
+            orderService ?? new OrderService(orders, [], new InMemoryNumberSequence(), _timeline, clock, NullLogger<OrderService>.Instance),
             scope ?? new OrderOperationScope(),
             confirmationSender: null,
             Mock.Of<ICheckoutEngine>(),

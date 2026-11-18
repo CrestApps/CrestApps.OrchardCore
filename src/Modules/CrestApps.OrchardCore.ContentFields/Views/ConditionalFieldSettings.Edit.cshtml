@@ -1,0 +1,138 @@
+@using CrestApps.OrchardCore.Conditions
+@model CrestApps.OrchardCore.ContentFields.ViewModels.ConditionalFieldSettingsViewModel
+@{
+    var operators = new (ConditionOperator Value, string Text)[]
+    {
+        (ConditionOperator.Is, T["is"].Value),
+        (ConditionOperator.IsNot, T["is not"].Value),
+        (ConditionOperator.IsOneOf, T["is one of"].Value),
+        (ConditionOperator.IsNoneOf, T["is none of"].Value),
+        (ConditionOperator.IsOrUnder, T["is or is under"].Value),
+        (ConditionOperator.IsNotEmpty, T["has an answer"].Value),
+        (ConditionOperator.IsEmpty, T["has no answer"].Value),
+        (ConditionOperator.Contains, T["contains"].Value),
+        (ConditionOperator.GreaterThan, T["is more than"].Value),
+        (ConditionOperator.LessThan, T["is less than"].Value),
+    };
+    var tableId = Html.IdFor(m => m.Conditions) + "_Rules";
+}
+
+<div class="mb-3">
+    <label class="form-label">@T["Show this field when"]</label>
+    <span class="hint d-block">@T["Leave the conditions empty to always show the field. A field that depends on a hidden field is hidden too. When the form is sent, what a hidden field holds is dropped and its required setting doesn't count."]</span>
+
+    @if (Model.MissingSources.Count > 0)
+    {
+        <div class="alert alert-warning mt-2" role="alert">
+            @T["A condition reads {0}, which this content type no longer has. The condition is ignored until you change or remove it.", string.Join(", ", Model.MissingSources)]
+        </div>
+    }
+
+    @if (Model.Sources.Count == 0 && Model.MissingSources.Count == 0)
+    {
+        <p class="text-body-secondary mt-2 mb-0">@T["This content type has no other field or value a condition can read."]</p>
+    }
+    else
+    {
+        <div class="mt-2 mb-2" style="max-width: 20em;">
+            <select asp-for="Match" class="form-select form-select-sm">
+                <option value="@ConditionMatch.All">@T["All of these conditions are met"]</option>
+                <option value="@ConditionMatch.Any">@T["Any of these conditions is met"]</option>
+            </select>
+        </div>
+
+        <table class="table table-sm align-top mb-0" id="@tableId">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Field or value"]</th>
+                    <th scope="col">@T["Condition"]</th>
+                    <th scope="col">@T["Value"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Model.Conditions.Count; i++)
+                {
+                    var row = Model.Conditions[i];
+                    var known = Model.Sources.Any(source => source.Name == row.Source);
+
+                    <tr data-condition-row>
+                        <td>
+                            <select asp-for="Conditions[i].Source" class="form-select form-select-sm" data-condition-source>
+                                <option value="">@T["(none)"]</option>
+                                @foreach (var source in Model.Sources)
+                                {
+                                    <option value="@source.Name" selected="@(source.Name == row.Source)">@source.DisplayName</option>
+                                }
+                                @if (!known && !string.IsNullOrEmpty(row.Source))
+                                {
+                                    <option value="@row.Source" selected>@T["{0} (removed)", row.Source]</option>
+                                }
+                            </select>
+                        </td>
+                        <td>
+                            <select asp-for="Conditions[i].Operator" class="form-select form-select-sm">
+                                @foreach (var (value, text) in operators)
+                                {
+                                    <option value="@value" selected="@(value == row.Operator)">@text</option>
+                                }
+                            </select>
+                        </td>
+                        <td>
+                            @foreach (var source in Model.Sources.Where(source => source.Options.Count > 0))
+                            {
+                                var active = source.Name == row.Source;
+
+                                <select name="@Html.NameFor(m => m.Conditions[i].Values)" multiple class="form-select form-select-sm" size="4" data-condition-values="@source.Name" hidden="@(!active)" disabled="@(!active)">
+                                    @foreach (var option in source.Options)
+                                    {
+                                        <option value="@option.Value" selected="@(active && row.Values.Contains(option.Value))">@(new string(' ', option.Level * 3))@option.Text</option>
+                                    }
+                                </select>
+                            }
+                            @{
+                                var typed = !Model.Sources.Any(source => source.Name == row.Source && source.Options.Count > 0);
+                            }
+                            <textarea asp-for="Conditions[i].Text" rows="1" class="form-control form-control-sm" data-condition-text hidden="@(!typed)" disabled="@(!typed)" placeholder="@T["One value per line"]"></textarea>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <span class="hint">@T["Choose several values with Ctrl or Cmd. For a list of choices, the values are the choices' stored values."]</span>
+
+        <script at="Foot">
+            (function () {
+                var table = document.getElementById('@tableId');
+
+                if (!table) {
+                    return;
+                }
+
+                // Shows the value list of the chosen source, or the text box for a source without a list.
+                function sync(row) {
+                    var source = row.querySelector('[data-condition-source]').value;
+                    var hasList = false;
+
+                    row.querySelectorAll('[data-condition-values]').forEach(function (list) {
+                        var active = list.getAttribute('data-condition-values') === source;
+
+                        list.hidden = !active;
+                        list.disabled = !active;
+                        hasList = hasList || active;
+                    });
+
+                    var text = row.querySelector('[data-condition-text]');
+
+                    text.hidden = hasList;
+                    text.disabled = hasList;
+                }
+
+                table.querySelectorAll('[data-condition-row]').forEach(function (row) {
+                    row.querySelector('[data-condition-source]').addEventListener('change', function () {
+                        sync(row);
+                    });
+                });
+            })();
+        </script>
+    }
+</div>

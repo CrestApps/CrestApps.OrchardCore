@@ -8,7 +8,7 @@ user_manual: user-manual/accounts
 
 | | |
 | --- | --- |
-| **Features** | Accounts (`CrestApps.OrchardCore.Accounts`), Account Members (`CrestApps.OrchardCore.Accounts.Members`), Account Locations (`CrestApps.OrchardCore.Accounts.Locations`) |
+| **Features** | Accounts (`CrestApps.OrchardCore.Accounts`), Account Members (`CrestApps.OrchardCore.Accounts.Members`), Account Locations (`CrestApps.OrchardCore.Accounts.Locations`), Account E-mail Domains (`CrestApps.OrchardCore.Accounts.EmailDomains`) |
 | **Core** | `CrestApps.OrchardCore.Accounts.Core` |
 | **Abstractions** | `CrestApps.OrchardCore.Accounts.Abstractions` |
 | **Category** | Content Management |
@@ -228,6 +228,10 @@ The Accounts feature registers `AccountBillingProfileSource`, the first source o
 address. It reads the published account, or its latest version while it was never published. Modules that keep more
 about an account add a source of their own after it: [Accounts B2B](accounts-b2b.md#billing-profile) adds the tax
 number, the billing e-mail and the terms.
+
+## Account e-mail domains
+
+The **Account E-mail Domains** feature keeps the domains an account's people write from. Its migration defines `AccountEmailDomainsPart` (`Domains`, lower case, without the `@`) and gives it to the `Account` type; the editor takes one domain per line. Published accounts' domains are indexed in `AccountEmailDomainIndex`, and `IAccountEmailDomains.FindAccountIdAsync(email)` answers the one account that lists the address's domain, or nothing when none or several do. [Tickets](./tickets) files a request without an account under the account of its requester's e-mail this way. An account can't list a public mail provider's domain (gmail.com, outlook.com and some forty others in `AccountEmailDomainsOptions.BuiltInPublicDomains`; a tenant adds its own under `CrestApps:Accounts:EmailDomains:PublicDomains` in its configuration) or one another account already lists (`IAccountEmailDomains.FindClaimsAsync`); `AccountEmailDomainsPartHandler` refuses both when the account is saved in the editor or imported.
 
 ## Removing an account
 

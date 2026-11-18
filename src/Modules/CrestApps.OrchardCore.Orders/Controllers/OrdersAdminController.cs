@@ -293,27 +293,6 @@ public sealed class OrdersAdminController : Controller
     }
 
     [HttpPost]
-    [Admin("orders/{orderId}/notes", "OrdersAddNote")]
-    public async Task<IActionResult> AddNote(string orderId, string text, [FromServices] IOrderService orderService)
-    {
-        if (await FindManagedAsync(orderId) is not { } order)
-        {
-            return NotFound();
-        }
-
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            await _notifier.WarningAsync(H["Write the note first."]);
-        }
-        else
-        {
-            await orderService.AddNoteAsync(order, text, OrderNoteKind.Note, User.Identity?.Name, HttpContext.RequestAborted);
-        }
-
-        return RedirectToAction(nameof(Detail), new { orderId });
-    }
-
-    [HttpPost]
     [Admin("orders/{orderId}/refund", "OrdersRefund")]
     public async Task<IActionResult> Refund(string orderId, OrderRefundInputModel model, [FromServices] OrderOperationsService operations)
     {

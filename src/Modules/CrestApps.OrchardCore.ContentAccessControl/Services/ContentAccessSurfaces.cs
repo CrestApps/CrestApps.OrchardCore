@@ -36,7 +36,7 @@ namespace CrestApps.OrchardCore.ContentAccessControl.Sitemaps
 
         /// <inheritdoc/>
         public async Task<bool> ApplyExtendedMetadataAsync(SitemapBuilderContext context, ContentItemsQueryContext queryContext, ContentItem contentItem, XElement url)
-            => (await ContentAccessRestrictions.GetRoleNamesAsync(contentItem, _contentDefinitionManager)).Count == 0;
+            => (await ContentAccessRestriction.GetRoleNamesAsync(contentItem, _contentDefinitionManager)).Count == 0;
     }
 }
 
@@ -283,7 +283,7 @@ namespace CrestApps.OrchardCore.ContentAccessControl.Indexing
                 return;
             }
 
-            foreach (var roleName in await ContentAccessRestrictions.GetRoleNamesAsync(contentItem, _contentDefinitionManager))
+            foreach (var roleName in await ContentAccessRestriction.GetRoleNamesAsync(contentItem, _contentDefinitionManager))
             {
                 context.DocumentIndex.Set(RoleNamesField, roleName, DocumentIndexOptions.Keyword | DocumentIndexOptions.Store);
             }

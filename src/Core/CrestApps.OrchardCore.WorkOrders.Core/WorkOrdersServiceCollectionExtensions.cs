@@ -1,7 +1,10 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.ServiceLevels;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
+using CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -21,15 +24,18 @@ public static class WorkOrdersServiceCollectionExtensions
         services.TryAddScoped<WorkOrderStore>();
         services.TryAddScoped<ICatalog<WorkOrderType>, WorkOrderSettingStore<WorkOrderType, WorkOrderTypeIndex>>();
         services.TryAddScoped<ICatalog<ChecklistTemplate>, WorkOrderSettingStore<ChecklistTemplate, ChecklistTemplateIndex>>();
-        services.TryAddScoped<ICatalog<ServiceLevelPolicy>, WorkOrderSettingStore<ServiceLevelPolicy, ServiceLevelPolicyIndex>>();
         services.TryAddScoped<ICatalog<WorkOrderSubStatus>, WorkOrderSettingStore<WorkOrderSubStatus, WorkOrderSubStatusIndex>>();
         services.TryAddScoped(typeof(WorkOrderSettingManager<>));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<WorkOrderType>, WorkOrderTypeHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ChecklistTemplate>, ChecklistTemplateHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ServiceLevelPolicy>, ServiceLevelPolicyHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<WorkOrderSubStatus>, WorkOrderSubStatusHandler>());
-        services.TryAddScoped<SlaClock>();
-        services.TryAddScoped<SlaMonitor>();
+        services.TryAddScoped<WorkOrderServiceLevels>();
+        services.TryAddScoped<WorkOrderServiceLevelUpgrade>();
+        services.TryAddScoped<WorkOrderNotesUpgrade>();
+        services.AddResumableStep<WorkOrderServiceLevelTimersStep>();
+        services.AddResumableStep<WorkOrderNotesStep>();
+        services.AddServiceLevelScope<WorkOrderServiceLevelScope>();
+        services.AddServiceLevelObserver<WorkOrderServiceLevelObserver>();
         services.AddNumberSequence();
         services.TryAddScoped<WorkOrderService>();
 
@@ -43,10 +49,11 @@ public static class WorkOrdersServiceCollectionExtensions
     /// <returns>The services.</returns>
     public static IServiceCollection AddServiceAgreementsCore(this IServiceCollection services)
     {
-        services.TryAddScoped<ServiceAgreementStore>();
-        services.TryAddScoped<ServiceAgreementManager>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ServiceAgreement>, ServiceAgreementHandler>());
+        services.AddAgreementsCore();
         services.TryAddScoped<ServiceAgreementScheduler>();
+        services.TryAddScoped<CrestApps.OrchardCore.WorkOrders.Core.Legacy.ServiceAgreementUpgrade>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<CrestApps.OrchardCore.Agreements.Services.IAgreementTermsValidator, WorkOrderAgreementTermsValidator>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<CrestApps.OrchardCore.Agreements.Services.IAgreementUsageProvider, WorkOrderAgreementUsageProvider>());
 
         return services;
     }
