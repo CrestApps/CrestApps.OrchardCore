@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Agent.Profiles;
@@ -97,7 +98,7 @@ internal static class AIConfigurationGuard
 
         if (apiKeyStore is not null && !string.IsNullOrEmpty(profile.ItemId))
         {
-            var now = services.GetService<TimeProvider>()?.GetUtcNow().UtcDateTime ?? DateTime.UtcNow;
+            var now = services.GetService<IClock>()?.UtcNow ?? (services.GetService<TimeProvider>() ?? TimeProvider.System).GetUtcNow().UtcDateTime;
             var keys = await apiKeyStore.GetAllAsync(cancellationToken);
 
             if (keys.Any(key => key.Kind == AIApiKeyKind.Browser &&

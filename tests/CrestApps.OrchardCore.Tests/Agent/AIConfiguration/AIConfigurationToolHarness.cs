@@ -380,7 +380,16 @@ internal sealed class AIConfigurationToolHarness
         var builder = new Mock<IAICompletionContextBuilder>();
 
         builder.Setup(b => b.BuildAsync(It.IsAny<object>(), It.IsAny<Action<AICompletionContext>>(), It.IsAny<CancellationToken>()))
-            .Returns(() => ValueTask.FromResult(new AICompletionContext()));
+            .Returns(() =>
+            {
+                // The data source handler writes the built profile's data source into the running turn's context.
+                if (CrestApps.Core.AI.Orchestration.AIInvocationScope.Current is { } invocation)
+                {
+                    invocation.DataSourceId = "tested-profile-source";
+                }
+
+                return ValueTask.FromResult(new AICompletionContext());
+            });
 
         return builder.Object;
     }

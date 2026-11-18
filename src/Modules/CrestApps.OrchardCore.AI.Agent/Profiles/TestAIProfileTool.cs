@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Extensions;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
@@ -101,6 +102,11 @@ public sealed class TestAIProfileTool : AIFunction
             return $"Nothing was sent: the message is longer than {MaxMessageLength} characters.";
         }
 
+        // Building the tested profile's context writes its data source into the running turn's context; the running
+        // assistant keeps its own once the test is done.
+        var invocation = AIInvocationScope.Current;
+        var runningDataSourceId = invocation?.DataSourceId;
+
         try
         {
             var completionContextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
@@ -141,6 +147,13 @@ public sealed class TestAIProfileTool : AIFunction
             services.GetService<ILogger<TestAIProfileTool>>()?.LogError(exception, "Testing the AI profile '{ProfileId}' failed.", profile.ItemId);
 
             return $"The test message could not be sent to the profile '{AIConfigurationGuard.GetTitle(profile)}': the model call failed. Check the profile's deployment on its page: {AIProfileToolSupport.GetProfileEditPath(services, profile.ItemId)}";
+        }
+        finally
+        {
+            if (invocation is not null)
+            {
+                invocation.DataSourceId = runningDataSourceId;
+            }
         }
     }
 }

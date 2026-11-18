@@ -265,6 +265,26 @@ public sealed class AIConfigurationToolsTests
     }
 
     [Fact]
+    public async Task TestAIProfile_InsideATurn_LeavesTheRunningAssistantsDataSource()
+    {
+        // Arrange
+        var harness = new AIConfigurationToolHarness();
+        harness.AddProfile("support", "support");
+        var running = harness.AddProfile("running", "running");
+
+        using var services = harness.Build();
+        using var turn = AIConfigurationToolHarness.BeginTurn(running);
+        CrestApps.Core.AI.Orchestration.AIInvocationScope.Current.DataSourceId = "running-source";
+
+        // Act
+        await AgentToolTestContext.InvokeAsync(new TestAIProfileTool(), services, new() { ["profileId"] = "support", ["message"] = "Hi" });
+
+        // Assert
+        Assert.Single(harness.Completions);
+        Assert.Equal("running-source", CrestApps.Core.AI.Orchestration.AIInvocationScope.Current.DataSourceId);
+    }
+
+    [Fact]
     public async Task TestAIProfile_RefusesAnUnknownProfile()
     {
         // Arrange
