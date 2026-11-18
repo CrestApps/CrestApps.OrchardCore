@@ -56,6 +56,8 @@ Each change is kept in the history and, with Audit Trail on, in the Audit Trail.
 
 Learners get a notice when they are enrolled, a few days before a course is due, and when it is overdue. Each learner can switch each notice off in their notification preferences.
 
+The notices reach learners by e-mail when your site sends notifications by e-mail. The **Notification Center** is in the admin, which learners do not open, so ask your administrator to turn on e-mail notifications if your learners should read them.
+
 ## Reports
 
 Go to **Reports**:

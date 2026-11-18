@@ -28,7 +28,7 @@ It works with other features when they are on:
 | Workflows | Eight events and six tasks (see below). |
 | Data Pipelines | The `Learning` data source and the **Enroll learners** destination step. |
 | Reports | The Course completion, Learner transcript and Inactive learners reports. |
-| Notifications | Enrolled, due soon and overdue notices, each a type a person can switch off. |
+| Notifications | Enrolled, due soon and overdue notices, each a type a person can switch off. A notice reaches a learner through the delivery methods the Notifications module sends, such as e-mail with **Email Notifications** on. The notification center is an admin page, and Learning does not give learners the admin (the **Learner** role has no **Access admin panel**), so on a site without a delivery method a plain learner does not see the notices. |
 | Audit Trail | Changes people make to enrollments by hand, with their reason, and every export of learner records. |
 | Webhooks | `learning.enrollment.created` and `learning.course.completed`. |
 | Staff | The Instructor capability, a **Learning** section on the staff profile and **My learning** on a staff member's page. |
