@@ -64,6 +64,13 @@ public sealed class XapiStatementRecord : CatalogItem
     /// <summary>Gets or sets the voiding statement.</summary>
     public string VoidedBy { get; set; }
 
+    /// <summary>
+    /// Gets or sets, for a voiding statement, what its sender could void, so a void that arrives before its target is
+    /// applied only to a target its sender could have voided; <see langword="null"/> for any other statement, and for a
+    /// voiding statement stored before the LRS kept it (such a void reaches only a statement of its own authority).
+    /// </summary>
+    public XapiVoidingRights VoidingRights { get; set; }
+
     /// <summary>Gets or sets the attachments whose content the LRS keeps.</summary>
     public IList<XapiAttachmentFile> Attachments { get; set; } = [];
 
@@ -73,6 +80,23 @@ public sealed class XapiStatementRecord : CatalogItem
     /// <summary>Gets or sets the keys the queries filter on: the statement's own and those of the statement it refers
     /// to, through any number of statement references.</summary>
     public XapiStatementKeys Keys { get; set; } = new();
+}
+
+/// <summary>
+/// What the sender of a voiding statement could void: any statement (a client that reads every statement, or the LRS
+/// writing for a module), a statement of the same authority, or, for a launch, a statement of the same authority, actor
+/// and registration.
+/// </summary>
+public sealed class XapiVoidingRights
+{
+    /// <summary>Gets or sets whether the sender reads, and so may void, every statement.</summary>
+    public bool ReadsAll { get; set; }
+
+    /// <summary>Gets or sets the actor key of the launch that sent it; <see langword="null"/> when no launch did.</summary>
+    public string LaunchActorKey { get; set; }
+
+    /// <summary>Gets or sets the registration of the launch that sent it.</summary>
+    public string LaunchRegistration { get; set; }
 }
 
 /// <summary>

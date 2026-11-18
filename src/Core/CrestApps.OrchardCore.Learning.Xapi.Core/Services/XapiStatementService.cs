@@ -101,7 +101,7 @@ public sealed class XapiStatementService
 
         Func<Task> pipeline = async () =>
         {
-            var stored = await StoreAsync(prepared, credential.Authority, credential.AuthorityKey, credential.ClientId, cancellationToken);
+            var stored = await StoreAsync(prepared, credential.Authority, credential.AuthorityKey, credential.ClientId, RightsOf(credential), cancellationToken);
 
             if (stored.Error is not null)
             {
@@ -164,7 +164,8 @@ public sealed class XapiStatementService
             return prepared.Error;
         }
 
-        var stored = await StoreAsync(prepared, authority, authorityKey, clientId: null, cancellationToken);
+        // The LRS writing for a module may void any statement, as the prepare step lets it.
+        var stored = await StoreAsync(prepared, authority, authorityKey, clientId: null, new XapiVoidingRights { ReadsAll = true }, cancellationToken);
 
         if (stored.Error is not null)
         {
@@ -551,19 +552,32 @@ public sealed class XapiStatementService
         };
     }
 
-    // A client that reads every statement may void any; any other client only a statement it stored itself (its own
-    // read scope); a launch only a statement of its own actor and registration that a launch stored, so never one the
-    // LMS stored with its own authority, such as satisfied or launched.
     private static bool MayVoid(XapiCredential credential, XapiStatementRecord target)
+        => MayVoid(RightsOf(credential), credential.AuthorityKey, target);
+
+    // What a credential may void, kept on the voiding statements it stores.
+    private static XapiVoidingRights RightsOf(XapiCredential credential)
+        => credential.Launch is { } launch
+            ? new XapiVoidingRights { LaunchActorKey = launch.ActorKey, LaunchRegistration = launch.Registration }
+            : new XapiVoidingRights { ReadsAll = credential.CanReadAllStatements };
+
+    // One rule for a void checked when it arrives and for a void that arrived before its target (review round 10, item
+    // 2): a sender that reads every statement may void any; any other client only a statement it stored itself (its own
+    // read scope); a launch only a statement of its own actor and registration that a launch stored, so never one the
+    // LMS stored with its own authority, such as satisfied or launched. A void stored before its rights were kept reaches
+    // only a statement of its own authority.
+    private static bool MayVoid(XapiVoidingRights rights, string authorityKey, XapiStatementRecord target)
     {
-        if (credential.Launch is { } launch)
+        var sameAuthority = string.Equals(target.AuthorityKey, authorityKey, StringComparison.Ordinal);
+
+        if (rights?.LaunchActorKey is { } actorKey)
         {
-            return string.Equals(target.AuthorityKey, credential.AuthorityKey, StringComparison.Ordinal) &&
-                string.Equals(target.ActorKey, launch.ActorKey, StringComparison.Ordinal) &&
-                string.Equals(target.Registration, launch.Registration, StringComparison.OrdinalIgnoreCase);
+            return sameAuthority &&
+                string.Equals(target.ActorKey, actorKey, StringComparison.Ordinal) &&
+                string.Equals(target.Registration, rights.LaunchRegistration, StringComparison.OrdinalIgnoreCase);
         }
 
-        return credential.CanReadAllStatements || string.Equals(target.AuthorityKey, credential.AuthorityKey, StringComparison.Ordinal);
+        return rights?.ReadsAll == true || sameAuthority;
     }
 
     private static (int Status, string Message)? CheckAttachments(List<JsonObject> statements, IReadOnlyList<XapiAttachmentContent> parts)
@@ -648,7 +662,7 @@ public sealed class XapiStatementService
         }
     }
 
-    private async Task<StoreResult> StoreAsync(PreparedWrite prepared, JsonObject authority, string authorityKey, string clientId, CancellationToken cancellationToken)
+    private async Task<StoreResult> StoreAsync(PreparedWrite prepared, JsonObject authority, string authorityKey, string clientId, XapiVoidingRights voidingRights, CancellationToken cancellationToken)
     {
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockKey, _lockTimeout, _lockExpiration);
 
@@ -701,6 +715,11 @@ public sealed class XapiStatementService
 
                 record.Sequence = ++sequence;
 
+                if (record.IsVoiding)
+                {
+                    record.VoidingRights = voidingRights;
+                }
+
                 if (record.TargetStatementId is not null)
                 {
                     var target = batch.GetValueOrDefault(record.TargetStatementId) ?? await _store.FindByStatementIdAsync(record.TargetStatementId, cancellationToken);
@@ -719,9 +738,10 @@ public sealed class XapiStatementService
                     }
                 }
 
-                // A voiding statement that arrived before this one voids it now.
-                var voiding = (await _store.ListReferringAsync(id, cancellationToken)).FirstOrDefault(referring => referring.IsVoiding)
-                    ?? batch.Values.FirstOrDefault(other => other.IsVoiding && other.TargetStatementId == id);
+                // A voiding statement that arrived before this one voids it now, when its sender could have voided it
+                // (review round 10, item 2); any other is ignored.
+                var voiding = (await _store.ListReferringAsync(id, cancellationToken)).FirstOrDefault(referring => referring.IsVoiding && MayVoid(referring.VoidingRights, referring.AuthorityKey, record))
+                    ?? batch.Values.FirstOrDefault(other => other.IsVoiding && other.TargetStatementId == id && MayVoid(other.VoidingRights, other.AuthorityKey, record));
 
                 if (voiding is not null && !record.IsVoiding)
                 {

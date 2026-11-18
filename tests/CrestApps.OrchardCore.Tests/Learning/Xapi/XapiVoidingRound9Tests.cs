@@ -53,6 +53,44 @@ public sealed class XapiVoidingRound9Tests
         Assert.Equal(200, (await lrs.GetAsync(new Dictionary<string, string> { ["voidedStatementId"] = launchedId })).Status);
     }
 
+    [Fact]
+    public async Task Round10_2_AnEarlyVoid_AppliesToALaterTarget_OnlyWhenItsSenderCouldHaveVoidedIt()
+    {
+        // Arrange: a launch, a client that writes only, and the LMS that reads every statement.
+        await using var lrs = await XapiTestHarness.CreateAsync();
+        var lms = XapiTestHarness.Client("lms", write: true, readAll: true);
+        var writer = XapiTestHarness.Client("writer", write: true);
+        var launch = new XapiCredential
+        {
+            Launch = new XapiLaunchScope { Registration = XapiSamples.Registration, ActorKey = "mbox:mailto:learner@example.com", ActivityId = XapiSamples.Activity },
+            AuthorityKey = "launch:cmi5",
+            Authority = XapiSamples.Agent("mailto:lms@example.com"),
+        };
+
+        var lmsTarget = XapiSamples.NewId();
+        var writerTarget = XapiSamples.NewId();
+        var ownTarget = XapiSamples.NewId();
+        var readAllTarget = XapiSamples.NewId();
+
+        // Act: each void arrives before its target, whose id the sender predicted.
+        Assert.Equal(200, (await lrs.PostAsync(LaunchVoiding(lmsTarget), launch)).Status);
+        Assert.Equal(200, (await lrs.PostAsync(XapiSamples.Voiding(writerTarget), writer)).Status);
+        Assert.Equal(200, (await lrs.PostAsync(LaunchVoiding(ownTarget), launch)).Status);
+        Assert.Equal(200, (await lrs.PostAsync(XapiSamples.Voiding(readAllTarget), lms)).Status);
+
+        Assert.Equal(204, (await lrs.PutAsync(lmsTarget, InRegistration(XapiSamples.Simple(mbox: "mailto:learner@example.com")), lms)).Status);
+        Assert.Equal(204, (await lrs.PutAsync(writerTarget, XapiSamples.Simple(), lms)).Status);
+        Assert.Equal(204, (await lrs.PutAsync(ownTarget, InRegistration(XapiSamples.Simple(mbox: "mailto:learner@example.com")), launch)).Status);
+        Assert.Equal(204, (await lrs.PutAsync(readAllTarget, XapiSamples.Simple(), writer)).Status);
+
+        // Assert: the LMS's statement and another authority's stay valid; the launch's own and any statement voided by
+        // a client that reads all are voided.
+        Assert.Equal(200, (await lrs.GetAsync(new Dictionary<string, string> { ["statementId"] = lmsTarget })).Status);
+        Assert.Equal(200, (await lrs.GetAsync(new Dictionary<string, string> { ["statementId"] = writerTarget })).Status);
+        Assert.Equal(200, (await lrs.GetAsync(new Dictionary<string, string> { ["voidedStatementId"] = ownTarget })).Status);
+        Assert.Equal(200, (await lrs.GetAsync(new Dictionary<string, string> { ["voidedStatementId"] = readAllTarget })).Status);
+    }
+
     private static JsonObject InRegistration(JsonObject statement)
     {
         statement["context"] = new JsonObject { ["registration"] = XapiSamples.Registration };
