@@ -1,0 +1,57 @@
+@model TicketStatusViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Category" class="ocat-label">@T["Category"]</label>
+    <div class="ocat-end">
+        <select asp-for="Category" class="form-select">
+            <option value="@TicketStatusCategory.New">@T["New: nobody has worked on it yet"]</option>
+            <option value="@TicketStatusCategory.Open">@T["Open: an agent is working on it"]</option>
+            <option value="@TicketStatusCategory.Pending">@T["Pending: waiting for the requester"]</option>
+            <option value="@TicketStatusCategory.OnHold">@T["On hold: waiting for someone else"]</option>
+            <option value="@TicketStatusCategory.Solved">@T["Solved: answered, reopens on a reply"]</option>
+            <option value="@TicketStatusCategory.Closed">@T["Closed: finished and read-only"]</option>
+        </select>
+        <span class="hint">@T["The category is what the life cycle, service levels and reports go by, whatever the status is called."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="CustomerLabel" class="ocat-label">@T["What customers see"]</label>
+    <div class="ocat-end">
+        <input asp-for="CustomerLabel" class="form-control" />
+        <span class="hint">@T["Leave empty to show the name."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="PausesTimers" class="form-check-input" type="checkbox" />
+            <label asp-for="PausesTimers" class="form-check-label">@T["Pauses service-level timers"]</label>
+            <span class="hint dashed">@T["While a ticket is in this status, its first response and resolution targets stop counting."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Color" class="ocat-label">@T["Color"]</label>
+    <div class="ocat-end">
+        <input asp-for="Color" class="form-control form-control-color" type="color" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Order" class="ocat-label">@T["Order"]</label>
+    <div class="ocat-end">
+        <input asp-for="Order" class="form-control" type="number" />
+        <span class="hint">@T["Lower comes first; the first status of the New category is the one new tickets start in."]</span>
+    </div>
+</div>

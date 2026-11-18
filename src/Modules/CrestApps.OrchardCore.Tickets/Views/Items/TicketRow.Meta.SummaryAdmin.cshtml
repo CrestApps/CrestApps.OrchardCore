@@ -1,0 +1,21 @@
+@model ShapeViewModel<TicketRow>
+
+@{
+    var row = Model.Value;
+}
+@if (!string.IsNullOrEmpty(row.RequesterName))
+{
+    <span class="badge ta-badge fw-normal" title="@T["Requester"]"><i class="fa-solid fa-user me-1" aria-hidden="true"></i>@row.RequesterName</span>
+}
+@if (!string.IsNullOrEmpty(row.AssigneeName))
+{
+    <span class="badge ta-badge fw-normal" title="@T["Assignee"]"><i class="fa-solid fa-user-check me-1" aria-hidden="true"></i>@row.AssigneeName</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" title="@T["Assignee"]"><i class="fa-solid fa-user-slash me-1" aria-hidden="true"></i>@T["Unassigned"]</span>
+}
+@if (!string.IsNullOrEmpty(row.TeamName))
+{
+    <span class="badge ta-badge fw-normal" title="@T["Team"]"><i class="fa-solid fa-people-group me-1" aria-hidden="true"></i>@row.TeamName</span>
+}

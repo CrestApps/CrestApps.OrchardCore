@@ -99,6 +99,7 @@ internal sealed class CalendarTestHarness : IAsyncDisposable
         services.AddSingleton(typeof(IStringLocalizer<>), typeof(PassThroughLocalizer<>));
         services.AddSingleton<IAuthorizationService, ClaimPermissionAuthorizationService>();
         services.AddSingleton<IDistributedLock, NoOpDistributedLock>();
+        services.AddSingleton(typeof(global::OrchardCore.Documents.IDocumentManager<>), typeof(CrestApps.OrchardCore.Tests.Doubles.InMemoryDocumentManager<>));
 
         var clock = new Mock<IClock>();
 

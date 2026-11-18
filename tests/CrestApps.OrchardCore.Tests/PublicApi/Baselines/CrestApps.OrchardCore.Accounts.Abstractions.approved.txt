@@ -9,12 +9,14 @@ namespace CrestApps.OrchardCore.Accounts
         public const string Leads = "Leads";
         public const string Locations = "Locations";
         public const string Members = "Members";
+        public const string Notes = "Notes";
         public const string Opportunities = "Opportunities";
         public const string Orders = "Orders";
         public const string Overview = "Overview";
         public const string PageName = "Account";
         public const string Records = "Records";
         public const string Service = "Service";
+        public const string Tickets = "Tickets";
         public static string EditorLocation(string tab, string position = "1") { }
         public static int GetPosition(string tab) { }
         public static string Location(string tab, string position = "1") { }
@@ -26,6 +28,7 @@ namespace CrestApps.OrchardCore.Accounts
     }
     public static class AccountsConstants
     {
+        public const string EmailDomainsFeature = "CrestApps.OrchardCore.Accounts.EmailDomains";
         public const string Feature = "CrestApps.OrchardCore.Accounts";
         public const string LocationsFeature = "CrestApps.OrchardCore.Accounts.Locations";
         public const string MembersFeature = "CrestApps.OrchardCore.Accounts.Members";
@@ -33,6 +36,7 @@ namespace CrestApps.OrchardCore.Accounts
         public static class ContentParts
         {
             public const string Account = "AccountPart";
+            public const string EmailDomains = "AccountEmailDomainsPart";
             public const string List = "ListPart";
             public const string Locations = "AccountLocationsPart";
             public const string Members = "AccountMembersPart";
@@ -54,6 +58,18 @@ namespace CrestApps.OrchardCore.Accounts
 }
 namespace CrestApps.OrchardCore.Accounts.Models
 {
+    public sealed class AccountEmailDomainsOptions
+    {
+        public static readonly System.Collections.Generic.IReadOnlyList<string> BuiltInPublicDomains;
+        public AccountEmailDomainsOptions() { }
+        public System.Collections.Generic.List<string> PublicDomains { get; set; }
+        public bool IsPublic(string domain) { }
+    }
+    public sealed class AccountEmailDomainsPart : OrchardCore.ContentManagement.ContentPart
+    {
+        public AccountEmailDomainsPart() { }
+        public System.Collections.Generic.List<string> Domains { get; set; }
+    }
     public sealed class AccountLocation
     {
         public AccountLocation() { }
@@ -128,6 +144,11 @@ namespace CrestApps.OrchardCore.Accounts.Services
         System.Threading.Tasks.Task<bool> IsAccountChildTypeAsync(string contentType);
         System.Threading.Tasks.Task<bool> IsAccountTypeAsync(string contentType);
         bool IsExcludedFromAccounts(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition);
+    }
+    public interface IAccountEmailDomains
+    {
+        System.Threading.Tasks.Task<string> FindAccountIdAsync(string email, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, string>> FindClaimsAsync(System.Collections.Generic.IEnumerable<string> domains, string exceptAccountId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAccountMemberService
     {

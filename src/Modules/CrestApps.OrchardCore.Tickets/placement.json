@@ -1,0 +1,18 @@
+{
+  "Content_PublishButton": [
+    {
+      "contentPart": [
+        "TicketPart"
+      ],
+      "place": "-"
+    }
+  ],
+  "Content_SaveDraftButton": [
+    {
+      "contentPart": [
+        "TicketPart"
+      ],
+      "place": "-"
+    }
+  ]
+}

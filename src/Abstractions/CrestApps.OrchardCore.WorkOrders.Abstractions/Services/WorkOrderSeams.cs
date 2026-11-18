@@ -1,32 +1,6 @@
-using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.WorkOrders.Models;
 
 namespace CrestApps.OrchardCore.WorkOrders.Services;
-
-/// <summary>
-/// Gives the hours a service level clock runs in.
-/// </summary>
-public interface IServiceHoursProvider
-{
-    /// <summary>
-    /// Gives the open stretches of a business hours calendar between two times.
-    /// </summary>
-    /// <param name="calendarId">The calendar.</param>
-    /// <param name="timeZoneId">Its time zone.</param>
-    /// <param name="fromUtc">The start.</param>
-    /// <param name="toUtc">The end.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The open stretches, in order, or <see langword="null"/> when the provider doesn't know the calendar.</returns>
-    Task<IReadOnlyList<TimeWindow>> GetOpenAsync(string calendarId, string timeZoneId, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Lists the calendars the provider knows, so the service level policy editor can offer them.
-    /// </summary>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The calendars, or none.</returns>
-    Task<IReadOnlyList<ServiceHoursCalendar>> ListCalendarsAsync(CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<ServiceHoursCalendar>>([]);
-}
 
 /// <summary>
 /// Takes the parts used on a work order off a stock location.
@@ -80,20 +54,6 @@ public interface IWorkOrderBilling
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The invoice's transaction id.</returns>
     Task<string> InvoiceAsync(WorkOrder workOrder, decimal amount, string currency, CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Hears what happens to service agreements.
-/// </summary>
-public interface IServiceAgreementObserver
-{
-    /// <summary>
-    /// Runs once when an active agreement comes within its notice of its end date.
-    /// </summary>
-    /// <param name="agreement">The agreement.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>A task.</returns>
-    Task OnExpiringAsync(ServiceAgreement agreement, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

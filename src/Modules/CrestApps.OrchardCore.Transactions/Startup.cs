@@ -6,7 +6,9 @@ using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Receipts.Core;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Transactions.Core;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Drivers;
 using CrestApps.OrchardCore.Transactions.Migrations;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -59,6 +61,8 @@ public sealed class Startup : StartupBase
 
         // The ledger travels between sites in the Transactions recipe step.
         services.AddRecipeExecutionStep<CrestApps.OrchardCore.Transactions.Recipes.TransactionLedgerRecipeStep>();
+
+        services.AddRecordSource<TransactionRecordSource>();
 
         services
             .AddNavigationProvider<TransactionsAdminMenu>()

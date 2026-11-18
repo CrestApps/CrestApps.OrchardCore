@@ -243,6 +243,21 @@ These tools are meant for customer-facing assistants and also work for anonymous
 | `bookAppointment` | Books an appointment for the customer at a time `findAppointmentSlots` returned, and says which staff, rooms and equipment it is with. |
 | `changeAppointment` | Cancels or moves a customer's appointment. The customer proves it is theirs with the manage code, or the email or phone number on the appointment. |
 
+### Ticket tools
+
+**Available when:** `CrestApps.OrchardCore.Tickets` with `CrestApps.OrchardCore.AI` on
+
+These tools act for the signed-in person using the AI, within the tickets they may view and the actions their ticket permissions allow, and refuse anonymous callers. They are in the **Tickets** category and selectable on AI profiles. See [Tickets](../modules/tickets/ai.md#ai-tools).
+
+| Function | Description |
+| --- | --- |
+| `listTicketOptions` | Lists the desks the user may open tickets in, every status with its category, the priorities and the ticket categories, with the ids the other ticket tools take. |
+| `searchTickets` | Finds the tickets the user may view by number or subject words, status category, desk and assignee (`take` up to 25). |
+| `getTicket` | Reads a ticket by id or number with its latest 20 replies, internal notes and events. |
+| `createTicket` | Opens a ticket on a desk the user may reply in, for a requester named by name and e-mail, with a category from `listTicketOptions`. |
+| `addTicketReply` | Sends a public reply (e-mailed to the requester) or adds an internal note, and can set a status with a reply. |
+| `updateTicket` | Changes a ticket's status, priority or category (edit permission) or its team or assignee (assign permission). |
+
 ### Commerce tools
 
 **Available when:** `CrestApps.OrchardCore.AgenticCommerce` with `CrestApps.OrchardCore.AI`, `CrestApps.OrchardCore.Products.Listing` and `CrestApps.OrchardCore.Products.Feeds` on

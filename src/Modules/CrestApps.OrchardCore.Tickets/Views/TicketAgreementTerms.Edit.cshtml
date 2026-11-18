@@ -1,0 +1,37 @@
+@using CrestApps.OrchardCore.Tickets.Agreements
+@model TicketAgreementTermsViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Tickets"]</div>
+    <div class="card-body">
+        <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" asp-for="CoversTickets" />
+            <label class="form-check-label" asp-for="CoversTickets">@T["Covers the account's tickets"]</label>
+            <span class="hint dashed">@T["A new ticket of the account on a desk and of a type it covers works under this agreement: the time logged on it counts against the agreement's hours."]</span>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="DeskIds" class="ocat-label">@T["Desks"]</label>
+            <div class="ocat-end">
+                <select asp-for="DeskIds" asp-items="Model.Desks" class="selectpicker show-tick" multiple data-width="100%" title="@T["Every desk"]"></select>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="TicketTypes" class="ocat-label">@T["Ticket types"]</label>
+            <div class="ocat-end">
+                <select asp-for="TicketTypes" asp-items="Model.Types" class="selectpicker show-tick" multiple data-width="100%" title="@T["Every type"]"></select>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ServiceLevelPolicyId" class="ocat-label">@T["Service level"]</label>
+            <div class="ocat-end">
+                <select asp-for="ServiceLevelPolicyId" asp-items="Model.Policies" class="form-select">
+                    <option value="">@T["The account's, or the desk's"]</option>
+                </select>
+                <span class="hint">@T["The targets of the agreement's tickets, before the account's own."]</span>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce.Emails;
+using CrestApps.OrchardCore.Core.Emails;
 using CrestApps.OrchardCore.Orders.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -7,7 +8,6 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Liquid;
 using OrchardCore.Localization;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
@@ -24,7 +24,6 @@ public sealed class OrderEmailTemplateSettingsDisplayDriver : SiteDisplayDriver<
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly ILiquidTemplateManager _liquid;
     private readonly IOptions<CommerceEmailOptions> _emailOptions;
     private readonly IStringLocalizerFactory _stringLocalizerFactory;
 
@@ -33,14 +32,12 @@ public sealed class OrderEmailTemplateSettingsDisplayDriver : SiteDisplayDriver<
     public OrderEmailTemplateSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        ILiquidTemplateManager liquid,
         IOptions<CommerceEmailOptions> emailOptions,
         IStringLocalizerFactory stringLocalizerFactory,
         IStringLocalizer<OrderEmailTemplateSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _liquid = liquid;
         _emailOptions = emailOptions;
         _stringLocalizerFactory = stringLocalizerFactory;
         S = stringLocalizer;
@@ -86,9 +83,10 @@ public sealed class OrderEmailTemplateSettingsDisplayDriver : SiteDisplayDriver<
             ($"Templates[{index}].Body", template.Body),
         }).Append((nameof(model.Layout), model.Layout)))
         {
-            if (!string.IsNullOrWhiteSpace(liquid) && !_liquid.Validate(liquid, out var errors))
+            // Checked with the same restricted Liquid the emails render with.
+            if (!string.IsNullOrWhiteSpace(liquid) && !LiquidTemplatedEmailTemplates.TryValidate(liquid, out var error))
             {
-                context.Updater.ModelState.AddModelError(Prefix, field, S["The Liquid doesn't parse: {0}", string.Join(" ", errors)]);
+                context.Updater.ModelState.AddModelError(Prefix, field, S["The Liquid doesn't parse: {0}", error]);
             }
         }
 

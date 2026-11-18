@@ -35,7 +35,7 @@ public sealed class ContactCenterRecipeStepSchemaTests
     [
         new(new ContactCenterSkillRecipeStep(), "Skills", typeof(ContactCenterSkill)),
         new(new ContactCenterQueueGroupRecipeStep(), "QueueGroups", typeof(ActivityQueueGroup)),
-        new(new ContactCenterBusinessHoursCalendarRecipeStep(), "Calendars", typeof(BusinessHoursCalendar)),
+        new(new ContactCenterBusinessHoursCalendarRecipeStep(), "Calendars", typeof(CrestApps.OrchardCore.ContactCenter.Legacy.LegacyBusinessHoursCalendar)),
         new(new ContactCenterQueueRecipeStep(), "Queues", typeof(ActivityQueue)),
         new(new ContactCenterEntryPointRecipeStep(), "EntryPoints", typeof(ContactCenterEntryPoint)),
         new(new ContactCenterDialerProfileRecipeStep(), "DialerProfiles", typeof(DialerProfile)),

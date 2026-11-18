@@ -1,0 +1,35 @@
+/* The ticket list on narrower screens (a tablet, or a desktop with the menu open), before the admin list stacks its
+   rows: the filters wrap onto more lines instead of running off the page, and a long badge (an e-mail address, a long
+   status) wraps inside its column instead of spilling over the next one. */
+.tickets-list .admin-list-toolbar-content .col-auto:has(> .btn-group.filter) {
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    max-width: 100%;
+}
+
+.tickets-list .admin-list-grid .ta-badge {
+    max-width: 100%;
+    white-space: normal;
+    text-align: start;
+    overflow-wrap: anywhere;
+}
+
+/* Roomier columns on a larger list, so fewer badges wrap (the columns of Views/Tickets/Index.cshtml, in their order). */
+@container admin-list (min-width: 60rem) {
+    .tickets-list .admin-list-grid-table {
+        --oc-admin-list-grid-columns: max-content minmax(0, 1fr) 11rem 15rem 11rem max-content !important;
+    }
+}
+
+/* A list wide enough for every badge on one line keeps them on one line, each column as wide as its content. */
+@container admin-list (min-width: 96rem) {
+    .tickets-list .admin-list-grid-table {
+        --oc-admin-list-grid-columns: max-content minmax(0, 1fr) max-content max-content max-content max-content !important;
+    }
+
+    .tickets-list .admin-list-grid .admin-list-grid-cell:is(.admin-list-column-state, .admin-list-column-people, .admin-list-column-due),
+    .tickets-list .admin-list-grid .ta-badge {
+        white-space: nowrap;
+    }
+}
+/*$vite$:1*/

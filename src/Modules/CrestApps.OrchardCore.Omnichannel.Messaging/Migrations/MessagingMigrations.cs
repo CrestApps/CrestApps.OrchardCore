@@ -111,7 +111,8 @@ internal sealed class MessagingMigrations : DataMigration
 
         await SchemaBuilder.CreateMapIndexTableAsync<MessageTemplateIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Name", column => column.WithLength(255)),
+            .Column<string>("Name", column => column.WithLength(255))
+            .Column<string>("Scope", column => column.Nullable().WithLength(MessagingStorage.TemplateScopeLength)),
             collection: MessagingStorage.CollectionName
         );
 
@@ -168,7 +169,7 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateLookupIndexesAsync();
         await CreateCampaignIndexAsync();
 
-        return 8;
+        return 9;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -316,6 +317,23 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateCampaignIndexAsync();
 
         return 8;
+    }
+
+    /// <summary>
+    /// Adds the scope of a reply template, so a template can be written for another kind of work, such as tickets.
+    /// Existing templates keep an empty scope: the messaging workspace's. A database that already has the column (one
+    /// built while this step was numbered 7 to 8) is left as it is.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom8Async()
+    {
+        await IndexTableColumnCreation.AddIfMissingAsync<MessageTemplateIndex>(
+            SchemaBuilder,
+            MessagingStorage.CollectionName,
+            "Scope",
+            table => table.AddColumn<string>("Scope", column => column.Nullable().WithLength(MessagingStorage.TemplateScopeLength)));
+
+        return 9;
     }
 
     private Task<bool> EnsureCampaignColumnAsync()

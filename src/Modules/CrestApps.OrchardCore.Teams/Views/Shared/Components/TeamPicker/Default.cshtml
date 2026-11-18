@@ -1,0 +1,28 @@
+@model CrestApps.OrchardCore.Teams.ViewModels.TeamPickerViewModel
+
+@{
+    var buttonText = Model.ButtonText ?? (Model.Multiple ? T["Choose teams"].Value : T["Choose a team"].Value);
+}
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<select id="@Model.Id"
+        name="@Model.InputName"
+        class="selectpicker show-tick@(Model.SmallButton ? " btn-group-sm" : string.Empty)"
+        multiple="@Model.Multiple"
+        required="@Model.Required"
+        data-live-search="@(Model.Options.Count > 10 ? "true" : "false")"
+        data-none-results-text="@T["No teams found."]"
+        data-selected-text-format="count > 3"
+        data-width="@(Model.SmallButton ? "auto" : "100%")"
+        title="@buttonText">
+    @if (!Model.Multiple)
+    {
+        <option value="" data-hidden="@(Model.Required ? "true" : null)">@buttonText</option>
+    }
+    @foreach (var option in Model.Options)
+    {
+        <option value="@option.Value" selected="@option.Selected" data-content="@($"<span style=\"padding-inline-start:{option.Depth}rem\">{Html.Encode(option.Text)}</span>")">@option.Text</option>
+    }
+</select>

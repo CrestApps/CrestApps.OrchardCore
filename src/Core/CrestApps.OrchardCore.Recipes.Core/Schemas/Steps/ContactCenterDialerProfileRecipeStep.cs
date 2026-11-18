@@ -42,7 +42,7 @@ public sealed class ContactCenterDialerProfileRecipeStep : IRecipeStep
                             ("AlwaysUseCallerId", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the caller identifier is presented even for an agent who has their own outbound line; when false, agents with a line call from it.")),
                             ("DefaultRegionCode", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("ISO 3166-1 alpha-2 region a destination is read in when it carries no country calling code.")),
                             ("RespectDoNotCall", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether do-not-call and communication preferences suppress activities.")),
-                            ("EnforceCallingWindow", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether calls are restricted by business-hours calendars.")),
+                            ("EnforceCallingWindow", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether calls are restricted by Business Hours schedules.")),
                             ("EnforceAbandonmentCap", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether outbound dialing is gated by a rolling abandonment-rate cap.")),
                             ("MaxAbandonmentRatePercent", new JsonSchemaBuilder().Type(SchemaValueType.Number).Description("Maximum tolerated rolling abandonment rate, expressed as a percentage of calls a live person answered.")),
                             ("AbandonmentSampleFloor", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Minimum number of live-answered calls that must accumulate in the rolling window before the abandonment rate is enforced.")),
@@ -59,11 +59,11 @@ public sealed class ContactCenterDialerProfileRecipeStep : IRecipeStep
                             ("ConnectWaitMilliseconds", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Milliseconds, from 0 to 1500, a person who answered an over-dialed call may wait for an agent to free up before the abandoned-call message plays.")),
                             ("AbandonedRetryRequiresAgent", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether a Predictive call that was abandoned is retried only with an agent reserved for it.")),
                             ("ShowDialProgressToAgent", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the agent's screens show who is being dialed and each step of an automated dial placed for them, rather than only that they are waiting for a connected call.")),
-                            ("CallingCalendarId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Default business-hours calendar used to evaluate outbound calls.")),
+                            ("CallingCalendarId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Default Business Hours schedule used to evaluate outbound calls.")),
                             ("RegionalCallingCalendarIds", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Object)
-                                .AdditionalProperties(new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A business-hours calendar identifier."))
-                                .Description("Region-specific business-hours calendar overrides keyed by ISO 3166-1 alpha-2 region code.")),
+                                .AdditionalProperties(new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A Business Hours schedule identifier."))
+                                .Description("Region-specific Business Hours schedule overrides keyed by ISO 3166-1 alpha-2 region code.")),
                             ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the dialer profile is enabled.")),
                             ("Properties", CatalogRecipeStepSchemas.Properties("dialer profile")))
                         .Required("Name")

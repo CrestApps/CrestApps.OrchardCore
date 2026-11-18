@@ -1,0 +1,78 @@
+@using CrestApps.OrchardCore.KnowledgeBase.Services
+@model HelpCenterViewModel
+
+<zone Name="Title">
+    <breadcrumb name="KnowledgeBaseHome" title="@T["Help center"]" />
+</zone>
+
+@{
+    var hasCategory = !string.IsNullOrWhiteSpace(Model.CategoryId);
+    var searching = !string.IsNullOrWhiteSpace(Model.Query) || hasCategory;
+
+    // The widgets the Knowledge Base recipe places; without them the page shows its own search and categories.
+    var top = KnowledgeBaseZones.Find(ThemeLayout, KnowledgeBaseConstants.Zones.Top);
+    var sidebar = KnowledgeBaseZones.Find(ThemeLayout, KnowledgeBaseConstants.Zones.Sidebar);
+    var after = KnowledgeBaseZones.Find(ThemeLayout, KnowledgeBaseConstants.Zones.AfterContent);
+}
+
+<div class="container my-4 knowledge-base-page" style="max-width: 960px;">
+    <h1 class="h3 mb-3">@(Model.CategoryName is null ? T["Help center"] : Model.CategoryName)</h1>
+
+    @if (top is not null)
+    {
+        @await DisplayAsync(top)
+    }
+    else
+    {
+        <partial name="_KnowledgeBaseSearch" model="new KnowledgeBaseSearchViewModel { Query = Model.Query, CategoryId = hasCategory ? Model.CategoryId : null, CategoryName = Model.CategoryName }" />
+    }
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            @if (sidebar is not null)
+            {
+                @await DisplayAsync(sidebar)
+            }
+            else
+            {
+                <partial name="_KnowledgeBaseCategories" model="new KnowledgeBaseCategoriesViewModel { Categories = Model.Categories, SelectedId = Model.CategoryId, AllSelected = !hasCategory }" />
+            }
+        </div>
+        <div class="col-md-8">
+            @if (Model.Groups.Count > 0)
+            {
+                @* The home page: each category with its most helpful articles. *@
+                @foreach (var group in Model.Groups)
+                {
+                    <section class="mb-4">
+                        <h2 class="h5 d-flex justify-content-between align-items-baseline">
+                            <a class="text-decoration-none" href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName, new { category = group.Id })">@group.Name</a>
+                            @if (group.Count > group.Articles.Count)
+                            {
+                                <a class="small fw-normal" href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName, new { category = group.Id })">@T["All {0} articles", group.Count]</a>
+                            }
+                        </h2>
+                        <partial name="_KnowledgeBaseArticles" model="group.Articles" />
+                    </section>
+                }
+            }
+            else
+            {
+                <h2 class="h6 text-uppercase text-body-secondary">@(!string.IsNullOrWhiteSpace(Model.Query) ? T["Articles found"] : hasCategory ? T["Articles"] : T["Most helpful"])</h2>
+                @if (Model.Articles.Count == 0)
+                {
+                    <p class="text-body-secondary">@(searching ? T["No article matches. Try other words."] : T["There are no articles yet."])</p>
+                }
+                else
+                {
+                    <partial name="_KnowledgeBaseArticles" model="Model.Articles" />
+                }
+            }
+
+            @if (after is not null)
+            {
+                @await DisplayAsync(after)
+            }
+        </div>
+    </div>
+</div>

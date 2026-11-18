@@ -57,6 +57,10 @@ public sealed class CallTopologyAuthorityTests
         Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Sms"),
         // Workforce for Contact Center reads agent profiles, the event log and interval statistics from Contact Center Core.
         Path.Combine("Modules", "CrestApps.OrchardCore.Workforce.ContactCenter"),
+        // Tickets uses the Messaging reply templates (Messaging Core reaches Contact Center Core); it never touches calls.
+        Path.Combine("Modules", "CrestApps.OrchardCore.Tickets"),
+        // The ticket bridge enqueues task activities and listens for accepted offers; it never touches calls.
+        Path.Combine("Modules", "CrestApps.OrchardCore.Tickets.ContactCenter"),
         Path.Combine("Targets", "CrestApps.OrchardCore.Cms.Core.Targets"),
         Path.Combine("Startup", "CrestApps.Aspire.AppHost"),
         Path.Combine("Startup", "CrestApps.OrchardCore.Cms.Web"),

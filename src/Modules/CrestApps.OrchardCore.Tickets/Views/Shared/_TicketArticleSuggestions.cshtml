@@ -1,0 +1,81 @@
+@*
+    Help articles that match what is being written, from the Knowledge Base's suggestion endpoint when that feature is on
+    (its route exists only then; without it nothing renders). Model: (string Source, string Target, bool Insert,
+    string Reader): the id of the field to read, the id of the field a chosen article's link is added to, whether to
+    offer that, and who reads a public reply ("public" or "signedin"), so only articles they can open are offered;
+    while an internal note is written (the composer's isInternal is true) every article the agent may read is offered.
+*@
+@model (string Source, string Target, bool Insert, string Reader)
+
+@{
+    var suggestUrl = Url.RouteUrl("KnowledgeBaseSuggest");
+    var id = "ticket-articles-" + Model.Source;
+}
+
+@if (!string.IsNullOrEmpty(suggestUrl))
+{
+    <div id="@id" class="small mb-3" hidden aria-live="polite">
+        <div class="text-body-secondary mb-1">@T["Help articles that may answer it:"]</div>
+        <ul class="list-unstyled mb-0" data-list></ul>
+    </div>
+
+    <script at="Foot">
+        (() => {
+            const box = document.getElementById('@id');
+            const source = document.getElementById('@Model.Source');
+            const target = document.getElementById('@Model.Target');
+            const list = box && box.querySelector('[data-list]');
+            const insert = @(Model.Insert ? "true" : "false");
+            const insertLabel = '@T["Add the link"]';
+            let timer = null;
+            let last = '';
+            if (!box || !source || !list) {
+                return;
+            }
+            const show = articles => {
+                list.replaceChildren();
+                for (const article of articles) {
+                    const item = document.createElement('li');
+                    const link = document.createElement('a');
+                    link.href = article.url;
+                    link.target = '_blank';
+                    link.rel = 'noopener';
+                    link.textContent = article.title;
+                    item.append(link);
+                    if (insert && target) {
+                        const add = document.createElement('button');
+                        add.type = 'button';
+                        add.className = 'btn btn-link btn-sm py-0';
+                        add.textContent = insertLabel;
+                        add.addEventListener('click', () => {
+                            const line = article.title + ': ' + new URL(article.url, window.location.origin).href;
+                            target.value = target.value ? target.value + '\n\n' + line : line;
+                            target.focus();
+                        });
+                        item.append(' ', add);
+                    }
+                    list.append(item);
+                }
+                box.hidden = articles.length === 0;
+            };
+            source.addEventListener('input', () => {
+                clearTimeout(timer);
+                timer = setTimeout(async () => {
+                    const text = source.value.trim().split(/\s+/).slice(-8).join(' ');
+                    const internal = document.querySelector('input[name="isInternal"]:checked')?.value === 'true';
+                    const reader = internal ? '' : '@(Model.Reader ?? string.Empty)';
+                    if (text.length < 3 || text + '|' + reader === last) {
+                        return;
+                    }
+                    last = text + '|' + reader;
+                    try {
+                        const response = await fetch('@suggestUrl?q=' + encodeURIComponent(text) + (reader ? '&reader=' + reader : ''), { headers: { Accept: 'application/json' } });
+                        show(response.ok ? await response.json() : []);
+                    } catch {
+                        show([]);
+                    }
+                }, 400);
+            });
+        })();
+    </script>
+}

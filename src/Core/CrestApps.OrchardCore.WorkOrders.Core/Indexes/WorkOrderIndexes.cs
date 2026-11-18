@@ -8,6 +8,11 @@ namespace CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 /// <summary>
 /// Indexes work orders.
 /// </summary>
+/// <remarks>
+/// The Legacy upgrades read this table through private readers of the same name that add the row's
+/// <c>DocumentId</c> (<c>WorkOrderServiceLevelUpgrade.WorkOrderIndex</c>, <c>WorkOrderNotesUpgrade.WorkOrderIndex</c>), to
+/// page work orders by it. Renaming this class or the table breaks them.
+/// </remarks>
 public sealed class WorkOrderIndex : CatalogItemIndex
 {
     /// <summary>
@@ -134,13 +139,6 @@ public sealed class ChecklistTemplateIndex : WorkOrderSettingIndex
 }
 
 /// <summary>
-/// Indexes the service level policies.
-/// </summary>
-public sealed class ServiceLevelPolicyIndex : WorkOrderSettingIndex
-{
-}
-
-/// <summary>
 /// Indexes the sub-statuses.
 /// </summary>
 public sealed class WorkOrderSubStatusIndex : WorkOrderSettingIndex
@@ -239,29 +237,6 @@ public sealed class ChecklistTemplateIndexProvider : IndexProvider<ChecklistTemp
 }
 
 /// <summary>
-/// Maps service level policies.
-/// </summary>
-public sealed class ServiceLevelPolicyIndexProvider : IndexProvider<ServiceLevelPolicy>
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ServiceLevelPolicyIndexProvider"/> class.
-    /// </summary>
-    public ServiceLevelPolicyIndexProvider()
-    {
-        CollectionName = WorkOrdersConstants.CollectionName;
-    }
-
-    /// <inheritdoc/>
-    public override void Describe(DescribeContext<ServiceLevelPolicy> context)
-    {
-        context.For<ServiceLevelPolicyIndex>()
-            .ExclusiveToDocumentType()
-            .SingleRecordPerDocument()
-            .Map(item => new ServiceLevelPolicyIndex { ItemId = item.ItemId, Name = item.Name });
-    }
-}
-
-/// <summary>
 /// Maps sub-statuses.
 /// </summary>
 public sealed class WorkOrderSubStatusIndexProvider : IndexProvider<WorkOrderSubStatus>
@@ -339,7 +314,6 @@ public static class WorkOrdersIndexSchema
 
         await CreateSettingTableAsync<WorkOrderTypeIndex>(schemaBuilder, collection);
         await CreateSettingTableAsync<ChecklistTemplateIndex>(schemaBuilder, collection);
-        await CreateSettingTableAsync<ServiceLevelPolicyIndex>(schemaBuilder, collection);
         await CreateSettingTableAsync<WorkOrderSubStatusIndex>(schemaBuilder, collection);
     }
 

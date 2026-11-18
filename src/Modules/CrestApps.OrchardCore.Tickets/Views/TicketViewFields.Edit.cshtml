@@ -1,0 +1,104 @@
+@model TicketViewViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+@{
+    string CategoryName(TicketStatusCategory category) => category switch
+    {
+        TicketStatusCategory.New => T["New"].Value,
+        TicketStatusCategory.Open => T["Open"].Value,
+        TicketStatusCategory.Pending => T["Pending"].Value,
+        TicketStatusCategory.OnHold => T["On hold"].Value,
+        TicketStatusCategory.Solved => T["Solved"].Value,
+        TicketStatusCategory.Closed => T["Closed"].Value,
+        _ => category.ToString(),
+    };
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["View"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Shared with"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("TeamPicker", new { name = Html.NameFor(m => m.SharedWithTeamId).ToString(), selectedValues = string.IsNullOrEmpty(Model.SharedWithTeamId) ? Array.Empty<string>() : new[] { Model.SharedWithTeamId } })
+                <span class="hint">@T["Leave empty to share the view with everybody."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Order" class="ocat-label">@T["Position"]</label>
+            <div class="ocat-end">
+                <input asp-for="Order" class="form-control" type="number" />
+                <span class="hint">@T["Where the view is listed; lower comes first."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Which tickets it lists"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <span class="ocat-label">@T["Status categories"]</span>
+            <div class="ocat-end">
+                @foreach (var category in Enum.GetValues<TicketStatusCategory>())
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Categories)" value="@category" id="category-@category" checked="@Model.Categories.Contains(category)" />
+                        <label class="form-check-label" for="category-@category">@CategoryName(category)</label>
+                    </div>
+                }
+                <span class="hint">@T["Leave all unchecked to list every category."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="DeskIds" class="ocat-label">@T["Desks"]</label>
+            <div class="ocat-end">
+                <select asp-for="DeskIds" asp-items="Model.Desks" class="selectpicker show-tick" multiple data-width="100%" title="@T["Every desk"]"></select>
+                <span class="hint">@T["Leave none selected to list every desk the user may see."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Assignee" class="ocat-label">@T["Assigned to"]</label>
+            <div class="ocat-end">
+                <select asp-for="Assignee" class="form-select">
+                    <option value="">@T["Anybody"]</option>
+                    <option value="@TicketAssignees.Me">@T["The user looking"]</option>
+                    <option value="@TicketAssignees.Unassigned">@T["Nobody"]</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="DueWithinHours" class="ocat-label">@T["Due within (hours)"]</label>
+            <div class="ocat-end">
+                <input asp-for="DueWithinHours" class="form-control" type="number" min="0" />
+                <span class="hint">@T["Only tickets with a service-level target due within this many hours, or overdue."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Sort" class="ocat-label">@T["Tickets in order of"]</label>
+            <div class="ocat-end">
+                <select asp-for="Sort" class="form-select">
+                    <option value="@TicketSort.Updated">@T["Recently updated first"]</option>
+                    <option value="@TicketSort.Created">@T["Newest first"]</option>
+                    <option value="@TicketSort.Due">@T["Soonest due first"]</option>
+                    <option value="@TicketSort.Priority">@T["Most urgent first"]</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>

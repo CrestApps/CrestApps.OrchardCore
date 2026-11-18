@@ -238,7 +238,7 @@ public sealed class WorkOrderSummarizeTool : WorkforceAIToolBase
             status = workOrder.Status.ToString(),
             accessNotes = workOrder.AccessNotes,
             contact = workOrder.Contact?.Name,
-            notes = workOrder.Notes.TakeLast(20).Select(note => new { at = FieldServiceLookups.Local(note.Utc, zone), by = note.By, text = note.Text }),
+            notes = (await services.GetRequiredService<WorkOrderService>().GetNotesAsync(workOrder.ItemId, 20, cancellationToken)).Select(note => new { at = FieldServiceLookups.Local(note.Utc, zone), by = note.By, text = note.Text }),
             checklists = workOrder.Checklists.Select(checklist => new
             {
                 name = checklist.Name,

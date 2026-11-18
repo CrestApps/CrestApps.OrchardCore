@@ -43,4 +43,27 @@ public interface IOpenHoursService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The schedules.</returns>
     Task<IReadOnlyList<HoursScheduleOption>> ListSchedulesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Adds an amount of open time to an instant: the instant at which the schedule has been open for that long. A
+    /// schedule nobody knows, or one that is never open, counts around the clock.
+    /// </summary>
+    /// <param name="scheduleId">The schedule's id, or empty to count around the clock.</param>
+    /// <param name="fromUtc">The start, in UTC.</param>
+    /// <param name="duration">The open time to add.</param>
+    /// <param name="timeZoneId">A time zone to read the schedule in instead of its own; optional.</param>
+    /// <param name="cancellationToken">A token to cancel the lookup.</param>
+    /// <returns>The instant, in UTC.</returns>
+    Task<DateTime> AddOpenTimeAsync(string scheduleId, DateTime fromUtc, TimeSpan duration, string timeZoneId = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets how long a schedule is open between two instants. A schedule nobody knows counts around the clock.
+    /// </summary>
+    /// <param name="scheduleId">The schedule's id, or empty to count around the clock.</param>
+    /// <param name="fromUtc">The start, in UTC.</param>
+    /// <param name="toUtc">The end, in UTC.</param>
+    /// <param name="timeZoneId">A time zone to read the schedule in instead of its own; optional.</param>
+    /// <param name="cancellationToken">A token to cancel the lookup.</param>
+    /// <returns>The open time; zero when the end isn't after the start.</returns>
+    Task<TimeSpan> GetOpenTimeBetweenAsync(string scheduleId, DateTime fromUtc, DateTime toUtc, string timeZoneId = null, CancellationToken cancellationToken = default);
 }

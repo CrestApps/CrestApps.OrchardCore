@@ -42,6 +42,8 @@ using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Users.Events;
 using OrchardCore.Users.Handlers;
+using CrestApps.OrchardCore.Parties.Models;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Customers;
 
@@ -61,7 +63,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICustomerService, DefaultCustomerService>();
 
         // Customers are parties: pickers and lists in any module find and name them by their customer record id.
-        services.AddPartySource<CustomerPartySource>();
+        services.AddPartySource<CustomerPartySource>(PartyKinds.Customer, LocalizationSource.Create<Startup>("Customer"), CustomerPermissions.ViewCustomers);
 
         // A customer is billed from their record: contact, default addresses, tax id and exemption. The user the record
         // belongs to acts for it.

@@ -1,0 +1,26 @@
+@model TicketTypeChoiceViewModel
+
+<zone Name="Title"><breadcrumb name="TicketsCreate" title="@T["New ticket"]">
+    <breadcrumb-item id="Tickets" action="Index" controller="Tickets" area="CrestApps.OrchardCore.Tickets">@T["Tickets"]</breadcrumb-item>
+</breadcrumb></zone>
+
+<p class="text-muted">@T["What kind of ticket? The form that follows asks what this type needs."]</p>
+
+<div class="row g-3">
+    @foreach (var type in Model.Types)
+    {
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h6 card-title mb-1">
+                        <a class="stretched-link" asp-action="Create" asp-route-contentType="@type.Value" asp-route-requester="@Model.Requester" asp-route-accountId="@Model.AccountId" asp-route-conversation="@Model.Conversation">@type.Text</a>
+                    </h2>
+                    @if (!string.IsNullOrWhiteSpace(type.Description))
+                    {
+                        <p class="card-text small text-muted mb-0">@type.Description</p>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>

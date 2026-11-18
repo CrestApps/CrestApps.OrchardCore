@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Commerce.Api;
 using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Webhooks.Controllers;
@@ -81,7 +82,7 @@ public sealed class CommerceWebhookTests
         var headers = new HeaderDictionary { [CommerceApi.CheckoutTokenHeader] = "token-1", ["Location"] = "/api/commerce/v1/checkout/1", ["X-Other"] = "not kept" };
         Results<Created<ApiMoney>, ProblemHttpResult> created = TypedResults.Created("/api/commerce/v1/checkout/1", new ApiMoney(5m, "USD"));
 
-        var stored = IdempotencyEndpointFilter.Capture(created, headers);
+        var stored = IdempotencyEndpointFilter.Capture(created, headers, ["Location", .. CommerceApi.GuestHeaders.Headers]);
 
         Assert.Equal(StatusCodes.Status201Created, stored.StatusCode);
         Assert.Equal("token-1", stored.Headers[CommerceApi.CheckoutTokenHeader]);
@@ -93,7 +94,7 @@ public sealed class CommerceWebhookTests
     public void OnlyAFinalAnswer_IsKeptForARetry()
     {
         Assert.True(IdempotencyEndpointFilter.IsFinal(IdempotencyEndpointFilter.Capture(TypedResults.Ok(new ApiMoney(1m, "USD")))));
-        Assert.True(IdempotencyEndpointFilter.IsFinal(IdempotencyEndpointFilter.Capture(ApiProblems.Conflict(ApiProblems.Codes.OutOfStock, "Sold out."))));
+        Assert.True(IdempotencyEndpointFilter.IsFinal(IdempotencyEndpointFilter.Capture(ApiProblems.Conflict(CommerceProblemCodes.OutOfStock, "Sold out."))));
         Assert.False(IdempotencyEndpointFilter.IsFinal(IdempotencyEndpointFilter.Capture(ApiProblems.Conflict(ApiProblems.Codes.Concurrency, "Changed elsewhere."))));
         Assert.False(IdempotencyEndpointFilter.IsFinal(IdempotencyEndpointFilter.Capture(ApiProblems.TooManyRequests("Slow down."))));
         Assert.False(IdempotencyEndpointFilter.IsFinal(IdempotencyEndpointFilter.Capture(TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable))));

@@ -360,7 +360,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 model.Cadences = cadenceItems;
                 model.BusinessHoursCalendarId = batch.BusinessHoursCalendarId;
 
-                // The business-hours calendar picker is available only when a feature provides calendars (ContactCenter).
+                // The business-hours picker is available only when a feature provides schedules (Business Hours).
                 // A tenant without the business-hours feature has no calendars, and neither has one that has the
                 // feature but has defined none. Both cases hide the picker rather than showing one with nothing
                 // in it, and both treat conversations as always open.

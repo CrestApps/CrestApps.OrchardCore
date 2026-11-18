@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<LinkTicketsTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-link" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Link Tickets"])
+    </h4>
+</header>

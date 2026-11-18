@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.Skills.Models;
 using System.Globalization;
-using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.Conditions;
+using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
@@ -23,7 +25,8 @@ using YesSql;
 namespace CrestApps.OrchardCore.WorkOrders.Controllers;
 
 /// <summary>
-/// The records work orders are set up with: types, checklists, service levels and sub-statuses.
+/// The records work orders are set up with: types, checklists and sub-statuses. Service level policies are the shared
+/// ones of the Service Levels feature.
 /// </summary>
 public sealed class WorkOrderSettingsController : Controller
 {
@@ -38,11 +41,6 @@ public sealed class WorkOrderSettingsController : Controller
     public const string Checklists = "checklists";
 
     /// <summary>
-    /// The service levels list.
-    /// </summary>
-    public const string ServiceLevels = "service-levels";
-
-    /// <summary>
     /// The sub-statuses list.
     /// </summary>
     public const string SubStatuses = "sub-statuses";
@@ -53,15 +51,12 @@ public sealed class WorkOrderSettingsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly WorkOrderSettingManager<WorkOrderType> _types;
     private readonly WorkOrderSettingManager<ChecklistTemplate> _checklists;
-    private readonly WorkOrderSettingManager<ServiceLevelPolicy> _policies;
+    private readonly IServiceLevelPolicyManager _policies;
     private readonly WorkOrderSettingManager<WorkOrderSubStatus> _subStatuses;
     private readonly WorkOrderLookups _lookups;
     private readonly WorkOrderStore _workOrderStore;
     private readonly ISession _session;
-    private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
-    private readonly ISiteService _siteService;
     private readonly INotifier _notifier;
-    private readonly IEnumerable<IServiceHoursProvider> _serviceHoursProviders;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -72,30 +67,24 @@ public sealed class WorkOrderSettingsController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="types">The types.</param>
     /// <param name="checklists">The checklists.</param>
-    /// <param name="policies">The service level policies.</param>
+    /// <param name="policies">The shared service level policies.</param>
     /// <param name="subStatuses">The sub-statuses.</param>
     /// <param name="lookups">The lookups.</param>
     /// <param name="workOrderStore">The work order store.</param>
     /// <param name="session">The session.</param>
-    /// <param name="timeZoneSelectListProvider">The time zone list provider.</param>
-    /// <param name="siteService">The site service.</param>
     /// <param name="notifier">The notifier.</param>
-    /// <param name="serviceHoursProviders">The providers of the hours calendars a service level can run in.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public WorkOrderSettingsController(
         IAuthorizationService authorizationService,
         WorkOrderSettingManager<WorkOrderType> types,
         WorkOrderSettingManager<ChecklistTemplate> checklists,
-        WorkOrderSettingManager<ServiceLevelPolicy> policies,
+        IServiceLevelPolicyManager policies,
         WorkOrderSettingManager<WorkOrderSubStatus> subStatuses,
         WorkOrderLookups lookups,
         WorkOrderStore workOrderStore,
         ISession session,
-        ITimeZoneSelectListProvider timeZoneSelectListProvider,
-        ISiteService siteService,
         INotifier notifier,
-        IEnumerable<IServiceHoursProvider> serviceHoursProviders,
         IHtmlLocalizer<WorkOrderSettingsController> htmlLocalizer,
         IStringLocalizer<WorkOrderSettingsController> stringLocalizer)
     {
@@ -107,10 +96,7 @@ public sealed class WorkOrderSettingsController : Controller
         _lookups = lookups;
         _workOrderStore = workOrderStore;
         _session = session;
-        _timeZoneSelectListProvider = timeZoneSelectListProvider;
-        _siteService = siteService;
         _notifier = notifier;
-        _serviceHoursProviders = serviceHoursProviders;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -118,7 +104,7 @@ public sealed class WorkOrderSettingsController : Controller
     /// <summary>
     /// Lists one kind of record.
     /// </summary>
-    /// <param name="kind">The list: types, checklists, service-levels or sub-statuses.</param>
+    /// <param name="kind">The list: types, checklists or sub-statuses.</param>
     /// <param name="search">The text the names are searched for.</param>
     /// <param name="pagerParameters">The pager parameters.</param>
     /// <param name="pagerOptions">The pager options.</param>
@@ -136,7 +122,6 @@ public sealed class WorkOrderSettingsController : Controller
         {
             Types => await TypeRowsAsync(),
             Checklists => await ChecklistRowsAsync(),
-            ServiceLevels => await PolicyRowsAsync(),
             SubStatuses => await SubStatusRowsAsync(),
             _ => null,
         };
@@ -209,7 +194,7 @@ public sealed class WorkOrderSettingsController : Controller
             RequiresSignature = item.RequiresSignature,
             RequiredPhotos = item.RequiredPhotos,
             ChecklistTemplateIds = [.. item.ChecklistTemplateIds],
-            RequiredSkills = [.. item.RequiredSkills.Select(skill => new RequiredSkill { SkillId = skill.SkillId, MinProficiency = skill.MinProficiency })],
+            RequiredSkills = [.. item.RequiredSkills.Select(skill => new SkillRequirement { SkillId = skill.SkillId, MinProficiency = skill.MinProficiency })],
             RequiredCertificationIds = [.. item.RequiredCertificationIds],
             AppointmentTypeIds = [.. item.AppointmentTypeIds],
             Lines = [.. item.DefaultLines.Select(ToEditModel)],
@@ -256,7 +241,7 @@ public sealed class WorkOrderSettingsController : Controller
         item.RequiredPhotos = Math.Max(0, form.RequiredPhotos);
         item.ChecklistTemplateIds = [.. (form.ChecklistTemplateIds ?? []).Where(templateId => !string.IsNullOrEmpty(templateId)).Distinct(StringComparer.Ordinal)];
         item.DefaultLines = [.. (form.Lines ?? []).Where(line => !string.IsNullOrWhiteSpace(line.Description)).Select(line => ToLine(line, null))];
-        item.RequiredSkills = [.. (form.RequiredSkills ?? []).Where(skill => !string.IsNullOrEmpty(skill.SkillId)).DistinctBy(skill => skill.SkillId).Select(skill => new RequiredSkill { SkillId = skill.SkillId, MinProficiency = Math.Clamp(skill.MinProficiency, 1, 5) })];
+        item.RequiredSkills = [.. (form.RequiredSkills ?? []).Where(skill => !string.IsNullOrEmpty(skill.SkillId)).DistinctBy(skill => skill.SkillId).Select(skill => new SkillRequirement { SkillId = skill.SkillId, MinProficiency = Math.Clamp(skill.MinProficiency, 1, 5) })];
         item.RequiredCertificationIds = [.. (form.RequiredCertificationIds ?? []).Where(certificationId => !string.IsNullOrEmpty(certificationId)).Distinct(StringComparer.Ordinal)];
         item.AppointmentTypeIds = [.. (form.AppointmentTypeIds ?? []).Where(typeId => !string.IsNullOrEmpty(typeId)).Distinct(StringComparer.Ordinal)];
 
@@ -316,8 +301,8 @@ public sealed class WorkOrderSettingsController : Controller
                 Max = question.Max,
                 Unit = question.Unit ?? question.Meter,
                 Help = question.Help,
-                ShowWhenQuestionId = question.ShowWhen?.QuestionId,
-                ShowWhenEquals = question.ShowWhen?.EqualsValue,
+                ShowWhenQuestionId = question.GetRule()?.Conditions.FirstOrDefault()?.Source,
+                ShowWhenEquals = question.GetRule()?.Conditions.FirstOrDefault()?.Values.FirstOrDefault(),
             })],
         };
 
@@ -365,15 +350,15 @@ public sealed class WorkOrderSettingsController : Controller
             Unit = row.Kind == ChecklistQuestionKind.Number && !string.IsNullOrWhiteSpace(row.Unit) ? row.Unit.Trim() : null,
             Meter = row.Kind == ChecklistQuestionKind.MeterReading && !string.IsNullOrWhiteSpace(row.Unit) ? row.Unit.Trim() : null,
             Help = string.IsNullOrWhiteSpace(row.Help) ? null : row.Help.Trim(),
-            ShowWhen = ShowWhen(row, previous),
+            Rule = ShowWhen(row, previous),
         })];
 
         // A question shows only after the one it depends on, so it can't depend on itself or on one asked later.
         var positions = item.Questions.Select((question, index) => (question.Id, index)).ToDictionary(entry => entry.Id, entry => entry.index, StringComparer.Ordinal);
 
-        foreach (var question in item.Questions.Where(question => question.ShowWhen is not null))
+        foreach (var question in item.Questions.Where(question => question.Rule is not null))
         {
-            if (!positions.TryGetValue(question.ShowWhen.QuestionId, out var at) || at >= positions[question.Id])
+            if (ConditionalVisibility.Sources(question.Rule).Any(source => !positions.TryGetValue(source, out var at) || at >= positions[question.Id]))
             {
                 ModelState.AddModelError(string.Empty, S["\"{0}\" can only depend on a question asked before it.", question.Text]);
             }
@@ -392,110 +377,6 @@ public sealed class WorkOrderSettingsController : Controller
         await _notifier.SuccessAsync(H["The checklist was saved."]);
 
         return RedirectToAction(nameof(Index), new { kind = Checklists });
-    }
-
-    /// <summary>
-    /// Shows the service level editor.
-    /// </summary>
-    /// <param name="id">The policy, or <see langword="null"/> for a new one.</param>
-    /// <returns>The page.</returns>
-    [Admin("work-orders/service-levels/edit/{id?}", "WorkOrderServiceLevelsEdit")]
-    public async Task<IActionResult> EditPolicy(string id)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, WorkOrdersPermissions.ManageWorkOrderSettings))
-        {
-            return Forbid();
-        }
-
-        var item = string.IsNullOrEmpty(id) ? await _policies.NewAsync() : await _policies.FindByIdAsync(id);
-
-        if (item is null)
-        {
-            return NotFound();
-        }
-
-        var weekly = item.WeeklyHours;
-        var model = new ServiceLevelPolicyEditViewModel
-        {
-            Id = id,
-            Name = item.Name,
-            TimeZoneId = item.TimeZoneId ?? (string.IsNullOrEmpty(id) ? (await _siteService.GetSiteSettingsAsync()).TimeZoneId : null),
-            HoursCalendarId = item.HoursCalendarId,
-            BusinessHoursOnly = weekly is not null,
-            Days = weekly is null ? WeeklyHours.Weekdays() : [.. weekly.Days],
-            Opens = (weekly ?? new WeeklyHours()).Opens,
-            Closes = (weekly ?? new WeeklyHours()).Closes,
-            WarningPercent = item.WarningPercent,
-            PauseStatuses = [.. item.PauseStatuses],
-            Targets = [.. Enum.GetValues<WorkOrderPriority>().OrderDescending().Select(priority => item.Targets.FirstOrDefault(target => target.Priority == priority) is { } target
-                ? new TargetEditModel { Priority = priority, ResponseHours = ToHours(target.ResponseMinutes), ResolveHours = ToHours(target.ResolveMinutes) }
-                : new TargetEditModel { Priority = priority })],
-        };
-
-        await PopulateAsync(model);
-
-        return View(model);
-    }
-
-    /// <summary>
-    /// Saves the service level editor.
-    /// </summary>
-    /// <param name="form">The form.</param>
-    /// <returns>The list, or the editor with its errors.</returns>
-    [HttpPost]
-    [ActionName(nameof(EditPolicy))]
-    [Admin("work-orders/service-levels/edit/{id?}", "WorkOrderServiceLevelsEdit")]
-    public async Task<IActionResult> EditPolicyPost(ServiceLevelPolicyEditViewModel form)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, WorkOrdersPermissions.ManageWorkOrderSettings))
-        {
-            return Forbid();
-        }
-
-        var isNew = string.IsNullOrEmpty(form.Id);
-        var item = isNew ? await _policies.NewAsync() : await _policies.FindByIdAsync(form.Id);
-
-        if (item is null)
-        {
-            return NotFound();
-        }
-
-        item.Name = form.Name?.Trim();
-        item.TimeZoneId = string.IsNullOrEmpty(form.TimeZoneId) ? null : form.TimeZoneId;
-        item.HoursCalendarId = string.IsNullOrWhiteSpace(form.HoursCalendarId) ? null : form.HoursCalendarId.Trim();
-        item.WeeklyHours = form.BusinessHoursOnly ? new WeeklyHours { Days = [.. (form.Days ?? []).Distinct().Order()], Opens = form.Opens, Closes = form.Closes } : null;
-        item.WarningPercent = form.WarningPercent;
-        item.PauseStatuses = [.. (form.PauseStatuses ?? []).Distinct()];
-        item.Targets = [.. (form.Targets ?? []).Where(target => target.ResponseHours > 0 || target.ResolveHours > 0).Select(target => new ServiceLevelTarget
-        {
-            Priority = target.Priority,
-            ResponseMinutes = ToMinutes(target.ResponseHours),
-            ResolveMinutes = ToMinutes(target.ResolveHours),
-        })];
-
-        if (form.BusinessHoursOnly && (item.WeeklyHours.Days.Count == 0 || form.Closes <= form.Opens))
-        {
-            ModelState.AddModelError(nameof(form.Days), S["Choose the days open, and a closing time after the opening time."]);
-        }
-
-        if (form.WarningPercent is < 1 or > 99)
-        {
-            ModelState.AddModelError(nameof(form.WarningPercent), S["The warning comes at between 1 and 99 percent of a target."]);
-        }
-
-        await ValidateAsync(_policies, item);
-
-        if (!ModelState.IsValid)
-        {
-            await PopulateAsync(form);
-
-            return View(form);
-        }
-
-        await SaveAsync(_policies, item, isNew);
-        await _notifier.SuccessAsync(H["The service level was saved."]);
-
-        return RedirectToAction(nameof(Index), new { kind = ServiceLevels });
     }
 
     /// <summary>
@@ -588,7 +469,6 @@ public sealed class WorkOrderSettingsController : Controller
         {
             Types => await DeleteTypeAsync(id),
             Checklists => await DeleteUnusedAsync(_checklists, id, type => type.ChecklistTemplateIds.Contains(id)),
-            ServiceLevels => await DeleteUnusedAsync(_policies, id, type => type.ServiceLevelPolicyId == id),
             SubStatuses => await DeleteUnusedAsync(_subStatuses, id, _ => false),
             _ => null,
         };
@@ -653,7 +533,7 @@ public sealed class WorkOrderSettingsController : Controller
 
     private async Task<List<WorkOrderSettingRow>> TypeRowsAsync()
     {
-        var policies = (await _policies.GetAllAsync()).ToDictionary(policy => policy.ItemId, policy => policy.Name, StringComparer.Ordinal);
+        var policies = (await _policies.ListByScopeAsync(WorkOrdersConstants.ServiceLevelScope)).ToDictionary(policy => policy.ItemId, policy => policy.Name, StringComparer.Ordinal);
         var types = await _types.GetAllAsync();
 
         // Counted in the database, type by type, instead of loading every work order's index row.
@@ -697,23 +577,6 @@ public sealed class WorkOrderSettingsController : Controller
         })];
     }
 
-    private async Task<List<WorkOrderSettingRow>> PolicyRowsAsync()
-    {
-        return [.. (await _policies.GetAllAsync()).OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase).Select(item => new WorkOrderSettingRow
-        {
-            Kind = ServiceLevels,
-            Id = item.ItemId,
-            Name = item.Name,
-            EditAction = nameof(EditPolicy),
-            Badges = [
-                (item.WeeklyHours is { } weekly
-                    ? S["{0} {1}–{2}", string.Join(" ", weekly.Days.Select(day => CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(day))), weekly.Opens.ToString("t", CultureInfo.CurrentCulture), weekly.Closes.ToString("t", CultureInfo.CurrentCulture)]
-                    : S["Around the clock"]).Value,
-                .. item.Targets.OrderByDescending(target => target.Priority).Select(target => S["{0}: respond {1}, resolve {2}", target.Priority, Duration(target.ResponseMinutes), Duration(target.ResolveMinutes)].Value),
-            ],
-        })];
-    }
-
     private async Task<List<WorkOrderSettingRow>> SubStatusRowsAsync()
     {
         return [.. (await _subStatuses.GetAllAsync()).OrderBy(item => item.ParentStatus).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase).Select(item => new WorkOrderSettingRow
@@ -728,7 +591,7 @@ public sealed class WorkOrderSettingsController : Controller
 
     private async Task PopulateAsync(WorkOrderTypeEditViewModel model)
     {
-        model.PolicyOptions = [.. (await _policies.GetAllAsync()).OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase).Select(item => new SelectListItem(item.Name, item.ItemId, item.ItemId == model.ServiceLevelPolicyId))];
+        model.PolicyOptions = [.. (await _policies.ListByScopeAsync(WorkOrdersConstants.ServiceLevelScope)).OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase).Select(item => new SelectListItem(item.Name, item.ItemId, item.ItemId == model.ServiceLevelPolicyId))];
         model.ChecklistOptions = [.. (await _checklists.GetAllAsync()).OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase).Select(item => new SelectListItem(item.Name, item.ItemId, model.ChecklistTemplateIds.Contains(item.ItemId)))];
         model.StockItemOptions = await _lookups.StockItemsAsync(HttpContext.RequestAborted);
         model.SkillOptions = await _lookups.SkillsAsync(HttpContext.RequestAborted);
@@ -738,47 +601,12 @@ public sealed class WorkOrderSettingsController : Controller
         // One empty row to add a skill, and two rows at least.
         while (!model.RequiredSkills.Any(skill => string.IsNullOrEmpty(skill.SkillId)) || model.RequiredSkills.Count < 2)
         {
-            model.RequiredSkills.Add(new RequiredSkill());
+            model.RequiredSkills.Add(new SkillRequirement());
         }
 
         while (model.Lines.Count(line => string.IsNullOrWhiteSpace(line.Description)) < BlankLines)
         {
             model.Lines.Add(new LineEditModel());
-        }
-    }
-
-    /// <summary>
-    /// Returns the hours calendars a service level can run in as picker options, keeping a selected calendar that no
-    /// provider lists any more so saving the policy doesn't lose it.
-    /// </summary>
-    /// <param name="calendars">The calendars the providers list.</param>
-    /// <param name="selectedId">The calendar the policy runs in, or <see langword="null"/>.</param>
-    /// <returns>The options.</returns>
-    internal static IList<SelectListItem> HoursCalendarOptions(IReadOnlyList<ServiceHoursCalendar> calendars, string selectedId)
-    {
-        var options = calendars
-            .Select(calendar => new SelectListItem(calendar.Name, calendar.Id, string.Equals(calendar.Id, selectedId, StringComparison.Ordinal)))
-            .ToList();
-
-        if (!string.IsNullOrEmpty(selectedId) && !options.Any(option => option.Selected))
-        {
-            options.Add(new SelectListItem(selectedId, selectedId, true));
-        }
-
-        return options;
-    }
-
-    private async Task PopulateAsync(ServiceLevelPolicyEditViewModel model)
-    {
-        model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(model.TimeZoneId, HttpContext.RequestAborted);
-        model.HoursCalendarOptions = HoursCalendarOptions(await ServiceHoursCalendars.ListAsync(_serviceHoursProviders, HttpContext.RequestAborted), model.HoursCalendarId);
-
-        foreach (var priority in Enum.GetValues<WorkOrderPriority>().OrderDescending())
-        {
-            if (!model.Targets.Any(target => target.Priority == priority))
-            {
-                model.Targets.Add(new TargetEditModel { Priority = priority });
-            }
         }
     }
 
@@ -843,7 +671,6 @@ public sealed class WorkOrderSettingsController : Controller
     {
         Types => nameof(EditType),
         Checklists => nameof(EditChecklist),
-        ServiceLevels => nameof(EditPolicy),
         _ => nameof(EditSubStatus),
     };
 
@@ -851,24 +678,18 @@ public sealed class WorkOrderSettingsController : Controller
     {
         WorkOrderType type => type.Name,
         ChecklistTemplate checklist => checklist.Name,
-        ServiceLevelPolicy policy => policy.Name,
         WorkOrderSubStatus subStatus => subStatus.Name,
         _ => string.Empty,
     };
 
     private static List<string> Present(params LocalizedString[] badges) => [.. badges.Where(badge => badge is not null).Select(badge => badge.Value)];
 
-    private static decimal? ToHours(int minutes) => minutes > 0 ? Math.Round(minutes / 60m, 2) : null;
-
-    private static int ToMinutes(decimal? hours) => hours > 0 ? (int)Math.Round(hours.Value * 60m) : 0;
-
-    private string Duration(int minutes) => minutes <= 0
-        ? S["no target"]
-        : minutes % 60 == 0 ? S["{0} h", minutes / 60] : S["{0} min", minutes];
-
     // The condition a question row asks for: a saved question and the answer that shows it, or none.
-    private static ChecklistCondition ShowWhen(QuestionEditModel row, Dictionary<string, ChecklistQuestion> previous)
+    private static ConditionRule ShowWhen(QuestionEditModel row, Dictionary<string, ChecklistQuestion> previous)
         => string.IsNullOrWhiteSpace(row.ShowWhenQuestionId) || row.ShowWhenQuestionId == row.Id || !previous.ContainsKey(row.ShowWhenQuestionId) || string.IsNullOrWhiteSpace(row.ShowWhenEquals)
             ? null
-            : new ChecklistCondition { QuestionId = row.ShowWhenQuestionId, EqualsValue = row.ShowWhenEquals.Trim() };
+            : new ConditionRule
+            {
+                Conditions = [new Condition { Source = row.ShowWhenQuestionId, Operator = ConditionOperator.Is, Values = [row.ShowWhenEquals.Trim()] }],
+            };
 }

@@ -23,6 +23,7 @@ It works with other features when they are on:
 | Audit Trail | Every recorded, ended, changed and removed entry, with who and why. |
 | Recipes, Deployment | The `TimeTracker` recipe step and deployment step. |
 | CrestApps Recipes | The steps' schemas (`IRecipeStep`, deployment step schema). |
+| Tickets | A desk names the stage its ticket work is recorded in; agents start and stop working on a ticket from its page (`Source` `Ticket`), and each ticket shows its time by person. See [Tickets](tickets/integrations.md#time-on-tickets). |
 
 ## Records
 
@@ -30,7 +31,7 @@ All live in the `TimeTracker` YesSql collection, each with its own index table.
 
 - **`TimeCategory`**: `Name` (unique), `Code`, `Color`, `Position` (the report column order), `Factor` (how a minute counts: 1 as it is, 1.5 half again, such as an overtime premium) and `Enabled`.
 - **`TimeStage`**: `Name` (unique), `Code` (for exports and mapping Contact Center states), `Color`, `Position`, `CategoryIds`, `SelfService` (people pick it on their clock; off for stages that come only from integrations or managers) and `Enabled`.
-- **`TimeEntry`**: `UserId` and `UserName`, `StageId`, `StartUtc`, `EndUtc` (none while the person is in it), `Source` (`Self`, `Manager`, `Kiosk`, `Mobile`, `ContactCenter`, `TimeOff`, `Api`, `Import`) with `SourceRef`, `Note`, `ManagedBy` (the clock that keeps it, if another one does), `CreatedBy` and `Changes` (each with when, who, why and what it was before).
+- **`TimeEntry`**: `UserId` and `UserName`, `StageId`, `StartUtc`, `EndUtc` (none while the person is in it), `Source` (`Self`, `Manager`, `Kiosk`, `Mobile`, `ContactCenter`, `TimeOff`, `Api`, `Import`, `Ticket`) with `SourceRef` (what in the source the entry stands for, such as `Ticket:{id}`), `ChargedTo` (the record the time counts against, such as `Agreement:{id}`, a `RecordRef`), `Note`, `ManagedBy` (the clock that keeps it, if another one does), `CreatedBy` and `Changes` (each with when, who, why and what it was before).
 
 `TimeEntryIndex` keeps the person, stage, start, end (the far future while open), whether it is open, and the source.
 
@@ -38,9 +39,12 @@ All live in the `TimeTracker` YesSql collection, each with its own index table.
 
 `ITimeTrackerService` does every change, under a distributed lock per person (`TIMETRACKER_USER_{id}`), saving before the lock is let go.
 
-- **`SwitchAsync`** puts a person in a stage from now: it clocks them in, or ends the stage they are in at this second and starts the new one, so the day has no gaps or overlaps. Switching to the stage they are in changes nothing.
+- **`SwitchAsync`** puts a person in a stage from now: it clocks them in, or ends the stage they are in at this second and starts the new one, so the day has no gaps or overlaps. Switching to the stage they are in, for the same source ref, changes nothing; the same stage for another source ref (another ticket, say) ends one entry and starts the next.
 - **`ClockOutAsync`** ends the stage they are in.
 - **`AddAsync`** records an entry that has ended (a manager's, an import's, approved time off). **`UpdateAsync`** changes a stage, times or note and needs a reason, kept in `Changes`. **`DeleteAsync`** needs a reason too. None of them lets a person's entries overlap or time be recorded in the future.
+- **`InsertAsync`** records an ended entry over the person's other time kept here, such as work logged on a record after the fact (Tickets' **Log time**): the time it covers is cut around it (an entry it falls inside becomes two, one it covers whole is removed), so the person keeps one entry at a time and their total doesn't change. It never cuts time from the entry's own `Source` or time another clock keeps (`ManagedBy`); an entry overlapping them is refused. Each cut entry keeps what it was and the reason in `Changes`, and observers hear `Edited`, `Created` and `Deleted` as usual.
+- **`ListAsync`** lists entries by people, stage, range, source (`TimeEntryQuery.Source`), source ref (`TimeEntryQuery.SourceRef`, or several with `SourceRefs`) and what they are charged to (`TimeEntryQuery.ChargedTo`), so another module finds the time recorded for one of its records, or all of its records.
+- **What time counts against** (`TimeEntry.ChargedTo`, in the index) is set once, when an entry with a source ref is created (by `SwitchAsync`, `AddAsync`, `InsertAsync` or a sync), inside the same lock and save: each `ITimeEntryChargeResolver` is asked in turn and the first that answers wins. It is never asked again, so a later change to the source record (a ticket moved to another agreement) leaves the time already logged where it was. The pieces of an entry that `InsertAsync` or a sync cuts around other time keep it. When the index gained the column, the **TimeTracker.ChargeEntries** resumable step asked the resolvers about the entries logged before, a page at a time.
 - **`GetTotalsAsync`** totals a range for each person, or each person and day in a time zone (an entry over midnight is split): minutes by stage, minutes by category after its factor, and every tracked minute. An open entry counts up to now.
 - `ITimeEntryObserver` hears about every change after it is saved; the Audit Trail is one.
 

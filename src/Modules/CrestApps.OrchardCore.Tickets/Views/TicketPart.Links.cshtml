@@ -1,0 +1,122 @@
+@model TicketLinksViewModel
+
+@{
+    var ticketId = Model.Ticket.ContentItemId;
+    var formId = "ticket-links-" + ticketId;
+    string KindName(string kind) => kind switch
+    {
+        TicketLinkKinds.Parent => T["Parent of this ticket"].Value,
+        TicketLinkKinds.Child => T["Part of this ticket"].Value,
+        TicketLinkKinds.Duplicate => T["Duplicate"].Value,
+        TicketLinkKinds.FollowUpOf => T["Followed up by"].Value,
+        TicketLinkKinds.Problem => T["Its problem"].Value,
+        _ => T["Related"].Value,
+    };
+}
+
+@if (Model.Links.Count > 0 || Model.Incidents.Count > 0 || Model.HiddenIncidents > 0 || Model.CanEdit)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h2 class="h6">@T["Links"]</h2>
+            @if (Model.Links.Count > 0)
+            {
+                <ul class="list-unstyled small">
+                    @foreach (var link in Model.Links)
+                    {
+                        <li class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                            <span>
+                                <span class="text-muted">@KindName(link.Link.Kind) · @link.KindName:</span>
+                                @if (string.IsNullOrEmpty(link.Url))
+                                {
+                                    @link.Name
+                                }
+                                else
+                                {
+                                    <a href="@link.Url">@link.Name</a>
+                                }
+                            </span>
+                            @if (Model.CanEdit)
+                            {
+                                <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="Link" asp-route-id="@ticketId" method="post" class="d-inline">
+                                    <input type="hidden" name="record" value="@link.Link.Record" />
+                                    <button type="submit" class="btn btn-link btn-sm p-0 text-danger" title="@T["Remove the link"]" aria-label="@T["Remove the link"]"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                                </form>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+            @if (Model.Incidents.Count > 0 || Model.HiddenIncidents > 0)
+            {
+                <h3 class="h6 small text-muted mt-2">@T["Incidents of this problem ({0})", Model.Incidents.Count + Model.HiddenIncidents]</h3>
+                <ul class="list-unstyled small">
+                    @foreach (var incident in Model.Incidents)
+                    {
+                        <li class="mb-1">
+                            @if (string.IsNullOrEmpty(incident.Url))
+                            {
+                                @incident.Name
+                            }
+                            else
+                            {
+                                <a href="@incident.Url">@incident.Name</a>
+                            }
+                        </li>
+                    }
+                </ul>
+                @if (Model.HiddenIncidents > 0)
+                {
+                    <p class="small text-muted mb-1">@T["{0} more you can't see.", Model.HiddenIncidents]</p>
+                }
+                <p class="small text-muted mb-0">@T["Solving this ticket solves its open incidents."]</p>
+            }
+            @if (Model.CanEdit && Model.Kinds.Count > 0)
+            {
+                <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="Link" asp-route-id="@ticketId" method="post" id="@formId" class="no-multisubmit">
+                    <div class="mb-2">
+                        <label for="@(formId)-record-kind" class="form-label small mb-1">@T["Link to"]</label>
+                        <select id="@(formId)-record-kind" name="recordKind" class="form-select form-select-sm" data-ticket-link-kind>
+                            @foreach (var kind in Model.Kinds)
+                            {
+                                <option value="@kind.Value">@kind.Text</option>
+                            }
+                        </select>
+                    </div>
+                    @for (var index = 0; index < Model.Kinds.Count; index++)
+                    {
+                        var kind = Model.Kinds[index];
+                        <div class="mb-2" data-ticket-link-picker="@kind.Value" hidden="@(index > 0)">
+                            @await Component.InvokeAsync("RecordPicker", new { name = "record-" + kind.Value, kind = kind.Value, valueType = "reference", smallButton = true })
+                        </div>
+                    }
+                    <div class="mb-2">
+                        <label for="@(formId)-kind" class="form-label small mb-1">@T["How they relate"]</label>
+                        <select id="@(formId)-kind" name="kind" class="form-select form-select-sm">
+                            <option value="@TicketLinkKinds.Related">@T["Related"]</option>
+                            <option value="@TicketLinkKinds.Parent">@T["Parent of this ticket"]</option>
+                            <option value="@TicketLinkKinds.Child">@T["Part of this ticket"]</option>
+                            <option value="@TicketLinkKinds.Duplicate">@T["Duplicate"]</option>
+                            <option value="@TicketLinkKinds.Problem">@T["Its problem (solving it solves this one)"]</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-secondary btn-sm">@T["Add link"]</button>
+                </form>
+                <script at="Foot">
+                    (() => {
+                        const form = document.getElementById('@formId');
+                        const kind = form?.querySelector('[data-ticket-link-kind]');
+                        if (!form || !kind) {
+                            return;
+                        }
+                        const show = () => form.querySelectorAll('[data-ticket-link-picker]').forEach(picker => {
+                            picker.hidden = picker.dataset.ticketLinkPicker !== kind.value;
+                        });
+                        kind.addEventListener('change', show);
+                        show();
+                    })();
+                </script>
+            }
+        </div>
+    </div>
+}

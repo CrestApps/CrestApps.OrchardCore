@@ -189,7 +189,7 @@ public static class ContactCenterDataGovernanceCatalog
             ContainsRecordingReference = false,
             RetentionBasis = "Administrator-managed; retained until changed or removed by an administrator.",
             ErasureStrategy = ContactCenterErasureStrategy.NotApplicable,
-            Description = "Tenant configuration such as queues, queue groups, skills, entry points, dialer profiles, agent state reason codes, business-hours calendars, and queue memberships. It holds no personal data of end customers.",
+            Description = "Tenant configuration such as queues, queue groups, skills, entry points, dialer profiles, agent state reason codes, and queue memberships. It holds no personal data of end customers.",
         },
     ];
 

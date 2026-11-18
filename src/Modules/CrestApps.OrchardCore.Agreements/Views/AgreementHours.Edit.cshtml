@@ -1,0 +1,56 @@
+@model AgreementHoursViewModel
+
+@{
+    string Hours(double minutes) => (minutes / 60).ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h6">@T["Covered hours"]</h2>
+        <div class="row">
+            <div class="col-md-5 mb-3">
+                <label asp-for="Kind" class="form-label">@T["Hours covered"]</label>
+                <select asp-for="Kind" class="form-select">
+                    <option value="@AgreementHoursKind.None">@T["None"]</option>
+                    <option value="@AgreementHoursKind.Block">@T["A block of hours"]</option>
+                    <option value="@AgreementHoursKind.MonthlyAllowance">@T["An allowance each month"]</option>
+                </select>
+                <span asp-validation-for="Kind" class="text-danger"></span>
+                <span class="hint">@T["A block is used until it runs out; an allowance starts again each month, and what's left doesn't carry over."]</span>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label asp-for="Hours" class="form-label">@T["Hours"]</label>
+                <input asp-for="Hours" type="number" step="0.25" min="0" class="form-control" />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="RoundingMinutes" class="form-label">@T["Round each entry up to"]</label>
+                <select asp-for="RoundingMinutes" class="form-select">
+                    <option value="0">@T["Don't round"]</option>
+                    <option value="6">@T["6 minutes"]</option>
+                    <option value="15">@T["15 minutes"]</option>
+                    <option value="30">@T["30 minutes"]</option>
+                </select>
+            </div>
+        </div>
+        <p class="hint mb-0">@T["Time past the hours covered keeps being worked and is billable. The account's manager is told when 80% and when all of the hours are used."]</p>
+        @if (Model.Balance is { } balance)
+        {
+            var share = Math.Min(100, balance.UsedShare * 100);
+            <hr />
+            <p class="mb-1">
+                @T["Used {0} of {1} hours", Hours(balance.UsedMinutes), Hours(balance.CoveredMinutes)]
+                <span class="text-body-secondary">(@balance.PeriodStart.ToString("d", System.Globalization.CultureInfo.CurrentCulture)@(balance.PeriodEnd is { } end ? " – " + end.ToString("d", System.Globalization.CultureInfo.CurrentCulture) : null))</span>
+            </p>
+            <div class="progress mb-2" role="progressbar" aria-label="@T["Hours used"]" aria-valuenow="@((int)share)" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar @(balance.UsedShare >= 1 ? "bg-danger" : balance.UsedShare >= 0.8 ? "bg-warning" : null)" style="width: @((int)share)%"></div>
+            </div>
+            <p class="small text-body-secondary mb-0">
+                @T["Left: {0} hours", Hours(balance.LeftMinutes)]
+                @if (balance.OverageMinutes > 0)
+                {
+                    <span class="text-danger ms-2">@T["Over by {0} hours, billable", Hours(balance.OverageMinutes)]</span>
+                }
+            </p>
+        }
+    </div>
+</div>

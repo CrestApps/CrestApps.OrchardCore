@@ -1,0 +1,4 @@
+@* Orchard Core's field editors show their hint through the Hint_Admin shape, which only the admin theme defines. This
+   fallback lets a content editor render on the site's own theme (a portal form, a widget form); the admin theme's
+   template takes precedence over it in the admin. *@
+<span class="form-text d-block">@Model.Hint</span>

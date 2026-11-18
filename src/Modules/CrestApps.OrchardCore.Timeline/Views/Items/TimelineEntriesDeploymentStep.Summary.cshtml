@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Timeline.Deployments
+
+@model ShapeViewModel<TimelineEntriesDeploymentStep>
+
+<h5>@T["Timeline entries"]</h5>
+
+<span class="badge text-bg-success">@(string.IsNullOrEmpty(Model.Value.SubjectKinds) ? T["No record kind chosen"].Value : Model.Value.SubjectKinds)</span>

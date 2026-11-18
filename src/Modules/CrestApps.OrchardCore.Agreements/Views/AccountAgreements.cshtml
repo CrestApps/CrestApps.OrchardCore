@@ -1,0 +1,39 @@
+@model AccountAgreementsViewModel
+
+@{
+    string Hours(double minutes) => (minutes / 60).ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <h2 class="h6 mb-0 me-auto">@T["Agreements"] <span class="badge text-bg-secondary fw-normal">@Model.Agreements.Count</span></h2>
+            @if (Model.CanManage)
+            {
+                <a class="btn btn-sm btn-primary" asp-area="CrestApps.OrchardCore.Agreements" asp-controller="Agreements" asp-action="Create" asp-route-accountId="@Model.AccountId">@T["New agreement"]</a>
+            }
+        </div>
+        @if (Model.Agreements.Count == 0)
+        {
+            <p class="small text-muted mb-0">@T["No agreements with this account yet."]</p>
+        }
+        else
+        {
+            <div class="list-group list-group-flush">
+                @foreach (var (agreement, balance) in Model.Agreements)
+                {
+                    <a class="list-group-item list-group-item-action d-flex flex-wrap gap-2 align-items-center px-0" asp-area="CrestApps.OrchardCore.Agreements" asp-controller="Agreements" asp-action="Edit" asp-route-id="@agreement.ItemId">
+                        <span class="fw-semibold">@agreement.Number</span>
+                        <span class="me-auto">@agreement.Name</span>
+                        @if (balance is not null)
+                        {
+                            <span class="small @(balance.UsedShare >= 1 ? "text-danger" : balance.UsedShare >= 0.8 ? "text-warning" : "text-body-secondary")">@T["{0} of {1} hours used", Hours(balance.UsedMinutes), Hours(balance.CoveredMinutes)]</span>
+                        }
+                        <span class="badge text-bg-light border">@agreement.Status</span>
+                        <span class="small text-muted">@agreement.StartDate.ToString("d", System.Globalization.CultureInfo.CurrentCulture)@(agreement.EndDate is { } end ? " – " + end.ToString("d", System.Globalization.CultureInfo.CurrentCulture) : null)</span>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</div>

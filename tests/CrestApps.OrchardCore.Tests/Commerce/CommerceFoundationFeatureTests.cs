@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ExchangeRates;
 using CrestApps.OrchardCore.Invoicing;
 using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Transactions;
+using CrestApps.OrchardCore.Users;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules.Manifest;
@@ -18,9 +19,9 @@ using TypeFeatureAttribute = OrchardCore.Modules.FeatureAttribute;
 namespace CrestApps.OrchardCore.Tests.Commerce;
 
 /// <summary>
-/// Billing does not turn on the store. What several features share (the Commerce menu and its icon, the customer
-/// account, the admin list helpers, customers' access to their own admin pages, personal data) is the Commerce
-/// Foundation feature, which billing depends on; the store's setup guide stays in the Commerce feature, which only the
+/// Billing does not turn on the store. What several features share (the Commerce menu and its icon, the admin list
+/// helpers, customers' access to their own admin pages, personal data) is the Commerce Foundation feature, which billing
+/// depends on, and the customer's account is the Users module's My Account feature, which the foundation depends on; the store's setup guide stays in the Commerce feature, which only the
 /// store modules depend on.
 /// </summary>
 public sealed class CommerceFoundationFeatureTests
@@ -71,11 +72,12 @@ public sealed class CommerceFoundationFeatureTests
     }
 
     [Fact]
-    public void TheFoundationsStartupAndAccountPages_BelongToTheFoundation()
+    public void TheFoundationsStartup_BelongsToTheFoundation_AndTheAccountPagesToMyAccount()
     {
         // A type without [Feature] belongs to the module's main feature, the store layer.
         Assert.Equal(CommerceConstants.Features.Foundation, typeof(FoundationStartup).GetCustomAttribute<TypeFeatureAttribute>()?.FeatureName);
-        Assert.Equal(CommerceConstants.Features.Foundation, typeof(AccountController).GetCustomAttribute<TypeFeatureAttribute>()?.FeatureName);
+        Assert.Equal(UsersConstants.Feature.Account, typeof(CrestApps.OrchardCore.Users.Controllers.AccountController).GetCustomAttribute<TypeFeatureAttribute>()?.FeatureName);
+        Assert.Contains(UsersConstants.Feature.Account, _features.Value[CommerceConstants.Features.Foundation].Dependencies);
         Assert.Null(typeof(StoreStartup).GetCustomAttribute<TypeFeatureAttribute>());
         Assert.Null(typeof(StoreSetupController).GetCustomAttribute<TypeFeatureAttribute>());
     }

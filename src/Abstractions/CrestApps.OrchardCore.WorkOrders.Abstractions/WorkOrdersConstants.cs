@@ -16,6 +16,17 @@ public static class WorkOrdersConstants
     public const string ReferenceType = "WorkOrder";
 
     /// <summary>
+    /// The record kind of a work order: what a record reference to a work order names. It is stored in every
+    /// reference, so it never changes.
+    /// </summary>
+    public const string RecordKind = "WorkOrder";
+
+    /// <summary>
+    /// The name of the service level scope work orders register: the shared policies written for work orders.
+    /// </summary>
+    public const string ServiceLevelScope = "WorkOrders";
+
+    /// <summary>
     /// The prefix of work order numbers.
     /// </summary>
     public const string NumberPrefix = "WO-";
@@ -24,16 +35,6 @@ public static class WorkOrdersConstants
     /// The number sequence series that work order numbers come from.
     /// </summary>
     public const string NumberSeries = "WorkOrders.WorkOrder";
-
-    /// <summary>
-    /// The prefix of service agreement numbers.
-    /// </summary>
-    public const string AgreementNumberPrefix = "SA-";
-
-    /// <summary>
-    /// The number sequence series that service agreement numbers come from.
-    /// </summary>
-    public const string AgreementNumberSeries = "WorkOrders.ServiceAgreement";
 
     /// <summary>
     /// The feature identifiers.

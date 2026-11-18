@@ -119,7 +119,7 @@ public sealed class ContactCenterAgentSkillsTests
         await kit.PublishShiftsAsync(ana, ben);
         await GiveAgentSkillAsync(kit.Harness, ana.UserId, "Boilers");
 
-        var (_, visit) = await kit.AddJobAsync("Boiler down", DispatchKit.South, workOrder => workOrder.RequiredSkills = [new RequiredSkill { SkillId = boilers.ItemId }]);
+        var (_, visit) = await kit.AddJobAsync("Boiler down", DispatchKit.South, workOrder => workOrder.RequiredSkills = [new SkillRequirement { SkillId = boilers.ItemId }]);
 
         // Act
         var found = await kit.CandidatesAsync(visit);

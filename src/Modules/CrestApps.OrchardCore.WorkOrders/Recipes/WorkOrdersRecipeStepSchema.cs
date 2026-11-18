@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using Json.Schema;
 using static CrestApps.OrchardCore.WorkOrders.Recipes.WorkOrdersSchemaBuilder;
@@ -20,10 +21,10 @@ internal sealed class WorkOrdersRecipeStepSchema : IRecipeStep
             WorkOrdersRecipeStep.RecipeName,
             "Creates or updates work order checklists, service levels, sub-statuses and types, and service agreements when the agreements feature is on. Records are matched by ItemId only; an existing record takes only the members given. The sections are imported in this order, so a type can point at a checklist or service level of the same step by ItemId.",
             ("Checklists", Array(Checklist(), "The checklist templates.")),
-            ("ServiceLevels", Array(ServiceLevel(), "The service level policies.")),
+            ("ServiceLevels", Array(ServiceLevel(), "Deprecated: Work Orders' own service level policies, as older recipes carried them. Each one becomes a shared policy; use the ServiceLevelPolicies step instead.")),
             ("SubStatuses", Array(SubStatus(), "The sub-statuses.")),
             ("Types", Array(TypeEntry(), "The work order types.")),
-            ("Agreements", Array(Agreement(), "The service agreements. Read only when the service agreements feature is on; their customers, accounts and assets must be on the site too.")));
+            ("Agreements", Array(Agreement(), "Agreements with visits, made as agreements of the Agreements module with their visits as Work Orders terms. Read only when the service agreements feature is on; their customers, accounts and assets must be on the site too.")));
 
         return ValueTask.FromResult(_cached);
     }
@@ -32,7 +33,7 @@ internal sealed class WorkOrdersRecipeStepSchema : IRecipeStep
     {
         var question = Object(
             "A question on the checklist.",
-            ("Id", Text("The question's id within the checklist, which ShowWhen refers to.")),
+            ("Id", Text("The question's id within the checklist, which the conditions of later questions read.")),
             ("Section", Text("The section the question is in.")),
             ("Text", Text("The question.")),
             ("Kind", Enum<ChecklistQuestionKind>("The kind of answer.")),
@@ -44,8 +45,11 @@ internal sealed class WorkOrdersRecipeStepSchema : IRecipeStep
             ("Choices", Strings("The choices of a Choice or MultiChoice question.")),
             ("MinPhotos", Integer("How many photos a Photo question needs.")),
             ("Meter", Text("The asset meter a MeterReading question records.")),
+            ("Rule", ConditionRuleSchema.Build(
+                "When the question shows; null for always.",
+                "The id of an earlier question of the checklist.")),
             ("ShowWhen", OptionalObject(
-                "Shows the question only after another was answered a certain way; null for always.",
+                "Deprecated: the older form of Rule (one question and the answer that shows it), still read and saved as a rule.",
                 ("QuestionId", Text("The id of the question it depends on.")),
                 ("EqualsValue", Text("The answer that shows it.")))));
 
@@ -65,7 +69,7 @@ internal sealed class WorkOrdersRecipeStepSchema : IRecipeStep
             ("ResolveMinutes", Integer("The minutes to resolution; 0 for none.")));
 
         return Object(
-            "A service level policy: how fast work orders must be answered and resolved, by priority.",
+            "Deprecated: a service level policy as older recipes carried it. Each one is copied to a shared policy with the same id; new recipes use the ServiceLevelPolicies step.",
             ("ItemId", ItemId("service level policy")),
             ("Name", Text("The policy name.")),
             ("Targets", Array(target, "The targets, by priority.")),
@@ -147,7 +151,7 @@ internal sealed class WorkOrdersRecipeStepSchema : IRecipeStep
             ("ItemId", ItemId("service agreement")),
             ("Number", Text("The number, such as SA-00001.")),
             ("Name", Text("The agreement name.")),
-            ("Status", Enum<ServiceAgreementStatus>("Where the agreement is.")),
+            ("Status", Enum<CrestApps.OrchardCore.Agreements.Models.AgreementStatus>("Where the agreement is.")),
             ("CustomerId", Text("The customer: the Orchard Core user id.")),
             ("AccountId", Text("The CRM account (the company) the agreement is with.")),
             ("Contact", OptionalObject(

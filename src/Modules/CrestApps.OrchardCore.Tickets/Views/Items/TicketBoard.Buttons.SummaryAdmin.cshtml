@@ -1,0 +1,21 @@
+@model TicketBoardRowViewModel
+
+<a asp-controller="TicketBoards" asp-action="Display" asp-route-id="@Model.Board.ItemId" class="btn btn-primary btn-sm">@T["Open"]</a>
+
+@* A link Orchard Core posts (the row sits inside the list's bulk form, which can't hold another form). *@
+<a asp-controller="TicketBoards" asp-action="Pin" asp-route-id="@Model.Board.ItemId" asp-route-pinned="@(Model.IsPinned ? "false" : "true")" asp-route-returnUrl="@(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString)"
+   class="btn btn-outline-secondary btn-sm"
+   data-url-af="UnsafeUrl"
+   title="@(Model.IsPinned ? T["Remove it from your menu"] : T["Show it in your menu, under Service Desk"])"><i class="fa-solid fa-thumbtack me-1" aria-hidden="true"></i>@(Model.IsPinned ? T["Unpin"] : T["Pin to menu"])</a>
+
+@if (Model.CanManage)
+{
+    <a asp-controller="TicketBoards" asp-action="Edit" asp-route-id="@Model.Board.ItemId" class="btn btn-secondary btn-sm">@T["Edit"]</a>
+
+    <a asp-controller="TicketBoards" asp-action="Delete"
+       asp-route-id="@Model.Board.ItemId"
+       class="btn btn-danger btn-sm"
+       data-title="@T["Delete"]"
+       data-message="@T["Delete the board {0}? The tickets on it stay as they are.", Model.Board.Name]"
+       data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}

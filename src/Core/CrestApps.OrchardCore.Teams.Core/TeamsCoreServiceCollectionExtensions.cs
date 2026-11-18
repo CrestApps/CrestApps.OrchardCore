@@ -26,6 +26,7 @@ public static class TeamsCoreServiceCollectionExtensions
         services.TryAddScoped<TeamStore>();
         services.TryAddScoped<ITeamManager, TeamManager>();
         services.TryAddScoped<ITeamMembershipService, DefaultTeamMembershipService>();
+        services.TryAddScoped<ITeamAssignmentService, DefaultTeamAssignmentService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Team>, TeamCatalogHandler>());
 
         return services;

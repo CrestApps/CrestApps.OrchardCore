@@ -3,8 +3,10 @@
 
 @{
     var agreement = Model.Agreement;
+    var terms = Model.Terms;
     var culture = CultureInfo.CurrentCulture;
-    var address = agreement.ServiceAddress;
+    var address = terms.ServiceAddress;
+    var active = agreement.Status == CrestApps.OrchardCore.Agreements.Models.AgreementStatus.Active;
 }
 
 <zone Name="Title"><breadcrumb name="ServiceAgreementsView" title="@T["{0} {1}", agreement.Number, agreement.Name]" /></zone>
@@ -13,17 +15,17 @@
     <div class="card-body">
         <div class="row gx-2 gy-2 align-items-center">
             <div class="col">
-                <span class="badge @(agreement.Status == ServiceAgreementStatus.Active ? "text-bg-success" : "text-bg-secondary") fw-normal">@agreement.Status</span>
-                <span class="text-muted small">@(agreement.EndDate is { } end ? T["{0} to {1}", agreement.StartDate.ToString("d", culture), end.ToString("d", culture)] : T["From {0}", agreement.StartDate.ToString("d", culture)]) · @(agreement.Pricing == AgreementPricing.Included ? T["Visits included"] : T["{0} a visit", agreement.PricePerVisit.ToString("N2", culture)])</span>
+                <span class="badge @(active ? "text-bg-success" : "text-bg-secondary") fw-normal">@agreement.Status</span>
+                <span class="text-muted small">@(agreement.EndDate is { } end ? T["{0} to {1}", agreement.StartDate.ToString("d", culture), end.ToString("d", culture)] : T["From {0}", agreement.StartDate.ToString("d", culture)]) · @(terms.Pricing == AgreementPricing.Included ? T["Visits included"] : T["{0} a visit", terms.PricePerVisit.ToString("N2", culture)])</span>
             </div>
             <div class="col-auto">
-                @if (agreement.Status == ServiceAgreementStatus.Active)
+                @if (active)
                 {
                     <form asp-action="Run" asp-route-id="@agreement.ItemId" method="post" class="d-inline">
                         <button type="submit" class="btn btn-secondary">@T["Make due work orders now"]</button>
                     </form>
                 }
-                <a asp-action="Edit" asp-route-id="@agreement.ItemId" class="btn btn-primary">@T["Edit"]</a>
+                <a asp-area="CrestApps.OrchardCore.Agreements" asp-controller="Agreements" asp-action="Edit" asp-route-id="@agreement.ItemId" class="btn btn-primary">@T["Edit"]</a>
             </div>
         </div>
     </div>
@@ -38,13 +40,13 @@
                 {
                     <dt class="col-4">@T["Account"]</dt><dd class="col-8"><a href="@Url.Content($"~/Admin/Contents/ContentItems/{agreement.AccountId}/Display")">@(Model.CustomerNames.GetValueOrDefault("Account") ?? agreement.AccountId)</a></dd>
                 }
-                @if (!string.IsNullOrEmpty(agreement.CustomerId))
+                @if (!string.IsNullOrEmpty(terms.CustomerId))
                 {
-                    <dt class="col-4">@T["Customer"]</dt><dd class="col-8">@(Model.CustomerNames.GetValueOrDefault("Customer") ?? agreement.CustomerId)</dd>
+                    <dt class="col-4">@T["Customer"]</dt><dd class="col-8">@(Model.CustomerNames.GetValueOrDefault("Customer") ?? terms.CustomerId)</dd>
                 }
-                @if (!string.IsNullOrEmpty(agreement.Contact?.Name))
+                @if (!string.IsNullOrEmpty(terms.Contact?.Name))
                 {
-                    <dt class="col-4">@T["Contact"]</dt><dd class="col-8">@agreement.Contact.Name @agreement.Contact.Phone</dd>
+                    <dt class="col-4">@T["Contact"]</dt><dd class="col-8">@terms.Contact.Name @terms.Contact.Phone</dd>
                 }
                 @if (address is not null)
                 {
@@ -87,7 +89,7 @@
     <h2 class="h6">@T["Work orders"]</h2>
     @if (Model.WorkOrders.Count == 0)
     {
-        <p class="small text-muted mb-0">@(agreement.Status == ServiceAgreementStatus.Active ? T["None made yet. They are made each hour, within each schedule's days ahead."] : T["None. Only an active agreement makes work orders."])</p>
+        <p class="small text-muted mb-0">@(active ? T["None made yet. They are made each hour, within each schedule's days ahead."] : T["None. Only an active agreement makes work orders."])</p>
     }
     else
     {

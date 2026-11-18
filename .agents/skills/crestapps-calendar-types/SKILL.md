@@ -80,7 +80,7 @@ services.AddCalendarType("Vehicles", type => type
 ```
 
 - Event type options: `Busy()` / `Free()` (free also leaves capacity), `AllDayByDefault()`, `Lasts(minutes)`,
-  `NeedsApproval()` (created `Tentative`; someone with Manage confirms), `RequiresAttendee()`, `IgnoresCapacity()`.
+  `NeedsApproval()` (created `Tentative`; someone with Manage confirms), `RequiresAttendee()`, `IgnoresCapacity()`, `MarksAbsence()` (team assignment treats its people as away while it lasts).
 - A type with no event types gets the default `Event` type (`CalendarsConstants.EventTypes.Default`).
 - `WithCapabilities(...)` limits what the editor offers (`Attendees`, `Recurrence`, `AllDay`, `FreeBusy`,
   `ExternalSync`, `Feed`; default `All`).

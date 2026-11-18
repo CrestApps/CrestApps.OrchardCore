@@ -82,7 +82,7 @@ public sealed class Startup : StartupBase
             .AddEventType(CalendarsConstants.EventTypes.Default, LocalizationSource.Create<Startup>("Event"))
             .AddEventType("Meeting", LocalizationSource.Create<Startup>("Meeting"), e => e.Color("#1971c2"))
             .AddEventType("Focus", LocalizationSource.Create<Startup>("Focus time"), e => e.Color("#7048e8"))
-            .AddEventType("OutOfOffice", LocalizationSource.Create<Startup>("Out of office"), e => e.Color("#e8590c").AllDayByDefault()));
+            .AddEventType(CalendarsConstants.EventTypes.OutOfOffice, LocalizationSource.Create<Startup>("Out of office"), e => e.Color("#e8590c").AllDayByDefault().MarksAbsence()));
     }
 
     /// <inheritdoc />

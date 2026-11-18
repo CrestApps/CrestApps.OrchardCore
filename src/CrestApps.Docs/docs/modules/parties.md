@@ -105,4 +105,4 @@ A source says who has billing access by overriding `GetMemberUserIdsAsync(party,
 ## Consumers
 
 - **Assets** reads an asset's owner through the party sources. The stored `AssetOwnerKind` keeps its values: `Customer` holds a user id and maps to the `User` party kind (`AssetOwners.ToPartyKind`, `asset.ToParty()`).
-- **Work Orders** picks and names a work order's customer, account and contact through `IPartyDirectory`. `WorkOrder.CustomerId` and `ServiceAgreement.CustomerId` keep their stored name and hold a **user id** (party kind `User`).
+- **Work Orders** picks and names a work order's customer, account and contact through `IPartyDirectory`. `WorkOrder.CustomerId` and `WorkOrderAgreementTerms.CustomerId` keep their stored name and hold a **user id** (party kind `User`).

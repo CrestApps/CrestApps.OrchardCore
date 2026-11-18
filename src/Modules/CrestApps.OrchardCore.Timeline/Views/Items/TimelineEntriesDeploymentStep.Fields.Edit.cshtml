@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Timeline.Deployments
+
+@model TimelineEntriesDeploymentStepViewModel
+
+<h5>@T["Timeline entries"]</h5>
+<div class="mb-3">
+    <label asp-for="SubjectKinds" class="form-label">@T["Record kinds"]</label>
+    <input asp-for="SubjectKinds" class="form-control" placeholder="WorkOrder, Order" />
+    <span class="hint">@T["The kinds of records whose timelines are exported, separated by commas, such as WorkOrder or Order."]</span>
+</div>
