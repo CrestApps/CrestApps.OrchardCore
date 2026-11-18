@@ -38,11 +38,11 @@
             @if (order.IsDraft)
             {
                 <button type="submit" form="purchase-order-ordered" class="btn btn-sm btn-success" disabled="@(order.Lines.Count == 0)">@T["Mark as ordered"]</button>
-                <button type="submit" form="purchase-order-delete" class="btn btn-sm btn-danger" data-confirm-submit data-title="@T["Delete draft"]" data-message="@T["Delete this draft purchase order?"]" data-ok-text="@T["Delete"]">@T["Delete"]</button>
+                <a href="@Url.Action("Delete", new { purchaseOrderId = order.ItemId })" class="btn btn-sm btn-danger" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete draft"]" data-message="@T["Delete this draft purchase order?"]" data-ok-text="@T["Delete"]">@T["Delete"]</a>
             }
             else if (order.Status is not (PurchaseOrderStatus.Received or PurchaseOrderStatus.Canceled))
             {
-                <button type="submit" form="purchase-order-cancel" class="btn btn-sm btn-outline-danger" data-confirm-submit data-title="@T["Cancel purchase order"]" data-message="@T["Cancel what's still to come? What was received stays in stock."]" data-ok-text="@T["Cancel order"]" data-cancel-text="@T["Keep it"]">@T["Cancel order"]</button>
+                <a href="@Url.Action("Cancel", new { purchaseOrderId = order.ItemId })" class="btn btn-sm btn-outline-danger" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Cancel purchase order"]" data-message="@T["Cancel what's still to come? What was received stays in stock."]" data-ok-text="@T["Cancel order"]" data-cancel-text="@T["Keep it"]">@T["Cancel order"]</a>
             }
         </div>
     }
@@ -242,7 +242,7 @@
             @if (canReceive)
             {
                 <button type="submit" class="btn btn-success" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId })">@T["Receive what arrived"]</button>
-                <button type="submit" class="btn btn-outline-success action-bar-secondary" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId, all = true })" data-confirm-submit data-title="@T["Receive everything"]" data-message="@T["Receive every item still to come, at {0}?", Model.LocationName]" data-ok-text="@T["Receive everything"]" data-ok-class="btn-primary">@T["Receive everything still to come"]</button>
+                <a href="@Url.Action("Receive", new { purchaseOrderId = order.ItemId, all = true })" class="btn btn-outline-success action-bar-secondary" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Receive everything"]" data-message="@T["Receive every item still to come, at {0}?", Model.LocationName]" data-ok-text="@T["Receive everything"]" data-ok-class="btn-primary">@T["Receive everything still to come"]</a>
             }
         </div>
     }
@@ -251,8 +251,4 @@
 @if (Model.CanManage)
 {
     <form asp-action="MarkOrdered" asp-route-purchaseOrderId="@order.ItemId" method="post" id="purchase-order-ordered" class="no-multisubmit"></form>
-    <form asp-action="Cancel" asp-route-purchaseOrderId="@order.ItemId" method="post" id="purchase-order-cancel" class="no-multisubmit"></form>
-    <form asp-action="Delete" asp-route-purchaseOrderId="@order.ItemId" method="post" id="purchase-order-delete" class="no-multisubmit"></form>
 }
-
-<script asp-name="confirm-submit" at="Foot"></script>

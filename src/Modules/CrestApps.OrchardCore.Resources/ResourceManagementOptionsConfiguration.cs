@@ -20,14 +20,6 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.0");
 
         _manifest
-            .DefineScript("confirm-submit")
-            .SetUrl(
-                "~/CrestApps.OrchardCore.Resources/scripts/confirm-submit.min.js",
-                "~/CrestApps.OrchardCore.Resources/scripts/confirm-submit.js"
-                )
-            .SetVersion("1.0.0");
-
-        _manifest
             .DefineScript("item-selector")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/scripts/item-selector.min.js",

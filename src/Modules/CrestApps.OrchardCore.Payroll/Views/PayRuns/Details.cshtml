@@ -268,14 +268,14 @@ else if (!string.IsNullOrEmpty(Model.DecideRefusal))
         <div class="action-bar-bottom">
             @if (canProcess)
             {
-                <button class="btn btn-success" type="submit" formaction="@Url.Action("Process", new { id = run.ItemId })" data-confirm-submit data-title="@T["Process and pay"]" data-message="@T["Process the pay run? Its statements become final and net pay is paid: deposits go to the bank file and checks to the check register."]">@(run.Status == PayRunStatus.Approved ? T["Process and pay"] : T["Pay what is left"])</button>
+                <a class="btn btn-success" href="@Url.Action("Process", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Process and pay"]" data-message="@T["Process the pay run? Its statements become final and net pay is paid: deposits go to the bank file and checks to the check register."]" data-ok-text="@T["Process and pay"]" data-ok-class="btn-primary">@(run.Status == PayRunStatus.Approved ? T["Process and pay"] : T["Pay what is left"])</a>
             }
             @if (canWork)
             {
                 @if (run.Status is PayRunStatus.PendingApproval or PayRunStatus.Approved)
                 {
                     @* An approval is for one calculation: calculating again withdraws it, so it asks first. *@
-                    <button class="btn btn-secondary" type="submit" formaction="@Url.Action("Calculate", new { id = run.ItemId })" data-confirm-submit data-title="@T["Calculate again"]" data-message="@T["Calculate the run again? Its approval is withdrawn, and the run must be submitted for approval again."]">@T["Calculate again"]</button>
+                    <a class="btn btn-secondary" href="@Url.Action("Calculate", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Calculate again"]" data-message="@T["Calculate the run again? Its approval is withdrawn, and the run must be submitted for approval again."]" data-ok-text="@T["Calculate again"]" data-ok-class="btn-primary">@T["Calculate again"]</a>
                 }
                 else
                 {
@@ -285,17 +285,15 @@ else if (!string.IsNullOrEmpty(Model.DecideRefusal))
                 {
                     @if (Model.Questions.Count > 0)
                     {
-                        <button class="btn btn-success" type="submit" formaction="@Url.Action("Submit", new { id = run.ItemId })" disabled="@(blockers > 0)" data-confirm-submit data-title="@T["Submit for approval"]" data-message="@T.Plural(Model.Questions.Count, "An employee asked about their pay and it hasn't changed since. Submit the run anyway?", "{0} employees asked about their pay and it hasn't changed since. Submit the run anyway?")">@T["Submit for approval"]</button>
+                        <a class="btn btn-success@(blockers > 0 ? " disabled" : null)" aria-disabled="@(blockers > 0 ? "true" : null)" tabindex="@(blockers > 0 ? "-1" : null)" href="@Url.Action("Submit", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Submit for approval"]" data-message="@T.Plural(Model.Questions.Count, "An employee asked about their pay and it hasn't changed since. Submit the run anyway?", "{0} employees asked about their pay and it hasn't changed since. Submit the run anyway?")" data-ok-text="@T["Submit for approval"]" data-ok-class="btn-primary">@T["Submit for approval"]</a>
                     }
                     else
                     {
                         <button class="btn btn-success" type="submit" formaction="@Url.Action("Submit", new { id = run.ItemId })" disabled="@(blockers > 0)">@T["Submit for approval"]</button>
                     }
                 }
-                <button class="btn btn-danger action-bar-secondary" type="submit" formaction="@Url.Action("Cancel", new { id = run.ItemId })" data-confirm-submit data-title="@T["Cancel the run"]" data-message="@T["Cancel the pay run? Its draft statements are removed and it can't be calculated again."]">@T["Cancel the run"]</button>
+                <a class="btn btn-danger action-bar-secondary" href="@Url.Action("Cancel", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Cancel the run"]" data-message="@T["Cancel the pay run? Its draft statements are removed and it can't be calculated again."]" data-ok-text="@T["Cancel the run"]" data-cancel-text="@T["Keep it"]">@T["Cancel the run"]</a>
             }
         </div>
     </form>
 }
-
-<script asp-name="confirm-submit" at="Foot"></script>
