@@ -42,6 +42,38 @@ public sealed class LearningRetrievalPolicyTests
     }
 
     [Fact]
+    public void Round10_4_AQuestionTypeAddedWithAddQuestionType_WithoutQuestionPart_IsExamContent_AndReachesNoProfile()
+    {
+        // Arrange: a module's own question type, registered as Assessments asks, whose content type has no QuestionPart.
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        Microsoft.Extensions.DependencyInjection.AssessmentsServiceCollectionExtensions.AddQuestionType<HotspotScorer>(services, "Hotspot", descriptor => descriptor.ContentType = "HotspotQuestion");
+        using var provider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(services);
+        var questionTypes = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Learning.Assessments.QuestionTypeOptions>>(provider).Value;
+        var question = new global::OrchardCore.ContentManagement.ContentItem { ContentItemId = "hotspot1", ContentType = "HotspotQuestion" };
+
+        // Act
+        var isExam = LearningRetrievalFilter.IsExamContent(question, questionTypes);
+        var candidate = new LearningRetrievalCandidate { Found = true, IsExamContent = isExam, CanView = true };
+
+        // Assert: exam content, so neither a tutor nor any other profile (such as NLWeb's) gets it.
+        Assert.True(isExam);
+        Assert.False(LearningRetrievalPolicy.Keep(candidate, isTutor: false, _lessonKinds));
+        Assert.False(LearningRetrievalPolicy.Keep(candidate, isTutor: true, _lessonKinds));
+    }
+
+    private sealed class HotspotScorer : CrestApps.OrchardCore.Learning.Assessments.Services.IQuestionScorer
+    {
+        public string QuestionType => "Hotspot";
+
+        public void Snapshot(global::OrchardCore.ContentManagement.ContentItem question, CrestApps.OrchardCore.Learning.Assessments.Models.AttemptItem item, Random random)
+        {
+        }
+
+        public decimal? Score(CrestApps.OrchardCore.Learning.Assessments.Models.AttemptItem item)
+            => null;
+    }
+
+    [Fact]
     public void Tutor_KeepsALessonOfAnActiveEnrollmentInACourseWithTheAssistantOn()
     {
         Assert.True(LearningRetrievalPolicy.Keep(_enrolledLesson, isTutor: true, _lessonKinds));
