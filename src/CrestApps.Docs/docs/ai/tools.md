@@ -912,6 +912,99 @@ The tools need **Manage AI deployments**; `cloneAIVoice` also needs the media pe
 
 The tools need **Manage AI tests, QA cohorts and alert rules** and apply the same checks as the editors of the **Tests**, **Alert rules** and **QA** pages. Times are in the user's or the site's time zone.
 
+### AI API key tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Chat.Api`
+
+| Function | Description |
+| --- | --- |
+| `listAIApiKeys` | Lists API keys with name, kind, prefix, scopes, roles, allowed origins and profiles, expiry, enabled state and last use. The key value and its hash are never returned. |
+| `saveAIApiKey` | Changes an existing key: name, enabled, expiry, scopes and roles of a server key, web sites and profiles of a browser key. It never makes a key; it returns the link to the **API keys** page, where a new key's value is shown once. Asks for approval. |
+| `deleteAIApiKey` | Deletes (revokes) keys by ID. Clients using them stop working at once. Asks for approval. |
+
+The tools need **Manage AI API keys** and apply the checks of the key editor. A key's value never passes through the assistant, a browser key's value included. A role must exist and cannot be Anonymous. A change that lets a browser key, which is public, chat with a profile that can run tools not marked safe for visitors (adding the profile, enabling the key again, or extending its expiry) is refused.
+
+### AI conversation tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Chat`
+
+| Function | Description |
+| --- | --- |
+| `deleteAIConversation` | Deletes one of the user's own conversations and its transcript by session ID. It cannot be undone. Asks for approval. |
+| `deleteAllAIConversations` | Deletes every one of the user's own conversations with one profile and returns how many were removed. It cannot be undone. Asks for approval. |
+
+Like a profile's chat **History** page, the tools delete the user's own conversations through the chat session manager. `deleteAIConversation` needs **Delete chat session** and `deleteAllAIConversations` **Delete all chat sessions**, and both need to be allowed to chat with the profile. The conversation the assistant is answering in is never deleted, and `deleteAllAIConversations` is refused for the profile of the running chat.
+
+### AI usage tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.UsageAnalytics`
+
+| Function | Description |
+| --- | --- |
+| `queryAIUsage` | Returns AI usage for a period of local days: requests, input, cached, reasoning, output, audio and image tokens, audio minutes and estimated cost, grouped by model, deployment, AI profile, connection, user, day or kind of request, with totals. |
+
+The tool needs **View AI Chat Analytics**. It reads the usage records the **AI Usage Analytics** report reads, every request sent to an AI provider, and estimates costs from the prices set on each deployment; rows of different currencies are kept apart. Voice call minutes are on the report only.
+
+### Chat interaction tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Chat.Interactions`
+
+| Function | Description |
+| --- | --- |
+| `listChatInteractions` | Lists chat interactions with title, owner, deployment and last activity, newest first, with search and paging. Without **List chat interactions for others** only the user's own are listed. |
+| `deleteChatInteractions` | Deletes chat interactions by ID, with their messages and uploaded documents. Interactions the user may not delete are skipped and reported. Asks for approval. |
+
+`listChatInteractions` needs **List chat interactions**. `deleteChatInteractions` checks **Delete chat interaction** on each interaction, as the **Chat Interactions** page does, so **Delete own chat interaction** covers the user's own. Profile Builder sessions and the interaction the assistant is answering in are left alone.
+
+### MCP connection tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Mcp`
+
+| Function | Description |
+| --- | --- |
+| `listMcpConnections` | Lists MCP connections with transport, title, endpoint or command, authentication, which credentials are stored and which profiles use them. |
+| `saveMcpConnection` | Creates or changes a remote (SSE) MCP connection: title, endpoint and authentication. Asks for approval. |
+| `deleteMcpConnection` | Deletes MCP connections by ID, local ones included, and names the profiles that lose their tools. Asks for approval. |
+
+The tools need **Manage MCP connections**. No credential is returned or accepted: keys, passwords, client secrets, private keys and certificates show only whether one is stored, custom headers and a local server's environment variables show their names only, and a local server's arguments their count only. A new connection is anonymous; `saveMcpConnection` can switch a connection to anonymous access, which removes its credentials, and change the fields of its authentication that are not secret, but a person enters any credential on the admin page the result links to. A connection that stores a credential cannot be moved to another host from a chat, since the credential would be sent there. The endpoint must be an absolute `http` or `https` address. A local (stdio) connection runs a program on the web server, so it is never created or changed by the tool. From inside a chat, the connections the running assistant uses cannot be changed or deleted.
+
+### MCP server prompt and resource tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Mcp.Server`
+
+| Function | Description |
+| --- | --- |
+| `listMcpPrompts` | Lists the prompts the site's MCP server offers, with their arguments and messages. |
+| `saveMcpPrompt` | Creates or changes a prompt: name, title, description, arguments and the user and assistant messages. |
+| `deleteMcpPrompt` | Deletes prompts by ID. Asks for approval. |
+| `listMcpResources` | Lists the resources the site's MCP server offers, with type, URI pattern and MIME type, and whether credentials are stored. `includeTypes` lists the resource types and the URI variables each supports. |
+| `saveMcpResource` | Creates or changes a resource of a type with a title, name, path, description and MIME type. Asks for approval. |
+| `deleteMcpResource` | Deletes resources by ID. Asks for approval. |
+
+The prompt tools need **Manage MCP prompts** and the resource tools **Manage MCP resources**, and they apply the checks of the editors. An FTP or SFTP resource needs a host and credentials, so it is created on the admin page; its password, private key and passphrase are listed only as stored or not, and its connection is not changed by the tool.
+
+### A2A connection tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.A2A`
+
+| Function | Description |
+| --- | --- |
+| `listA2AConnections` | Lists A2A connections with title, endpoint, authentication, whether credentials are stored and which profiles use them. |
+| `saveA2AConnection` | Creates or changes a connection to a remote A2A host: title, `http` or `https` endpoint and authentication. Profiles that use it send conversation content to that host. Asks for approval. |
+| `deleteA2AConnection` | Deletes A2A connections by ID and names the profiles that lose those remote agents. Asks for approval. |
+
+The tools need **Manage Agent-to-Agent connections** and handle credentials as the MCP connection tools do. From inside a chat, the connections the running assistant uses cannot be changed or deleted.
+
+### AI memory tool
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Memory`
+
+| Function | Description |
+| --- | --- |
+| `clearAIUserMemory` | Deletes everything the AI has remembered about one user, by user name or ID, or about the user in the chat, and returns how many memories were removed. It cannot be undone. Asks for approval. |
+
+The tool needs **Clear AI memory** for the user's own memory and **Clear AI memory for other users** for anyone else's, checked separately, as the Clear AI memory action of a user's page does. Each memory is deleted through the memory manager, so it leaves the memory index too.
+
 ### Analytics tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Chat.Analytics`

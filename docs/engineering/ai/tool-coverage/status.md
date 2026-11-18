@@ -26,6 +26,7 @@ Tools that run Orchard Core's settings display drivers (`getSiteSettings`, `upda
 | 10 | Data pipelines | [14](14-orchard-automation.md) | 21 | 6 | 15 | 89f4affd8..2a331bf76 |
 | 11 | AI profiles and agents, profile templates, personas, tool instances | [20](20-crestapps-ai-core.md) | 18 | 18 | 0 | 40fdee087..a97e4d4f1 |
 | 12 | AI provider connections, deployments and pricing, voice library, AI quality | [20](20-crestapps-ai-core.md) | 18 | 18 | 0 | e2d901cca..41cba0083 |
+| 13 | AI API keys, conversations, usage, chat interactions, MCP connections, MCP server, A2A connections, AI memory | [20](20-crestapps-ai-core.md) | 21 | 21 | 0 | aa0aade44..caedc8999 |
 
 Orchard Core part (batches 1 to 10): 189 planned new tools, 132 built, 57 deferred. Left out on purpose: the four template tools (`listTemplates`, `getTemplate`, `saveTemplate`, `deleteTemplate`), because pull request 1321 adds shape template tools; and the six "existing, improve" rows (`listWorkflowTypes`, `getWorkflowType`, `listWorkflowActivities` and three AI tools), because phase 1 does not change existing tools.
 
@@ -90,8 +91,8 @@ The configuration guard of F4 does not exist yet, so the tools of batch 11 apply
 
 | Rule | State | What is missing |
 | --- | --- | --- |
-| A, no self-edit from inside an AI turn | Implemented | MCP and A2A connections are collected but no tool changes them yet. The running profile is read from `ToolExecutionContext.Resource`, which is set once per turn, so inside an agent it names the top-level profile; the guard covers that by protecting every agent the top-level profile and the session profile can reach, plus every always-available agent. `LockSystemMessage` and `IsRemovable` cannot be turned off: no tool accepts either field, every write to a protected profile (restore included) is refused, and `saveAIProfile` refuses new instructions on a locked profile. |
-| B, no powerful tools where visitors can reach | Implemented for the Anonymous role, enabled unexpired browser API keys and always-available agents; partly for published content items with an `AIProfilePart` | The Anonymous-role check asks `IAuthorizationService` with an anonymous principal, so the real role and `QueryAIProfile_{name}` handlers decide; the tests answer it with a double, and it was not run on a site. The published-widget lookup (`PublishedChatWidgetFinder`, a YesSql query) is exercised through a double only. Phone numbers, SMS and other channel bindings, and the Authenticated role, are not checked. The reverse direction (making a profile reachable by a role, API key or widget change) is not guarded, since no tool of this batch does it. Tool instances are never allowed on a reachable profile. |
+| A, no self-edit from inside an AI turn | Implemented | MCP and A2A connections are protected from batch 13 (`IsProtectedMcpConnection`, `IsProtectedA2AConnection`). The running profile is read from `ToolExecutionContext.Resource`, which is set once per turn, so inside an agent it names the top-level profile; the guard covers that by protecting every agent the top-level profile and the session profile can reach, plus every always-available agent. `LockSystemMessage` and `IsRemovable` cannot be turned off: no tool accepts either field, every write to a protected profile (restore included) is refused, and `saveAIProfile` refuses new instructions on a locked profile. |
+| B, no powerful tools where visitors can reach | Implemented for the Anonymous role, enabled unexpired browser API keys and always-available agents; partly for published content items with an `AIProfilePart` | The Anonymous-role check asks `IAuthorizationService` with an anonymous principal, so the real role and `QueryAIProfile_{name}` handlers decide; the tests answer it with a double, and it was not run on a site. The published-widget lookup (`PublishedChatWidgetFinder`, a YesSql query) is exercised through a double only. Phone numbers, SMS and other channel bindings, and the Authenticated role, are not checked. The reverse direction is guarded for browser API keys from batch 13 (`saveAIApiKey`, through `AIConfigurationGuard.GetUnsafeCapabilitiesAsync`); a role permission edit or a published widget made through the content tools is still not guarded. Tool instances are never allowed on a reachable profile. |
 | C, `AccessAITool_{name}` for every added tool and tool instance | Implemented | Also applied to `restoreAIProfileVersion` and `createAIProfileFromTemplate`, which the admin pages do not do. |
 | Secrets | Implemented | Tool instance settings are read and written through an explicit list per source; the Workflow source's settings are admin-page only. Addresses are checked for scheme and internal hosts without resolving the name. |
 
@@ -127,6 +128,27 @@ Keys are never accepted or returned, which is stricter than the catalog rows of 
 | `saveAIAlertRule` | Email addresses are checked as addresses, which the editor does not do |
 
 The quality tools needed one extraction (commit e2d901cca): the range checks of `AITestCaseDisplayDriver`, `AIAlertRuleDisplayDriver` and `AIQACohortDisplayDriver` moved unchanged, with their sentences, into `AITestCaseValidator`, `AIAlertRuleValidator` and `AIQACohortValidator` in `AI.Core/Conversations`, which the drivers now call after applying the form. The alert rule's "checked again at once when what it watches changes" moved there too. One difference: a selection of only blank profile IDs, which the driver used to accept, is now refused; the editor's multi-select has no blank option, so the form cannot post one.
+
+## Batch 13: API keys, conversations, usage, chat interactions, MCP, A2A and memory
+
+No tool of batch 13 was deferred. `AI.Agent` now references the `CrestApps.Core.AI.Mcp` and `CrestApps.Core.AI.A2A` packages, which brings the `ModelContextProtocol` package to every site that installs it, as batch 4 did with Lucene. The A2A permission and `ViewChatAnalytics` live in module assemblies, so `AIModulePermissions.cs` mirrors them by name; `AIConstants.Feature` gained `A2A` and `ChatInteractions`. A test checks each mirrored name and each key read by name against the module that owns it.
+
+Extractions (behavior-preserving; the admin code calls them now):
+
+- `AIApiKeyValidator` (AI.Core `ApiKeys`): the name, origin, profile, scope and role checks and the per-kind clean-up of `AIApiKeyDisplayDriver.UpdateAsync`.
+- `AIUserMemoryCleaner` (AI.Core `Services`): the count, list and delete loop of `UserMemoryController.Clear`.
+- `McpResourceUris` (AI.Core): `McpResourceHandler.BuildUri` and `ExtractPath`, which the handler now forwards to.
+
+Credentials: no MCP or A2A credential (API key, password, OAuth secret, private key, certificate, header value, environment variable value) is returned or accepted, and stdio arguments are returned as a count only. A new connection is anonymous. `saveMcpConnection` and `saveA2AConnection` may switch a connection to anonymous access (which clears its credentials, as the editor does) and change the non-secret fields of its current authentication; choosing an authentication that needs a credential is refused with the admin link. A connection that stores a credential cannot be moved to another host (endpoint or OAuth token endpoint), since the credential would be sent there. Rule A protects the MCP and A2A connections of the running assistant; deleting a stdio connection is allowed.
+
+| Tool | What it does not do |
+| --- | --- |
+| `saveAIApiKey` | Never creates a key (a new key's value is shown once): it returns the API keys page link. Roles must exist and cannot be Anonymous, which the editor's list also leaves out |
+| `deleteAIConversation`, `deleteAllAIConversations` | Only the caller's own conversations, because `IAIChatSessionManager.DeleteAsync` and `DeleteAllAsync`, which the History page calls, filter on the signed-in user. The catalog's "any conversation" would need `AIConversationPrivacyService.DeleteAsync` (the REST API's path), which also runs the `IAIConversationPrivacyHandler`s; the manager's delete does not. The manager also reads the user from `HttpContext`, so on a long-polling connection with the package in use it deletes nothing (the tool then says so). One session per call |
+| `queryAIUsage` | No voice call minutes: the voice grouping (`AIVoiceUsageReport`) and the completion grouping helpers are `internal` to the AI Chat module and drag view models and filter drivers with them. The tool groups the same `IAICompletionUsageService` records itself and prices them with the public `AIUsageCostEstimator`; rows are the report's Metered usage, not its Chat completions table |
+| `saveMcpConnection` | Endpoints must be `http` or `https`; the editor takes any absolute address. Custom headers are not set |
+| `saveMcpResource` | FTP and SFTP resources are not created, and their connection is not changed |
+| `clearAIUserMemory` | Checks **Clear AI memory for others** on its own for another user. `UserMemoryController.Clear` checks only `ClearAIMemory` with the user ID as resource; Orchard's role handler grants that permission without looking at the resource, so a role with only **Clear AI memory** may clear anyone's memory on that page. Not fixed here (it is admin code) |
 
 ## Notes for the maintainer
 
