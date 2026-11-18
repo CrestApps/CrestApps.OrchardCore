@@ -87,6 +87,13 @@ internal sealed class ExternalToolHandler : CatalogEntryHandlerBase<ExternalTool
         {
             context.Result.Fail(new ValidationResult(S["Another external tool uses this client ID."], [nameof(ExternalTool.ClientId)]));
         }
+        else if (_clients.TryGetPending(tool.ItemId, out _) && await _clients.IsTakenByAnotherApplicationAsync(tool.ClientId))
+        {
+            // Only the editor writes the tool's OpenID application, so only the editor is refused here: a recipe
+            // imports the application with the OpenID applications step and the tool with its own step, and never
+            // writes the application through the tool.
+            context.Result.Fail(new ValidationResult(S["An OpenID application that External Tools did not make uses this client ID. Choose another client ID."], [nameof(ExternalTool.ClientId)]));
+        }
 
         if (string.IsNullOrWhiteSpace(tool.DeploymentId))
         {

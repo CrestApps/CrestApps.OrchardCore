@@ -23,7 +23,7 @@ Your administrator sets up the OpenID server once so tools can sign in to send s
 The tool's provider gives you their details, and you give them the site's.
 
 1. Go to **Learning > External Tools** and click **Add external tool**.
-2. Enter a **Name**, then the details from the provider: **Client ID**, **Deployment ID**, **Login initiation URL**, **Redirect URIs** (one a line), **Target link URI**, the **Deep Linking URL** if the tool lets you pick content, and the **Tool's JWKS URL** (or paste its key set).
+2. Enter a **Name**, then the details from the provider: **Client ID**, **Deployment ID**, **Login initiation URL**, **Redirect URIs** (one a line), **Target link URI**, the **Deep Linking URL** if the tool lets you pick content, and the **Tool's JWKS URL** (or paste its key set). The client ID cannot be one that another OpenID application of the site already uses (one you made under **Security > OpenID Connect**, for example); the editor refuses it.
 3. Under **What the tool learns**, choose what the tool may know about a person: an anonymous id only, the id and the name, or the id, the name and the e-mail address.
 4. Tick **May read the course roster** and **May post grades** if the tool needs them.
 5. Click **Save**.

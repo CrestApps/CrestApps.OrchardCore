@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Learning.Lti;
 using CrestApps.OrchardCore.Learning.Lti.Core.Launch;
@@ -7,9 +8,13 @@ using CrestApps.OrchardCore.Learning.Lti.Models;
 using CrestApps.OrchardCore.Learning.Lti.Services;
 using CrestApps.OrchardCore.PersonalData;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+using OpenIddict.Abstractions;
 using OrchardCore;
 using OrchardCore.Deployment;
 using OrchardCore.Deployment.Services;
+using OrchardCore.OpenId.Abstractions.Descriptors;
+using OrchardCore.OpenId.Abstractions.Managers;
 using OrchardCore.Recipes.Models;
 
 namespace CrestApps.OrchardCore.Learning.IntegrationTests;
@@ -89,6 +94,90 @@ public sealed class LtiDataTests
         Assert.Contains(nothing.Errors, error => error.MemberNames.Contains("RedirectUris"));
         Assert.Contains(nothing.Errors, error => error.MemberNames.Contains(nameof(ExternalTool.JwksUrl)));
         Assert.True(recipe.Succeeded);
+    }
+
+    [Fact]
+    public async Task Round9H2_AToolWithTheClientIdOfAnotherOpenIdApplication_IsRefused_AndTheApplicationStaysAsItWas()
+    {
+        // Arrange: a confidential client with the client credentials grant and the Administrator role, which External
+        // Tools did not make.
+        var clientId = "foreign-client-" + Guid.NewGuid().ToString("n");
+
+        await _fixture.InTenantAsync(async services =>
+        {
+            var descriptor = new OpenIdApplicationDescriptor
+            {
+                ClientId = clientId,
+                ClientSecret = "Foreign-secret-1234567890",
+                ClientType = OpenIddictConstants.ClientTypes.Confidential,
+                ConsentType = OpenIddictConstants.ConsentTypes.Explicit,
+                DisplayName = "Foreign client",
+            };
+
+            descriptor.Roles.Add("Administrator");
+            descriptor.RedirectUris.Add(new Uri("https://foreign.example.com/callback"));
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.ClientCredentials);
+
+            await services.GetRequiredService<IOpenIdApplicationManager>().CreateAsync(descriptor, TestContext.Current.CancellationToken);
+        });
+
+        using var rsa = RSA.Create(2048);
+        var parameters = rsa.ExportParameters(false);
+        var keySet = "{\"keys\":[{\"kty\":\"RSA\",\"use\":\"sig\",\"kid\":\"attacker-1\",\"n\":\"" + Base64UrlEncoder.Encode(parameters.Modulus) + "\",\"e\":\"" + Base64UrlEncoder.Encode(parameters.Exponent) + "\"}]}";
+
+        // Act: someone who manages external tools registers a tool with that client id, their own redirect URI and
+        // key set, and the editor saves it.
+        var (validation, syncRefused) = await _fixture.InTenantAsync(async services =>
+        {
+            var manager = services.GetRequiredService<IExternalToolManager>();
+            var clients = services.GetRequiredService<ExternalToolClients>();
+            var tool = await manager.NewAsync();
+
+            tool.Name = "Takeover tool";
+            tool.ClientId = clientId;
+            tool.DeploymentId = "deployment-takeover";
+            tool.LoginInitiationUrl = "https://evil.example.com/login";
+            tool.TargetLinkUri = "https://evil.example.com/launch";
+            clients.SetPending(tool, ["https://evil.example.com/launch"], keySet);
+
+            var result = await manager.ValidateAsync(tool);
+            var refused = false;
+
+            try
+            {
+                await clients.SyncAsync(tool);
+            }
+            catch (InvalidOperationException)
+            {
+                refused = true;
+            }
+
+            return (result, refused);
+        });
+
+        var (redirectUris, consentType, storedKeySet, roles, marked) = await _fixture.InTenantAsync(async services =>
+        {
+            var applications = services.GetRequiredService<IOpenIdApplicationManager>();
+            var application = await applications.FindByClientIdAsync(clientId, TestContext.Current.CancellationToken);
+
+            return (
+                (await applications.GetRedirectUrisAsync(application, TestContext.Current.CancellationToken)).ToArray(),
+                await applications.GetConsentTypeAsync(application, TestContext.Current.CancellationToken),
+                await applications.GetJsonWebKeySetAsync(application, TestContext.Current.CancellationToken),
+                (await applications.GetRolesAsync(application, TestContext.Current.CancellationToken)).ToArray(),
+                (await applications.GetPropertiesAsync(application, TestContext.Current.CancellationToken)).ContainsKey(ExternalToolClients.MarkerProperty));
+        });
+
+        // Assert
+        Assert.False(validation.Succeeded);
+        Assert.Contains(validation.Errors, error => error.MemberNames.Contains(nameof(ExternalTool.ClientId)));
+        Assert.True(syncRefused);
+        Assert.Equal(["https://foreign.example.com/callback"], redirectUris);
+        Assert.Equal(OpenIddictConstants.ConsentTypes.Explicit, consentType);
+        Assert.Null(storedKeySet);
+        Assert.Contains("Administrator", roles);
+        Assert.False(marked);
     }
 
     [Fact]

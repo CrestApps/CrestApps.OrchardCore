@@ -39,7 +39,8 @@ public sealed class ExternalToolClients
     {
         var application = string.IsNullOrEmpty(clientId) ? null : await _applications.FindByClientIdAsync(clientId);
 
-        if (application is null)
+        // An application External Tools did not make is not the tool's: nothing of it is shown in the tool's editor.
+        if (application is null || !await IsMarkedAsync(application))
         {
             return ([], null);
         }
@@ -48,6 +49,18 @@ public sealed class ExternalToolClients
         var keySet = await _applications.GetJsonWebKeySetAsync(application);
 
         return (redirectUris.ToArray(), keySet is null ? null : JsonSerializer.Serialize(keySet, _indented));
+    }
+
+    /// <summary>
+    /// Tells whether an OpenID application that External Tools did not make already uses a client id. Such an application
+    /// belongs to someone else (it may hold roles, secrets and redirect URIs of its own), so a tool may not take its
+    /// client id, and <see cref="SyncAsync"/> never changes it.
+    /// </summary>
+    public async Task<bool> IsTakenByAnotherApplicationAsync(string clientId)
+    {
+        var application = string.IsNullOrEmpty(clientId) ? null : await _applications.FindByClientIdAsync(clientId);
+
+        return application is not null && !await IsMarkedAsync(application);
     }
 
     /// <summary>
@@ -64,8 +77,10 @@ public sealed class ExternalToolClients
         => _pending.TryGetValue(toolId ?? string.Empty, out pending);
 
     /// <summary>
-    /// Writes the tool's application, made when it does not exist.
+    /// Writes the tool's application, made when it does not exist. An existing application that External Tools did not
+    /// make is never changed.
     /// </summary>
+    /// <exception cref="InvalidOperationException">An application External Tools did not make uses the tool's client id.</exception>
     public async Task SyncAsync(ExternalTool tool)
     {
         ArgumentNullException.ThrowIfNull(tool);
@@ -75,6 +90,11 @@ public sealed class ExternalToolClients
 
         if (application is not null)
         {
+            if (!await IsMarkedAsync(application))
+            {
+                throw new InvalidOperationException("An OpenID application that External Tools did not make uses this client ID; it is left unchanged.");
+            }
+
             await _applications.PopulateAsync(descriptor, application);
         }
 
@@ -127,13 +147,14 @@ public sealed class ExternalToolClients
             return;
         }
 
-        var properties = await _applications.GetPropertiesAsync(application);
-
-        if (properties.ContainsKey(MarkerProperty))
+        if (await IsMarkedAsync(application))
         {
             await _applications.DeleteAsync(application);
         }
     }
+
+    private async Task<bool> IsMarkedAsync(object application)
+        => (await _applications.GetPropertiesAsync(application)).ContainsKey(MarkerProperty);
 
     /// <summary>
     /// Returns the scopes a tool may ask for.
