@@ -19,7 +19,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Commerce",
     Dependencies =
     [
-        CommerceConstants.Features.Area,
+        CommerceConstants.Features.Foundation,
         OrchardCoreFeatureIds.Users,
         AddressConstants.Feature.ModuleId,
     ]

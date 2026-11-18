@@ -1,0 +1,105 @@
+@model PaymentTermViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["The term"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Name">
+            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="Name" class="form-control" maxlength="255" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <span class="hint">@T["Printed on documents, such as Net 30 or Due on receipt."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Description">
+            <label asp-for="Description" class="ocat-label">@T["Notes"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Enabled">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Enabled" class="form-check-input" />
+                    <label asp-for="Enabled" class="form-check-label">@T["Can be chosen for new documents"]</label>
+                    <span class="hint dashed">@T["Turn it off to stop using the term. Documents that already use it keep it."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["When it is due"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Kind">
+            <label asp-for="Kind" class="ocat-label ocat-label-required">@T["Due"]</label>
+            <div class="ocat-end">
+                <select asp-for="Kind" asp-items="Model.KindOptions" class="form-select" data-payment-term-kind></select>
+                <span asp-validation-for="Kind" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Days" data-payment-term-for="NetDays EndOfMonth">
+            <label asp-for="Days" class="ocat-label">@T["Days"]</label>
+            <div class="ocat-end">
+                <input asp-for="Days" type="number" min="0" max="3650" class="form-control" style="max-width: 10rem" />
+                <span asp-validation-for="Days" class="text-danger"></span>
+                <span class="hint">@T["After the issue date, or after the end of the issue month."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="DayOfMonth" data-payment-term-for="DayOfNextMonth">
+            <label asp-for="DayOfMonth" class="ocat-label">@T["Day of the next month"]</label>
+            <div class="ocat-end">
+                <input asp-for="DayOfMonth" type="number" min="1" max="31" class="form-control" style="max-width: 10rem" value="@(Model.DayOfMonth > 0 ? Model.DayOfMonth : 1)" />
+                <span asp-validation-for="DayOfMonth" class="text-danger"></span>
+                <span class="hint">@T["From 1 to 31. A day the month does not have is its last day."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Early-payment discount"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="DiscountPercent">
+            <label asp-for="DiscountPercent" class="ocat-label">@T["Discount (%)"]</label>
+            <div class="ocat-end">
+                <input asp-for="DiscountPercent" type="number" min="0" max="99.99" step="0.01" class="form-control" style="max-width: 10rem" />
+                <span asp-validation-for="DiscountPercent" class="text-danger"></span>
+                <span class="hint">@T["Optional. Taken off what is owed when it is paid within the days below."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="DiscountDays">
+            <label asp-for="DiscountDays" class="ocat-label">@T["Offered for (days)"]</label>
+            <div class="ocat-end">
+                <input asp-for="DiscountDays" type="number" min="1" max="3650" class="form-control" style="max-width: 10rem" />
+                <span asp-validation-for="DiscountDays" class="text-danger"></span>
+                <span class="hint">@T["The number of days after the issue date, the last day included."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const kind = document.querySelector('[data-payment-term-kind]');
+
+        if (!kind) {
+            return;
+        }
+
+        // A field the chosen kind does not use is hidden and disabled, so the browser's form check skips it (a hidden
+        // day of the month of 0 would otherwise stop the form from being sent) and it is not posted.
+        const update = () => {
+            document.querySelectorAll('[data-payment-term-for]').forEach(row => {
+                const used = row.dataset.paymentTermFor.split(' ').includes(kind.value);
+
+                row.classList.toggle('d-none', !used);
+                row.querySelectorAll('input').forEach(input => input.disabled = !used);
+            });
+        };
+
+        kind.addEventListener('change', update);
+        update();
+    })();
+</script>

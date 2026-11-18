@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.Customers.Drivers;
 using CrestApps.OrchardCore.Customers.Handlers;
 using CrestApps.OrchardCore.Customers.Migrations;
 using CrestApps.OrchardCore.Customers.Navigation;
+using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Customers.Recipes;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Orders.Core;
@@ -25,6 +26,7 @@ using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Customers.Api;
 using CrestApps.OrchardCore.PersonalData.Core;
+using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,6 +64,15 @@ public sealed class Startup : StartupBase
 
         // Customers are parties: pickers and lists in any module find and name them by their customer record id.
         services.AddPartySource<CustomerPartySource>(PartyKinds.Customer, LocalizationSource.Create<Startup>("Customer"), CustomerPermissions.ViewCustomers);
+
+        // A customer is billed from their record: contact, default addresses, tax id and exemption. The user the record
+        // belongs to acts for it.
+        services.AddPartyBillingProfileSource<CustomerBillingProfileSource>();
+        services.AddPartyMemberSource<CustomerPartyMemberSource>();
+
+        // A customer party's tax profile gets the customer record's type, exemption and certificates, by the rules
+        // checkout tax uses. The profile service itself comes with Taxation, or with the feature that taxes a document.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPartyTaxProfileProvider, CustomerPartyTaxProfileProvider>());
 
         // A guest's history joins their account once the account's email is verified.
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
@@ -155,6 +166,8 @@ public sealed class StoreCreditStartup : StartupBase
             .AddIndexProvider<Indexes.StoreCreditAccountIndexProvider>();
         services.AddScoped<IStoreCreditStore, StoreCreditStore>();
         services.AddScoped<StoreCreditService>();
+        services.AddScoped<ICustomerCreditService, StoreCreditCustomerCreditService>();
+        services.AddScoped<ICommercePersonalDataContributor, StoreCreditPersonalDataContributor>();
         services.AddScoped<StoreCreditTenderProvider>();
         services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());
         services.AddScoped<Orders.Core.Services.IOrderStoreCreditRefunder>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());

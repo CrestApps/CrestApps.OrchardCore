@@ -40,6 +40,10 @@ public sealed class TaxTestHarness
         services.AddSingleton<IExemptionCertificateStore, InMemoryExemptionCertificateStore>();
         services.AddSingleton<IMerchantTaxRegistrationStore, InMemoryMerchantTaxRegistrationStore>();
 
+        // The site's rounding level (Settings > Commerce > Tax calculation) without site settings.
+        services.AddSingleton(RoundingLevelProvider);
+        services.AddSingleton<ITaxRoundingLevelProvider>(RoundingLevelProvider);
+
         configure?.Invoke(services);
 
         _services = services.BuildServiceProvider();
@@ -53,6 +57,11 @@ public sealed class TaxTestHarness
         Registrations = _services.GetRequiredService<IMerchantTaxRegistrationStore>();
         TaxService = _services.GetRequiredService<ITaxService>();
     }
+
+    /// <summary>
+    /// Gets the site's tax rounding level, which a test can change; a new site's per tax and rate by default.
+    /// </summary>
+    public TestTaxRoundingLevelProvider RoundingLevelProvider { get; } = new();
 
     /// <summary>
     /// Gets the clock used by the harness.

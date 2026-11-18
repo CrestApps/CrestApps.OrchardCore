@@ -1,0 +1,57 @@
+@model InvoiceSendViewModel
+
+<zone Name="Title">
+    <breadcrumb name="InvoicesSend" title="@(string.IsNullOrEmpty(Model.Number) ? T["Send the invoice"] : T["Send invoice {0}", Model.Number])">
+        <breadcrumb-item id="InvoicesIndex" action="Index" controller="InvoicesAdmin" area="@InvoicingConstants.Features.Area" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Invoices"]</breadcrumb-item>
+        <breadcrumb-item id="InvoicesDetail" action="Detail" controller="InvoicesAdmin" area="@InvoicingConstants.Features.Area" route-itemId="@Model.ItemId" permission="@InvoicingPermissions.ViewInvoices.Name">@(string.IsNullOrEmpty(Model.Number) ? T["Draft invoice"] : T["Invoice {0}", Model.Number])</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (!Model.CanSend)
+{
+    <div class="alert alert-warning">@T["E-mail isn't set up, so the invoice can't be sent. Copy its share link from its page instead."]</div>
+}
+
+@if (Model.IssuesFirst)
+{
+    <div class="alert alert-info">@T["This is a draft. Sending it issues it first: it gets its number, what it totals is owed, and it can't be changed after."]</div>
+}
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    <input type="hidden" asp-for="ItemId" />
+
+    <div class="ocat-wrapper" asp-validation-class-for="To">
+        <label asp-for="To" class="ocat-label ocat-label-required">@T["To"]</label>
+        <div class="ocat-end">
+            <input asp-for="To" type="email" class="form-control" required autocomplete="off" maxlength="255" />
+            <span class="hint">@T["The invoice is attached as a PDF, with a link to view it online and, while something is owed, a link to pay it."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Cc">
+        <label asp-for="Cc" class="ocat-label">@T["Copy to"]</label>
+        <div class="ocat-end">
+            <input asp-for="Cc" class="form-control" autocomplete="off" maxlength="1000" />
+            <span class="hint">@T["Separate several addresses with commas."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Bcc">
+        <label asp-for="Bcc" class="ocat-label">@T["Blind copy to"]</label>
+        <div class="ocat-end">
+            <input asp-for="Bcc" class="form-control" autocomplete="off" maxlength="1000" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <span class="hint">@T["The message is the Invoice sent to its customer e-mail, which you can change under Settings > Commerce > E-mails."]</span>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button type="submit" class="btn btn-primary" disabled="@(!Model.CanSend)">@(Model.IssuesFirst ? T["Issue and send"] : T["Send"])</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Detail" asp-route-itemId="@Model.ItemId">@T["Cancel"]</a>
+    </div>
+</form>

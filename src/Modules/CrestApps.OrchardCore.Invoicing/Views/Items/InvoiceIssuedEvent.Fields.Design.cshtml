@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<InvoiceIssuedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Invoice Issued"])
+    </h4>
+</header>

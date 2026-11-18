@@ -1,5 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Parties;
+using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Taxation.Core.Services;
 using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +37,8 @@ public static class TaxationServiceCollectionExtensions
         services.TryAddScoped<ITaxableItemResolver, DefaultTaxableItemResolver>();
         services.TryAddScoped<ITaxSnapshotFactory, DefaultTaxSnapshotFactory>();
         services.TryAddScoped<ITaxRefundCalculator, DefaultTaxRefundCalculator>();
+        services.TryAddScoped<ITaxBreakdownCalculator, DefaultTaxBreakdownCalculator>();
+        services.TryAddScoped<ITaxRoundingLevelProvider, SiteTaxRoundingLevelProvider>();
 
         services.AddTaxSourcingStrategy<OriginTaxSourcingStrategy>();
         services.AddTaxSourcingStrategy<DestinationTaxSourcingStrategy>();
@@ -42,6 +46,8 @@ public static class TaxationServiceCollectionExtensions
         services.AddTaxSourcingStrategy<CustomerBusinessTaxSourcingStrategy>();
         services.AddTaxSourcingStrategy<ServiceLocationTaxSourcingStrategy>();
         services.AddTaxSourcingStrategy<EventLocationTaxSourcingStrategy>();
+
+        services.AddPartyTaxProfiles();
 
         return services;
     }
@@ -75,6 +81,42 @@ public static class TaxationServiceCollectionExtensions
         services.AddTaxCalculationMethod<TaxTableTaxCalculationMethod>();
         services.AddTaxCalculationMethod<ProgressiveTaxCalculationMethod>();
         services.AddTaxCalculationMethod<ThresholdTaxCalculationMethod>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the <see cref="IPartyTaxProfileService"/> once, with the default provider that fills a party's tax
+    /// profile from its billing profile, and the <see cref="IPartyBillingProfileService"/> it reads, so a document
+    /// billed to a party is taxed without a checkout.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection, to allow chaining.</returns>
+    public static IServiceCollection AddPartyTaxProfiles(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddPartyBillingProfiles();
+        services.TryAddScoped<IPartyTaxProfileService, PartyTaxProfileService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPartyTaxProfileProvider, BillingProfilePartyTaxProfileProvider>());
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers a provider that adds what a module knows about a party's tax status, and the
+    /// <see cref="IPartyTaxProfileService"/> that runs every provider.
+    /// </summary>
+    /// <typeparam name="TProvider">The provider.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection, to allow chaining.</returns>
+    public static IServiceCollection AddPartyTaxProfileProvider<TProvider>(this IServiceCollection services)
+        where TProvider : class, IPartyTaxProfileProvider
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddPartyTaxProfiles();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPartyTaxProfileProvider, TProvider>());
 
         return services;
     }

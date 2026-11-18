@@ -1,8 +1,14 @@
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Numbering;
+using CrestApps.OrchardCore.Parties;
+using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.FinancialDocuments;
+using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Transactions.Core;
 
@@ -21,8 +27,58 @@ public static class TransactionsServiceCollectionExtensions
         services.AddScoped<ITransactionStore, TransactionStore>();
         services.AddScoped<ITransactionManager, TransactionManager>();
         services.AddScoped<ITransactionSettlementService, TransactionSettlementService>();
+
+        // Financial document numbers come from the shared number series, one series per kind of document, so a site
+        // chooses the format of its receipts, invoices and credit notes in one place.
+        services.AddNumberSequence();
+        services.AddNumberSeries(FinancialDocumentSeries.GetName(FinancialDocumentKind.Receipt), LocalizationSource.Create("Receipts", typeof(FinancialDocumentSeries)), FinancialDocumentSeries.GetDefaultFormat(FinancialDocumentKind.Receipt));
+        services.AddNumberSeries(FinancialDocumentSeries.GetName(FinancialDocumentKind.Invoice), LocalizationSource.Create("Invoices", typeof(FinancialDocumentSeries)), FinancialDocumentSeries.GetDefaultFormat(FinancialDocumentKind.Invoice));
+        services.AddNumberSeries(FinancialDocumentSeries.GetName(FinancialDocumentKind.CreditNote), LocalizationSource.Create("Credit notes", typeof(FinancialDocumentSeries)), FinancialDocumentSeries.GetDefaultFormat(FinancialDocumentKind.CreditNote));
+        services.AddNumberSeries(FinancialDocumentSeries.GetName(FinancialDocumentKind.RefundDocument), LocalizationSource.Create("Refund documents", typeof(FinancialDocumentSeries)), FinancialDocumentSeries.GetDefaultFormat(FinancialDocumentKind.RefundDocument));
+
         services.TryAddScoped<IFinancialDocumentNumberGenerator, SequentialFinancialDocumentNumberGenerator>();
         services.TryAddScoped<ITransactionInvoiceService, TransactionInvoiceService>();
+
+        // The ledger travels between sites in the Transactions recipe step, written and read as it is.
+        services.TryAddScoped<TransactionLedgerExporter>();
+        services.TryAddScoped<TransactionLedgerImporter>();
+
+        // A signed-in user sees the transactions they own and those owed by the parties they act for.
+        services.AddPartyMembership();
+        services.TryAddScoped<ITransactionVisibilityService, DefaultTransactionVisibilityService>();
+
+        // Whether a party is reminded and charged late fees, kept once for the party and shown in its billing profile.
+        services.AddPartyCollectionSettings();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the parties' collection settings: their store, service and billing profile source. The host also
+    /// registers <c>PartyCollectionSettingsIndexProvider</c> and creates its index table.
+    /// </summary>
+    public static IServiceCollection AddPartyCollectionSettings(this IServiceCollection services)
+    {
+        services.TryAddScoped<PartyCollectionSettingsStore>();
+        services.TryAddScoped<IPartyCollectionSettingsService, DefaultPartyCollectionSettingsService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPartyBillingProfileSource, PartyCollectionSettingsBillingProfileSource>());
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the payment terms catalog: <see cref="IPaymentTermManager"/>, its store, and
+    /// <see cref="IPaymentTermCalculator"/>. The host also registers <c>PaymentTermIndexProvider</c> and creates its index
+    /// table.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The same service collection so calls can be chained.</returns>
+    public static IServiceCollection AddPaymentTermsCore(this IServiceCollection services)
+    {
+        services.TryAddScoped<IPaymentTermStore, PaymentTermStore>();
+        services.TryAddScoped<IPaymentTermManager, PaymentTermManager>();
+        services.TryAddScoped<ICatalogManager<PaymentTerm>>(serviceProvider => serviceProvider.GetRequiredService<IPaymentTermManager>());
+        services.TryAddSingleton<IPaymentTermCalculator, PaymentTermCalculator>();
 
         return services;
     }

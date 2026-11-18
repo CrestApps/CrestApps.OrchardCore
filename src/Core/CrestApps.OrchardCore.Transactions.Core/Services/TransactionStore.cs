@@ -1,10 +1,14 @@
+using System.Linq.Expressions;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using OrchardCore.Modules;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Transactions.Core.Services;
 
@@ -41,14 +45,25 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
 
         var records = Session.Query<Transaction, TransactionIndex>(collection: CollectionName);
 
-        if (!string.IsNullOrEmpty(query.OwnerId))
-        {
-            records = records.Where(x => x.OwnerId == query.OwnerId);
-        }
+        var payers = (query.Payers ?? []).Where(payer => !payer.IsEmpty).Distinct().ToArray();
 
-        if (query.OwnerKind.HasValue)
+        if (payers.Length > 0)
         {
-            records = records.Where(x => x.OwnerKind == query.OwnerKind.Value);
+            // The owner's own transactions and those the named parties owe: what a person sees when they also act for
+            // an account.
+            records = records.Where(BuildOwnerOrPayerPredicate(query.OwnerId, query.OwnerKind, payers));
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(query.OwnerId))
+            {
+                records = records.Where(x => x.OwnerId == query.OwnerId);
+            }
+
+            if (query.OwnerKind.HasValue)
+            {
+                records = records.Where(x => x.OwnerKind == query.OwnerKind.Value);
+            }
         }
 
         if (!string.IsNullOrEmpty(query.Source))
@@ -93,6 +108,40 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
         };
     }
 
+    private static Expression<Func<TransactionIndex, bool>> BuildOwnerOrPayerPredicate(string ownerId, CustomerOwnerKind? ownerKind, PartyRef[] payers)
+    {
+        Expression<Func<TransactionIndex, bool>> predicate = null;
+
+        if (!string.IsNullOrEmpty(ownerId))
+        {
+            if (ownerKind.HasValue)
+            {
+                var kind = ownerKind.Value;
+
+                predicate = x => x.OwnerId == ownerId && x.OwnerKind == kind;
+            }
+            else
+            {
+                predicate = x => x.OwnerId == ownerId;
+            }
+        }
+
+        foreach (var group in payers.GroupBy(payer => payer.Kind, StringComparer.Ordinal))
+        {
+            var payerKind = group.Key;
+            var payerIds = group
+                .Select(payer => TransactionIndexProvider.TruncateParentReference(payer.Id))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            Expression<Func<TransactionIndex, bool>> owedByKind = x => x.PayerKind == payerKind && x.PayerId.IsIn(payerIds);
+
+            predicate = IndexPredicates.OrElse(predicate, owedByKind);
+        }
+
+        return predicate;
+    }
+
     /// <inheritdoc/>
     public Task<Transaction> GetByObligationAsync(string checkoutSessionId, string obligationId, CancellationToken cancellationToken = default)
     {
@@ -103,6 +152,22 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
             x => x.CheckoutSessionId == checkoutSessionId && x.ObligationId == obligationId,
             collection: CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Transaction>> GetByCheckoutSessionAsync(string checkoutSessionId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(checkoutSessionId);
+
+        // One checkout pays a handful of debts at most.
+        var records = await Session.Query<Transaction, TransactionIndex>(
+            x => x.CheckoutSessionId == checkoutSessionId,
+            collection: CollectionName)
+            .OrderBy(x => x.CreatedUtc)
+            .Take(50)
+            .ListAsync(cancellationToken);
+
+        return [.. records];
     }
 
     /// <inheritdoc/>

@@ -403,6 +403,11 @@ public sealed class WorkOrder : CatalogItem
     public string InvoiceTransactionId { get; set; }
 
     /// <summary>
+    /// Gets or sets the invoice document billed for the work order, when Invoicing billed it.
+    /// </summary>
+    public string InvoiceId { get; set; }
+
+    /// <summary>
     /// Gets or sets the service agreement it was made for, if any.
     /// </summary>
     public string AgreementId { get; set; }

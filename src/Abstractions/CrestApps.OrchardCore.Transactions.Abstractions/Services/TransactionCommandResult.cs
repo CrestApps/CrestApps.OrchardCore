@@ -39,9 +39,27 @@ public sealed class TransactionCommandResult
     public SavedPaymentMethodChargeStatus ChargeStatus { get; set; }
 
     /// <summary>
+    /// Gets or sets the part of a payment that was not recorded because it was more than what the transaction still
+    /// owed, in the transaction's currency. The caller decides what becomes of it, for example the payer's credit.
+    /// </summary>
+    public decimal UnappliedAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the money added to the payer's customer credit by the command: the part of a payment above what was
+    /// owed, when the payment asked for it (<see cref="TransactionPaymentRequest.CreditExcess"/>).
+    /// </summary>
+    public decimal CreditedAmount { get; set; }
+
+    /// <summary>
     /// Gets the reasons the command was refused or did not fully succeed, ready to show to the person who asked.
     /// </summary>
     public IList<string> Errors { get; } = [];
+
+    /// <summary>
+    /// Gets what the person who asked should know about a command that succeeded, such as customer credit that will be
+    /// changed a moment later because its balance was busy.
+    /// </summary>
+    public IList<string> Warnings { get; } = [];
 
     /// <summary>
     /// Adds an error to the result.

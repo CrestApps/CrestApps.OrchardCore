@@ -1,0 +1,18 @@
+@* The page of an invoice. Its shapes come from the display drivers of Invoice for the DetailAdmin display type: the
+   Content zone is the main column and the Actions zone the side column. *@
+<div class="row">
+    <div class="col-lg-8">
+        @if (Model.Content != null)
+        {
+            <div class="d-flex flex-column gap-3 mb-3">
+                @await DisplayAsync(Model.Content)
+            </div>
+        }
+    </div>
+    <div class="col-lg-4">
+        @if (Model.Actions != null)
+        {
+            @await DisplayAsync(Model.Actions)
+        }
+    </div>
+</div>

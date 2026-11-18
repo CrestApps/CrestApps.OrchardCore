@@ -395,6 +395,7 @@ html[data-manual='technical'] .navbar__link--active {
 .sidebar-icon--compass { --sidebar-icon: url('/img/icons/compass.svg'); }
 .sidebar-icon--contact { --sidebar-icon: url('/img/icons/contact.svg'); }
 .sidebar-icon--door-open { --sidebar-icon: url('/img/icons/door-open.svg'); }
+.sidebar-icon--file-invoice-dollar { --sidebar-icon: url('/img/icons/file-invoice-dollar.svg'); }
 .sidebar-icon--file-cog { --sidebar-icon: url('/img/icons/file-cog.svg'); }
 .sidebar-icon--headset { --sidebar-icon: url('/img/icons/headset.svg'); }
 .sidebar-icon--history { --sidebar-icon: url('/img/icons/history.svg'); }

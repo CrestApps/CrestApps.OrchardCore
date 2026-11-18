@@ -20,10 +20,31 @@ public interface IWorkOrderPartsService
 }
 
 /// <summary>
-/// Invoices a completed work order.
+/// Invoices a completed work order. When several are registered, the one with the highest <see cref="Priority"/> bills:
+/// Invoicing's (a numbered invoice with the lines) wins over the plain debt Transactions posts.
 /// </summary>
 public interface IWorkOrderBilling
 {
+    /// <summary>
+    /// Gets the priority of this billing over the others registered.
+    /// </summary>
+    int Priority
+        => 0;
+
+    /// <summary>
+    /// Bills a completed work order with its lines, payer, term and tax category. Billing that only posts an amount
+    /// implements <see cref="InvoiceAsync(WorkOrder, decimal, string, CancellationToken)"/> and gets this from it.
+    /// </summary>
+    /// <param name="request">What to bill.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>What it created.</returns>
+    async Task<WorkOrderBillingResult> InvoiceAsync(WorkOrderBillingRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return new WorkOrderBillingResult { TransactionId = await InvoiceAsync(request.WorkOrder, request.Amount, request.Currency, cancellationToken) };
+    }
+
     /// <summary>
     /// Creates the invoice.
     /// </summary>

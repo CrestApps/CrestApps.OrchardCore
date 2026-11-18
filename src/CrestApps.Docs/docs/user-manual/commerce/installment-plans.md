@@ -153,6 +153,8 @@ When the plan charges the card, each payment is charged on its due date. If the 
 
 If the payment service could not be reached at all, nothing is known about the card, so the charge is simply tried again shortly and does not use up a retry.
 
+Cards are charged the same way for invoices, payment plans and booking balances: each payment's transaction shows **Charged to a saved card** with the time of its next charge, and a declined charge is on its timeline with the card's reason. A **Charge now** on a payment that is already due counts as one of its tries, and its retries carry on as set.
+
 ## Find a plan
 
 The list shows one row per plan, with its title, status and these badges: **Customer**, **Total**, **Received**, **Outstanding** (on open plans that still owe money) and **Next payment** (the amount and its due date).

@@ -24,6 +24,7 @@
     <ProjectReference Include="..\CrestApps.OrchardCore.Agreements.Abstractions\CrestApps.OrchardCore.Agreements.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Calendars.Abstractions\CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Skills.Abstractions\CrestApps.OrchardCore.Skills.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Parties.Abstractions\CrestApps.OrchardCore.Parties.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

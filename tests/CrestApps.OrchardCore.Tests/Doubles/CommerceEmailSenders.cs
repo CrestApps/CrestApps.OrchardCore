@@ -1,7 +1,9 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Commerce.Core.Emails;
 using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Core.Emails;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Email;
@@ -18,11 +20,16 @@ namespace CrestApps.OrchardCore.Tests.Doubles;
 public static class CommerceEmailSenders
 {
     /// <summary>
+    /// Gets a localizer of the sender's texts that returns each text as written.
+    /// </summary>
+    public static IStringLocalizer<CommerceEmailSender> Localizer { get; } = new PassThroughLocalizer();
+
+    /// <summary>
     /// Returns a sender that sends through the email service the services hold, if any.
     /// </summary>
     /// <param name="services">The services.</param>
     public static CommerceEmailSender Create(IServiceProvider services)
-        => new(services, new AsBuiltCommerceEmailTemplates(), NullLogger<CommerceEmailSender>.Instance);
+        => new(services, new AsBuiltCommerceEmailTemplates(), NullLogger<CommerceEmailSender>.Instance, Localizer);
 
     /// <summary>
     /// Returns a sender that sends through the email service.
@@ -40,7 +47,7 @@ public static class CommerceEmailSenders
     {
         var services = new ServiceCollection().AddLogging().AddSingleton(emailService).BuildServiceProvider();
 
-        return new(services, Templates(settings), NullLogger<CommerceEmailSender>.Instance);
+        return new(services, Templates(settings), NullLogger<CommerceEmailSender>.Instance, Localizer);
     }
 
     /// <summary>
@@ -63,5 +70,17 @@ public static class CommerceEmailSenders
             .BuildServiceProvider();
 
         return new LiquidCommerceEmailTemplates(services, siteService.Object, NullLogger<LiquidCommerceEmailTemplates>.Instance);
+    }
+
+    private sealed class PassThroughLocalizer : IStringLocalizer<CommerceEmailSender>
+    {
+        public LocalizedString this[string name]
+            => new(name, name);
+
+        public LocalizedString this[string name, params object[] arguments]
+            => new(name, string.Format(CultureInfo.InvariantCulture, name, arguments));
+
+        public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures)
+            => [];
     }
 }

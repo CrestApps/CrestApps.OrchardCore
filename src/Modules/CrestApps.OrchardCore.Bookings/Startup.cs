@@ -58,6 +58,7 @@ public sealed class Startup : StartupBase
             .AddCommerceEmailKind(BookingEmailSender.EmailKind, LocalizationSource.Create<Startup>("Booking confirmed or canceled"));
         services.AddScoped<BookingDepositService>();
         services.AddScoped<BookingBalanceCharger>();
+        services.AddScoped<ITransactionEventHandler, BookingBalanceChargeHandler>();
         services.AddScoped<ITransactionPaymentHandler, BookingBalancePaymentHandler>();
 
         // A booking's date and option ride on its cart line, and its order line books it.

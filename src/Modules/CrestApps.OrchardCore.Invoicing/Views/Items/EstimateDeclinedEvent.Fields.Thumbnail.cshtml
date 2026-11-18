@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Estimates
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<EstimateDeclinedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-thumbs-down" aria-hidden="true"></i>
+    @T["Estimate Declined"]
+</h4>
+<p>@T["Starts when the customer declines an estimate."]</p>

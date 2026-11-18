@@ -91,12 +91,7 @@ The handler resolves `BookingService` when an order changes rather than when it'
 
 `BookingBalanceTenderProvider.DebitAsync` puts the balance on an outstanding ledger transaction, with the transactions' reminders and pay link, due on that date. It keeps a `BookingBalance` record of the transaction and the deposit's checkout session. `CreditAsync` takes refunds off what's owed.
 
-`BookingBalanceCharger.ChargeAsync` charges the kept card through the checkout without the buyer present, as installments do:
-
-1. It reads the card through `ICheckoutSavedPaymentMethodProvider` from the deposit's succeeded attempts.
-2. It starts a checkout on the transaction, and begins it with `CheckoutPaymentDataKeys.ForOffSessionCharge`.
-
-A declined card is tried again the next day, three times in all. The charger reads the balance again after the checkout commits: saving the document read before that commit would store it twice.
+The balance's transaction carries its charge from the start (`DeferredBalanceDebit.AutoCharge`, from `BookingBalanceCharger.NewAutoCharge`): the card the deposit's checkout kept (`SourceSessionId`), on the due date, retried a day later twice (`RetryDays` `[1, 1]`, three charges in all). The Transactions feature's saved card charge service charges it without the buyer present, as it does invoices and installment plan payments; see [Charging on a schedule](transactions#charging-on-a-schedule-with-retries). `BookingBalanceChargeHandler` keeps the `BookingBalance` in step with its events: a decline records the attempt, the failure and the next attempt and reports a failure that isn't final; a charge no longer retried marks the balance `Failed` and reports a final one. `BookingBalancePaymentHandler` marks it `Paid` once its invoice is paid. The bookings background task hands a due balance whose invoice carries no charge (one made before) to the service, and settles one paid or canceled meanwhile. Staff's **Charge the card now** on the booking charges it now through the same service (`BookingBalanceCharger.ChargeAsync`).
 
 ## Cancellation
 
@@ -165,7 +160,7 @@ services.AddScoped<IBookingHandler, BookingAuditHandler>();
 | --- | --- | --- |
 | `PaymentReceivedAsync` | `BookingService.ConfirmPaidAsync` | An order with bookings is paid: `FullPayment`, or `Deposit` when a balance is owed later. `Amount` is what was paid now; `Reference` is the order's checkout session. |
 | `PaymentReceivedAsync` | `BookingBalancePaymentHandler` (an `ITransactionPaymentHandler`) | A payment is applied to a balance's ledger invoice, however it was paid: the kept card charged when it's due, the buyer's pay link, or staff recording a payment. `PaymentKind` is `Balance`; `Reference` is the ledger transaction. |
-| `PaymentFailedAsync` | `BookingBalanceCharger` | Charging the balance to the kept card fails. `IsFinal` is `true` when it isn't tried again (after the last attempt, or when no card or invoice can be found). |
+| `PaymentFailedAsync` | `BookingBalanceCharger` (from the saved card charge service's events) | Charging the balance to the kept card fails. `IsFinal` is `true` when it isn't tried again (after the last attempt, when the card's bank asks the buyer to approve it, or when no card or invoice can be found). |
 | `RefundedAsync` | `BookingOrderEventHandler.RefundedAsync` | A refund is recorded on an order with confirmed bookings, whether a booking was canceled with a refund or staff refunded the order. `Reference` is the refund's id. |
 
 Each is reported once. An order reported paid again confirms no booking twice, so it reports nothing new; the ledger applies a payment and an order records a refund only once; and a balance that already failed for good, was paid or was let go of reports no further failure. Each try of a declined charge reports its own failure. Only bookings that were confirmed are included in a balance payment, a failed charge or a refund. The handlers run inside the unit of work that records the money; a handler that throws is logged and doesn't undo it.

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Transactions.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TransactionRefundedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+    @T["Transaction Refunded"]
+</h4>
+<p>@T["Starts when money is given back on a transaction."]</p>

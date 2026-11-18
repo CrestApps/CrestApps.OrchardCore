@@ -48,6 +48,10 @@ All live in the `TimeTracker` YesSql collection, each with its own index table.
 - **`GetTotalsAsync`** totals a range for each person, or each person and day in a time zone (an entry over midnight is split): minutes by stage, minutes by category after its factor, and every tracked minute. An open entry counts up to now.
 - `ITimeEntryObserver` hears about every change after it is saved; the Audit Trail is one.
 
+### Billed time
+
+With [Invoicing Billing](invoicing#billing-work-and-costs), ended entries can be billed to a customer at an hourly rate. An entry billed on an invoice records it (`TimeEntry.BilledInvoiceId` and `BilledLineId`, set and cleared through `ITimeTrackerService.SetBilledAsync`), and can't be changed or removed until the invoice lets it go: the line taken off, the draft deleted or the invoice voided.
+
 ## Other clocks
 
 Another clock, such as the Workforce time clock, can keep a person's time and show it here:

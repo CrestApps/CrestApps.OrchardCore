@@ -133,7 +133,18 @@ public sealed class OrdersAdminController : Controller
 
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId, HttpContext.RequestAborted);
 
-        if (order is null || order.Status == OrderStatus.Draft)
+        if (order is null)
+        {
+            return NotFound();
+        }
+
+        // Invoiced by another module (Invoicing): its invoice is the order's invoice, a sent draft order's included.
+        if (await OrderDocumentLinks.GetInvoiceUrlAsync(HttpContext.RequestServices.GetServices<IOrderDocumentSender>(), order, forStaff: true, HttpContext.RequestAborted) is { } invoiceUrl)
+        {
+            return Redirect(invoiceUrl);
+        }
+
+        if (order.Status == OrderStatus.Draft)
         {
             return NotFound();
         }

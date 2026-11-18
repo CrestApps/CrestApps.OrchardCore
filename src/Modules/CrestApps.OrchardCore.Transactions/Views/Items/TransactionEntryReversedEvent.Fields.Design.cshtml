@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Transactions.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TransactionEntryReversedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Transaction Entry Taken Back"])
+    </h4>
+</header>

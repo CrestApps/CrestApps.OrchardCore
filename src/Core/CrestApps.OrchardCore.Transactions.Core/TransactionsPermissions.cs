@@ -37,6 +37,13 @@ public static class TransactionsPermissions
     /// <summary>
     /// The permission required for an authenticated user to view and pay their own transactions.
     /// </summary>
+    /// <summary>
+    /// Allows creating, changing and deleting the store's payment terms.
+    /// </summary>
+    public static readonly Permission ManagePaymentTerms = new(
+        "ManagePaymentTerms",
+        LocalizationSource.Create("Manage payment terms", typeof(TransactionsPermissions)));
+
     public static readonly Permission ViewOwnTransactions = new(
         "ViewOwnTransactions",
         LocalizationSource.Create("View own transactions", typeof(TransactionsPermissions)));

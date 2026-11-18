@@ -88,6 +88,17 @@ public interface ITimeTrackerService
     Task<TimeTrackerResult> DeleteAsync(string entryId, string actor, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Records the invoice line that bills an ended entry to a customer, or, with <see langword="null"/>, lets it go so it
+    /// can be billed again. A billed entry can't be changed or removed.
+    /// </summary>
+    /// <param name="entryId">The entry.</param>
+    /// <param name="invoiceId">The invoice that bills it, or <see langword="null"/> to let it go.</param>
+    /// <param name="lineId">The invoice's line.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The outcome.</returns>
+    Task<TimeTrackerResult> SetBilledAsync(string entryId, string invoiceId, string lineId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds an entry.
     /// </summary>
     /// <param name="entryId">The entry.</param>

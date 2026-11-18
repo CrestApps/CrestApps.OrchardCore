@@ -454,9 +454,21 @@ public sealed class OrderInvoice
     public DateTime? DueUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets when it was last emailed to the buyer, or <see langword="null"/> while it's being put together.
+    /// Gets or sets when it was last sent to the buyer, or <see langword="null"/> while it's being put together.
     /// </summary>
     public DateTime? SentUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the last send made the document without e-mailing it (e-mail isn't set up), so the buyer
+    /// has it only when staff share its link.
+    /// </summary>
+    public bool NotEmailed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of the document it was last sent as, such as another module's invoice or estimate, or
+    /// <see langword="null"/> for the order's own e-mail.
+    /// </summary>
+    public string SentAs { get; set; }
 
     /// <summary>
     /// Gets or sets the order this one adds to, such as items added after that one was paid.

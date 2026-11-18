@@ -16,7 +16,7 @@ public sealed class CommerceModuleBoundaryTests
 
     // The financial-document contracts moved to Transactions when Commerce.Abstractions was retired: a
     // receipt or invoice number belongs with the ledger that issues it, not with the orchestration shell.
-    private static readonly Assembly _transactionsAbstractionsAssembly = typeof(CrestApps.OrchardCore.Transactions.FinancialDocuments.IFinancialDocumentPolicy).Assembly;
+    private static readonly Assembly _transactionsAbstractionsAssembly = typeof(CrestApps.OrchardCore.Transactions.FinancialDocuments.IFinancialDocumentNumberGenerator).Assembly;
 
     // Domain web/core and provider assemblies Commerce must never take a dependency on, because doing so
     // would let the orchestration shell reach into or own another domain's data or provider integration.

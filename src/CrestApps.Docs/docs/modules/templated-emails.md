@@ -4,7 +4,7 @@ title: Templated e-mails
 description: "The shared templated e-mail sender in CrestApps.OrchardCore.Core: kinds of e-mail a site can write its own Liquid template of, grouped by the module that sends them, sources that keep those templates, the built e-mail as {{ Content }}, a layout per group, and sending in the recipient's culture."
 ---
 
-A module that sends people e-mails of a kind (an inspection's *booked*, an order's confirmation) builds the e-mail in code and lets the site write over it in Liquid. `CrestApps.OrchardCore.Core` holds the shared pieces; Commerce sends its e-mails through them.
+A module that sends people e-mails of a kind (an inspection's *booked*, an order's confirmation) builds the e-mail in code and lets the site write over it in Liquid. `CrestApps.OrchardCore.Core` holds the shared pieces; Commerce renders its templates through them.
 
 | Piece | Holds |
 | --- | --- |
@@ -54,4 +54,4 @@ A module whose site templates live in its settings uses the shared editor rather
 
 ## Commerce
 
-`ICommerceEmailSender` and `ICommerceEmailTemplates` keep their signatures, so the store's call sites don't change. `CommerceEmailSender` sends through `TemplatedEmailSender`, and `LiquidCommerceEmailTemplates` renders the store's templates of `OrderEmailTemplateSettings` (**Settings › Commerce › Emails**) through `LiquidTemplatedEmailTemplates` with `CommerceEmailTemplateSource`, which adds `{{ StoreName }}`. The store's layout only wraps commerce e-mails.
+`ICommerceEmailSender` and `ICommerceEmailTemplates` keep their signatures, so the store's call sites don't change. `CommerceEmailSender` sends through Orchard Core's e-mail service itself, since it also carries copies, blind copies, attachments and a result with the reason a send failed, which `TemplatedEmailSender` doesn't yet; `LiquidCommerceEmailTemplates` renders the store's templates of `OrderEmailTemplateSettings` (**Settings › Commerce › Emails**) through `LiquidTemplatedEmailTemplates` with `CommerceEmailTemplateSource`, which adds `{{ StoreName }}`. The store's layout only wraps commerce e-mails.

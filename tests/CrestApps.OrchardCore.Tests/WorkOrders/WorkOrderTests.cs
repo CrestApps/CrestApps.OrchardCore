@@ -213,7 +213,7 @@ public sealed class WorkOrderTests
         var clock = new Mock<IClock>();
         var observer = new Mock<IWorkOrderObserver>();
         var parts = new Mock<IWorkOrderPartsService>();
-        var billing = new Mock<IWorkOrderBilling>();
+        var billing = new Mock<IWorkOrderBilling> { CallBase = true };
 
         clock.SetupGet(c => c.UtcNow).Returns(() => setup.Now);
         observer.Setup(o => o.OnEventAsync(It.IsAny<WorkOrder>(), It.IsAny<string>(), It.IsAny<IReadOnlyDictionary<string, object>>(), It.IsAny<CancellationToken>()))

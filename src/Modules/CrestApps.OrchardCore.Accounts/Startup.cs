@@ -52,6 +52,10 @@ public sealed class Startup : StartupBase
 
         // Accounts are parties: pickers and lists in any module (asset owners, work orders) find and name them.
         services.AddPartySource<AccountPartySource>(PartyKinds.Account, LocalizationSource.Create<Startup>("Account"), CommonPermissions.ListContent);
+
+        // An account is billed under its name at its billing location; modules that keep more about it add their own
+        // billing profile source after this one.
+        services.AddPartyBillingProfileSource<AccountBillingProfileSource>();
         services.AddScoped<AccountListSynchronizer>();
         services.AddScoped<IContentDefinitionEventHandler, AccountsContentDefinitionEventHandler>();
         services.AddScoped<IContentDisplayDriver, AccountPickerDisplayDriver>();
@@ -75,7 +79,6 @@ public sealed class Startup : StartupBase
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Notes, LocalizationSource.Create<Startup>("Notes"), "fa-regular fa-note-sticky", AccountPageTabs.GetPosition(AccountPageTabs.Notes));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Orders, LocalizationSource.Create<Startup>("Orders"), "fa-solid fa-bag-shopping", AccountPageTabs.GetPosition(AccountPageTabs.Orders));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Business, LocalizationSource.Create<Startup>("Business buying"), "fa-solid fa-briefcase", AccountPageTabs.GetPosition(AccountPageTabs.Business));
-        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Invoices, LocalizationSource.Create<Startup>("Invoices"), "fa-solid fa-file-invoice-dollar", AccountPageTabs.GetPosition(AccountPageTabs.Invoices));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Service, LocalizationSource.Create<Startup>("Service"), "fa-solid fa-screwdriver-wrench", AccountPageTabs.GetPosition(AccountPageTabs.Service));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Records, LocalizationSource.Create<Startup>("All records"), "fa-solid fa-folder-open", AccountPageTabs.GetPosition(AccountPageTabs.Records));
     }
@@ -101,6 +104,9 @@ public sealed class MembersStartup : StartupBase
             .AddHandler<AccountMembersPartHandler>();
 
         services.AddScoped<IAccountMemberService, AccountMemberService>();
+
+        // The members of an account act for it wherever a party's members are asked for, such as a billing portal.
+        services.AddPartyMemberSource<AccountPartyMemberSource>();
         services.AddIndexProvider<AccountMemberIndexProvider>();
         services.AddDataMigration<AccountMembersMigrations>();
         services.AddPermissionProvider<AccountMembersPermissionProvider>();

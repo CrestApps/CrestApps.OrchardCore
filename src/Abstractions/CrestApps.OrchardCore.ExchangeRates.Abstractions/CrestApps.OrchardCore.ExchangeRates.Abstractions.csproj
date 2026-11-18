@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace(".Abstractions",""))</RootNamespace>
+    <Title>CrestApps OrchardCore Exchange Rates Abstractions</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Abstractions for the CrestApps OrchardCore Exchange Rates module: dated exchange rates to the currency the store
+      reports in, the service that finds the rate of a day, and the seam for providers that fetch rates.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS ExchangeRates Currency Commerce Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

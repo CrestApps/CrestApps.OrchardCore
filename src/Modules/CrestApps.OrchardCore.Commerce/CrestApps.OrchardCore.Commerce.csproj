@@ -7,9 +7,10 @@
     <Description>
       $(CrestAppsDescription)
 
-      Registers the shared Commerce admin menu and its icon so that every commerce-related module contributes
-      its screens under a single, consistently branded top-level menu. The feature is enabled by dependency
-      only and exposes no standalone functionality on its own.
+      Commerce Foundation registers what billing and the store share: the Commerce admin menu and its icon, the
+      customer account, the commerce admin list helpers, customers' access to their own admin pages, and personal
+      data. Commerce, the store layer on top of it, adds the store's setup guide. Both are enabled by dependency
+      only.
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS Commerce</PackageTags>
   </PropertyGroup>

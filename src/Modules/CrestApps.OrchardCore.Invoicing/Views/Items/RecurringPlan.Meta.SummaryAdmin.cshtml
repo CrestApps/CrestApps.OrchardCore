@@ -1,0 +1,33 @@
+@model ShapeViewModel<RecurringPlanRowViewModel>
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+
+@{
+    var plan = Model.Value.Plan;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Schedule"]">
+    <i class="fa-solid fa-repeat text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Schedule"]</span>
+    <partial name="_RecurringPlanSchedule" model="plan" />
+</span>
+@if (!string.IsNullOrEmpty(plan.BillTo?.Contact?.Name))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Bills"]">
+        <i class="fa-regular fa-user text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Bills"]</span>
+        @plan.BillTo.Contact.Name
+    </span>
+}
+@if (!string.IsNullOrEmpty(plan.Currency))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Total of each invoice"]">
+        <i class="fa-solid fa-sack-dollar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Total of each invoice"]</span>
+        @MoneyFormatter.Format(plan.Totals?.Total ?? 0m, plan.Currency)
+    </span>
+}
+@* The next run is a day in the site's time zone, kept as a date: it is shown as it is. *@
+@if (plan.NextRunDate is { } next && plan.Status == RecurringPlanStatus.Active)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Next run"]">
+        <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Next run"]</span>
+        @next.ToString("d")
+    </span>
+}

@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Timeline;
 using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
@@ -560,14 +561,13 @@ public sealed class WorkOrderService
         {
             var amount = BillableAmount(workOrder, type);
 
-            foreach (var billing in _billing)
+            // The billing with the highest priority bills it: Invoicing's when it is on, else the debt Transactions posts.
+            if (amount > 0 && _billing.OrderByDescending(billing => billing.Priority).FirstOrDefault() is { } billing)
             {
-                if (amount > 0)
-                {
-                    workOrder.InvoiceTransactionId = await billing.InvoiceAsync(workOrder, amount, type.Currency ?? "USD", cancellationToken);
-                }
+                var billed = await billing.InvoiceAsync(CreateBillingRequest(workOrder, type, amount), cancellationToken);
 
-                break;
+                workOrder.InvoiceTransactionId = billed?.TransactionId;
+                workOrder.InvoiceId = billed?.InvoiceId;
             }
         }
 
@@ -660,6 +660,80 @@ public sealed class WorkOrderService
     /// <param name="workOrder">The work order.</param>
     /// <param name="type">Its type.</param>
     /// <returns>The amount.</returns>
+    /// <summary>
+    /// What a completed work order bills: its billable lines when billed by time and materials, else one line at the
+    /// agreed or fixed price; owed by its account, else its customer user, else its contact.
+    /// </summary>
+    /// <param name="workOrder">The work order.</param>
+    /// <param name="type">Its type.</param>
+    /// <param name="amount">The amount billed.</param>
+    /// <returns>The billing request.</returns>
+    public static WorkOrderBillingRequest CreateBillingRequest(WorkOrder workOrder, WorkOrderType type, decimal amount)
+    {
+        ArgumentNullException.ThrowIfNull(workOrder);
+        ArgumentNullException.ThrowIfNull(type);
+
+        var request = new WorkOrderBillingRequest
+        {
+            WorkOrder = workOrder,
+            Amount = amount,
+            Currency = type.Currency ?? "USD",
+            Payer = GetPayer(workOrder),
+        };
+
+        if (workOrder.AgreedPrice is null && type.BillingMode == WorkOrderBillingMode.TimeAndMaterials)
+        {
+            foreach (var line in workOrder.Lines.Where(line => line.Billable))
+            {
+                var quantity = line.QuantityUsed > 0 || line.Kind == WorkOrderLineKind.Product ? line.QuantityUsed : line.QuantityEstimated;
+
+                if (quantity <= 0m)
+                {
+                    continue;
+                }
+
+                request.Lines.Add(new WorkOrderBillingLine
+                {
+                    Kind = line.Kind,
+                    Description = line.Description,
+                    Quantity = quantity,
+                    UnitPrice = line.UnitPrice,
+                    ProductId = line.ProductId,
+                });
+            }
+        }
+        else
+        {
+            request.Lines.Add(new WorkOrderBillingLine
+            {
+                Kind = WorkOrderLineKind.Service,
+                Description = string.IsNullOrWhiteSpace(workOrder.Summary) ? workOrder.Number : workOrder.Summary,
+                Quantity = 1m,
+                UnitPrice = amount,
+            });
+        }
+
+        return request;
+    }
+
+    // Who owes the work order: its account, else its customer user, else its CRM contact.
+    private static PartyRef GetPayer(WorkOrder workOrder)
+    {
+        if (!string.IsNullOrEmpty(workOrder.AccountId))
+        {
+            return new PartyRef(PartyKinds.Account, workOrder.AccountId);
+        }
+
+        if (!string.IsNullOrEmpty(workOrder.CustomerId))
+        {
+            return new PartyRef(PartyKinds.User, workOrder.CustomerId);
+        }
+
+        return string.IsNullOrEmpty(workOrder.ContactId)
+            ? default
+            : new PartyRef(PartyKinds.Contact, workOrder.ContactId);
+    }
+
     public static decimal BillableAmount(WorkOrder workOrder, WorkOrderType type)
     {
         ArgumentNullException.ThrowIfNull(workOrder);

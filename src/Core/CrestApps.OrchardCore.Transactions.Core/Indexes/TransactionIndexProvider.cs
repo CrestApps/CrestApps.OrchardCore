@@ -29,28 +29,38 @@ public sealed class TransactionIndexProvider : IndexProvider<Transaction>
         context.For<TransactionIndex>()
             .ExclusiveToDocumentType()
             .SingleRecordPerDocument()
-            .Map(transaction => new TransactionIndex
+            .Map(transaction =>
             {
-                ItemId = transaction.ItemId,
-                Title = transaction.Title,
-                Source = transaction.Source,
-                OwnerId = transaction.OwnerId,
-                OwnerKind = transaction.OwnerKind,
-                ReferenceType = transaction.ReferenceType,
-                ReferenceId = transaction.ReferenceId,
-                ParentReferenceType = TruncateParentReference(transaction.ParentReferenceType),
-                ParentReferenceId = TruncateParentReference(transaction.ParentReferenceId),
-                CheckoutSessionId = transaction.CheckoutSessionId,
-                ObligationId = transaction.ObligationId,
-                Currency = transaction.Currency,
-                TotalAmount = transaction.TotalAmount,
-                AmountPaid = transaction.AmountPaid,
-                OutstandingAmount = CurrencyScale.Round(transaction.OutstandingAmount, transaction.Currency),
-                Status = transaction.Status,
-                DueUtc = transaction.DueUtc,
-                NextCycleUtc = transaction.Recurrence?.GetNextCycleUtc(),
-                CreatedUtc = transaction.CreatedUtc,
-                UpdatedUtc = transaction.UpdatedUtc,
+                // The payer as recorded, or as it follows from the owner for a transaction older than the payer.
+                var payer = transaction.GetPayer();
+
+                return new TransactionIndex
+                {
+                    ItemId = transaction.ItemId,
+                    Title = transaction.Title,
+                    Source = transaction.Source,
+                    OwnerId = transaction.OwnerId,
+                    OwnerKind = transaction.OwnerKind,
+                    PayerKind = payer.IsEmpty ? null : payer.Kind,
+                    PayerId = payer.IsEmpty ? null : TruncateParentReference(payer.Id),
+                    ReferenceType = transaction.ReferenceType,
+                    ReferenceId = transaction.ReferenceId,
+                    ParentReferenceType = TruncateParentReference(transaction.ParentReferenceType),
+                    ParentReferenceId = TruncateParentReference(transaction.ParentReferenceId),
+                    CheckoutSessionId = transaction.CheckoutSessionId,
+                    ObligationId = transaction.ObligationId,
+                    Currency = transaction.Currency,
+                    TotalAmount = transaction.TotalAmount,
+                    AmountPaid = transaction.AmountPaid,
+                    OutstandingAmount = CurrencyScale.Round(transaction.OutstandingAmount, transaction.Currency),
+                    Status = transaction.Status,
+                    DueUtc = transaction.DueUtc,
+                    NextCycleUtc = transaction.Recurrence?.GetNextCycleUtc(),
+                    CreatedUtc = transaction.CreatedUtc,
+                    UpdatedUtc = transaction.UpdatedUtc,
+                    PendingCredit = transaction.Events?.Any(entry => entry.CreditState == TransactionCreditState.Pending) == true ? true : null,
+                    AutoChargeNextAttemptUtc = transaction.AutoCharge?.NextAttemptUtc,
+                };
             });
     }
 

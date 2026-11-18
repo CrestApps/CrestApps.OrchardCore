@@ -55,4 +55,10 @@ public enum TransactionEventType
     /// cardholder must approve it, or not started at the provider.
     /// </summary>
     PaymentFailed = 9,
+
+    /// <summary>
+    /// An earlier payment recorded by hand, or an earlier adjustment, was taken back. The event names the one it
+    /// reverses, and its amount is added back to what is owed.
+    /// </summary>
+    Reversed = 10,
 }

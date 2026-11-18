@@ -53,6 +53,7 @@
                        id="@inputId"
                        value="@method.Key"
                        autocomplete="off"
+                       data-defers-payment="@(method.DefersPayment ? "true" : null)"
                        checked="@method.IsDefault" />
                 <label class="btn checkout-payment-method w-100 text-start p-3" for="@inputId">
                     <span class="d-block fw-semibold">@method.Title</span>
@@ -123,6 +124,7 @@
         statusEndpoint: '@Url.RouteUrl(CheckoutConstants.RouteNames.PaymentStatus, new { sessionId = Model.Flow.Session.SessionId })',
         confirmationUrl: '@Url.RouteUrl(CheckoutConstants.RouteNames.Confirmation, new { sessionId = Model.Flow.Session.SessionId })',
         cancelUrl: '@Url.RouteUrl(CheckoutConstants.RouteNames.Step, new { sessionId = Model.Flow.Session.SessionId, step = CheckoutConstants.PaymentStepKey })',
+        deferredSubmitLabel: '@T["Place order"]',
         genericErrorMessage: '@T["Your payment could not be completed. Please try again."]',
         selectMethodMessage: '@T["Please choose a payment method."]',
         stillProcessingMessage: '@T["Your payment is still being processed. You will receive a confirmation once it completes."]'

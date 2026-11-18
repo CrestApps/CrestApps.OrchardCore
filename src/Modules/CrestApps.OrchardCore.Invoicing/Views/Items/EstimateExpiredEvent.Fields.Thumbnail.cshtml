@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Estimates
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<EstimateExpiredEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-hourglass-end" aria-hidden="true"></i>
+    @T["Estimate Expired"]
+</h4>
+<p>@T["Starts when an estimate expires unanswered."]</p>
