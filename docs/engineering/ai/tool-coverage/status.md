@@ -25,7 +25,9 @@ Tools that run Orchard Core's settings display drivers (`getSiteSettings`, `upda
 | 9 | Workflows | [14](14-orchard-automation.md) | 18 | 15 | 3 | ecc5a9144..0f31da528 |
 | 10 | Data pipelines | [14](14-orchard-automation.md) | 21 | 6 | 15 | 89f4affd8..2a331bf76 |
 
-Orchard Core part: 189 planned new tools, 132 built, 57 deferred. Left out on purpose: the four template tools (`listTemplates`, `getTemplate`, `saveTemplate`, `deleteTemplate`), because pull request 1321 adds shape template tools; and the six "existing, improve" rows (`listWorkflowTypes`, `getWorkflowType`, `listWorkflowActivities` and three AI tools), because phase 1 does not change existing tools.
+| 11 | AI profiles and agents, profile templates, personas, tool instances | [20](20-crestapps-ai-core.md) | 18 | 18 | 0 | 40fdee087..a97e4d4f1 |
+
+Orchard Core part (batches 1 to 10): 189 planned new tools, 132 built, 57 deferred. Left out on purpose: the four template tools (`listTemplates`, `getTemplate`, `saveTemplate`, `deleteTemplate`), because pull request 1321 adds shape template tools; and the six "existing, improve" rows (`listWorkflowTypes`, `getWorkflowType`, `listWorkflowActivities` and three AI tools), because phase 1 does not change existing tools.
 
 ## Why tools were deferred
 
@@ -81,6 +83,30 @@ Almost every deferral has one cause: the service the admin page uses exists only
 | `saveWorkflowType` | 9 | Creates only; saves the published version directly, so it asks for approval; HTTP Request URLs are generated in the designer |
 | `listWorkflowTypeVersions`, `listWorkflowInstances` | 9 | No compare or draft state; no status or date filters |
 | `getDataSetSchema`, `listDataPipelineStepTypes` | 10 | No parameters; no settings schema per step type |
+
+## Batch 11: the AI configuration guard inside the tools
+
+The configuration guard of F4 does not exist yet, so the tools of batch 11 apply its rules themselves through one helper, `Profiles/AIConfigurationGuard.cs` in `CrestApps.OrchardCore.AI.Agent`. The recipe path (`importOrchardCoreRecipe`) is not covered: an assistant with that tool can still change itself. The guard still belongs in an `ICatalogEntryHandler<T>` in AI.Core.
+
+| Rule | State | What is missing |
+| --- | --- | --- |
+| A, no self-edit from inside an AI turn | Implemented | MCP and A2A connections are collected but no tool changes them yet. The running profile is read from `ToolExecutionContext.Resource`, which is set once per turn, so inside an agent it names the top-level profile; the guard covers that by protecting every agent the top-level profile and the session profile can reach, plus every always-available agent. `LockSystemMessage` and `IsRemovable` cannot be turned off: no tool accepts either field, every write to a protected profile (restore included) is refused, and `saveAIProfile` refuses new instructions on a locked profile. |
+| B, no powerful tools where visitors can reach | Implemented for the Anonymous role, enabled unexpired browser API keys and always-available agents; partly for published content items with an `AIProfilePart` | The Anonymous-role check asks `IAuthorizationService` with an anonymous principal, so the real role and `QueryAIProfile_{name}` handlers decide; the tests answer it with a double, and it was not run on a site. The published-widget lookup (`PublishedChatWidgetFinder`, a YesSql query) is exercised through a double only. Phone numbers, SMS and other channel bindings, and the Authenticated role, are not checked. The reverse direction (making a profile reachable by a role, API key or widget change) is not guarded, since no tool of this batch does it. Tool instances are never allowed on a reachable profile. |
+| C, `AccessAITool_{name}` for every added tool and tool instance | Implemented | Also applied to `restoreAIProfileVersion` and `createAIProfileFromTemplate`, which the admin pages do not do. |
+| Secrets | Implemented | Tool instance settings are read and written through an explicit list per source; the Workflow source's settings are admin-page only. Addresses are checked for scheme and internal hosts without resolving the name. |
+
+## Built, but narrower than the catalog (batch 11)
+
+| Tool | What it does not do |
+| --- | --- |
+| `setAIProfileCapabilities` | No MCP or A2A connections (their metadata types are in packages this module does not reference); they are set on the profile's page |
+| `saveAIProfile` | Updates by ID only; no feature settings (analytics, data extraction, post-session, guardrails, speaking styles) |
+| `saveAIProfileTemplate` | No tool, agent or connection names on a Profile template |
+| `listAIProfileTemplates` | Templates the template manager knows; shipped speaking styles and guardrail topics that exist only as template-service files are not listed |
+| `listAITools` | No risk tier (F3 does not exist); no MCP or A2A connections |
+| `listAIToolInstances`, `saveAIToolInstance` | Settings through an explicit list per source; Workflow and unknown sources only on the admin page |
+
+`createAIProfileFromTemplate` needed one extraction: `AIProfileTemplateProfileFactory` and `AIProfileTemplateApplicator` moved unchanged from the AI module to `AI.Core` (now public), and the scenario feature check moved to `ProfileScenarioFeatureLookup` in `AI.Core`, which `ProfileScenarioCatalog` calls (commit 40fdee087).
 
 ## Notes for the maintainer
 
