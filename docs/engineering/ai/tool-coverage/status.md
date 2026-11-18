@@ -28,7 +28,7 @@ Tools that run Orchard Core's settings display drivers (`getSiteSettings`, `upda
 | 12 | AI provider connections, deployments and pricing, voice library, AI quality | [20](20-crestapps-ai-core.md) | 18 | 18 | 0 | e2d901cca..41cba0083 |
 | 13 | AI API keys, conversations, usage, chat interactions, MCP connections, MCP server, A2A connections, AI memory | [20](20-crestapps-ai-core.md) | 21 | 21 | 0 | aa0aade44..caedc8999 |
 | 14 | AI data sources, AI documents, AI file sources, AI web crawlers | [21](21-crestapps-ai-knowledge-reports-data.md) | 16 | 14 | 2 | c914acfdc..d289a346e |
-| 15 | Data connectors, content transfer | [21](21-crestapps-ai-knowledge-reports-data.md) | 18 | 16 | 2 | BATCH15_RANGE |
+| 15 | Data connectors, content transfer | [21](21-crestapps-ai-knowledge-reports-data.md) | 18 | 16 | 2 | 1497ca6f7..e4f839b32 |
 
 Orchard Core part (batches 1 to 10): 189 planned new tools, 132 built, 57 deferred. Left out on purpose: the four template tools (`listTemplates`, `getTemplate`, `saveTemplate`, `deleteTemplate`), because pull request 1321 adds shape template tools; and the six "existing, improve" rows (`listWorkflowTypes`, `getWorkflowType`, `listWorkflowActivities` and three AI tools), because phase 1 does not change existing tools.
 
