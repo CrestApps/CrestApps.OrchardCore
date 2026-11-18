@@ -113,6 +113,27 @@ public sealed class PackageRuntimeService
         var error = await _writeGate.RunLockedAsync(LockKey(enrollment.ItemId, launch.PackageItemId), async _ =>
         {
             var state = await _store.FindFreshAsync(enrollment.ItemId, launch.PackageItemId, cancellationToken);
+
+            // A commit or finish whose progress write found the enrollment busy: its result is recorded now, before the
+            // new session can start a new attempt and reset the data it comes from (review round 9). While the
+            // enrollment is still busy the launch is refused, so the result is not lost.
+            if (state is { ResultNotRecorded: true } && !review)
+            {
+                var pending = PackagesConstants.Standards.IsScorm2004(state.Standard)
+                    ? PackageResultMapper.Map(state.Cmi2004 ?? new Scorm2004Cmi(), launch.PackageItemId, state.Attempts)
+                    : PackageResultMapper.Map(state.Cmi ?? new Scorm12Cmi(), launch.PackageItemId, state.Sessions);
+                var update = await _progress.RecordWithRetryAsync(enrollment, pending, cancellationToken);
+
+                if (update?.RefusedReason == LearningRefusals.Busy)
+                {
+                    return PackageRuntimeErrors.Busy;
+                }
+
+                // Learning committed the session, which forgets the state read before: read it again.
+                state = await _store.FindFreshAsync(enrollment.ItemId, launch.PackageItemId, cancellationToken);
+                state.ResultNotRecorded = false;
+            }
+
             var isNew = state is null;
             var standard = string.IsNullOrEmpty(part.Standard) ? PackagesConstants.Standards.Scorm12 : part.Standard;
             var scorm2004 = PackagesConstants.Standards.IsScorm2004(standard);
@@ -358,6 +379,9 @@ public sealed class PackageRuntimeService
             if (request.Commit || request.Finish)
             {
                 state.LastCommitUtc = now;
+
+                // This result replaces one that was not recorded; it is recorded below.
+                state.ResultNotRecorded = false;
             }
 
             // Every runtime call loads and writes the whole state, and every package page embeds it: a change that would
@@ -382,6 +406,14 @@ public sealed class PackageRuntimeService
                     : PackageResultMapper.Map(cmi, launch.PackageItemId, state.Sessions);
 
                 result.Progress = await _progress.RecordWithRetryAsync(enrollment, itemResult, cancellationToken);
+
+                // The enrollment stayed busy, so Learning committed nothing and the state is still the session's: it keeps
+                // the flag, and the next launch records the result before it starts a session (review round 9).
+                if (result.Progress?.RefusedReason == LearningRefusals.Busy)
+                {
+                    state.ResultNotRecorded = true;
+                    await _store.UpdateAsync(state, cancellationToken);
+                }
 
                 if (result.Progress?.RefusedReason is not null && _logger.IsEnabled(LogLevel.Information))
                 {

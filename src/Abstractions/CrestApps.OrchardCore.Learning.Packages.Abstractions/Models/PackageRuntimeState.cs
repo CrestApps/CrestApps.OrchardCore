@@ -69,6 +69,13 @@ public sealed class PackageRuntimeState : CatalogItem
     /// <summary>Gets or sets when the content last committed its data, in UTC.</summary>
     public DateTime? LastCommitUtc { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether the result of the last commit or finish did not reach the learner's progress because the
+    /// enrollment stayed busy. The next launch records it before it starts a session, which for SCORM 2004 can start a new
+    /// attempt and reset the data the result comes from.
+    /// </summary>
+    public bool ResultNotRecorded { get; set; }
+
     /// <summary>Gets or sets when a session last finished, in UTC.</summary>
     public DateTime? LastFinishedUtc { get; set; }
 }

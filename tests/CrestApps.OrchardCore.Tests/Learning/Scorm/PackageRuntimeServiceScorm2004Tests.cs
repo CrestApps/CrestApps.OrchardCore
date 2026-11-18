@@ -1,7 +1,10 @@
+using CrestApps.OrchardCore.Learning.Core.Services;
+using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Packages;
 using CrestApps.OrchardCore.Learning.Packages.Core.Scorm;
 using CrestApps.OrchardCore.Learning.Packages.Core.Services;
 using CrestApps.OrchardCore.Learning.Packages.Models;
+using CrestApps.OrchardCore.Learning.Services;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Scorm;
@@ -112,6 +115,36 @@ public sealed class PackageRuntimeServiceScorm2004Tests
         Assert.Null(state.CurrentLaunchId);
         Assert.Equal(h.Clock.UtcNow, state.LastFinishedUtc);
         Assert.Equal(PackageRuntimeErrors.Superseded, again.Error);
+    }
+
+    [Fact]
+    public async Task Round9Low_AFinishWhoseProgressWriteWasBusy_IsRecordedOnTheNextLaunch_BeforeANewAttempt()
+    {
+        var busy = new BusyLock("Learning:EnrollmentWrite:");
+        await using var h = await PackageTestHarness.CreateAsync(distributedLock: busy);
+        await h.AddScorm2004PackageAsync();
+        var enrollment = await h.EnrollAsync("ana");
+        var launch = await h.LaunchAsync("ana", Item);
+
+        // Every try of the progress write finds the enrollment busy.
+        busy.RefuseNext(StaffResultRecorder.MaxTries);
+        var finished = await h.ApplyAsync("ana", launch, finish: true, changes: [("cmi.completion_status", "completed"), ("cmi.progress_measure", "1"), ("cmi.success_status", "passed"), ("cmi.score.scaled", "0.9"), ("cmi.exit", "normal")]);
+        var notYet = await h.ProgressAsync(enrollment.ItemId, Item);
+
+        // The next launch starts a new attempt (the exit was normal), which resets the data the result came from.
+        var next = await h.LaunchAsync("ana", Item);
+        var recorded = await h.ProgressAsync(enrollment.ItemId, Item);
+        var state = await h.StateAsync(enrollment.ItemId, Item);
+
+        Assert.True(finished.Succeeded, finished.Error);
+        Assert.Equal(LearningRefusals.Busy, finished.Progress?.RefusedReason);
+        Assert.Null(notYet?.Score);
+        Assert.True(next.Succeeded, next.Error);
+        Assert.Equal(90, recorded?.Score);
+        Assert.Equal(CourseItemState.Completed, recorded.State);
+        Assert.Equal(2, state.Attempts);
+        Assert.Equal("unknown", state.Cmi2004.CompletionStatus);
+        Assert.False(state.ResultNotRecorded);
     }
 
     [Fact]
