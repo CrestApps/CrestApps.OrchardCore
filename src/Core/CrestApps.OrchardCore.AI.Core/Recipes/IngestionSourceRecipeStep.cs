@@ -121,8 +121,12 @@ public abstract class IngestionSourceRecipeStep<TSource> : CatalogRecipeStepBase
         }
 
         // When the update also points the source at another server or account, such as another FTP host or user name,
-        // or another URL, the secrets it kept are dropped, as the editors drop them.
-        await RecipeSecretDestinations.UpdateAsync(entry, token, data => _manager.UpdateAsync(entry, data));
+        // or another URL, the secrets it kept are dropped, as the editors drop them, before the one save.
+        await RecipeSecretDestinations.UpdateAsync(
+            entry,
+            token,
+            async data => await _manager.NewAsync(entry.Source, data),
+            data => _manager.UpdateAsync(entry, data));
     }
 
     /// <inheritdoc/>

@@ -115,6 +115,29 @@ public sealed class AIDataSourceSourceValidationHandlerTests
         Assert.Equal(url == "http://172.18.0.3:9200/", result.Succeeded);
     }
 
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(null, "the-password")]
+    [InlineData("elastic", null)]
+    public async Task Validating_ABasicElasticsearchSource_RequiresAUsernameAndAPassword(string username, string password)
+    {
+        // Arrange (review 9, K1): a blank user name with no password passed, so a move that dropped the password was saved.
+        await using var services = Services();
+        var dataSource = ElasticsearchSource("https://search.vendor.example:9200/");
+        var metadata = Metadata("https://search.vendor.example:9200/", indexName: "logs");
+        metadata.AuthenticationType = ElasticsearchSourceMetadata.BasicAuthenticationType;
+        metadata.Username = username;
+        metadata.Password = password;
+        dataSource.Put(metadata);
+
+        // Act
+        var result = await ValidateAsync(services, dataSource);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Errors, error => error.MemberNames.Contains(username is null ? nameof(ElasticsearchSourceMetadata.Username) : nameof(ElasticsearchSourceMetadata.Password)));
+    }
+
     [Fact]
     public async Task Validating_APublicAzureAISearchSource_Succeeds_AndASourceWithoutAHandlerIsLeftAlone()
     {

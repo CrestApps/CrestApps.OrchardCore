@@ -227,10 +227,12 @@ public static class AISourceCatalogApi
         KeepStoredProperties(changes, current);
 
         // Validate a copy first: the manager saves as it updates. The copy drops the secrets the update would drop, so a
-        // required one that must be given again is reported.
+        // required one that must be given again is reported, and the changes drop them too, so the record is saved once
+        // without them: a save queues a data source's sync, which must never see the new address with a kept secret
+        // (review 9, K1).
         var copy = await manager.NewAsync(item.Source, Merge(current, changes), httpContext.RequestAborted);
         copy.ItemId = item.ItemId;
-        RecipeSecretDestinations.DropKeptSecrets(copy, before);
+        RecipeSecretDestinations.DropKeptSecrets(changes, copy, before);
 
         if (!await MayBindConnectionAsync(item, copy, connectionPicker))
         {

@@ -75,6 +75,77 @@ public static class RecipeSecretDestinations
     }
 
     /// <summary>
+    /// Updates an entry from JSON, saving it once, without the secrets the update would keep although it also changes
+    /// where the entry sends them. The JSON is first applied to a new entry, which is not saved; when that drops a secret,
+    /// the JSON carries the new entry's properties without it, so no save, and nothing a save queues, such as a data
+    /// source's sync, ever holds the new destination with the kept secret (review 9, K1).
+    /// </summary>
+    /// <param name="entry">The stored entry.</param>
+    /// <param name="data">The JSON to apply, in the shape the entry's catalog handlers read, which replace the properties
+    /// with the ones it gives.</param>
+    /// <param name="preview">Makes a new, unsaved entry from JSON, such as the entry's catalog manager <c>NewAsync</c>.</param>
+    /// <param name="update">Applies JSON to the entry and saves it, such as the entry's catalog manager update.</param>
+    public static async ValueTask UpdateAsync(ExtensibleEntity entry, JsonObject data, Func<JsonObject, ValueTask<ExtensibleEntity>> preview, Func<JsonNode, ValueTask> update)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        ArgumentNullException.ThrowIfNull(data);
+        ArgumentNullException.ThrowIfNull(preview);
+
+        var before = Snapshot(entry);
+        var candidate = await preview(Apply(before, data));
+
+        if (candidate is not null)
+        {
+            DropKeptSecrets(data, candidate, before);
+        }
+
+        await UpdateAsync(entry, data, update);
+    }
+
+    /// <summary>
+    /// Drops, from the JSON an update is about to save, the secrets it would keep although it also changes where the entry
+    /// sends them: when they are dropped from the candidate, the JSON's properties are replaced with the candidate's.
+    /// </summary>
+    /// <param name="data">The JSON about to be saved; the catalog handlers replace the entry's properties with its own.</param>
+    /// <param name="candidate">The entry as the update would leave it, not saved.</param>
+    /// <param name="before">The stored entry's JSON, from <see cref="Snapshot"/>.</param>
+    /// <returns><see langword="true"/> when a secret was dropped.</returns>
+    public static bool DropKeptSecrets(JsonObject data, ExtensibleEntity candidate, JsonObject before)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+
+        if (!DropKeptSecrets(candidate, before))
+        {
+            return false;
+        }
+
+        Member(data, nameof(ExtensibleEntity.Properties), out var key);
+        data[key ?? nameof(ExtensibleEntity.Properties)] =Snapshot(candidate)[nameof(ExtensibleEntity.Properties)]?.DeepClone();
+
+        return true;
+    }
+
+    // The entry's JSON with each member the update gives in place of its own, as the catalog handlers apply it.
+    private static JsonObject Apply(JsonObject before, JsonObject data)
+    {
+        var result = before.DeepClone().AsObject();
+
+        foreach (var (key, value) in data)
+        {
+            Member(result, key, out var existing);
+
+            if (existing is not null)
+            {
+                result.Remove(existing);
+            }
+
+            result[key] = value?.DeepClone();
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Drops the secrets a recipe kept from before when it changed where the entry sends them.
     /// </summary>
     /// <param name="entry">The entry, after the recipe applied its JSON.</param>

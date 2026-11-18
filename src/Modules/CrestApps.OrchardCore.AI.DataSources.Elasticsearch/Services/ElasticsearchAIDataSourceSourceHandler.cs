@@ -148,13 +148,19 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
             result.Fail(new ValidationResult("Elasticsearch index name is required.", [nameof(ElasticsearchSourceMetadata.IndexName)]));
         }
 
-        var hasUsername = !string.IsNullOrWhiteSpace(metadata.Username);
-        var hasPassword = !string.IsNullOrWhiteSpace(metadata.Password);
-
-        if (string.Equals(authenticationType, ElasticsearchSourceMetadata.BasicAuthenticationType, StringComparison.OrdinalIgnoreCase) &&
-            hasUsername != hasPassword)
+        // Basic authentication needs a username and a password, as the editor requires (review 9, K1): neither was
+        // accepted, so an update that moved the source and dropped its password still passed.
+        if (string.Equals(authenticationType, ElasticsearchSourceMetadata.BasicAuthenticationType, StringComparison.OrdinalIgnoreCase))
         {
-            result.Fail(new ValidationResult("Elasticsearch basic authentication requires both username and password.", [nameof(ElasticsearchSourceMetadata.Username), nameof(ElasticsearchSourceMetadata.Password)]));
+            if (string.IsNullOrWhiteSpace(metadata.Username))
+            {
+                result.Fail(new ValidationResult("Elasticsearch basic authentication requires a username.", [nameof(ElasticsearchSourceMetadata.Username)]));
+            }
+
+            if (string.IsNullOrWhiteSpace(metadata.Password))
+            {
+                result.Fail(new ValidationResult("Elasticsearch basic authentication requires a password.", [nameof(ElasticsearchSourceMetadata.Password)]));
+            }
         }
 
         if (string.Equals(authenticationType, ElasticsearchSourceMetadata.ApiKeyAuthenticationType, StringComparison.OrdinalIgnoreCase) &&

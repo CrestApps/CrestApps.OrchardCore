@@ -60,8 +60,8 @@ public sealed class AISourceCatalogApiSecretTests
         Assert.Null(saved[MetadataName]["ApiKey"]);
         Assert.Null(Metadata(manager.Entries.Single())["ApiKey"]);
 
-        // The drop is saved: a store that wrote the record on the first save writes it again.
-        Assert.Equal(2, manager.Saves);
+        // The record is saved once, already without the key (review 9, K1).
+        Assert.Equal(1, manager.Saves);
     }
 
     [Fact]
