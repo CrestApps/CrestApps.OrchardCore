@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer.Qti;
 using CrestApps.OrchardCore.ContentTransfer.Handlers;
 using CrestApps.OrchardCore.ContentTransfer.Models;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Indexes;
@@ -7,6 +8,7 @@ using CrestApps.OrchardCore.Learning.Assessments.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -177,23 +179,44 @@ internal sealed class QuestionBankImportHandler : IContentImportHandler
 }
 
 /// <summary>
-/// Matches a row to the question imported before with the same source identifier into the same question bank, by
-/// writing that question's id in the row's <c>ContentItemId</c> column, so importing the file again updates the
-/// questions instead of adding them a second time.
+/// Matches a row to the question imported before from the same source file with the same source identifier into the
+/// same question bank, by writing that question's id in the row's <c>ContentItemId</c> column, so importing the file
+/// again updates the questions instead of adding them a second time. Identifiers such as <c>item1</c> repeat across
+/// packages, so nothing is matched without a chosen bank, a question from another file is never matched, and the person
+/// who imports must be allowed to edit the question.
 /// </summary>
 internal sealed class QuestionSourceRowFilter : IContentImportRowFilter
 {
     private const string SourceIdentifierColumn = "QuestionPart_SourceIdentifier";
     private const string ContentItemIdColumn = "ContentItemId";
 
+    private const string SourceFileColumn = "QuestionPart_SourceFile";
+
     private readonly QuestionTypeOptions _questionTypes;
     private readonly ISession _session;
+    private readonly IContentManager _contentManager;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IEnumerable<IContentTransferFileFormatProvider> _formats;
+    private readonly IServiceProvider _services;
     private string _bankId;
+    private ContentTransferEntry _entry;
+    private System.Security.Claims.ClaimsPrincipal _importer;
+    private bool _importerRead;
 
-    public QuestionSourceRowFilter(IOptions<QuestionTypeOptions> questionTypes, ISession session)
+    public QuestionSourceRowFilter(
+        IOptions<QuestionTypeOptions> questionTypes,
+        ISession session,
+        IContentManager contentManager,
+        IAuthorizationService authorizationService,
+        IEnumerable<IContentTransferFileFormatProvider> formats,
+        IServiceProvider services)
     {
         _questionTypes = questionTypes.Value;
         _session = session;
+        _contentManager = contentManager;
+        _authorizationService = authorizationService;
+        _formats = formats;
+        _services = services;
     }
 
     public Task<bool> InitializeAsync(ContentImportRowFilterInitContext context)
@@ -201,6 +224,7 @@ internal sealed class QuestionSourceRowFilter : IContentImportRowFilter
         ArgumentNullException.ThrowIfNull(context);
 
         _bankId = context.Entry?.GetOrCreate<QuestionImportOptionsPart>().QuestionBankId;
+        _entry = context.Entry;
 
         return Task.FromResult(context.ContentTypeDefinition is not null && _questionTypes.IsQuestion(context.ContentTypeDefinition.Name));
     }
@@ -208,6 +232,12 @@ internal sealed class QuestionSourceRowFilter : IContentImportRowFilter
     public async Task PrepareBatchAsync(ContentImportRowFilterBatchContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+
+        // Without a chosen bank an identifier would match questions of every package on the site.
+        if (string.IsNullOrEmpty(_bankId))
+        {
+            return;
+        }
 
         var rows = context.Rows
             .Where(row => row.Columns.Contains(SourceIdentifierColumn) && row.Columns.Contains(ContentItemIdColumn))
@@ -222,20 +252,64 @@ internal sealed class QuestionSourceRowFilter : IContentImportRowFilter
 
         var identifiers = rows.Select(row => row.Identifier).Distinct(StringComparer.Ordinal).ToArray();
         var bankId = _bankId;
-        var matches = string.IsNullOrEmpty(bankId)
-            ? await _session.QueryIndex<QuestionSourceIndex>(index => index.SourceIdentifier.IsIn(identifiers) && index.QuestionBankId == null).ListAsync(context.CancellationToken)
-            : await _session.QueryIndex<QuestionSourceIndex>(index => index.SourceIdentifier.IsIn(identifiers) && index.QuestionBankId == bankId).ListAsync(context.CancellationToken);
-        var byIdentifier = matches
-            .GroupBy(match => match.SourceIdentifier, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.OrderBy(match => match.Id).First().ContentItemId, StringComparer.Ordinal);
+        var matches = await _session.QueryIndex<QuestionSourceIndex>(index => index.SourceIdentifier.IsIn(identifiers) && index.QuestionBankId == bankId).ListAsync(context.CancellationToken);
+        var importer = await ImporterAsync();
+
+        if (importer is null)
+        {
+            return;
+        }
 
         foreach (var (row, identifier) in rows)
         {
-            if (byIdentifier.TryGetValue(identifier, out var contentItemId))
+            var sourceFile = SourceFileOf(row);
+
+            foreach (var match in matches.Where(match => match.SourceIdentifier == identifier).OrderBy(match => match.Id))
             {
-                row[ContentItemIdColumn] = contentItemId;
+                var question = await _contentManager.GetAsync(match.ContentItemId, VersionOptions.Latest);
+
+                if (question is null ||
+                    !string.Equals(question.Get<QuestionPart>(nameof(QuestionPart))?.SourceFile, sourceFile, StringComparison.Ordinal) ||
+                    !await _authorizationService.AuthorizeAsync(importer, CommonPermissions.EditContent, question))
+                {
+                    continue;
+                }
+
+                row[ContentItemIdColumn] = question.ContentItemId;
+
+                break;
             }
         }
+    }
+
+    // The source file a question imported from this row keeps: the QTI reader's item path within the uploaded file
+    // (as the QTI import handler writes it), or the column as it is for any other file.
+    private string SourceFileOf(System.Data.DataRow row)
+    {
+        var path = row.Table.Columns.Contains(SourceFileColumn) ? row[SourceFileColumn]?.ToString() : null;
+
+        return QtiMediaImportHandler.ReadByQti(_formats, _entry) ? QtiQuestionImportHandler.SourceFileOf(_entry?.UploadedFileName, path) : path;
+    }
+
+    // The person who queued the import: the background import runs without a request.
+    private async Task<System.Security.Claims.ClaimsPrincipal> ImporterAsync()
+    {
+        if (_importerRead)
+        {
+            return _importer;
+        }
+
+        _importerRead = true;
+
+        if (string.IsNullOrEmpty(_entry?.Owner) ||
+            _services.GetService<Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>>() is not { } users ||
+            _services.GetService<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<global::OrchardCore.Users.IUser>>() is not { } principals ||
+            await users.FindByIdAsync(_entry.Owner) is not { } user)
+        {
+            return null;
+        }
+
+        return _importer = await principals.CreateAsync(user);
     }
 
     public Task<bool> ShouldSkipRowAsync(ContentImportRowFilterContext context)

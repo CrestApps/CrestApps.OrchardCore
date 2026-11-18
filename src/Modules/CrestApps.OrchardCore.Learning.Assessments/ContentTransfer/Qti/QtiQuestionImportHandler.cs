@@ -23,6 +23,18 @@ internal sealed class QtiQuestionImportHandler : ContentImportHandlerBase, ICont
         S = stringLocalizer;
     }
 
+    /// <summary>
+    /// Names the source of an imported question: an item file is its own source; an item of a package is named with the
+    /// package.
+    /// </summary>
+    /// <param name="uploaded">The uploaded file name.</param>
+    /// <param name="path">The item's path in the package, as the QTI reader wrote it.</param>
+    /// <returns>The source file the question keeps.</returns>
+    internal static string SourceFileOf(string uploaded, string path)
+        => string.IsNullOrWhiteSpace(uploaded)
+            ? path
+            : string.IsNullOrWhiteSpace(path) || uploaded.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) ? uploaded : $"{uploaded}/{path}";
+
     /// <inheritdoc />
     public Task<IReadOnlyCollection<ImportColumn>> GetColumnsAsync(ImportContentContext context)
         => Task.FromResult<IReadOnlyCollection<ImportColumn>>([]);
@@ -51,12 +63,7 @@ internal sealed class QtiQuestionImportHandler : ContentImportHandlerBase, ICont
 
         if (!string.IsNullOrWhiteSpace(uploaded) && context.Columns.Contains(SourceFileColumn))
         {
-            var path = context.Row[SourceFileColumn]?.ToString();
-
-            // An item file is its own source; an item of a package is named with the package.
-            context.Row[SourceFileColumn] = string.IsNullOrWhiteSpace(path) || uploaded.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
-                ? uploaded
-                : $"{uploaded}/{path}";
+            context.Row[SourceFileColumn] = SourceFileOf(uploaded, context.Row[SourceFileColumn]?.ToString());
         }
 
         return Task.CompletedTask;

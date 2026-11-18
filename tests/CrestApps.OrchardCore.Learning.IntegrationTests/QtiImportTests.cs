@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Records;
 using OrchardCore.Entities;
 using OrchardCore.Lists.Indexes;
 using OrchardCore.Media;
@@ -89,9 +90,47 @@ public sealed class QtiImportTests
         Assert.Equal(firstQuestions.Select(question => question.ContentItemId).Order(StringComparer.Ordinal), secondQuestions.Select(question => question.ContentItemId).Order(StringComparer.Ordinal));
     }
 
-    private async Task<ContentTransferEntry> ImportAsync(byte[] package, string bankId)
+    [Fact]
+    public async Task Round9M9_ReImportMatchesOnlyTheSamePackageInTheSameChosenBank()
     {
-        var entryId = await QueueAndRunAsync(package, bankId);
+        // Arrange: two banks' worth of imports of packages whose items have the same identifiers.
+        var bankId = await _fixture.InTenantAsync(async services =>
+        {
+            var contentManager = services.GetRequiredService<IContentManager>();
+            var bank = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.QuestionBank);
+            bank.Alter<TitlePart>(part => part.Title = "QTI bank of two instructors");
+            await contentManager.CreateAsync(bank, VersionOptions.Published);
+
+            return bank.ContentItemId;
+        });
+
+        var package = Package();
+
+        // Act: instructor A imports a.zip; instructor B imports another package with the same item identifiers into
+        // the same bank; then both import without a bank.
+        await ImportAsync(package, bankId, "instructor-a.zip");
+        var before = (await QuestionsAsync(bankId)).Select(question => question.ContentItemId).ToHashSet(StringComparer.Ordinal);
+        await ImportAsync(package, bankId, "instructor-b.zip");
+        var after = await QuestionsAsync(bankId);
+
+        var firstBankless = await ImportAsync(package, null, "bankless-a.zip");
+        var secondBankless = await ImportAsync(package, null, "bankless-b.zip");
+        var bankless = await _fixture.InTenantAsync(async services => (await services.GetRequiredService<ISession>()
+            .Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType == AssessmentsConstants.ContentTypes.SingleChoiceQuestion)
+            .ListAsync()).Count(item => item.Get<QuestionPart>(nameof(QuestionPart))?.SourceFile is "bankless-a.zip/items/choice.xml" or "bankless-b.zip/items/choice.xml"));
+
+        // Assert: B's import added questions of its own and left A's as they were.
+        Assert.Equal(6, after.Count);
+        Assert.True(before.IsSubsetOf(after.Select(question => question.ContentItemId)));
+        Assert.Equal(3, after.Count(question => question.Get<QuestionPart>(nameof(QuestionPart)).SourceFile.StartsWith("instructor-a.zip/", StringComparison.Ordinal)));
+        Assert.Equal(3, firstBankless.GetOrCreate<ImportFileProcessStatsPart>().ImportedCount);
+        Assert.Equal(3, secondBankless.GetOrCreate<ImportFileProcessStatsPart>().ImportedCount);
+        Assert.Equal(2, bankless);
+    }
+
+    private async Task<ContentTransferEntry> ImportAsync(byte[] package, string bankId, string uploadedFileName = "bank.zip")
+    {
+        var entryId = await QueueAndRunAsync(package, bankId, uploadedFileName);
 
         // The import of the entry runs in a scope of its own, as the deferred task the upload starts runs it.
         await _fixture.InTenantAsync(services =>
@@ -107,9 +146,12 @@ public sealed class QtiImportTests
             .FirstOrDefaultAsync());
     }
 
-    private Task<string> QueueAndRunAsync(byte[] package, string bankId)
+    private Task<string> QueueAndRunAsync(byte[] package, string bankId, string uploadedFileName)
         => _fixture.InTenantAsync(async services =>
         {
+            var users = services.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>>();
+            var admin = await users.FindByNameAsync("admin");
+
             var store = services.GetRequiredService<IContentTransferFileStore>();
             var session = services.GetRequiredService<ISession>();
             var storedName = await store.CreateFileFromStreamAsync(Guid.NewGuid().ToString("n") + ".zip", new MemoryStream(package), false);
@@ -117,7 +159,8 @@ public sealed class QtiImportTests
             {
                 EntryId = Guid.NewGuid().ToString("n")[..26],
                 ContentType = AssessmentsConstants.ContentTypes.SingleChoiceQuestion,
-                UploadedFileName = "bank.zip",
+                UploadedFileName = uploadedFileName,
+                Owner = await users.GetUserIdAsync(admin),
                 StoredFileName = storedName,
                 Status = ContentTransferEntryStatus.Pending,
                 Direction = ContentTransferDirection.Import,

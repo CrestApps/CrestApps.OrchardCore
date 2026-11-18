@@ -33,7 +33,7 @@ Questions written in another system can be imported when that system exports QTI
 3. When the import finishes, look at it in the import list. Items that could not be imported are counted as **Not imported from QTI**; download the failed rows from **Actions** to read why, such as an interaction no question type can hold (a hotspot or a slider) or an image the package lacks.
 4. Open the bank and check the questions. The editor shows the item and file each question came from.
 
-Importing the same package into the same bank again updates the questions it made before instead of adding them twice. Images are copied to the media library, in a folder of the import under **qti-imports**; if your site uses Secure Media, ask your admin to let learners view that folder. Choices and answers are plain text, so an item whose choices are pictures is not imported.
+Importing the same package (the same file name) into the same bank again updates the questions it made before instead of adding them twice. Without a bank, or with another file, the import always adds new questions. Images are copied to the media library, in a folder of the import under **qti-imports**; if your site uses Secure Media, ask your admin to let learners view that folder. Choices and answers are plain text, so an item whose choices are pictures is not imported.
 
 ## Add a quiz to a course
 
