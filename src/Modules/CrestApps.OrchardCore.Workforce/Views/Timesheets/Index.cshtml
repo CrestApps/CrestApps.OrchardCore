@@ -30,7 +30,7 @@
                         <form asp-action="Lock" method="post" class="d-inline no-multisubmit">
                             <input type="hidden" name="calendarId" value="@Model.CalendarId" />
                             <input type="hidden" name="periodStart" value="@Model.PeriodStart.Value.ToString("yyyy-MM-dd")" />
-                            <button type="submit" class="btn btn-primary" data-url-af="RemoveUrl" data-title="@T["Lock"]" data-message="@T["Lock the approved timesheets of this period? They go to payroll and can no longer change."]">@T.Plural(Model.ApprovedInPeriod, "Lock 1 approved timesheet", "Lock {0} approved timesheets")</button>
+                            <button type="submit" class="btn btn-primary" data-url-af="RemoveUrl" data-title="@T["Lock"]" data-message="@T["Lock the approved timesheets of this period? They go to payroll and can no longer change."]" data-ok-text="@T["Lock"]" data-ok-class="btn-primary">@T.Plural(Model.ApprovedInPeriod, "Lock 1 approved timesheet", "Lock {0} approved timesheets")</button>
                         </form>
                     </div>
                 }

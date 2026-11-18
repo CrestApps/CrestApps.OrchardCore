@@ -41,11 +41,11 @@
             @if (order.IsDraft)
             {
                 <button type="submit" form="purchase-order-ordered" class="btn btn-sm btn-success" disabled="@(order.Lines.Count == 0)">@T["Mark as ordered"]</button>
-                <button type="submit" form="purchase-order-delete" class="btn btn-sm btn-danger" data-confirm-title="@T["Delete draft"]" data-confirm="@T["Delete this draft purchase order?"]">@T["Delete"]</button>
+                <button type="submit" form="purchase-order-delete" class="btn btn-sm btn-danger" data-confirm-title="@T["Delete draft"]" data-confirm="@T["Delete this draft purchase order?"]" data-confirm-ok="@T["Delete"]">@T["Delete"]</button>
             }
             else if (order.Status is not (PurchaseOrderStatus.Received or PurchaseOrderStatus.Canceled))
             {
-                <button type="submit" form="purchase-order-cancel" class="btn btn-sm btn-outline-danger" data-confirm-title="@T["Cancel purchase order"]" data-confirm="@T["Cancel what's still to come? What was received stays in stock."]">@T["Cancel order"]</button>
+                <button type="submit" form="purchase-order-cancel" class="btn btn-sm btn-outline-danger" data-confirm-title="@T["Cancel purchase order"]" data-confirm="@T["Cancel what's still to come? What was received stays in stock."]" data-confirm-ok="@T["Cancel order"]" data-confirm-cancel="@T["Keep it"]">@T["Cancel order"]</button>
             }
         </div>
     }
@@ -245,7 +245,7 @@
             @if (canReceive)
             {
                 <button type="submit" class="btn btn-success" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId })">@T["Receive what arrived"]</button>
-                <button type="submit" class="btn btn-outline-success action-bar-secondary" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId, all = true })" data-confirm-title="@T["Receive everything"]" data-confirm="@T["Receive every item still to come, at {0}?", Model.LocationName]">@T["Receive everything still to come"]</button>
+                <button type="submit" class="btn btn-outline-success action-bar-secondary" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId, all = true })" data-confirm-title="@T["Receive everything"]" data-confirm="@T["Receive every item still to come, at {0}?", Model.LocationName]" data-confirm-ok="@T["Receive everything"]">@T["Receive everything still to come"]</button>
             }
         </div>
     }
