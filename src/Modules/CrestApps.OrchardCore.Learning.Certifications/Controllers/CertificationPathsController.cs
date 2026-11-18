@@ -56,6 +56,7 @@ public sealed class CertificationPathsController : Controller
         S = stringLocalizer;
     }
 
+    [HttpGet]
     [Admin("learning/certification-paths/{id}/people", "LearningCertificationPathPeople")]
     public async Task<IActionResult> People(string id, CertificationPathState? state, PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
     {
