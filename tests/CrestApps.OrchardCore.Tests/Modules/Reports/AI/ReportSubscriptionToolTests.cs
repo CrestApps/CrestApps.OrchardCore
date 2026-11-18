@@ -110,6 +110,20 @@ public sealed class ReportSubscriptionToolTests
     }
 
     [Fact]
+    public async Task ListReportSubscriptions_WithAnUnknownId_SaysSo()
+    {
+        // Arrange
+        AddSubscription();
+        var services = Build(true, _manage);
+
+        // Act
+        var result = await InvokeAsync(ListReportSubscriptionsTool.TheName, services, new() { ["id"] = "missing" });
+
+        // Assert
+        Assert.Contains("no report subscription with the id 'missing'", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SaveReportSubscription_CreatesAScheduleSavedByTheCaller()
     {
         // Arrange

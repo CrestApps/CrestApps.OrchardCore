@@ -229,6 +229,22 @@ public sealed class WebhookAIToolTests
     }
 
     [Fact]
+    public async Task RotateWebhookSecret_WithAnUnknownId_ChangesNothing()
+    {
+        // Arrange
+        var webhook = _harness.AddWebhook();
+        var protectedSecret = webhook.ProtectedSecret;
+        var services = _harness.Build();
+
+        // Act
+        var result = await InvokeAsync(RotateWebhookSecretTool.TheName, services, new() { ["id"] = "missing" });
+
+        // Assert
+        Assert.Contains("no webhook with the id 'missing'", result, StringComparison.Ordinal);
+        Assert.Equal(protectedSecret, webhook.ProtectedSecret);
+    }
+
+    [Fact]
     public async Task DeleteWebhook_DeletesItAndItsDeliveries()
     {
         // Arrange
