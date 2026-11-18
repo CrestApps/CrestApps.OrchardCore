@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.AI.Tooling.Instances.DataSources;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
@@ -394,6 +395,22 @@ internal static class AIConfigurationGuard
             foreach (var agentName in AIProfileCapabilities.Read(item.Profile).AgentNames)
             {
                 Enqueue(await profileManager.FindByNameAsync(agentName, cancellationToken), item.Depth + 1);
+            }
+        }
+
+        // A data source search tool instance answers from its own data source, which the assistant uses through it.
+        if (configuration.ToolInstanceNames.Count > 0 && services.GetService<INamedCatalog<AIToolInstance>>() is { } toolInstances)
+        {
+            foreach (var instanceName in configuration.ToolInstanceNames.Order(StringComparer.OrdinalIgnoreCase))
+            {
+                var instance = await toolInstances.FindByNameAsync(instanceName, cancellationToken);
+
+                if (instance is not null &&
+                    instance.TryGet<DataSourceSearchToolSettings>(out var searchSettings) &&
+                    !string.IsNullOrWhiteSpace(searchSettings.DataSourceId))
+                {
+                    configuration.DataSourceIds.Add(searchSettings.DataSourceId.Trim());
+                }
             }
         }
 

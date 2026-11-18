@@ -6,8 +6,8 @@ namespace CrestApps.OrchardCore.AI.Agent.Profiles;
 
 /// <summary>
 /// What the assistant running the current AI turn is built from: its profile, the session's profile, the admin chat
-/// widget's profile, the agents those can call, and the persona, prompt templates, tool instances and MCP and A2A
-/// connections all of them use. None of it may be changed or deleted from inside the turn.
+/// widget's profile, the agents those can call, and the persona, prompt templates, tool instances, MCP and A2A
+/// connections and AI data sources all of them use. None of it may be changed or deleted from inside the turn.
 /// </summary>
 internal sealed class AIProtectedConfiguration
 {
@@ -75,6 +75,20 @@ internal sealed class AIProtectedConfiguration
     /// Gets the IDs of the A2A connections the protected profiles and a running chat interaction use.
     /// </summary>
     public HashSet<string> A2AConnectionIds { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets the IDs of the AI data sources the protected profiles, a running chat interaction and the protected tool
+    /// instances search.
+    /// </summary>
+    public HashSet<string> DataSourceIds { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Whether an AI data source is protected.
+    /// </summary>
+    /// <param name="dataSourceId">The ID of the data source, which is what profiles and tool instances use.</param>
+    /// <returns><see langword="true"/> when it may not be changed or deleted from inside the AI turn.</returns>
+    public bool IsProtectedDataSource(string dataSourceId)
+        => _everything || (!string.IsNullOrEmpty(dataSourceId) && DataSourceIds.Contains(dataSourceId));
 
     /// <summary>
     /// Whether a profile is protected.
@@ -169,6 +183,11 @@ internal sealed class AIProtectedConfiguration
         if (entity.TryGet<AIToolInstanceMetadata>(out var instances))
         {
             AddAll(ToolInstanceNames, instances.ToolInstanceNames);
+        }
+
+        if (entity.TryGet<DataSourceMetadata>(out var dataSource) && !string.IsNullOrWhiteSpace(dataSource.DataSourceId))
+        {
+            DataSourceIds.Add(dataSource.DataSourceId.Trim());
         }
 
         if (entity is AIProfile profile)
