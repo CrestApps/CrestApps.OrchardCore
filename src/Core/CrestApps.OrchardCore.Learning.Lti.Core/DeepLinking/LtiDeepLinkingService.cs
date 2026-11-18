@@ -110,7 +110,7 @@ public sealed class LtiDeepLinkingService
             return Refuse(response, "The deployment id is not the tool's.");
         }
 
-        if (!await _nonces.TryUseAsync("deep-linking:" + tool.ClientId, Claim(token, "nonce"), cancellationToken))
+        if (!await _nonces.TryUseAsync("deep-linking:" + tool.ClientId, Claim(token, "nonce"), DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc), cancellationToken))
         {
             return Refuse(response, "The nonce is missing or was used before.");
         }
@@ -122,7 +122,9 @@ public sealed class LtiDeepLinkingService
             return Refuse(response, "The data is not the platform's, or it expired.");
         }
 
-        if (!await _nonces.TryUseAsync("deep-linking-data", data.Id, cancellationToken))
+        // The data id is remembered while the data is valid, so the same request cannot be answered twice (review
+        // round 9, M5).
+        if (!await _nonces.TryUseAsync("deep-linking-data", data.Id, data.ExpiresUtc, cancellationToken))
         {
             return Refuse(response, "This Deep Linking request was answered before.");
         }

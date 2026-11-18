@@ -287,7 +287,7 @@ public sealed class LtiAuthorizationServiceTests
         => new(
             new FakeToolDirectory(_tool),
             new LtiMessageHints(_protection, _clock),
-            new LtiNonceStore(_cache),
+            new LtiNonceStore(_cache, new KeyedLock(), _clock),
             new FakeLaunchContextFactory(contextIsGone),
             new FakePlatform(),
             CreateKeys(),

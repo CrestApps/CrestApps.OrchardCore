@@ -16,6 +16,12 @@ public static class LtiTokens
     public static readonly TimeSpan ClockSkew = TimeSpan.FromMinutes(1);
 
     /// <summary>
+    /// The longest a tool's client assertion may be valid, from its <c>iat</c> to its <c>exp</c>, and the furthest in the
+    /// future its <c>exp</c> may be. Its <c>jti</c> is remembered until it expires.
+    /// </summary>
+    public static readonly TimeSpan MaxClientAssertionLifetime = TimeSpan.FromMinutes(5);
+
+    /// <summary>
     /// Signs claims as a compact JWT with <c>typ</c> JWT and the key's <c>kid</c>. The claims carry their own
     /// <c>iat</c> and <c>exp</c>; none are added.
     /// </summary>

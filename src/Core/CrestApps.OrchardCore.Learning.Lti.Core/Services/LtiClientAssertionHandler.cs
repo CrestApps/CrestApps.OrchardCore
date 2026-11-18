@@ -12,8 +12,9 @@ namespace CrestApps.OrchardCore.Learning.Lti.Core.Services;
 /// <summary>
 /// Validates the <c>private_key_jwt</c> client assertions of registered external tools at the OpenID server's token
 /// endpoint, in the shape the 1EdTech Security Framework (4.1) describes and LTI tools send: <c>typ</c> <c>JWT</c> (or
-/// none), <c>aud</c> the token endpoint URL (or the issuer), <c>iss</c> and <c>sub</c> the client id, <c>exp</c>, and a
-/// <c>jti</c> not seen before, signed with one of the tool's keys (its JWKS URL, or the key set of its OpenID
+/// none), <c>aud</c> the token endpoint URL (or the issuer), <c>iss</c> and <c>sub</c> the client id, <c>iat</c> and
+/// <c>exp</c> at most <see cref="LtiTokens.MaxClientAssertionLifetime"/> apart, and a <c>jti</c> not seen before (it is
+/// remembered until the assertion expires), signed with one of the tool's keys (its JWKS URL, or the key set of its OpenID
 /// application). OpenIddict 7 accepts only <c>client-authentication+jwt</c> with the issuer as audience; its own
 /// validation skips a token whose principal is already set, so this handler runs just before it and sets the principal
 /// for tools only. Every other client assertion is left to OpenIddict. Everything after it (client type, grant type and
@@ -138,7 +139,22 @@ public sealed class LtiClientAssertionHandler : IOpenIddictServerHandler<OpenIdd
             return;
         }
 
-        if (!await _nonces.TryUseAsync("client-assertion:" + tool.ClientId, token.Id))
+        // A replay is refused only while its jti is remembered, so the assertion must be short-lived: iat is required,
+        // and neither its lifetime nor how far ahead it expires may pass the limit.
+        var issuedAt = token.TryGetPayloadValue<long>(JwtRegisteredClaimNames.Iat, out var iat) ? DateTimeOffset.FromUnixTimeSeconds(iat).UtcDateTime : (DateTime?)null;
+        var expires = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
+
+        if (issuedAt is null ||
+            issuedAt.Value - LtiTokens.ClockSkew > now ||
+            expires - issuedAt.Value > LtiTokens.MaxClientAssertionLifetime ||
+            expires - now > LtiTokens.MaxClientAssertionLifetime + LtiTokens.ClockSkew)
+        {
+            context.Reject(OpenIddictConstants.Errors.InvalidClient, "The client assertion needs iat, and may be valid for at most five minutes.");
+
+            return;
+        }
+
+        if (!await _nonces.TryUseAsync("client-assertion:" + tool.ClientId, token.Id, expires))
         {
             context.Reject(OpenIddictConstants.Errors.InvalidClient, "The client assertion's jti is missing or was used before.");
 

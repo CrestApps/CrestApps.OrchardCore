@@ -194,7 +194,7 @@ public sealed class LtiDeepLinkingServiceTests
     }
 
     private LtiDeepLinkingService CreateService()
-        => new(new KeyedToolDirectory(_tool), new Platform(), new LtiNonceStore(_cache), new LtiDeepLinkingDataTokens(_protection, _clock), _clock, NullLogger<LtiDeepLinkingService>.Instance);
+        => new(new KeyedToolDirectory(_tool), new Platform(), new LtiNonceStore(_cache, new KeyedLock(), _clock), new LtiDeepLinkingDataTokens(_protection, _clock), _clock, NullLogger<LtiDeepLinkingService>.Instance);
 
     private string Data()
         => new LtiDeepLinkingDataTokens(_protection, _clock).Create(new LtiDeepLinkingData { ToolId = "tool-1", UserId = "user-1", CourseId = "course-1" });
