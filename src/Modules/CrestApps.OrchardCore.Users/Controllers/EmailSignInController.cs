@@ -229,7 +229,14 @@ public sealed class EmailSignInController : Controller
 
         if (credentialsInDoubt)
         {
-            await _signInManager.SignInWithClaimsAsync(user, isPersistent: false, [new Claim(UserCredentialsProof.AuthenticationMethodReferenceClaim, UserCredentialsProof.EmailedCodeMethod)]);
+            // What the account's credentials were at this sign-in goes with the session, so a login linked or removed from
+            // it later marks the account (EmailOwnershipUserEventHandler). Its pages warn, so the sign-in notice is skipped.
+            EmailOwnershipLoginFormEvent.MarkCodeSignIn(HttpContext);
+            await _signInManager.SignInWithClaimsAsync(user, isPersistent: false,
+            [
+                new Claim(UserCredentialsProof.AuthenticationMethodReferenceClaim, UserCredentialsProof.EmailedCodeMethod),
+                new Claim(UserCredentialsProof.CodeSessionCredentialsClaim, UserCredentialsProof.CredentialsFingerprint((User)user)),
+            ]);
         }
         else
         {

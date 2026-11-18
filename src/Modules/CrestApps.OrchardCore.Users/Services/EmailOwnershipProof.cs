@@ -98,6 +98,7 @@ public sealed class EmailOwnershipProof
         if (firstProof)
         {
             removed = RemoveWhatWasNotShown(account, passwordShown, shownLoginProvider);
+            UserCredentialsProof.ClearChangedInCodeSession(account);
             UserCredentialsResets.Record(account.Properties, now);
             UserEmailOwnership.MarkVerified(account.Properties, account.Email, now);
         }

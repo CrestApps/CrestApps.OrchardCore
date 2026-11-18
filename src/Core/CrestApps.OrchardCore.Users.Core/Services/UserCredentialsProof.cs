@@ -1,4 +1,8 @@
+using System.Globalization;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json.Nodes;
 using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Users.Core.Services;
@@ -45,11 +49,26 @@ public static class UserCredentialsProof
     public const string SecurityStampClaimType = "AspNet.Identity.SecurityStamp";
 
     /// <summary>
-    /// The claim a sign-in carries when the account's address isn't proved and it has a password or an external login
-    /// (see <see cref="HasCredentialsInDoubt"/>). The Confirm email ownership feature adds it when it builds the
+    /// The claim a sign-in carries when the account's address isn't proved, it has a password or an external login, and
+    /// one of its credentials changed in a session an e-mailed code began (see <see cref="HasCredentialsInDoubt"/> and
+    /// <see cref="ChangedInCodeSessionPropertyName"/>). The Confirm email ownership feature adds it when it builds the
     /// session's claims, so only such a session has its account read on every page.
     /// </summary>
     public const string CredentialsInDoubtClaim = "crestapps_credentials_in_doubt";
+
+    /// <summary>
+    /// The claim a session an e-mailed code began carries with <see cref="CredentialsFingerprint"/> of the account at that
+    /// sign-in, so a later change of its password or external logins from that session is noticed.
+    /// </summary>
+    public const string CodeSessionCredentialsClaim = "crestapps_code_session_credentials";
+
+    /// <summary>
+    /// The key, in the account's properties, of when a password or an external login of the account was added, changed
+    /// or removed from a session an e-mailed code began, while its address wasn't proved: the owner, who holds the
+    /// mailbox, linked their own login or removed one next to credentials somebody else may hold. Every session of such an
+    /// account is told on every page until the address is proved. The first proof clears it.
+    /// </summary>
+    public const string ChangedInCodeSessionPropertyName = "EmailOwnershipCredentialsChangedInCodeSessionUtc";
 
     /// <summary>
     /// The <see cref="AuthenticationMethodReferenceClaim"/> value of a session a code e-mailed to the account began, when
@@ -117,9 +136,61 @@ public static class UserCredentialsProof
         => HasCredentials(account) && !UserEmailOwnership.IsVerified(account.Properties, account.Email);
 
     /// <summary>
-    /// Whether <paramref name="principal"/>'s sign-in was to an account with credentials in doubt (it carries
-    /// <see cref="CredentialsInDoubtClaim"/>) or began with an e-mailed code. No other session can show less than its
-    /// account has, so nothing else needs the account read.
+    /// How many credentials the account has: its password and each external login.
+    /// </summary>
+    /// <param name="account">The account.</param>
+    public static int CountCredentials(User account)
+        => (string.IsNullOrEmpty(account?.PasswordHash) ? 0 : 1) + (account?.LoginInfos?.Count ?? 0);
+
+    /// <summary>
+    /// Whether a credential of the account changed in a session an e-mailed code began while its address wasn't proved
+    /// (see <see cref="ChangedInCodeSessionPropertyName"/>).
+    /// </summary>
+    /// <param name="account">The account.</param>
+    public static bool ChangedInCodeSession(User account)
+        => account?.Properties?[ChangedInCodeSessionPropertyName] is JsonValue value && value.TryGetValue<string>(out var text) && !string.IsNullOrEmpty(text);
+
+    /// <summary>
+    /// Records that a credential of the account changed in a session an e-mailed code began.
+    /// </summary>
+    /// <param name="account">The account.</param>
+    /// <param name="changedUtc">When.</param>
+    public static void MarkChangedInCodeSession(User account, DateTime changedUtc)
+    {
+        ArgumentNullException.ThrowIfNull(account);
+
+        account.Properties[ChangedInCodeSessionPropertyName] = changedUtc.ToString("O", CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Clears <see cref="ChangedInCodeSessionPropertyName"/>, once the address is proved.
+    /// </summary>
+    /// <param name="account">The account.</param>
+    public static void ClearChangedInCodeSession(User account)
+        => account?.Properties?.Remove(ChangedInCodeSessionPropertyName);
+
+    /// <summary>
+    /// A short digest of what can sign in to the account without its mailbox: its security stamp, which Identity rotates
+    /// when a password is set, changed or reset and when a login is removed, and its external logins, since adding one
+    /// keeps the stamp. Nothing of the password itself goes in.
+    /// </summary>
+    /// <param name="account">The account.</param>
+    public static string CredentialsFingerprint(User account)
+    {
+        ArgumentNullException.ThrowIfNull(account);
+
+        var logins = (account.LoginInfos ?? [])
+            .Select(login => login.LoginProvider + "\n" + login.ProviderKey)
+            .Order(StringComparer.Ordinal);
+        var text = string.Join("\n\n", [account.SecurityStamp ?? string.Empty, .. logins]);
+
+        return Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(text)), 0, 16);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="principal"/>'s sign-in was to an account with credentials in doubt that changed in a code
+    /// session (it carries <see cref="CredentialsInDoubtClaim"/>) or began with an e-mailed code. Any other session is
+    /// told at sign-in only, so nothing else needs the account read.
     /// </summary>
     /// <param name="principal">The request's user.</param>
     public static bool MayHaveCredentialsInDoubt(ClaimsPrincipal principal)

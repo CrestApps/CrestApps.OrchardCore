@@ -15,15 +15,17 @@ namespace CrestApps.OrchardCore.Users.Filters;
 /// Tells a user whose account's address isn't proved, and has a password or an external login their session does not
 /// show (<see cref="UserCredentialsProof.HasCredentialsNotShown"/>, which counts a credential as shown only while the
 /// session's cookie carries the account's current security stamp), on every page they open, that somebody else may hold
-/// them, and how to remove them: "Confirm it's you". Whoever registered with the address, or changed their email to it,
-/// could otherwise keep reading what the owner adds to the account. It is decided on the account, not on how the
-/// session began, so it stays after the owner links or removes a login, which signs the browser in again. It stops once
-/// the address is proved.
+/// them, and how to remove them: "Confirm it's you". That is said on every page to a session an e-mailed code began,
+/// and to every session of an account whose credentials changed in such a session
+/// (<see cref="UserCredentialsProof.ChangedInCodeSessionPropertyName"/>): the owner linked or removed a login from it,
+/// which signs the browser in again without the code's mark, next to a credential somebody else may hold. Any other
+/// account is told once at sign-in (<see cref="Services.EmailOwnershipLoginFormEvent"/>). It stops once the address is
+/// proved.
 /// </summary>
 /// <remarks>
-/// It reads the account only on a page (a GET that renders a view) of a session marked as one to an account with
-/// credentials in doubt (<see cref="UserCredentialsProof.CredentialsInDoubtClaim"/>, added when the session's claims are
-/// built, see <see cref="Services.EmailOwnershipClaimsProvider"/>) or begun with an e-mailed code: one user read per
+/// It reads the account only on a page (a GET that renders a view) of a session begun with an e-mailed code or marked as
+/// one to an account whose credentials changed in a code session (<see cref="UserCredentialsProof.CredentialsInDoubtClaim"/>,
+/// added when the session's claims are built, see <see cref="Services.EmailOwnershipClaimsProvider"/>): one user read per
 /// such page. Other sessions and other requests cost nothing. The notice goes through Orchard Core's notifier, which
 /// runs on the result after this.
 /// </remarks>
