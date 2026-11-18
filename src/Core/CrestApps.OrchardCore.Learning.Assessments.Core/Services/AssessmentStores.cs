@@ -40,6 +40,36 @@ public sealed class AssessmentAttemptStore : DocumentCatalog<AssessmentAttempt, 
     /// <param name="userId">The learner.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The attempts.</returns>
+    /// <summary>
+    /// Lists the ids of a quiz's attempts. The documents are read rather than the index rows, whose decimal columns
+    /// SQLite may hand back as integers on one row and reals on the next.
+    /// </summary>
+    /// <param name="quizId">The quiz.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The attempt ids.</returns>
+    public async Task<IReadOnlyList<string>> ListIdsByQuizAsync(string quizId, CancellationToken cancellationToken = default)
+    {
+        const int pageSize = 200;
+
+        var ids = new List<string>();
+
+        for (var skip = 0; ; skip += pageSize)
+        {
+            var page = (await Session.Query<AssessmentAttempt, AssessmentAttemptIndex>(index => index.QuizId == quizId, collection: CollectionName)
+                .OrderBy(index => index.Id)
+                .Skip(skip)
+                .Take(pageSize)
+                .ListAsync(cancellationToken)).ToArray();
+
+            ids.AddRange(page.Select(attempt => attempt.ItemId));
+
+            if (page.Length < pageSize)
+            {
+                return ids;
+            }
+        }
+    }
+
     public async Task<IReadOnlyList<AssessmentAttempt>> ListByUserAsync(string userId, CancellationToken cancellationToken = default)
         => (await Session.Query<AssessmentAttempt, AssessmentAttemptIndex>(index => index.UserId == userId, collection: CollectionName)
             .OrderByDescending(index => index.StartedUtc)

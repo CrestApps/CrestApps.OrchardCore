@@ -30,7 +30,7 @@ To write many questions at once, use **Content transfer** with a spreadsheet: ea
 2. Choose fixed **Questions** and, or instead, **Random draws**: how many questions to take from a bank, optionally only with a tag.
 3. Set the **Time limit**, when the quiz **Opens** and **Closes** (in your time zone), how many **Attempts** are allowed and the **Delay** between them, the **Pass mark** and how attempts combine: the highest, the latest or the average.
 4. Choose the **Navigation**: free, or one question at a time (the learner answers questions in order and cannot go back or read ahead).
-5. Choose when learners may **review** their answers: right away with the score only, once graded, once the quiz closes, or never.
+5. Choose when learners may **review** their answers: right away with the score only, once graded, once the quiz closes, or never. With **once the quiz closes**, moving **Closes** later or earlier moves the review of attempts already taken too, except for a learner whose override gave them their own close date.
 6. Optionally set an **Access code** learners type to start, such as a code given in the exam room, and an **Honor statement** they confirm. The code is kept only as a hash; after five wrong codes a learner waits 15 minutes.
 
 ## Taking a quiz

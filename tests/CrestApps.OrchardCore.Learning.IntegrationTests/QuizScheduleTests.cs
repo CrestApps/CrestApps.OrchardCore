@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Learning.Assessments;
+using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Models;
@@ -15,7 +16,8 @@ using OrchardCore.Users;
 namespace CrestApps.OrchardCore.Learning.IntegrationTests;
 
 /// <summary>
-/// A quiz's dates as the learner meets them: the player gives the date of a deadline days away.
+/// A quiz's dates as the learner meets them: the player gives the date of a deadline days away, and moving the close
+/// date moves when the attempts already taken may be reviewed.
 /// </summary>
 [Collection(LearningSiteCollection.Name)]
 public sealed partial class QuizScheduleTests
@@ -52,6 +54,54 @@ public sealed partial class QuizScheduleTests
         var due = DueLine().Match(html);
         Assert.True(due.Success, "The player shows no Due line.");
         Assert.Contains(closes.Year.ToString(CultureInfo.InvariantCulture), due.Groups[1].Value);
+    }
+
+    [Fact]
+    public async Task MovingTheCloseDate_MovesTheReviewOfAttemptsAlreadyTaken()
+    {
+        // Arrange: answers are shown once the quiz closes, a week from now.
+        var quizId = await CreateQuizAsync("Review after close", part =>
+        {
+            part.ReviewPolicy = ReviewPolicy.AfterClose;
+            part.ClosesUtc = DateTime.UtcNow.AddDays(7);
+        });
+        var attemptId = await AsLearnerAsync(async (services, user, userId) =>
+        {
+            var attempts = services.GetRequiredService<IAssessmentAttemptService>();
+            var started = await attempts.StartAsync(new StartAttemptRequest { UserId = userId, User = user, QuizId = quizId, HonorConfirmed = true });
+
+            Assert.True(started.Succeeded, started.ErrorCode);
+
+            await attempts.SaveResponseAsync(started.Attempt.ItemId, userId, 0, new AttemptResponse { Texts = ["North stairs"] });
+            var submitted = await attempts.SubmitAsync(started.Attempt.ItemId, userId);
+
+            Assert.True(submitted.Succeeded, submitted.ErrorCode);
+            Assert.False(attempts.CanReview(submitted.Attempt));
+
+            return started.Attempt.ItemId;
+        });
+        var closes = DateTime.UtcNow.AddHours(-1);
+
+        // Act: the quiz closes an hour ago instead.
+        await _fixture.InTenantAsync(async services =>
+        {
+            var contentManager = services.GetRequiredService<IContentManager>();
+            var quiz = await contentManager.GetAsync(quizId, VersionOptions.DraftRequired);
+
+            quiz.Alter<QuizPart>(part => part.ClosesUtc = closes);
+            await contentManager.UpdateAsync(quiz);
+            await contentManager.PublishAsync(quiz);
+        });
+
+        // Assert
+        await _fixture.InTenantAsync(async services =>
+        {
+            var attempt = await services.GetRequiredService<AssessmentAttemptStore>().FindByIdAsync(attemptId);
+
+            Assert.NotNull(attempt.QuizClosesUtc);
+            Assert.Equal(closes, attempt.QuizClosesUtc.Value, TimeSpan.FromSeconds(1));
+            Assert.True(services.GetRequiredService<IAssessmentAttemptService>().CanReview(attempt));
+        });
     }
 
     private Task<string> CreateQuizAsync(string title, Action<QuizPart> configure)

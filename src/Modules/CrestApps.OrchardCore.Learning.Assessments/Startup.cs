@@ -25,6 +25,7 @@ using CrestApps.OrchardCore.Learning.Assessments.Reports;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Drivers;
+using CrestApps.OrchardCore.Learning.Assessments.Handlers;
 using CrestApps.OrchardCore.Learning.Assessments.Migrations;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.Navigation;
@@ -78,7 +79,8 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<EssayQuestionPartDisplayDriver>();
         services.AddContentPart<QuizPart>()
             .UseDisplayDriver<QuizPartDisplayDriver>()
-            .UseDisplayDriver<QuizPartLearnerDisplayDriver>();
+            .UseDisplayDriver<QuizPartLearnerDisplayDriver>()
+            .AddHandler<QuizCloseDateHandler>();
 
         services.AddScoped<GradingScope>();
         services.AddDisplayDriver<AssessmentAttempt, AttemptRowDisplayDriver>();

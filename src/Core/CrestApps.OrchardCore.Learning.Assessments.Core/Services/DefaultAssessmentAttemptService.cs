@@ -442,6 +442,42 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
     public bool CanReview(AssessmentAttempt attempt)
         => _reviewPolicy.CanReview(attempt);
 
+    /// <inheritdoc />
+    public async Task<int> MoveQuizCloseAsync(string quizId, DateTime? previousClosesUtc, DateTime? closesUtc, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(quizId) || previousClosesUtc == closesUtc)
+        {
+            return 0;
+        }
+
+        var moved = 0;
+
+        foreach (var attemptId in await _attemptStore.ListIdsByQuizAsync(quizId, cancellationToken))
+        {
+            var result = await WriteAsync(attemptId, async (attempt, notifications) =>
+            {
+                // An attempt that took its close date from the learner's override, or already moved, keeps it.
+                if (attempt.QuizClosesUtc != previousClosesUtc)
+                {
+                    return new AttemptResult { Attempt = attempt };
+                }
+
+                attempt.QuizClosesUtc = closesUtc;
+                await _attemptStore.UpdateAsync(attempt, cancellationToken);
+                moved++;
+
+                return new AttemptResult { Attempt = attempt };
+            }, cancellationToken);
+
+            if (!result.Succeeded)
+            {
+                _logger.LogWarning("The close date of attempt {AttemptId} did not move with its quiz: {Error}.", attemptId, result.ErrorCode);
+            }
+        }
+
+        return moved;
+    }
+
     private async Task SubmitCoreAsync(AssessmentAttempt attempt, bool autoSubmitted, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;

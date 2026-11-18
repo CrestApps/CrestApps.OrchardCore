@@ -82,6 +82,18 @@ public interface IAssessmentAttemptService
     /// <param name="attempt">The attempt.</param>
     /// <returns><see langword="true"/> when the review policy allows it.</returns>
     bool CanReview(AssessmentAttempt attempt);
+
+    /// <summary>
+    /// Moves the close date of a quiz on its attempts, so the review that waits for the quiz to close follows the date
+    /// the quiz closes now. Only attempts that kept the quiz's previous close date move; an attempt that took its close
+    /// date from the learner's override keeps it.
+    /// </summary>
+    /// <param name="quizId">The quiz.</param>
+    /// <param name="previousClosesUtc">The close date the quiz had, in UTC, or <see langword="null"/>.</param>
+    /// <param name="closesUtc">The close date the quiz has now, in UTC, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>How many attempts moved.</returns>
+    Task<int> MoveQuizCloseAsync(string quizId, DateTime? previousClosesUtc, DateTime? closesUtc, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
