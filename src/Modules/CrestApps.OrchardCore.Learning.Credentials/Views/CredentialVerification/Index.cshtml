@@ -17,6 +17,11 @@
 <meta name="robots" content="noindex, nofollow" />
 
 <div class="container my-5" style="max-width: 46rem">
+    <div class="product-breadcrumb">
+        <breadcrumb name="LearningCredentialVerification" title="@T["Verify a digital credential"]">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
     <h1 class="h3 mb-4">@T["Verify a digital credential"]</h1>
 
     @if (Model.Outcome == CredentialVerificationOutcome.NotFound)
