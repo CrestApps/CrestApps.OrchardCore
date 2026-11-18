@@ -52,7 +52,7 @@ When the **Data Connectors** feature is on, the source editor also offers **Data
 
 ## A cluster on a private network
 
-A self-managed URL may not be on the site's own network (loopback, private or link-local addresses, or a host name that resolves to one, such as `http://elasticsearch:9200` inside Docker), in the editor, the API and the **AIDataSource** recipe step. A host that runs Elasticsearch on a private network sets `CrestApps:AI:Egress:AllowPrivateNetwork` to `true`. The URL is checked only when it is new or changed, so a data source saved before the check keeps working and can still be edited; changing its URL to another private address needs the setting.
+A self-managed URL may not be on the site's own network (loopback, private or link-local addresses, or a host name that resolves to one, such as `http://elasticsearch:9200` inside Docker), in the editor, the API and the **AIDataSource** recipe step. A host that runs Elasticsearch on a private network sets `CrestApps:AI:Egress:AllowPrivateNetwork` to `true`. The URL is checked only when it is new or changed, so a data source saved before the check keeps working and can still be edited; changing its URL to another private address needs the setting. A URL that was stored but not used, while the data source was in Elastic Cloud mode or read through a data connection, counts as new: it is checked when the data source switches to its own self-managed settings.
 
 ## Global connection
 

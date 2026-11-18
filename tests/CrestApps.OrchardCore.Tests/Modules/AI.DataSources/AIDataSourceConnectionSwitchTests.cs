@@ -204,6 +204,45 @@ public sealed class AIDataSourceConnectionSwitchTests
         Assert.Equal(isValid, context.Updater.ModelState.IsValid);
     }
 
+    [Theory]
+    [InlineData("cloud")]
+    [InlineData("connection")]
+    public async Task Elasticsearch_ChecksAUrlStoredWhileItWasNotUsed(string storedAs)
+    {
+        // Arrange (review 9, K6): the API can store a URL unchecked while the source is in Cloud mode or uses a data
+        // connection; switching to its own self-managed settings with that URL must check it.
+        var connection = new DataConnection { ItemId = ConnectionId, Name = "search", Connector = DataConnectorConstants.Connectors.Elasticsearch };
+        var driver = new ElasticsearchAIDataSourceDisplayDriver(_protection, Options.Create(new ElasticsearchDataSourceOptions()), CreatePicker(connection), EndpointPolicy(), new PassThroughStringLocalizer<ElasticsearchAIDataSourceDisplayDriver>());
+        var dataSource = new AIDataSource { ItemId = "ds-2", Source = AIDataSourceSourceTypes.Elasticsearch };
+        dataSource.Put(new ElasticsearchSourceMetadata
+        {
+            EnvironmentType = storedAs == "cloud" ? ElasticsearchSourceMetadata.CloudHostedEnvironmentType : ElasticsearchSourceMetadata.SelfManagedEnvironmentType,
+            Url = "http://10.0.0.5:9200",
+            CloudId = storedAs == "cloud" ? "deployment:abc" : null,
+            AuthenticationType = ElasticsearchSourceMetadata.NoneAuthenticationType,
+            IndexName = "articles",
+        });
+
+        if (storedAs == "connection")
+        {
+            dataSource.Put(new DataConnectionReference { ConnectionId = ConnectionId });
+        }
+
+        var context = Context(new EditElasticsearchAIDataSourceViewModel
+        {
+            EnvironmentType = ElasticsearchSourceMetadata.SelfManagedEnvironmentType,
+            Url = "http://10.0.0.5:9200",
+            AuthenticationType = ElasticsearchSourceMetadata.NoneAuthenticationType,
+            IndexName = "articles",
+        });
+
+        // Act
+        await driver.UpdateAsync(dataSource, context);
+
+        // Assert
+        Assert.Contains(context.Updater.ModelState, entry => entry.Key.EndsWith(nameof(EditElasticsearchAIDataSourceViewModel.Url), StringComparison.Ordinal) && entry.Value.Errors.Count > 0);
+    }
+
     private static CrestApps.OrchardCore.AI.Core.AIEndpointPolicy EndpointPolicy()
         => new(Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(), Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions()));
 

@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 using CrestApps.OrchardCore.AI.DataSources.Handlers;
+using CrestApps.OrchardCore.DataConnectors.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -113,6 +114,39 @@ public sealed class AIDataSourceSourceValidationHandlerTests
 
         // Assert
         Assert.Equal(url == "http://172.18.0.3:9200/", result.Succeeded);
+    }
+
+    [Theory]
+    [InlineData("cloud")]
+    [InlineData("connection")]
+    public async Task Saving_AnElasticsearchSource_ChecksAUrlStoredWhileItWasNotUsed(string storedAs)
+    {
+        // Arrange (review 9, K6): a URL the API stored while the source was in Cloud mode or used a data connection was
+        // never checked, so keeping it while switching to self-managed must not exempt it.
+        await using var services = Services();
+        await using var scope = services.CreateAsyncScope();
+        var stored = ElasticsearchSource("http://10.0.0.5:9200/");
+
+        if (storedAs == "cloud")
+        {
+            var metadata = Metadata("http://10.0.0.5:9200/", indexName: "logs");
+            metadata.EnvironmentType = ElasticsearchSourceMetadata.CloudHostedEnvironmentType;
+            metadata.CloudId = "deployment:abc";
+            stored.Put(metadata);
+        }
+        else
+        {
+            stored.Put(new DataConnectionReference { ConnectionId = "4qkc7h2m9x1r5t8v3w6y0z2b4d" });
+        }
+
+        var manager = Manager(scope, Store(stored));
+        await manager.FindByIdAsync("ds-2", TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await manager.ValidateAsync(ElasticsearchSource("http://10.0.0.5:9200/"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(result.Errors, error => error.MemberNames.Contains(nameof(ElasticsearchSourceMetadata.Url)));
     }
 
     [Theory]

@@ -67,7 +67,24 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     private bool KeepsStoredUrl(AIDataSource dataSource, string url)
         => _storedSettings?.Find(dataSource.ItemId) is { } stored &&
             stored.TryGet<ElasticsearchSourceMetadata>(out var storedMetadata) &&
-            string.Equals(storedMetadata.Url?.Trim(), url?.Trim(), StringComparison.Ordinal);
+            UsedStoredUrl(storedMetadata, AIDataSourceConnectionPicker.GetConnectionId(stored), url);
+
+    /// <summary>
+    /// Says whether a URL is the one the stored data source used as its own self-managed cluster, which was checked when
+    /// it was saved. A URL stored while the source was in Cloud mode or used a data connection was not used, so the API
+    /// saved it unchecked, and it is checked when the source starts using it (review 9, K6). The editor applies the same
+    /// rule.
+    /// </summary>
+    /// <param name="stored">The stored settings.</param>
+    /// <param name="storedConnectionId">The data connection the stored source used, if any.</param>
+    /// <param name="url">The URL being saved.</param>
+    /// <returns><see langword="true"/> when the URL needs no new check.</returns>
+    internal static bool UsedStoredUrl(ElasticsearchSourceMetadata stored, string storedConnectionId, string url)
+        => storedConnectionId is null &&
+            stored is not null &&
+            !string.IsNullOrWhiteSpace(stored.Url) &&
+            !string.Equals(stored.GetEnvironmentType(), ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(stored.Url.Trim(), url?.Trim(), StringComparison.Ordinal);
 
     public async ValueTask ValidateAsync(
         AIDataSource dataSource,

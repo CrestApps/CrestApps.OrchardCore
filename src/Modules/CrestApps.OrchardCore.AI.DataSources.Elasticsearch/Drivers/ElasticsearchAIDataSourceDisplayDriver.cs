@@ -101,6 +101,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         // A data source that uses a data connection reads the URL and the credentials from the connection. Its own URL
         // and credentials stay stored, unused, so switching back to its own settings loses nothing; they are not
         // exported while the connection is used.
+        var storedConnectionId = AIDataSourceConnectionPicker.GetConnectionId(dataSource);
         var connectionId = await _connectionPicker.UpdateAsync(dataSource, model.DataConnectionId, ElasticsearchDataConnectionSettings.ConnectorNames, context, Prefix, nameof(model.DataConnectionId));
 
         if (connectionId is not null)
@@ -139,7 +140,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         var stored = dataSource.GetOrCreate<ElasticsearchSourceMetadata>();
         var existingMetadata = KeptCredentials(stored, environmentType, model.Url, model.CloudId, authenticationType);
 
-        ValidateUrl(context, environmentType, model.Url, stored.Url);
+        ValidateUrl(context, environmentType, model.Url, stored, storedConnectionId);
 
         if (string.Equals(environmentType, ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
             string.IsNullOrWhiteSpace(model.CloudId))
@@ -232,8 +233,9 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
     }
 
     // A self-managed cluster's URL is required, and a new one must not be on the site's own network. The stored URL is
-    // not checked again (review 8, G7), so a cluster on a private network saved before the check can still be edited.
-    private void ValidateUrl(UpdateEditorContext context, string environmentType, string url, string storedUrl)
+    // not checked again (review 8, G7), so a cluster on a private network saved before the check can still be edited;
+    // only a URL the stored source used as its own self-managed cluster is exempt (review 9, K6).
+    private void ValidateUrl(UpdateEditorContext context, string environmentType, string url, ElasticsearchSourceMetadata stored, string storedConnectionId)
     {
         if (!string.Equals(environmentType, ElasticsearchSourceMetadata.SelfManagedEnvironmentType, StringComparison.OrdinalIgnoreCase))
         {
@@ -244,7 +246,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(EditElasticsearchAIDataSourceViewModel.Url), S["Elasticsearch URL is required."]);
         }
-        else if (!string.Equals(url.Trim(), storedUrl?.Trim(), StringComparison.Ordinal) && !_endpointPolicy.IsAllowed(url.Trim()))
+        else if (!ElasticsearchAIDataSourceSourceHandler.UsedStoredUrl(stored, storedConnectionId, url) && !_endpointPolicy.IsAllowed(url.Trim()))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(EditElasticsearchAIDataSourceViewModel.Url), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
