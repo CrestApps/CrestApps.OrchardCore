@@ -12,8 +12,8 @@ It stands on its own. A site can have a knowledge base without the [Service Desk
 
 | | |
 | --- | --- |
-| **Menu** | Knowledge Base > Articles, Categories, Feedback, Help center |
-| **Permission** | **List content items** for the menu; the content permissions of the Knowledge Article type to write articles; **View knowledge base feedback** for the feedback report |
+| **Menu** | Content > Content Items (articles and categories); Reports > Knowledge Base Feedback |
+| **Permission** | The content permissions of the Knowledge Article type to write articles; **View knowledge base feedback** for the feedback report |
 | **Feature** | Knowledge Base |
 
 <AskYourAdmin />
@@ -32,6 +32,6 @@ It stands on its own. A site can have a knowledge base without the [Service Desk
 1. Run the **Knowledge Base** recipe under **Configuration > Recipes**. It turns on the Knowledge Base and places the help center's widgets: the search box at the top, the categories beside the page and related articles after each article. See [The help center](./help-center.md).
 2. Add your categories. See [Categories](./categories.md).
 3. Write your first articles. See [Write articles](./write-articles.md).
-4. Open **Knowledge Base > Help center** to see your help center as readers do.
+4. Open `/help` on your site to see your help center as readers do.
 
 You can also turn on **Knowledge Base** alone under **Tools > Features**. The help center then shows its own search box and categories, and articles show without the widgets until you add them.

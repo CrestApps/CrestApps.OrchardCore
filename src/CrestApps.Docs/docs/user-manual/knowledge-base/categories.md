@@ -10,7 +10,7 @@ Categories group articles about the same thing, such as *Accounts* or *Billing*.
 
 | | |
 | --- | --- |
-| **Menu** | Knowledge Base > Categories |
+| **Menu** | Content > Content Items |
 | **Permission** | The content permissions of taxonomies, to edit the categories |
 | **Feature** | Knowledge Base |
 
@@ -20,7 +20,7 @@ Categories group articles about the same thing, such as *Accounts* or *Billing*.
 
 The categories are the terms of the **Knowledge Base Categories** taxonomy.
 
-1. Go to **Knowledge Base > Categories**.
+1. Go to **Content > Content Items** and open **Knowledge Base Categories**.
 2. Add terms, such as *Accounts* and *Billing*. Drag a term under another one to make it a sub-category.
 3. Publish the taxonomy.
 

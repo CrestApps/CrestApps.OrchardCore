@@ -38,7 +38,7 @@ With the Reports feature on, `KnowledgeBaseFeedbackReport` (`knowledge-base-feed
 | **By category** | The same per category, by the category's name with those above it |
 | **What was missing** | The newest 200 comments, with the time in the reader's time zone (`ILocalClock`), the article and the reader |
 
-It needs **View knowledge base feedback** and exports through the Reports framework (CSV, Excel and PDF when those features are on). The Knowledge Base menu links to it as **Feedback**.
+It needs **View knowledge base feedback**, is listed under **Reports** with the other reports, and exports through the Reports framework (CSV, Excel and PDF when those features are on).
 
 ## Data set
 

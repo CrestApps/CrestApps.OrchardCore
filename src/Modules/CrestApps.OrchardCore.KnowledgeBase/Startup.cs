@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.KnowledgeBase.Drivers;
 using CrestApps.OrchardCore.KnowledgeBase.Indexes;
 using CrestApps.OrchardCore.KnowledgeBase.Migrations;
-using CrestApps.OrchardCore.KnowledgeBase.Navigation;
 using CrestApps.OrchardCore.KnowledgeBase.Models;
 using CrestApps.OrchardCore.KnowledgeBase.Recipes;
 using CrestApps.OrchardCore.KnowledgeBase.Reports;
@@ -18,7 +17,6 @@ using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
-using OrchardCore.Navigation;
 using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.KnowledgeBase;
@@ -37,7 +35,6 @@ public sealed class Startup : StartupBase
         services.AddScoped<KnowledgeArticleSearch>();
         services.AddScoped<KnowledgeBaseCategories>();
         services.AddScoped<KnowledgeBaseHelpCenter>();
-        services.AddNavigationProvider<KnowledgeBaseAdminMenu>();
 
         // Readers' answers to "Was this helpful?", kept in the Knowledge Base's own collection.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(KnowledgeBaseConstants.CollectionName));
@@ -58,7 +55,7 @@ public sealed class Startup : StartupBase
 }
 
 /// <summary>
-/// The Knowledge Base Feedback report under Reports, and Feedback in the Knowledge Base menu.
+/// The Knowledge Base Feedback report, under Reports.
 /// </summary>
 [RequireFeatures(ReportsConstants.Feature)]
 public sealed class ReportsStartup : StartupBase
@@ -66,7 +63,6 @@ public sealed class ReportsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddReport<KnowledgeBaseFeedbackReport>();
-        services.AddNavigationProvider<KnowledgeBaseFeedbackAdminMenu>();
     }
 }
 

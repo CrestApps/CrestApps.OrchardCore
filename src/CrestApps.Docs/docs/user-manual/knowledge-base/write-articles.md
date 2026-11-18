@@ -10,7 +10,7 @@ Help articles answer the questions readers ask most. Each one has a title, a sum
 
 | | |
 | --- | --- |
-| **Menu** | Knowledge Base > Articles |
+| **Menu** | Content > Content Items |
 | **Permission** | The content permissions of the Knowledge Article type (for example **Edit Knowledge Article** and **Publish Knowledge Article**) |
 | **Feature** | Knowledge Base |
 
@@ -18,7 +18,7 @@ Help articles answer the questions readers ask most. Each one has a title, a sum
 
 ## Write an article
 
-1. Go to **Knowledge Base > Articles** and select **New Knowledge Article**.
+1. Go to **Content > Content Items**, select **New**, and choose **Knowledge Article**. To find the articles you wrote, filter the list by **Knowledge Article**.
 2. Give it a **Title**.
 3. In **Which roles can see this content**, pick who may open it. It reads **Any role** until you pick one, and then everyone can read it. Pick **Authenticated** for anyone who is signed in, or your staff roles for an article only your team should read.
 4. Write a short **Summary**: one or two sentences shown in lists, searches and suggestions. Search looks at the title and the summary.

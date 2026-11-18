@@ -13,7 +13,8 @@
     var after = KnowledgeBaseZones.Find(ThemeLayout, KnowledgeBaseConstants.Zones.AfterContent);
 }
 
-<div class="knowledge-base-page">
+@* The same width and spacing as the help center's page, so the two look alike. *@
+<div class="container my-4 knowledge-base-page" style="max-width: 960px;">
     @if (top is not null)
     {
         @await DisplayAsync(top)

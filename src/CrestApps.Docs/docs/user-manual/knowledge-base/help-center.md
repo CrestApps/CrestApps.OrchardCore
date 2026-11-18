@@ -10,7 +10,7 @@ The help center is at `/help` on your site. It shows the articles by category, e
 
 | | |
 | --- | --- |
-| **Menu** | Knowledge Base > Help center (to view it); Design > Widgets (to move its widgets) |
+| **Menu** | Design > Widgets (to move its widgets); the help center itself is at `/help` on your site |
 | **Permission** | **Manage layers** to move or remove widgets |
 | **Feature** | Knowledge Base, Widgets, Layers |
 

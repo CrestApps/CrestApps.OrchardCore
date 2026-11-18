@@ -5,7 +5,7 @@ description: "Help articles for everyone, for signed-in people or for the roles 
 user_manual: user-manual/knowledge-base/index
 ---
 
-The **Knowledge Base** holds help articles. It is a feature of its own, in the **Content Management** category of **Tools > Features**, with its own admin menu: it has no dependency on [Tickets](./tickets), so a site can publish a help center without a service desk, and Tickets suggests articles when both are on.
+The **Knowledge Base** holds help articles. It is a feature of its own, in the **Content Management** category of **Tools > Features**: it has no dependency on [Tickets](./tickets), so a site can publish a help center without a service desk, and Tickets suggests articles when both are on.
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
@@ -44,7 +44,7 @@ An article's category is a term of a taxonomy: the Knowledge Article type has a 
 
 ## Admin menu
 
-The module adds its own top-level **Knowledge Base** menu (`KnowledgeBaseAdminMenu`, id `knowledgeBase`), apart from the Service Desk menu: **Articles**, Orchard Core's content list of the `KnowledgeArticle` type with its **New Knowledge Article** button; **Categories**, the editor of the taxonomy the category field uses (shown once the taxonomy exists); **Feedback**, the [feedback report](./knowledge-base/feedback), added by `KnowledgeBaseFeedbackAdminMenu` when the Reports feature is on and shown to those with **View knowledge base feedback**; and **Help center**, a link to `/help`. The menu, Articles, Categories and Help center need **List content items** (`ListContent`), as Orchard Core's own content lists do; the list and the editors still check the content permissions, and Content Access Control still decides who reads each article.
+The module adds no admin menu of its own. Articles and the **Knowledge Base Categories** taxonomy are content items, listed under **Content > Content Items** (the `KnowledgeArticle` type is listable and creatable), and the [feedback report](./knowledge-base/feedback) is under **Reports**, as every coded report is.
 
 ## Help center
 

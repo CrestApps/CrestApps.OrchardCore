@@ -31,7 +31,7 @@ The **Service Desk** is where your team answers requests. Each request is a **ti
 - **Boards**: tickets as cards in columns, and under it each board you pinned to your menu.
 - **Desks**, **Statuses**, **Priorities** and **Views**: the service desk's setup, for those who may manage ticket settings.
 
-The [Knowledge Base](../knowledge-base/index.md) has a menu of its own: it works with or without the Service Desk. With both on, agents and requesters get its articles as suggestions while they write.
+The [Knowledge Base](../knowledge-base/index.md) is a feature of its own: it works with or without the Service Desk. With both on, agents and requesters get its articles as suggestions while they write.
 
 **Settings > Service Desk** holds the **Notification templates**, the messages requesters get, and, with AI on, the **AI profile for replies**.
 
@@ -48,7 +48,7 @@ Turn them on under **Tools > Features**:
 | **Ticket Web Form** | A **Ticket Form** widget for any page |
 | **Ticket Approvals** | Approval steps before work starts on a ticket type |
 | **Tickets for Contact Center** | Offers a desk's new tickets to a Contact Center queue's agents |
-| **Knowledge Base** | Help articles, categories and the help center at `/help`, under their own **Knowledge Base** menu; see [Knowledge Base](../knowledge-base/index.md) |
+| **Knowledge Base** | Help articles, categories and the help center at `/help`; see [Knowledge Base](../knowledge-base/index.md) |
 | **Tickets API** | Lets other systems read and change tickets |
 
 To start with a working example, run the [help desk starter recipe](./help-desk-starter.md).
