@@ -127,6 +127,13 @@ public sealed class PackageRuntimeRequest
 
     /// <summary>Gets or sets whether the content called <c>LMSFinish</c>.</summary>
     public bool Finish { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of the call in its launch, counted by the player from 1. A call at or below the last number
+    /// applied is answered without being applied again, so a call sent again after a lost or busy answer never overwrites
+    /// a newer one. A call without a number is applied as it comes.
+    /// </summary>
+    public long? Sequence { get; set; }
 }
 
 /// <summary>

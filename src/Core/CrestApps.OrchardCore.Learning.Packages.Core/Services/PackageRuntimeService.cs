@@ -159,6 +159,7 @@ public sealed class PackageRuntimeService
             }
 
             state.CurrentLaunchId = launch.LaunchId;
+            state.LastSequence = 0;
             state.PackageFileId = part.PackageFileId;
             state.PackageTitle = target.Item.DisplayText;
 
@@ -292,6 +293,15 @@ public sealed class PackageRuntimeService
                 return PackageRuntimeErrors.Superseded;
             }
 
+            // A call at or below the last one applied was applied already, or is older than one that was: it is answered
+            // as taken, and nothing of it is applied (review round 9, M3).
+            if (request.Sequence is { } sequence && sequence <= state.LastSequence)
+            {
+                result = new PackageRuntimeResult { State = state };
+
+                return null;
+            }
+
             var scorm2004 = PackagesConstants.Standards.IsScorm2004(state.Standard);
             var cmi = scorm2004 ? null : state.Cmi ??= new Scorm12Cmi();
             var cmi2004 = scorm2004 ? state.Cmi2004 ??= new Scorm2004Cmi() : null;
@@ -316,6 +326,11 @@ public sealed class PackageRuntimeService
             }
 
             var refused = scorm2004 ? Replay(cmi2004, changes) : Replay(cmi, changes);
+
+            if (request.Sequence is { } applied)
+            {
+                state.LastSequence = applied;
+            }
 
             if (request.Finish)
             {

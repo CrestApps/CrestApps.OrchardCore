@@ -133,6 +133,34 @@ public sealed class LearningPackagesTests
     }
 
     [Fact]
+    public async Task Round9M3_ARuntimeCallAtOrBelowTheLastSequence_IsNotApplied()
+    {
+        // Arrange
+        var (courseId, itemId) = await CreatePackageCourseAsync("learner1", "learner2");
+        using var learner = await _fixture.CreateClientAsync("learner1");
+        var player = await learner.GetStringAsync($"learning/courses/{courseId}/play/{itemId}", TestContext.Current.CancellationToken);
+        var launch = await LaunchAsync(learner, itemId, player);
+        var runtimeUrl = launch["runtimeUrl"]!.GetValue<string>().TrimStart('/');
+        var token = launch["token"]!.GetValue<string>();
+
+        // Act: the newer call arrives first, then an older one sent again after a busy answer.
+        var newer = await PostRuntimeAsync(learner, runtimeUrl, LearningSiteFixture.Token(player), token, """{"sequence":2,"changes":[["cmi.core.lesson_location","slide-5"]],"commit":true,"finish":false}""");
+        var older = await PostRuntimeAsync(learner, runtimeUrl, LearningSiteFixture.Token(player), token, """{"sequence":1,"changes":[["cmi.core.lesson_location","slide-2"]],"commit":true,"finish":false}""");
+
+        var state = await _fixture.InTenantAsync(async services =>
+        {
+            var enrollment = (await services.GetRequiredService<IEnrollmentStore>().ListByCourseForUserAsync(_fixture.EnrolledUserId, courseId)).Single();
+
+            return await services.GetRequiredService<PackageRuntimeStore>().FindAsync(enrollment.ItemId, itemId);
+        });
+
+        // Assert
+        Assert.True(newer["accepted"]!.GetValue<bool>());
+        Assert.True(older["accepted"]!.GetValue<bool>());
+        Assert.Equal("slide-5", state.Cmi.LessonLocation);
+    }
+
+    [Fact]
     public async Task Scorm2004Package_ImportsAndLaunchesWithThe2004Api_Sandboxed()
     {
         // Arrange

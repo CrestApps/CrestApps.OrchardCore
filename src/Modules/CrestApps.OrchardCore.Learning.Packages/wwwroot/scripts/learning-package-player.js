@@ -3,6 +3,56 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
+	//#region src/Modules/CrestApps.OrchardCore.Learning.Packages/Assets/js/package-runtime-queue.js
+	var defaultAttempts = 5;
+	var defaultRetryDelay = 250;
+	function wait(milliseconds) {
+		return milliseconds > 0 ? new Promise((resolve) => setTimeout(resolve, milliseconds)) : Promise.resolve();
+	}
+	/**
+	* Creates the queue of a launch.
+	* @param {(payload: object, keepalive: boolean) => Promise<object|null>} post Sends a payload; resolves to the answer, or
+	*   null when no answer came.
+	* @param {{ attempts?: number, retryDelay?: number }} [options] How often and how long apart a call is sent again.
+	* @returns {{ send: (build: () => object|null, keepalive?: boolean) => Promise<object|null>, idle: () => boolean }}
+	*/
+	function createRuntimeQueue(post, options = {}) {
+		const attempts = options.attempts ?? defaultAttempts;
+		const retryDelay = options.retryDelay ?? defaultRetryDelay;
+		let sequence = 0;
+		let tail = Promise.resolve();
+		let busy = 0;
+		const run = async (build, keepalive) => {
+			const payload = build();
+			if (!payload) return null;
+			payload.sequence = ++sequence;
+			for (let attempt = 1; attempt <= attempts; attempt++) {
+				let result;
+				try {
+					result = await post(payload, keepalive === true);
+				} catch {
+					result = null;
+				}
+				if (result && !result.retry) return result;
+				if (attempt < attempts) await wait(retryDelay * attempt);
+			}
+			return null;
+		};
+		return {
+			send(build, keepalive) {
+				busy++;
+				const next = tail.then(() => run(build, keepalive));
+				tail = next.catch(() => null).finally(() => {
+					busy--;
+				});
+				return next;
+			},
+			idle() {
+				return busy === 0;
+			}
+		};
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Learning.Packages/Assets/js/learning-package-player.js
 	var defaultProtocol = "crestapps-scorm12";
 	var frameName = "crestapps-package-frame";
@@ -27,39 +77,42 @@
 		const host = root.querySelector("[data-package-frame-host]");
 		if (!button || !host) return;
 		let session = null;
-		const send = async (commit, finish, keepalive) => {
-			if (!session) return null;
-			const changes = session.pending.splice(0);
-			if (changes.length === 0 && !commit && !finish) return null;
+		const post = async (current, payload, keepalive) => {
 			const body = form(root, {
-				token: session.token,
-				payload: JSON.stringify({
-					changes,
-					commit,
-					finish
-				})
+				token: current.token,
+				payload: JSON.stringify(payload)
 			});
 			try {
-				const response = await fetch(session.runtimeUrl, {
+				const response = await fetch(current.runtimeUrl, {
 					method: "POST",
 					body,
 					credentials: "same-origin",
-					keepalive: keepalive === true,
+					keepalive,
 					headers: { "X-Requested-With": "XMLHttpRequest" }
 				});
 				if (!response.ok) {
 					setStatus(root, root.dataset.errorText);
-					return null;
+					return { accepted: false };
 				}
 				const result = await response.json();
-				if (result.retry) session.pending.unshift(...changes);
-				else if (!result.accepted) setStatus(root, result.message || root.dataset.errorText);
+				if (!result.retry && !result.accepted) setStatus(root, result.message || root.dataset.errorText);
 				else if (result.refused?.length) console.warn("The server refused some values the package set.", result.refused);
 				return result;
 			} catch {
-				session.pending.unshift(...changes);
 				return null;
 			}
+		};
+		const send = (commit, finish, keepalive) => {
+			const current = session;
+			if (!current) return Promise.resolve(null);
+			return current.queue.send(() => {
+				const changes = current.pending.splice(0);
+				return changes.length === 0 && !commit && !finish ? null : {
+					changes,
+					commit,
+					finish
+				};
+			}, keepalive);
 		};
 		const onMessage = async (event) => {
 			const frame = host.querySelector("iframe");
@@ -114,6 +167,8 @@
 					pending: [],
 					finished: false
 				};
+				const launched = session;
+				session.queue = createRuntimeQueue((payload, keepalive) => post(launched, payload, keepalive));
 				session.timer = window.setInterval(() => send(false, false), flushSeconds * 1e3);
 				const frame = document.createElement("iframe");
 				frame.name = frameName;

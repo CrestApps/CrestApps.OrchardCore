@@ -5,6 +5,8 @@
 // What the content set is sent to the server, which checks every value again, when the content commits or finishes
 // (Terminate in SCORM 2004), every half minute, and when the page is left.
 
+import { createRuntimeQueue } from './package-runtime-queue.js';
+
 // The message protocol of the SCORM 1.2 frame script; a SCORM 2004 launch names its own (crestapps-scorm2004).
 const defaultProtocol = 'crestapps-scorm12';
 const frameName = 'crestapps-package-frame';
@@ -41,43 +43,32 @@ function start(root) {
 
     let session = null;
 
-    const send = async (commit, finish, keepalive) => {
-        if (!session) {
-            return null;
-        }
-
-        const changes = session.pending.splice(0);
-
-        if (changes.length === 0 && !commit && !finish) {
-            return null;
-        }
-
+    // Posts one runtime call of the current launch. A busy answer comes back with retry, and the queue sends the same
+    // call again; an answer that never came is null, and the queue sends it again too.
+    const post = async (current, payload, keepalive) => {
         const body = form(root, {
-            token: session.token,
-            payload: JSON.stringify({ changes, commit, finish }),
+            token: current.token,
+            payload: JSON.stringify(payload),
         });
 
         try {
-            const response = await fetch(session.runtimeUrl, {
+            const response = await fetch(current.runtimeUrl, {
                 method: 'POST',
                 body,
                 credentials: 'same-origin',
-                keepalive: keepalive === true,
+                keepalive,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             });
 
             if (!response.ok) {
                 setStatus(root, root.dataset.errorText);
 
-                return null;
+                return { accepted: false };
             }
 
             const result = await response.json();
 
-            if (result.retry) {
-                // The runtime data was busy with another write: send the same values again with the next call.
-                session.pending.unshift(...changes);
-            } else if (!result.accepted) {
+            if (!result.retry && !result.accepted) {
                 setStatus(root, result.message || root.dataset.errorText);
             } else if (result.refused?.length) {
                 console.warn('The server refused some values the package set.', result.refused);
@@ -85,10 +76,24 @@ function start(root) {
 
             return result;
         } catch {
-            session.pending.unshift(...changes);
-
             return null;
         }
+    };
+
+    // Every call of a launch goes through its queue, one at a time and in order (review round 9, M3): a finish waits for
+    // the commit before it, and takes the values the content set until its turn.
+    const send = (commit, finish, keepalive) => {
+        const current = session;
+
+        if (!current) {
+            return Promise.resolve(null);
+        }
+
+        return current.queue.send(() => {
+            const changes = current.pending.splice(0);
+
+            return changes.length === 0 && !commit && !finish ? null : { changes, commit, finish };
+        }, keepalive);
     };
 
     const onMessage = async event => {
@@ -175,6 +180,8 @@ function start(root) {
                 pending: [],
                 finished: false,
             };
+            const launched = session;
+            session.queue = createRuntimeQueue((payload, keepalive) => post(launched, payload, keepalive));
             session.timer = window.setInterval(() => send(false, false), flushSeconds * 1000);
 
             const frame = document.createElement('iframe');

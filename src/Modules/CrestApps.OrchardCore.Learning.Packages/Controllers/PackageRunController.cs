@@ -172,7 +172,7 @@ public sealed class PackageRunController : Controller
             return Challenge();
         }
 
-        if (!TryReadPayload(payload, out var changes, out var commit, out var finish))
+        if (!TryReadPayload(payload, out var changes, out var commit, out var finish, out var sequence))
         {
             return BadRequest();
         }
@@ -186,6 +186,7 @@ public sealed class PackageRunController : Controller
             Changes = changes,
             Commit = commit,
             Finish = finish,
+            Sequence = sequence,
         }, HttpContext.RequestAborted);
 
         return Json(new
@@ -214,11 +215,12 @@ public sealed class PackageRunController : Controller
         response.Headers["X-Robots-Tag"] = "noindex, nofollow";
     }
 
-    internal static bool TryReadPayload(string payload, out List<PackageRuntimeChange> changes, out bool commit, out bool finish)
+    internal static bool TryReadPayload(string payload, out List<PackageRuntimeChange> changes, out bool commit, out bool finish, out long? sequence)
     {
         changes = [];
         commit = false;
         finish = false;
+        sequence = null;
 
         if (string.IsNullOrEmpty(payload))
         {
@@ -237,6 +239,16 @@ public sealed class PackageRunController : Controller
 
             commit = root.TryGetProperty("commit", out var commitValue) && commitValue.ValueKind == JsonValueKind.True;
             finish = root.TryGetProperty("finish", out var finishValue) && finishValue.ValueKind == JsonValueKind.True;
+
+            if (root.TryGetProperty("sequence", out var sequenceValue))
+            {
+                if (sequenceValue.ValueKind != JsonValueKind.Number || !sequenceValue.TryGetInt64(out var number) || number < 1)
+                {
+                    return false;
+                }
+
+                sequence = number;
+            }
 
             if (root.TryGetProperty("changes", out var list) && list.ValueKind == JsonValueKind.Array)
             {

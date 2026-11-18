@@ -55,6 +55,11 @@ public sealed class PackageRuntimeState : CatalogItem
     /// <summary>Gets or sets the launch that may write now; an older launch, such as another tab, is refused.</summary>
     public string CurrentLaunchId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the number of the last runtime call applied in the current launch; a new launch starts again at 0.
+    /// </summary>
+    public long LastSequence { get; set; }
+
     /// <summary>Gets or sets when the package was first launched, in UTC.</summary>
     public DateTime? FirstLaunchedUtc { get; set; }
 
