@@ -1,13 +1,28 @@
+@using CrestApps.OrchardCore.KnowledgeBase.Indexes
 @model KnowledgeArticleFeedbackViewModel
 
-<aside class="border-top mt-4 pt-3 knowledge-article-feedback">
-    @if (Context.Request.Query["feedback"] == "thanks")
+@{
+    var feedback = Context.Request.Query["feedback"].ToString();
+    var here = Context.Request.PathBase + Context.Request.Path;
+}
+
+<aside id="kb-feedback" class="border-top mt-4 pt-3 knowledge-article-feedback">
+    @if (feedback == "missing")
+    {
+        <form method="post" asp-route="KnowledgeBaseFeedbackComment" asp-route-id="@Model.ContentItemId" asp-route-returnUrl="@here">
+            <label for="kb-feedback-comment" class="form-label">@T["Sorry it didn't help. What was missing?"]</label>
+            <textarea id="kb-feedback-comment" name="comment" class="form-control mb-2" rows="3" maxlength="@KnowledgeArticleFeedbackIndex.MaxCommentLength"></textarea>
+            <span class="hint d-block mb-2">@T["Optional. It helps us improve the article; we don't reply to it."]</span>
+            <button type="submit" class="btn btn-sm btn-primary">@T["Send"]</button>
+        </form>
+    }
+    else if (feedback == "thanks")
     {
         <p class="mb-0">@T["Thank you for telling us."]</p>
     }
     else
     {
-        <form method="post" asp-route="KnowledgeBaseFeedback" asp-route-id="@Model.ContentItemId" asp-route-returnUrl="@(Context.Request.PathBase + Context.Request.Path)" class="d-flex flex-wrap align-items-center gap-2">
+        <form method="post" asp-route="KnowledgeBaseFeedback" asp-route-id="@Model.ContentItemId" asp-route-returnUrl="@here" class="d-flex flex-wrap align-items-center gap-2">
             <span>@T["Was this helpful?"]</span>
             <button type="submit" name="helpful" value="true" class="btn btn-sm btn-outline-success">@T["Yes"]</button>
             <button type="submit" name="helpful" value="false" class="btn btn-sm btn-outline-secondary">@T["No"]</button>

@@ -14,7 +14,7 @@ using OrchardCore.Modules.Manifest;
     Id = KnowledgeBaseConstants.Feature,
     Name = "Knowledge Base",
     Description = "Help articles for everyone, for signed-in people or for the roles you pick: a Knowledge Article content type with categories, drafts and versions, a help center at /help with search, \"was this helpful?\" feedback, and suggestions other modules show while people write a request or a reply.",
-    Category = "Service Desk",
+    Category = "Content Management",
     Dependencies =
     [
         OrchardCoreFeatureIds.Contents,

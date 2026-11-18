@@ -2,10 +2,10 @@
 sidebar_label: Knowledge Base
 title: Knowledge Base
 description: "Help articles for everyone, for signed-in people or for the roles you pick: the Knowledge Article content type, the help center at /help with search and categories, \"was this helpful?\" feedback, and suggestions for other modules."
-user_manual: user-manual/service-desk/knowledge-base
+user_manual: user-manual/knowledge-base/index
 ---
 
-The **Knowledge Base** holds help articles. It has no dependency on [Tickets](./tickets): a site can publish a help center on its own, and Tickets suggests articles when it is on too.
+The **Knowledge Base** holds help articles. It is a feature of its own, in the **Content Management** category of **Tools > Features**, with its own admin menu: it has no dependency on [Tickets](./tickets), so a site can publish a help center without a service desk, and Tickets suggests articles when both are on.
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
@@ -18,7 +18,7 @@ The feature adds a **Knowledge Article** content type (`KnowledgeArticle`): a ti
 | Property | Holds |
 | --- | --- |
 | `Summary` | One or two sentences shown in lists, searches and suggestions |
-| `HelpfulCount`, `NotHelpfulCount` | Readers' answers to "Was this helpful?" |
+| `HelpfulCount`, `NotHelpfulCount` | How many readers answered yes and no to "Was this helpful?", which the help center sorts by. Each answer is also a dated record; see [Feedback](./knowledge-base/feedback) |
 
 ## Who can read an article
 
@@ -44,11 +44,13 @@ An article's category is a term of a taxonomy: the Knowledge Article type has a 
 
 ## Admin menu
 
-The module adds **Knowledge Base** to the **Service Desk** menu (`KnowledgeBaseAdminMenu`, the same `serviceDesk` item the Tickets feature adds, so the two merge; on its own it makes that menu): **Articles**, Orchard Core's content list of the `KnowledgeArticle` type with its **New Knowledge Article** button, and **Help center**, a link to `/help`. All three need **List content items** (`ListContent`), as Orchard Core's own content lists do; the list and the editor still check the type's content permissions, and Content Access Control still decides who reads each article.
+The module adds its own top-level **Knowledge Base** menu (`KnowledgeBaseAdminMenu`, id `knowledgeBase`), apart from the Service Desk menu: **Articles**, Orchard Core's content list of the `KnowledgeArticle` type with its **New Knowledge Article** button; **Categories**, the editor of the taxonomy the category field uses (shown once the taxonomy exists); **Feedback**, the [feedback report](./knowledge-base/feedback), added by `KnowledgeBaseFeedbackAdminMenu` when the Reports feature is on and shown to those with **View knowledge base feedback**; and **Help center**, a link to `/help`. The menu, Articles, Categories and Help center need **List content items** (`ListContent`), as Orchard Core's own content lists do; the list and the editors still check the content permissions, and Content Access Control still decides who reads each article.
 
 ## Help center
 
-`/help` (route `KnowledgeBaseHome`) lists the articles by category: each category with articles, in the taxonomy's order, with its five most helpful and a link to the rest, beside the list of categories and their counts (a category counts those of the categories under it). `?category=` (a term's content item id) is the category's page, with its articles and those of the categories under it, and searches within it; `?q=` searches. A site without categories shows the most helpful articles. A search matches articles with every word (up to five, two letters or more) in the title or the summary, most helpful first, among the articles the reader may read (`KnowledgeArticleSearch`). Each article ends with **Was this helpful?**, posted to `help/articles/{id}/feedback` and counted once per browser, under a lock on the article so answers given at the same time all count. Through Orchard Core's **Rate Limits** (the feature turns it on), a visitor address gives at most 20 answers in 10 minutes (group `knowledge-base-feedback`), so a script can't push an article up.
+`/help` (route `KnowledgeBaseHome`) lists the articles by category: each category with articles, in the taxonomy's order, with its five most helpful and a link to the rest, beside the list of categories and their counts (a category counts those of the categories under it). `?category=` (a term's content item id) is the category's page, with its articles and those of the categories under it, and searches within it; `?q=` searches. A site without categories shows the most helpful articles. A search matches articles with every word (up to five, two letters or more) in the title or the summary, most helpful first, among the articles the reader may read (`KnowledgeArticleSearch`). Each article ends with **Was this helpful?**, posted to `help/articles/{id}/feedback`: each answer is a dated record and one more on the article's counter, once per browser, under a lock on the article so answers given at the same time all count. After a No the reader may say what was missing. Through Orchard Core's **Rate Limits** (the feature turns it on), a visitor address gives at most 20 answers in 10 minutes (group `knowledge-base-feedback`), so a script can't push an article up. See [Feedback](./knowledge-base/feedback).
+
+The help center's page shows the zones `KnowledgeBaseTop`, `KnowledgeBaseSidebar` and `KnowledgeBaseAfterContent` itself, and so does an article's page (the `Content-KnowledgeArticle.Detail` template): the Knowledge Base recipe places the search, categories and related articles widgets there. Without widgets in them, the help center shows its own search box and categories. See [Widgets and recipe](./knowledge-base/widgets-and-recipe).
 
 `help/api/suggest?q=` (route `KnowledgeBaseSuggest`) answers up to five articles as JSON (`title`, `summary`, `url`) for the reader, so other modules can suggest articles while someone writes: articles with any of the text's longer words (four letters or more, common words left out, the last eight) in the title or summary, those matching the most words first. With [Tickets](./tickets) on, the requester's **New request** form and the agent's reply box show these suggestions as they type; an agent adds an article's link to the reply with one click. `&reader=public` or `&reader=signedin` keeps the answer to articles that reader can open as well (the roles `Anonymous` or `Authenticated`, `KnowledgeArticleSearch.VisitorReader` and `SignedInReader`): a public reply offers only what its requester can read (articles for everyone, plus those for `Authenticated` when the requester has a login), while an internal note offers every article the agent may read.
 

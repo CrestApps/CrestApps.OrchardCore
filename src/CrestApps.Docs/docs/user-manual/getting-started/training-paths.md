@@ -221,7 +221,7 @@ Use these training paths to onboard new staff. Each path is an ordered checklist
    - [ ] [Agreements](../administration/agreements.md), if your accounts have them.
 4. **Results** (1 hour)
    - [ ] [Service desk reports](../service-desk/reports.md).
-   - [ ] [Knowledge Base](../service-desk/knowledge-base.md): write articles for the questions you get most.
+   - [ ] [Knowledge Base](../knowledge-base/index.md): write articles for the questions you get most.
 
 **You are ready when you can:**
 

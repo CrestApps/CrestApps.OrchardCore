@@ -10,8 +10,8 @@ The **Service Desk** is where your team answers requests. Each request is a **ti
 
 | | |
 | --- | --- |
-| **Menu** | **Service Desk**: Tickets, Boards and the boards you pinned, Knowledge Base (Articles and Help center), and for those who manage the service desk, Desks, Statuses, Priorities and Views; **Settings > Service Desk** for the notification templates and the AI profile for replies |
-| **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support**; **Manage ticket settings** for the desks, statuses, priorities, views and settings; **Manage shared ticket boards** or **Manage my own ticket boards** to make boards; **View ticket reports** for the reports; **List content items** for the Knowledge Base menu, and each article's **Which roles can see this content** for who reads it |
+| **Menu** | **Service Desk**: Tickets, Boards and the boards you pinned, and for those who manage the service desk, Desks, Statuses, Priorities and Views; **Settings > Service Desk** for the notification templates and the AI profile for replies |
+| **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support**; **Manage ticket settings** for the desks, statuses, priorities, views and settings; **Manage shared ticket boards** or **Manage my own ticket boards** to make boards; **View ticket reports** for the reports |
 | **Feature** | Tickets |
 
 <AskYourAdmin />
@@ -23,14 +23,15 @@ The **Service Desk** is where your team answers requests. Each request is a **ti
 | **Agent** | Works the ticket list and boards, answers requesters, writes internal notes, records time | [Work the ticket list](./ticket-list.md), [Answer a ticket](./answer-a-ticket.md) |
 | **Desk manager** | Shapes desks, statuses, priorities, views and boards, ticket types and categories, and service levels; reads the reports | [Desks](./desks.md), [Reports](./reports.md) |
 | **Administrator** | Turns on the features, gives roles their desk permissions, sets up notification templates, the AI assistant and the portal | [Features to turn on](#features-to-turn-on), [Notification templates](./notification-templates.md) |
-| **Requester** | Sends a request, follows it and replies from their account or a link in their e-mails, rates a solved request, and reads the help center | [Tickets Portal](./portal.md), [Knowledge Base](./knowledge-base.md) |
+| **Requester** | Sends a request, follows it and replies from their account or a link in their e-mails, rates a solved request, and reads the help center | [Tickets Portal](./portal.md), [Knowledge Base](../knowledge-base/index.md) |
 
 ## The Service Desk menu
 
 - **Tickets**: the ticket list and its saved views.
 - **Boards**: tickets as cards in columns, and under it each board you pinned to your menu.
-- **Knowledge Base**: **Articles**, the help articles with their **New Knowledge Article** button, and **Help center**, the public page at `/help`.
 - **Desks**, **Statuses**, **Priorities** and **Views**: the service desk's setup, for those who may manage ticket settings.
+
+The [Knowledge Base](../knowledge-base/index.md) has a menu of its own: it works with or without the Service Desk. With both on, agents and requesters get its articles as suggestions while they write.
 
 **Settings > Service Desk** holds the **Notification templates**, the messages requesters get, and, with AI on, the **AI profile for replies**.
 
@@ -47,7 +48,7 @@ Turn them on under **Tools > Features**:
 | **Ticket Web Form** | A **Ticket Form** widget for any page |
 | **Ticket Approvals** | Approval steps before work starts on a ticket type |
 | **Tickets for Contact Center** | Offers a desk's new tickets to a Contact Center queue's agents |
-| **Knowledge Base** | Help articles, categories and the help center at `/help` |
+| **Knowledge Base** | Help articles, categories and the help center at `/help`, under their own **Knowledge Base** menu; see [Knowledge Base](../knowledge-base/index.md) |
 | **Tickets API** | Lets other systems read and change tickets |
 
 To start with a working example, run the [help desk starter recipe](./help-desk-starter.md).
@@ -83,7 +84,7 @@ To start with a working example, run the [help desk starter recipe](./help-desk-
 
 - [Tickets Portal](./portal.md)
 - [Request form on a page](./web-form.md)
-- [Knowledge Base](./knowledge-base.md)
+- [Knowledge Base](../knowledge-base/index.md)
 
 **Results**
 

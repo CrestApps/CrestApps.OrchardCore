@@ -64,3 +64,55 @@ public sealed record HelpCenterCategory(string Id, string Name, int Level, int C
 /// <param name="Count">The articles in it.</param>
 /// <param name="Articles">Its most helpful articles.</param>
 public sealed record HelpCenterGroup(string Id, string Name, int Count, IReadOnlyList<KnowledgeArticleIndex> Articles);
+
+/// <summary>
+/// The help center's search box, on its page and as a widget.
+/// </summary>
+public class KnowledgeBaseSearchViewModel
+{
+    public string Query { get; set; }
+
+    /// <summary>
+    /// Gets or sets the category searched within, on a category's page.
+    /// </summary>
+    public string CategoryId { get; set; }
+
+    /// <summary>
+    /// Gets or sets that category's name.
+    /// </summary>
+    public string CategoryName { get; set; }
+}
+
+/// <summary>
+/// The help center's categories, on its page and as a widget.
+/// </summary>
+public class KnowledgeBaseCategoriesViewModel
+{
+    public IReadOnlyList<HelpCenterCategory> Categories { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the category shown: the one whose page this is, or the article's.
+    /// </summary>
+    public string SelectedId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether "All articles" is the one shown, on the help center's home.
+    /// </summary>
+    public bool AllSelected { get; set; }
+}
+
+/// <summary>
+/// An article's related articles, as a widget.
+/// </summary>
+public class RelatedArticlesViewModel
+{
+    public IReadOnlyList<KnowledgeArticleIndex> Articles { get; set; } = [];
+}
+
+/// <summary>
+/// The settings of a Related articles widget.
+/// </summary>
+public class RelatedArticlesPartViewModel
+{
+    public int Count { get; set; }
+}

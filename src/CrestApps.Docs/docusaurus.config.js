@@ -81,8 +81,9 @@ const config = {
             to: '/docs/user-manual/service-desk',
           },
           {
-            from: '/docs/user-manual/administration/knowledge-base',
-            to: '/docs/user-manual/service-desk/knowledge-base',
+            // The Knowledge Base, once a page of the Service Desk section, has a section of its own.
+            from: ['/docs/user-manual/administration/knowledge-base', '/docs/user-manual/service-desk/knowledge-base'],
+            to: '/docs/user-manual/knowledge-base',
           },
         ],
       }),

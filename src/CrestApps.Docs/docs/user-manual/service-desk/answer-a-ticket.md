@@ -22,7 +22,7 @@ Open a ticket from the list. Its thread is on the left, newest first; its values
 - Write in the composer and choose **Reply to the requester** (they are told when the desk tells requesters) or **Internal note** for the agents only. Mention a colleague with `@username` to tell them.
 - Choose **Then set the status to** to send and move the ticket in one step, such as **Waiting for the requester**.
 - Pick a **Reply template** to start from a saved answer; it can also set a status, priority or team.
-- With the Knowledge Base on, articles that match what you write show as suggestions under the reply box. Select one to add its link to your reply. A public reply suggests only articles the requester can open; an internal note suggests every article you may read. See [Knowledge Base](./knowledge-base.md).
+- With the Knowledge Base on, articles that match what you write show as suggestions under the reply box. Select one to add its link to your reply. A public reply suggests only articles the requester can open; an internal note suggests every article you may read. See [Write articles](../knowledge-base/write-articles.md#suggestions-in-tickets).
 - Attach files by dragging them onto the reply box, pasting them, or selecting **browse**. Files you add later join the ones already there, and the × next to a file removes it.
 - With the AI assistant on the desk, **Suggest a reply** writes a draft for you. See [AI assistant](./ai-assistant.md).
 

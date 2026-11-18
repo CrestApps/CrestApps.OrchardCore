@@ -31,7 +31,7 @@ Signed-in people find **Requests** under **My account**:
 - **New request**: they choose the kind of request, then answer its form (the subject, a category when the type has them, the questions that apply, their message and files);
 - each request's conversation with a reply box. They see your public replies and their files, never your internal notes or the history of changes. A reply on a solved request reopens it, as on your side.
 
-While they write, matching [Knowledge Base](./knowledge-base.md) articles show as suggestions, so they may find the answer before they send.
+While they write, matching [Knowledge Base](../knowledge-base/index.md) articles show as suggestions, so they may find the answer before they send.
 
 ## Guests and links
 

@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.KnowledgeBase.Indexes;
+using CrestApps.OrchardCore.KnowledgeBase.Models;
 using CrestApps.OrchardCore.Roles.Core.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -108,8 +109,10 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
 
         ConvertCategoriesOnceCommitted(await DefineCategoriesAsync());
         await AddWhoCanReadItAsync();
+        await CreateFeedbackIndexAsync(SchemaBuilder);
+        await DefineWidgetsAsync();
 
-        return 6;
+        return 8;
     }
 
     /// <summary>
@@ -268,6 +271,81 @@ internal sealed class KnowledgeBaseMigrations : DataMigration
         }
 
         return 6;
+    }
+
+    /// <summary>
+    /// Keeps each reader's answer to "Was this helpful?" as a dated record in the Knowledge Base's collection, for the
+    /// feedback report; the counters on the article stay, for sorting.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        await CreateFeedbackIndexAsync(SchemaBuilder);
+
+        return 7;
+    }
+
+    /// <summary>
+    /// Adds the help center's widgets: its search box, its categories and an article's related articles.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom7Async()
+    {
+        await DefineWidgetsAsync();
+
+        return 8;
+    }
+
+    /// <summary>
+    /// Creates the table of <see cref="KnowledgeArticleFeedbackIndex"/> in the Knowledge Base's collection.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task that completes when the table exists.</returns>
+    internal static async Task CreateFeedbackIndexAsync(ISchemaBuilder schemaBuilder)
+    {
+        await schemaBuilder.CreateMapIndexTableAsync<KnowledgeArticleFeedbackIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<string>("CategoryId", column => column.Nullable().WithLength(26))
+            .Column<bool>("Helpful")
+            .Column<bool>("HasComment")
+            .Column<DateTime>("CreatedUtc")
+            .Column<string>("UserId", column => column.Nullable().WithLength(26)),
+            collection: KnowledgeBaseConstants.CollectionName);
+
+        await schemaBuilder.AlterIndexTableAsync<KnowledgeArticleFeedbackIndex>(table =>
+        {
+            table.CreateIndex("IDX_KBFeedback_Created", "CreatedUtc", "DocumentId");
+            table.CreateIndex("IDX_KBFeedback_Article", "ContentItemId", "CreatedUtc");
+            table.CreateIndex("IDX_KBFeedback_ItemId", "ItemId");
+            table.CreateIndex("IDX_KBFeedback_User", "UserId");
+        }, collection: KnowledgeBaseConstants.CollectionName);
+    }
+
+    // The widgets the help center and its articles share; the Knowledge Base recipe places them.
+    private async Task DefineWidgetsAsync()
+    {
+        await DefineWidgetAsync(nameof(HelpCenterSearchPart), "Help center search", "A search box that searches the help center's articles.");
+        await DefineWidgetAsync(nameof(KnowledgeBaseCategoriesPart), "Knowledge base categories", "The help center's categories, with how many articles a reader may open in each.");
+        await DefineWidgetAsync(nameof(RelatedArticlesPart), "Related articles", "On an article, other articles about the same thing: those of its category first, then those whose title or summary share its words.");
+    }
+
+    private async Task DefineWidgetAsync(string partName, string displayName, string description)
+    {
+        await _contentDefinitionManager.AlterPartDefinitionAsync(partName, part => part
+            .WithDisplayName(displayName)
+            .WithDescription(description));
+
+        var typeName = KnowledgeBaseConstants.WidgetTypeOf(partName);
+
+        if (await _contentDefinitionManager.GetTypeDefinitionAsync(typeName) is null)
+        {
+            await _contentDefinitionManager.AlterTypeDefinitionAsync(typeName, type => type
+                .WithDisplayName(displayName)
+                .WithDescription(description)
+                .Stereotype("Widget")
+                .WithPart(partName));
+        }
     }
 
     /// <summary>

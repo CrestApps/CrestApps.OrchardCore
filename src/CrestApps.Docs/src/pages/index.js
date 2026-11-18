@@ -92,6 +92,13 @@ const AREAS = [
     technical: '/docs/modules/tickets',
   },
   {
+    title: 'Knowledge Base',
+    icon: 'book-a',
+    text: 'A help center at /help: articles in categories, who can read each one, search, related articles and what readers found helpful.',
+    user: '/docs/user-manual/knowledge-base',
+    technical: '/docs/modules/knowledge-base',
+  },
+  {
     title: 'Payroll',
     inHero: true,
     icon: 'banknote',

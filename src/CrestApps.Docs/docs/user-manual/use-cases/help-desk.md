@@ -37,7 +37,7 @@ When it is done:
 5. **Ask for what you need.** Add fields to your ticket types, give them show-when rules, sort tickets into categories that route them, and mark the fields customers fill in. See [Ticket types, fields and categories](../service-desk/ticket-types-and-categories.md).
 6. **Write the messages requesters get.** Edit the notification templates under **Settings > Service Desk**. See [Notification templates](../service-desk/notification-templates.md).
 7. **Open the doors.** Let customers send requests from their account, and put a request form on your contact page. See [Tickets Portal](../service-desk/portal.md) and [Request form on a page](../service-desk/web-form.md).
-8. **Write your first articles.** Add the help center's categories and articles for the questions you get most. See [Knowledge Base](../service-desk/knowledge-base.md).
+8. **Write your first articles.** Add the help center's categories and articles for the questions you get most. See [Knowledge Base](../knowledge-base/index.md).
 9. **Get the agents going.** Agents work the ticket list and boards, answer requesters and record their time. See [Work the ticket list](../service-desk/ticket-list.md), [Answer a ticket](../service-desk/answer-a-ticket.md) and [Boards](../service-desk/boards.md).
 10. **Measure.** Use the ticket reports to see volume, response times and service levels. See [Service desk reports](../service-desk/reports.md).
 

@@ -20,18 +20,19 @@ public sealed class HelpCenterController : Controller
 {
     private const string FeedbackCookiePrefix = "kb-feedback-";
 
-    // The articles the home page shows under each category; the category's page lists them all.
-    private const int ArticlesPerGroup = 5;
-
     private readonly KnowledgeArticleSearch _search;
     private readonly KnowledgeBaseCategories _categories;
+    private readonly KnowledgeBaseHelpCenter _helpCenter;
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDistributedLock _locks;
     private readonly YesSql.ISession _session;
+    private readonly KnowledgeArticleFeedbackService _feedback;
 
-    public HelpCenterController(KnowledgeArticleSearch search, KnowledgeBaseCategories categories, IContentManager contentManager, IAuthorizationService authorizationService, IDistributedLock locks, YesSql.ISession session)
+    public HelpCenterController(KnowledgeArticleSearch search, KnowledgeBaseCategories categories, IContentManager contentManager, IAuthorizationService authorizationService, IDistributedLock locks, YesSql.ISession session, KnowledgeArticleFeedbackService feedback, KnowledgeBaseHelpCenter helpCenter)
     {
+        _feedback = feedback;
+        _helpCenter = helpCenter;
         _locks = locks;
         _session = session;
         _search = search;
@@ -51,22 +52,16 @@ public sealed class HelpCenterController : Controller
     public async Task<IActionResult> Index(string q = null, string category = null)
     {
         var tree = await _categories.GetTreeAsync();
-        var grouped = await _search.ByCategoryAsync(User, ArticlesPerGroup, HttpContext.RequestAborted);
+        var grouped = await _helpCenter.GetGroupedAsync(User, HttpContext.RequestAborted);
         var selected = string.IsNullOrWhiteSpace(category) ? null : tree.Find(category.Trim());
         var searching = !string.IsNullOrWhiteSpace(q) || !string.IsNullOrWhiteSpace(category);
-
-        // A category counts the articles of the categories under it too, as choosing it lists them.
-        int Count(string id)
-            => KnowledgeBaseCategories.WithDescendants(tree, id).Sum(value => grouped.TryGetValue(value, out var group) ? group.Count : 0);
 
         var model = new HelpCenterViewModel
         {
             Query = q,
             CategoryId = selected?.Id ?? category,
             CategoryName = selected is null ? null : tree.GetPathText(selected.Id, " › "),
-            Categories = [.. tree.Nodes
-                .Select(node => new HelpCenterCategory(node.Id, node.Name, node.Level, Count(node.Id)))
-                .Where(value => value.Count > 0)],
+            Categories = await _helpCenter.GetCategoriesAsync(User, HttpContext.RequestAborted),
             Groups = searching ? [] : [.. tree.Nodes
                 .Where(node => grouped.ContainsKey(node.Id))
                 .Select(node => new HelpCenterGroup(node.Id, tree.GetPathText(node.Id, " › "), grouped[node.Id].Count, grouped[node.Id].Articles))],
@@ -140,36 +135,59 @@ public sealed class HelpCenterController : Controller
         // One answer per browser; a second is thanked but not counted.
         var cookie = FeedbackCookiePrefix + id;
 
-        if (!Request.Cookies.ContainsKey(cookie))
+        if (Request.Cookies.ContainsKey(cookie))
         {
-            // Counted under a lock on the article and saved before it is let go, so answers at the same time all count.
-            var (locker, locked) = await _locks.TryAcquireLockAsync("KB_FEEDBACK_" + id, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15));
-
-            if (!locked)
-            {
-                return Redirect(back + (back.Contains('?') ? "&" : "?") + "feedback=thanks");
-            }
-
-            await using var held = locker;
-
-            article = await _contentManager.GetAsync(id, VersionOptions.Published);
-            article.Alter<KnowledgeArticlePart>(part =>
-            {
-                if (helpful)
-                {
-                    part.HelpfulCount++;
-                }
-                else
-                {
-                    part.NotHelpfulCount++;
-                }
-            });
-
-            await _contentManager.UpdateAsync(article);
-            await _session.SaveChangesAsync(HttpContext.RequestAborted);
-            Response.Cookies.Append(cookie, "1", new CookieOptions { MaxAge = TimeSpan.FromDays(365), HttpOnly = true, IsEssential = false, SameSite = SameSiteMode.Lax, Secure = Request.IsHttps });
+            return Redirect(WithFeedback(back, "thanks"));
         }
 
-        return Redirect(back + (back.Contains('?') ? "&" : "?") + "feedback=thanks");
+        // Counted under a lock on the article and saved before it is let go, so answers at the same time all count.
+        var (locker, locked) = await _locks.TryAcquireLockAsync("KB_FEEDBACK_" + id, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15));
+
+        if (!locked)
+        {
+            return Redirect(WithFeedback(back, "thanks"));
+        }
+
+        await using (locker)
+        {
+            article = await _contentManager.GetAsync(id, VersionOptions.Published);
+            var feedbackId = await _feedback.RecordAsync(article, helpful, User);
+            await _session.SaveChangesAsync(HttpContext.RequestAborted);
+
+            // The answer's id lets this browser, and only it, say what was missing after a No.
+            Response.Cookies.Append(cookie, feedbackId, new CookieOptions { MaxAge = TimeSpan.FromDays(365), HttpOnly = true, IsEssential = false, SameSite = SameSiteMode.Lax, Secure = Request.IsHttps });
+        }
+
+        return Redirect(WithFeedback(back, helpful ? "thanks" : "missing"));
+    }
+
+    /// <summary>
+    /// Keeps what a reader said was missing after answering No: once, on their own answer.
+    /// </summary>
+    /// <param name="id">The article.</param>
+    /// <param name="comment">What was missing.</param>
+    /// <param name="returnUrl">Where to go back to.</param>
+    /// <returns>A redirect back to the article.</returns>
+    [HttpPost("help/articles/{id}/feedback/comment", Name = "KnowledgeBaseFeedbackComment")]
+    [RateLimitGroup(KnowledgeBaseConstants.FeedbackRateLimitGroup)]
+    public async Task<IActionResult> FeedbackComment(string id, string comment, string returnUrl)
+    {
+        var back = Url.IsLocalUrl(returnUrl) ? returnUrl : Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName);
+
+        if (Request.Cookies.TryGetValue(FeedbackCookiePrefix + id, out var feedbackId)
+            && await _feedback.AddCommentAsync(id, feedbackId, comment, HttpContext.RequestAborted))
+        {
+            await _session.SaveChangesAsync(HttpContext.RequestAborted);
+        }
+
+        return Redirect(WithFeedback(back, "thanks"));
+    }
+
+    private static string WithFeedback(string url, string value)
+    {
+        var anchor = url.IndexOf('#', StringComparison.Ordinal);
+        var path = anchor < 0 ? url : url[..anchor];
+
+        return path + (path.Contains('?') ? "&" : "?") + "feedback=" + value + "#kb-feedback";
     }
 }

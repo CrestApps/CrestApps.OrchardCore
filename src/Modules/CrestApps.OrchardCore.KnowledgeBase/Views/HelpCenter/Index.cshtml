@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.KnowledgeBase.Services
 @model HelpCenterViewModel
 
 <zone Name="Title">
@@ -7,36 +8,35 @@
 @{
     var hasCategory = !string.IsNullOrWhiteSpace(Model.CategoryId);
     var searching = !string.IsNullOrWhiteSpace(Model.Query) || hasCategory;
+
+    // The widgets the Knowledge Base recipe places; without them the page shows its own search and categories.
+    var top = KnowledgeBaseZones.Find(ThemeLayout, KnowledgeBaseConstants.Zones.Top);
+    var sidebar = KnowledgeBaseZones.Find(ThemeLayout, KnowledgeBaseConstants.Zones.Sidebar);
+    var after = KnowledgeBaseZones.Find(ThemeLayout, KnowledgeBaseConstants.Zones.AfterContent);
 }
 
-<div class="container my-4" style="max-width: 960px;">
+<div class="container my-4 knowledge-base-page" style="max-width: 960px;">
     <h1 class="h3 mb-3">@(Model.CategoryName is null ? T["Help center"] : Model.CategoryName)</h1>
 
-    <form method="get" asp-route="@KnowledgeBaseConstants.HomeRouteName" class="mb-4" role="search">
-        <div class="input-group">
-            <input type="search" name="q" value="@Model.Query" class="form-control" placeholder="@(Model.CategoryName is null ? T["Search the articles"] : T["Search {0}", Model.CategoryName])" aria-label="@T["Search the articles"]" />
-            @if (hasCategory)
-            {
-                <input type="hidden" name="category" value="@Model.CategoryId" />
-            }
-            <button type="submit" class="btn btn-primary">@T["Search"]</button>
-        </div>
-    </form>
+    @if (top is not null)
+    {
+        @await DisplayAsync(top)
+    }
+    else
+    {
+        <partial name="_KnowledgeBaseSearch" model="new KnowledgeBaseSearchViewModel { Query = Model.Query, CategoryId = hasCategory ? Model.CategoryId : null, CategoryName = Model.CategoryName }" />
+    }
 
     <div class="row g-4">
         <div class="col-md-4">
-            <h2 class="h6 text-uppercase text-body-secondary">@T["Categories"]</h2>
-            <div class="list-group">
-                <a class="list-group-item list-group-item-action@(hasCategory ? null : " active")" href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName)">@T["All articles"]</a>
-                @foreach (var category in Model.Categories)
-                {
-                    <a class="list-group-item list-group-item-action d-flex justify-content-between@(string.Equals(category.Id, Model.CategoryId, StringComparison.Ordinal) ? " active" : null)"
-                       style="padding-left: @(1 + category.Level)rem;"
-                       href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName, new { category = category.Id })">
-                        <span>@category.Name</span><span class="badge text-bg-light">@category.Count</span>
-                    </a>
-                }
-            </div>
+            @if (sidebar is not null)
+            {
+                @await DisplayAsync(sidebar)
+            }
+            else
+            {
+                <partial name="_KnowledgeBaseCategories" model="new KnowledgeBaseCategoriesViewModel { Categories = Model.Categories, SelectedId = Model.CategoryId, AllSelected = !hasCategory }" />
+            }
         </div>
         <div class="col-md-8">
             @if (Model.Groups.Count > 0)
@@ -52,7 +52,7 @@
                                 <a class="small fw-normal" href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName, new { category = group.Id })">@T["All {0} articles", group.Count]</a>
                             }
                         </h2>
-                        <partial name="_HelpCenterArticles" model="group.Articles" />
+                        <partial name="_KnowledgeBaseArticles" model="group.Articles" />
                     </section>
                 }
             }
@@ -65,8 +65,13 @@
                 }
                 else
                 {
-                    <partial name="_HelpCenterArticles" model="Model.Articles" />
+                    <partial name="_KnowledgeBaseArticles" model="Model.Articles" />
                 }
+            }
+
+            @if (after is not null)
+            {
+                @await DisplayAsync(after)
             }
         </div>
     </div>
