@@ -67,11 +67,8 @@ public sealed class DeleteContentTransferEntryTool : ContentTransferAIToolBase
             return $"Nothing was deleted: no content transfer entry the user can delete has the ID '{entryId}'. Call listContentTransferEntries to find it.";
         }
 
-        if (entry.Status == ContentTransferEntryStatus.Deleting)
-        {
-            return $"Nothing was changed: the entry '{entry.EntryId}' is already being deleted.";
-        }
-
+        // An entry already marked as deleting is queued again, as the list's Delete action does: nothing else sweeps those
+        // entries, so a deletion that failed would otherwise leave it for good. Deleting an entry already gone does nothing.
         // The deletion is queued before the entry is marked, so an entry is never left marked as deleting with nothing to
         // delete it: nothing else sweeps those entries.
         if (ShellScope.Current is null)

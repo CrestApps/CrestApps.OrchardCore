@@ -125,13 +125,23 @@ public sealed class ContentTransferAIToolTests : IAsyncLifetime
         Assert.Equal(ContentTransferEntryStatus.Processing, (await FindAsync("import1")).Status);
     }
 
+    public static TheoryData<string, string> ToolsAndPermissions => new()
+    {
+        { ListContentTransferTypesTool.TheName, ContentTransferPermissions.ImportContentFromFile.Name + "," + ContentTransferPermissions.ExportContentFromFile.Name },
+        { ListContentTransferEntriesTool.TheName, ContentTransferPermissions.ListContentTransferEntries.Name },
+        { GetContentTransferEntryTool.TheName, ContentTransferPermissions.ImportContentFromFile.Name },
+        { SetContentImportStateTool.TheName, ContentTransferPermissions.ImportContentFromFile.Name },
+        { DeleteContentTransferEntryTool.TheName, ContentTransferPermissions.DeleteContentTransferEntries.Name },
+    };
+
     [Theory]
-    [MemberData(nameof(ToolNames))]
-    public async Task Tool_RefusesACallerWithoutItsPermission(string toolName)
+    [MemberData(nameof(ToolsAndPermissions))]
+    public async Task Tool_RefusesACallerWithoutItsPermission(string toolName, string permissions)
     {
         // Arrange
+        var denied = permissions.Split(',');
         await AddEntryAsync("import1", ContentTransferDirection.Import, ContentTransferEntryStatus.Processing);
-        var services = Build(authorize: (_, _) => false);
+        var services = Build(authorize: (permission, _) => !denied.Contains(permission.Name));
 
         // Act
         var result = await AgentToolTestContext.InvokeAsync(CreateTool(toolName), services, new() { ["entryId"] = "import1", ["state"] = "Paused" });
@@ -139,6 +149,21 @@ public sealed class ContentTransferAIToolTests : IAsyncLifetime
         // Assert
         Assert.Equal(ContentTransferAIToolBase.NotAllowedMessage, result);
         Assert.Equal(ContentTransferEntryStatus.Processing, (await FindAsync("import1")).Status);
+        Assert.All(denied, name => Assert.Contains(services.GetRequiredService<FakeAuthorizationService>().Checks, check => check.Permission == name));
+    }
+
+    [Fact]
+    public async Task DeleteContentTransferEntry_QueuesAgain_AnEntryAlreadyMarkedAsDeleting()
+    {
+        // Arrange
+        await AddEntryAsync("import1", ContentTransferDirection.Import, ContentTransferEntryStatus.Deleting);
+        var services = Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteContentTransferEntryTool(), services, new() { ["entryId"] = "import1" });
+
+        // Assert: the test has no shell scope, so the tool reaches the queueing step and says it could not queue there.
+        Assert.Contains("could not be queued", result, StringComparison.Ordinal);
     }
 
     [Fact]
