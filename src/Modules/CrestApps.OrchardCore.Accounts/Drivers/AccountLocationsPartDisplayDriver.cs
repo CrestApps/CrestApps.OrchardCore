@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Accounts.Models;
+using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Accounts.ViewModels;
 using CrestApps.OrchardCore.Addresses.Core.Editing;
 using OrchardCore;
@@ -79,8 +80,7 @@ internal sealed class AccountLocationsPartDisplayDriver : ContentPartDisplayDriv
                 continue;
             }
 
-            row.Address.Name = null;
-            row.Address.Company = accountName;
+            AccountLocationRules.AddressToAccount(row.Address, accountName);
 
             var result = await _addressEditor.ValidateAsync(row.Address, context.Updater.ModelState, AddressPrefix(i), options);
 
@@ -91,12 +91,7 @@ internal sealed class AccountLocationsPartDisplayDriver : ContentPartDisplayDriv
                 continue;
             }
 
-            locations.Add(new AccountLocation
-            {
-                LocationId = string.IsNullOrEmpty(row.LocationId) ? IdGenerator.GenerateId() : row.LocationId,
-                Name = string.IsNullOrWhiteSpace(row.Name) ? result.Address.City : row.Name.Trim(),
-                Address = result.Address,
-            });
+            locations.Add(AccountLocationRules.CreateLocation(row.LocationId, row.Name, result.Address));
         }
 
         if (!valid)
@@ -137,10 +132,5 @@ internal sealed class AccountLocationsPartDisplayDriver : ContentPartDisplayDriv
 
     // A new location starts in the country of the account's first location.
     private static AddressEditorOptions EditorOptions(IEnumerable<string> countries)
-        => new()
-        {
-            ShowName = false,
-            ShowCompany = false,
-            DefaultCountry = countries?.FirstOrDefault(country => !string.IsNullOrWhiteSpace(country)),
-        };
+        => AccountLocationRules.EditorOptions(countries);
 }
