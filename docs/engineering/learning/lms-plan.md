@@ -1345,11 +1345,6 @@ Fixed test first on this branch; the red and green counts are in each commit.
 | Workflow hint shows `{ x }` (Award Credential) | The Liquid example is an argument of the localized hint. | `d6948f957` |
 | GET/POST route guard | The credential award, external tool, package upload and statement pages say `HttpGet`. | `bef4c4b02` |
 
-| Review launches report `entry = ab-initio` | A spec bug: SCORM 1.2 and SCORM 2004 give `ab-initio` only for the first launch (of an attempt), `resume` after suspend and empty otherwise. A review now gives the entry of the session it reopens. | `8f4e7cbb2` |
-| The external tools deployment step has no title | `LearningExternalToolsDeploymentStepDisplayDriver` with its views; a guard test fails for any Learning deployment step without a display driver. | `85e655950` |
-| Workflow hint shows `{ x }` (Award Credential) | The Liquid example is an argument of the localized hint. | `422686669` |
-| GET/POST route guard | The credential award, external tool, package upload and statement pages say `HttpGet`. | `9c2174fd0` |
-
 ### Phase 9: AI (branch `ma/learning-phase-9`, stacked on `ma/learning-phase-8`)
 
 **Built.**
@@ -1401,4 +1396,4 @@ Fixed test first on this branch; the red and green counts are in each commit.
 
 | Bug | Fix | Commit |
 | --- | --- | --- |
-| GET/POST route guard | `AuthoringController.Index` says `HttpGet`; every routed Learning action now declares its HTTP method. | `c4be61cbe` |
+| GET/POST route guard | `AuthoringController.Index` says `HttpGet`; every routed Learning action now declares its HTTP method. | `226722b36` |
