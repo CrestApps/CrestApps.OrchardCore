@@ -867,6 +867,51 @@ The tools need **Manage AI personas**.
 
 The tools need **Manage AI tool instances**, and **Manage AI tool instances created by others** for an instance someone else owns, as the admin page does. Credentials (API keys, bearer tokens, passwords, client secrets and OAuth tokens) and default headers are never returned, only whether each is stored, and never accepted: `saveAIToolInstance` saves the rest and returns the admin page where a person enters them. Stored credentials stay when other settings change, and the address an instance with a stored credential calls cannot be changed from a chat. Addresses must be absolute `http` or `https` addresses outside the server and its internal networks; the host name is not resolved, so the request itself must still be guarded. The settings of the Workflow source are set on its admin page.
 
+### AI provider connection tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.ConnectionManagement`
+
+| Function | Description |
+| --- | --- |
+| `listAIProviderConnections` | Lists provider connections with provider, name, title, endpoint, authentication type, whether a key is stored, whether the connection comes from configuration (read-only) and which deployments use it. With `includeProviders` it lists the providers a connection can be created for. |
+| `saveAIProviderConnection` | Creates a provider connection or changes one by ID: title, endpoint and, for Azure, the authentication type and managed identity. Saving reloads the site, which can end the current chat. Asks for approval. |
+| `deleteAIProviderConnection` | Deletes provider connections by ID, names the deployments that stop working, and reloads the site. Asks for approval. |
+
+The tools need **Manage AI provider connections**. Keys are never returned, only whether one is stored, and never accepted: a connection that cannot exist without a key (an OpenAI connection, or an Azure one with key authentication) is not created, and the result links to the admin page where a person creates it with its key. Connections defined in configuration (appsettings) cannot be changed or deleted. From inside a chat, the connection the running assistant's deployments use cannot be changed or deleted.
+
+### AI deployment and voice tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI`
+
+| Function | Description |
+| --- | --- |
+| `listAIDeployments` | Lists deployments with provider, connection, model, capabilities, prices, whether a contained key is stored, whether they come from configuration, and which slot defaults and profiles use them. Filter by provider, connection or capability; `includeOptions` lists the providers and capabilities. |
+| `saveAIDeployment` | Creates a deployment under a provider or changes one by ID: model, connection, capabilities and, for speech providers that hold their own connection, the endpoint and sign-in. The technical name never changes. Asks for approval. |
+| `setAIDeploymentPricing` | Sets or clears what a deployment costs: a currency and prices per meter, with the checks of the **Pricing** card. It only changes the cost estimates of the usage reports. |
+| `deleteAIDeployment` | Deletes deployments by ID and names the profiles that named them. The site's default deployments are skipped until another default is picked. Asks for approval. |
+| `listAIVoices` | Searches the voices of a text-to-speech deployment by text, language and gender, one page at a time with the provider's cursor. |
+| `cloneAIVoice` | Clones a voice at the provider from a recording of up to 10 MB in the media library and returns its ID. The provider may charge for it. Asks for approval. |
+| `deleteAIVoice` | Deletes a voice at the provider. It cannot be undone. Asks for approval. |
+
+The tools need **Manage AI deployments**; `cloneAIVoice` also needs the media permission for the recording's folder. A key a speech deployment holds is never returned, only whether one is stored, and never accepted: the result links to the deployment's admin page, where a person enters it. Deployments defined in configuration cannot be changed or deleted. From inside a chat, the deployments the running assistant uses (its profiles' chat and utility deployments, the site defaults they fall back to, and its persona's voice deployment) cannot be changed or deleted; their prices can.
+
+### AI quality management tools
+
+**Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Quality`
+
+| Function | Description |
+| --- | --- |
+| `listAITestRuns` | Lists the runs of a batch or a test case with status, score, pass or fail, the judge's findings, the pass rate and how many are still pending. Use it after `runAITests`. |
+| `saveAITestCase` | Creates or changes a simulation test case. `fromConversationId` starts from a real conversation, as **Create test from conversation** does. |
+| `deleteAITestCases` | Deletes test cases by ID; their runs stay. Asks for approval. |
+| `saveAIAlertRule` | Creates or changes an alert rule, or turns one on or off. A changed metric, condition, threshold or profile is checked again at once. |
+| `deleteAIAlertRule` | Deletes alert rules by ID, with their incident history. Asks for approval. |
+| `listAIQACohorts` | Lists QA cohorts: profiles, sample, criteria, passing score, judge deployment and whether each is on. |
+| `saveAIQACohort` | Creates or changes a QA cohort. An enabled cohort makes a paid judge call for every sampled conversation. Asks for approval. |
+| `deleteAIQACohort` | Deletes QA cohorts by ID; recorded scores stay. Asks for approval. |
+
+The tools need **Manage AI tests, QA cohorts and alert rules** and apply the same checks as the editors of the **Tests**, **Alert rules** and **QA** pages. Times are in the user's or the site's time zone.
+
 ### Analytics tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Chat.Analytics`

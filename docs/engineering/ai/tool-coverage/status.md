@@ -24,8 +24,8 @@ Tools that run Orchard Core's settings display drivers (`getSiteSettings`, `upda
 | 8 | Remote deployment, translations, background tasks, URL rewriting, health | [13](13-orchard-site-administration.md) | 15 | 8 | 7 | f651064cb..8bf806dfe |
 | 9 | Workflows | [14](14-orchard-automation.md) | 18 | 15 | 3 | ecc5a9144..0f31da528 |
 | 10 | Data pipelines | [14](14-orchard-automation.md) | 21 | 6 | 15 | 89f4affd8..2a331bf76 |
-
 | 11 | AI profiles and agents, profile templates, personas, tool instances | [20](20-crestapps-ai-core.md) | 18 | 18 | 0 | 40fdee087..a97e4d4f1 |
+| 12 | AI provider connections, deployments and pricing, voice library, AI quality | [20](20-crestapps-ai-core.md) | 18 | 18 | 0 | e2d901cca..41cba0083 |
 
 Orchard Core part (batches 1 to 10): 189 planned new tools, 132 built, 57 deferred. Left out on purpose: the four template tools (`listTemplates`, `getTemplate`, `saveTemplate`, `deleteTemplate`), because pull request 1321 adds shape template tools; and the six "existing, improve" rows (`listWorkflowTypes`, `getWorkflowType`, `listWorkflowActivities` and three AI tools), because phase 1 does not change existing tools.
 
@@ -107,6 +107,26 @@ The configuration guard of F4 does not exist yet, so the tools of batch 11 apply
 | `listAIToolInstances`, `saveAIToolInstance` | Settings through an explicit list per source; Workflow and unknown sources only on the admin page |
 
 `createAIProfileFromTemplate` needed one extraction: `AIProfileTemplateProfileFactory` and `AIProfileTemplateApplicator` moved unchanged from the AI module to `AI.Core` (now public), and the scenario feature check moved to `ProfileScenarioFeatureLookup` in `AI.Core`, which `ProfileScenarioCatalog` calls (commit 40fdee087).
+
+## Batch 12: AI models and AI quality
+
+No tool of batch 12 was deferred. The existing `runAITests`, `listAITestCases`, `listAIAlerts` and `summarizeAIQuality` are unchanged, although the catalog asks for `runAITests` to ask for approval; it still does not.
+
+Keys are never accepted or returned, which is stricter than the catalog rows of `saveAIProviderConnection` and `saveAIDeployment` ("write-only key"); their descriptions say so. A tool refuses any argument whose name looks like a secret and links to the admin page. Rule A covers models through `AIConfigurationGuard.GetProtectedModelsAsync` and `Profiles/AIProtectedModels.cs`: from inside an AI turn, the chat and utility deployments of every protected profile and of a running chat interaction, the site's default chat and utility deployments they fall back to, the voice deployments of the protected personas, and the connections of all of them, cannot be changed or deleted. Pricing is not guarded on purpose: it only changes cost estimates, so "set the price of gpt-4o" works even when gpt-4o is the assistant's own model.
+
+| Tool | What it does not do |
+| --- | --- |
+| `saveAIProviderConnection` | Never creates a connection that needs a key (OpenAI, or Azure with key authentication): it refuses and links to the provider's Create page. An update cannot be validated on a copy, because the provider handlers only run inside the manager's update; the tool checks the endpoint and that key authentication has a stored key first, and reports any later validation problem in `problems` |
+| `saveAIDeployment` | No model parameter limits (allowed values, minimum, maximum), no Cascaded Realtime chain. A speech deployment is saved without its key (`hasApiKey: false`, with the link); its endpoint is checked as an absolute address only, so the Azure Speech editor's "endpoint required" check is not repeated |
+| `setAIDeploymentPricing` | Free prices (amount 0) are dropped by `SetPricing`, as in the editor; the result counts them in `ignoredFreePrices` |
+| `deleteAIDeployment` | Also skips the site's default deployment of any slot, which the admin page does not; the person picks another default first |
+| Rule A for models | Realtime, speech-to-text and text-to-speech deployments a profile uses through its speech settings or a cascaded chain are not protected, only chat, utility and persona voice deployments |
+| `listAIVoices` | Cursor paging from the provider, so no `total` or `page` |
+| `cloneAIVoice` | Reads the recording from the media library instead of an upload, and needs the media folder permission too |
+| `listAITestRuns` | For a test case (no batch), the pass rate and pending count are over the page shown, as on the Runs page |
+| `saveAIAlertRule` | Email addresses are checked as addresses, which the editor does not do |
+
+The quality tools needed one extraction (commit e2d901cca): the range checks of `AITestCaseDisplayDriver`, `AIAlertRuleDisplayDriver` and `AIQACohortDisplayDriver` moved unchanged, with their sentences, into `AITestCaseValidator`, `AIAlertRuleValidator` and `AIQACohortValidator` in `AI.Core/Conversations`, which the drivers now call after applying the form. The alert rule's "checked again at once when what it watches changes" moved there too. One difference: the QA cohort driver used to accept a selection of only blank profile IDs and save a cohort with no profile; it is now refused.
 
 ## Notes for the maintainer
 
