@@ -22,6 +22,7 @@ using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using OrchardCore.Notifications;
 using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Classes;
@@ -398,6 +399,21 @@ public sealed class ClassRegistrationTests
         Assert.Equal(ClassRegistrationErrors.NoAccess, accessEnded.Error);
     }
 
+    // Hands the changes the session service queued in this scope to the appointment observers, as a site does after the
+    // commit (outside a shell scope the queue only collects them).
+    private static async Task NotifyObserversAsync(IServiceProvider services)
+    {
+        var queue = services.GetRequiredService<CrestApps.OrchardCore.Scheduling.Core.Services.AppointmentChangeQueue>();
+
+        foreach (var change in queue.Pending.ToList())
+        {
+            foreach (var observer in services.GetServices<IAppointmentObserver>())
+            {
+                await observer.OnChangedAsync(change);
+            }
+        }
+    }
+
     private static IClassRegistrationService Registrations(IServiceProvider services)
         => services.GetRequiredService<IClassRegistrationService>();
 
@@ -431,7 +447,7 @@ public sealed class ClassRegistrationTests
         return result.Enrollment;
     }
 
-    private static async Task<(CalendarTestHarness Harness, SchedulingSession Session)> CreateAsync(int capacity = 5, int? minimumMinutes = null, UserManager<IUser> users = null, TestClock clock = null)
+    private static async Task<(CalendarTestHarness Harness, SchedulingSession Session)> CreateAsync(int capacity = 5, int? minimumMinutes = null, UserManager<IUser> users = null, TestClock clock = null, Action<IServiceCollection> configure = null)
     {
         clock ??= new TestClock { UtcNow = CalendarTestHarness.Now };
         var (harness, courses, _) = await LearningTestHarness.CreateAsync(
@@ -444,6 +460,7 @@ public sealed class ClassRegistrationTests
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(clock);
                 services.AddSingleton(users ?? Users());
+                configure?.Invoke(services);
             },
             async schemaBuilder =>
             {
@@ -469,6 +486,53 @@ public sealed class ClassRegistrationTests
         var session = await SaveSessionAsync(harness, type.ItemId, [resource.ItemId], "class1", capacity);
 
         return (harness, session);
+    }
+
+    [Fact]
+    public async Task CancellingAWholeSession_TellsEachLearnerWhoHadAPlace_ButAGivenUpPlaceTellsNobody()
+    {
+        // Arrange: browser pass 2026-11-18. The cancel page said the learners are told, and nobody was.
+        var sent = new List<(object User, INotificationMessage Message)>();
+        var notifications = new Mock<INotificationService>();
+
+        notifications.Setup(service => service.SendAsync(It.IsAny<object>(), It.IsAny<INotificationMessage>(), It.IsAny<CancellationToken>()))
+            .Callback((object user, INotificationMessage message, CancellationToken _) => sent.Add((user, message)))
+            .ReturnsAsync(new NotificationSendResult());
+
+        var (h, session) = await CreateAsync(configure: services => services.AddSingleton(notifications.Object));
+        await using var _ = h;
+        var ana = await EnrollAsync(h, "ana");
+        var ben = await EnrollAsync(h, "ben");
+        var cid = await EnrollAsync(h, "cid");
+        await RegisterAsync(h, ana, session);
+        await RegisterAsync(h, ben, session);
+        await RegisterAsync(h, cid, session);
+
+        // Act: the observers hear what the session service queued for after the commit.
+        await h.RunAsync(async services =>
+        {
+            await Registrations(services).CancelAsync(cid.ItemId, "class1", "Cannot come");
+            await NotifyObserversAsync(services);
+
+            return true;
+        });
+        var afterGivingUp = sent.Count;
+        await h.RunAsync(async services =>
+        {
+            await services.GetRequiredService<ISchedulingSessionService>().CancelAsync(session.ItemId, "The trainer is ill", "admin");
+            await NotifyObserversAsync(services);
+
+            return true;
+        });
+
+        // Assert
+        Assert.Equal(0, afterGivingUp);
+        Assert.Equal(2, sent.Count);
+        Assert.All(sent, notice =>
+        {
+            Assert.Equal(ClassesConstants.SessionCancelledNotificationType, notice.Message.Type);
+            Assert.Contains("The trainer is ill", notice.Message.TextBody);
+        });
     }
 
     private static async Task<SchedulingSession> SaveSessionAsync(CalendarTestHarness h, string typeId, IList<string> resourceIds, string classItemId, int capacity)

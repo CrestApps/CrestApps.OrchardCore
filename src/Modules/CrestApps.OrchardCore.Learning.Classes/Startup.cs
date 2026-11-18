@@ -14,7 +14,9 @@ using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Notifications;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Learning.Classes;
@@ -61,5 +63,18 @@ public sealed class WorkforceStartup : StartupBase
     {
         services.TryAddScoped<ClassShiftSegmentPlanner>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAppointmentObserver, ClassShiftSegmentObserver>());
+    }
+}
+
+/// <summary>
+/// The notification type that tells learners their class session was cancelled.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
+public sealed class NotificationsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNotificationType(ClassesConstants.SessionCancelledNotificationType, LocalizationSource.Create<NotificationsStartup>("Class session cancelled"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When staff cancel a class session you had a place in."));
     }
 }

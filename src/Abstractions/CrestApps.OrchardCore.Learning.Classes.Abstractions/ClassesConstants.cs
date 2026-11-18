@@ -27,6 +27,11 @@ public static class ClassesConstants
     public const string RegistrationSource = "Learning.Class";
 
     /// <summary>
+    /// The notification type that tells a learner the class session they had a place in was cancelled.
+    /// </summary>
+    public const string SessionCancelledNotificationType = "LearningClassSessionCancelled";
+
+    /// <summary>
     /// The content types Learning classes adds.
     /// </summary>
     public static class ContentTypes

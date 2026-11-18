@@ -17,7 +17,8 @@ public static class LearningClassesCoreServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the class course item kind, class registration, the observers that complete a class item on
-    /// attendance and give up an enrollment's places when it ends, and the queue that retries their unfinished work.
+    /// attendance, give up an enrollment's places when it ends and tell learners of a cancelled session, and the queue
+    /// that retries their unfinished work.
     /// The feature's migration creates the queue's table.
     /// </summary>
     /// <param name="services">The service collection.</param>
@@ -35,6 +36,7 @@ public static class LearningClassesCoreServiceCollectionExtensions
             options.RemoveCompletedItems = true;
         });
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAppointmentObserver, ClassAttendanceObserver>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAppointmentObserver, ClassSessionCancelledObserver>());
         services.AddEnrollmentObserver<ClassEnrollmentObserver>();
         services.AddCourseItemKind<ClassPart>(ClassesConstants.ClassKind, kind =>
         {
