@@ -128,7 +128,7 @@ const AREAS = [
     inHero: true,
     icon: 'calendar-days',
     text: 'Shared calendars and bookable scheduling for people, rooms and resources.',
-    user: '/docs/user-manual/calendars/calendars',
+    user: '/docs/user-manual/calendars',
     technical: '/docs/modules/calendars',
   },
   {
