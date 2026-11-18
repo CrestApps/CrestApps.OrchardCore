@@ -181,6 +181,56 @@ public sealed class LtiDataTests
     }
 
     [Fact]
+    public async Task Round9Low_ToolAddressesMustBeHttps()
+    {
+        var result = await _fixture.InTenantAsync(async services =>
+        {
+            var manager = services.GetRequiredService<IExternalToolManager>();
+            var clients = services.GetRequiredService<ExternalToolClients>();
+            var tool = await manager.NewAsync();
+
+            tool.Name = "Plain http tool";
+            tool.ClientId = "lti-http-" + Guid.NewGuid().ToString("n");
+            tool.DeploymentId = "deployment-http";
+            tool.LoginInitiationUrl = "http://tool.example.com/login";
+            tool.TargetLinkUri = "http://tool.example.com/launch";
+            tool.JwksUrl = "http://tool.example.com/jwks";
+            clients.SetPending(tool, ["http://tool.example.com/launch"], null);
+
+            return await manager.ValidateAsync(tool);
+        });
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Errors, error => error.MemberNames.Contains(nameof(ExternalTool.LoginInitiationUrl)));
+        Assert.Contains(result.Errors, error => error.MemberNames.Contains(nameof(ExternalTool.TargetLinkUri)));
+        Assert.Contains(result.Errors, error => error.MemberNames.Contains(nameof(ExternalTool.JwksUrl)));
+        Assert.Contains(result.Errors, error => error.MemberNames.Contains("RedirectUris"));
+    }
+
+    [Fact]
+    public async Task Round9Low_AnImportedSigningKey_SignsInTheRequestThatImportedIt_OnTheRealSecretsStore()
+    {
+        // The key ring imports a key (as the Agentic Commerce upgrade does) and signs with it in the same scope: the
+        // secret it saved there must not be taken for missing, which would rotate the key at once.
+        var kid = "round9-import-" + Guid.NewGuid().ToString("n")[..8];
+
+        var signing = await _fixture.InTenantAsync(async services =>
+        {
+            var ring = services.GetRequiredService<CrestApps.OrchardCore.SigningKeys.ISigningKeyRing>();
+            var privateJwk = CrestApps.OrchardCore.SigningKeys.Core.SigningKeyJwk.Create(CrestApps.OrchardCore.SigningKeys.SigningKeyAlgorithms.RS256, kid);
+
+            await ring.ImportAsync(CrestApps.OrchardCore.Learning.Credentials.CredentialsConstants.KeySet,
+            [
+                new CrestApps.OrchardCore.SigningKeys.SigningKeyImport { Kid = kid, PrivateJwk = privateJwk, CreatedUtc = DateTime.UtcNow.AddMinutes(1) },
+            ]);
+
+            return await ring.GetSigningKeyAsync(CrestApps.OrchardCore.Learning.Credentials.CredentialsConstants.KeySet);
+        });
+
+        Assert.Equal(kid, signing.Kid);
+    }
+
+    [Fact]
     public async Task Recipe_TheExportedStep_ImportsTheToolAgain_WithTheSameIds()
     {
         // Arrange: a tool of its own, so the shared one stays.

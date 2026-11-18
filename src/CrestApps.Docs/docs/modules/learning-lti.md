@@ -28,7 +28,7 @@ The feature's migration adds the five LTI service scopes to the OpenID scopes.
 | Name, Notes | How authors pick the tool. |
 | Client ID | The tool's client id on this platform. Saving the tool creates or updates an OpenID application with this id: confidential (it signs in with its key, never a secret), with the client credentials flow, the redirect URIs below, the scopes the tool may use and the tool's key set. A client id that an OpenID application not made by External Tools already uses is refused, and such an application is never changed. |
 | Deployment ID | Sent with every launch. |
-| Login initiation URL | The tool's OIDC login initiation URL, where every launch starts. |
+| Login initiation URL | The tool's OIDC login initiation URL, where every launch starts. This address, the target link URI, the Deep Linking URL, the JWKS URL and the redirect URIs must be https (plain http only to this machine, in the Development environment). |
 | Redirect URIs | Where the tool receives launches, one a line. A launch to any other address is refused. |
 | Target link URI | The default launch URL; a course item can name another. |
 | Deep Linking URL | Where course staff pick content in the tool. Empty when the tool has no Deep Linking. |

@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Learning.Lti.Core.Services;
 using CrestApps.OrchardCore.Learning.Lti.Models;
 using CrestApps.OrchardCore.Learning.Lti.Services;
 using CrestApps.OrchardCore.Learning.Lti.ViewModels;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using Microsoft.IdentityModel.Tokens;
 using OrchardCore.Modules;
@@ -27,6 +28,7 @@ internal sealed class ExternalToolHandler : CatalogEntryHandlerBase<ExternalTool
     private readonly ExternalToolClients _clients;
     private readonly ILtiToolDirectory _tools;
     private readonly IClock _clock;
+    private readonly bool _isDevelopment;
 
     internal readonly IStringLocalizer S;
 
@@ -35,12 +37,14 @@ internal sealed class ExternalToolHandler : CatalogEntryHandlerBase<ExternalTool
         ExternalToolClients clients,
         ILtiToolDirectory tools,
         IClock clock,
+        IHostEnvironment hostEnvironment,
         IStringLocalizer<ExternalToolHandler> stringLocalizer)
     {
         _store = store;
         _clients = clients;
         _tools = tools;
         _clock = clock;
+        _isDevelopment = hostEnvironment?.IsDevelopment() == true;
         S = stringLocalizer;
     }
 
@@ -199,9 +203,10 @@ internal sealed class ExternalToolHandler : CatalogEntryHandlerBase<ExternalTool
         }
     }
 
-    private static bool IsAddress(string value)
+    // https, with no fragment; plain http only to this machine while developing (review round 9).
+    private bool IsAddress(string value)
         => Uri.TryCreate(value, UriKind.Absolute, out var uri)
-            && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
+            && (uri.Scheme == Uri.UriSchemeHttps || (_isDevelopment && uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback))
             && string.IsNullOrEmpty(uri.Fragment);
 
     public override Task DeletedAsync(DeletedContext<ExternalTool> context, CancellationToken cancellationToken = default)
@@ -219,7 +224,7 @@ internal sealed class ExternalToolHandler : CatalogEntryHandlerBase<ExternalTool
             return;
         }
 
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp) || !string.IsNullOrEmpty(uri.Fragment))
+        if (!IsAddress(value))
         {
             context.Result.Fail(new ValidationResult(S["Enter a full address that starts with https:// and has no fragment."], [member]));
         }
