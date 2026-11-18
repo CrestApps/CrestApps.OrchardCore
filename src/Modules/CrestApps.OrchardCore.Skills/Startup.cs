@@ -5,7 +5,9 @@ using CrestApps.OrchardCore.Skills.Drivers;
 using CrestApps.OrchardCore.Skills.Migrations;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Navigation;
+using CrestApps.OrchardCore.Skills.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -40,5 +42,6 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<SkillsPermissionsProvider>();
         services.AddNavigationProvider<SkillsAdminMenu>();
         services.AddSingleton<IBackgroundTask, SkillsDailyBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISkillSubjectProvider, UserSkillSubjectProvider>());
     }
 }

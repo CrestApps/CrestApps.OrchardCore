@@ -56,8 +56,8 @@ public static class StaffCoreServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Makes a staff member and their user one skill holder, so skills given to either count for both. Call it when
-    /// Skills is on.
+    /// Makes a staff member and their user one skill holder, so skills given to either count for both, and describes
+    /// staff members to Skills (names, and the staff scope for changing their skills). Call it when Skills is on.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <returns>The service collection.</returns>
@@ -66,6 +66,7 @@ public static class StaffCoreServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISkillSubjectLinkProvider, StaffSkillSubjectLinkProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISkillSubjectProvider, StaffSkillSubjectProvider>());
 
         return services;
     }
