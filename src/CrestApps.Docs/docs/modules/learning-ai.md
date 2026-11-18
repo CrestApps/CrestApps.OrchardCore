@@ -26,7 +26,7 @@ Feature ids, tool names and template ids are constants in `LearningAIConstants`;
 
 The **Learning tutor** profile template (`Templates/Profiles/learning-tutor.md`, id `learning-tutor`, listed when Learning Assistant is on) is a chat profile with the tools `getMyLearningProgress`, `getMyNextLesson` and `explainMyQuizResult`, and a system message that tells the model to answer only from the course content it is given, never to give or hint at the answers to quiz or exam questions, and to explain a quiz result only with what the result tool returns.
 
-A profile created from the template in the **New AI Profile** flow is marked as a tutor (`LearningTutorTemplateApplicationHandler` stores `LearningTutorProfileMetadata { IsTutor = true }` in the profile's properties). The **Knowledge** tab of every AI profile has a **Learning tutor** checkbox that sets the same mark, so a profile made another way (or by the `CreateAIProfileFromTemplate` recipe step, which does not run template application handlers) can be marked too. In a recipe, set `Properties.LearningTutorProfileMetadata.IsTutor` on the profile.
+A profile created from the template in the **New AI Profile** flow is marked as a tutor (`LearningTutorTemplateApplicationHandler` stores `LearningTutorProfileMetadata { IsTutor = true }` in the profile's properties). The **Knowledge** tab of every AI profile has a **Learning tutor** checkbox that sets the same mark, so a profile made another way can be marked too. The `CreateAIProfileFromTemplate` recipe step runs the template application handlers, as the New AI Profile flow does, so a tutor it makes from the template is marked; in another recipe step, set `Properties.LearningTutorProfileMetadata.IsTutor` on the profile.
 
 To answer from lessons, give the tutor profile an AI data source over a content index that holds the lesson content types (**Page lesson**, **Video lesson**, **File lesson**). Show it to learners with the AI Chat widget, for example in a layer on the learner pages.
 
@@ -40,7 +40,7 @@ Learning AI registers `LearningRetrievalFilter` through the AI Data Sources resu
 
 - **Exam content never reaches a model.** A chunk whose content item is a question (any type with `QuestionPart`), a question bank, or a quiz (`QuizLesson`, `QuizPart`, or the `Quiz` course item kind) is dropped for every profile and every person, including people who may read answer keys.
 - **A tutor** keeps only chunks of course items whose kind is in `LearningAIOptions.TutorLessonKinds` (page, video and file lessons by default), whose course has the learning assistant on, and that the Learning access decision opens to the person because of an **active enrollment** within its access dates and release rules. Course staff, authors and free previews do not count, and chunks that are not course items (other content, documents) are dropped.
-- **Any other profile** keeps course items only when the person may view them (Orchard Core's `ViewContent`, which the Learning access handler decides), and everything else as before.
+- **Any other profile** keeps course items only when the person may view them (Orchard Core's `ViewContent`, which the Learning access handler decides) and the course's learning assistant is on: the course switch holds for every profile, not only tutors. Everything else stays as before.
 
 Questions do not need to be in a data source index for this to hold, but keep question and bank types out of AI knowledge base indexes all the same: the filter drops their chunks after the search, so they only take up search results.
 

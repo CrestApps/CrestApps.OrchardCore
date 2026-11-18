@@ -146,6 +146,7 @@ internal sealed class LearningRetrievalFilter : IAIDataSourceResultFilter
                 IsCourseItem = true,
                 Kind = kind,
                 CanView = await _authorizationService.AuthorizeAsync(user, CommonPermissions.ViewContent, item),
+                AssistantEnabled = await IsAssistantOnAsync(_courseStructure.GetCourseId(item), courses),
             };
         }
 

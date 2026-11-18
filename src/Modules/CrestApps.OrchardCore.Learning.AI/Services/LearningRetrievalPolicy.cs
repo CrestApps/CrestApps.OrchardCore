@@ -46,7 +46,8 @@ internal sealed class LearningRetrievalCandidate
 /// <summary>
 /// Decides which retrieved chunks reach a model. Exam content never does. A tutor gets only lessons of the courses the
 /// learner is actively enrolled in, within the access dates and release rules, whose learning assistant is on. Any
-/// other AI profile gets course items only when the person may view them, and everything else as before.
+/// other AI profile gets course items only when the person may view them and the course's learning assistant is on
+/// (the course switch holds for every profile), and everything else as before.
 /// </summary>
 internal static class LearningRetrievalPolicy
 {
@@ -79,7 +80,7 @@ internal static class LearningRetrievalPolicy
 
         if (candidate.Found && candidate.IsCourseItem)
         {
-            return candidate.CanView;
+            return candidate.CanView && candidate.AssistantEnabled;
         }
 
         return true;

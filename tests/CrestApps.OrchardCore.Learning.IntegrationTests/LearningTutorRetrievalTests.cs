@@ -78,6 +78,44 @@ public sealed class LearningTutorRetrievalTests
     }
 
     [Fact]
+    public async Task Round9M11_ACourseItemOfACourseWithTheAssistantOff_ReachesNoProfile()
+    {
+        var setup = await _site.InTenantAsync(SetUpAsync);
+
+        // Someone who may read every lesson, through a profile that is not marked as a tutor.
+        var kept = await _site.InTenantAsync(services => FilterAsync(services, "admin", new AIProfile { ItemId = "plain" }, setup.Chunks));
+
+        Assert.DoesNotContain(kept, chunk => chunk.ReferenceId == setup.DisabledCourseLessonId);
+        Assert.Contains(kept, chunk => chunk.ReferenceId == setup.EnabledLessonId);
+    }
+
+    [Fact]
+    public async Task Round9M11_ATutorMadeByTheRecipeStep_IsMarkedAsATutor()
+    {
+        var name = "recipe-tutor-" + Guid.NewGuid().ToString("n")[..8];
+
+        await _site.InTenantAsync(services => LearningSiteFixture.RunRecipeAsync(services, new System.Text.Json.Nodes.JsonObject
+        {
+            ["name"] = "Round9TutorFromTemplate",
+            ["steps"] = new System.Text.Json.Nodes.JsonArray(new System.Text.Json.Nodes.JsonObject
+            {
+                ["name"] = "CreateAIProfileFromTemplate",
+                ["Profiles"] = new System.Text.Json.Nodes.JsonArray(new System.Text.Json.Nodes.JsonObject
+                {
+                    ["TemplateId"] = CrestApps.OrchardCore.Learning.AI.LearningAIConstants.Templates.Tutor,
+                    ["Name"] = name,
+                    ["DisplayText"] = "Recipe tutor",
+                }),
+            }),
+        }));
+
+        var profile = await _site.InTenantAsync(async services => await services.GetRequiredService<CrestApps.Core.AI.Profiles.IAIProfileManager>().FindByNameAsync(name));
+
+        Assert.NotNull(profile);
+        Assert.True(profile.TryGet<LearningTutorProfileMetadata>(out var metadata) && metadata.IsTutor);
+    }
+
+    [Fact]
     public async Task Round9H6_SeveralPhrasesSearchedAtOnce_AreFilteredOneAtATime_OnTheSitesStore()
     {
         // Arrange: the knowledge base search wrapped as AI Data Sources wraps it, with every filter of the site and a
