@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.Users.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.DisplayManagement.Notify;
@@ -93,14 +92,14 @@ public sealed class EmailOwnershipLoginFormEventTests
             EmailOwnershipLoginFormEvent.MarkCodeSignIn(httpContext);
         }
 
-        var services = new ServiceCollection()
-            .AddSingleton(notifier.Object)
-            .AddSingleton(page.Object)
-            .AddSingleton<IHttpContextAccessor>(new HttpContextAccessor { HttpContext = httpContext })
-            .AddSingleton<IHtmlLocalizer<EmailOwnershipLoginFormEvent>>(new PassThroughHtmlLocalizer<EmailOwnershipLoginFormEvent>())
-            .BuildServiceProvider();
+        var loginFormEvent = new EmailOwnershipLoginFormEvent(
+            page.Object,
+            notifier.Object,
+            new HttpContextAccessor { HttpContext = httpContext },
+            new PassThroughHtmlLocalizer<EmailOwnershipLoginFormEvent>(),
+            NullLogger<EmailOwnershipLoginFormEvent>.Instance);
 
-        await new EmailOwnershipLoginFormEvent(services, NullLogger<EmailOwnershipLoginFormEvent>.Instance).LoggedInAsync(account);
+        await loginFormEvent.LoggedInAsync(account);
 
         return notices;
     }

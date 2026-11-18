@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Users.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Users;
@@ -18,20 +17,29 @@ namespace CrestApps.OrchardCore.Users.Services;
 /// account whose credentials changed in such a session, are told on every page (<see cref="Filters.EmailOwnershipNoticeFilter"/>),
 /// and they are not told here too.
 /// </summary>
-/// <remarks>
-/// The confirmation page is resolved when the event fires, as the Customers feature's sign-in notice does: Orchard
-/// Core's user service builds the sign-in events, and the page's eligibility check needs the user manager.
-/// </remarks>
+
 public sealed class EmailOwnershipLoginFormEvent : LoginFormEventBase
 {
     private const string CodeSignInItem = "CrestApps.EmailOwnership.CodeSignIn";
 
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IEmailOwnershipConfirmationPage _confirmationPage;
+    private readonly INotifier _notifier;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger _logger;
 
-    public EmailOwnershipLoginFormEvent(IServiceProvider serviceProvider, ILogger<EmailOwnershipLoginFormEvent> logger)
+    internal readonly IHtmlLocalizer H;
+
+    public EmailOwnershipLoginFormEvent(
+        IEmailOwnershipConfirmationPage confirmationPage,
+        INotifier notifier,
+        IHttpContextAccessor httpContextAccessor,
+        IHtmlLocalizer<EmailOwnershipLoginFormEvent> htmlLocalizer,
+        ILogger<EmailOwnershipLoginFormEvent> logger)
     {
-        _serviceProvider = serviceProvider;
+        _confirmationPage = confirmationPage;
+        _notifier = notifier;
+        _httpContextAccessor = httpContextAccessor;
+        H = htmlLocalizer;
         _logger = logger;
     }
 
@@ -55,22 +63,19 @@ public sealed class EmailOwnershipLoginFormEvent : LoginFormEventBase
             UserCredentialsProof.CountCredentials(account) < 2 ||
             !UserCredentialsProof.HasCredentialsInDoubt(account) ||
             UserCredentialsProof.ChangedInCodeSession(account) ||
-            _serviceProvider.GetService<IHttpContextAccessor>()?.HttpContext?.Items.ContainsKey(CodeSignInItem) == true ||
-            _serviceProvider.GetService<IEmailOwnershipConfirmationPage>() is not { } confirmationPage)
+            _httpContextAccessor.HttpContext?.Items.ContainsKey(CodeSignInItem) == true)
         {
             return;
         }
 
         try
         {
-            if (await confirmationPage.GetUrlAsync(account) is not { } url)
+            if (await _confirmationPage.GetUrlAsync(account) is not { } url)
             {
                 return;
             }
 
-            var H = _serviceProvider.GetRequiredService<IHtmlLocalizer<EmailOwnershipLoginFormEvent>>();
-
-            await _serviceProvider.GetRequiredService<INotifier>().WarningAsync(H["This account has a password or other sign-ins that were added before this email address was confirmed as yours. If you didn't add them, <a href=\"{0}\">confirm it's you</a> to remove them.", url]);
+            await _notifier.WarningAsync(H["This account has a password or other sign-ins that were added before this email address was confirmed as yours. If you didn't add them, <a href=\"{0}\">confirm it's you</a> to remove them.", url]);
         }
         catch (Exception exception)
         {
