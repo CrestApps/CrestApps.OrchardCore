@@ -1064,3 +1064,12 @@ The ten new workflow activities are listed in the workflow designer's activity l
 **Not checked in the browser.** Drop-lowest with several items, the close date refusing work, a regrade, the data source in a report, the recipe step, erasure of a learner's submissions, and the workflow events on a live workflow (all unit-tested).
 
 **Fixed while verifying.** The rubric editor failed with a 500 because its row partial was outside `Views/Shared`; an integration test now opens the rubric and coursework editors. "(1 points)" now reads "(1 point)". Known and not fixed: the player's browser title repeats the item's name for every item kind (the item's Detail display and the breadcrumb both add it).
+
+**Browser pass 2026-11-18.** Fixed test first on this branch; the red and green counts are in each commit.
+
+| Bug | Fix | Commit |
+| --- | --- | --- |
+| "Grade again" leads a grader to a 403 | The grading form and **Return for resubmission** show on graded work only to someone with Override grades. | `1bc1ae005` |
+| Data sets show raw ids (Submissions) | The course and coursework ids reference their content items, as the learner and grader already referenced the users. | `d108faca0` |
+| Workflow hint shows `{ x }` (Return Coursework For Resubmission) | The Liquid example is an argument of the localized hint. | `381d36df7` |
+| GET/POST route guard | The coursework grading pages say `HttpGet`. | `f67bb7271` |
