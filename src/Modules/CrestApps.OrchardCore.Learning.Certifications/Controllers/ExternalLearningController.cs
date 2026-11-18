@@ -36,6 +36,7 @@ public sealed class ExternalLearningController : Controller
         H = htmlLocalizer;
     }
 
+    [HttpGet]
     [Admin("learning/external-learning", "LearningExternalLearning")]
     public async Task<IActionResult> Index(ExternalLearningState? state, PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
     {
@@ -64,6 +65,7 @@ public sealed class ExternalLearningController : Controller
         });
     }
 
+    [HttpGet]
     [Admin("learning/external-learning/{id}", "LearningExternalLearningReview")]
     public async Task<IActionResult> Review(string id, [FromServices] LearnerUserLookup users)
     {
@@ -131,6 +133,7 @@ public sealed class ExternalLearningController : Controller
     /// <summary>
     /// Opens the evidence of external learning, to reviewers and to the person who recorded it.
     /// </summary>
+    [HttpGet]
     [Route("learning/external-learning/{id}/evidence")]
     public async Task<IActionResult> Evidence(string id, [FromServices] IProtectedFileLinks<ExternalLearningEvidence> links)
     {

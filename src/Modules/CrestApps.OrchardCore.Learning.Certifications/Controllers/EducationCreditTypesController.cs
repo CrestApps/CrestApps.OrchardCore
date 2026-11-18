@@ -29,6 +29,7 @@ public sealed class EducationCreditTypesController : Controller
         H = htmlLocalizer;
     }
 
+    [HttpGet]
     [Admin("learning/credit-types", "LearningCreditTypes")]
     public async Task<IActionResult> Index()
     {
@@ -43,6 +44,7 @@ public sealed class EducationCreditTypesController : Controller
         });
     }
 
+    [HttpGet]
     [Admin("learning/credit-types/edit/{id?}", "LearningCreditTypesEdit")]
     public async Task<IActionResult> Edit(string id)
     {

@@ -33,6 +33,7 @@ public sealed class MyRequiredLearningController : Controller
     /// <summary>
     /// Lists what is required of the signed-in person and the paths they are on.
     /// </summary>
+    [HttpGet]
     [Route("learning/required")]
     public async Task<IActionResult> Index([FromServices] IServiceProvider services)
     {

@@ -47,6 +47,7 @@ public sealed class LearningPathsController : Controller
     /// <summary>
     /// Lists the people on a path.
     /// </summary>
+    [HttpGet]
     [Admin("learning/paths/{id}/people", "LearningPathPeople")]
     public async Task<IActionResult> People(string id, LearningPathState? state, PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
     {

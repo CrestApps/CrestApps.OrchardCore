@@ -45,6 +45,7 @@ public sealed class TeamLearningController : Controller
     /// <summary>
     /// Lists the team and their required learning.
     /// </summary>
+    [HttpGet]
     [Admin("learning/team", "TeamLearning")]
     public async Task<IActionResult> Index()
     {

@@ -65,6 +65,7 @@ public sealed class RequiredLearningController : Controller
     /// <summary>
     /// Lists the rules.
     /// </summary>
+    [HttpGet]
     [Admin("learning/required", "RequiredLearning")]
     public async Task<IActionResult> Index(string search)
     {
@@ -88,6 +89,7 @@ public sealed class RequiredLearningController : Controller
     /// <summary>
     /// Shows the editor of a new or existing rule.
     /// </summary>
+    [HttpGet]
     [Admin("learning/required/edit/{id?}", "RequiredLearningEdit")]
     public async Task<IActionResult> Edit(string id)
     {
@@ -293,6 +295,7 @@ public sealed class RequiredLearningController : Controller
     /// <summary>
     /// Lists who a rule covers today, without changing anything.
     /// </summary>
+    [HttpGet]
     [Admin("learning/required/preview/{id}", "RequiredLearningPreview")]
     public async Task<IActionResult> Preview(string id)
     {
@@ -333,6 +336,7 @@ public sealed class RequiredLearningController : Controller
     /// <summary>
     /// Lists the people under a rule and their state.
     /// </summary>
+    [HttpGet]
     [Admin("learning/required/{id}/people", "RequiredLearningPeople")]
     public async Task<IActionResult> People(string id, RequiredLearningState? state, PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
     {
@@ -377,6 +381,7 @@ public sealed class RequiredLearningController : Controller
     /// <summary>
     /// Shows the form that exempts a person.
     /// </summary>
+    [HttpGet]
     [Admin("learning/required/exempt/{id}", "RequiredLearningExempt")]
     public async Task<IActionResult> Exempt(string id)
     {
@@ -500,6 +505,7 @@ public sealed class RequiredLearningController : Controller
     /// <summary>
     /// Opens the evidence of an exemption.
     /// </summary>
+    [HttpGet]
     [Admin("learning/required/evidence/{id}", "RequiredLearningEvidence")]
     public async Task<IActionResult> Evidence(string id, [FromServices] IProtectedFileLinks<RequiredLearningEvidence> links)
     {

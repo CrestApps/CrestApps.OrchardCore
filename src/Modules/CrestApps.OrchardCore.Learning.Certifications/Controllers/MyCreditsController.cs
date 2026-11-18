@@ -38,6 +38,7 @@ public sealed class MyCreditsController : Controller
         S = stringLocalizer;
     }
 
+    [HttpGet]
     [Route("learning/credits")]
     public async Task<IActionResult> Index()
         => View(await BuildAsync(new MyExternalLearningForm()));
