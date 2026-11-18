@@ -54,7 +54,9 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
             model.Level = part.Level;
             model.EstimatedMinutes = part.EstimatedMinutes;
             model.EnrollmentMode = part.EnrollmentMode;
-            model.HasEnrollmentKey = await _keyStore.HasKeyAsync(courseId);
+            // A course that was never saved has no key, even when this request wrote one before another part of the
+            // form refused the save: the write is thrown away with the item.
+            model.HasEnrollmentKey = part.ContentItem.Id != 0 && await _keyStore.HasKeyAsync(courseId);
             model.AccessDays = part.AccessDays;
             model.PassMark = part.PassMark;
             model.MinimumGrade = ReadDecimal(part, LearningRuleNames.MinimumGrade, "Grade");
