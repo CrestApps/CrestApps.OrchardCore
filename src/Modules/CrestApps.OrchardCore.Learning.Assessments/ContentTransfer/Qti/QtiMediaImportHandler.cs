@@ -2,18 +2,23 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.FileStorage;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Qti;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Media;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.ContentTransfer.Qti;
 
 /// <summary>
-/// Stores the images of an imported QTI item in the media library, in a folder of the import, and writes their addresses
-/// in the prompt and the feedback. A row whose images cannot be stored fails rather than keeping a broken picture. Only a
-/// row the QTI reader wrote is read: the media column of any other file (a spreadsheet, say) is ignored, and every image
-/// must be of the parser's image types, with the bytes of one.
+/// Stores the images of an imported QTI item and writes their addresses in the prompt and the feedback. A picture the
+/// prompt shows goes to the media library, in a folder of the import, as learners see it while they answer. A picture
+/// only the general feedback shows goes to a protected file area (<see cref="QtiFeedbackImages"/>) and is served to
+/// staff, and to a learner once their review shows the feedback, so it cannot give the answer away before (review round
+/// 9). A row whose images cannot be stored fails rather than keeping a broken picture. Only a row the QTI reader wrote is
+/// read: the media column of any other file (a spreadsheet, say) is ignored, and every image must be of the parser's
+/// image types, with the bytes of one.
 /// </summary>
 internal sealed class QtiMediaImportHandler : IContentImportHandler
 {
@@ -22,9 +27,14 @@ internal sealed class QtiMediaImportHandler : IContentImportHandler
     /// </summary>
     public const string MediaFolder = "qti-imports";
 
-    private static readonly string[] _htmlColumns = ["QuestionPart_Prompt", "QuestionPart_GeneralFeedback"];
+    private const string PromptColumn = "QuestionPart_Prompt";
+    private const string FeedbackColumn = "QuestionPart_GeneralFeedback";
+
+    private static readonly string[] _htmlColumns = [PromptColumn, FeedbackColumn];
 
     private readonly IMediaFileStore _mediaFileStore;
+    private readonly IProtectedFileStore<QtiFeedbackImages> _feedbackImages;
+    private readonly ShellSettings _shellSettings;
     private readonly MediaOptions _mediaOptions;
     private readonly IEnumerable<IContentTransferFileFormatProvider> _formats;
 
@@ -32,11 +42,15 @@ internal sealed class QtiMediaImportHandler : IContentImportHandler
 
     public QtiMediaImportHandler(
         IMediaFileStore mediaFileStore,
+        IProtectedFileStore<QtiFeedbackImages> feedbackImages,
+        ShellSettings shellSettings,
         IOptions<MediaOptions> mediaOptions,
         IEnumerable<IContentTransferFileFormatProvider> formats,
         IStringLocalizer<QtiMediaImportHandler> stringLocalizer)
     {
         _mediaFileStore = mediaFileStore;
+        _feedbackImages = feedbackImages;
+        _shellSettings = shellSettings;
         _mediaOptions = mediaOptions.Value;
         _formats = formats;
         S = stringLocalizer;
@@ -111,22 +125,37 @@ internal sealed class QtiMediaImportHandler : IContentImportHandler
                 return;
             }
 
+            var reference = WebUtility.HtmlEncode(QtiMediaFile.Scheme + file.Path);
+
+            // A picture the prompt does not show is the feedback's alone: it could give the answer away, so it is kept
+            // out of the media library.
+            var feedbackOnly = !(context.Columns.Contains(PromptColumn) && (context.Row[PromptColumn]?.ToString() ?? string.Empty).Contains(reference, StringComparison.Ordinal));
+            string url;
+
             try
             {
                 using var stream = new MemoryStream(content, writable: false);
 
-                // The folder is the import's own, so a run of the same import writes the same file again.
-                await _mediaFileStore.CreateFileFromStreamAsync(path, stream, overwrite: true);
+                if (feedbackOnly)
+                {
+                    var stored = await _feedbackImages.SaveAsync(Path.GetFileName(path), stream);
+                    url = FeedbackImageUrl(stored.FileId);
+                }
+                else
+                {
+                    // The folder is the import's own, so a run of the same import writes the same file again.
+                    await _mediaFileStore.CreateFileFromStreamAsync(path, stream, overwrite: true);
+                    url = _mediaFileStore.MapPathToPublicUrl(path);
+                }
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                context.Fail(S["The image {0} could not be stored in the media library: {1}", file.Path, exception.Message], S["Not imported from QTI"]);
+                context.Fail(S["The image {0} could not be stored: {1}", file.Path, exception.Message], S["Not imported from QTI"]);
 
                 return;
             }
 
-            var reference = WebUtility.HtmlEncode(QtiMediaFile.Scheme + file.Path);
-            var url = WebUtility.HtmlEncode(_mediaFileStore.MapPathToPublicUrl(path));
+            url = WebUtility.HtmlEncode(url);
 
             foreach (var column in _htmlColumns)
             {
@@ -151,6 +180,10 @@ internal sealed class QtiMediaImportHandler : IContentImportHandler
     /// <inheritdoc />
     public Task ExportAsync(ContentExportContext context)
         => Task.CompletedTask;
+
+    // The address of a feedback picture, under the tenant's prefix as the media library's are.
+    private string FeedbackImageUrl(string fileId)
+        => (string.IsNullOrEmpty(_shellSettings.RequestUrlPrefix) ? string.Empty : "/" + _shellSettings.RequestUrlPrefix) + "/" + QtiFeedbackImages.PathOf(fileId);
 
     /// <summary>
     /// Returns the media path of an image of a package: under the folder of the import, each segment of its package path

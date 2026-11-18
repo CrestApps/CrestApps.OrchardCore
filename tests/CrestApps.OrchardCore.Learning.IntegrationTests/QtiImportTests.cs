@@ -128,6 +128,57 @@ public sealed class QtiImportTests
         Assert.Equal(2, bankless);
     }
 
+    [Fact]
+    public async Task Round9Low_AFeedbackOnlyPicture_StaysOutOfTheMediaLibrary_AndOnlyStaffReadIt()
+    {
+        // Arrange: an item whose prompt and general feedback each show a picture of their own.
+        var bankId = await _fixture.InTenantAsync(async services =>
+        {
+            var contentManager = services.GetRequiredService<IContentManager>();
+            var bank = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.QuestionBank);
+            bank.Alter<TitlePart>(part => part.Title = "QTI feedback picture bank");
+            await contentManager.CreateAsync(bank, VersionOptions.Published);
+
+            return bank.ContentItemId;
+        });
+
+        // Act
+        var entry = await ImportAsync(FeedbackPackage(), bankId, "feedback.zip");
+        var part = Assert.Single(await QuestionsAsync(bankId)).Get<QuestionPart>(nameof(QuestionPart));
+        var promptPath = $"qti-imports/{entry.EntryId}/items/images/sign.png";
+        var feedbackPath = $"qti-imports/{entry.EntryId}/items/images/answer.png";
+        var (promptStored, feedbackStored) = await _fixture.InTenantAsync(async services =>
+        {
+            var media = services.GetRequiredService<IMediaFileStore>();
+
+            return (await media.GetFileInfoAsync(promptPath), await media.GetFileInfoAsync(feedbackPath));
+        });
+
+        // Assert: the prompt's picture is in the media library, as learners see it while they answer; the feedback's is
+        // not, and is served only to staff (a learner reads it only once their attempt's review shows the feedback).
+        Assert.Contains(promptPath, part.Prompt, StringComparison.Ordinal);
+        Assert.NotNull(promptStored);
+        Assert.Null(feedbackStored);
+        Assert.DoesNotContain("qti-imports", part.GeneralFeedback, StringComparison.Ordinal);
+        Assert.DoesNotContain("qti-media:", part.GeneralFeedback, StringComparison.Ordinal);
+
+        var source = System.Text.RegularExpressions.Regex.Match(part.GeneralFeedback, "src=\"([^\"]+)\"").Groups[1].Value;
+        Assert.Contains("learning/assessments/feedback-images/", source, StringComparison.Ordinal);
+
+        var address = new Uri(_fixture.BaseAddress, System.Net.WebUtility.HtmlDecode(source));
+        using var admin = await _fixture.CreateClientAsync("admin");
+        using var learner = await _fixture.CreateClientAsync("learner1");
+        using var anonymous = new HttpClient { BaseAddress = _fixture.BaseAddress };
+        var byAdmin = await admin.GetAsync(address, TestContext.Current.CancellationToken);
+        var byLearner = await learner.GetAsync(address, TestContext.Current.CancellationToken);
+        var byAnonymous = await anonymous.GetAsync(address, TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, byAdmin.StatusCode);
+        Assert.Equal("image/png", byAdmin.Content.Headers.ContentType?.MediaType);
+        Assert.NotEqual(System.Net.HttpStatusCode.OK, byLearner.StatusCode);
+        Assert.NotEqual(System.Net.HttpStatusCode.OK, byAnonymous.StatusCode);
+    }
+
     private async Task<ContentTransferEntry> ImportAsync(byte[] package, string bankId, string uploadedFileName = "bank.zip")
     {
         var entryId = await QueueAndRunAsync(package, bankId, uploadedFileName);
@@ -200,6 +251,46 @@ public sealed class QtiImportTests
 
             return items.Where(item => item.Latest).ToList();
         });
+
+    private static byte[] FeedbackPackage()
+    {
+        var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==");
+        var files = new (string Name, byte[] Content)[]
+        {
+            ("imsmanifest.xml", Encoding.UTF8.GetBytes("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <manifest xmlns="http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1" identifier="M">
+                  <resources>
+                    <resource identifier="essay" type="imsqti_item_xmlv3p0" href="items/essay.xml"><file href="items/essay.xml"/></resource>
+                  </resources>
+                </manifest>
+                """)),
+            ("items/essay.xml", Encoding.UTF8.GetBytes($"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <qti-assessment-item xmlns="{Namespace30}" identifier="essay" title="essay" adaptive="false" time-dependent="false">
+                <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="string"/>
+                <qti-outcome-declaration identifier="COMPLETION" cardinality="single" base-type="identifier"/>
+                <qti-item-body><p><img src="images/sign.png" alt="Sign"/></p><p>What does the sign ask of you?</p><qti-extended-text-interaction response-identifier="RESPONSE"/></qti-item-body>
+                <qti-modal-feedback outcome-identifier="COMPLETION" identifier="done" show-hide="show"><p><img src="images/answer.png" alt="The answer"/></p></qti-modal-feedback>
+                </qti-assessment-item>
+                """)),
+            ("items/images/sign.png", png),
+            ("items/images/answer.png", png),
+        };
+
+        using var stream = new MemoryStream();
+
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var (name, content) in files)
+            {
+                using var writer = archive.CreateEntry(name).Open();
+                writer.Write(content);
+            }
+        }
+
+        return stream.ToArray();
+    }
 
     private static byte[] Package()
     {

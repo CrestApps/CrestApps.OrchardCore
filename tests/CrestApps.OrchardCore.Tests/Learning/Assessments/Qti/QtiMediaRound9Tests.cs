@@ -66,6 +66,8 @@ public sealed class QtiMediaRound9Tests
 
         var services = new ServiceCollection()
             .AddSingleton(store.Object)
+            .AddSingleton(Mock.Of<CrestApps.OrchardCore.FileStorage.IProtectedFileStore<CrestApps.OrchardCore.Learning.Assessments.Core.Qti.QtiFeedbackImages>>(MockBehavior.Strict))
+            .AddSingleton(new global::OrchardCore.Environment.Shell.ShellSettings())
             .AddSingleton(Options.Create(new MediaOptions
             {
                 AllowedFileExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".svg" },

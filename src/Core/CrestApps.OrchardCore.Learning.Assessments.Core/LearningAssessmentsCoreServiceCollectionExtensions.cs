@@ -27,6 +27,7 @@ public static class LearningAssessmentsCoreServiceCollectionExtensions
         services.TryAddScoped<IAssessmentContentSource, DefaultAssessmentContentSource>();
         services.TryAddScoped<AttemptReviewPolicy>();
         services.TryAddScoped<GradingScope>();
+        services.TryAddScoped<QtiFeedbackImageAccess>();
         services.TryAddScoped<GradingQueue>();
         services.AddGradingQueueSource<AttemptGradingQueueSource>();
         services.AddAttemptObserver<AssessmentsTelemetryObserver>();

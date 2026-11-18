@@ -63,6 +63,9 @@ public sealed class Startup : StartupBase
 
         services.AddLearningAssessmentsCore();
 
+        // The pictures only imported QTI feedback shows, kept out of the media library (review round 9).
+        services.AddProtectedFileArea<CrestApps.OrchardCore.Learning.Assessments.Core.Qti.QtiFeedbackImages>(CrestApps.OrchardCore.Learning.Assessments.Core.Qti.QtiFeedbackImages.Folder);
+
         services.AddContentPart<QuestionPart>()
             .UseDisplayDriver<QuestionPartDisplayDriver>();
         services.AddContentPart<ChoiceQuestionPart>()
