@@ -1240,6 +1240,84 @@ These tools are meant for a customer-facing shopping assistant and also work for
 | `addToStoreCart` | Adds an item (item id and quantity) to the caller's own cart and returns the cart. |
 | `getStoreCart` | Returns the caller's own cart: its items, prices, subtotal and the cart page link. |
 
+### User display name tool
+
+**Available when:** `CrestApps.OrchardCore.Users.DisplayName` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `setUserDisplayName` | Sets a user's first, middle, last and display name. Names left out keep their value; an empty text clears one. Fails when the **User Display Name** settings require a name that would be empty. |
+
+The tool needs **Edit users** on that user, as the name card of the user editor does, and saves through the user manager, so the user event handlers and the name index run.
+
+### User avatar tool
+
+**Available when:** `CrestApps.OrchardCore.Users.Avatars` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `setUserAvatar` | Sets a user's avatar from an image already in the media library (a path such as `people/ana.png`, or its `/media/` address), or clears it. |
+
+The tool needs **Manage media**, as the avatar card does, and **Edit users** on that user. The file must exist and have an extension the media library allows whose type is an image. Clearing is refused when the **User Avatars** settings require an avatar. Upload the image first with the media tools.
+
+### Content access tools
+
+**Available when:** `CrestApps.OrchardCore.ContentAccessControl` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `getContentItemAccessRoles` | Tells which roles may view a content item, whether its content type restricts access at all, and, per restricting Role Picker part, the roles of the published item and of a pending draft, the part's rules and the roles it offers. |
+| `setContentItemAccessRoles` | Sets the roles that may view a content item in a Role Picker part with **Restrict content** on. An empty list makes the item visible to everyone who may view content. Asks for approval. |
+
+Both tools need **Edit content** on the item. Roles must exist and not be excluded by the part, and the part's **Required** and **Allow select multiple** settings apply, as in the item's editor. A type with several restricting parts needs the part's name. A published item with no pending draft is published again with the new roles, which also needs **Publish content** on it; an item with unpublished changes is never published by the tool, because that would publish the other changes too: pass `saveAsDraft` to save the roles in the draft. Administrators can always view restricted items. Turning restriction on for a content type is a change to its definition.
+
+### Structured data check tool
+
+**Available when:** `CrestApps.OrchardCore.Seo` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `getContentItemStructuredData` | Returns the JSON-LD a published content item's page publishes, built by the same engine as the page, or says that its content type describes none or that pages publish none. |
+
+The tool needs **View content** on the published item, so a restricted item is refused as it is on the site. Nodes that other shapes on the page add while it renders, such as a list's items, are not included.
+
+### Child tenant tools
+
+**Available when:** `CrestApps.OrchardCore.TenantHierarchy.Parent` with `CrestApps.OrchardCore.AI` on, in a parent tenant
+
+| Function | Description |
+| --- | --- |
+| `listChildTenants` | Lists the child tenants with entry id, name, address, state, description and creation date, by text and state, and optionally the child limit, address pattern, grace period and setup recipes the platform allows. Offers the open link for the child tenants the caller may enter. |
+| `saveChildTenant` | Creates a child tenant from a name, a slug, a description and one of the allowed setup recipes, and queues its setup, or changes the name, slug and description of one. Asks for approval. |
+| `changeChildTenantState` | Suspends, resumes or reloads up to 50 child tenants. Asks for approval. |
+| `removeChildTenant` | Removes a suspended child tenant and its database, at once or after the grace period. Needs its exact display name. Asks for approval. |
+| `restoreChildTenant` | Cancels a pending removal; the child tenant stays suspended. Asks for approval. |
+| `retryChildTenantSetup` | Removes a failed child tenant and creates it again with the same name, address and recipe, and queues its setup. Asks for approval. |
+| `discardChildTenant` | Discards a failed setup, or dismisses the entry of a child tenant the platform removed or moved. Asks for approval. |
+| `listChildTenantFeatures` | Lists the features a running child tenant may change, with whether each is on. |
+| `setChildTenantFeatures` | Enables or disables features of a running child tenant. Features the Features screen does not offer, such as blocked ones, are ignored and listed. Asks for approval. |
+| `listChildTenantAccessGrants` | Lists who may enter every child tenant or one child tenant, with the parent roles and child roles a grant can use. |
+| `grantChildTenantAccess` | Lets a parent user or role enter one child tenant or every one, with child roles the Access screen offers. Replaces the roles of an existing grant and says so. Asks for approval. |
+| `revokeChildTenantAccess` | Removes an access grant. Asks for approval. |
+
+Each tool needs the permission of the child tenants page action it mirrors: **View child tenants** to list, **Create child tenants** to create, retry and discard a failed setup, **Edit, suspend, resume and reload child tenants** to change, change the state and dismiss, **Remove child tenants** to remove and restore, **Enable and disable features in child tenants** for features and **Manage who may enter child tenants** for grants. The address is only a slug, checked as the page checks it (format, reserved names, the parent's address pattern, addresses in use), and the recipe must be one the parent's policy allows; no tool takes a host, a URL prefix, a database or a connection string, and none is returned. The child tenants page queues a new tenant's setup until its request ends, which a chat does not have, so the tools queue it to run when the chat's reply ends; nothing is created when it cannot be queued. Follow the setup with `listChildTenants`. Entering a child tenant is a browser sign-in and has no tool. The activity of child tenants is in the audit trail.
+
+### Tenant hierarchy platform tools
+
+**Available when:** `CrestApps.OrchardCore.TenantHierarchy.Platform` with `CrestApps.OrchardCore.AI` on, in the Default tenant
+
+| Function | Description |
+| --- | --- |
+| `getTenantHierarchyOverview` | Shows the parent tenants with their children, the orphaned children, the tenants that can become parents, the database pools and whether the host guard is installed; for one parent, its policy, children and the problems found. |
+| `saveParentTenant` | Makes an ordinary tenant a parent (slug, display name, policy) or changes a parent's display name and policy. Fields left out keep their value. Asks for approval. |
+| `changeParentTenantState` | Suspends a parent with its running children, or resumes it with the children suspended with it. Asks for approval. |
+| `unmakeParentTenant` | Turns a parent without children back into an ordinary tenant. Asks for approval. |
+| `removeParentTenant` | Removes a suspended parent and all its children with their data. Needs the parent's exact tenant name. Asks for approval. |
+| `moveChildTenant` | Moves a child tenant to another parent, or gives an orphan a parent. Asks for approval. |
+| `detachChildTenant` | Makes an orphaned child tenant an ordinary tenant. Asks for approval. |
+
+The tools need **Manage the tenant hierarchy**. A policy change is applied on top of the stored policy, so a field not given, such as the blocked features or the allowed recipes, keeps its value; lists given replace the stored lists, and recipes must be setup recipes of the site. Session times are given in minutes and hours, as in the policy editor. A tenant's connection string, secret and database settings are never returned.
+
 ## Tool permissions
 
 Tool permissions decide who may **attach** a tool, and, for chat interactions, who may **use** it. They do not limit who may use the tools of an AI profile: for a profile, the profile itself is the authorization boundary.
