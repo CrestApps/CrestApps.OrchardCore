@@ -1390,6 +1390,57 @@ The territory tools need **Manage service territories** and run the same checks 
 
 `listAccounts` needs **List content** and searches only the account types the caller may view. The other tools need **Edit content** on the account, and `setAccountMembers` also needs **Manage the users who sign in for accounts**. Saving an account with `createOrUpdateContentItem` skips the rules of the account editor's members, locations and team parts; these tools apply them: each member must be an existing user who belongs to no other account (nothing changes when one does not qualify), a location's address is checked against its country's rules and addressed to the account, and team members must be staff. A published account with no pending draft is published again with the change, which needs **Publish content**; an account with unpublished changes is changed only with `saveAsDraft`. Orders and work orders keep their own copy of a removed location's address.
 
+### Business buying and price list tools
+
+**Available when:** `CrestApps.OrchardCore.Accounts.B2B` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `getB2BAccountSummary` | Returns an account's business-buying setup and standing: enabled, terms, credit limit and available credit, amount owed, open term invoices, monthly budget and spend, price list, buyers with their order limits, and whether punchout is on. |
+| `saveB2BAccountSettings` | Turns business buying on or off for an account and sets tax id, billing email, payment terms, price list, monthly budget and per-buyer order limits. Only the settings given change. |
+| `configureB2BPunchout` | Enables or disables punchout for an account and chooses the member the procurement system shops as. Asks for approval. |
+| `listPriceLists` | Lists price lists with their percent off, currency and entry count, filtered by name; pass an id to get its prices by SKU. |
+| `savePriceList` | Creates or updates a price list: name, percent off and unit prices by SKU, in the store's currency. Prices given replace the stored ones. |
+| `deletePriceList` | Deletes a price list. The accounts on it pay the store's prices. Asks for approval. |
+
+Every tool needs **Manage B2B accounts**. The account tools also need **View content** (`getB2BAccountSummary`) or **Edit content** (the other two) on the account, and save it as the account editor does: a published account with no pending draft is published again, which needs **Publish content**, and an account with unpublished changes is changed only with `saveAsDraft`. The rules are the Business buying card's: net days from 0 to 365, a deposit from 0 to 100 percent, no negative credit limit or budget, and a punchout buyer who is a member of the account and not a site administrator. Order limits are given by a member's user name or email; a user who is not a member, or a price list that does not exist, is refused. Amounts are in the store's currency.
+
+A punchout key is a credential: no tool issues, returns or accepts one. The first key and a new key are issued in the Business buying card of the account's editor, which shows the key once, so `configureB2BPunchout` refuses to turn punchout on for an account that has no key and returns the editor's address. The summary says only whether a key exists and when it was made.
+
+### Customer tools
+
+**Available when:** `CrestApps.OrchardCore.Customers` with `CrestApps.OrchardCore.AI` on; `adjustCustomerStoreCredit` with `CrestApps.OrchardCore.Customers.StoreCredit`, and `adjustCustomerLoyaltyPoints` with `CrestApps.OrchardCore.Customers.Loyalty`
+
+| Function | Description |
+| --- | --- |
+| `listCustomers` | Finds customers by the start of their name, company or email, with the filters of the customer list (Active, WithAccount, Guests, Businesses, Disabled, All) and paging. |
+| `getCustomer` | Returns one customer's profile, addresses, recent orders, merge history, privacy log and, when those features are on, store credit balances and loyalty points. |
+| `saveCustomer` | Creates a customer or updates one: kind, status (Active or Disabled), names, company, tax id and exemption, phone, marketing consent, and email for guests only. Only the fields given change. |
+| `saveCustomerAddress` | Adds an address to a customer's address book or updates one by id, after checking it against the country's rules; can mark it as the default billing or shipping address. |
+| `deleteCustomerAddress` | Deletes one address from a customer's address book. Asks for approval. |
+| `exportCustomerData` | Returns the link that downloads everything the store holds on a customer, for a data access request. Asks for approval. |
+| `eraseCustomerData` | Erases a customer's personal data and the personal details on their orders, for an erasure request. It cannot be undone. Asks for approval. |
+| `adjustCustomerStoreCredit` | Adds or removes store credit for a customer in a currency, with a reason. Asks for approval. |
+| `adjustCustomerLoyaltyPoints` | Adds or removes loyalty points for a customer, with a reason. Asks for approval. |
+
+Reading needs **View customers** and every change needs **Manage customers**, as on the Customers pages. The tools apply the customer form's rules: a business needs a company name, a customer needs a name, a company or an email, an account holder's email comes from their user account, and an anonymized customer cannot be edited; an anonymized or merged customer's address book cannot change.
+
+`exportCustomerData` never puts the customer's data in the conversation: it returns the address of the customer page's Export action, which checks the permission again, builds the JSON file and records the export in the privacy log when it is opened. `eraseCustomerData` runs the same erasure as the customer page, through every module's personal-data contributor, and records it in the privacy log under the caller's name.
+
+Store credit and points are money. The two adjustment tools pass the balance cards' checks (only a customer with an account, an amount that is not zero, a three-letter currency, a reason), change the balance under the checkout's lock, and keep the reason and the caller's user name with the activity. A balance never goes below zero; the result reports the change actually made.
+
+### Team tools
+
+**Available when:** `CrestApps.OrchardCore.Teams` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listTeams` | Lists the team hierarchy (organization, regions, sites, departments, teams, crews) with id, kind, parent, linked role, time zone and whether each is enabled; filter by name. |
+| `saveTeam` | Creates or updates a team: name, kind, parent, description, linked role, time zone and enabled. Only the fields given change. |
+| `deleteTeam` | Deletes a team. It is refused, with the reasons, while the team still has sub-teams or another module still depends on it. Asks for approval. |
+
+The tools need **Manage teams**, as the Teams pages do. They write through the team manager, so its rules apply: a name is required, the parent must exist, a team cannot be placed under itself or one of its sub-teams, and the time zone must be a valid IANA id. `saveTeam` changes the core fields only; the cards other modules add to the team editor, such as Workforce or Contact Center settings, keep their values. Team memberships are set on the staff member.
+
 ## Tool permissions
 
 Tool permissions decide who may **attach** a tool, and, for chat interactions, who may **use** it. They do not limit who may use the tools of an AI profile: for a profile, the profile itself is the authorization boundary.
