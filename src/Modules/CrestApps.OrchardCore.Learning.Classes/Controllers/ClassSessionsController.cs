@@ -72,6 +72,7 @@ public sealed class ClassSessionsController : Controller
     /// </summary>
     /// <param name="classItemId">The class course item.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/classes/{classItemId}/sessions", "LearningClassSessions")]
     public async Task<IActionResult> Index(string classItemId)
     {
@@ -112,6 +113,7 @@ public sealed class ClassSessionsController : Controller
     /// </summary>
     /// <param name="classItemId">The class course item.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/classes/{classItemId}/sessions/new", "LearningClassSessionsCreate")]
     public async Task<IActionResult> Create(string classItemId)
     {
@@ -173,6 +175,7 @@ public sealed class ClassSessionsController : Controller
     /// </summary>
     /// <param name="id">The session.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/class-sessions/{id}/edit", "LearningClassSessionsEdit")]
     public async Task<IActionResult> Edit(string id)
     {
@@ -245,6 +248,7 @@ public sealed class ClassSessionsController : Controller
     /// </summary>
     /// <param name="id">The session.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/class-sessions/{id}/cancel", "LearningClassSessionsCancel")]
     public async Task<IActionResult> Cancel(string id)
     {
@@ -316,6 +320,7 @@ public sealed class ClassSessionsController : Controller
     /// </summary>
     /// <param name="id">The session.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/class-sessions/{id}/roster", "LearningClassSessionsRoster")]
     public async Task<IActionResult> Roster(string id)
     {
