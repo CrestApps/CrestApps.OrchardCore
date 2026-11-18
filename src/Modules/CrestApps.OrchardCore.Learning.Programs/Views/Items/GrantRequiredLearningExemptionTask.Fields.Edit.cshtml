@@ -11,7 +11,7 @@
 <div class="mb-3">
     <label asp-for="UserId" class="form-label">@T["User id"]</label>
     <input asp-for="UserId" class="form-control code" />
-    <span class="hint">@T["The person, such as {{ Workflow.Input.UserId }}."]</span>
+    <span class="hint">@T["The person, such as {0}.", "{{ Workflow.Input.UserId }}"]</span>
 </div>
 <div class="mb-3">
     <label asp-for="Reason" class="form-label">@T["Reason"]</label>

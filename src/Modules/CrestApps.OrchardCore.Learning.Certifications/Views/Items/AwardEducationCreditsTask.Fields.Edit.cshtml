@@ -10,7 +10,7 @@
 <div class="mb-3">
     <label asp-for="UserId" class="form-label">@T["User id"]</label>
     <input asp-for="UserId" class="form-control code" />
-    <span class="hint">@T["The person, such as {{ Workflow.Input.UserId }}."]</span>
+    <span class="hint">@T["The person, such as {0}.", "{{ Workflow.Input.UserId }}"]</span>
 </div>
 <div class="mb-3">
     <label asp-for="Amount" class="form-label">@T["Credits"]</label>
@@ -19,5 +19,5 @@
 <div class="mb-3">
     <label asp-for="SourceId" class="form-label">@T["Source id"]</label>
     <input asp-for="SourceId" class="form-control code" />
-    <span class="hint">@T["What the credits are for, such as {{ Workflow.Input.ContentItemId }}. The same source id awards each person once; the task ends with Already awarded when it posted nothing new."]</span>
+    <span class="hint">@T["What the credits are for, such as {0}. The same source id awards each person once; the task ends with Already awarded when it posted nothing new.", "{{ Workflow.Input.ContentItemId }}"]</span>
 </div>
