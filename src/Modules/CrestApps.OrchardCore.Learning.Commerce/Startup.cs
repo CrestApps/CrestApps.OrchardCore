@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Learning.Commerce.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Commerce.Drivers;
 using CrestApps.OrchardCore.Learning.Commerce.Handlers;
 using CrestApps.OrchardCore.Learning.Commerce.Migrations;
+using CrestApps.OrchardCore.Learning.Programs;
 using CrestApps.OrchardCore.Learning.Commerce.Models;
 using CrestApps.OrchardCore.Learning.Commerce.Reports;
 using CrestApps.OrchardCore.Learning.Commerce.Services;
@@ -62,6 +63,19 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Tells a person a seat was given to them.
 /// </summary>
+/// <summary>
+/// Sells learning paths on their pages when Learning Paths is turned on, also after Learning Commerce.
+/// </summary>
+[RequireFeatures(ProgramsConstants.Features.Paths)]
+public sealed class LearningPathsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<LearningPathProductMigrations>();
+    }
+}
+
 [RequireFeatures(OrchardCoreFeatureIds.Notifications)]
 public sealed class NotificationsStartup : StartupBase
 {

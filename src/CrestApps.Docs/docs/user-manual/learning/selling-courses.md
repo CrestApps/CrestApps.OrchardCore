@@ -16,7 +16,7 @@ Sell a course in your store like any other product. A person who buys it is enro
 ## Put a price on a course
 
 1. Open the course in **Content** and go to the **Product** section that Learning Commerce added.
-2. Enter the price, and the SKU if you use one.
+2. Enter the price, and the SKU if you use one. A course you leave without a price is simply not for sale: it shows no price and no **Add to cart**. A learning path is sold the same way, from the **Product** section of the path.
 3. Under **What buying it grants**, leave every row unticked to enroll the buyer in this course. To grant something else, tick a row and choose:
    - **Enrollment** and a course, to enroll the buyer in another course as well, such as a bundle.
    - **Learning path**, to start the buyer on a path.

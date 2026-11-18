@@ -52,6 +52,7 @@ The part's behavior is configured per content type through **`ProductPartSetting
 | `PriceDisplay` | `ProductPriceDisplay` | How prices are shown to visitors: `Show` (the default), `OnRequest`, or `Hidden`. |
 | `OnRequestLabel` | `string` | The text shown in place of the price when the price display is `OnRequest`, such as *Call for price*. |
 | `AllowPriceDisplayOverride` | `bool` | Lets each product choose its own price display. |
+| `PriceOptional` | `bool` | Lets a product be saved without a price; a product without one cannot be bought and shows no price (`CanBePurchased` is false and `GetPriceDisplay` is `Hidden`). Learning Commerce turns it on for courses and learning paths. |
 
 ## Attaching the Product part
 

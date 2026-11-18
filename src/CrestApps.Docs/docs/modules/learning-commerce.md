@@ -14,7 +14,7 @@ user_manual:
 
 ## Courses as products
 
-The feature's migration attaches `ProductPart` and `LearningProductPart` to the **Course** type and, when Learning Programs is on, to the **Learning Path** type, with the product page details turned on (`ProductPageSettings.ShowDetails`), so a course page shows its price and an **Add to cart** button and courses appear in the Products listing. `LearningProductPart` can also be attached to any other product type, for a bundle of courses or a pack of seats.
+The feature's migration attaches `ProductPart` and `LearningProductPart` to the **Course** type and, when Learning Paths is on, to the **Learning Path** type (also when Learning Paths is turned on later, through `LearningPathProductMigrations`), with the product page details turned on (`ProductPageSettings.ShowDetails`), so a priced course or path shows its price and an **Add to cart** button on its page and appears in the Products listing. The price may be left empty (`ProductPartSettings.PriceOptional`): a course or path without a price is simply not for sale and shows no price. Migration step 3 applies both settings to sites made before them. `LearningProductPart` can also be attached to any other product type, for a bundle of courses or a pack of seats.
 
 `LearningProductPart.Grants` says what buying one unit grants:
 

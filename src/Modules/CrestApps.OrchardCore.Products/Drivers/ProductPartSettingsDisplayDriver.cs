@@ -37,6 +37,7 @@ public sealed class ProductPartSettingsDisplayDriver : ContentTypePartDefinition
             model.PriceDisplay = settings.PriceDisplay;
             model.OnRequestLabel = settings.OnRequestLabel;
             model.AllowPriceDisplayOverride = settings.AllowPriceDisplayOverride;
+            model.PriceOptional = settings.PriceOptional;
             model.SalesModes =
             [
                 new SelectListItem(S["Purchasable: every product can be bought online"], nameof(ProductSalesMode.Purchasable)),
@@ -82,6 +83,7 @@ public sealed class ProductPartSettingsDisplayDriver : ContentTypePartDefinition
             PriceDisplay = model.PriceDisplay,
             OnRequestLabel = model.OnRequestLabel?.Trim(),
             AllowPriceDisplayOverride = model.AllowPriceDisplayOverride,
+            PriceOptional = model.PriceOptional,
         });
 
         return Edit(contentTypePartDefinition, context);

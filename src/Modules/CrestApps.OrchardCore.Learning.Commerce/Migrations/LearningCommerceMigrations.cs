@@ -1,7 +1,5 @@
 using CrestApps.OrchardCore.Learning.Commerce.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Commerce.Models;
-using CrestApps.OrchardCore.Learning.Programs;
-using CrestApps.OrchardCore.Products.Core.Listing;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -29,21 +27,9 @@ internal sealed class LearningCommerceMigrations : DataMigration
             .WithDisplayName("Learning Product")
             .WithDescription("What buying the product grants: the course or path itself, other courses, or seats for an account."));
 
-        foreach (var type in new[] { LearningConstants.ContentTypes.Course, ProgramsConstants.LearningPathContentType })
-        {
-            if (await _contentDefinitionManager.GetTypeDefinitionAsync(type) is null)
-            {
-                continue;
-            }
+        await LearningCommerceProductTypes.SellOnTheirPagesAsync(_contentDefinitionManager);
 
-            await _contentDefinitionManager.AlterTypeDefinitionAsync(type, definition => definition
-                .WithPart("ProductPart", part => part
-                    .WithPosition("30")
-                    .WithSettings(new ProductPageSettings { ShowDetails = true }))
-                .WithPart(nameof(LearningProductPart), part => part.WithPosition("31")));
-        }
-
-        return 2;
+        return 3;
     }
 
     // The work queue that fulfils paid purchases after the checkout: a new table only.
@@ -52,5 +38,14 @@ internal sealed class LearningCommerceMigrations : DataMigration
         await LearningCommerceIndexSchema.CreateFulfillmentQueueAsync(SchemaBuilder);
 
         return 2;
+    }
+
+    // A course or a path without a price is simply not for sale, and a priced one shows its price and Add to cart on its
+    // page: sites made before this step required a price on every course, and some had a path without the details.
+    public async Task<int> UpdateFrom2Async()
+    {
+        await LearningCommerceProductTypes.SellOnTheirPagesAsync(_contentDefinitionManager);
+
+        return 3;
     }
 }
