@@ -112,7 +112,7 @@ The player sends the values to `/learning/packages/runtime/{enrollmentId}/{itemI
 
 ### The runtime state on the server
 
-The server keeps one runtime state per enrollment and package item (the `LearningPackageRuntime` collection). A runtime call must carry the token of the latest launch by the signed-in learner, for the enrollment and item it names. A call from an older launch (another tab) or after the session finished is refused. Writes to one runtime state run under one lock per enrollment and package.
+The server keeps one runtime state per enrollment and package item (the `LearningPackageRuntime` collection). A runtime call must carry the token of the latest launch by the signed-in learner, for the enrollment and item it names. A call from an older launch (another tab) or after the session finished is refused. Writes to one runtime state run under one lock per enrollment and package. The lists of the runtime data take at most the SCORM 2004 smallest permitted maximums (250 interactions, 100 objectives, 10 objective ids and 10 correct responses per interaction, 250 learner comments; `ScormLimits`): a write past a list's limit gets 201 in SCORM 1.2 and 351 in SCORM 2004. A call that would make the stored state larger than 1 MB is refused whole (`StateTooLarge`), and nothing of it is saved.
 
 For a SCORM 1.2 package, every value is replayed through the SCORM 1.2 data model on the server (`Scorm12DataModel`), so a value the browser accepted is never trusted:
 

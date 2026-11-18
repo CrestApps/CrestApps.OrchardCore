@@ -284,6 +284,7 @@ public sealed class PackageRunController : Controller
             PackageRuntimeErrors.Superseded => S["This package was opened again in another window, or its session ended. Launch it again to go on."],
             PackageRuntimeErrors.InvalidToken => S["This session of the package has expired. Launch it again to go on."],
             PackageRuntimeErrors.Busy => S["Your progress is being saved. Try again in a moment."],
+            PackageRuntimeErrors.StateTooLarge => S["The package stored more data than a package may keep, so this progress was not saved."],
             _ => S["Your progress in the package could not be saved."],
         };
 }

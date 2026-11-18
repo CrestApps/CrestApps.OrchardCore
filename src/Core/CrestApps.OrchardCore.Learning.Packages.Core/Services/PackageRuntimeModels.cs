@@ -39,6 +39,9 @@ public static class PackageRuntimeErrors
 
     /// <summary>The request has more changes than one call may carry.</summary>
     public const string TooManyChanges = "TooManyChanges";
+
+    /// <summary>The changes would make the runtime state larger than <see cref="Scorm.ScormLimits.MaxStateBytes"/>.</summary>
+    public const string StateTooLarge = "StateTooLarge";
 }
 
 /// <summary>

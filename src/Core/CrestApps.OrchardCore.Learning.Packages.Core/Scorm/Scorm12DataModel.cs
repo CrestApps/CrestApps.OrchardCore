@@ -174,7 +174,7 @@ public static partial class Scorm12DataModel
 
         if (pattern.StartsWith("cmi.objectives.n.", StringComparison.Ordinal))
         {
-            return Within(indexes[0], cmi.Objectives.Count, allowNext);
+            return Within(indexes[0], cmi.Objectives.Count, allowNext, ScormLimits.Objectives);
         }
 
         if (!pattern.StartsWith("cmi.interactions.n.", StringComparison.Ordinal))
@@ -184,7 +184,7 @@ public static partial class Scorm12DataModel
 
         var interactionIndex = indexes[0];
 
-        if (!Within(interactionIndex, cmi.Interactions.Count, allowNext))
+        if (!Within(interactionIndex, cmi.Interactions.Count, allowNext, ScormLimits.Interactions))
         {
             return false;
         }
@@ -195,15 +195,17 @@ public static partial class Scorm12DataModel
         }
 
         var interaction = interactionIndex < cmi.Interactions.Count ? cmi.Interactions[interactionIndex] : null;
-        var count = pattern.StartsWith("cmi.interactions.n.objectives.", StringComparison.Ordinal)
+        var objectives = pattern.StartsWith("cmi.interactions.n.objectives.", StringComparison.Ordinal);
+        var count = objectives
             ? interaction?.ObjectiveIds.Count ?? 0
             : interaction?.CorrectResponses.Count ?? 0;
 
-        return Within(indexes[1], count, allowNext);
+        return Within(indexes[1], count, allowNext, objectives ? ScormLimits.InteractionObjectives : ScormLimits.CorrectResponses);
     }
 
-    private static bool Within(int index, int count, bool allowNext)
-        => index < count || (allowNext && index == count);
+    // A write may add the next entry while the list is under its limit (review round 9, M4).
+    private static bool Within(int index, int count, bool allowNext, int limit)
+        => index < count || (allowNext && ScormLimits.MayAdd(index, count, limit));
 
     private static Scorm12Read Fail(string error)
         => new(string.Empty, error);

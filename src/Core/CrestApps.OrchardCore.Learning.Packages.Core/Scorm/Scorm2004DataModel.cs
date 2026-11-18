@@ -326,6 +326,12 @@ public static partial class Scorm2004DataModel
             return Scorm2004Errors.GeneralSetFailure;
         }
 
+        // A list takes no entry past its limit (review round 9, M4).
+        if (!ScormLimits.MayAdd(indexes[0], count.Value, TopLimit(pattern)))
+        {
+            return Scorm2004Errors.GeneralSetFailure;
+        }
+
         if (indexes[0] == count)
         {
             if (pattern.StartsWith("adl.data.", StringComparison.Ordinal))
@@ -347,13 +353,30 @@ public static partial class Scorm2004DataModel
         }
 
         var interaction = cmi.Interactions[indexes[0]];
+        var subList = SubList(interaction, pattern);
+        var subLimit = pattern.StartsWith("cmi.interactions.n.objectives.", StringComparison.Ordinal) ? ScormLimits.InteractionObjectives : ScormLimits.CorrectResponses;
 
-        if (indexes[1] > SubList(interaction, pattern).Count)
+        if (indexes[1] > subList.Count || !ScormLimits.MayAdd(indexes[1], subList.Count, subLimit))
         {
             return Scorm2004Errors.GeneralSetFailure;
         }
 
         return Scorm2004Errors.NoError;
+    }
+
+    private static int TopLimit(string pattern)
+    {
+        if (pattern.StartsWith("cmi.objectives.n.", StringComparison.Ordinal))
+        {
+            return ScormLimits.Objectives;
+        }
+
+        if (pattern.StartsWith("cmi.interactions.n.", StringComparison.Ordinal))
+        {
+            return ScormLimits.Interactions;
+        }
+
+        return pattern.StartsWith("cmi.comments_from_learner.n.", StringComparison.Ordinal) ? ScormLimits.CommentsFromLearner : int.MaxValue;
     }
 
     private static int? TopCount(Scorm2004Cmi cmi, string pattern)

@@ -360,6 +360,13 @@ public sealed class PackageRuntimeService
                 state.LastCommitUtc = now;
             }
 
+            // Every runtime call loads and writes the whole state, and every package page embeds it: a change that would
+            // make it larger than the limit is refused whole, and nothing of it is saved (review round 9, M4).
+            if (System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(state).Length > ScormLimits.MaxStateBytes)
+            {
+                return PackageRuntimeErrors.StateTooLarge;
+            }
+
             await _store.UpdateAsync(state, cancellationToken);
 
             result = new PackageRuntimeResult { Refused = refused, State = state };
