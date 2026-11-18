@@ -1,3 +1,4 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Logging;
@@ -29,12 +30,12 @@ internal sealed class LoggingPaymentIssueRecorder : IPaymentIssueRecorder
 
         _logger.LogError(
             "Payment issue '{Kind}' for {ReferenceType} '{ReferenceId}' (provider '{ProviderKey}', reference '{ProviderReference}'): {Message}",
-            issue.Kind,
-            issue.ReferenceType,
-            issue.ReferenceId,
-            issue.ProviderKey,
-            issue.ProviderReference,
-            issue.Message);
+            issue.Kind.SanitizeLogValue(),
+            issue.ReferenceType.SanitizeLogValue(),
+            issue.ReferenceId.SanitizeLogValue(),
+            issue.ProviderKey.SanitizeLogValue(),
+            issue.ProviderReference.SanitizeLogValue(),
+            issue.Message.SanitizeLogValue());
 
         return Task.FromResult(false);
     }
