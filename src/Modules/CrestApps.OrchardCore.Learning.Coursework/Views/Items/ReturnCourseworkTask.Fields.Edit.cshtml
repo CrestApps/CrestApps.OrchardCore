@@ -5,7 +5,7 @@
 <div class="mb-3">
     <label asp-for="SubmissionId" class="form-label">@T["Submission id"]</label>
     <input asp-for="SubmissionId" class="form-control code" />
-    <span class="hint">@T["The submission, such as {{ Workflow.Input.SubmissionId }}."]</span>
+    <span class="hint">@T["The submission, such as {0}.", "{{ Workflow.Input.SubmissionId }}"]</span>
 </div>
 <div class="mb-3">
     <label asp-for="Feedback" class="form-label">@T["Feedback"]</label>
