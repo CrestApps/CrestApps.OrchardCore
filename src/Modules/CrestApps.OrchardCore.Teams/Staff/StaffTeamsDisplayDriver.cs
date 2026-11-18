@@ -99,16 +99,14 @@ internal sealed class StaffTeamsDisplayDriver : DisplayDriver<StaffMember>
 
         // A manager can only add people to the teams they manage; memberships already there stay as they are.
         var scope = await _scopeService.GetScopeAsync(_httpContextAccessor.HttpContext?.User);
-        var existing = staff.TeamMemberships.Select(membership => membership.TeamId).ToHashSet(StringComparer.Ordinal);
 
-        if (!scope.All && memberships.Any(membership => !existing.Contains(membership.TeamId) && !scope.CoversTeam(membership.TeamId)))
+        if (StaffTeamMemberships.AddsTeamOutsideScope(scope, staff, memberships))
         {
             context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(StaffTeamsEditViewModel.Memberships)}", S["You can only add people to the teams you manage."]);
         }
         else
         {
-            staff.TeamMemberships = memberships;
-            staff.PrimaryTeamId = memberships.FirstOrDefault()?.TeamId;
+            StaffTeamMemberships.Apply(staff, memberships);
         }
 
         return await EditorAsync(staff, model.Memberships ?? []);

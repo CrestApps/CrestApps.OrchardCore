@@ -106,18 +106,10 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         // A staff member keeps the user account it was linked to: pay, history and badges never move to another
-        // person. A record without one can be linked once.
-        if (string.IsNullOrEmpty(staff.UserId))
-        {
-            staff.UserId = string.IsNullOrWhiteSpace(model.UserId) ? null : model.UserId.Trim();
-        }
-
-        // A person with an account takes their name and e-mail from it when saved.
-        if (string.IsNullOrEmpty(staff.UserId))
-        {
-            staff.DisplayName = model.DisplayName;
-            staff.Email = model.Email;
-        }
+        // person. A record without one can be linked once. A person with an account takes their name and e-mail from it
+        // when saved.
+        StaffMemberEditorRules.LinkUser(staff, model.UserId);
+        StaffMemberEditorRules.SetNameAndEmail(staff, model.DisplayName, model.Email);
 
         staff.Phone = model.Phone;
         staff.EmployeeNumber = model.EmployeeNumber;
@@ -133,20 +125,13 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
         staff.WorkLocation = model.WorkLocation;
         staff.ContractedHoursPerWeek = model.ContractedHoursPerWeek;
 
-        var homeBaseMoved = !string.Equals(staff.HomeBase?.Address, model.HomeBase?.Trim(), StringComparison.Ordinal);
-
         // A new address drops the old coordinates, so they are found again for the new one.
-        staff.HomeBase = string.IsNullOrWhiteSpace(model.HomeBase) ? null : new StaffLocation
-        {
-            Address = model.HomeBase.Trim(),
-            Latitude = homeBaseMoved ? null : staff.HomeBase?.Latitude,
-            Longitude = homeBaseMoved ? null : staff.HomeBase?.Longitude,
-        };
+        StaffMemberEditorRules.SetHomeBase(staff, model.HomeBase);
+
         // Only the capabilities offered here are edited; ones turned off, or that a module set and doesn't show, stay.
         var registered = (await _capabilities.ListAsync()).Select(capability => capability.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var chosen = (model.Capabilities ?? []).Where(registered.Contains);
 
-        staff.Capabilities = staff.Capabilities.Where(capability => !registered.Contains(capability)).Concat(chosen).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        StaffMemberEditorRules.SetCapabilities(staff, registered, model.Capabilities);
 
         if (await CanSeeSensitiveAsync())
         {
