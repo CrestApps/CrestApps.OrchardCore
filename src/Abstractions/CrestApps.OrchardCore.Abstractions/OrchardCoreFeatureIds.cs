@@ -108,6 +108,8 @@ public static class OrchardCoreFeatureIds
 
     public const string Notifications = "OrchardCore.Notifications";
 
+    public const string NotificationsEmail = "OrchardCore.Notifications.Email";
+
     public const string OpenId = "OrchardCore.OpenId";
 
     public const string OpenIdClient = "OrchardCore.OpenId.Client";

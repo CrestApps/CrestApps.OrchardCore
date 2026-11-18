@@ -19,6 +19,8 @@ public sealed class LtiLineItemIndexProvider : IndexProvider<LtiLineItem>
     /// <inheritdoc />
     public override void Describe(DescribeContext<LtiLineItem> context)
         => context.For<LtiLineItemIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(lineItem => new LtiLineItemIndex
             {
                 ItemId = lineItem.ItemId,

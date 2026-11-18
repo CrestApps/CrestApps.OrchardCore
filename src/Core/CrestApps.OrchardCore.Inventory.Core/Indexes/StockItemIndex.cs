@@ -39,6 +39,8 @@ public sealed class StockItemIndexProvider : IndexProvider<StockItem>
     public override void Describe(DescribeContext<StockItem> context)
     {
         context.For<StockItemIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new StockItemIndex
             {
                 ItemId = item.ItemId,

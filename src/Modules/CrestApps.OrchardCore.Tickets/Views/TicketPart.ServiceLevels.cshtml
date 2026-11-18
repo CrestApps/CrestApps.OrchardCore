@@ -1,0 +1,57 @@
+@using CrestApps.OrchardCore.ServiceLevels.Models
+@model TicketServiceLevelsViewModel
+
+@{
+    string MetricName(string metric) => metric switch
+    {
+        ServiceLevelMetrics.FirstResponse => T["First response"].Value,
+        ServiceLevelMetrics.NextResponse => T["Next response"].Value,
+        ServiceLevelMetrics.Resolution => T["Resolution"].Value,
+        _ => metric,
+    };
+}
+
+@if (Model.Timers.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h2 class="h6">@T["Service levels"]</h2>
+            <ul class="list-unstyled small mb-0">
+                @foreach (var timer in Model.Timers)
+                {
+                    <li class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <span>@MetricName(timer.Metric)</span>
+                        <span class="text-end">
+                            @switch (timer.State)
+                            {
+                                case ServiceLevelTimerState.Completed:
+                                    <span class="badge @(timer.BreachedUtc is null ? "text-bg-success" : "text-bg-warning") fw-normal">@(timer.BreachedUtc is null ? T["Met"] : T["Met late"])</span>
+                                    break;
+                                case ServiceLevelTimerState.Cancelled:
+                                    <span class="badge ta-badge fw-normal">@T["Stopped"]</span>
+                                    break;
+                                case ServiceLevelTimerState.Paused:
+                                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-pause me-1" aria-hidden="true"></i>@T["Paused"]</span>
+                                    break;
+                                default:
+                                    if (timer.NoBusinessHours)
+                                    {
+                                        <span class="badge text-bg-warning fw-normal me-1" title="@T["Its business hours schedule is never open, so the target counts around the clock."]">@T["No business hours"]</span>
+                                    }
+                                    if (timer.DueUtc <= Model.NowUtc)
+                                    {
+                                        <span class="badge text-bg-danger fw-normal">@T["Past its target"]</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge @(timer.WarnAtUtc <= Model.NowUtc ? "text-bg-warning" : "ta-badge") fw-normal">@T["Due"] @await DisplayAsync(await New.DateTime(Utc: timer.DueUtc, Format: "g"))</span>
+                                    }
+                                    break;
+                            }
+                        </span>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+}

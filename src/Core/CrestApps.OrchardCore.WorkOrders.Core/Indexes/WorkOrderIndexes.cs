@@ -8,6 +8,11 @@ namespace CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 /// <summary>
 /// Indexes work orders.
 /// </summary>
+/// <remarks>
+/// The Legacy upgrades read this table through private readers of the same name that add the row's
+/// <c>DocumentId</c> (<c>WorkOrderServiceLevelUpgrade.WorkOrderIndex</c>, <c>WorkOrderNotesUpgrade.WorkOrderIndex</c>), to
+/// page work orders by it. Renaming this class or the table breaks them.
+/// </remarks>
 public sealed class WorkOrderIndex : CatalogItemIndex
 {
     /// <summary>
@@ -134,13 +139,6 @@ public sealed class ChecklistTemplateIndex : WorkOrderSettingIndex
 }
 
 /// <summary>
-/// Indexes the service level policies.
-/// </summary>
-public sealed class ServiceLevelPolicyIndex : WorkOrderSettingIndex
-{
-}
-
-/// <summary>
 /// Indexes the sub-statuses.
 /// </summary>
 public sealed class WorkOrderSubStatusIndex : WorkOrderSettingIndex
@@ -164,6 +162,8 @@ public sealed class WorkOrderIndexProvider : IndexProvider<WorkOrder>
     public override void Describe(DescribeContext<WorkOrder> context)
     {
         context.For<WorkOrderIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new WorkOrderIndex
             {
                 ItemId = item.ItemId,
@@ -185,6 +185,7 @@ public sealed class WorkOrderIndexProvider : IndexProvider<WorkOrder>
             });
 
         context.For<WorkOrderAssetIndex>()
+            .ExclusiveToDocumentType()
             .Map(item => item.AssetIds.Distinct(StringComparer.Ordinal).Select(assetId => new WorkOrderAssetIndex { WorkOrderId = item.ItemId, AssetId = assetId, Status = item.Status.ToString() }));
     }
 }
@@ -206,6 +207,8 @@ public sealed class WorkOrderTypeIndexProvider : IndexProvider<WorkOrderType>
     public override void Describe(DescribeContext<WorkOrderType> context)
     {
         context.For<WorkOrderTypeIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new WorkOrderTypeIndex { ItemId = item.ItemId, Name = item.Name });
     }
 }
@@ -227,28 +230,9 @@ public sealed class ChecklistTemplateIndexProvider : IndexProvider<ChecklistTemp
     public override void Describe(DescribeContext<ChecklistTemplate> context)
     {
         context.For<ChecklistTemplateIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new ChecklistTemplateIndex { ItemId = item.ItemId, Name = item.Name });
-    }
-}
-
-/// <summary>
-/// Maps service level policies.
-/// </summary>
-public sealed class ServiceLevelPolicyIndexProvider : IndexProvider<ServiceLevelPolicy>
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ServiceLevelPolicyIndexProvider"/> class.
-    /// </summary>
-    public ServiceLevelPolicyIndexProvider()
-    {
-        CollectionName = WorkOrdersConstants.CollectionName;
-    }
-
-    /// <inheritdoc/>
-    public override void Describe(DescribeContext<ServiceLevelPolicy> context)
-    {
-        context.For<ServiceLevelPolicyIndex>()
-            .Map(item => new ServiceLevelPolicyIndex { ItemId = item.ItemId, Name = item.Name });
     }
 }
 
@@ -269,6 +253,8 @@ public sealed class WorkOrderSubStatusIndexProvider : IndexProvider<WorkOrderSub
     public override void Describe(DescribeContext<WorkOrderSubStatus> context)
     {
         context.For<WorkOrderSubStatusIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new WorkOrderSubStatusIndex { ItemId = item.ItemId, Name = item.Name });
     }
 }
@@ -328,7 +314,6 @@ public static class WorkOrdersIndexSchema
 
         await CreateSettingTableAsync<WorkOrderTypeIndex>(schemaBuilder, collection);
         await CreateSettingTableAsync<ChecklistTemplateIndex>(schemaBuilder, collection);
-        await CreateSettingTableAsync<ServiceLevelPolicyIndex>(schemaBuilder, collection);
         await CreateSettingTableAsync<WorkOrderSubStatusIndex>(schemaBuilder, collection);
     }
 

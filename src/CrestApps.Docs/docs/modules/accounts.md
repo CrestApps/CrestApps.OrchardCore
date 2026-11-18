@@ -8,7 +8,7 @@ user_manual: user-manual/accounts
 
 | | |
 | --- | --- |
-| **Features** | Accounts (`CrestApps.OrchardCore.Accounts`), Account Members (`CrestApps.OrchardCore.Accounts.Members`), Account Locations (`CrestApps.OrchardCore.Accounts.Locations`) |
+| **Features** | Accounts (`CrestApps.OrchardCore.Accounts`), Account Members (`CrestApps.OrchardCore.Accounts.Members`), Account Locations (`CrestApps.OrchardCore.Accounts.Locations`), Account E-mail Domains (`CrestApps.OrchardCore.Accounts.EmailDomains`) |
 | **Core** | `CrestApps.OrchardCore.Accounts.Core` |
 | **Abstractions** | `CrestApps.OrchardCore.Accounts.Abstractions` |
 | **Category** | Content Management |
@@ -119,7 +119,7 @@ is a dropdown. Each feature adds its own section, or a card in one, with a conte
 | **Activities** | `Activities` (40) | The CRM: the scheduled and completed activities of the account's contacts, with **List Activities**. |
 | **Orders** | `Orders` (50) | [Orders](carts-and-orders.md#the-account-page): the latest orders placed for the account (`Order.AccountId`). |
 | **Business** | `Business` (60) | [Accounts B2B](accounts-b2b.md#the-account-page): its terms, what it owes and its buyers. |
-| **Invoices** | `Invoices` (70) | Accounts B2B: the invoices for what it bought on its terms. |
+| **Invoices** | `Invoices` (70) | [Invoicing](invoicing.md#customer-pages-and-the-account-page) (registered by Invoicing's Accounts startup): what the account owes and is overdue on, its latest invoices, and **New invoice** billed to it. |
 | **Service** | `Service` (80) | Reserved for field service: work orders, assets and service agreements. |
 | **Records** | `Records` (100) | Accounts: Orchard Core's list of every record the account holds, with the buttons that add one. |
 
@@ -186,7 +186,13 @@ it to the `Account` type at position 4; another account type can be given the pa
 - **Index.** `AccountMemberIndex` (`AccountContentItemId`, `UserId`, `Published`, `Latest`) holds one row per member
   of each version.
 - **Lookup.** `IAccountMemberService.FindAccountAsync(userId)` returns the published account a user signs in for;
-  `FindOtherAccountIdAsync(userId, exceptAccountId)` tells an editor the user already belongs to another one.
+  `FindOtherAccountIdAsync(userId, exceptAccountId)` tells an editor the user already belongs to another one;
+  `GetMemberUserIdsAsync(accountId)` returns the user ids of the members of the published account, and
+  `GetMembersAsync(accountId)` its members with their roles.
+- **Party members.** The feature registers `AccountPartyMemberSource`, so `IPartyMembershipService` (see
+  [Parties](parties.md#who-may-act-for-a-party)) answers that an account's members act for it. Only its admins have
+  billing access (`PartyAccess.Billing`): they see and settle what the account owes, while a plain member (a buyer)
+  sees only what they own, as on the business account page.
 - **Contacts.** When an account is saved, each member is linked to the account's contact with their email, through the
   registered `IAccountContactFinder`s. The CRM registers one that matches a contact's primary email among the contacts
   in the account. A member with no match, or more than one, has no contact.
@@ -233,9 +239,23 @@ adds it to the `Account` type at position 5.
 | `LocationId` | Stays the same when the location is renamed or moved. |
 | `Name` | Such as *Head office*; the city when left blank. |
 | `Address` | An `Address`, entered and checked with the shared [address editor](addresses.md), addressed to the account. |
+| `IsBilling` | Whether the account's invoices and other billing documents are addressed to this location. The editor's **Billing location** box marks it, and refuses a save with more than one. |
 
-`AccountLocationsPart.FindLocation(locationId)` finds one. Accounts B2B offers them as shipping addresses at checkout;
-a field service module offers them as service addresses.
+`AccountLocationsPart.FindLocation(locationId)` finds one. `AccountLocationsPart.GetBillingLocation()` returns the
+location the account is billed at: the one marked as the billing location, else the first location, or none. Accounts
+B2B offers the locations as shipping addresses at checkout; a field service module offers them as service addresses.
+
+## Billing an account
+
+The Accounts feature registers `AccountBillingProfileSource`, the first source of the `Account` party kind's
+[billing profile](parties.md#billing-a-party): the account's name, and its billing location's address as the billing
+address. It reads the published account, or its latest version while it was never published. Modules that keep more
+about an account add a source of their own after it: [Accounts B2B](accounts-b2b.md#billing-profile) adds the tax
+number, the billing e-mail and the terms.
+
+## Account e-mail domains
+
+The **Account E-mail Domains** feature keeps the domains an account's people write from. Its migration defines `AccountEmailDomainsPart` (`Domains`, lower case, without the `@`) and gives it to the `Account` type; the editor takes one domain per line. Published accounts' domains are indexed in `AccountEmailDomainIndex`, and `IAccountEmailDomains.FindAccountIdAsync(email)` answers the one account that lists the address's domain, or nothing when none or several do. [Tickets](./tickets) files a request without an account under the account of its requester's e-mail this way. An account can't list a public mail provider's domain (gmail.com, outlook.com and some forty others in `AccountEmailDomainsOptions.BuiltInPublicDomains`; a tenant adds its own under `CrestApps:Accounts:EmailDomains:PublicDomains` in its configuration) or one another account already lists (`IAccountEmailDomains.FindClaimsAsync`); `AccountEmailDomainsPartHandler` refuses both when the account is saved in the editor or imported.
 
 ## Removing an account
 
@@ -293,7 +313,8 @@ as their contacts and opportunities.
           {
             "LocationId": "hq",
             "Name": "Head office",
-            "Address": { "Country": "US", "AddressLine1": "1 Main Street", "City": "Reno", "Region": "NV", "PostalCode": "89501" }
+            "Address": { "Country": "US", "AddressLine1": "1 Main Street", "City": "Reno", "Region": "NV", "PostalCode": "89501" },
+            "IsBilling": true
           }
         ]
       }

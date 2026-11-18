@@ -1,0 +1,4 @@
+@model ShapeViewModel<CheckRecord>
+
+<span class="fw-semibold">@T["Check {0}", Model.Value.Number]</span>
+<span class="text-secondary ms-1">@Model.Value.BankAccountName</span>

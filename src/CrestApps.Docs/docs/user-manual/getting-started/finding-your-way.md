@@ -92,7 +92,7 @@ Your **extension** number, the **queues** you may sign in to and your **roles** 
 
 ## Search the manual
 
-The search box at the top of any User Manual page searches only the User Manual. Try a screen name, a button label or a word such as *wrap-up*. The [glossary](../glossary.md) explains the words this manual uses, and [troubleshooting](../troubleshooting.md) answers common "why can't I..." questions.
+The search box at the top of every page searches both manuals; clear **Technical Manual** next to it to search only the User Manual. Try a screen name, a button label or a word such as *wrap-up*. The [glossary](../glossary.md) explains the words this manual uses, and [troubleshooting](../troubleshooting.md) answers common "why can't I..." questions.
 
 ## Next steps
 

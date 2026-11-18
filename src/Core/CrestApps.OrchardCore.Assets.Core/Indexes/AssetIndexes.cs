@@ -105,6 +105,8 @@ public sealed class AssetTypeIndexProvider : IndexProvider<AssetType>
     public override void Describe(DescribeContext<AssetType> context)
     {
         context.For<AssetTypeIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new AssetTypeIndex { ItemId = item.ItemId, Name = item.Name, Category = item.Category.ToString() });
     }
 }
@@ -126,6 +128,8 @@ public sealed class AssetIndexProvider : IndexProvider<Asset>
     public override void Describe(DescribeContext<Asset> context)
     {
         context.For<AssetIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new AssetIndex
             {
                 ItemId = item.ItemId,
@@ -158,6 +162,8 @@ public sealed class AssetMeterReadingIndexProvider : IndexProvider<AssetMeterRea
     public override void Describe(DescribeContext<AssetMeterReading> context)
     {
         context.For<AssetMeterReadingIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new AssetMeterReadingIndex { ItemId = item.ItemId, AssetId = item.AssetId, Meter = item.Meter, Utc = item.Utc });
     }
 }

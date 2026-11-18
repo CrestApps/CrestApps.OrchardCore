@@ -1,0 +1,56 @@
+@using CrestApps.OrchardCore.KnowledgeBase.Services
+@using OrchardCore.ContentManagement
+@using OrchardCore.Mvc.Utilities
+@*
+    An article's page, as Orchard Core's Content template, with the help center's zones around it: its search above,
+    its categories beside it and related articles after it, when the Knowledge Base recipe (or an administrator) put
+    widgets in them. A theme can override this template, Content-KnowledgeArticle.Detail.
+*@
+@{
+    ContentItem contentItem = Model.ContentItem;
+    var top = KnowledgeBaseZones.Find(ThemeLayout, KnowledgeBaseConstants.Zones.Top);
+    var sidebar = KnowledgeBaseZones.Find(ThemeLayout, KnowledgeBaseConstants.Zones.Sidebar);
+    var after = KnowledgeBaseZones.Find(ThemeLayout, KnowledgeBaseConstants.Zones.AfterContent);
+}
+
+@* The same width and spacing as the help center's page, so the two look alike. *@
+<div class="container my-4 knowledge-base-page" style="max-width: 960px;">
+    @if (top is not null)
+    {
+        @await DisplayAsync(top)
+    }
+
+    <div class="row g-4">
+        @if (sidebar is not null)
+        {
+            <div class="col-md-4 order-2 order-md-1">
+                @await DisplayAsync(sidebar)
+            </div>
+        }
+        <div class="@(sidebar is null ? "col-12" : "col-md-8 order-1 order-md-2")">
+            <article class="content-item @contentItem.ContentType.HtmlClassify()">
+                <header>
+                    @await DisplayAsync(Model.Header)
+                    @if (Model.Meta != null)
+                    {
+                        <div>
+                            @await DisplayAsync(Model.Meta)
+                        </div>
+                    }
+                </header>
+                @await DisplayAsync(Model.Content)
+                @if (Model.Footer != null)
+                {
+                    <footer>
+                        @await DisplayAsync(Model.Footer)
+                    </footer>
+                }
+            </article>
+
+            @if (after is not null)
+            {
+                @await DisplayAsync(after)
+            }
+        </div>
+    </div>
+</div>

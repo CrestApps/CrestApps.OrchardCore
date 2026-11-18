@@ -20,6 +20,8 @@ public sealed class EnrollmentIndexProvider : IndexProvider<Enrollment>
     public override void Describe(DescribeContext<Enrollment> context)
     {
         context.For<EnrollmentIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(enrollment => new EnrollmentIndex
             {
                 ItemId = enrollment.ItemId,
@@ -40,6 +42,7 @@ public sealed class EnrollmentIndexProvider : IndexProvider<Enrollment>
             });
 
         context.For<EnrollmentGrantIndex>()
+            .ExclusiveToDocumentType()
             .Map(enrollment => (enrollment.Grants ?? [])
                 .Where(grant => !string.IsNullOrEmpty(grant?.Source))
                 .Select(grant => new EnrollmentGrantIndex

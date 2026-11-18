@@ -1,0 +1,21 @@
+@model DisbursementsFiltersViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="btn-group filter">
+    <select class="selectpicker show-tick me-2" data-style="btn-sm" data-width="fit" data-header="@T["Method"]" data-dropdown-align-right="auto" aria-label="@T["Method"]" data-disbursements-filter="Method" asp-items="Model.MethodOptions"></select>
+</div>
+<div class="btn-group filter">
+    <select class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]" data-disbursements-filter="Status" asp-items="Model.StatusOptions"></select>
+</div>
+
+<script at="Foot">
+    document.querySelectorAll('[data-disbursements-filter]').forEach(select => {
+        select.addEventListener('change', () => {
+            const form = document.getElementById('disbursements-filter');
+            form.querySelector('input[type=hidden][name="' + select.dataset.disbursementsFilter + '"]').value = select.value;
+            document.getElementById('submitFilter').click();
+        });
+    });
+</script>

@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Pdf;
-using CrestApps.OrchardCore.Pdf.Models;
 using CrestApps.OrchardCore.Reports.Models;
 
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
@@ -213,8 +212,8 @@ internal sealed class ReportPdfTableWriter
         var font = bold || (hasStyle && style.Bold)
             ? _flow.Bold
             : _flow.Regular;
-        var color = hasStyle && PdfColor.TryParse(style.Color, out var textColor) ? textColor : ReportPdfTheme.Text;
-        PdfColor? fill = hasStyle && PdfColor.TryParse(style.BackgroundColor, out var background) ? background : null;
+        var color = hasStyle && ReportPdfColors.TryParse(style.Color, out var textColor) ? textColor : ReportPdfTheme.Text;
+        PdfColor? fill = hasStyle && ReportPdfColors.TryParse(style.BackgroundColor, out var background) ? background : null;
         var lines = PdfText.Wrap(font.Prepare(value), font, _layout.FontSize, Width(index, span) - ReportPdfTableLayout.CellPadding);
 
         return new Cell(lines, font, color, fill, align, index, span);
@@ -290,7 +289,7 @@ internal sealed class ReportPdfTableWriter
         _flow.Advance(height);
     }
 
-    private sealed record Cell(List<string> Lines, PdfFont Font, PdfColor Color, PdfColor? Fill, ReportColumnAlign Align, int Column, int Span);
+    private sealed record Cell(List<string> Lines, PdfFontFace Font, PdfColor Color, PdfColor? Fill, ReportColumnAlign Align, int Column, int Span);
 
     private sealed class Row
     {

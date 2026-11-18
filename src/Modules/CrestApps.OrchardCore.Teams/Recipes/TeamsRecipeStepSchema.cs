@@ -44,6 +44,7 @@ internal sealed class TeamsRecipeStepSchema : IRecipeStep
                 ("description", Text("What the team does.")),
                 ("linkedRoleName", Text("A role whose members are treated as part of the team.")),
                 ("timeZoneId", Text("The team's IANA time zone.")),
+                ("address", new JsonSchemaBuilder().Type(SchemaValueType.Object | SchemaValueType.Null).Description("Where the team works: addressLine1, addressLine2, city, region, postalCode, country (two-letter code) and the other address parts.")),
                 ("enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the team is in use.")))
             .Required("name")
             .AdditionalProperties(true);

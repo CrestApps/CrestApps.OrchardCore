@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.WorkOrders.Models
+
+@model WorkOrderServiceLevelPolicyViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Pause in"]</label>
+    <div class="ocat-end">
+        @foreach (var status in Model.Statuses)
+        {
+            var id = Html.IdFor(model => model.PauseStatuses) + "-" + status;
+
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="@id" name="@Html.NameFor(model => model.PauseStatuses)" value="@status" checked="@Model.PauseStatuses.Contains(status)" />
+                <label class="form-check-label" for="@id">@status.Text()</label>
+            </div>
+        }
+        <span class="hint">@T["A work order's timers stop while it is in one of these statuses, or in a sub-status that pauses service levels, and start again when it leaves."]</span>
+    </div>
+</div>

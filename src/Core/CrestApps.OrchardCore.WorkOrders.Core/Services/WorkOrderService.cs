@@ -1,5 +1,12 @@
+using CrestApps.OrchardCore.Skills.Models;
 using System.Globalization;
+using CrestApps.OrchardCore.Conditions;
 using CrestApps.OrchardCore.Numbering;
+using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Timeline;
+using CrestApps.OrchardCore.Timeline.Models;
+using CrestApps.OrchardCore.Timeline.Services;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
@@ -33,7 +40,7 @@ public sealed class WorkOrderResult
 }
 
 /// <summary>
-/// Creates, changes, completes, bills and follows up work orders, keeping their service level clock.
+/// Creates, changes, completes, bills and follows up work orders, keeping their service level timers.
 /// </summary>
 public sealed class WorkOrderService
 {
@@ -42,9 +49,9 @@ public sealed class WorkOrderService
     private readonly WorkOrderStore _store;
     private readonly WorkOrderSettingManager<WorkOrderType> _types;
     private readonly WorkOrderSettingManager<ChecklistTemplate> _checklists;
-    private readonly WorkOrderSettingManager<ServiceLevelPolicy> _policies;
     private readonly WorkOrderSettingManager<WorkOrderSubStatus> _subStatuses;
-    private readonly SlaClock _slaClock;
+    private readonly WorkOrderServiceLevels _serviceLevels;
+    private readonly ITimelineService _timeline;
     private readonly IEnumerable<IWorkOrderHandler> _handlers;
     private readonly IEnumerable<IWorkOrderObserver> _observers;
     private readonly IEnumerable<IWorkOrderPartsService> _parts;
@@ -61,9 +68,9 @@ public sealed class WorkOrderService
     /// <param name="store">The work order store.</param>
     /// <param name="types">The work order types.</param>
     /// <param name="checklists">The checklist templates.</param>
-    /// <param name="policies">The service level policies.</param>
     /// <param name="subStatuses">The sub-statuses.</param>
-    /// <param name="slaClock">The service level clock.</param>
+    /// <param name="serviceLevels">The work order's service level timers.</param>
+    /// <param name="timeline">The timeline its notes and history are kept on.</param>
     /// <param name="handlers">The work order handlers.</param>
     /// <param name="observers">The work order observers.</param>
     /// <param name="parts">The parts service, when Inventory is on.</param>
@@ -76,9 +83,9 @@ public sealed class WorkOrderService
         WorkOrderStore store,
         WorkOrderSettingManager<WorkOrderType> types,
         WorkOrderSettingManager<ChecklistTemplate> checklists,
-        WorkOrderSettingManager<ServiceLevelPolicy> policies,
         WorkOrderSettingManager<WorkOrderSubStatus> subStatuses,
-        SlaClock slaClock,
+        WorkOrderServiceLevels serviceLevels,
+        ITimelineService timeline,
         IEnumerable<IWorkOrderHandler> handlers,
         IEnumerable<IWorkOrderObserver> observers,
         IEnumerable<IWorkOrderPartsService> parts,
@@ -91,9 +98,9 @@ public sealed class WorkOrderService
         _store = store;
         _types = types;
         _checklists = checklists;
-        _policies = policies;
         _subStatuses = subStatuses;
-        _slaClock = slaClock;
+        _serviceLevels = serviceLevels;
+        _timeline = timeline;
         _handlers = handlers;
         _observers = observers;
         _parts = parts;
@@ -133,7 +140,7 @@ public sealed class WorkOrderService
             TypeId = type.ItemId,
             Priority = type.DefaultPriority,
             EstimatedMinutes = type.DefaultDurationMinutes,
-            RequiredSkills = [.. type.RequiredSkills.Select(skill => new RequiredSkill { SkillId = skill.SkillId, MinProficiency = skill.MinProficiency })],
+            RequiredSkills = [.. type.RequiredSkills.Select(skill => new SkillRequirement { SkillId = skill.SkillId, MinProficiency = skill.MinProficiency })],
             Lines = [.. type.DefaultLines.Select(line => Copy(line))],
             Sla = new WorkOrderSla { PolicyId = type.ServiceLevelPolicyId },
         };
@@ -179,14 +186,14 @@ public sealed class WorkOrderService
             line.Id ??= CrestApps.Core.UniqueId.GenerateId();
         }
 
-        await ScheduleSlaAsync(workOrder, now, cancellationToken);
+        await _serviceLevels.StartAsync(workOrder, now, cancellationToken);
 
         foreach (var handler in _handlers)
         {
             await handler.CreatingAsync(workOrder, cancellationToken);
         }
 
-        Note(workOrder, actor, S["Created."]);
+        await NoteAsync(workOrder, actor, S["Created."]);
         await _store.CreateAsync(workOrder, cancellationToken);
         await NotifyAsync(workOrder, WorkOrdersConstants.Events.Created, null, cancellationToken);
 
@@ -216,7 +223,8 @@ public sealed class WorkOrderService
             await handler.UpdatingAsync(workOrder, cancellationToken);
         }
 
-        Note(workOrder, actor, S["Details changed."]);
+        await _serviceLevels.UpdatedAsync(workOrder, cancellationToken);
+        await NoteAsync(workOrder, actor, S["Details changed."]);
         await _store.UpdateAsync(workOrder, cancellationToken);
 
         return new WorkOrderResult { WorkOrder = workOrder };
@@ -284,7 +292,7 @@ public sealed class WorkOrderService
             workOrder.ClosedBy = actor;
         }
 
-        Note(workOrder, actor, string.IsNullOrWhiteSpace(note) ? S["{0} to {1}.", previous.Text(), Label(status, subStatus)] : S["{0} to {1}: {2}", previous.Text(), Label(status, subStatus), note.Trim()]);
+        await NoteAsync(workOrder, actor, string.IsNullOrWhiteSpace(note) ? S["{0} to {1}.", previous.Text(), Label(status, subStatus)] : S["{0} to {1}: {2}", previous.Text(), Label(status, subStatus), note.Trim()]);
         await _store.UpdateAsync(workOrder, cancellationToken);
         await NotifyAsync(workOrder, WorkOrdersConstants.Events.StatusChanged, new Dictionary<string, object> { ["PreviousStatus"] = previous.ToString() }, cancellationToken);
 
@@ -340,7 +348,7 @@ public sealed class WorkOrderService
         }
 
         line.QuantityUsed += quantity;
-        Note(workOrder, actor, S["Used {0} × {1}.", quantity.ToString("0.##", CultureInfo.CurrentCulture), line.Description]);
+        await NoteAsync(workOrder, actor, S["Used {0} × {1}.", quantity.ToString("0.##", CultureInfo.CurrentCulture), line.Description]);
         await _store.UpdateAsync(workOrder, cancellationToken);
 
         return new WorkOrderResult { WorkOrder = workOrder };
@@ -426,7 +434,7 @@ public sealed class WorkOrderService
         }
 
         workOrder.Signatures.Add(new WorkOrderSignature { Name = name.Trim(), ImagePath = string.IsNullOrWhiteSpace(imagePath) ? null : imagePath.Trim(), Utc = _clock.UtcNow });
-        Note(workOrder, actor, S["Signed by {0}.", name.Trim()]);
+        await NoteAsync(workOrder, actor, S["Signed by {0}.", name.Trim()]);
         await _store.UpdateAsync(workOrder, cancellationToken);
 
         return new WorkOrderResult { WorkOrder = workOrder };
@@ -457,7 +465,7 @@ public sealed class WorkOrderService
         if (!workOrder.Attachments.Contains(path.Trim(), StringComparer.OrdinalIgnoreCase))
         {
             workOrder.Attachments.Add(path.Trim());
-            Note(workOrder, actor, S["Added {0}.", Path.GetFileName(path.Trim())]);
+            await NoteAsync(workOrder, actor, S["Added {0}.", Path.GetFileName(path.Trim())]);
             await _store.UpdateAsync(workOrder, cancellationToken);
         }
 
@@ -481,7 +489,13 @@ public sealed class WorkOrderService
             return WorkOrderResult.Fail(S["Write the note."]);
         }
 
-        Note(workOrder, actor, text.Trim());
+        var errors = await NoteAsync(workOrder, actor, text.Trim(), TimelineConstants.Kinds.Note);
+
+        if (errors.Count > 0)
+        {
+            return WorkOrderResult.Fail([.. errors]);
+        }
+
         await _store.UpdateAsync(workOrder, cancellationToken);
 
         return new WorkOrderResult { WorkOrder = workOrder };
@@ -514,7 +528,9 @@ public sealed class WorkOrderService
 
         foreach (var checklist in workOrder.Checklists)
         {
-            foreach (var question in checklist.Questions.Where(question => question.Required && IsShown(checklist, question)))
+            var hidden = GetHiddenQuestions(checklist);
+
+            foreach (var question in checklist.Questions.Where(question => question.Required && !hidden.Contains(question.Id ?? string.Empty)))
             {
                 if (!checklist.Answers.Any(answer => answer.QuestionId == question.Id))
                 {
@@ -545,22 +561,48 @@ public sealed class WorkOrderService
         {
             var amount = BillableAmount(workOrder, type);
 
-            foreach (var billing in _billing)
+            // The billing with the highest priority bills it: Invoicing's when it is on, else the debt Transactions posts.
+            if (amount > 0 && _billing.OrderByDescending(billing => billing.Priority).FirstOrDefault() is { } billing)
             {
-                if (amount > 0)
-                {
-                    workOrder.InvoiceTransactionId = await billing.InvoiceAsync(workOrder, amount, type.Currency ?? "USD", cancellationToken);
-                }
+                var billed = await billing.InvoiceAsync(CreateBillingRequest(workOrder, type, amount), cancellationToken);
 
-                break;
+                workOrder.InvoiceTransactionId = billed?.TransactionId;
+                workOrder.InvoiceId = billed?.InvoiceId;
             }
         }
 
-        Note(workOrder, actor, S["Completed."]);
+        await NoteAsync(workOrder, actor, S["Completed."]);
         await _store.UpdateAsync(workOrder, cancellationToken);
         await NotifyAsync(workOrder, WorkOrdersConstants.Events.Completed, null, cancellationToken);
 
         return new WorkOrderResult { WorkOrder = workOrder };
+    }
+
+    /// <summary>
+    /// Gets the newest notes and history of a work order, oldest first, as the field app and the AI tools read them.
+    /// </summary>
+    /// <param name="workOrderId">The work order.</param>
+    /// <param name="take">How many entries, at most.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The notes.</returns>
+    public async Task<IReadOnlyList<WorkOrderNote>> GetNotesAsync(string workOrderId, int take = 50, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(workOrderId))
+        {
+            return [];
+        }
+
+        var page = await _timeline.ListAsync(new TimelineQuery
+        {
+            Subject = new RecordRef(WorkOrdersConstants.RecordKind, workOrderId),
+            IncludeInternal = true,
+            Take = take,
+        }, cancellationToken);
+
+        return [.. page.Entries
+            .Where(entry => !string.IsNullOrEmpty(entry.Body))
+            .Reverse()
+            .Select(entry => new WorkOrderNote { Utc = entry.CreatedUtc, By = entry.AuthorName, Text = entry.Body })];
     }
 
     /// <summary>
@@ -618,6 +660,80 @@ public sealed class WorkOrderService
     /// <param name="workOrder">The work order.</param>
     /// <param name="type">Its type.</param>
     /// <returns>The amount.</returns>
+    /// <summary>
+    /// What a completed work order bills: its billable lines when billed by time and materials, else one line at the
+    /// agreed or fixed price; owed by its account, else its customer user, else its contact.
+    /// </summary>
+    /// <param name="workOrder">The work order.</param>
+    /// <param name="type">Its type.</param>
+    /// <param name="amount">The amount billed.</param>
+    /// <returns>The billing request.</returns>
+    public static WorkOrderBillingRequest CreateBillingRequest(WorkOrder workOrder, WorkOrderType type, decimal amount)
+    {
+        ArgumentNullException.ThrowIfNull(workOrder);
+        ArgumentNullException.ThrowIfNull(type);
+
+        var request = new WorkOrderBillingRequest
+        {
+            WorkOrder = workOrder,
+            Amount = amount,
+            Currency = type.Currency ?? "USD",
+            Payer = GetPayer(workOrder),
+        };
+
+        if (workOrder.AgreedPrice is null && type.BillingMode == WorkOrderBillingMode.TimeAndMaterials)
+        {
+            foreach (var line in workOrder.Lines.Where(line => line.Billable))
+            {
+                var quantity = line.QuantityUsed > 0 || line.Kind == WorkOrderLineKind.Product ? line.QuantityUsed : line.QuantityEstimated;
+
+                if (quantity <= 0m)
+                {
+                    continue;
+                }
+
+                request.Lines.Add(new WorkOrderBillingLine
+                {
+                    Kind = line.Kind,
+                    Description = line.Description,
+                    Quantity = quantity,
+                    UnitPrice = line.UnitPrice,
+                    ProductId = line.ProductId,
+                });
+            }
+        }
+        else
+        {
+            request.Lines.Add(new WorkOrderBillingLine
+            {
+                Kind = WorkOrderLineKind.Service,
+                Description = string.IsNullOrWhiteSpace(workOrder.Summary) ? workOrder.Number : workOrder.Summary,
+                Quantity = 1m,
+                UnitPrice = amount,
+            });
+        }
+
+        return request;
+    }
+
+    // Who owes the work order: its account, else its customer user, else its CRM contact.
+    private static PartyRef GetPayer(WorkOrder workOrder)
+    {
+        if (!string.IsNullOrEmpty(workOrder.AccountId))
+        {
+            return new PartyRef(PartyKinds.Account, workOrder.AccountId);
+        }
+
+        if (!string.IsNullOrEmpty(workOrder.CustomerId))
+        {
+            return new PartyRef(PartyKinds.User, workOrder.CustomerId);
+        }
+
+        return string.IsNullOrEmpty(workOrder.ContactId)
+            ? default
+            : new PartyRef(PartyKinds.Contact, workOrder.ContactId);
+    }
+
     public static decimal BillableAmount(WorkOrder workOrder, WorkOrderType type)
     {
         ArgumentNullException.ThrowIfNull(workOrder);
@@ -644,17 +760,53 @@ public sealed class WorkOrderService
     /// <returns><see langword="true"/> when it shows.</returns>
     public static bool IsShown(WorkOrderChecklist checklist, ChecklistQuestion question)
     {
-        ArgumentNullException.ThrowIfNull(checklist);
         ArgumentNullException.ThrowIfNull(question);
 
-        if (question.ShowWhen is null || string.IsNullOrEmpty(question.ShowWhen.QuestionId))
+        return !GetHiddenQuestions(checklist).Contains(question.Id ?? string.Empty);
+    }
+
+    /// <summary>
+    /// Gets the questions of a checklist that don't show, given the answers so far: a question shows when its rule is
+    /// met, and a question that depends on a hidden one is hidden too. Pure.
+    /// </summary>
+    /// <param name="checklist">The checklist.</param>
+    /// <returns>The ids of the hidden questions.</returns>
+    public static IReadOnlySet<string> GetHiddenQuestions(WorkOrderChecklist checklist)
+    {
+        ArgumentNullException.ThrowIfNull(checklist);
+
+        var rules = new Dictionary<string, ConditionRule>(StringComparer.Ordinal);
+        var kinds = new Dictionary<string, ChecklistQuestionKind>(StringComparer.Ordinal);
+
+        foreach (var item in checklist.Questions.Where(item => !string.IsNullOrEmpty(item.Id)))
         {
-            return true;
+            kinds[item.Id] = item.Kind;
+
+            if (item.GetRule() is { } rule)
+            {
+                rules[item.Id] = rule;
+            }
         }
 
-        var answer = checklist.Answers.FirstOrDefault(item => item.QuestionId == question.ShowWhen.QuestionId)?.Value;
+        return ConditionalVisibility.GetHidden(rules, source =>
+        {
+            if (!kinds.TryGetValue(source, out var kind))
+            {
+                return null;
+            }
 
-        return string.Equals(answer, question.ShowWhen.EqualsValue, StringComparison.OrdinalIgnoreCase);
+            var answer = checklist.Answers.FirstOrDefault(item => item.QuestionId == source)?.Value;
+
+            if (answer is null)
+            {
+                return ConditionValue.Empty;
+            }
+
+            // A multiple-choice answer keeps its choices one per line.
+            return kind == ChecklistQuestionKind.MultiChoice
+                ? new ConditionValue(answer.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                : ConditionValue.Of(answer);
+        });
     }
 
     private string Check(ChecklistQuestion question, string value)
@@ -690,50 +842,12 @@ public sealed class WorkOrderService
 
     private async Task MoveAsync(WorkOrder workOrder, WorkOrderStatus status, WorkOrderSubStatus subStatus, CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
-        var policy = string.IsNullOrEmpty(workOrder.Sla.PolicyId) ? null : await _policies.FindByIdAsync(workOrder.Sla.PolicyId, cancellationToken);
-        var pauses = policy is not null && (policy.PauseStatuses.Contains(status) || subStatus?.PausesSla == true);
-
-        if (workOrder.Sla.FirstResponseUtc is null && WorkOrderStatusRules.IsResponse(status))
-        {
-            workOrder.Sla.FirstResponseUtc = now;
-        }
-
-        // The clock stops while the work order waits, and its open targets move by the time it stopped.
-        if (workOrder.Sla.PausedSinceUtc is { } since && !pauses)
-        {
-            var stopped = now - since;
-
-            workOrder.Sla.PausedSeconds += (long)stopped.TotalSeconds;
-            workOrder.Sla.PausedSinceUtc = null;
-
-            if (workOrder.Sla.FirstResponseUtc is null && workOrder.Sla.RespondByUtc is { } respondBy)
-            {
-                workOrder.Sla.RespondByUtc = respondBy + stopped;
-            }
-
-            if (workOrder.Sla.ResolveByUtc is { } resolveBy)
-            {
-                workOrder.Sla.ResolveByUtc = resolveBy + stopped;
-            }
-        }
-        else if (pauses && workOrder.Sla.PausedSinceUtc is null)
-        {
-            workOrder.Sla.PausedSinceUtc = now;
-        }
-
         workOrder.Status = status;
         workOrder.SubStatusId = subStatus?.ItemId;
-    }
 
-    private async Task ScheduleSlaAsync(WorkOrder workOrder, DateTime now, CancellationToken cancellationToken)
-    {
-        var policy = string.IsNullOrEmpty(workOrder.Sla?.PolicyId) ? null : await _policies.FindByIdAsync(workOrder.Sla.PolicyId, cancellationToken);
-        var target = SlaClock.TargetOf(policy, workOrder.Priority);
-
-        workOrder.Sla ??= new WorkOrderSla();
-        workOrder.Sla.RespondByUtc = target?.ResponseMinutes > 0 ? await _slaClock.DueAsync(now, target.ResponseMinutes, policy, cancellationToken) : null;
-        workOrder.Sla.ResolveByUtc = target?.ResolveMinutes > 0 ? await _slaClock.DueAsync(now, target.ResolveMinutes, policy, cancellationToken) : null;
+        // The first move to a response status answers it, a status that waits stops the timers, and a finished or
+        // canceled work order ends them.
+        await _serviceLevels.MovedAsync(workOrder, subStatus, _clock.UtcNow, cancellationToken);
     }
 
     private async Task<IReadOnlyList<string>> ValidateAsync(WorkOrder workOrder, CancellationToken cancellationToken)
@@ -784,8 +898,22 @@ public sealed class WorkOrderService
         }
     }
 
-    private void Note(WorkOrder workOrder, string actor, string text)
-        => workOrder.Notes.Add(new WorkOrderNote { Utc = _clock.UtcNow, By = actor, Text = text });
+    // Notes and history are entries on the work order's timeline: what someone wrote is a note, what happened is an
+    // event. The actor is the name of who did it, as the callers pass it.
+    private async Task<IReadOnlyList<string>> NoteAsync(WorkOrder workOrder, string actor, string text, string kind = TimelineConstants.Kinds.Event)
+    {
+        var result = await _timeline.AddAsync(new TimelineEntry
+        {
+            Subject = WorkOrderServiceLevels.SubjectOf(workOrder),
+            Kind = kind,
+            Visibility = TimelineVisibility.Internal,
+            AuthorName = actor,
+            Body = text,
+            CreatedUtc = _clock.UtcNow,
+        });
+
+        return result.Errors;
+    }
 
     private static string Label(WorkOrderStatus status, WorkOrderSubStatus subStatus)
         => subStatus is null ? status.Text() : $"{status.Text()} ({subStatus.Name})";

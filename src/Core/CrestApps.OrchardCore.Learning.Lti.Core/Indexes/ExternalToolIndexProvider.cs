@@ -19,6 +19,8 @@ public sealed class ExternalToolIndexProvider : IndexProvider<ExternalTool>
     /// <inheritdoc />
     public override void Describe(DescribeContext<ExternalTool> context)
         => context.For<ExternalToolIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(tool => new ExternalToolIndex
             {
                 ItemId = tool.ItemId,

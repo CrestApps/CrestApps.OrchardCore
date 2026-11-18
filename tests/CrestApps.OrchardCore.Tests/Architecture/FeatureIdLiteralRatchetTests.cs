@@ -29,7 +29,6 @@ public sealed partial class FeatureIdLiteralRatchetTests
         ["src/Modules/CrestApps.OrchardCore.AI/Startup.cs"] = 4,
         ["src/Modules/CrestApps.OrchardCore.AzureAIInference/Manifest.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Calendars/AIToolsStartup.cs"] = 1,
-        ["src/Modules/CrestApps.OrchardCore.ContentAccessControl/Manifest.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.ContentFields/Manifest.cs"] = 2,
         ["src/Modules/CrestApps.OrchardCore.ContentFields/Startup.cs"] = 2,
         ["src/Modules/CrestApps.OrchardCore.Dispatch/AIToolsStartup.cs"] = 1,

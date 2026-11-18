@@ -63,6 +63,8 @@ public sealed class SubmissionIndexProvider : IndexProvider<Submission>
     /// <inheritdoc />
     public override void Describe(DescribeContext<Submission> context)
         => context.For<SubmissionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(submission => new SubmissionIndex
             {
                 ItemId = submission.ItemId,

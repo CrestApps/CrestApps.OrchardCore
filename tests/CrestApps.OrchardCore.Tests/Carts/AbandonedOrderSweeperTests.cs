@@ -30,7 +30,7 @@ public sealed class AbandonedOrderSweeperTests
             .Setup(store => store.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string id, CancellationToken _) => _sessions.GetValueOrDefault(id));
 
-        var service = new OrderService(_orders, [], new InMemoryNumberSequence(), clock.Object, NullLogger<OrderService>.Instance);
+        var service = new OrderService(_orders, [], new InMemoryNumberSequence(), new InMemoryTimelineService(), clock.Object, NullLogger<OrderService>.Instance);
 
         return new AbandonedOrderSweeper(_orders, service, sessions.Object, clock.Object, NullLogger<AbandonedOrderSweeper>.Instance);
     }

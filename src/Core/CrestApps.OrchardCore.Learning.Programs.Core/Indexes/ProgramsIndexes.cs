@@ -57,6 +57,8 @@ public sealed class LearningPathProgressIndexProvider : IndexProvider<LearningPa
     public override void Describe(DescribeContext<LearningPathProgress> context)
     {
         context.For<LearningPathProgressIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(progress => new LearningPathProgressIndex
             {
                 ItemId = progress.ItemId,
@@ -81,6 +83,8 @@ public sealed class LearningRequirementIndexProvider : IndexProvider<LearningReq
     public override void Describe(DescribeContext<LearningRequirement> context)
     {
         context.For<LearningRequirementIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(requirement => new LearningRequirementIndex
             {
                 ItemId = requirement.ItemId,
@@ -104,6 +108,8 @@ public sealed class RequiredLearningAssignmentIndexProvider : IndexProvider<Requ
     public override void Describe(DescribeContext<RequiredLearningAssignment> context)
     {
         context.For<RequiredLearningAssignmentIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(assignment => new RequiredLearningAssignmentIndex
             {
                 ItemId = assignment.ItemId,

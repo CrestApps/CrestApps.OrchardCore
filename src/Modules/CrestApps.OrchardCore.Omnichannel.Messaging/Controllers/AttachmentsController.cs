@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
@@ -49,7 +50,7 @@ public sealed class AttachmentsController : Controller
         }
 
         var format = _attachmentLinks.TryReadViewToken(id, token, out var attachmentId, out var contentType, out var fileName)
-            ? MessagingFileFormats.FindByContentType(contentType)
+            ? FileFormats.FindByContentType(contentType)
             : null;
 
         if (format is null)

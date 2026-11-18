@@ -162,8 +162,8 @@ public sealed class AssessmentPathsTests
     [Fact]
     public async Task NoPageShowsTheKeyBeforeSubmitting_AndAnAttemptStillReadsAfterItsQuestionIsChangedAndRemoved()
     {
-        // Arrange
-        var setup = await SetupAsync();
+        // Arrange: questions of its own, since this test removes one and the other tests read the shared ones in any order.
+        var setup = await CreateSetupAsync(" (removed)");
         var attemptId = await AsLearnerAsync(async (services, user, userId) =>
         {
             var attempts = services.GetRequiredService<IAssessmentAttemptService>();
@@ -224,71 +224,7 @@ public sealed class AssessmentPathsTests
                 return existing.Value;
             }
 
-            var value = await _fixture.InTenantAsync(async services =>
-            {
-                var contentManager = services.GetRequiredService<IContentManager>();
-
-                var bank = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.QuestionBank);
-                bank.DisplayText = "Fire bank";
-                bank.Alter<TitlePart>(part => part.Title = "Fire bank");
-                await contentManager.CreateAsync(bank, VersionOptions.Published);
-
-                var essay = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.EssayQuestion);
-                essay.DisplayText = "Exit route essay";
-                essay.Alter<TitlePart>(part => part.Title = "Exit route essay");
-                essay.Alter<QuestionPart>(part =>
-                {
-                    part.Prompt = "<p>Describe your exit route.</p>";
-                    part.Points = 2;
-                });
-                essay.Alter<EssayQuestionPart>(part => part.GraderGuidance = GraderGuidance);
-                essay.Alter<ContainedPart>(part =>
-                {
-                    part.ListContentItemId = bank.ContentItemId;
-                    part.ListContentType = bank.ContentType;
-                });
-                await contentManager.CreateAsync(essay, VersionOptions.Published);
-
-                var shortText = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.ShortTextQuestion);
-                shortText.DisplayText = "Fire exit short answer";
-                shortText.Alter<TitlePart>(part => part.Title = "Fire exit short answer");
-                shortText.Alter<QuestionPart>(part =>
-                {
-                    part.Prompt = "<p>Which exit do you use?</p>";
-                    part.Points = 1;
-                });
-                shortText.Alter<ShortTextQuestionPart>(part => part.AcceptedAnswers = [AcceptedAnswer]);
-                shortText.Alter<ContainedPart>(part =>
-                {
-                    part.ListContentItemId = bank.ContentItemId;
-                    part.ListContentType = bank.ContentType;
-                });
-                await contentManager.CreateAsync(shortText, VersionOptions.Published);
-
-                var course = await contentManager.GetAsync(_fixture.CourseId, VersionOptions.Published);
-                var quiz = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.Quiz);
-                quiz.DisplayText = "Exit quiz";
-                quiz.Alter<TitlePart>(part => part.Title = "Exit quiz");
-                quiz.Alter<QuizPart>(part =>
-                {
-                    part.QuestionIds = [essay.ContentItemId, shortText.ContentItemId];
-                    part.MaxAttempts = null;
-                });
-                quiz.Alter<ContainedPart>(part =>
-                {
-                    part.ListContentItemId = course.ContentItemId;
-                    part.ListContentType = course.ContentType;
-                });
-                quiz.Alter<CourseItemPart>(part => part.CompletionMode = CompletionModes.Submitted);
-                await contentManager.CreateAsync(quiz, VersionOptions.Published);
-
-                var draft = await contentManager.GetAsync(_fixture.CourseId, VersionOptions.DraftRequired);
-                draft.Alter<CourseOutlinePart>(part => part.Sections[0].Items.Add(new CourseOutlineItem { ContentItemId = quiz.ContentItemId, Required = false }));
-                await contentManager.UpdateAsync(draft);
-                await contentManager.PublishAsync(draft);
-
-                return new Setup(bank.ContentItemId, essay.ContentItemId, shortText.ContentItemId, quiz.ContentItemId);
-            });
+            var value = await CreateSetupAsync(string.Empty);
 
             _setup = (_fixture, value);
 
@@ -299,6 +235,73 @@ public sealed class AssessmentPathsTests
             _setupLock.Release();
         }
     }
+
+    private Task<Setup> CreateSetupAsync(string suffix)
+        => _fixture.InTenantAsync(async services =>
+        {
+            var contentManager = services.GetRequiredService<IContentManager>();
+
+            var bank = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.QuestionBank);
+            bank.DisplayText = "Fire bank" + suffix;
+            bank.Alter<TitlePart>(part => part.Title = "Fire bank" + suffix);
+            await contentManager.CreateAsync(bank, VersionOptions.Published);
+
+            var essay = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.EssayQuestion);
+            essay.DisplayText = "Exit route essay" + suffix;
+            essay.Alter<TitlePart>(part => part.Title = "Exit route essay" + suffix);
+            essay.Alter<QuestionPart>(part =>
+            {
+                part.Prompt = "<p>Describe your exit route.</p>";
+                part.Points = 2;
+            });
+            essay.Alter<EssayQuestionPart>(part => part.GraderGuidance = GraderGuidance);
+            essay.Alter<ContainedPart>(part =>
+            {
+                part.ListContentItemId = bank.ContentItemId;
+                part.ListContentType = bank.ContentType;
+            });
+            await contentManager.CreateAsync(essay, VersionOptions.Published);
+
+            var shortText = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.ShortTextQuestion);
+            shortText.DisplayText = "Fire exit short answer" + suffix;
+            shortText.Alter<TitlePart>(part => part.Title = "Fire exit short answer" + suffix);
+            shortText.Alter<QuestionPart>(part =>
+            {
+                part.Prompt = "<p>Which exit do you use?</p>";
+                part.Points = 1;
+            });
+            shortText.Alter<ShortTextQuestionPart>(part => part.AcceptedAnswers = [AcceptedAnswer]);
+            shortText.Alter<ContainedPart>(part =>
+            {
+                part.ListContentItemId = bank.ContentItemId;
+                part.ListContentType = bank.ContentType;
+            });
+            await contentManager.CreateAsync(shortText, VersionOptions.Published);
+
+            var course = await contentManager.GetAsync(_fixture.CourseId, VersionOptions.Published);
+            var quiz = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.Quiz);
+            quiz.DisplayText = "Exit quiz" + suffix;
+            quiz.Alter<TitlePart>(part => part.Title = "Exit quiz" + suffix);
+            quiz.Alter<QuizPart>(part =>
+            {
+                part.QuestionIds = [essay.ContentItemId, shortText.ContentItemId];
+                part.MaxAttempts = null;
+            });
+            quiz.Alter<ContainedPart>(part =>
+            {
+                part.ListContentItemId = course.ContentItemId;
+                part.ListContentType = course.ContentType;
+            });
+            quiz.Alter<CourseItemPart>(part => part.CompletionMode = CompletionModes.Submitted);
+            await contentManager.CreateAsync(quiz, VersionOptions.Published);
+
+            var draft = await contentManager.GetAsync(_fixture.CourseId, VersionOptions.DraftRequired);
+            draft.Alter<CourseOutlinePart>(part => part.Sections[0].Items.Add(new CourseOutlineItem { ContentItemId = quiz.ContentItemId, Required = false }));
+            await contentManager.UpdateAsync(draft);
+            await contentManager.PublishAsync(draft);
+
+            return new Setup(bank.ContentItemId, essay.ContentItemId, shortText.ContentItemId, quiz.ContentItemId);
+        });
 
     private Task<T> AsLearnerAsync<T>(Func<IServiceProvider, System.Security.Claims.ClaimsPrincipal, string, Task<T>> work)
         => _fixture.InTenantAsync(async services =>

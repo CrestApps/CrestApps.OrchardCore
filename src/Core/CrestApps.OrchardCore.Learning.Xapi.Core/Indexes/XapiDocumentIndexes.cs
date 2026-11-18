@@ -60,6 +60,8 @@ public sealed class XapiDocumentIndexProvider : IndexProvider<XapiDocument>
     /// <inheritdoc />
     public override void Describe(DescribeContext<XapiDocument> context)
         => context.For<XapiDocumentIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(document => new XapiDocumentIndex
             {
                 ItemId = document.ItemId,
@@ -89,6 +91,8 @@ public sealed class XapiActivityIndexProvider : IndexProvider<XapiActivityRecord
     /// <inheritdoc />
     public override void Describe(DescribeContext<XapiActivityRecord> context)
         => context.For<XapiActivityIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(activity => new XapiActivityIndex
             {
                 ItemId = activity.ItemId,

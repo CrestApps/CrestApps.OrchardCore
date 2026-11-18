@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Transactions.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<RecordTransactionPaymentTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i>
+    @T["Record Transaction Payment"]
+</h4>
+<p>@T["Records a payment received outside the site on a transaction."]</p>

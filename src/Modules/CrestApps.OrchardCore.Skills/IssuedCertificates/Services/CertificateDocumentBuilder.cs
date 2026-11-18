@@ -83,7 +83,7 @@ public sealed class CertificateDocumentBuilder
 
         if (template.Landscape)
         {
-            size = size.Landscape();
+            size = size.Landscape;
         }
 
         var accent = PdfColor.Parse(template.AccentColor, new PdfColor(30, 58, 138));
@@ -168,7 +168,7 @@ public sealed class CertificateDocumentBuilder
             Author = string.IsNullOrWhiteSpace(certification.Issuer) ? site.SiteName : certification.Issuer,
         };
 
-        var fonts = PdfFontSet.FromInstalledFamily(template.FontFamily);
+        var fonts = PdfFontSet.GetInstalled(string.IsNullOrWhiteSpace(template.FontFamily) ? PdfDocumentRenderer.DefaultFontFamily : template.FontFamily.Trim());
 
         layout.RegularFont = fonts.Regular;
         layout.BoldFont = fonts.Bold;

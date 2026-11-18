@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Transactions;
@@ -127,6 +128,7 @@ public sealed class TransactionRefundHandlerSharedPaymentTests
             TransactionManagerFactory.Create(store),
             services,
             new TestClock(_now),
+            NullLogger<TransactionRefundHandler>.Instance,
             new PassThroughStringLocalizer<TransactionRefundHandler>());
 
         return (handler, store);

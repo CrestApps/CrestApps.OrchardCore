@@ -63,7 +63,7 @@
       Reference the modules this one depends on directly, so installing this package brings the features it needs and
       the feature dependencies resolve.
     -->
-    <ProjectReference Include="..\CrestApps.OrchardCore.Learning\CrestApps.OrchardCore.Learning.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning\CrestApps.OrchardCore.Learning.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
   </ItemGroup>
 

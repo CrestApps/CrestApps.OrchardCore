@@ -22,6 +22,8 @@ public sealed class ContactCenterProjectionCheckpointIndexProvider : IndexProvid
     {
         context
             .For<ContactCenterProjectionCheckpointIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(checkpoint => new ContactCenterProjectionCheckpointIndex
             {
                 ItemId = checkpoint.ItemId,

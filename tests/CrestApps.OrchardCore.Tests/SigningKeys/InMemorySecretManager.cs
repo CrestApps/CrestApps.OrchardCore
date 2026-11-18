@@ -21,25 +21,23 @@ internal sealed class InMemorySecretManager : ISecretManager
     public SecretSaveOptions OptionsOf(string name)
         => _secrets.TryGetValue(name, out var entry) ? entry.Options : null;
 
-    public Task<T> GetSecretAsync<T>(string name)
-        where T : class, ISecret
-        => Task.FromResult(_secrets.TryGetValue(name, out var entry) ? JsonSerializer.Deserialize(entry.Json, entry.Type) as T : null);
+    public Task<Secret> GetSecretAsync(string name)
+        => Task.FromResult(_secrets.TryGetValue(name, out var entry) ? Secret.FromValue(JsonSerializer.Deserialize(entry.Json, entry.Type)) : default);
 
-    public Task<T> GetSecretAsync<T>(string name, string storeName)
-        where T : class, ISecret
-        => GetSecretAsync<T>(name);
+    public Task<Secret> GetSecretAsync(string name, string storeName)
+        => GetSecretAsync(name);
 
-    public Task SaveSecretAsync<T>(string name, T secret, SecretSaveOptions options = null)
-        where T : class, ISecret
+    public Task SaveSecretAsync(string name, Secret secret, SecretSaveOptions options = null)
     {
-        _secrets[name] = (secret.GetType(), JsonSerializer.Serialize(secret, secret.GetType()), options);
+        var value = secret.Value ?? throw new ArgumentException("The secret has no value.", nameof(secret));
+
+        _secrets[name] = (value.GetType(), JsonSerializer.Serialize(value, value.GetType()), options);
         Saves++;
 
         return Task.CompletedTask;
     }
 
-    public Task SaveSecretAsync<T>(string name, T secret, string storeName, SecretSaveOptions options = null)
-        where T : class, ISecret
+    public Task SaveSecretAsync(string name, Secret secret, string storeName, SecretSaveOptions options = null)
         => SaveSecretAsync(name, secret, options);
 
     public Task RemoveSecretAsync(string name)

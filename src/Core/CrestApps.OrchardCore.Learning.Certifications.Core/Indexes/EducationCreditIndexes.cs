@@ -38,6 +38,8 @@ public sealed class EducationCreditTypeIndexProvider : IndexProvider<EducationCr
 
     public override void Describe(DescribeContext<EducationCreditType> context)
         => context.For<EducationCreditTypeIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(type => new EducationCreditTypeIndex { ItemId = type.ItemId, Name = type.Name });
 }
 
@@ -53,6 +55,8 @@ public sealed class ExternalLearningSubmissionIndexProvider : IndexProvider<Exte
 
     public override void Describe(DescribeContext<ExternalLearningSubmission> context)
         => context.For<ExternalLearningSubmissionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(submission => new ExternalLearningSubmissionIndex
             {
                 ItemId = submission.ItemId,

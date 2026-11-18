@@ -22,6 +22,8 @@ public sealed class AgentProfileIndexProvider : IndexProvider<AgentProfile>
     {
         context
             .For<AgentProfileIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(profile => new AgentProfileIndex
             {
                 ItemId = profile.ItemId,

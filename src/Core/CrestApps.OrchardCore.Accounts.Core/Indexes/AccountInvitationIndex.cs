@@ -37,6 +37,8 @@ public sealed class AccountInvitationIndexProvider : IndexProvider<AccountInvita
 
     public override void Describe(DescribeContext<AccountInvitation> context)
         => context.For<AccountInvitationIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(invitation => new AccountInvitationIndex
             {
                 ItemId = invitation.ItemId,

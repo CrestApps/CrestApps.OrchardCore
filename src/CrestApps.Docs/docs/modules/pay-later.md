@@ -58,7 +58,25 @@ Each cycle is created exactly once. The sweep takes a lock on the one commitment
 
 ### Configuring the payment term
 
-Under **Settings → Commerce → Offline payments** you can set the **net term (days)** — how many days after checkout a recorded Pay Later balance is due. The due date drives the reminder cadence configured in the [Transactions](transactions) settings. A value of `0` records the balance with no due date. `PayLaterSettings.Enabled` (off by default) offers the option at checkout; until it's on, enabling the feature adds nothing to checkout.
+A Pay Later balance falls due the way an invoice does, and the way B2B checkouts and accounting systems set terms: the most specific term wins. `PayLaterDueDateResolver` decides, for the first balance and for every renewal cycle:
+
+1. **The payer's own payment term**, from their billing profile (`PartyBillingProfile.PaymentTermId`, such as an account that buys on Net 60). A guest has none.
+2. **The payment term chosen for Pay Later** (`PayLaterSettings.PaymentTermId`), under **Settings → Commerce → Offline payments → Payment term**. The field is shown when the [Payment Terms](transactions#payment-terms) feature is on, which Invoicing turns on.
+3. **The net term (days)** (`PayLaterSettings.NetTermDays`, 30 by default): how many days after checkout, or after the start of the cycle, the balance is due. `0` records it with no due date.
+
+A payment term gives a date (Net 15, the end of the month, a day of the next month), so the balance is due at the end of that day in the site's time zone, as an invoice is. A disabled or deleted term is skipped. Without the Payment Terms feature only the number of days applies, as before. A trial or a delayed start counts from the day its first real cycle begins. The due date drives the reminder cadence configured in the [Transactions](transactions) settings.
+
+`OfflineCheckoutPaymentProvider.GetDueUtcAsync(DateTime now, PartyRef payer, CancellationToken)` is what the checkout handler asks; Pay Later overrides it, and Bank transfer and Cash on delivery keep their own number of days. `PayLaterSettings.Enabled` (off by default) offers the option at checkout; until it's on, enabling the feature adds nothing to checkout.
+
+### With Invoicing
+
+With [Invoicing](invoicing) on, every Pay Later balance gets an invoice that takes the debt over, so the customer receives a numbered invoice, and pays and is reminded about one amount:
+
+- **An order's balance** gets the order's invoice, made from its lines ([Orders paid on account](invoicing#orders-paid-on-account)).
+- **What another checkout left owing**, such as a subscription's first cycle or a membership, gets an invoice with one line for what was bought, over the period when it bills a cycle ([Deferred debts](invoicing#deferred-debts-renewals-and-other-checkouts)).
+- **Each renewal cycle** gets an invoice for its period.
+
+The invoice is due when the balance is, its number is the one the reminders give, and paying it settles the balance. An invoice never offers Pay Later as a way to pay it: a promise to pay later can't settle a balance (`DefersPayment`).
 
 ## Bank transfer and cash on delivery
 

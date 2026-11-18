@@ -1,0 +1,3 @@
+@model ShapeViewModel<ExchangeRate>
+
+<a asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.Currency → @Model.Value.BaseCurrency</a>

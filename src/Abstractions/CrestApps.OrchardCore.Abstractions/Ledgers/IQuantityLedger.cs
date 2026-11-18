@@ -38,6 +38,23 @@ public interface IQuantityLedger<TLedger>
     Task<IReadOnlyList<QuantityLedgerEntry>> ListByKindAsync(string kind, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets entries by their ids. An id with no entry is left out.
+    /// </summary>
+    /// <param name="itemIds">The ids of the entries.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The entries.</returns>
+    Task<IReadOnlyList<QuantityLedgerEntry>> GetAsync(IReadOnlyCollection<string> itemIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Saves the properties of a posted entry, such as the pay runs that took a payout. The quantity, dates, kind and
+    /// key stay as they were posted.
+    /// </summary>
+    /// <param name="entry">The entry, with its id and the properties to keep.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="false"/> when no entry has the id.</returns>
+    Task<bool> SavePropertiesAsync(QuantityLedgerEntry entry, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Pages the entries of an account, newest first, optionally of one balance.
     /// </summary>
     Task<(int Count, IReadOnlyList<QuantityLedgerEntry> Items)> PageAsync(string accountId, string bucket, int skip, int take, CancellationToken cancellationToken = default);

@@ -361,7 +361,7 @@ public sealed class PdfReportExportFormatTests
     public void Serialize_WhenTextHasMoreCharactersThanOneEmbeddedFontHolds_ShouldWriteThemAll()
     {
         // Arrange
-        Assert.SkipWhen(PdfFontSet.Installed.Regular is null, "No TrueType font is installed.");
+        Assert.SkipWhen(PdfFontSet.GetInstalled(ReportPdfTheme.FontFamily).Regular is null, "No TrueType font is installed.");
 
         // The letters of Latin-1 and Latin Extended-A, and of ASCII: more than the 255 characters of one embedded font.
         var characters = string.Concat(Enumerable.Range(0x00C0, 0x0180 - 0x00C0).Select(code => (char)code))

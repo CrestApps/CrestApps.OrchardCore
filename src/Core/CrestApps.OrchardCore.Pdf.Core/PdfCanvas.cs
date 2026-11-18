@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Pdf.Models;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Graphics.Core;
 using UglyToad.PdfPig.Graphics.Operations;
@@ -10,7 +9,7 @@ using UglyToad.PdfPig.Writer;
 namespace CrestApps.OrchardCore.Pdf;
 
 /// <summary>
-/// Draws on a page of a PDF. Positions are in points from the top left of the page, as a document is laid out;
+/// Draws on a page of a PDF document. Positions are in points from the top left of the page, as a document is laid out;
 /// the page turns them into the coordinates of PDF, which start at the bottom left.
 /// </summary>
 public sealed class PdfCanvas
@@ -51,73 +50,6 @@ public sealed class PdfCanvas
         SetFillColor(color);
         Operations.Add(new AppendRectangle(x, _height - top - height, width, height));
         Operations.Add(FillPathNonZeroWinding.Value);
-    }
-
-    /// <summary>
-    /// Outlines a rectangle, without filling it.
-    /// </summary>
-    /// <param name="x">The left of the rectangle.</param>
-    /// <param name="top">The top of the rectangle.</param>
-    /// <param name="width">The width of the rectangle.</param>
-    /// <param name="height">The height of the rectangle.</param>
-    /// <param name="color">The color of the outline.</param>
-    /// <param name="lineWidth">The width of the outline.</param>
-    public void StrokeRectangle(double x, double top, double width, double height, PdfColor color, double lineWidth)
-    {
-        if (width <= 0 || height <= 0 || lineWidth <= 0)
-        {
-            return;
-        }
-
-        Operations.Add(new SetStrokeColorDeviceRgb(color.R / 255d, color.G / 255d, color.B / 255d));
-        Operations.Add(new SetLineWidth(lineWidth));
-        Operations.Add(new AppendRectangle(x, _height - top - height, width, height));
-        Operations.Add(StrokePath.Value);
-    }
-
-    /// <summary>
-    /// Draws a JPEG or PNG image stretched to a box.
-    /// </summary>
-    /// <param name="data">The image file.</param>
-    /// <param name="x">The left of the box.</param>
-    /// <param name="top">The top of the box.</param>
-    /// <param name="width">The width of the box.</param>
-    /// <param name="height">The height of the box.</param>
-    /// <returns>
-    /// <see langword="true"/> when the image is drawn; <see langword="false"/> when the file is neither JPEG nor PNG,
-    /// or PdfPig cannot read it, such as a 16-bit PNG.
-    /// </returns>
-    public bool DrawImage(byte[] data, double x, double top, double width, double height)
-    {
-        if (data is not { Length: > 8 } || width <= 0 || height <= 0)
-        {
-            return false;
-        }
-
-        var box = new PdfRectangle(x, _height - top - height, x + width, _height - top);
-
-        try
-        {
-            if (data[0] == 0xFF && data[1] == 0xD8)
-            {
-                _page.AddJpeg(data, box);
-
-                return true;
-            }
-
-            if (data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47)
-            {
-                _page.AddPng(data, box);
-
-                return true;
-            }
-        }
-        catch (Exception)
-        {
-            // An image PdfPig cannot read is left out rather than failing the whole document.
-        }
-
-        return false;
     }
 
     /// <summary>
@@ -239,13 +171,13 @@ public sealed class PdfCanvas
     /// <summary>
     /// Writes a line of prepared text, outlining its letters when the face simulates bold.
     /// </summary>
-    /// <param name="text">The text, from <see cref="PdfFont.Prepare"/>, without line breaks.</param>
+    /// <param name="text">The text, from <see cref="PdfFontFace.Prepare"/>, without line breaks.</param>
     /// <param name="font">The font.</param>
     /// <param name="size">The font size, in points.</param>
     /// <param name="x">The left of the text.</param>
     /// <param name="top">The top of the line of text.</param>
     /// <param name="color">The color.</param>
-    public void DrawText(string text, PdfFont font, double size, double x, double top, PdfColor color)
+    public void DrawText(string text, PdfFontFace font, double size, double x, double top, PdfColor color)
     {
         if (string.IsNullOrEmpty(text))
         {
@@ -268,6 +200,110 @@ public sealed class PdfCanvas
         {
             _page.SetTextRenderingMode(TextRenderingMode.Fill);
         }
+    }
+
+    /// <summary>
+    /// Writes a line of prepared text on a baseline, for a form or a check where the standard gives the place of the
+    /// baseline and not of the top of the line.
+    /// </summary>
+    /// <param name="text">The text, from <see cref="PdfFontFace.Prepare"/>, without line breaks.</param>
+    /// <param name="font">The face.</param>
+    /// <param name="size">The font size, in points.</param>
+    /// <param name="x">The left of the text.</param>
+    /// <param name="baseline">The baseline of the text, in points from the top of the page.</param>
+    /// <param name="color">The color of the text.</param>
+    public void DrawTextOnBaseline(string text, PdfFontFace font, double size, double x, double baseline, PdfColor color)
+    {
+        ArgumentNullException.ThrowIfNull(font);
+
+        DrawText(text, font, size, x, baseline - (font.Ascent * size), color);
+    }
+
+    /// <summary>
+    /// Writes a line of prepared text that ends at a position, such as an amount in a column.
+    /// </summary>
+    /// <param name="text">The text, from <see cref="PdfFontFace.Prepare"/>, without line breaks.</param>
+    /// <param name="font">The face.</param>
+    /// <param name="size">The font size, in points.</param>
+    /// <param name="right">The right of the text.</param>
+    /// <param name="top">The top of the line.</param>
+    /// <param name="color">The color of the text.</param>
+    public void DrawTextRight(string text, PdfFontFace font, double size, double right, double top, PdfColor color)
+    {
+        ArgumentNullException.ThrowIfNull(font);
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        DrawText(text, font, size, right - font.Measure(text, size), top, color);
+    }
+
+    /// <summary>
+    /// Draws the outline of a rectangle.
+    /// </summary>
+    /// <param name="x">The left of the rectangle.</param>
+    /// <param name="top">The top of the rectangle.</param>
+    /// <param name="width">The width of the rectangle.</param>
+    /// <param name="height">The height of the rectangle.</param>
+    /// <param name="color">The color of the outline.</param>
+    /// <param name="lineWidth">The width of the outline.</param>
+    public void DrawRectangle(double x, double top, double width, double height, PdfColor color, double lineWidth)
+    {
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        Operations.Add(new SetStrokeColorDeviceRgb(color.R / 255d, color.G / 255d, color.B / 255d));
+        Operations.Add(new SetLineWidth(lineWidth));
+        Operations.Add(new AppendRectangle(x, _height - top - height, width, height));
+        Operations.Add(StrokePath.Value);
+    }
+
+    /// <summary>
+    /// Draws a PNG or JPEG picture in a rectangle, such as a logo or a signature. The picture fills the rectangle; the
+    /// caller keeps its proportions.
+    /// </summary>
+    /// <param name="image">The PNG or JPEG file.</param>
+    /// <param name="x">The left of the picture.</param>
+    /// <param name="top">The top of the picture.</param>
+    /// <param name="width">The width of the picture.</param>
+    /// <param name="height">The height of the picture.</param>
+    /// <returns><see langword="false"/> when the file is not a PNG or JPEG picture that can be drawn; nothing is drawn then.</returns>
+    public bool DrawImage(byte[] image, double x, double top, double width, double height)
+    {
+        if (image is null || image.Length < 4 || width <= 0 || height <= 0)
+        {
+            return false;
+        }
+
+        var placement = new PdfRectangle(x, _height - top - height, x + width, _height - top);
+
+        try
+        {
+            if (image[0] == 0x89 && image[1] == 0x50 && image[2] == 0x4E && image[3] == 0x47)
+            {
+                _page.AddPng(image, placement);
+
+                return true;
+            }
+
+            if (image[0] == 0xFF && image[1] == 0xD8)
+            {
+                _page.AddJpeg(image, placement);
+
+                return true;
+            }
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or NotSupportedException or IOException)
+        {
+            // A picture the PDF writer cannot read is left out, like a font it cannot write with.
+            return false;
+        }
+
+        return false;
     }
 
     private void SetFillColor(PdfColor color)

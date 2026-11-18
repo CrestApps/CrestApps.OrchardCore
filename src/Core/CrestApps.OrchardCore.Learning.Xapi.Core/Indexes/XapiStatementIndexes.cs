@@ -112,6 +112,8 @@ public sealed class XapiStatementIndexProvider : IndexProvider<XapiStatementReco
     public override void Describe(DescribeContext<XapiStatementRecord> context)
     {
         context.For<XapiStatementIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(record => new XapiStatementIndex
             {
                 ItemId = record.ItemId,
@@ -131,6 +133,7 @@ public sealed class XapiStatementIndexProvider : IndexProvider<XapiStatementReco
             });
 
         context.For<XapiStatementAgentIndex>()
+            .ExclusiveToDocumentType()
             .Map(record => (record.Keys?.Agents ?? [])
                 .Where(key => !string.IsNullOrEmpty(key.Value))
                 .GroupBy(key => key.Value, StringComparer.Ordinal)
@@ -141,6 +144,7 @@ public sealed class XapiStatementIndexProvider : IndexProvider<XapiStatementReco
                 }));
 
         context.For<XapiStatementActivityIndex>()
+            .ExclusiveToDocumentType()
             .Map(record => (record.Keys?.Activities ?? [])
                 .Where(key => !string.IsNullOrEmpty(key.Value))
                 .GroupBy(key => key.Value, StringComparer.Ordinal)
@@ -151,12 +155,14 @@ public sealed class XapiStatementIndexProvider : IndexProvider<XapiStatementReco
                 }));
 
         context.For<XapiStatementVerbIndex>()
+            .ExclusiveToDocumentType()
             .Map(record => (record.Keys?.Verbs ?? [])
                 .Where(verb => !string.IsNullOrEmpty(verb))
                 .Distinct(StringComparer.Ordinal)
                 .Select(verb => new XapiStatementVerbIndex { VerbHash = XapiAgents.Hash(verb) }));
 
         context.For<XapiStatementRegistrationIndex>()
+            .ExclusiveToDocumentType()
             .Map(record => (record.Keys?.Registrations ?? [])
                 .Where(registration => !string.IsNullOrEmpty(registration))
                 .Distinct(StringComparer.Ordinal)

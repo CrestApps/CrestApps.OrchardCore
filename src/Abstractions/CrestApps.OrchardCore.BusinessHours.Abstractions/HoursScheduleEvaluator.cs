@@ -23,6 +23,11 @@ public static class HoursScheduleEvaluator
     private const int MinutesPerDay = 1440;
 
     /// <summary>
+    /// How far ahead <see cref="AddOpenTime"/> looks for open time before it gives up.
+    /// </summary>
+    public static readonly TimeSpan OpenTimeHorizon = TimeSpan.FromDays(366);
+
+    /// <summary>
     /// Gets whether a schedule is open at an instant.
     /// </summary>
     /// <param name="schedule">The schedule.</param>
@@ -125,6 +130,68 @@ public static class HoursScheduleEvaluator
         {
             yield return (0, window.CloseMinute);
         }
+    }
+
+    /// <summary>
+    /// Adds an amount of open time to an instant: the instant at which the schedule has been open for that long,
+    /// counting from the start. "Eight business hours from Friday 4 pm" is Monday 4 pm on a nine-to-five schedule.
+    /// </summary>
+    /// <param name="schedule">The schedule.</param>
+    /// <param name="fromUtc">The start, in UTC.</param>
+    /// <param name="duration">The open time to add.</param>
+    /// <param name="timeZoneId">A time zone to read the schedule in instead of its own; optional.</param>
+    /// <returns>The instant, in UTC, or <see langword="null"/> when the schedule isn't open for that long within
+    /// <see cref="OpenTimeHorizon"/> (a schedule that is never open).</returns>
+    public static DateTime? AddOpenTime(HoursSchedule schedule, DateTime fromUtc, TimeSpan duration, string timeZoneId = null)
+    {
+        ArgumentNullException.ThrowIfNull(schedule);
+
+        var start = DateTime.SpecifyKind(fromUtc, DateTimeKind.Utc);
+
+        if (duration <= TimeSpan.Zero)
+        {
+            return start;
+        }
+
+        var remaining = duration;
+
+        // A week at a time, so a long target on a short week doesn't build one huge list of windows.
+        for (var from = start; from - start < OpenTimeHorizon; from = from.AddDays(7))
+        {
+            foreach (var window in GetOpenWindows(schedule, from, from.AddDays(7), timeZoneId))
+            {
+                if (window.Duration >= remaining)
+                {
+                    return window.StartUtc + remaining;
+                }
+
+                remaining -= window.Duration;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets how long a schedule is open between two instants.
+    /// </summary>
+    /// <param name="schedule">The schedule.</param>
+    /// <param name="fromUtc">The start, in UTC.</param>
+    /// <param name="toUtc">The end, in UTC.</param>
+    /// <param name="timeZoneId">A time zone to read the schedule in instead of its own; optional.</param>
+    /// <returns>The open time; zero when the end isn't after the start.</returns>
+    public static TimeSpan GetOpenTime(HoursSchedule schedule, DateTime fromUtc, DateTime toUtc, string timeZoneId = null)
+    {
+        ArgumentNullException.ThrowIfNull(schedule);
+
+        var total = TimeSpan.Zero;
+
+        foreach (var window in GetOpenWindows(schedule, fromUtc, toUtc, timeZoneId))
+        {
+            total += window.Duration;
+        }
+
+        return total;
     }
 
     private static string ZoneOf(HoursSchedule schedule, string timeZoneId)

@@ -19,6 +19,8 @@ public sealed class LtiScoreIndexProvider : IndexProvider<LtiScore>
     /// <inheritdoc />
     public override void Describe(DescribeContext<LtiScore> context)
         => context.For<LtiScoreIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(score => new LtiScoreIndex
             {
                 ItemId = score.ItemId,

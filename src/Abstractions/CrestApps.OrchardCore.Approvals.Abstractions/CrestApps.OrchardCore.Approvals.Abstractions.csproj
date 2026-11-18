@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Approvals</RootNamespace>
+    <Title>CrestApps OrchardCore Approvals Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts for approvals: the record of a decision about any subject, the policy that says who may make
+      it and how many must, the two built-in rules, the handlers of each subject kind and the observers of decisions.
+    </Description>
+    <PackageTags>$(PackageTags) Approvals Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

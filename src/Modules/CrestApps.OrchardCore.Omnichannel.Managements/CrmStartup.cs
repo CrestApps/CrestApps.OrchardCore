@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.ContentTransfer;
@@ -248,10 +249,11 @@ public sealed class CrmWorkflowsStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the Create AI Activity workflow task, which starts an AI call or text from a workflow.
+/// Registers the Create AI Activity workflow task, which starts an AI call or text from a workflow. Its editor lists
+/// AI profiles, so it needs AI as well as Workflows: without AI the workflow editor can't build it.
 /// </summary>
 [Feature(OmnichannelConstants.Features.Activities)]
-[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows, AIConstants.Feature.Area)]
 public sealed class AIActivityWorkflowsStartup : StartupBase
 {
     /// <inheritdoc/>

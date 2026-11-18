@@ -33,6 +33,8 @@ public sealed class AssessmentAttemptIndexProvider : IndexProvider<AssessmentAtt
     public override void Describe(DescribeContext<AssessmentAttempt> context)
     {
         context.For<AssessmentAttemptIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(attempt => new AssessmentAttemptIndex
             {
                 ItemId = attempt.ItemId,
@@ -51,6 +53,7 @@ public sealed class AssessmentAttemptIndexProvider : IndexProvider<AssessmentAtt
             });
 
         context.For<AttemptItemIndex>()
+            .ExclusiveToDocumentType()
             .Map(attempt => attempt.Status is AttemptStatus.Graded or AttemptStatus.NeedsGrading or AttemptStatus.Submitted
                 ? (attempt.Items ?? []).Select(item => new AttemptItemIndex
                 {
@@ -83,6 +86,8 @@ public sealed class AssessmentOverrideIndexProvider : IndexProvider<AssessmentOv
     /// <inheritdoc />
     public override void Describe(DescribeContext<AssessmentOverride> context)
         => context.For<AssessmentOverrideIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(entry => new AssessmentOverrideIndex
             {
                 ItemId = entry.ItemId,
@@ -108,6 +113,8 @@ public sealed class GradeScaleIndexProvider : IndexProvider<GradeScale>
     /// <inheritdoc />
     public override void Describe(DescribeContext<GradeScale> context)
         => context.For<GradeScaleIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(scale => new GradeScaleIndex
             {
                 ItemId = scale.ItemId,

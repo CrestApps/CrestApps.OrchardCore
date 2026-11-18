@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Pdf;
-using CrestApps.OrchardCore.Pdf.Models;
 
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 
@@ -17,7 +16,7 @@ internal static class ReportPdfTheme
     /// <summary>
     /// The family the report is written in, or the installed font that stands in for it.
     /// </summary>
-    public const string FontFamily = PdfFontSet.DefaultFamily;
+    public const string FontFamily = "Arial";
 
     /// <summary>
     /// The color of body text.

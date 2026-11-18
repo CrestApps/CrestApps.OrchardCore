@@ -63,6 +63,8 @@ public sealed class QuantityLedgerEntryIndexProvider : IndexProvider<QuantityLed
     public override void Describe(DescribeContext<QuantityLedgerEntry> context)
     {
         context.For<QuantityLedgerEntryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(entry => new QuantityLedgerEntryIndex
             {
                 ItemId = entry.ItemId,

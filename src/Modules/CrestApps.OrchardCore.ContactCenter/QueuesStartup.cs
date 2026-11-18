@@ -112,8 +112,8 @@ public sealed class QueuesStartup : StartupBase
             .AddIndexProvider<ActivityReservationIndexProvider>()
             .AddDataMigration<ActivityReservationIndexMigrations>();
 
-        // Queue and skill administration screens. (Business-hours calendars are administered by the Business Hours
-        // feature this feature depends on.)
+        // Queue and skill administration screens. (Business hours are Business Hours schedules, administered by
+        // the Business Hours module.)
         services
             .AddDisplayDriver<ActivityQueueGroup, ActivityQueueGroupDisplayDriver>()
             .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>();

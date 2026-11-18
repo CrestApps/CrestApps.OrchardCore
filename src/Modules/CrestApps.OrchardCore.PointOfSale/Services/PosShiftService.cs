@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
@@ -163,6 +164,7 @@ public sealed class PosShiftService
         ArgumentNullException.ThrowIfNull(shift);
 
         var summary = new RegisterShiftSummary();
+        var departments = new Dictionary<string, RegisterShiftDepartmentTotal>(StringComparer.Ordinal);
 
         for (var skip = 0; ; skip += PageSize)
         {
@@ -184,6 +186,23 @@ public sealed class PosShiftService
                 summary.Other += other;
                 summary.Card += Math.Max(0m, total - cash - other);
                 summary.Refunded += order.RefundedAmount;
+                summary.Tax += order.TaxAmount ?? 0m;
+
+                foreach (var line in order.Lines ?? [])
+                {
+                    if (!PosDepartmentLines.IsDepartmentLine(line))
+                    {
+                        continue;
+                    }
+
+                    if (!departments.TryGetValue(line.ContentItemId, out var department))
+                    {
+                        departments[line.ContentItemId] = department = new RegisterShiftDepartmentTotal { DepartmentId = line.ContentItemId, Name = line.Title };
+                    }
+
+                    department.Quantity += line.Quantity;
+                    department.Total += line.LineTotal;
+                }
             }
 
             if (page.Count < PageSize)
@@ -192,6 +211,10 @@ public sealed class PosShiftService
             }
         }
 
+        summary.Departments = [.. departments.Values
+            .OrderByDescending(department => department.Total)
+            .ThenBy(department => department.Name, StringComparer.OrdinalIgnoreCase)];
+
         return summary;
     }
 
@@ -199,6 +222,13 @@ public sealed class PosShiftService
     /// Closes a shift with the cash counted in its drawer, keeping what it sold and what the drawer should have held.
     /// </summary>
     public async Task<bool> CloseAsync(RegisterShift shift, decimal countedCash, string note, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+        => await CloseAsync(shift, countedCash, note, null, null, user, cancellationToken);
+
+    /// <summary>
+    /// Closes a shift with the cash counted in its drawer and the tips the cashier declares: those added on card and the
+    /// cash tips kept.
+    /// </summary>
+    public async Task<bool> CloseAsync(RegisterShift shift, decimal countedCash, string note, decimal? cardTips, decimal? cashTips, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
         if (shift is not { Status: RegisterShiftStatus.Open })
         {
@@ -211,6 +241,8 @@ public sealed class PosShiftService
         shift.ExpectedCash = shift.GetExpectedCash(summary.Cash);
         shift.CountedCash = countedCash;
         shift.CloseNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        shift.CardTips = cardTips is > 0m ? cardTips : null;
+        shift.CashTips = cashTips is > 0m ? cashTips : null;
         shift.ClosedByUserId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         shift.ClosedByName = GetName(user);
         shift.ClosedUtc = _clock.UtcNow;
@@ -220,6 +252,31 @@ public sealed class PosShiftService
 
         return true;
     }
+
+    /// <summary>
+    /// Declares or corrects the tips of a closed shift, until payroll took them.
+    /// </summary>
+    /// <returns><see langword="false"/> when the shift is open or payroll already took its tips.</returns>
+    public async Task<bool> DeclareTipsAsync(RegisterShift shift, decimal? cardTips, decimal? cashTips, CancellationToken cancellationToken = default)
+    {
+        if (shift is not { Status: RegisterShiftStatus.Closed } || TipsTaken(shift))
+        {
+            return false;
+        }
+
+        shift.CardTips = cardTips is > 0m ? cardTips : null;
+        shift.CashTips = cashTips is > 0m ? cashTips : null;
+
+        await _shifts.UpdateAsync(shift, cancellationToken);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Gets whether payroll took a shift's tips.
+    /// </summary>
+    public static bool TipsTaken(RegisterShift shift)
+        => shift.TryGet<RegisterShiftPayroll>(out var payroll) && payroll?.ConsumerIds.Count > 0;
 
     internal static string GetName(ClaimsPrincipal user)
         => user.Identity?.Name ?? user.FindFirstValue("name") ?? user.FindFirstValue("client_id") ?? "API";

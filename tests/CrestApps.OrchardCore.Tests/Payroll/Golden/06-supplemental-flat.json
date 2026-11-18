@@ -1,0 +1,75 @@
+{
+  "Frequency": "Biweekly",
+  "PeriodStart": "2026-11-01",
+  "PeriodEnd": "2026-11-14",
+  "PayDate": "2026-11-20",
+  "Description": "A bonus withheld at the flat supplemental rate of 22%, regular wages at 10%.",
+  "Pay": {
+    "PayBasis": "Hourly",
+    "Rates": [
+      {
+        "EffectiveFrom": "2020-01-01",
+        "HourlyRate": 20
+      }
+    ]
+  },
+  "Codes": [
+    {
+      "Code": "REG",
+      "Class": "Earning",
+      "Kind": "Regular"
+    },
+    {
+      "Code": "BONUS",
+      "Class": "Earning",
+      "Kind": "Bonus"
+    }
+  ],
+  "Distribution": [
+    {
+      "Method": "Check",
+      "Split": "Remainder"
+    }
+  ],
+  "SupplementalMethod": "Flat",
+  "Inputs": [
+    {
+      "PayCode": "REG",
+      "Hours": 80
+    },
+    {
+      "PayCode": "BONUS",
+      "Amount": 1000
+    }
+  ],
+  "TaxRules": [
+    {
+      "rule": {
+        "TaxCode": "US-FIT",
+        "Name": "Income tax",
+        "Jurisdiction": "US",
+        "Category": "IncomeTax",
+        "Payer": "Employee",
+        "Method": "Percentage",
+        "EffectiveFrom": "2026-01-01",
+        "Rate": 10,
+        "SupplementalRate": 22
+      }
+    }
+  ],
+  "Expected": {
+    "Lines": [
+      "Earning REG 1600.00 for 80h",
+      "Earning BONUS 1000.00",
+      "Tax US-FIT Employee 380.00 on 2600.00"
+    ],
+    "Gross": 2600.0,
+    "Net": 2220.0,
+    "Payments": [
+      {
+        "Method": "Check",
+        "Amount": 2220.0
+      }
+    ]
+  }
+}

@@ -62,6 +62,8 @@ public sealed class SchedulingSessionIndexProvider : IndexProvider<SchedulingSes
 
     public override void Describe(DescribeContext<SchedulingSession> context)
         => context.For<SchedulingSessionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(session => new SchedulingSessionIndex
             {
                 ItemId = session.ItemId,
@@ -82,6 +84,8 @@ public sealed class SessionRegistrationIndexProvider : IndexProvider<Appointment
 
     public override void Describe(DescribeContext<Appointment> context)
         => context.For<SessionRegistrationIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .When(appointment => !string.IsNullOrEmpty(appointment.SessionId))
             .Map(appointment => new SessionRegistrationIndex
             {
@@ -102,6 +106,8 @@ public sealed class SessionWaitlistIndexProvider : IndexProvider<WaitlistEntry>
 
     public override void Describe(DescribeContext<WaitlistEntry> context)
         => context.For<SessionWaitlistIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .When(entry => !string.IsNullOrEmpty(entry.SessionId))
             .Map(entry => new SessionWaitlistIndex
             {

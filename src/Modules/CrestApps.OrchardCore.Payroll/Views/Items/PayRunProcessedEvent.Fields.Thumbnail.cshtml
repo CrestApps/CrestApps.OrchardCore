@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<PayRunProcessedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-gears" aria-hidden="true"></i> @T["Pay Run Processed"]</h4>
+<p>@T["Starts when a pay run is processed, paid in full or not; Status is Paid, PartiallyPaid or Failed."]</p>

@@ -51,7 +51,7 @@ public sealed partial class ModuleWiringTests
         }
 
         var undeclared = used
-            .Where(pair => !declared.Contains(pair.Key))
+            .Where(pair => !declared.Contains(pair.Key) && !_namedByValue.Contains(pair.Key))
             .Select(pair => $"'{pair.Key}' used by {pair.Value}")
             .OrderBy(text => text, StringComparer.Ordinal)
             .ToArray();
@@ -134,14 +134,32 @@ public sealed partial class ModuleWiringTests
                 !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) &&
                 !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
 
-    // Collections are named by a constant, so the constant's own name identifies it well enough to match a
-    // declaration against a use without resolving the value.
+    // Constants that name, by their value, a collection declared through an option rather than by the same constant.
+    private static readonly HashSet<string> _namedByValue = new(StringComparer.Ordinal)
+    {
+        // "AI", the collection AI.Core declares through YesSqlStoreOptions.AICollectionName (whose default is "AI").
+        "ProfileBuilderStorage.CollectionName",
+    };
+
+    // Collections are named by a constant, so the constant with its class identifies it well enough to match a
+    // declaration against a use without resolving the value. The class is kept: every module names its constant
+    // CollectionName, so the member alone would let one module's declaration hide another's missing one. A member read
+    // through an instance (an options value or field, such as _options.AICollectionName or options.Value.AICollectionName)
+    // is an option, the same whichever variable reads it, so the member alone names it.
     private static string Normalize(string expression)
     {
-        var trimmed = expression.Trim();
-        var lastDot = trimmed.LastIndexOf('.');
+        var parts = expression.Trim().Split('.', StringSplitOptions.RemoveEmptyEntries);
 
-        return lastDot >= 0 ? trimmed[(lastDot + 1)..] : trimmed;
+        if (parts.Length < 2)
+        {
+            return string.Join('.', parts);
+        }
+
+        var owner = parts[^2];
+
+        return owner == "Value" || owner[0] == '_' || char.IsLower(owner[0])
+            ? parts[^1]
+            : $"{owner}.{parts[^1]}";
     }
 
     private static string GetRepositoryPath(string relativePath)

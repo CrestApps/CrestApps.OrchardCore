@@ -505,7 +505,7 @@ public sealed class LearningCommerceRound7Tests
 
                 orders.Setup(service => service.AddNoteAsync(It.IsAny<Order>(), It.IsAny<string>(), It.IsAny<OrderNoteKind>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                     .Callback((Order target, string text, OrderNoteKind kind, string author, CancellationToken _) => (target.Notes ??= []).Add(new OrderNote { Text = text, Kind = kind, AuthorName = author }))
-                    .Returns(Task.CompletedTask);
+                    .ReturnsAsync(Array.Empty<string>());
 
                 services.RemoveAll<IContentManager>();
                 services.AddSingleton(content.Object);

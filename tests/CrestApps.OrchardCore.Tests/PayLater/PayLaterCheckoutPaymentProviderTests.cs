@@ -121,8 +121,11 @@ public sealed class PayLaterCheckoutPaymentProviderTests
         var hostEnvironment = new Mock<IHostEnvironment>();
         hostEnvironment.SetupGet(e => e.EnvironmentName).Returns(isProduction ? Environments.Production : Environments.Development);
 
+        var siteService = SiteServiceFactory.Create(new CrestApps.OrchardCore.PayLater.Models.PayLaterSettings { Enabled = true });
+
         return new PayLaterCheckoutPaymentProvider(
-            SiteServiceFactory.Create(new CrestApps.OrchardCore.PayLater.Models.PayLaterSettings { Enabled = true }),
+            siteService,
+            new PayLaterDueDateResolver(siteService, Mock.Of<IServiceProvider>()),
             hostEnvironment.Object,
             Mock.Of<IStringLocalizer<PayLaterCheckoutPaymentProvider>>());
     }

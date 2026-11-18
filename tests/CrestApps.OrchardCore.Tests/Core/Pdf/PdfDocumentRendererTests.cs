@@ -15,7 +15,7 @@ public sealed class PdfDocumentRendererTests
     {
         // Arrange
         var layout = new PdfDocumentLayout { Title = "Certificate 42", Author = "Learning" };
-        var page = new PdfPageLayout(PdfPageSize.Letter.Landscape());
+        var page = new PdfPageLayout(PdfPageSize.Letter.Landscape);
 
         page.Elements.Add(new PdfTextElement { Text = "Certificate of Completion", X = 72, Top = 72, FontSize = 28, Bold = true });
         page.Elements.Add(new PdfTextElement { Text = "Awarded to Zoë Ångström", X = 72, Top = 140, FontSize = 16 });
@@ -37,7 +37,7 @@ public sealed class PdfDocumentRendererTests
         Assert.Contains("Certificate of Completion", first.Text);
 
         // Without an installed TrueType font the document is written in Helvetica, which writes letters without accents.
-        Assert.Contains(PdfFontSet.Installed.Regular is null ? "Zoe Angstrom" : "Zoë Ångström", first.Text);
+        Assert.Contains(PdfFontSet.GetInstalled(PdfDocumentRenderer.DefaultFontFamily).Regular is null ? "Zoe Angstrom" : "Zoë Ångström", first.Text);
         Assert.Equal(595.28, document.GetPage(2).Width, tolerance: 0.5);
     }
 

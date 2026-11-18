@@ -1,0 +1,14 @@
+@model ShapeViewModel<TicketBoard>
+
+@if (!string.IsNullOrEmpty(Model.Value.OwnerId))
+{
+    <span class="badge ta-badge fw-normal" title="@T["Shared with"]"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Only you"]</span>
+}
+else if (!string.IsNullOrEmpty(Model.Value.SharedWithTeamId))
+{
+    <span class="badge ta-badge fw-normal" title="@T["Shared with"]"><i class="fa-solid fa-people-group me-1" aria-hidden="true"></i>@T["A team"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" title="@T["Shared with"]"><i class="fa-solid fa-globe me-1" aria-hidden="true"></i>@T["Everybody"]</span>
+}

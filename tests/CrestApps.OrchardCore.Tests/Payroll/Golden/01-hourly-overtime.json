@@ -1,0 +1,100 @@
+{
+  "Frequency": "Biweekly",
+  "PeriodStart": "2026-11-01",
+  "PeriodEnd": "2026-11-14",
+  "PayDate": "2026-11-20",
+  "Description": "Regular and overtime hours at one rate; employee and employer social insurance and a flat income tax.",
+  "Pay": {
+    "PayBasis": "Hourly",
+    "Rates": [
+      {
+        "EffectiveFrom": "2020-01-01",
+        "HourlyRate": 20
+      }
+    ]
+  },
+  "Codes": [
+    {
+      "Code": "REG",
+      "Class": "Earning",
+      "Kind": "Regular"
+    },
+    {
+      "Code": "OT",
+      "Class": "Earning",
+      "Kind": "Overtime",
+      "Multiplier": 1.5
+    }
+  ],
+  "Distribution": [
+    {
+      "Method": "Check",
+      "Split": "Remainder"
+    }
+  ],
+  "Inputs": [
+    {
+      "PayCode": "REG",
+      "Hours": 80
+    },
+    {
+      "PayCode": "OT",
+      "Hours": 6
+    }
+  ],
+  "TaxRules": [
+    {
+      "rule": {
+        "TaxCode": "US-FIT",
+        "Name": "Income tax",
+        "Jurisdiction": "US",
+        "Category": "IncomeTax",
+        "Payer": "Employee",
+        "Method": "Percentage",
+        "EffectiveFrom": "2026-01-01",
+        "Rate": 10
+      }
+    },
+    {
+      "rule": {
+        "TaxCode": "US-SS",
+        "Name": "Social insurance",
+        "Jurisdiction": "US",
+        "Category": "SocialInsurance",
+        "Payer": "Employee",
+        "Method": "Percentage",
+        "EffectiveFrom": "2026-01-01",
+        "Rate": 6.2
+      }
+    },
+    {
+      "rule": {
+        "TaxCode": "US-SS-ER",
+        "Name": "Social insurance, employer",
+        "Jurisdiction": "US",
+        "Category": "SocialInsurance",
+        "Payer": "Employer",
+        "Method": "Percentage",
+        "EffectiveFrom": "2026-01-01",
+        "Rate": 6.2
+      }
+    }
+  ],
+  "Expected": {
+    "Lines": [
+      "Earning REG 1600.00 for 80h",
+      "Earning OT 180.00 for 6h",
+      "Tax US-FIT Employee 178.00 on 1780.00",
+      "Tax US-SS Employee 110.36 on 1780.00",
+      "Tax US-SS-ER Employer 110.36 on 1780.00"
+    ],
+    "Gross": 1780.0,
+    "Net": 1491.64,
+    "Payments": [
+      {
+        "Method": "Check",
+        "Amount": 1491.64
+      }
+    ]
+  }
+}

@@ -43,7 +43,7 @@ Take the first step that works, and say in the pull request which step you took:
 * `CrestApps.OrchardCore.X.Abstractions` holds contracts, shared records and value types, constants and feature IDs. It references only other `.Abstractions` projects and framework abstractions.
 * `CrestApps.OrchardCore.X.Core` holds implementations, stores and indexes, and the reusable pieces that more than one module needs, including UI building blocks: base display drivers, shared view models, tag helpers and view components. It holds no module-specific views, controllers, routes or endpoints, and it never references a module project.
 * `CrestApps.OrchardCore.X` (the module) holds the manifest, startups, drivers, controllers, views, migrations, recipe and deployment steps and endpoints.
-* A module may keep a `<ProjectReference>` to another module, but only to carry the feature dependency: the module declares the dependency in its manifest and references the project so a site that installs its NuGet package gets the dependency's package too. Module **code**, including compiled views, never uses a class, model, service, view model, tag helper or view component from another module assembly. Anything two modules share lives in the owner's `.Abstractions` (contracts, models, constants) or `.Core` (implementations, base classes, shared tag helpers and view components); move it there first. This applies across the board, with no exception for sub-modules, providers or `Resources`. `ModuleLayeringTests` enforces it on the compiled assemblies, with a shrink-only allowlist of today's violations. Remove project references that nothing needs.
+* A module may keep a `<ProjectReference>` to another module, but only to carry the feature dependency: the module declares the dependency in its manifest and references the project so a site that installs its NuGet package gets the dependency's package too. Every `<ProjectReference>` to a module or theme project, in any project, sets `PrivateAssets="none"`: a module package registers itself in the host through its `build` props, which NuGet drops for a dependency without it, so the module's assembly would be copied but never loaded as a module (`ProjectReferenceRulesTests` enforces it). Module **code**, including compiled views, never uses a class, model, service, view model, tag helper or view component from another module assembly. Anything two modules share lives in the owner's `.Abstractions` (contracts, models, constants) or `.Core` (implementations, base classes, shared tag helpers and view components); move it there first. This applies across the board, with no exception for sub-modules, providers or `Resources`. `ModuleLayeringTests` enforces it on the compiled assemblies, with a shrink-only allowlist of today's violations. Remove project references that nothing needs.
 * Put optional integrations (AI tools, reports, workflows, another domain) in a `[RequireFeatures]` startup in the consumer or in a bridge module (`Workforce.ContactCenter` is the pattern), so the building block works without them. Do not add a hard project reference to `AI.Core` only to register AI tools.
 * Domain types never go into the solution-wide `CrestApps.OrchardCore.Abstractions`; they go into their own domain's `.Abstractions`.
 * Feature IDs are constants in the owning `.Abstractions` project. Never repeat a feature ID as a string literal in `[RequireFeatures]`, manifests or recipes.
@@ -267,6 +267,16 @@ Build admin UI the way Orchard Core builds it, and add a new concept only when O
 * Each recipe step has an `IRecipeStep` schema, and each deployment step a deployment step schema, registered in a startup with `[RequireFeatures("CrestApps.OrchardCore.Recipes")]`, so CrestApps Recipes exports their definitions.
 * Every options class bound from configuration (appsettings) is described in the module's `ConfigurationSchema.json`.
 
+#### YesSql Index Declarations
+
+YesSql 6.2 lets an index provider declare what its rows hold, and then runs simpler queries (OrchardCore PR #20201). Every index provider declares what is true of its rows:
+
+* `ExclusiveToDocumentType()` on every `context.For<TIndex>()`. An index type of ours is produced by one provider, for one document type, so its counts can read the index table without joining `Document`. Never produce one index type from providers of two document types; split it into two index types.
+* `SingleRecordPerDocument()` as well when the map returns at most one row per document (a single `new TIndex { ... }` or `null`). Leave it out when the map returns a row per item of a list (phone numbers, attendees, queue memberships...): YesSql then still groups by document, and saving would throw. A query is only left ungrouped when every index it joins declares a single row, so this is what lets a page stop as soon as it is full.
+* A search with `Contains`, `EndsWith` or `NotContains` (a `LIKE '%…%'`) on a large table with a sort calls `NoIndexOptimizations()` first. A text can't seek; without the grouping the database can walk an index of the sort looking for the few matching rows, all of it when none does. An unsorted search with `Take` doesn't need it.
+* A hand-written `IQuery<T>` wrapper overrides `NoIndexOptimizations()`: the interface's default returns `this` and drops the request.
+* `tests/CrestApps.OrchardCore.Tests/Architecture/IndexDeclarationArchitectureTests.cs` guards the first two rules. Add a new multi-row index type to its list.
+
 #### Admin Edit (Form) Page Buttons
 
 Every admin create, edit, settings, import or other form page keeps its buttons in Orchard Core's sticky action bar at the bottom of the screen (OrchardCore PR #19302), so **Save** and **Cancel** stay visible however long the form is. Follow `.agents/skills/crestapps-admin-edit-views/SKILL.md` for every new form page and whenever you touch an existing one.
@@ -415,6 +425,9 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
   Messenger, …) to the Omnichannel Messaging workspace, modeled on the SMS channel: the `IMessagingChannel`
   contract, inbound through the durable provider inbox, channel-only inbound rules, delivery receipts, endpoints,
   wiring, tests and docs.
+- **Example**: `.agents/skills/crestapps-invoicing` — how to bill a module's work as an invoice and build on Invoicing:
+  drafts, the issue/void/credit commands, `IInvoiceObserver`, document contributors, tax providers, visibility, the
+  ledger rules, recipes and personal data.
 - **Example**: `.agents/skills/crestapps-report-data-source` — how to add a data source (connector) to the Report
   Designer (a database, a search index, an API, or a module's own records) by implementing `IReportDataSource`, and
   how to extend the content items source for custom content fields and parts: the security boundary, value types, safe filter

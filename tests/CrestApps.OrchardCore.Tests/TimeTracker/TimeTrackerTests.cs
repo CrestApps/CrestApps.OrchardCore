@@ -133,6 +133,71 @@ public sealed class TimeTrackerTests
     }
 
     [Fact]
+    public async Task AnInsertedEntry_TakesItsPlaceInTheDay_CuttingTheTimeItCovers_AndKeepsWhatItWas()
+    {
+        // Arrange (Ana works from 9:00 and is still at it at 15:00; she logs 30 minutes of ticket work from 14:00)
+        await using var kit = await Kit.CreateAsync();
+        var payable = await kit.CategoryAsync("Payable");
+        var work = await kit.StageAsync("Work", payable);
+        var tickets = await kit.StageAsync("Tickets", payable);
+
+        await kit.SwitchAsync(work, 0);
+        kit.Now = _nine.AddHours(6);
+
+        // Act
+        var inserted = await kit.InsertAsync(new TimeEntry { UserId = "ana", UserName = "ana", StageId = tickets.ItemId, StartUtc = _nine.AddHours(5), EndUtc = _nine.AddHours(5.5), Source = TimeTrackerConstants.Sources.Ticket, SourceRef = "Ticket:t1", Note = "Called back" });
+        var entries = await kit.EntriesAsync();
+        var totals = Assert.Single(await kit.TotalsAsync(byDay: false));
+
+        // Assert
+        Assert.True(inserted.Succeeded, string.Join(" ", inserted.Errors));
+        (string, DateTime, DateTime?, string)[] expected =
+        [
+            (work.ItemId, _nine, _nine.AddHours(5), null),
+            (tickets.ItemId, _nine.AddHours(5), _nine.AddHours(5.5), "Ticket:t1"),
+            (work.ItemId, _nine.AddHours(5.5), null, null),
+        ];
+        Assert.Equal(expected, entries.Select(entry => (entry.StageId, entry.StartUtc, entry.EndUtc, entry.SourceRef)));
+        Assert.Equal("Called back", entries[1].Note);
+        Assert.Equal("Work 2026-11-02 14:00-open", Assert.Single(entries[0].Changes).Before);
+        Assert.Equal("Logged time", entries[0].Changes[0].Reason);
+        Assert.Equal(360, totals.TotalMinutes);
+        Assert.Equal(360m, totals.MinutesByCategory[payable.ItemId]);
+        Assert.Contains((TimeEntryChangeKind.Edited, "Logged time"), kit.Changes);
+        Assert.Equal(2, kit.Changes.Count(change => change is (TimeEntryChangeKind.Created, "Logged time")));
+    }
+
+    [Fact]
+    public async Task AnInsertedEntry_ReplacesTimeItCoversWhole_ButNeverCutsItsOwnSourceOrAnotherClocks()
+    {
+        // Arrange (lunch 12:00-12:30 inside an insert of 11:30-13:00; ticket time 14:00-14:30; the clock's time 15:00-16:00)
+        await using var kit = await Kit.CreateAsync();
+        var work = await kit.StageAsync("Work");
+        var lunch = await kit.StageAsync("Lunch");
+        var tickets = await kit.StageAsync("Tickets");
+
+        kit.Now = _nine.AddHours(8);
+        await kit.Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().AddAsync(new TimeEntry { UserId = "ana", StageId = lunch.ItemId, StartUtc = _nine.AddHours(3), EndUtc = _nine.AddHours(3.5), Source = TimeTrackerConstants.Sources.Self }, "manager", "Lunch"));
+        var t1 = await kit.InsertAsync(new TimeEntry { UserId = "ana", StageId = tickets.ItemId, StartUtc = _nine.AddHours(5), EndUtc = _nine.AddHours(5.5), Source = TimeTrackerConstants.Sources.Ticket, SourceRef = "Ticket:t1" });
+
+        // Act
+        var covering = await kit.InsertAsync(new TimeEntry { UserId = "ana", StageId = work.ItemId, StartUtc = _nine.AddHours(2.5), EndUtc = _nine.AddHours(4), Source = TimeTrackerConstants.Sources.Manager });
+        var sameSource = await kit.InsertAsync(new TimeEntry { UserId = "ana", StageId = tickets.ItemId, StartUtc = _nine.AddHours(5.25), EndUtc = _nine.AddHours(6), Source = TimeTrackerConstants.Sources.Ticket, SourceRef = "Ticket:t2" });
+        var future = await kit.InsertAsync(new TimeEntry { UserId = "ana", StageId = tickets.ItemId, StartUtc = _nine.AddHours(7.5), EndUtc = _nine.AddHours(9), Source = TimeTrackerConstants.Sources.Ticket, SourceRef = "Ticket:t2" });
+        await kit.SyncAsync(new TimeEntry { StageId = work.ItemId, StartUtc = _nine.AddHours(6), EndUtc = _nine.AddHours(7) });
+        var overClock = await kit.InsertAsync(new TimeEntry { UserId = "ana", StageId = tickets.ItemId, StartUtc = _nine.AddHours(6.25), EndUtc = _nine.AddHours(6.75), Source = TimeTrackerConstants.Sources.Ticket, SourceRef = "Ticket:t2" });
+        var entries = await kit.EntriesAsync();
+
+        // Assert
+        Assert.True(t1.Succeeded && covering.Succeeded, string.Join(" ", t1.Errors.Concat(covering.Errors)));
+        Assert.StartsWith("It overlaps other time from", Assert.Single(sameSource.Errors));
+        Assert.Equal("Time can't be recorded in the future.", Assert.Single(future.Errors));
+        Assert.Equal("This time comes from the Time Clock; correct it there.", Assert.Single(overClock.Errors));
+        Assert.Equal([work.ItemId, tickets.ItemId, work.ItemId], entries.Select(entry => entry.StageId));
+        Assert.Contains((TimeEntryChangeKind.Deleted, "Logged time"), kit.Changes);
+    }
+
+    [Fact]
     public async Task TheStageAndCategoryNames_AreRequired_AndUnique()
     {
         await using var kit = await Kit.CreateAsync();
@@ -514,6 +579,9 @@ public sealed class TimeTrackerTests
                 Overrides = overrides,
                 BuildAsync = _ => Task.FromResult<IReadOnlyList<TimeEntry>>(desired),
             }));
+
+        public Task<TimeTrackerResult> InsertAsync(TimeEntry entry)
+            => Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().InsertAsync(entry, "ana", "Logged time"));
 
         public Task<IReadOnlyList<TimeEntry>> EntriesAsync()
             => Harness.RunAsync(services => services.GetRequiredService<ITimeTrackerService>().ListAsync(new TimeEntryQuery { UserIds = ["ana"] }), commit: false);

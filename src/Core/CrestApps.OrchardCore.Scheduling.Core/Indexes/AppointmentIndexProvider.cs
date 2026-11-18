@@ -21,6 +21,8 @@ public sealed class AppointmentIndexProvider : IndexProvider<Appointment>
     public override void Describe(DescribeContext<Appointment> context)
     {
         context.For<AppointmentIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(appointment => new AppointmentIndex
             {
                 ItemId = appointment.ItemId,
@@ -37,6 +39,7 @@ public sealed class AppointmentIndexProvider : IndexProvider<Appointment>
             });
 
         context.For<AppointmentResourceIndex>()
+            .ExclusiveToDocumentType()
             .Map(appointment => appointment.ResourceIds.Select(resourceId => new AppointmentResourceIndex
             {
                 AppointmentId = appointment.ItemId,

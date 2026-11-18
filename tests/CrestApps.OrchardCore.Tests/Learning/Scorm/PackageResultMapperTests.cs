@@ -18,7 +18,7 @@ public sealed class PackageResultMapperTests
     {
         var cmi = new Scorm12Cmi { ScoreRaw = raw, ScoreMin = min, ScoreMax = max };
 
-        Assert.Equal(expected is null ? null : (decimal)expected, PackageResultMapper.ScorePercent(cmi));
+        Assert.Equal(expected is null ? null : Math.Round((decimal)expected, 2), PackageResultMapper.ScorePercent(cmi));
     }
 
     [Theory]
@@ -57,7 +57,7 @@ public sealed class PackageResultMapperTests
     {
         var cmi = new Scorm2004Cmi { ScoreScaled = scaled, ScoreRaw = raw, ScoreMin = min, ScoreMax = max };
 
-        Assert.Equal(expected is null ? null : (decimal)expected, PackageResultMapper.ScorePercent(cmi));
+        Assert.Equal(expected is null ? null : Math.Round((decimal)expected, 2), PackageResultMapper.ScorePercent(cmi));
     }
 
     [Theory]

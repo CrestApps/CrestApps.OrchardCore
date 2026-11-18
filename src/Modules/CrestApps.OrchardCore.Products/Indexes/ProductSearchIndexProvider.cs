@@ -18,6 +18,8 @@ public sealed class ProductSearchIndexProvider : IndexProvider<ProductSearchDocu
     public override void Describe(DescribeContext<ProductSearchDocument> context)
     {
         context.For<ProductSearchIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(document => new ProductSearchIndex
             {
                 ContentItemId = document.ContentItemId,
@@ -33,6 +35,8 @@ public sealed class ProductSearchIndexProvider : IndexProvider<ProductSearchDocu
             });
 
         context.For<ProductSaleIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .When(document => document.SaleStartsUtc.HasValue || document.SaleEndsUtc.HasValue)
             .Map(document => new ProductSaleIndex
             {
@@ -42,6 +46,7 @@ public sealed class ProductSearchIndexProvider : IndexProvider<ProductSearchDocu
             });
 
         context.For<ProductAttributeIndex>()
+            .ExclusiveToDocumentType()
             .Map(document => (document.Attributes ?? [])
                 .Where(value => !string.IsNullOrEmpty(value.Key))
                 .Select(value => new ProductAttributeIndex

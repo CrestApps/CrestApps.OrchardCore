@@ -55,6 +55,6 @@
     }
 
     <div class="receipt-print-area">
-        <partial name="~/Areas/CrestApps.OrchardCore.Receipts/Views/ReceiptDocument.cshtml" model="Model.Invoice" />
+        @await DisplayAsync(await New.BusinessDocument(Document: Model.Invoice))
     </div>
 </div>

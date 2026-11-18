@@ -92,6 +92,8 @@ public sealed class AdherenceRuleSetIndexProvider : IndexProvider<AdherenceRuleS
     public override void Describe(DescribeContext<AdherenceRuleSet> context)
     {
         context.For<AdherenceRuleSetIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new AdherenceRuleSetIndex { ItemId = item.ItemId, Name = item.Name });
     }
 }
@@ -113,6 +115,8 @@ public sealed class AdherenceExceptionIndexProvider : IndexProvider<AdherenceExc
     public override void Describe(DescribeContext<AdherenceException> context)
     {
         context.For<AdherenceExceptionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new AdherenceExceptionIndex
             {
                 ItemId = item.ItemId,
@@ -141,6 +145,8 @@ public sealed class AdherenceDayIndexProvider : IndexProvider<AdherenceDay>
     public override void Describe(DescribeContext<AdherenceDay> context)
     {
         context.For<AdherenceDayIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new AdherenceDayIndex
             {
                 ItemId = item.ItemId,
@@ -168,6 +174,8 @@ public sealed class AdherenceAlertIndexProvider : IndexProvider<AdherenceAlert>
     public override void Describe(DescribeContext<AdherenceAlert> context)
     {
         context.For<AdherenceAlertIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new AdherenceAlertIndex { ItemId = item.ItemId, Key = item.Key });
     }
 }

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SendInvoiceTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+    @T["Send Invoice"]
+</h4>
+<p>@T["Sends an invoice to its customer by e-mail with its PDF."]</p>

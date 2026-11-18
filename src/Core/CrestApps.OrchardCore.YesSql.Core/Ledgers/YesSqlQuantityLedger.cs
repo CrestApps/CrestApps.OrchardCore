@@ -114,6 +114,51 @@ public sealed class YesSqlQuantityLedger<TLedger> : IQuantityLedger<TLedger>
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<QuantityLedgerEntry>> GetAsync(IReadOnlyCollection<string> itemIds, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(itemIds);
+
+        var ids = itemIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+
+        if (ids.Length == 0)
+        {
+            return [];
+        }
+
+        return (await _session.Query<QuantityLedgerEntry, QuantityLedgerEntryIndex>(index => index.ItemId.IsIn(ids), collection: _collection)
+            .ListAsync(cancellationToken)).ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> SavePropertiesAsync(QuantityLedgerEntry entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (string.IsNullOrEmpty(entry.ItemId))
+        {
+            return false;
+        }
+
+        var itemId = entry.ItemId;
+        var stored = await _session.Query<QuantityLedgerEntry, QuantityLedgerEntryIndex>(index => index.ItemId == itemId, collection: _collection)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (stored is null)
+        {
+            return false;
+        }
+
+        if (!ReferenceEquals(stored, entry))
+        {
+            stored.Properties = entry.Properties;
+        }
+
+        await _session.SaveAsync(stored, checkConcurrency: false, collection: _collection, cancellationToken: cancellationToken);
+
+        return true;
+    }
+
+    /// <inheritdoc/>
     public async Task<(int Count, IReadOnlyList<QuantityLedgerEntry> Items)> PageAsync(string accountId, string bucket, int skip, int take, CancellationToken cancellationToken = default)
     {
         var query = string.IsNullOrEmpty(bucket)

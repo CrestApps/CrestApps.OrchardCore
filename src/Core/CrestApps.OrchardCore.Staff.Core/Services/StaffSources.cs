@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using System.Security.Cryptography;
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Skills.Models;
@@ -307,6 +308,18 @@ internal sealed class StaffPartySource : IPartySource
 
     public async Task<IReadOnlyDictionary<string, string>> GetNamesAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
         => await _directory.GetNamesAsync(ids ?? [], cancellationToken);
+
+    public async Task<IReadOnlyDictionary<string, ContactInfo>> GetContactInfoAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
+    {
+        var contacts = new Dictionary<string, ContactInfo>(StringComparer.Ordinal);
+
+        foreach (var (id, staff) in await _directory.GetAsync(ids ?? [], cancellationToken))
+        {
+            contacts[id] = ContactInfo.From(staff.DisplayName, staff.Email, staff.Phone);
+        }
+
+        return contacts;
+    }
 
     private static PartyOption ToOption(StaffMember staff)
         => new(staff.ItemId, string.IsNullOrEmpty(staff.JobTitle) ? staff.DisplayName : $"{staff.DisplayName} ({staff.JobTitle})");

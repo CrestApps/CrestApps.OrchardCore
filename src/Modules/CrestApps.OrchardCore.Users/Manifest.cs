@@ -56,6 +56,19 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Name = "My Account",
+    Category = "Users",
+    Description = "The \"my account\" area on the site (/account): a home page, a menu and a page frame that other modules add their pages to, such as orders or tickets.",
+    Id = UsersConstants.Feature.Account,
+    Dependencies =
+    [
+        OrchardCoreFeatureIds.Users,
+        UsersConstants.Feature.Area,
+    ],
+    EnabledByDependencyOnly = true
+)]
+
+[assembly: Feature(
     Name = "User Avatar",
     Category = "Users",
     Description = "Provides a way to display an avatar for each user.",

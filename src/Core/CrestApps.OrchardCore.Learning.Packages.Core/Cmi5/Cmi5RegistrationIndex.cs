@@ -35,6 +35,8 @@ public sealed class Cmi5RegistrationIndexProvider : IndexProvider<PackageRuntime
     /// <inheritdoc />
     public override void Describe(DescribeContext<PackageRuntimeState> context)
         => context.For<Cmi5RegistrationIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .When(state => !string.IsNullOrEmpty(state.Cmi5?.Registration))
             .Map(state => new Cmi5RegistrationIndex
             {

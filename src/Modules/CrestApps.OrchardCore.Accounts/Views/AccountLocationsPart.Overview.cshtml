@@ -21,6 +21,10 @@
 
                 <li class="list-group-item">
                     <span class="fw-semibold">@location.Name</span>
+                    @if (location.IsBilling)
+                    {
+                        <span class="badge ta-badge fw-normal ms-1" data-bs-toggle="tooltip" title="@T["Billing documents are addressed here."]"><i class="fa-solid fa-file-invoice" aria-hidden="true"></i> @T["Billing"]</span>
+                    }
                     <span class="text-body-secondary ms-1">@string.Join(", ", new[] { address?.AddressLine1, address?.AddressLine2, address?.City, address?.Region, address?.PostalCode, address?.Country }.Where(value => !string.IsNullOrWhiteSpace(value)))</span>
                 </li>
             }

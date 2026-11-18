@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.AspNetCore.Builder;
@@ -31,7 +32,7 @@ internal static class MessagingAttachmentEndpoint
         ILogger<MessagingAttachmentLinks> logger)
     {
         var format = links.TryReadPublicToken(token, out var attachmentId, out var contentType)
-            ? MessagingFileFormats.FindByContentType(contentType)
+            ? FileFormats.FindByContentType(contentType)
             : null;
 
         if (format is null)

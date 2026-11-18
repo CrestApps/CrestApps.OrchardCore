@@ -19,6 +19,8 @@ public sealed class CredentialAwardIndexProvider : IndexProvider<CredentialAward
     /// <inheritdoc/>
     public override void Describe(DescribeContext<CredentialAward> context)
         => context.For<CredentialAwardIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(award => new CredentialAwardIndex
             {
                 ItemId = award.ItemId,

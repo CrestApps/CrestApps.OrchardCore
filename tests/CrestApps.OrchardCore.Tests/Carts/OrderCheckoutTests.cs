@@ -378,7 +378,7 @@ public sealed class OrderCheckoutTests
             .Callback<OrderCanceledContext, CancellationToken>((context, _) => _canceled.Add(context))
             .Returns(Task.CompletedTask);
 
-        return new(_orders, [handler.Object], new InMemoryNumberSequence(), Clock(), NullLogger<OrderService>.Instance);
+        return new(_orders, [handler.Object], new InMemoryNumberSequence(), new InMemoryTimelineService(), Clock(), NullLogger<OrderService>.Instance);
     }
 
     private OrderCheckoutHandler CreateHandler()

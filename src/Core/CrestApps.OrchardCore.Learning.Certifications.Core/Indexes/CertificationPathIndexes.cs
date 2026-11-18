@@ -104,6 +104,8 @@ public sealed class CertificationPathIndexProvider : IndexProvider<Certification
     public override void Describe(DescribeContext<CertificationPath> context)
     {
         context.For<CertificationPathIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(path => new CertificationPathIndex
             {
                 ItemId = path.ItemId,
@@ -112,6 +114,7 @@ public sealed class CertificationPathIndexProvider : IndexProvider<Certification
             });
 
         context.For<CertificationPathTargetIndex>()
+            .ExclusiveToDocumentType()
             .Map(path => path.InitialRequirements
                 .Concat(path.RenewalRequirements)
                 .Where(requirement => !string.IsNullOrEmpty(requirement.TargetId))
@@ -143,6 +146,8 @@ public sealed class CertificationPathProgressIndexProvider : IndexProvider<Certi
     public override void Describe(DescribeContext<CertificationPathProgress> context)
     {
         context.For<CertificationPathProgressIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(progress => new CertificationPathProgressIndex
             {
                 ItemId = progress.ItemId,

@@ -73,7 +73,6 @@ public sealed class WorkforceSettingsPortabilityTests
             var pattern = Assert.Single(await services.GetRequiredService<IShiftPatternManager>().GetAllAsync());
             var requirement = Assert.Single(await services.GetRequiredService<ICoverageService>().ListRequirementsAsync(team.ItemId));
             var kiosk = Assert.Single(await services.GetRequiredService<ITimeClockKioskManager>().GetAllAsync());
-            var csv = await services.GetRequiredService<IPayrollExportService>().GetCsvSettingsAsync();
             var ruleSet = Assert.Single(await services.GetRequiredService<ILaborRuleSetManager>().GetAllAsync());
 
             Assert.Equal("Two-week rotation", pattern.Name);
@@ -88,8 +87,6 @@ public sealed class WorkforceSettingsPortabilityTests
             Assert.Equal("Lobby", kiosk.Name);
             Assert.Equal(team.ItemId, kiosk.TeamId);
             Assert.Null(kiosk.TokenHash);
-
-            Assert.Equal([("Employee", PayrollCsvField.WorkerExternalId), ("Hours", PayrollCsvField.Hours)], csv.Columns.Select(column => (column.Header, column.Field)));
 
             Assert.Equal("Hourly staff", ruleSet.Name);
             Assert.Equal([team.ItemId], ruleSet.TeamIds);

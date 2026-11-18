@@ -10,7 +10,7 @@ The **Taxation** screens decide which taxes your site charges and how much. You 
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Taxation > Categories, Types, Jurisdictions, Tables and Rules |
+| **Menu** | Commerce > Taxation > Categories, Types, Jurisdictions, Rules and Tables |
 | **Permission** | Manage taxation |
 | **Feature** | Taxation |
 
@@ -89,7 +89,7 @@ Ranges cannot overlap, and only one row can be open-ended. A table that a rule u
 
 A **rule** is one tax: what it applies to, and how it is worked out. Several rules can apply to the same item; for example a general sales tax and an extra tobacco tax.
 
-1. Open **Commerce > Taxation > Rules** and click **Add Tax Rule**.
+1. Open **Commerce > Taxation > Sales tax rules** and click **Add Tax Rule**.
 2. In **Select a calculation method**, click **Add** on the method you want. The method cannot be changed later.
 3. Fill in the fields and click **Save**.
 
@@ -139,6 +139,20 @@ A rule tied to a **Jurisdiction** only charges buyers whose address is in that j
 Some taxes are charged where the seller is rather than where the buyer is. Under **Settings > Commerce > Tax origin**, enter your store's **Country**, **State or province** and, if your taxes depend on them, county, city and postal code. Leave the country blank when every tax you collect is based on where the buyer is.
 
 Customers you mark **Exempt from tax** under [Customers](customers.md) pay no tax when they check out signed in.
+
+## Choose how tax is rounded
+
+Open **Settings > Commerce > Tax calculation** (permission **Manage taxation**) to choose where tax is rounded to the cent. The checkout and [invoices](invoicing.md) both use this setting, so a cart and an invoice with the same lines come to the same tax.
+
+| **Round tax at** | What it does |
+| --- | --- |
+| **Each tax and rate on the total** | Each tax and rate is rounded once, on what its lines add up to. This is what the European invoice standard (EN 16931) asks for. Two lines of 10.05 at 7.5% come to 1.51. The default for new sites. |
+| **Each line** | Every line's tax is rounded on its own and the rounded amounts are added up. Two lines of 10.05 at 7.5% come to 0.75 + 0.75 = 1.50. A site that already charged tax before this setting existed keeps this one. |
+| **Each kind of tax** | What each kind of tax, such as VAT or a sales tax, adds up to is rounded once. |
+| **Each jurisdiction** | What each jurisdiction, such as a state or a county, levies is rounded once. |
+| **The whole order** | Only the order's total tax is rounded. |
+
+Changing it changes what the checkout charges from then on. Orders and issued invoices keep their amounts.
 
 ## 6. Classify your products
 
@@ -213,7 +227,7 @@ The **EU VAT standard rates** recipe sets up VAT for the European Union in one s
 
 1. Open **Configuration > Recipes**.
 2. Find **EU VAT standard rates** and click **Run**.
-3. Open **Commerce > Taxation > Rules** to see the rules, named after their countries, such as *Germany VAT*.
+3. Open **Commerce > Taxation > Sales tax rules** to see the rules, named after their countries, such as *Germany VAT*.
 
 :::caution[Check the rates]
 VAT rates change. Check each country's rate before you sell there, and add reduced rates for the products they apply to, such as books or food, as rules for those [categories](#1-create-tax-categories).

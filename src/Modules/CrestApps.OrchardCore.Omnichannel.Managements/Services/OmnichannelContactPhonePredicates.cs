@@ -106,6 +106,30 @@ internal static class OmnichannelContactPhonePredicates
     }
 
     /// <summary>
+    /// Builds the predicate the search box of a contact list uses over the phone number index: numbers, of any type,
+    /// whose E.164 value starts with the digits typed.
+    /// </summary>
+    /// <remarks>
+    /// The phone number index holds every number in E.164 only, so a national entry is read in the
+    /// <see cref="PhoneNumberSearchTerm.DefaultCountryCallingCode"/> country: <c>702555</c> and <c>1702555</c> both
+    /// look for <c>+1702555</c>. No NANP area code starts with a <c>1</c>, so a national entry that does already
+    /// carries the country code.
+    /// </remarks>
+    /// <param name="searchTerm">The parsed search term.</param>
+    /// <returns>The predicate over the phone number index.</returns>
+    public static Expression<Func<OmnichannelContactPhoneNumberIndex, bool>> SearchBoxNumberMatch(PhoneNumberSearchTerm searchTerm)
+    {
+        var value = searchTerm.Value;
+        var prefix = searchTerm.IsE164
+            ? value
+            : value.StartsWith(PhoneNumberSearchTerm.DefaultCountryCallingCode, StringComparison.Ordinal)
+                ? $"+{value}"
+                : $"+{PhoneNumberSearchTerm.DefaultCountryCallingCode}{value}";
+
+        return index => index.NormalizedPhoneNumber.StartsWith(prefix);
+    }
+
+    /// <summary>
     /// Builds the predicate that matches contacts whose primary cell and home numbers both do not contain the
     /// search term, the negation of a <see cref="PhoneNumberMatchType.Contains"/> match.
     /// </summary>

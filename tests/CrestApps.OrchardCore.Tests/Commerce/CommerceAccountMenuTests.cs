@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Commerce;
-using CrestApps.OrchardCore.Commerce.Navigation;
+using CrestApps.OrchardCore.Users.Navigation;
 using CrestApps.OrchardCore.Customers.Navigation;
 using CrestApps.OrchardCore.Downloads.Navigation;
 using CrestApps.OrchardCore.Orders.Navigation;
@@ -19,7 +19,7 @@ public sealed class CommerceAccountMenuTests
 {
     public static TheoryData<Type> Providers => new()
     {
-        typeof(CommerceAccountMenu),
+        typeof(AccountHomeMenu),
         typeof(OrdersAccountMenu),
         typeof(CustomersAccountMenu),
         typeof(DownloadsAccountMenu),

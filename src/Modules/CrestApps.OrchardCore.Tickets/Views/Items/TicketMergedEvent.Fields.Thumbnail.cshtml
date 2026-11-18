@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketMergedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-code-merge" aria-hidden="true"></i>
+    @T["Ticket Merged"]
+</h4>
+<p>@T["Starts when a ticket is merged into another."]</p>

@@ -46,8 +46,8 @@ public sealed class MarketsTests
     [InlineData(23.01, "EUR", MarketPriceRounding.WholeUnits, 24.00)]
     [InlineData(23.456, "EUR", MarketPriceRounding.None, 23.46)]
     [InlineData(1234.2, "JPY", MarketPriceRounding.EndIn99, 1235)]
-    public void AConvertedPrice_RoundsUpByTheMarketsRule(decimal amount, string currency, MarketPriceRounding rounding, decimal expected)
-        => Assert.Equal(expected, MarketPricing.Round(amount, currency, rounding));
+    public void AConvertedPrice_RoundsUpByTheMarketsRule(double amount, string currency, MarketPriceRounding rounding, double expected)
+        => Assert.Equal(DecimalConversion.FromDouble(expected), MarketPricing.Round(DecimalConversion.FromDouble(amount), currency, rounding));
 
     [Fact]
     public void Converting_GoesThroughTheStoresCurrency()

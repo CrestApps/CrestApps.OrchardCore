@@ -1,16 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>CrestApps.OrchardCore.Pdf</RootNamespace>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
     <Title>CrestApps OrchardCore PDF Core</Title>
     <Description>
       $(CrestAppsDescription)
 
-      Writes PDF files with PdfPig (Apache-2.0): the renderer of the PDF layout model, the drawing canvas, TrueType fonts
-      found on the host and embedded as subsets, text cleaning and wrapping, JPEG and PNG images, and vector QR codes
-      drawn with QRCoder (MIT).
+      Writes PDF documents: pages, text measured and wrapped with embedded fonts, lines, shapes and pictures placed
+      at exact positions, vector QR codes drawn with QRCoder (MIT), and the renderer of the PDF layout model. Reports,
+      check printing, certificates and other modules build their documents on it.
     </Description>
-    <PackageTags>$(PackageTags) PDF PdfPig QRCode Core</PackageTags>
+    <PackageTags>$(PackageTags) PDF Documents QRCode Core</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

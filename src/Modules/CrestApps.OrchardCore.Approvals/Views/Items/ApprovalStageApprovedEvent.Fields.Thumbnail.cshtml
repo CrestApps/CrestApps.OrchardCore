@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Approvals.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ApprovalStageApprovedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-forward-step" aria-hidden="true"></i> @T["Approval Stage Approved"]</h4>
+<p>@T["Starts when a stage is approved and the next one starts."]</p>

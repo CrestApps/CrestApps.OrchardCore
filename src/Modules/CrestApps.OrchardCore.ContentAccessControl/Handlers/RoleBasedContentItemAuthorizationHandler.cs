@@ -1,10 +1,9 @@
-using CrestApps.OrchardCore.Roles.Core.Models;
+using CrestApps.OrchardCore.ContentAccessControl.Services;
+using CrestApps.OrchardCore.Roles.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
-using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Contents;
 using OrchardCore.Security;
 
@@ -32,12 +31,14 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
         // included: a restricted item is refused to whoever isn't in its roles, whatever else allowed it.
         var user = context?.User;
 
-        if (user == null || user.IsInRole(OrchardCoreConstants.Roles.Administrator))
+        if (user == null || ContentAccessRoles.SeesEverything(user))
         {
             return;
         }
 
-        if (context.Resource == null || requirement.Permission != CommonPermissions.ViewContent)
+        // Every permission that reads the item meets the restriction, its securable type's own included
+        // (ViewContent_Handbook, ViewOwnContent_Handbook...), or a restricted item would leak through it.
+        if (context.Resource == null || !IsReading(requirement.Permission?.Name))
         {
             return;
         }
@@ -63,59 +64,56 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
             return;
         }
 
-        var roleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var roleNames = ContentAccessRestriction.GetRoleNames(definition, contentItem);
 
-        // RolePickerPart is reusable by default. Look in the content type definition for the part.
-        foreach (var partDefinition in definition.Parts)
+        if (roleNames.Count == 0)
         {
-            var settings = partDefinition.GetSettings<RolePickerPartContentAccessControlSettings>();
-
-            if (!settings.IsContentRestricted)
-            {
-                continue;
-            }
-
-            if (partDefinition.IsNamedPart())
-            {
-                var rolePickerPart = contentItem.Get<RolePickerPart>(partDefinition.Name);
-
-                if (rolePickerPart?.RoleNames is null)
-                {
-                    continue;
-                }
-
-                foreach (var roleName in rolePickerPart.RoleNames)
-                {
-                    roleNames.Add(roleName);
-                }
-            }
-            else
-            {
-                if (!contentItem.TryGet<RolePickerPart>(out var rolePickerPart) || rolePickerPart.RoleNames is null)
-                {
-                    continue;
-                }
-
-                foreach (var roleName in rolePickerPart.RoleNames)
-                {
-                    roleNames.Add(roleName);
-                }
-            }
+            return;
         }
 
-        foreach (var roleName in roleNames)
+        // Authenticated stands for anyone signed in and Anonymous for a visitor; neither is ever a role claim.
+        if (ContentAccessRoles.IsInAnyRole(user, roleNames))
         {
-            if (user.IsInRole(roleName))
+            // A picked role lets its people view the item; listing and previewing still need their own permission.
+            if (IsViewing(requirement.Permission.Name))
             {
                 context.Succeed(requirement);
-
-                return;
             }
         }
-
-        if (roleNames.Count > 0)
+        else
         {
             context.Fail(new AuthorizationFailureReason(this, "User is not in any of the required roles for this content item."));
         }
     }
+
+    /// <summary>
+    /// Whether a permission reads content: viewing, previewing or listing it, whether one's own or anyone's, in general
+    /// or for a securable type (<c>ViewContent_Handbook</c>). Compared by name, so a type's own permission meets the
+    /// restriction too.
+    /// </summary>
+    /// <param name="name">The permission's name.</param>
+    /// <returns>Whether it reads content.</returns>
+    internal static bool IsReading(string name)
+        => !string.IsNullOrEmpty(name) && _reading.Contains(RootName(name));
+
+    /// <summary>
+    /// Whether a permission views content, in general or for a securable type: the ones a picked role grants.
+    /// </summary>
+    /// <param name="name">The permission's name.</param>
+    /// <returns>Whether it views content.</returns>
+    internal static bool IsViewing(string name)
+        => !string.IsNullOrEmpty(name) && RootName(name) == CommonPermissions.ViewContent.Name;
+
+    // A securable type's permission is the general one's name, an underscore and the type: ViewContent_Handbook.
+    private static string RootName(string name)
+        => name.Split('_', 2)[0];
+
+    private static readonly HashSet<string> _reading = new(StringComparer.Ordinal)
+    {
+        CommonPermissions.ViewContent.Name,
+        CommonPermissions.ViewOwnContent.Name,
+        CommonPermissions.PreviewContent.Name,
+        CommonPermissions.PreviewOwnContent.Name,
+        CommonPermissions.ListContent.Name,
+    };
 }

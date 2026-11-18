@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Attachments.Models
 @using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments
 @using CrestApps.OrchardCore.Omnichannel.Messaging.Services
 @model MessageBubbleViewModel
@@ -30,7 +31,7 @@
 }
 
 @functions {
-    private static string FileIcon(MessagingFileFormat format)
+    private static string FileIcon(FileFormat format)
         => format?.ContentType switch
         {
             "application/pdf" => "fa-regular fa-file-pdf",
@@ -54,7 +55,7 @@
                 @foreach (var attachment in attachments)
                 {
                     var src = Url.Action("Show", "Attachments", new { area = "CrestApps.OrchardCore.Omnichannel.Messaging", id = message.ConversationId, token = AttachmentLinks.CreateViewToken(message.ConversationId, attachment) });
-                    var format = MessagingFileFormats.FindByContentType(attachment.ContentType);
+                    var format = FileFormats.FindByContentType(attachment.ContentType);
 
                     @* A picture is shown as a thumbnail; every other file is a download, named as it was sent. *@
                     if (format?.IsImage == true)

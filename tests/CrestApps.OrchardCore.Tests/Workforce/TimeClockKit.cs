@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Payroll.Core.Services;
+using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
@@ -29,7 +32,7 @@ internal sealed class TimeClockKit : IAsyncDisposable
 
     public DateTime Now { get; set; } = CalendarTestHarness.Now;
 
-    public PayPeriodCalendar Calendar { get; private set; }
+    public PaySchedule Calendar { get; private set; }
 
     public TimeClockPolicy Policy { get; private set; }
 
@@ -58,11 +61,11 @@ internal sealed class TimeClockKit : IAsyncDisposable
             .ToDictionary(code => code.Code, StringComparer.Ordinal);
         kit.Calendar = await harness.RunAsync(async services =>
         {
-            var manager = services.GetRequiredService<IPayPeriodCalendarManager>();
+            var manager = services.GetRequiredService<IPayScheduleManager>();
             var calendar = await manager.NewAsync();
 
             calendar.Name = "Weekly";
-            calendar.Frequency = PayPeriodFrequency.Weekly;
+            calendar.Frequency = PayFrequency.Weekly;
             calendar.AnchorDate = Monday.AddDays(-1);
             calendar.WeekStart = DayOfWeek.Sunday;
             await manager.CreateAsync(calendar);

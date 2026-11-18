@@ -13,6 +13,7 @@ public sealed class CourseStaffIndexProvider : IndexProvider<ContentItem>
     public override void Describe(DescribeContext<ContentItem> context)
     {
         context.For<CourseStaffIndex>()
+            .ExclusiveToDocumentType()
             .When(item => item.Has<CoursePart>())
             .Map(item => (item.Get<CoursePart>(nameof(CoursePart)).Staff ?? [])
                 .Where(staff => !string.IsNullOrEmpty(staff?.UserId))

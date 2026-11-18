@@ -1,0 +1,154 @@
+{
+  "name": "PayrollScheduledRun",
+  "displayName": "Automation: open and calculate pay runs on schedule",
+  "description": "Adds a workflow that, every weekday morning, opens the pay run of an employer's pay schedule for the current period (once per period), calculates it and submits it for approval; a run with blockers is left calculated and the payroll administrators are told. It's added turned off: open Workflows > Open and calculate pay runs on schedule, set the employer and pay schedule ids on Open Pay Run and the user names on the notice, and turn it on.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "payroll"
+  ],
+  "tags": [
+    "payroll",
+    "automation",
+    "workflow",
+    "schedule"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "OrchardCore.Workflows",
+        "OrchardCore.Workflows.Timers",
+        "OrchardCore.Notifications",
+        "CrestApps.OrchardCore.Payroll"
+      ]
+    },
+    {
+      "name": "WorkflowType",
+      "data": [
+        {
+          "WorkflowTypeId": "4payrollscheduledrunwf0001",
+          "Name": "Open and calculate pay runs on schedule",
+          "IsEnabled": false,
+          "IsSingleton": true,
+          "LockTimeout": 0,
+          "LockExpiration": 0,
+          "DeleteFinishedWorkflows": true,
+          "Activities": [
+            {
+              "ActivityId": "4payrollscheduledtimer0001",
+              "Name": "TimerEvent",
+              "X": 20,
+              "Y": 40,
+              "IsStart": true,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Every weekday at 7"
+                },
+                "CronExpression": "0 7 * * 1-5",
+                "UseLocalTime": true
+              }
+            },
+            {
+              "ActivityId": "4payrollscheduledopen00001",
+              "Name": "OpenPayRunTask",
+              "X": 320,
+              "Y": 40,
+              "IsStart": false,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Open the period's run"
+                },
+                "EmployerId": "",
+                "PayScheduleId": "",
+                "RunType": "Regular"
+              }
+            },
+            {
+              "ActivityId": "4payrollscheduledcalc00001",
+              "Name": "CalculatePayRunTask",
+              "X": 620,
+              "Y": 40,
+              "IsStart": false,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Calculate it"
+                },
+                "PayRunId": "{{ Workflow.Output.PayRunId }}"
+              }
+            },
+            {
+              "ActivityId": "4payrollscheduledsubmit001",
+              "Name": "SubmitPayRunTask",
+              "X": 920,
+              "Y": 40,
+              "IsStart": false,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Submit it for approval"
+                },
+                "PayRunId": "{{ Workflow.Output.PayRunId }}"
+              }
+            },
+            {
+              "ActivityId": "4payrollscheduledblocked01",
+              "Name": "NotifyUserTask",
+              "X": 620,
+              "Y": 260,
+              "IsStart": false,
+              "Properties": {
+                "ActivityMetadata": {
+                  "Title": "Tell the payroll administrators"
+                },
+                "UserNames": {
+                  "Expression": "admin"
+                },
+                "Subject": {
+                  "Expression": "Pay run {{ Workflow.Output.PayRunNumber }} has blockers"
+                },
+                "Summary": {
+                  "Expression": "The pay run was calculated on schedule but has blockers: {{ Workflow.LastResult }}"
+                },
+                "TextBody": {
+                  "Expression": "Open the pay run, fix its blockers, calculate it again and submit it for approval."
+                },
+                "Url": {
+                  "Expression": "~/Admin/payroll/pay-runs/{{ Workflow.Output.PayRunId }}"
+                }
+              }
+            }
+          ],
+          "Transitions": [
+            {
+              "Id": 0,
+              "SourceActivityId": "4payrollscheduledtimer0001",
+              "SourceOutcomeName": "Done",
+              "DestinationActivityId": "4payrollscheduledopen00001"
+            },
+            {
+              "Id": 0,
+              "SourceActivityId": "4payrollscheduledopen00001",
+              "SourceOutcomeName": "Done",
+              "DestinationActivityId": "4payrollscheduledcalc00001"
+            },
+            {
+              "Id": 0,
+              "SourceActivityId": "4payrollscheduledcalc00001",
+              "SourceOutcomeName": "Done",
+              "DestinationActivityId": "4payrollscheduledsubmit001"
+            },
+            {
+              "Id": 0,
+              "SourceActivityId": "4payrollscheduledcalc00001",
+              "SourceOutcomeName": "Blocked",
+              "DestinationActivityId": "4payrollscheduledblocked01"
+            }
+          ],
+          "Properties": {}
+        }
+      ]
+    }
+  ]
+}

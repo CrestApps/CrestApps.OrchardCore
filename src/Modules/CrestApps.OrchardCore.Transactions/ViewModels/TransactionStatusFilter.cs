@@ -43,7 +43,8 @@ public enum TransactionStatusFilter
     Failed = 6,
 
     /// <summary>
-    /// Only abandoned transactions are returned.
+    /// Only abandoned transactions are returned. No code sets that status, so the filter is not offered; the value is kept
+    /// so a link that names it still opens.
     /// </summary>
     Abandoned = 7,
 

@@ -1,5 +1,7 @@
+using CrestApps.Core;
+using CrestApps.OrchardCore.Agreements.Models;
+using CrestApps.OrchardCore.Agreements.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
-using CrestApps.OrchardCore.WorkOrders.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
@@ -55,9 +57,9 @@ public sealed class ServiceAgreementExpiringEventDisplayDriver : ActivityDisplay
 }
 
 /// <summary>
-/// Starts the expiring event.
+/// Starts the expiring event of an agreement with visits.
 /// </summary>
-internal sealed class WorkflowServiceAgreementObserver : IServiceAgreementObserver
+internal sealed class WorkflowServiceAgreementObserver : IAgreementObserver
 {
     private readonly IWorkflowManager _workflowManager;
 
@@ -71,14 +73,20 @@ internal sealed class WorkflowServiceAgreementObserver : IServiceAgreementObserv
     }
 
     /// <inheritdoc/>
-    public Task OnExpiringAsync(ServiceAgreement agreement, CancellationToken cancellationToken = default)
-        => _workflowManager.TriggerEventAsync(WorkOrdersConstants.Events.AgreementExpiring, new Dictionary<string, object>
-        {
-            ["AgreementId"] = agreement.ItemId,
-            ["Number"] = agreement.Number,
-            ["Name"] = agreement.Name,
-            ["EndDate"] = agreement.EndDate?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
-            ["CustomerId"] = agreement.CustomerId,
-            ["AccountId"] = agreement.AccountId,
-        }, agreement.ItemId);
+    public Task OnExpiringAsync(Agreement agreement, CancellationToken cancellationToken = default)
+        => !agreement.TryGet<WorkOrderAgreementTerms>(out var terms) || terms is null
+            ? Task.CompletedTask
+            : _workflowManager.TriggerEventAsync(WorkOrdersConstants.Events.AgreementExpiring, new Dictionary<string, object>
+            {
+                ["AgreementId"] = agreement.ItemId,
+                ["Number"] = agreement.Number,
+                ["Name"] = agreement.Name,
+                ["EndDate"] = agreement.EndDate?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+                ["CustomerId"] = terms.CustomerId,
+                ["AccountId"] = agreement.AccountId,
+            }, agreement.ItemId);
+
+    /// <inheritdoc/>
+    public Task OnHoursUsedAsync(Agreement agreement, int percent, AgreementBalance balance, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

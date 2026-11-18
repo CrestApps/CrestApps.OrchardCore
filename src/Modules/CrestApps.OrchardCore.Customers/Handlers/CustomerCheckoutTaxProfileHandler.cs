@@ -1,11 +1,7 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.Core.Services;
-using CrestApps.OrchardCore.Customers.Core.Models;
-using CrestApps.OrchardCore.Taxation.Models;
-using CrestApps.OrchardCore.Taxation.Services;
-using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.Entities;
+using CrestApps.OrchardCore.Customers.Services;
 
 namespace CrestApps.OrchardCore.Customers.Handlers;
 
@@ -13,7 +9,8 @@ namespace CrestApps.OrchardCore.Customers.Handlers;
 /// Tells checkout tax who is buying: a business or a person, their tax id, whether they are exempt, and the exemption
 /// certificates on file for them. Only a signed-in buyer is known; a guest is taxed as a person. When another handler
 /// already said who is buying, such as a business account the buyer buys for, its type and tax numbers stay, and the
-/// customer record adds what is missing: the customer, the exemption and the certificates.
+/// customer record adds what is missing: the customer, the exemption and the certificates. The rules are the ones the
+/// tax profile of a customer party uses (<see cref="CustomerTaxProfiles"/>).
 /// </summary>
 internal sealed class CustomerCheckoutTaxProfileHandler : ICheckoutTaxProfileHandler
 {
@@ -45,36 +42,11 @@ internal sealed class CustomerCheckoutTaxProfileHandler : ICheckoutTaxProfileHan
 
         if (profile.Customer is { } known)
         {
-            known.CustomerId = customer.ItemId;
-            known.TaxRegistrationNumber ??= customer.TaxId;
-            known.VatNumber ??= customer.TaxId;
-            known.IsTaxExempt |= customer.IsTaxExempt;
-            known.ExemptionCertificateIds = [.. (known.ExemptionCertificateIds ?? []).Union(await GetCertificateIdsAsync(customer.ItemId, cancellationToken))];
+            await CustomerTaxProfiles.MergeAsync(known, customer, _serviceProvider, cancellationToken);
 
             return;
         }
 
-        profile.Customer = new CustomerTaxProfile
-        {
-            CustomerId = customer.ItemId,
-            CustomerType = customer.Kind == CustomerKind.Business ? CustomerTaxType.B2B : CustomerTaxType.B2C,
-            TaxRegistrationNumber = customer.TaxId,
-            VatNumber = customer.TaxId,
-            IsTaxExempt = customer.IsTaxExempt,
-            ExemptionCertificateIds = await GetCertificateIdsAsync(customer.ItemId, cancellationToken),
-        };
-    }
-
-    // Certificates are kept by the Taxation feature, which may be off.
-    private async Task<IList<string>> GetCertificateIdsAsync(string customerId, CancellationToken cancellationToken)
-    {
-        if (_serviceProvider.GetService<IExemptionCertificateStore>() is not { } certificates)
-        {
-            return [];
-        }
-
-        return [.. (await certificates.GetAllAsync(cancellationToken))
-            .Where(certificate => string.Equals(certificate.CustomerId, customerId, StringComparison.Ordinal))
-            .Select(certificate => certificate.ItemId)];
+        profile.Customer = await CustomerTaxProfiles.CreateAsync(customer, _serviceProvider, cancellationToken);
     }
 }

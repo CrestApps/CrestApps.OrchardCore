@@ -55,8 +55,8 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Certifications.Core\CrestApps.OrchardCore.Learning.Certifications.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Skills.Core\CrestApps.OrchardCore.Skills.Core.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Learning\CrestApps.OrchardCore.Learning.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Skills\CrestApps.OrchardCore.Skills.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning\CrestApps.OrchardCore.Learning.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Skills\CrestApps.OrchardCore.Skills.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

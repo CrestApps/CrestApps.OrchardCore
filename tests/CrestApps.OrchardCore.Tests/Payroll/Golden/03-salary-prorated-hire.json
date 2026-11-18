@@ -1,0 +1,43 @@
+{
+  "Description": "A 52000 salary paid twice a month, hired on Monday 23 November: 6 of the period's 11 working days.",
+  "Frequency": "SemiMonthly",
+  "PeriodStart": "2026-11-16",
+  "PeriodEnd": "2026-11-30",
+  "PayDate": "2026-11-30",
+  "HireDate": "2026-11-23",
+  "Pay": {
+    "PayBasis": "Salary",
+    "Salaries": [
+      {
+        "EffectiveFrom": "2020-01-01",
+        "AnnualAmount": 52000
+      }
+    ]
+  },
+  "Codes": [
+    {
+      "Code": "SAL",
+      "Class": "Earning",
+      "Kind": "Salary"
+    }
+  ],
+  "Distribution": [
+    {
+      "Method": "Check",
+      "Split": "Remainder"
+    }
+  ],
+  "Expected": {
+    "Lines": [
+      "Earning SAL 1181.82"
+    ],
+    "Gross": 1181.82,
+    "Net": 1181.82,
+    "Payments": [
+      {
+        "Method": "Check",
+        "Amount": 1181.82
+      }
+    ]
+  }
+}

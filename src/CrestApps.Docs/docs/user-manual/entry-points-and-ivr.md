@@ -69,7 +69,7 @@ Numbers that were typed on an entry point before entry points picked them from t
 
 | Field | What it does |
 | --- | --- |
-| **Business hours calendar** | When the entry point is open. Empty means *Always open*. See [Business hours](business-hours.md). |
+| **Business hours** | The business hours schedule that says when the entry point is open. Empty means *Always open*. See [Business hours](business-hours.md). |
 | **Closed action** | Calls only. What to do with calls while closed: **Hold in queue** (the default), **Voicemail**, **Overflow** (to the overflow queue below), or **Reject**. On a specific-agent line every choice except Reject becomes Voicemail. |
 | **Overflow queue** | The queue that takes after-hours calls when the closed action is Overflow. |
 | **Closed message** | Spoken to a caller who rings while the entry point is closed, before the closed action. Once it has been said the caller is held in the queue, moved to the overflow queue or sent to voicemail; with **Reject** the call ends after the message. Empty applies the closed action straight away, with no message. |

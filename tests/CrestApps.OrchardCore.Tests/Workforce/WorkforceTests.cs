@@ -1,10 +1,9 @@
-using CrestApps.OrchardCore.Tests.Doubles;
-using CrestApps.OrchardCore.Staff.Core.Indexes;
-using CrestApps.OrchardCore.Staff;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Payroll;
+using CrestApps.OrchardCore.Payroll.Core.Indexes;
 using CrestApps.OrchardCore.Scheduling;
 using CrestApps.OrchardCore.Scheduling.Core;
 using CrestApps.OrchardCore.Scheduling.Core.Indexes;
@@ -14,6 +13,8 @@ using CrestApps.OrchardCore.Scheduling.Services;
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Skills.Core;
 using CrestApps.OrchardCore.Skills.Core.Indexes;
+using CrestApps.OrchardCore.Staff;
+using CrestApps.OrchardCore.Staff.Core.Indexes;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams;
@@ -21,6 +22,7 @@ using CrestApps.OrchardCore.Teams.Core.Indexes;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
@@ -437,6 +439,7 @@ public sealed class WorkforceTests
                 await LaborRulesIndexSchema.CreateAsync(schemaBuilder);
                 await PortalIndexSchema.CreateAsync(schemaBuilder);
                 await PortalIndexSchema.CreateStaffFeedIndexAsync(schemaBuilder);
+                await PaySetupIndexSchema.CreateAsync(schemaBuilder);
                 await TimeClockIndexSchema.CreateAsync(schemaBuilder);
 
                 if (schema is not null)
@@ -452,10 +455,11 @@ public sealed class WorkforceTests
                 .Concat(TimeOffIndexProviders.All())
                 .Concat(LaborRulesIndexProviders.All())
                 .Concat(PortalIndexProviders.All())
+                .Concat(PaySetupIndexProviders.All())
                 .Concat(TimeClockIndexProviders.All())
                 .Concat(indexProviders ?? [])
                 .ToArray(),
-            new[] { SkillsConstants.CollectionName, TeamsConstants.CollectionName, StaffConstants.CollectionName, SchedulingConstants.CollectionName, WorkforceConstants.CollectionName, WorkforceConstants.TimeOffLedgerCollectionName }.Concat(collections ?? []).ToArray());
+            new[] { SkillsConstants.CollectionName, TeamsConstants.CollectionName, StaffConstants.CollectionName, SchedulingConstants.CollectionName, WorkforceConstants.CollectionName, WorkforceConstants.TimeOffLedgerCollectionName, PayrollConstants.CollectionName, CrestApps.OrchardCore.Taxation.TaxationConstants.IncomeTaxCollectionName }.Concat(collections ?? []).ToArray());
     }
 
     internal static Task<Team> AddTeamAsync(CalendarTestHarness harness, string name, TeamKind kind, string parentId = null)

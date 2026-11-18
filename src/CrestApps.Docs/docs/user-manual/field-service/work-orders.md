@@ -11,21 +11,23 @@ A work order is a job done for a customer, such as a repair or an installation. 
 | | |
 | --- | --- |
 | **Menu** | Field Service > Work Orders, Work Order Types, Checklists, Service Levels, Sub-statuses |
-| **Permission** | Manage work orders, or View work orders to see them; Manage work order settings for the types, checklists, service levels and sub-statuses |
-| **Feature** | Work Orders; Service Agreements for recurring visits; Inventory for parts, Transactions for invoices, Geo for territories, Assets for equipment |
+| **Permission** | Manage work orders, or View work orders to see them; Manage work order settings for the types, checklists and sub-statuses; Manage service level policies for the service levels |
+| **Feature** | Work Orders (it turns on Service Levels and Business Hours); Service Agreements for recurring visits; Inventory for parts, Invoicing (or Transactions) for invoices, Geo for territories, Assets for equipment |
 
 <AskYourAdmin />
 
 ## Set up a service level
 
-A service level says how fast work orders are responded to and resolved.
+A service level policy says how fast work orders are responded to and resolved, at each priority. Work order policies are kept with every other policy, such as the ticket policies, in **Content > Service Levels**.
 
-1. Go to **Field Service > Service Levels** and select **Add service level**.
-2. Enter a name and choose the time zone.
-3. Under **Targets**, enter the hours to respond and to resolve for each priority. Responding means making it ready, scheduling it or starting it; resolving means completing it.
+1. Go to **Content > Service Levels** and select **Add Policy**, then **Add** on **Work orders**.
+2. Enter a name and choose in **Counted on** the business hours to count in, or **Around the clock**. See [Business Hours Schedules](../administration/business-hours-schedules.md).
+3. Under **Targets**, enter the minutes to respond and to resolve for each priority. Responding means making it ready, scheduling it or starting it; resolving means completing it.
 4. Choose when the warning comes, such as at 80% of a target.
-5. Under **When the clock runs**, tick **Only in opening hours** and choose the days and hours, or leave it unticked for around the clock. Choose the statuses the clock stops in, such as *On hold*.
+5. Under **Work orders**, tick the statuses the timers stop in, such as *On hold*.
 6. Select **Save**.
+
+See [Service Levels](../administration/service-levels.md) for every field.
 
 ## Make a checklist
 
@@ -46,7 +48,7 @@ A required question must be answered before the work order is completed.
 6. Tick its checklists, and list the lines every work order starts with, such as an hour of labor or a filter. With Inventory on, choose the stock item a part comes from.
 7. Select **Save**.
 
-Sub-statuses, under **Field Service > Sub-statuses**, are finer statuses inside one, such as *Waiting for parts* under *On hold*. A sub-status can stop the service level clock.
+Sub-statuses, under **Field Service > Sub-statuses**, are finer statuses inside one, such as *Waiting for parts* under *On hold*. A sub-status can stop the service level timers.
 
 ## Create a work order
 
@@ -68,7 +70,7 @@ On a work order's page:
 - **Record signature** with the name of who signed.
 - Add a note. The history shows every change, newest first.
 
-When the work order is in progress, select **Complete**. If something is missing, such as a required answer or the signature, the page says what. A billed work order then gets its invoice, linked under **About**.
+When the work order is in progress, select **Complete**. If something is missing, such as a required answer or the signature, the page says what. A billed work order then gets its invoice, linked under **About**. With Invoicing on, it is a numbered invoice with the work order's labor and parts, under **Commerce > Invoices**.
 
 To come back for more work, enter what it is for under **Follow-up** and select **Create follow-up**. The new work order is for the same customer, place and assets, and links back to this one.
 
@@ -83,13 +85,13 @@ To come back for more work, enter what it is for under **Follow-up** and select 
 
 A service agreement makes the work orders of a customer's recurring visits, such as a furnace service every six months.
 
-1. Go to **Field Service > Service Agreements** and select **Add service agreement**.
-2. Enter a name, the days it starts and ends, and the notice you want before the end.
+1. Go to **Field Service > Service Agreements** (the **Agreements** list) and select **Add agreement**, or select **New agreement** on the account's page.
+2. Enter a name, the account, the days it starts and ends, and the notice you want before the end. If the agreement also covers hours of work, set them under **Covered hours**.
 3. Under **Visits**, add a row for each recurring visit: its name, the work order type, how often it repeats, how many days ahead its work order is made, and, when the visit is for only some of the assets covered, those assets. For anything else, choose **Custom rule** and enter an iCalendar rule, such as `FREQ=MONTHLY;BYDAY=2SU` for the second Sunday of each month.
 4. Under **Pricing**, choose whether the visits are included, so their work orders aren't invoiced, or invoiced at a price per visit.
-5. Enter the customer, contact, address and the assets covered, set the status to **Active** and select **Save**.
+5. Enter the customer (when the visits are for a person), contact, address and the assets covered, set the status to **Active** and select **Save**.
 
-The agreement's page shows the next visits of each schedule and the work orders made so far. Work orders are made each hour; select **Make due work orders now** to make them at once. Each visit gets one work order, for its whole day. An agreement past its end date becomes expired; a workflow can start when one comes within its notice, such as to offer a renewal.
+Select **Next visits and work orders** on the **Visits** panel to see the next visits of each schedule and the work orders made so far. Work orders are made each hour; select **Make due work orders now** to make them at once. Each visit gets one work order, for its whole day. The billable labor of the work orders done under the agreement counts against its covered hours. An agreement past its end date becomes expired; a workflow can start when one comes within its notice, such as to offer a renewal.
 
 ## Service levels on the page
 

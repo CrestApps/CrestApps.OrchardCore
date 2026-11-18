@@ -107,7 +107,7 @@ With the **Send Payment Receipts** feature on, the customer is sent a receipt af
 A receipt shows:
 
 - your business's logo, name and address, under your **Header title** (*Payment receipt* unless you change it);
-- **Receipt:** with the receipt number, and the **Date** of the payment;
+- **Receipt:** with the receipt number, the **Date** of the payment, and the **Currency** code, such as *USD*, because several currencies share a symbol such as *$*;
 - **Billed to**, and the **Status** **Paid**;
 - the amount paid, with its share of the transaction's tax;
 - **Notes**: *Paid offline.* for a payment an administrator recorded, *Payment for invoice INV-1001.* when the payment settled an invoice, and how much of the charge was taken off without being paid when the transaction was adjusted;
@@ -159,7 +159,9 @@ Invoices and receipts share one set of branding settings.
 | **Contact phone** | A phone number printed at the bottom. |
 | **Website** | A website address printed at the bottom. |
 | **Footer text** | Free text printed at the bottom, such as a thank-you note or your return policy. |
-| **Show a test-payment badge for test-mode payments** | Marks receipts for payments made in a payment provider's test mode with a **Test payment** badge. On by default. |
+| **Show a test-payment badge for test-mode payments** | Prints **Test payment** across receipts for payments made in a payment provider's test mode. On by default. |
+
+Invoices and receipts are printed with the document template for **Receipts**, when there is one. The template adds an accent color and a paper size, and its logo and footer when these settings leave them empty. See [Document Templates and Number Series](document-templates-and-number-series.md).
 
 ## Make sure links point at your site
 
@@ -171,3 +173,4 @@ Set it before you rely on pay links. Without it, a link copied from the invoice 
 
 - [Transactions](transactions.md): the report, recording payments and reminder settings.
 - [Payments and Refunds](payments-and-refunds.md): refunding a payment.
+- [Document Templates and Number Series](document-templates-and-number-series.md): the look of printed documents and how their numbers are written.

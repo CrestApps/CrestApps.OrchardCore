@@ -47,8 +47,8 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Classes.Core\CrestApps.OrchardCore.Learning.Classes.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Scheduling.Core\CrestApps.OrchardCore.Scheduling.Core.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Learning\CrestApps.OrchardCore.Learning.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Scheduling\CrestApps.OrchardCore.Scheduling.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning\CrestApps.OrchardCore.Learning.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Scheduling\CrestApps.OrchardCore.Scheduling.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

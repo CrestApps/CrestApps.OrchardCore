@@ -9,8 +9,9 @@ namespace CrestApps.OrchardCore.YesSql.Core.Migrations;
 /// index table are filled in for the records saved before it.
 /// </summary>
 /// <remarks>
-/// Run it from a deferred task (<c>ShellScope.AddDeferredTask</c>) scheduled by the migration that adds the columns,
-/// not inside the migration: mapping every record again during activation would hold up the tenant. Records are saved
+/// Run it from an <see cref="Upgrades.IResumableStep"/> the migration that adds the columns requests through
+/// <see cref="Upgrades.ResumableSteps"/>, not inside the migration (mapping every record again during activation would
+/// hold up the tenant) and not from a deferred task (a failure there is swallowed and nothing runs it again). Records are saved
 /// straight through the session rather than through their store, so no store handler runs.
 /// </remarks>
 public static class CatalogIndexBackfill

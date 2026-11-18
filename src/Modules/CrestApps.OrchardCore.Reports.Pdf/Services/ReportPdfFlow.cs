@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text;
 using CrestApps.OrchardCore.Pdf;
-using CrestApps.OrchardCore.Pdf.Models;
 using UglyToad.PdfPig.Writer;
 
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
@@ -38,8 +37,8 @@ internal sealed class ReportPdfFlow
         PdfDocumentBuilder builder,
         double pageWidth,
         double pageHeight,
-        PdfFont regular,
-        PdfFont bold)
+        PdfFontFace regular,
+        PdfFontFace bold)
     {
         _builder = builder;
         _pageWidth = pageWidth;
@@ -53,12 +52,12 @@ internal sealed class ReportPdfFlow
     /// <summary>
     /// Gets the regular face.
     /// </summary>
-    public PdfFont Regular { get; }
+    public PdfFontFace Regular { get; }
 
     /// <summary>
     /// Gets the bold face.
     /// </summary>
-    public PdfFont Bold { get; }
+    public PdfFontFace Bold { get; }
 
     /// <summary>
     /// Gets the page being filled.
@@ -144,7 +143,7 @@ internal sealed class ReportPdfFlow
     /// <param name="font">The face.</param>
     /// <param name="size">The font size, in points.</param>
     /// <returns>The height, in points.</returns>
-    public static double GetHeight(IReadOnlyCollection<string> lines, PdfFont font, double size)
+    public static double GetHeight(IReadOnlyCollection<string> lines, PdfFontFace font, double size)
     {
         return lines.Count * font.LineHeight * size;
     }
@@ -156,7 +155,7 @@ internal sealed class ReportPdfFlow
     /// <param name="font">The face.</param>
     /// <param name="size">The font size, in points.</param>
     /// <param name="color">The color.</param>
-    public void WriteLines(IReadOnlyList<string> lines, PdfFont font, double size, PdfColor color)
+    public void WriteLines(IReadOnlyList<string> lines, PdfFontFace font, double size, PdfColor color)
     {
         var lineHeight = font.LineHeight * size;
 

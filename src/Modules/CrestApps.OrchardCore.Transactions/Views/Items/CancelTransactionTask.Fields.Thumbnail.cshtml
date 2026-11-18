@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Transactions.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CancelTransactionTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-ban" aria-hidden="true"></i>
+    @T["Cancel Transaction"]
+</h4>
+<p>@T["Cancels a transaction that is no longer owed."]</p>

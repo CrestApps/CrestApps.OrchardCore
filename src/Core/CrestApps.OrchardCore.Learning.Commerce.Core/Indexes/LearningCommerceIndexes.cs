@@ -53,7 +53,10 @@ public sealed class LearningPurchaseIndexProvider : IndexProvider<LearningPurcha
     }
 
     public override void Describe(DescribeContext<LearningPurchase> context)
-        => context.For<LearningPurchaseIndex>().Map(purchase => new LearningPurchaseIndex { ItemId = purchase.ItemId, OrderId = purchase.OrderId, LineId = purchase.LineId, UserId = purchase.UserId });
+        => context.For<LearningPurchaseIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(purchase => new LearningPurchaseIndex { ItemId = purchase.ItemId, OrderId = purchase.OrderId, LineId = purchase.LineId, UserId = purchase.UserId });
 }
 
 public sealed class LicensePoolIndexProvider : IndexProvider<LicensePool>
@@ -64,7 +67,10 @@ public sealed class LicensePoolIndexProvider : IndexProvider<LicensePool>
     }
 
     public override void Describe(DescribeContext<LicensePool> context)
-        => context.For<LicensePoolIndex>().Map(pool => new LicensePoolIndex { ItemId = pool.ItemId, AccountId = pool.AccountId, CourseId = pool.CourseId, OrderId = pool.OrderId, LineId = pool.LineId, State = pool.State });
+        => context.For<LicensePoolIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(pool => new LicensePoolIndex { ItemId = pool.ItemId, AccountId = pool.AccountId, CourseId = pool.CourseId, OrderId = pool.OrderId, LineId = pool.LineId, State = pool.State });
 }
 
 public sealed class LicenseSeatIndexProvider : IndexProvider<LicenseSeat>
@@ -75,16 +81,19 @@ public sealed class LicenseSeatIndexProvider : IndexProvider<LicenseSeat>
     }
 
     public override void Describe(DescribeContext<LicenseSeat> context)
-        => context.For<LicenseSeatIndex>().Map(seat => new LicenseSeatIndex
-        {
-            ItemId = seat.ItemId,
-            PoolId = seat.PoolId,
-            AccountId = seat.AccountId,
-            UserId = seat.UserId,
-            NormalizedEmail = seat.Email?.Trim().ToUpperInvariant(),
-            InvitationId = seat.InvitationId,
-            State = seat.State,
-        });
+        => context.For<LicenseSeatIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(seat => new LicenseSeatIndex
+            {
+                ItemId = seat.ItemId,
+                PoolId = seat.PoolId,
+                AccountId = seat.AccountId,
+                UserId = seat.UserId,
+                NormalizedEmail = seat.Email?.Trim().ToUpperInvariant(),
+                InvitationId = seat.InvitationId,
+                State = seat.State,
+            });
 }
 
 /// <summary>

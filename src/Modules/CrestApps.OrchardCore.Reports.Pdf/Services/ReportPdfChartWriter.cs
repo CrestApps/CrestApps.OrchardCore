@@ -1,6 +1,5 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Pdf;
-using CrestApps.OrchardCore.Pdf.Models;
 using CrestApps.OrchardCore.Reports.Models;
 
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
@@ -128,7 +127,7 @@ internal sealed class ReportPdfChartWriter
     /// </summary>
     public double Height => _chartHeight > 0 ? SpaceBefore + _chartHeight : 0;
 
-    private PdfFont Font => _flow.Regular;
+    private PdfFontFace Font => _flow.Regular;
 
     private double LineHeight => Font.LineHeight * FontSize;
 

@@ -31,6 +31,11 @@ public static class AccountsConstants
     public const string InvitationsCollectionName = "AccountInvitations";
 
     /// <summary>
+    /// The feature that keeps the e-mail domains an account's people write from.
+    /// </summary>
+    public const string EmailDomainsFeature = "CrestApps.OrchardCore.Accounts.EmailDomains";
+
+    /// <summary>
     /// The technical names of the content parts an account is made of.
     /// </summary>
     public static class ContentParts
@@ -54,6 +59,11 @@ public static class AccountsConstants
         /// The part that holds an account's addresses.
         /// </summary>
         public const string Locations = "AccountLocationsPart";
+
+        /// <summary>
+        /// The part holding an account's e-mail domains.
+        /// </summary>
+        public const string EmailDomains = "AccountEmailDomainsPart";
 
         /// <summary>
         /// Orchard Core's list part, which holds an account's contacts.

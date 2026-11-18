@@ -29,7 +29,7 @@ public sealed class TeamsStartup : StartupBase
             .WithPosition(10)
             .AddEventType("Meeting", LocalizationSource.Create<TeamsStartup>("Meeting"), e => e.Color("#0c8599"))
             .AddEventType("OnCall", LocalizationSource.Create<TeamsStartup>("On call"), e => e.Color("#d6336c").RequiresAttendee().Lasts(480))
-            .AddEventType("OutOfOffice", LocalizationSource.Create<TeamsStartup>("Out of office"), e => e.Color("#e8590c").AllDayByDefault().RequiresAttendee().IgnoresCapacity())
+            .AddEventType(CalendarsConstants.EventTypes.OutOfOffice, LocalizationSource.Create<TeamsStartup>("Out of office"), e => e.Color("#e8590c").AllDayByDefault().RequiresAttendee().IgnoresCapacity().MarksAbsence())
             .AddEventType("Milestone", LocalizationSource.Create<TeamsStartup>("Milestone"), e => e.Color("#5c940d").AllDayByDefault().Free()));
     }
 }
@@ -46,5 +46,18 @@ public sealed class TeamMembershipStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddCalendarAccessContributor<TeamMembershipCalendarAccessContributor>();
+    }
+}
+
+/// <summary>
+/// Tells team assignment who is away now because of an absence on a calendar (out of office, time off).
+/// </summary>
+[RequireFeatures(TeamsConstants.Features.Teams)]
+public sealed class TeamAvailabilityStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTeamMemberAvailabilitySource<CalendarAbsenceAvailabilitySource>();
     }
 }

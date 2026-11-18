@@ -16,6 +16,12 @@ public static class AssetsConstants
     public const string Source = "Asset";
 
     /// <summary>
+    /// The record kind of an asset: what a record reference to an asset names. It is stored in every reference, so it
+    /// never changes.
+    /// </summary>
+    public const string RecordKind = "Asset";
+
+    /// <summary>
     /// The calendar type of a schedulable asset, from the Calendars Resources feature.
     /// </summary>
     public const string EquipmentCalendarType = "Equipment";

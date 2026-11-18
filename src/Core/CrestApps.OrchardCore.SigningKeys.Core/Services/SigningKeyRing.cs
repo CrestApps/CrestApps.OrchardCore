@@ -319,9 +319,8 @@ public sealed class SigningKeyRing : ISigningKeyRing
             return cached;
         }
 
-        var secret = record.Algorithm == SigningKeyAlgorithms.ES256
-            ? (ISecret)await _secretManager.GetSecretAsync<TextSecret>(record.SecretName)
-            : await _secretManager.GetSecretAsync<RsaKeySecret>(record.SecretName);
+        // The key reads the secret of its algorithm's type only: a text secret for ES256, an RSA key for RS256.
+        var secret = await _secretManager.GetSecretAsync(record.SecretName);
 
         if (secret is null || SigningKeyJwk.FromSecret(record.Algorithm, secret, record.Kid) is not { } privateJwk)
         {

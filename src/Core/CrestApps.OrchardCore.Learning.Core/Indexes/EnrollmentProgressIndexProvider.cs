@@ -20,6 +20,8 @@ public sealed class EnrollmentProgressIndexProvider : IndexProvider<EnrollmentPr
     public override void Describe(DescribeContext<EnrollmentProgress> context)
     {
         context.For<EnrollmentProgressIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(progress => new EnrollmentProgressIndex
             {
                 ItemId = progress.ItemId,
@@ -29,6 +31,7 @@ public sealed class EnrollmentProgressIndexProvider : IndexProvider<EnrollmentPr
             });
 
         context.For<CourseItemProgressIndex>()
+            .ExclusiveToDocumentType()
             .Map(progress => (progress.Items ?? [])
                 .Where(item => !string.IsNullOrEmpty(item?.ContentItemId))
                 .Select(item => new CourseItemProgressIndex

@@ -1,22 +1,18 @@
 namespace CrestApps.OrchardCore.Transactions.FinancialDocuments;
 
 /// <summary>
-/// The kinds of financial document a money event can produce. The shipped default issues only a
-/// <see cref="Receipt"/>; a future Orders domain can opt in to persisted <see cref="Invoice"/>,
-/// <see cref="CreditNote"/>, and <see cref="RefundDocument"/> kinds through an
-/// <see cref="IFinancialDocumentPolicy"/> without a breaking change.
+/// The kinds of financial document that take their numbers from <see cref="IFinancialDocumentNumberGenerator"/>, each
+/// from its own number series (<see cref="FinancialDocumentSeries"/>).
 /// </summary>
 public enum FinancialDocumentKind
 {
     /// <summary>
-    /// A receipt acknowledging a payment. Produced on demand and never persisted as a numbered legal
-    /// document. This is the only kind the shipped default policy issues.
+    /// A receipt acknowledging a payment.
     /// </summary>
     Receipt,
 
     /// <summary>
-    /// A formal invoice requesting or recording payment for an order. Persisted and numbered when a policy
-    /// opts in.
+    /// An invoice requesting payment: the payment request of a transaction, or an issued invoice document.
     /// </summary>
     Invoice,
 

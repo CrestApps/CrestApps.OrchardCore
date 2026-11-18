@@ -3,7 +3,9 @@ using Json.Schema;
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 
 /// <summary>
-/// Schema for the "ContactCenterBusinessHoursCalendar" recipe step — imports reusable business-hours calendars that gate when queues and entry points route work.
+/// Schema for the "ContactCenterBusinessHoursCalendar" recipe step of older recipes. Each calendar is imported as a Business Hours
+/// schedule, keeping its id, so the queues and entry points that name it keep their hours. New recipes use the
+/// "BusinessHoursSchedules" step.
 /// </summary>
 public sealed class ContactCenterBusinessHoursCalendarRecipeStep : IRecipeStep
 {
@@ -19,7 +21,7 @@ public sealed class ContactCenterBusinessHoursCalendarRecipeStep : IRecipeStep
         _cached ??= new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("ContactCenterBusinessHoursCalendar").Description("Recipe step discriminator. Must be 'ContactCenterBusinessHoursCalendar'.")),
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("ContactCenterBusinessHoursCalendar").Description("Recipe step discriminator. Must be 'ContactCenterBusinessHoursCalendar'. Older recipes use this step; each calendar is imported as a Business Hours schedule. New recipes use the BusinessHoursSchedules step.")),
                 ("Calendars", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(new JsonSchemaBuilder()

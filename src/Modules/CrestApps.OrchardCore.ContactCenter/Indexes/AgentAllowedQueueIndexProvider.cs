@@ -26,6 +26,7 @@ public sealed class AgentAllowedQueueIndexProvider : IndexProvider<AgentProfile>
     {
         context
             .For<AgentAllowedQueueIndex>()
+            .ExclusiveToDocumentType()
             .Map(BuildRows);
     }
 

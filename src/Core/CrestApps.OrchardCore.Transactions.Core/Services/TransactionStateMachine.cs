@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Transactions.Core.Services;
@@ -59,6 +60,76 @@ public static class TransactionStateMachine
         => transaction is not null &&
             IsCollectable(transaction.Status) &&
             transaction.OutstandingAmount > 0m;
+
+    /// <summary>
+    /// Works out what an online payment of a requested amount pays: the whole of what is owed unless the transaction
+    /// accepts part payments, never more than what is owed, and never less than the smallest part payment the
+    /// transaction accepts (what is owed can always be paid in full, even when it is less than that).
+    /// </summary>
+    /// <param name="transaction">The transaction to pay.</param>
+    /// <param name="requested">The amount the payer asked to pay, or <see langword="null"/> to pay everything.</param>
+    /// <param name="amount">The amount to charge, at the currency's precision.</param>
+    /// <returns><see langword="true"/> when the requested amount is accepted; <see langword="false"/> when it is below
+    /// the smallest part payment, in which case <paramref name="amount"/> is that smallest payment.</returns>
+    public static bool TryGetPaymentAmount(Transaction transaction, decimal? requested, out decimal amount)
+    {
+        ArgumentNullException.ThrowIfNull(transaction);
+
+        var outstanding = CurrencyScale.Round(transaction.OutstandingAmount, transaction.Currency);
+
+        amount = outstanding;
+
+        if (!transaction.AllowPartialPayment || requested is not decimal asked)
+        {
+            return true;
+        }
+
+        var rounded = CurrencyScale.Round(asked, transaction.Currency);
+
+        if (rounded >= outstanding)
+        {
+            return true;
+        }
+
+        var minimum = Math.Min(outstanding, CurrencyScale.Round(Math.Max(0m, transaction.MinimumPayment ?? 0m), transaction.Currency));
+
+        if (rounded <= 0m || rounded < minimum)
+        {
+            amount = minimum > 0m ? minimum : outstanding;
+
+            return false;
+        }
+
+        amount = rounded;
+
+        return true;
+    }
+
+    /// <summary>
+    /// Returns <see langword="true"/> when a timeline entry may be taken back: a payment recorded by hand or an
+    /// adjustment, that was not taken back already, on a transaction that was not canceled or refunded.
+    /// </summary>
+    /// <param name="transaction">The transaction to evaluate.</param>
+    /// <param name="entry">The timeline entry to take back.</param>
+    public static bool CanReverse(Transaction transaction, TransactionEvent entry)
+    {
+        if (transaction is null || entry is null || string.IsNullOrEmpty(entry.Id) || entry.Amount is not > 0m)
+        {
+            return false;
+        }
+
+        if (transaction.Status is TransactionStatus.Canceled or TransactionStatus.Refunded or TransactionStatus.Abandoned)
+        {
+            return false;
+        }
+
+        // Money taken online went through a gateway: it is given back with a refund, never by editing the ledger.
+        var reversible = entry.Type == TransactionEventType.Adjusted ||
+            (entry.Type == TransactionEventType.PaymentRecorded && string.IsNullOrEmpty(entry.PaymentAttemptId));
+
+        return reversible &&
+            !transaction.Events.Any(other => string.Equals(other.ReversesEventId, entry.Id, StringComparison.Ordinal));
+    }
 
     /// <summary>
     /// Returns <see langword="true"/> when the invoice may be sent to the owner: the transaction still owes money and

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<InvoiceViewedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-eye" aria-hidden="true"></i>
+    @T["Invoice Viewed"]
+</h4>
+<p>@T["Starts the first time the customer opens an invoice."]</p>

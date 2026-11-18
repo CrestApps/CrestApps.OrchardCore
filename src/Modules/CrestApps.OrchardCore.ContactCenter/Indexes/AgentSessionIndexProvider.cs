@@ -22,6 +22,8 @@ public sealed class AgentSessionIndexProvider : IndexProvider<AgentSession>
     {
         context
             .For<AgentSessionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(session => new AgentSessionIndex
             {
                 ItemId = session.ItemId,

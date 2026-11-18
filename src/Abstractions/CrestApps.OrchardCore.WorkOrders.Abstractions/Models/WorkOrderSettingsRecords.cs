@@ -1,9 +1,12 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Conditions;
 
 namespace CrestApps.OrchardCore.WorkOrders.Models;
 
 /// <summary>
-/// Shows a question only after another was answered a certain way.
+/// How checklists saved before the shared conditions said when a question shows: after another was answered a certain
+/// way. Still read from those checklists (<see cref="ChecklistQuestion.GetRule"/>); new ones keep
+/// <see cref="ChecklistQuestion.Rule"/>.
 /// </summary>
 public sealed class ChecklistCondition
 {
@@ -84,9 +87,38 @@ public sealed class ChecklistQuestion
     public string Meter { get; set; }
 
     /// <summary>
-    /// Gets or sets when it shows, or <see langword="null"/> for always.
+    /// Gets or sets when it shows, or <see langword="null"/> for always. Its conditions read other questions by their
+    /// <see cref="Id"/>.
+    /// </summary>
+    public ConditionRule Rule { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it shows, as checklists saved before <see cref="Rule"/> said it. Read through
+    /// <see cref="GetRule"/>; cleared when the question is saved again.
     /// </summary>
     public ChecklistCondition ShowWhen { get; set; }
+
+    /// <summary>
+    /// Gets when the question shows: its <see cref="Rule"/>, or the older <see cref="ShowWhen"/> as a rule.
+    /// </summary>
+    /// <returns>The rule, or <see langword="null"/> for always.</returns>
+    public ConditionRule GetRule()
+    {
+        if (!ConditionRule.IsEmpty(Rule))
+        {
+            return Rule;
+        }
+
+        return string.IsNullOrEmpty(ShowWhen?.QuestionId)
+            ? null
+            : new ConditionRule
+            {
+                Conditions =
+                [
+                    new Condition { Source = ShowWhen.QuestionId, Operator = ConditionOperator.Is, Values = [ShowWhen.EqualsValue ?? string.Empty] },
+                ],
+            };
+    }
 }
 
 /// <summary>
@@ -103,102 +135,6 @@ public sealed class ChecklistTemplate : CatalogItem
     /// Gets or sets the questions, in order.
     /// </summary>
     public List<ChecklistQuestion> Questions { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets when it was created.
-    /// </summary>
-    public DateTime CreatedUtc { get; set; }
-}
-
-/// <summary>
-/// The same opening hours every week, such as weekdays from 8 to 6.
-/// </summary>
-public sealed class WeeklyHours
-{
-    // Lists start empty: a stored record is read into a new instance, and default items would be read twice.
-
-    /// <summary>
-    /// Gets or sets the days open.
-    /// </summary>
-    public List<DayOfWeek> Days { get; set; } = [];
-
-    /// <summary>
-    /// Gives Monday to Friday, the usual days open.
-    /// </summary>
-    /// <returns>The days.</returns>
-    public static List<DayOfWeek> Weekdays() => [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday];
-
-    /// <summary>
-    /// Gets or sets when they open.
-    /// </summary>
-    public TimeOnly Opens { get; set; } = new(9, 0);
-
-    /// <summary>
-    /// Gets or sets when they close.
-    /// </summary>
-    public TimeOnly Closes { get; set; } = new(17, 0);
-}
-
-/// <summary>
-/// The targets of one priority.
-/// </summary>
-public sealed class ServiceLevelTarget
-{
-    /// <summary>
-    /// Gets or sets the priority.
-    /// </summary>
-    public WorkOrderPriority Priority { get; set; }
-
-    /// <summary>
-    /// Gets or sets the minutes to the first response, or 0 for none.
-    /// </summary>
-    public int ResponseMinutes { get; set; }
-
-    /// <summary>
-    /// Gets or sets the minutes to resolution, or 0 for none.
-    /// </summary>
-    public int ResolveMinutes { get; set; }
-}
-
-/// <summary>
-/// How fast work orders must be answered and resolved, by priority.
-/// </summary>
-public sealed class ServiceLevelPolicy : CatalogItem
-{
-    /// <summary>
-    /// Gets or sets the name.
-    /// </summary>
-    public string Name { get; set; }
-
-    /// <summary>
-    /// Gets or sets the targets, by priority.
-    /// </summary>
-    public List<ServiceLevelTarget> Targets { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the business hours calendar the clock runs in, or <see langword="null"/> for around the clock.
-    /// </summary>
-    public string HoursCalendarId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the same opening hours every week the clock runs in, or <see langword="null"/>.
-    /// </summary>
-    public WeeklyHours WeeklyHours { get; set; }
-
-    /// <summary>
-    /// Gets or sets the time zone of the business hours.
-    /// </summary>
-    public string TimeZoneId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the statuses the clock stops in.
-    /// </summary>
-    public List<WorkOrderStatus> PauseStatuses { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets how far through a target, in percent, the warning is raised.
-    /// </summary>
-    public int WarningPercent { get; set; } = 80;
 
     /// <summary>
     /// Gets or sets when it was created.

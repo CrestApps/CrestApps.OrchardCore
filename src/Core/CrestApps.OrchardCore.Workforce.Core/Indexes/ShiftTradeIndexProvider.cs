@@ -20,6 +20,8 @@ public sealed class ShiftTradeIndexProvider : IndexProvider<ShiftTrade>
     public override void Describe(DescribeContext<ShiftTrade> context)
     {
         context.For<ShiftTradeIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new ShiftTradeIndex
             {
                 ItemId = item.ItemId,

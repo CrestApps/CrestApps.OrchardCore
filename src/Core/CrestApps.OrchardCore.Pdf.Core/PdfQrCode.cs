@@ -43,7 +43,7 @@ internal static class PdfQrCode
     /// <param name="top">The top of the code.</param>
     /// <param name="size">The width and height of the code, quiet zone included.</param>
     /// <param name="color">The color of the dark modules.</param>
-    public static void Draw(PdfCanvas canvas, string value, double x, double top, double size, Models.PdfColor color)
+    public static void Draw(PdfCanvas canvas, string value, double x, double top, double size, PdfColor color)
     {
         if (string.IsNullOrEmpty(value) || size <= 0)
         {
@@ -54,7 +54,7 @@ internal static class PdfQrCode
         var count = modules.GetLength(0);
         var module = size / count;
 
-        canvas.FillRectangle(x, top, size, size, Models.PdfColor.White);
+        canvas.FillRectangle(x, top, size, size, PdfColor.White);
 
         for (var row = 0; row < count; row++)
         {

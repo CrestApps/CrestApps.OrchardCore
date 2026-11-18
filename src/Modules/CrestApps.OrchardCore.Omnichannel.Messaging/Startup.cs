@@ -82,7 +82,8 @@ public sealed class Startup : StartupBase
         services
             .AddScoped<IMessageTemplateStore, MessageTemplateStore>()
             .AddScoped<IMessageTemplateManager, MessageTemplateManager>()
-            .AddScoped<ICatalogEntryHandler<MessageTemplate>, MessageTemplateHandler>();
+            .AddScoped<ICatalogEntryHandler<MessageTemplate>, MessageTemplateHandler>()
+            .AddScoped<IMessageTemplateRenderer, LiquidMessageTemplateRenderer>();
 
         // Broadcast catalog + fan-out.
         services

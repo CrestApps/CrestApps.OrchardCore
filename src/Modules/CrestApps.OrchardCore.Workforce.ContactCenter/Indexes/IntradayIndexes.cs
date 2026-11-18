@@ -48,6 +48,8 @@ public sealed class IntradayOfferIndexProvider : IndexProvider<IntradayOffer>
     public override void Describe(DescribeContext<IntradayOffer> context)
     {
         context.For<IntradayOfferIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new IntradayOfferIndex
             {
                 ItemId = item.ItemId,

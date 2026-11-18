@@ -15,6 +15,8 @@ public sealed class ProcessedStripeWebhookEventIndexProvider : IndexProvider<Pro
     public override void Describe(DescribeContext<ProcessedStripeWebhookEvent> context)
     {
         context.For<ProcessedStripeWebhookEventIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(record => new ProcessedStripeWebhookEventIndex
             {
                 EventId = record.EventId,

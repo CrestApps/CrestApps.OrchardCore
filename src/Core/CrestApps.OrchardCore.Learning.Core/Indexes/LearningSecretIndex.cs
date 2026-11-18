@@ -36,6 +36,8 @@ public sealed class LearningSecretIndexProvider : IndexProvider<LearningSecret>
     /// <inheritdoc />
     public override void Describe(DescribeContext<LearningSecret> context)
         => context.For<LearningSecretIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(secret => new LearningSecretIndex
             {
                 ItemId = secret.ItemId,

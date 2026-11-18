@@ -35,6 +35,8 @@ public sealed class QuestionSourceIndexProvider : IndexProvider<ContentItem>
     /// <inheritdoc />
     public override void Describe(DescribeContext<ContentItem> context)
         => context.For<QuestionSourceIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .When(item => item.Latest && !string.IsNullOrEmpty(item.Get<QuestionPart>(nameof(QuestionPart))?.SourceIdentifier))
             .Map(item => new QuestionSourceIndex
             {

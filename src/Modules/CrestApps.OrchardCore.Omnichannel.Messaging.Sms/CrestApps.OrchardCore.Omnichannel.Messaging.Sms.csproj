@@ -37,7 +37,7 @@
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Webhooks.Abstractions/CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
-    <ProjectReference Include="../CrestApps.OrchardCore.Webhooks/CrestApps.OrchardCore.Webhooks.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Webhooks/CrestApps.OrchardCore.Webhooks.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

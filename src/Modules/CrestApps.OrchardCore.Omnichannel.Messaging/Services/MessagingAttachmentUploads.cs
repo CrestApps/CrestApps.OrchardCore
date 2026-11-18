@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using Microsoft.AspNetCore.Http;
@@ -76,7 +77,7 @@ public sealed class MessagingAttachmentUploads
 
             var bytes = buffer.ToArray();
             var fileName = Path.GetFileName(file.FileName);
-            var format = MessagingFileFormats.Detect(bytes, fileName, file.ContentType, capabilities.Formats);
+            var format = FileFormats.Detect(bytes, fileName, file.ContentType, capabilities.Formats);
 
             if (format is null)
             {

@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<PayrollFilingAmendedEvent>
+
+<header><h4><i class="fa-solid fa-file-circle-exclamation" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Payroll Filing Amended"])</h4></header>
+<p class="hint">@T["Starts when an amendment of a filed tax filing is started; AmendsId is the filing it corrects. Input: FilingId, EmployerId, Form, Year, Quarter, Period, Status, FiledOn, Reference, AmendsId, People, Change and Actor."]</p>

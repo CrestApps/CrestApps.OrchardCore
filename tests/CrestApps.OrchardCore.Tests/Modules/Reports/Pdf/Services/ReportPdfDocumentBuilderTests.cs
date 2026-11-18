@@ -44,13 +44,13 @@ public sealed class ReportPdfDocumentBuilderTests
     public void Build_WhenTheFontHasNoBoldFace_ShouldOutlineTheRegularFace()
     {
         // Arrange
-        Assert.SkipWhen(PdfFontSet.Installed.Regular is null, "No TrueType font is installed.");
+        Assert.SkipWhen(PdfFontSet.GetInstalled(ReportPdfTheme.FontFamily).Regular is null, "No TrueType font is installed.");
 
         var document = new ReportDocument { Title = "Agents" }
             .Add(ReportSection.ForMetrics("Summary", [new ReportMetric("Calls", "8", "Today")]));
 
         // Act
-        var content = new ReportPdfDocumentBuilder(document, "Page {0} of {1}", new PdfFontSet(PdfFontSet.Installed.Regular, null)).Build();
+        var content = new ReportPdfDocumentBuilder(document, "Page {0} of {1}", new PdfFontSet(PdfFontSet.GetInstalled(ReportPdfTheme.FontFamily).Regular, null)).Build();
 
         // Assert
         using var pdf = PdfDocument.Open(content);
@@ -64,13 +64,13 @@ public sealed class ReportPdfDocumentBuilderTests
     public void Build_WhenTheFontsAreInstalled_ShouldEmbedThem()
     {
         // Arrange
-        Assert.SkipWhen(PdfFontSet.Installed.Regular is null, "No TrueType font is installed.");
+        Assert.SkipWhen(PdfFontSet.GetInstalled(ReportPdfTheme.FontFamily).Regular is null, "No TrueType font is installed.");
 
         var document = new ReportDocument { Title = "Agents" }
             .Add(ReportSection.ForMetrics("Summary", [new ReportMetric("Calls", "8")]));
 
         // Act
-        var content = new ReportPdfDocumentBuilder(document, "Page {0} of {1}", PdfFontSet.Installed).Build();
+        var content = new ReportPdfDocumentBuilder(document, "Page {0} of {1}", PdfFontSet.GetInstalled(ReportPdfTheme.FontFamily)).Build();
 
         // Assert
         using var pdf = PdfDocument.Open(content);
@@ -82,10 +82,10 @@ public sealed class ReportPdfDocumentBuilderTests
     public void Build_WhenTheFontCannotBeEmbedded_ShouldWriteInHelvetica()
     {
         // Arrange
-        Assert.SkipWhen(PdfFontSet.Installed.Regular is null, "No TrueType font is installed.");
+        Assert.SkipWhen(PdfFontSet.GetInstalled(ReportPdfTheme.FontFamily).Regular is null, "No TrueType font is installed.");
 
         // PdfPig names an embedded font by its PostScript name, and cannot embed a font without one.
-        var fonts = new PdfFontSet(WithoutPostScriptName(PdfFontSet.Installed.Regular), null);
+        var fonts = new PdfFontSet(WithoutPostScriptName(PdfFontSet.GetInstalled(ReportPdfTheme.FontFamily).Regular), null);
         var document = new ReportDocument { Title = "Agents" }
             .Add(ReportSection.ForMetrics("Summary", [new ReportMetric("Calls", "8")]));
 

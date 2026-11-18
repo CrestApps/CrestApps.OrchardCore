@@ -8,10 +8,15 @@ namespace CrestApps.OrchardCore.Pdf;
 /// </summary>
 /// <remarks>
 /// The text is written in the font files of the layout when PdfPig can embed them, otherwise in the installed sans-serif
-/// font (<see cref="PdfFontSet.Installed"/>), or in Helvetica.
+/// font (the faces of <see cref="DefaultFontFamily"/>, or of the font that stands in for it), or in Helvetica.
 /// </remarks>
 public sealed class PdfDocumentRenderer : IPdfDocumentRenderer
 {
+    /// <summary>
+    /// The installed font family a layout without font files is written in.
+    /// </summary>
+    public const string DefaultFontFamily = "Arial";
+
     /// <inheritdoc/>
     public byte[] Render(PdfDocumentLayout layout)
     {
@@ -75,16 +80,16 @@ public sealed class PdfDocumentRenderer : IPdfDocumentRenderer
     {
         if (layout.RegularFont is null)
         {
-            return PdfFontSet.Installed;
+            return PdfFontSet.GetInstalled(DefaultFontFamily);
         }
 
         var fonts = new PdfFontSet(layout.RegularFont, layout.BoldFont);
 
         // A file PdfPig cannot embed is not used; the installed font writes the document instead of Helvetica.
-        return fonts.Regular is null ? PdfFontSet.Installed : fonts;
+        return fonts.Regular is null ? PdfFontSet.GetInstalled(DefaultFontFamily) : fonts;
     }
 
-    private static void DrawText(PdfCanvas canvas, PdfTextElement element, PdfFont font)
+    private static void DrawText(PdfCanvas canvas, PdfTextElement element, PdfFontFace font)
     {
         var size = element.FontSize > 0 ? element.FontSize : 12;
         var prepared = font.Prepare(element.Text);
@@ -135,7 +140,7 @@ public sealed class PdfDocumentRenderer : IPdfDocumentRenderer
 
         if (element.Outline is { } outline)
         {
-            canvas.StrokeRectangle(element.X, element.Top, element.Width, element.Height, outline, element.OutlineThickness);
+            canvas.DrawRectangle(element.X, element.Top, element.Width, element.Height, outline, element.OutlineThickness);
         }
     }
 }

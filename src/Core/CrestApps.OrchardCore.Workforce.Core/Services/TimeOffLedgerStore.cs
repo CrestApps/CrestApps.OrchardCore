@@ -32,6 +32,26 @@ internal sealed class TimeOffLedgerStore
     public async Task<TimeOffLedgerEntry> FindByKeyAsync(string idempotencyKey, CancellationToken cancellationToken = default)
         => await _ledger.FindByKeyAsync(idempotencyKey, cancellationToken) is { } entry ? TimeOffLedgerMapping.ToTimeOff(entry) : null;
 
+    public async Task<IReadOnlyList<TimeOffLedgerEntry>> ListPayoutsAsync(DateOnly? through, CancellationToken cancellationToken = default)
+        => (await _ledger.ListByKindAsync(nameof(TimeOffLedgerKind.Payout), cancellationToken))
+            .Where(entry => through is null || entry.EffectiveDate <= through.Value)
+            .OrderBy(entry => entry.EffectiveDate)
+            .Select(TimeOffLedgerMapping.ToTimeOff)
+            .ToArray();
+
+    public async Task<IReadOnlyList<TimeOffLedgerEntry>> GetAsync(IReadOnlyCollection<string> itemIds, CancellationToken cancellationToken = default)
+        => (await _ledger.GetAsync(itemIds, cancellationToken)).Select(TimeOffLedgerMapping.ToTimeOff).ToArray();
+
+    /// <summary>
+    /// Saves the properties of a posted entry, such as the pay runs that took a payout; the entry itself stays as posted.
+    /// </summary>
+    public Task UpdateAsync(TimeOffLedgerEntry entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        return _ledger.SavePropertiesAsync(TimeOffLedgerMapping.ToQuantity(entry), cancellationToken);
+    }
+
     public async Task CreateAsync(TimeOffLedgerEntry entry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);

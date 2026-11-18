@@ -1,6 +1,5 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Pdf;
-using CrestApps.OrchardCore.Pdf.Models;
 using CrestApps.OrchardCore.Reports.Models;
 using UglyToad.PdfPig.Writer;
 
@@ -120,7 +119,7 @@ internal sealed class ReportPdfDocumentBuilder
         return builder.Build();
     }
 
-    private void MeasureTables(PdfFont font)
+    private void MeasureTables(PdfFontFace font)
     {
         foreach (var section in _report.Sections)
         {
@@ -442,7 +441,7 @@ internal sealed class ReportPdfDocumentBuilder
     // filters it and its description, wrapped, with their height on the page.
     private sealed record Head(List<string> Band, List<string> Title, List<string> Description, double Height);
 
-    private sealed record CardPart(List<string> Lines, PdfFont Font, double Size, PdfColor Color, double SpaceBefore);
+    private sealed record CardPart(List<string> Lines, PdfFontFace Font, double Size, PdfColor Color, double SpaceBefore);
 
     private sealed record Card(List<CardPart> Parts, double Width, double Height);
 

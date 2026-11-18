@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore;
 
 namespace CrestApps.OrchardCore.Transactions.Core.Services;
 
@@ -55,6 +56,8 @@ public sealed class TransactionManager : CatalogManager<Transaction>, ITransacti
     {
         ArgumentNullException.ThrowIfNull(entry);
 
+        EnsureEventIds(entry);
+
         await base.CreateAsync(entry, cancellationToken);
 
         RememberSavedStatus(entry);
@@ -76,6 +79,8 @@ public sealed class TransactionManager : CatalogManager<Transaction>, ITransacti
 
         var known = _savedStatuses.TryGetValue(entry, out var saved);
         var previous = known ? saved.Value : entry.Status;
+
+        EnsureEventIds(entry);
 
         await base.UpdateAsync(entry, data, cancellationToken);
 
@@ -183,6 +188,19 @@ public sealed class TransactionManager : CatalogManager<Transaction>, ITransacti
         _savedStatuses.TryAdd(entry, new StrongBox<TransactionStatus>(entry.Status));
 
         await base.LoadAsync(entry, cancellationToken);
+    }
+
+    // The timeline is added to from many places. Naming each entry here, when the transaction is saved, means an entry
+    // can always be addressed later: to print its receipt, or to take it back with an entry that reverses it.
+    private static void EnsureEventIds(Transaction entry)
+    {
+        foreach (var transactionEvent in entry.Events)
+        {
+            if (string.IsNullOrEmpty(transactionEvent.Id))
+            {
+                transactionEvent.Id = IdGenerator.GenerateId();
+            }
+        }
     }
 
     private void RememberSavedStatus(Transaction entry)

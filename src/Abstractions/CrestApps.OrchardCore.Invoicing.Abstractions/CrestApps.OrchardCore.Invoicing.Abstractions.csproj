@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace(".Abstractions",""))</RootNamespace>
+    <Title>CrestApps OrchardCore Invoicing Abstractions</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Abstractions for the CrestApps OrchardCore Invoicing module: the invoice and credit note document model with
+      lines, charges, the tax breakdown and totals, the life cycle statuses, the document calculator, tax providers
+      and the feature ids.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Invoicing Billing Commerce Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Addresses.Abstractions\CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.BusinessDocuments.Abstractions\CrestApps.OrchardCore.BusinessDocuments.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Parties.Abstractions\CrestApps.OrchardCore.Parties.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Taxation.Abstractions\CrestApps.OrchardCore.Taxation.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Transactions.Abstractions\CrestApps.OrchardCore.Transactions.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

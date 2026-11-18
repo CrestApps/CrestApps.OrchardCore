@@ -49,6 +49,15 @@ internal sealed class BookingBalancePaymentHandler : ITransactionPaymentHandler
             return;
         }
 
+        if (transaction.OutstandingAmount <= 0m && balance.Status is BookingBalanceStatus.Scheduled or BookingBalanceStatus.Failed)
+        {
+            balance.Status = BookingBalanceStatus.Paid;
+            balance.LastFailure = null;
+            balance.NextAttemptUtc = null;
+
+            await _balances.UpdateAsync(balance, cancellationToken);
+        }
+
         var bookings = (await _bookings.ListByOrderAsync(balance.OrderId, cancellationToken))
             .Where(booking => booking.ConfirmedUtc.HasValue)
             .ToList();

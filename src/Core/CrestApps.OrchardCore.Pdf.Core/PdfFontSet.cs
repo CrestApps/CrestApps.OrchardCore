@@ -5,19 +5,13 @@ using UglyToad.PdfPig.Writer;
 namespace CrestApps.OrchardCore.Pdf;
 
 /// <summary>
-/// The regular and bold font files a PDF is written in. <see cref="Installed"/> finds them once per process: the faces
-/// of Arial, or of the installed font that stands in for it. Without a usable TrueType font, the document is written
-/// in Helvetica, which every PDF reader has.
+/// The font files a PDF document is written in: the regular and bold faces of an installed family, such as Arial, or
+/// of the installed font that stands in for it. They are found once per process and family. When the host has no
+/// usable TrueType font, documents are written in Helvetica, which every PDF reader has.
 /// </summary>
 public sealed class PdfFontSet
 {
-    /// <summary>
-    /// The font family <see cref="Installed"/> looks for.
-    /// </summary>
-    public const string DefaultFamily = "Arial";
-
-    private static readonly Lazy<PdfFontSet> _installed = new(FindInstalled);
-    private static readonly ConcurrentDictionary<string, Lazy<PdfFontSet>> _families = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, PdfFontSet> _installed = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PdfFontSet"/> class. A file PdfPig cannot write with is not
@@ -29,17 +23,24 @@ public sealed class PdfFontSet
         byte[] regular,
         byte[] bold)
     {
-        Regular = PdfFont.CanUse(regular) ? regular : null;
-        Bold = Regular is not null && PdfFont.CanUse(bold) ? bold : null;
+        Regular = PdfFontFace.CanUse(regular) ? regular : null;
+        Bold = Regular is not null && PdfFontFace.CanUse(bold) ? bold : null;
     }
 
     /// <summary>
-    /// Gets the fonts installed on this machine.
+    /// Gets the fonts installed on this machine for a family, or for the font that stands in for it.
     /// </summary>
-    public static PdfFontSet Installed => _installed.Value;
+    /// <param name="familyName">The family a document asks for, such as <c>Arial</c>.</param>
+    /// <returns>The fonts.</returns>
+    public static PdfFontSet GetInstalled(string familyName)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(familyName);
+
+        return _installed.GetOrAdd(familyName, FindInstalled);
+    }
 
     /// <summary>
-    /// Gets the regular TrueType file, or <see langword="null"/> when the document is written in Helvetica.
+    /// Gets the regular TrueType file, or <see langword="null"/> when documents are written in Helvetica.
     /// </summary>
     public byte[] Regular { get; }
 
@@ -53,11 +54,11 @@ public sealed class PdfFontSet
     /// </summary>
     /// <param name="builder">The document.</param>
     /// <returns>The face.</returns>
-    public PdfFont CreateRegular(PdfDocumentBuilder builder)
+    public PdfFontFace CreateRegular(PdfDocumentBuilder builder)
     {
         return Regular is null
-            ? PdfFont.FromStandard(builder, Standard14Font.Helvetica)
-            : PdfFont.FromTrueType(builder, Regular, simulatesBold: false);
+            ? PdfFontFace.FromStandard(builder, Standard14Font.Helvetica)
+            : PdfFontFace.FromTrueType(builder, Regular, simulatesBold: false);
     }
 
     /// <summary>
@@ -65,48 +66,27 @@ public sealed class PdfFontSet
     /// </summary>
     /// <param name="builder">The document.</param>
     /// <returns>The face.</returns>
-    public PdfFont CreateBold(PdfDocumentBuilder builder)
+    public PdfFontFace CreateBold(PdfDocumentBuilder builder)
     {
         if (Bold is not null)
         {
-            return PdfFont.FromTrueType(builder, Bold, simulatesBold: false);
+            return PdfFontFace.FromTrueType(builder, Bold, simulatesBold: false);
         }
 
         return Regular is null
-            ? PdfFont.FromStandard(builder, Standard14Font.HelveticaBold)
-            : PdfFont.FromTrueType(builder, Regular, simulatesBold: true);
+            ? PdfFontFace.FromStandard(builder, Standard14Font.HelveticaBold)
+            : PdfFontFace.FromTrueType(builder, Regular, simulatesBold: true);
     }
 
-    /// <summary>
-    /// Finds the regular and bold faces of a font family installed on this machine, such as <c>Noto Sans</c>, once per
-    /// family and process; the default family stands in for a family that is not installed.
-    /// </summary>
-    /// <param name="family">The family name.</param>
-    /// <returns>The fonts.</returns>
-    public static PdfFontSet FromInstalledFamily(string family)
-    {
-        if (string.IsNullOrWhiteSpace(family) || string.Equals(family.Trim(), DefaultFamily, StringComparison.OrdinalIgnoreCase))
-        {
-            return Installed;
-        }
-
-        return _families.GetOrAdd(family.Trim(), name => new Lazy<PdfFontSet>(() => Find(name))).Value;
-    }
-
-    private static PdfFontSet FindInstalled()
-    {
-        return Find(DefaultFamily);
-    }
-
-    private static PdfFontSet Find(string family)
+    private static PdfFontSet FindInstalled(string familyName)
     {
         if (!PdfFontResolver.TryCreate(out var resolver))
         {
             return new PdfFontSet(null, null);
         }
 
-        var regular = resolver.Resolve(family, isBold: false);
-        var bold = resolver.Resolve(family, isBold: true);
+        var regular = resolver.Resolve(familyName, isBold: false);
+        var bold = resolver.Resolve(familyName, isBold: true);
 
         return new PdfFontSet(Read(regular.Path), bold.SimulateBold ? null : Read(bold.Path));
     }

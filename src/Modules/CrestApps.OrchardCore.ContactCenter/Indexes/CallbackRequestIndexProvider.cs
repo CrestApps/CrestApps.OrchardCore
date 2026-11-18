@@ -22,6 +22,8 @@ public sealed class CallbackRequestIndexProvider : IndexProvider<CallbackRequest
     {
         context
             .For<CallbackRequestIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(callback => new CallbackRequestIndex
             {
                 ItemId = callback.ItemId,

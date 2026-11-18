@@ -50,7 +50,7 @@ public sealed class WorkforceAIToolTests
         await PublishTwoTeamsAsync(harness);
 
         var result = await InvokeAsync<MyScheduleTool>(harness, CalendarTestHarness.User("user-ana"), new() { ["from"] = "2026-11-09", ["days"] = 3 });
-        var shifts = JsonDocument.Parse(result).RootElement.GetProperty("shifts").EnumerateArray().ToArray();
+        var shifts = JsonElement.Parse(result).GetProperty("shifts").EnumerateArray().ToArray();
 
         Assert.Single(shifts);
         Assert.Equal("East", shifts[0].GetProperty("team").GetString());
@@ -101,7 +101,7 @@ public sealed class WorkforceAIToolTests
         });
 
         var result = await InvokeAsync<FindCoverTool>(harness, CalendarTestHarness.User("maya"), new() { ["workerName"] = "Ana", ["date"] = "2026-11-09" });
-        var root = JsonDocument.Parse(result).RootElement;
+        var root = JsonElement.Parse(result);
 
         Assert.Equal(["Cara"], root.GetProperty("canCover").EnumerateArray().Select(item => item.GetProperty("name").GetString()));
         Assert.Contains("Dan", root.GetProperty("cannotCover").EnumerateArray().Select(item => item.GetProperty("name").GetString()));
@@ -151,6 +151,6 @@ public sealed class WorkforceAIToolTests
 
     private static string[] Workers(string result)
     {
-        return [.. JsonDocument.Parse(result).RootElement.GetProperty("working").EnumerateArray().Select(item => item.GetProperty("name").GetString())];
+        return [.. JsonElement.Parse(result).GetProperty("working").EnumerateArray().Select(item => item.GetProperty("name").GetString())];
     }
 }

@@ -1,0 +1,22 @@
+@model ShapeViewModel<MyPayStatementRow>
+@using System.Globalization
+@using CrestApps.OrchardCore.Currencies
+
+@{
+    var statement = Model.Value.Statement;
+    string Money(decimal value) => string.IsNullOrEmpty(statement.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.FormatForDisplay(value, statement.Currency) + " " + statement.Currency;
+}
+
+<span class="badge ta-badge fw-normal">@T["Net {0}", Money(statement.Net)]</span>
+@if (statement.VoidOf is not null)
+{
+    <span class="badge text-bg-secondary fw-normal">@T["Reversal"]</span>
+}
+else if (statement.Status == PayStatementStatus.Voided)
+{
+    <span class="badge text-bg-secondary fw-normal">@T["Voided"]</span>
+}
+else if (statement.Status == PayStatementStatus.Final)
+{
+    <span class="badge text-bg-warning fw-normal">@T["Being paid"]</span>
+}

@@ -47,6 +47,8 @@ public sealed class PackageRuntimeStateIndexProvider : IndexProvider<PackageRunt
     /// <inheritdoc />
     public override void Describe(DescribeContext<PackageRuntimeState> context)
         => context.For<PackageRuntimeStateIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(state => new PackageRuntimeStateIndex
             {
                 ItemId = state.ItemId,

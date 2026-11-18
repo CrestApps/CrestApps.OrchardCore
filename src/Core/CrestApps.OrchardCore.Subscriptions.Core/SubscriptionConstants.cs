@@ -17,6 +17,12 @@ public static class SubscriptionConstants
     public const string SubscriptionCollectionName = "Subscription";
 
     /// <summary>
+    /// The record kind of a subscription agreement: what a record reference to a subscription names. It is stored in
+    /// every reference, so it never changes.
+    /// </summary>
+    public const string RecordKind = "Subscription";
+
+    /// <summary>
     /// The YesSql collection the durable tenant provisioning jobs are stored in.
     /// </summary>
     public const string TenantProvisioningCollectionName = "TenantProvisioning";

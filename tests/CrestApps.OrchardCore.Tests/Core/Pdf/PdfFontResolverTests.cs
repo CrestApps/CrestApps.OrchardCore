@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.Pdf;
 
 namespace CrestApps.OrchardCore.Tests.Core.Pdf;
 
-public sealed class ReportPdfFontResolverTests
+public sealed class PdfFontResolverTests
 {
     [Fact]
     public void Resolve_WhenWindowsFontsAreInstalled_ShouldReadTheirShortStyleSuffixes()

@@ -225,7 +225,7 @@ public sealed class DefaultDispatchCandidateFinder : IDispatchCandidateFinder
         return await RuleOutAsync(worker, workOrder, workOrder?.RequiredSkills ?? [], type?.RequiredCertificationIds ?? [], territory, territory?.Members.Count > 0 && settings.StrictTerritory, date.ToDateTime(TimeOnly.MinValue), cancellationToken);
     }
 
-    private async Task<string> RuleOutAsync(StaffMember worker, WorkOrder workOrder, List<RequiredSkill> requiredSkills, List<string> requiredCertifications, Geo.Models.ServiceTerritory territory, bool strictTerritory, DateTime fromUtc, CancellationToken cancellationToken)
+    private async Task<string> RuleOutAsync(StaffMember worker, WorkOrder workOrder, List<SkillRequirement> requiredSkills, List<string> requiredCertifications, Geo.Models.ServiceTerritory territory, bool strictTerritory, DateTime fromUtc, CancellationToken cancellationToken)
     {
         if (workOrder?.ExcludedWorkerIds.Contains(worker.ItemId) == true)
         {
@@ -273,7 +273,7 @@ public sealed class DefaultDispatchCandidateFinder : IDispatchCandidateFinder
         return null;
     }
 
-    private async Task ScoreAsync(DispatchCandidate candidate, WorkerAvailability availability, WorkOrder workOrder, List<RequiredSkill> requiredSkills, DispatchObjective objective, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken)
+    private async Task ScoreAsync(DispatchCandidate candidate, WorkerAvailability availability, WorkOrder workOrder, List<SkillRequirement> requiredSkills, DispatchObjective objective, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken)
     {
         // Each part is between 0 and its weight.
         var parts = candidate.ScoreParts;

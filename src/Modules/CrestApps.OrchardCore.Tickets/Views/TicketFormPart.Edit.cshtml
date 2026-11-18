@@ -1,0 +1,31 @@
+@using CrestApps.OrchardCore.Tickets.WebForm
+@model TicketFormPartViewModel
+
+@if (!Model.ChallengeConfigured)
+{
+    <div class="alert alert-warning">
+        @T["Without a reCAPTCHA challenge, robots can send requests through this form from many addresses. Turn on ReCaptcha under Configuration > Features and set its keys under Settings > Security > reCaptcha; guests then have to pass it."]
+    </div>
+}
+
+<div class="mb-3" asp-validation-class-for="TicketType">
+    <label asp-for="TicketType" class="form-label">@T["Ticket type"]</label>
+    <select asp-for="TicketType" asp-items="Model.Types" class="form-select">
+        <option value="">@T["Choose one"]</option>
+    </select>
+    <span asp-validation-for="TicketType" class="text-danger"></span>
+</div>
+
+<div class="mb-3" asp-validation-class-for="DeskId">
+    <label asp-for="DeskId" class="form-label">@T["Desk"]</label>
+    <select asp-for="DeskId" asp-items="Model.Desks" class="form-select">
+        <option value="">@T["Choose one"]</option>
+    </select>
+    <span asp-validation-for="DeskId" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="SuccessMessage" class="form-label">@T["After sending"]</label>
+    <textarea asp-for="SuccessMessage" class="form-control" rows="2"></textarea>
+    <span class="hint">@T["What the visitor reads once their request is sent. Leave it empty for a thank-you with the request's number."]</span>
+</div>

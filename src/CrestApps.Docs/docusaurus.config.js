@@ -43,13 +43,20 @@ const config = {
         language: ['en'],
         highlightSearchTermsOnTargetPage: true,
         explicitSearchResultPath: true,
-        // The User Manual gets its own search index so people who use the app can search only it.
-        // The search box on a User Manual page searches the User Manual; everywhere else it searches
-        // the whole site. The search page has a filter to switch between the two.
+        // Each manual gets its own search index, so a reader can search both (the default) or only one:
+        // the search box and the search page have a User Manual and a Technical Manual checkbox. The
+        // Technical Manual is every doc except the User Manual; `exclude` is added by our patch
+        // (patches/@easyops-cn+docusaurus-search-local+*.patch). The User Manual comes first: a page
+        // belongs to the first context whose path it is under.
         searchContextByPaths: [
           {
             label: 'User Manual',
             path: 'docs/user-manual',
+          },
+          {
+            label: 'Technical Manual',
+            path: 'docs',
+            exclude: ['docs/user-manual'],
           },
         ],
         useAllContextsWithNoSearchContext: true,
@@ -67,6 +74,16 @@ const config = {
             // The single-page agent and supervisor manual became the task-by-task User Manual.
             from: '/docs/contact-center/user-manual',
             to: '/docs/user-manual',
+          },
+          {
+            // The Tickets and Knowledge Base pages became the Service Desk section of the User Manual.
+            from: '/docs/user-manual/administration/tickets',
+            to: '/docs/user-manual/service-desk',
+          },
+          {
+            // The Knowledge Base, once a page of the Service Desk section, has a section of its own.
+            from: ['/docs/user-manual/administration/knowledge-base', '/docs/user-manual/service-desk/knowledge-base'],
+            to: '/docs/user-manual/knowledge-base',
           },
         ],
       }),

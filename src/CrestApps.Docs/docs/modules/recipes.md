@@ -98,7 +98,7 @@ The feature also exports dedicated schemas for the Contact Center, Omnichannel a
 
 - **Contact Center** (`CrestApps.OrchardCore.ContactCenter`): `ContactCenterVoiceMedia`, and the `ContactCenterExternalTransferSettings` site settings.
 - **Contact Center queues** (`CrestApps.OrchardCore.ContactCenter.Queues`): `ContactCenterSkill`, `ContactCenterQueueGroup`, and `ContactCenterQueue`.
-- **Contact Center business hours** (`CrestApps.OrchardCore.ContactCenter.BusinessHours`): `ContactCenterBusinessHoursCalendar`.
+- **Contact Center business hours** (`CrestApps.OrchardCore.ContactCenter.BusinessHours`): `ContactCenterBusinessHoursCalendar`, the step of older recipes, read as Business Hours schedules (new recipes use `BusinessHoursSchedules`).
 - **Contact Center agent entitlements** (`CrestApps.OrchardCore.ContactCenter.AgentEntitlements`): `ContactCenterAgentEntitlement`.
 - **Contact Center agents** (`CrestApps.OrchardCore.ContactCenter.Agents`): `AgentStateReasonCode`.
 - **Contact Center inbound voice** (`CrestApps.OrchardCore.ContactCenter.InboundVoice`): `ContactCenterEntryPoint`.

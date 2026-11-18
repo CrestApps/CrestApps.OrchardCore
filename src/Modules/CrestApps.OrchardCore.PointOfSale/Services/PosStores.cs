@@ -30,6 +30,42 @@ public sealed class RegisterStore : DocumentCatalog<Register, RegisterIndex>, IR
     }
 }
 
+public interface IPosDepartmentStore : ICatalog<PosDepartment>
+{
+    /// <summary>
+    /// Returns a page of departments in their order.
+    /// </summary>
+    Task<(int Count, IReadOnlyList<PosDepartment> Departments)> PageAsync(int skip, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns every department in its order: by position, then by name.
+    /// </summary>
+    Task<IReadOnlyList<PosDepartment>> ListOrderedAsync(CancellationToken cancellationToken = default);
+}
+
+public sealed class PosDepartmentStore : DocumentCatalog<PosDepartment, PosDepartmentIndex>, IPosDepartmentStore
+{
+    public PosDepartmentStore(ISession session)
+        : base(session)
+    {
+        CollectionName = PosConstants.CollectionName;
+    }
+
+    public async Task<(int Count, IReadOnlyList<PosDepartment> Departments)> PageAsync(int skip, int take, CancellationToken cancellationToken = default)
+    {
+        var query = Session.Query<PosDepartment, PosDepartmentIndex>(collection: CollectionName);
+        var count = await query.CountAsync(cancellationToken);
+        var page = await query.OrderBy(index => index.Position).ThenBy(index => index.Name).Skip(skip).Take(take).ListAsync(cancellationToken);
+
+        return (count, [.. page]);
+    }
+
+    public async Task<IReadOnlyList<PosDepartment>> ListOrderedAsync(CancellationToken cancellationToken = default)
+        => [.. (await GetAllAsync(cancellationToken))
+            .OrderBy(department => department.Position)
+            .ThenBy(department => department.Name, StringComparer.OrdinalIgnoreCase)];
+}
+
 public interface IRegisterShiftStore : ICatalog<RegisterShift>
 {
     /// <summary>
@@ -49,6 +85,14 @@ public interface IRegisterShiftStore : ICatalog<RegisterShift>
     /// <param name="take">The most shifts returned for each way the person took part.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     Task<IReadOnlyList<RegisterShift>> ListForUsersAsync(IEnumerable<string> userIds, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the closed shifts opened from one instant to another.
+    /// </summary>
+    /// <param name="fromUtc">The first instant, or <see langword="null"/> for any.</param>
+    /// <param name="toUtc">The instant after the last, or <see langword="null"/> for any.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<IReadOnlyList<RegisterShift>> ListClosedAsync(DateTime? fromUtc, DateTime? toUtc, CancellationToken cancellationToken = default);
 }
 
 public sealed class RegisterShiftStore : DocumentCatalog<RegisterShift, RegisterShiftIndex>, IRegisterShiftStore
@@ -60,6 +104,18 @@ public sealed class RegisterShiftStore : DocumentCatalog<RegisterShift, Register
         : base(session)
     {
         CollectionName = PosConstants.CollectionName;
+    }
+
+    public async Task<IReadOnlyList<RegisterShift>> ListClosedAsync(DateTime? fromUtc, DateTime? toUtc, CancellationToken cancellationToken = default)
+    {
+        var closed = (int)RegisterShiftStatus.Closed;
+        var from = fromUtc ?? DateTime.MinValue;
+        var to = toUtc ?? DateTime.MaxValue;
+        var shifts = await Session.Query<RegisterShift, RegisterShiftIndex>(index => index.Status == closed && index.OpenedUtc >= from && index.OpenedUtc < to, collection: CollectionName)
+            .OrderBy(index => index.OpenedUtc)
+            .ListAsync(cancellationToken);
+
+        return [.. shifts];
     }
 
     public Task<RegisterShift> FindOpenAsync(string registerId, CancellationToken cancellationToken = default)

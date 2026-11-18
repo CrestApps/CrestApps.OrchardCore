@@ -109,8 +109,8 @@ The form is made of cards: **General**, **Dialing**, **Caller ID**, **Compliance
    | Field | What it does |
    | --- | --- |
    | **Respect do-not-call and communication preferences** | Skips contacts who opted out of calls and numbers on a national do-not-call registry. On by default. |
-   | **Enforce a calling window** | Dials only while the chosen calendar is open, checked in the **contact's** time zone. |
-   | **Outbound calling calendar** | The [business hours calendar](business-hours.md) for the calling window. Required when the window is enforced. |
+   | **Enforce a calling window** | Dials only while the chosen hours are open, checked in the **contact's** time zone. |
+   | **Outbound calling hours** | The [business hours schedule](business-hours.md) for the calling window. Required when the window is enforced. |
 
 6. On **Abandoned calls** (Power, Progressive and Predictive):
 

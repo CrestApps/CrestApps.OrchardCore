@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketCustomerRepliedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-reply" aria-hidden="true"></i>
+    @T["Ticket Customer Replied"]
+</h4>
+<p>@T["Starts when the requester replies."]</p>

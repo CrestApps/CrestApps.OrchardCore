@@ -46,7 +46,7 @@ depends on the features your site uses and what you're allowed to see:
 | **Activities** | How many calls, messages and tasks with its contacts are scheduled and done. **List Activities** shows them all. |
 | **Orders** | The orders placed for it. |
 | **Business buying** | When it buys as a business: its payment terms, what it owes and its buyers. |
-| **Invoices** | The invoices for what it bought on its terms, and what is still owed on each. |
+| **Invoices** | With Invoicing on: what the account owes and is overdue on, its latest invoices, and **New invoice** to bill it. |
 | **All records** | Everything the account holds. |
 
 **Edit Account**, **New** (to add a record to the account) and **List Activities** are at the top of every section.

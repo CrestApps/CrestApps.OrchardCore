@@ -1,0 +1,100 @@
+@using CrestApps.OrchardCore.Tickets.Portal
+@model TicketPortalDisplayViewModel
+
+@{
+    var routeValues = Model.IsGuest
+        ? new Dictionary<string, string> { ["id"] = Model.TicketId }
+        : new Dictionary<string, string> { ["number"] = Model.Number };
+}
+
+@* Said here, on the page: the site's theme may not show notifications. *@
+@if (!string.IsNullOrEmpty(Model.Message))
+{
+    <div class="alert alert-success" role="status">@Model.Message</div>
+}
+@if (!string.IsNullOrEmpty(Model.Error))
+{
+    <div class="alert alert-danger" role="alert">@Model.Error</div>
+}
+
+<div class="d-flex flex-wrap gap-3 align-items-center mb-3 small text-body-secondary">
+    @if (!string.IsNullOrEmpty(Model.Status))
+    {
+        <span class="badge text-bg-primary">@Model.Status</span>
+    }
+    <span>@T["Opened {0}", Model.Created]</span>
+    @if (Model.ProtectedItems.Count > 0)
+    {
+        <a href="#request-protected" class="badge text-bg-warning text-decoration-none"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Contains protected information"]</a>
+    }
+</div>
+
+<partial name="_TicketPortalProtected" model="Model" />
+
+<div class="d-flex flex-column gap-3 mb-4">
+    @for (var i = 0; i < Model.Entries.Count; i++)
+    {
+        var entry = Model.Entries[i];
+        @if (i == 1 && Model.Skipped > 0)
+        {
+            <p class="text-center small text-body-secondary mb-0">@T["{0} earlier messages aren't shown.", Model.Skipped]</p>
+        }
+        <div class="card@(entry.IsRequester ? null : " border-primary-subtle")" id="@CrestApps.OrchardCore.Tickets.Portal.TicketPortalController.EntryAnchor(entry.Id)" style="scroll-margin-top: 6rem;">
+            <div class="card-header d-flex justify-content-between small">
+                <span class="fw-semibold">@(entry.IsMine ? T["You"] : (object)(entry.AuthorName ?? (entry.IsRequester ? T["Requester"].Value : T["Support"].Value)))</span>
+                <span class="text-body-secondary">@entry.When</span>
+            </div>
+            <div class="card-body">
+                <div style="white-space: pre-wrap;">@entry.Body</div>
+                @if (entry.Files.Count > 0)
+                {
+                    <ul class="list-unstyled mt-2 mb-0 small">
+                        @foreach (var file in entry.Files)
+                        {
+                            <li><i class="fa-solid fa-paperclip me-1" aria-hidden="true"></i><a href="@file.Url">@file.FileName</a></li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@* The request's files in one place: those of its public messages only. *@
+@await Component.InvokeAsync("TicketFiles", new { ticketId = Model.TicketId, forRequester = true })
+
+@if (Model.CanRate)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="h6">@(Model.Score is null ? T["How did we do?"] : T["Your rating: {0} out of 5", Model.Score])</h2>
+            <form method="post" asp-route="TicketPortalRateOwn" asp-route-number="@Model.Number" class="no-multisubmit">
+                <partial name="_TicketPortalRating" model="(Model.Score, Model.RatingComment)" />
+                <button type="submit" class="btn btn-outline-primary btn-sm">@(Model.Score is null ? T["Send my rating"] : T["Update my rating"])</button>
+            </form>
+        </div>
+    </div>
+}
+
+@if (Model.CanReply)
+{
+    <form method="post" asp-route="@(Model.IsGuest ? "TicketPortalGuestReply" : "TicketPortalReply")" asp-all-route-data="@routeValues" enctype="multipart/form-data" class="no-multisubmit">
+        <div class="mb-3">
+            <label for="reply-body" class="form-label">@T["Reply"]</label>
+            <textarea id="reply-body" name="body" class="form-control" rows="4" required>@Model.Draft</textarea>
+        </div>
+        @if (Model.CanAttach)
+        {
+            <div class="mb-3">
+                <label for="reply-files" class="form-label">@T["Files"]</label>
+                @await DisplayAsync(await New.FileDropInput(InputName: "files", InputId: "reply-files", Compact: true, Target: "form"))
+            </div>
+        }
+        <partial name="_TicketProtectedInputs" />
+        <button type="submit" class="btn btn-primary">@T["Send"]</button>
+    </form>
+}
+else
+{
+    <p class="text-body-secondary">@T["This request was merged into another request, where our replies continue. You'll get them by e-mail."]</p>
+}

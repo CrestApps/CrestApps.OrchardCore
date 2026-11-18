@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Tickets.Portal
+@model TicketPortalRateViewModel
+
+<div class="container my-4" style="max-width: 640px;">
+    <h1 class="h3 mb-1">@T["How did we do?"]</h1>
+    <p class="text-body-secondary mb-4">@T["{0} {1}", Model.Number, Model.Subject]</p>
+
+    @if (Model.Thanked)
+    {
+        <div class="alert alert-success" role="status">@T["Thank you for your rating."]</div>
+    }
+    @if (!string.IsNullOrEmpty(Model.Error))
+    {
+        <div class="alert alert-danger" role="alert">@Model.Error</div>
+    }
+
+    <form method="post" asp-route="TicketPortalRatePost" asp-route-id="@Model.TicketId" class="no-multisubmit">
+        <partial name="_TicketPortalRating" model="(Model.Score, Model.Comment)" />
+        <button type="submit" class="btn btn-primary">@(Model.Rated ? T["Update my rating"] : T["Send my rating"])</button>
+    </form>
+</div>

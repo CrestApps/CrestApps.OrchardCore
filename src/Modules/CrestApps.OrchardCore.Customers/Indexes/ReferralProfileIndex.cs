@@ -28,6 +28,8 @@ public sealed class ReferralProfileIndexProvider : IndexProvider<ReferralProfile
     public override void Describe(DescribeContext<ReferralProfile> context)
     {
         context.For<ReferralProfileIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(profile => new ReferralProfileIndex
             {
                 ItemId = profile.ItemId,

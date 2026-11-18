@@ -1,0 +1,8 @@
+@model MyPayIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PayrollMyPay" title="@T["My pay"]" />
+</zone>
+
+@* People who are staff see their pay in the Pay section of their own staff profile; this page is for those who aren't. *@
+<div class="alert alert-info">@T["Your user is not linked to a staff member, so there is no pay to show. Ask your payroll contact to link it."]</div>

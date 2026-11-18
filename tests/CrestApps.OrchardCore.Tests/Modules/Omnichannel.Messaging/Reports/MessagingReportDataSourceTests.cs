@@ -75,7 +75,8 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
                 .Column<DateTime>("LastActivityUtc", column => column.Nullable())
                 .Column<int>("UnreadCount", column => column.NotNull().WithDefault(0))
                 .Column<DateTime>("AssignedUtc", column => column.Nullable())
-                .Column<DateTime>("FirstResponseDueUtc", column => column.Nullable()),
+                .Column<DateTime>("FirstResponseDueUtc", column => column.Nullable())
+                .Column<string>("CampaignId", column => column.Nullable().WithLength(26)),
                 collection: MessagingStorage.CollectionName);
 
             await schemaBuilder.CreateMapIndexTableAsync<OmnichannelMessageIndex>(table => table

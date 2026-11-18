@@ -1,0 +1,92 @@
+{
+  "Frequency": "Biweekly",
+  "PeriodStart": "2026-11-01",
+  "PeriodEnd": "2026-11-14",
+  "PayDate": "2026-11-20",
+  "Description": "Pay too small for its deductions: the loan (largest priority number) is cut to what is left and the rest is owed; the union dues (priority 100) are taken in full.",
+  "Pay": {
+    "PayBasis": "Hourly",
+    "Rates": [
+      {
+        "EffectiveFrom": "2020-01-01",
+        "HourlyRate": 20
+      }
+    ]
+  },
+  "Distribution": [
+    {
+      "Method": "Check",
+      "Split": "Remainder"
+    }
+  ],
+  "Codes": [
+    {
+      "Code": "REG",
+      "Class": "Earning",
+      "Kind": "Regular"
+    },
+    {
+      "Code": "UNION",
+      "Class": "Deduction",
+      "Kind": "Contribution",
+      "Settings": {
+        "Calculation": "FixedAmount",
+        "Priority": 100
+      }
+    },
+    {
+      "Code": "LOAN",
+      "Class": "Deduction",
+      "Kind": "Loan",
+      "Settings": {
+        "Calculation": "FixedAmount",
+        "Priority": 200,
+        "Arrears": "CarryForward"
+      }
+    }
+  ],
+  "Inputs": [
+    {
+      "PayCode": "REG",
+      "Hours": 5
+    }
+  ],
+  "Items": [
+    {
+      "PayCode": "UNION",
+      "Amount": 20
+    },
+    {
+      "PayCode": "LOAN",
+      "Amount": 300
+    }
+  ],
+  "TaxRules": [
+    {
+      "rule": {
+        "TaxCode": "US-FIT",
+        "Name": "Income tax",
+        "Jurisdiction": "US",
+        "Category": "IncomeTax",
+        "Payer": "Employee",
+        "Method": "Percentage",
+        "EffectiveFrom": "2026-01-01",
+        "Rate": 10
+      }
+    }
+  ],
+  "Expected": {
+    "Lines": [
+      "Earning REG 100.00 for 5h",
+      "Tax US-FIT Employee 10.00 on 100.00",
+      "Deduction UNION 20.00",
+      "Deduction LOAN 70.00 cut 230.00 owed 230.00"
+    ],
+    "Gross": 100.0,
+    "Net": 0.0,
+    "Payments": [],
+    "WarningsContaining": [
+      "was cut by"
+    ]
+  }
+}

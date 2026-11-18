@@ -111,6 +111,10 @@ The `UserAudiences` recipe step creates or updates defined audiences by name, an
 }
 ```
 
+## My account
+
+The **My Account** feature (`CrestApps.OrchardCore.Users.Account`, turned on by the modules that need it, such as Commerce and Tickets) is the site's "my account" area: `/account` (route `CommerceAccount`, signed-in users only), a **My account** link in Orchard Core's user menu, and the `commerce-account` navigation menu that modules add their pages to with a `NamedNavigationProvider` (`UsersConstants.Account.MenuName`). Each page renders the `CommerceAccountPage` shape (`UsersConstants.Account.PageShape`), which frames it with the `CommerceAccountNavigation` menu; the home page shows a tile per page (`AccountOverview` shape). The names come from when the area belonged to Commerce and are kept, so themes and modules that use them keep working.
+
 ## User Display Name
 
 | | |
@@ -201,3 +205,18 @@ Adds **Email me a sign-in code** to the login form (`EmailCodeLoginFormDisplayDr
 `IUserAvatarProvider` gives the address of a user's picture. The User Avatars feature registers one, and the user search (`IUserSearchService`) fills `UserSearchResult.AvatarUrl` from it, so modules show faces (for example the staff organization chart) without knowing where pictures are kept.
 
 An `IUserAudienceProvider` can also leave users out of a search with `GetExcludedUserIdsAsync`, which only receives the users a search found. Staff uses it for the `StaffUnlinked` audience, so the staff editor offers only accounts that aren't linked to a staff member yet.
+
+## Confirm the password before private pages
+
+`IPasswordConfirmation` (Users.Abstractions) asks the signed-in person for their password before a page shows private data, such as pay. Put `[ConfirmPassword]` (Users.Core) on a controller or an action: until the person confirms, a GET is redirected to **Confirm your password** (`~/Admin/confirm-password`) and back, and a form posted after the confirmation ran out goes back to the page it was posted from. A confirmation is a cookie protected for that user only (`HttpOnly`, `SameSite=Strict`), valid for `Window` (10 minutes); a wrong password counts toward lockout.
+
+```csharp
+[Admin]
+[ConfirmPassword]
+public sealed class MyPayController : Controller
+{
+    // Every action asks first.
+}
+```
+
+A display driver that shows private data on a page others can open checks `IsConfirmedAsync(user)` itself and renders a prompt that links to `GetConfirmationUrl(returnUrl)`. A page that must ask every time it is opened, such as a person's own pay, checks `IsJustConfirmedAsync(user)` instead: it is true only on the first page the person opens right after typing their password (a second, one-minute cookie that the check deletes), and every caller in that request gets the same answer. Without the Users feature, `[ConfirmPassword]` refuses the page.

@@ -2,7 +2,9 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Tests.Checkout;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -245,6 +247,75 @@ public sealed class TransactionChargeSavedPaymentMethodTests
     }
 
     [Fact]
+    public async Task ChargeKeptPaymentMethodAsync_ChargesTheCardTheOwnersCheckoutKept()
+    {
+        // Arrange: a guest's balance, collected with the card the deposit's checkout kept (no saved card exists).
+        var transaction = CreateOutstanding();
+
+        transaction.OwnerId = null;
+        transaction.OwnerKind = CustomerOwnerKind.Guest;
+
+        var context = new TestContextBuilder(transaction);
+
+        context.KeepsCardFrom(new CheckoutSession { SessionId = "deposit-session" });
+        context.SettlesOnCompletion();
+
+        // Act
+        var result = await context.Service.ChargeKeptPaymentMethodAsync("transaction-1", "deposit-session", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors));
+        Assert.Equal(SavedPaymentMethodChargeStatus.Succeeded, result.ChargeStatus);
+        Assert.Equal("pm_kept", CheckoutPaymentDataKeys.GetValue(Assert.Single(context.Begun).ProviderData, CheckoutPaymentDataKeys.SavedPaymentMethodReference));
+        context.PaymentMethods.Verify(store => store.MarkChargedAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ChargeKeptPaymentMethodAsync_WithAnotherOwnersCheckout_IsRefusedWithoutCharging()
+    {
+        // Arrange
+        var context = new TestContextBuilder(CreateOutstanding());
+
+        context.KeepsCardFrom(new CheckoutSession { SessionId = "deposit-session", OwnerId = "someone-else" });
+
+        // Act
+        var result = await context.Service.ChargeKeptPaymentMethodAsync("transaction-1", "deposit-session", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Empty(context.Begun);
+    }
+
+    [Fact]
+    public async Task ChargeSavedPaymentMethodAsync_WhenAnEarlierChargeTookTheMoneyButWasNotRecorded_AppliesItInsteadOfChargingAgain()
+    {
+        // Arrange: the provider took the money for an earlier charge, but recording it on the transaction was lost.
+        var context = new TestContextBuilder(CreateOutstanding());
+
+        await context.Attempts.CreateAsync(new PaymentAttempt
+        {
+            ItemId = "attempt-earlier",
+            SessionId = "earlier-session",
+            ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
+            ReferenceId = "transaction-1",
+            ProviderKey = "test",
+            ProviderReference = "pi_earlier",
+            Currency = "USD",
+            ConfirmedAmount = 100m,
+            State = PaymentAttemptState.Succeeded,
+        }, TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await context.Service.ChargeSavedPaymentMethodAsync("transaction-1", "card-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors));
+        Assert.Equal(SavedPaymentMethodChargeStatus.Succeeded, result.ChargeStatus);
+        Assert.Equal(TransactionStatus.Paid, (await context.Manager.FindByIdAsync("transaction-1", TestContext.Current.CancellationToken)).Status);
+        Assert.Empty(context.Begun);
+    }
+
+    [Fact]
     public async Task ChargeSavedPaymentMethodAsync_WithoutTheCheckout_IsRefused()
     {
         // Arrange
@@ -384,6 +455,42 @@ public sealed class TransactionChargeSavedPaymentMethodTests
 
         public List<string> CanceledReasons { get; } = [];
 
+        public InMemoryPaymentAttemptStore Attempts { get; } = new();
+
+        public Mock<ICheckoutSavedPaymentMethodProvider> KeptCards { get; } = new();
+
+        // The checkout kept a card: its settled attempt reports it, and the session store finds the checkout.
+        public void KeepsCardFrom(CheckoutSession session)
+        {
+            _sessions.Setup(store => store.GetAsync(session.SessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+
+            Attempts.CreateAsync(new PaymentAttempt
+            {
+                ItemId = "attempt-" + session.SessionId,
+                SessionId = session.SessionId,
+                ReferenceType = "Order",
+                ReferenceId = "order-1",
+                ProviderKey = "test",
+                Currency = "USD",
+                ConfirmedAmount = 50m,
+                State = PaymentAttemptState.Succeeded,
+            }).AsTask().GetAwaiter().GetResult();
+
+            KeptCards.SetupGet(provider => provider.Key).Returns("test");
+            KeptCards
+                .Setup(provider => provider.GetSavedPaymentMethodAsync(It.IsAny<PaymentAttempt>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new SavedPaymentMethod
+                {
+                    ProviderKey = "test",
+                    CustomerReference = "cus_kept",
+                    PaymentMethodReference = "pm_kept",
+                    Brand = "visa",
+                    Last4 = "1111",
+                    ExpirationMonth = 12,
+                    ExpirationYear = 2030,
+                });
+        }
+
         public DefaultTransactionCommandService Service
             => TransactionCommandServiceFactory.Create(
                 Manager,
@@ -392,6 +499,14 @@ public sealed class TransactionChargeSavedPaymentMethodTests
                     .AddSingleton(_engine.Object)
                     .AddSingleton(_sessions.Object)
                     .AddSingleton(PaymentMethods.Object)
+                    .AddSingleton<IPaymentAttemptStore>(Attempts)
+                    .AddSingleton(KeptCards.Object)
+                    .AddSingleton<ITransactionSettlementService>(sp => new TransactionSettlementService(
+                        Manager,
+                        sp,
+                        Clock,
+                        NullLogger<TransactionSettlementService>.Instance,
+                        new PassThroughStringLocalizer<TransactionSettlementService>()))
                     .BuildServiceProvider(),
                 new LocalLock(NullLogger<LocalLock>.Instance));
 

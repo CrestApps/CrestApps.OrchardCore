@@ -102,7 +102,7 @@ public sealed class ReportsController : Controller
 
         var filter = await BuildFilterAsync(descriptor.Name);
         var filterShape = await _filterDisplayManager.BuildEditorAsync(filter, _updateModelAccessor.ModelUpdater, false);
-        var document = await ReportTelemetry.RunCodedReportAsync(_reportManager.GetReport(descriptor.Name), descriptor, new ReportContext(filter), HttpContext.RequestAborted);
+        var document = await ReportTelemetry.RunCodedReportAsync(_reportManager.GetReport(descriptor.Name), descriptor, new ReportContext(filter) { User = User }, HttpContext.RequestAborted);
         document.Title = _localizerFactory.Localize(descriptor.DisplayName).Value;
 
         await _displayValueResolver.ResolveNonTableValuesAsync(document);
@@ -151,7 +151,7 @@ public sealed class ReportsController : Controller
         }
 
         var filter = await BuildFilterAsync(report.Name);
-        var document = await ReportTelemetry.RunCodedReportAsync(_reportManager.GetReport(report.Name), report, new ReportContext(filter, ReportRunMode.Export), HttpContext.RequestAborted);
+        var document = await ReportTelemetry.RunCodedReportAsync(_reportManager.GetReport(report.Name), report, new ReportContext(filter, ReportRunMode.Export) { User = User }, HttpContext.RequestAborted);
         document.Title = _localizerFactory.Localize(report.DisplayName).Value;
 
         await _displayValueResolver.ResolveAsync(document);

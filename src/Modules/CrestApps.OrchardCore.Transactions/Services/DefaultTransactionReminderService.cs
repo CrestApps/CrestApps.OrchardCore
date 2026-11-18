@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Customers.Models;
@@ -61,7 +62,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             return false;
         }
 
-        var amount = FormatAmount(transaction.OutstandingAmount, transaction.Currency);
+        var amount = CurrencyFormat.WithCode(transaction.OutstandingAmount, transaction.Currency);
         var title = GetTitle(transaction);
         var invoice = await PrepareInvoiceAsync(transaction, cancellationToken);
 
@@ -98,6 +99,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
 
         var reminder = new Reminder
         {
+            Values = BuildValues(transaction, amount, due, invoice),
             Subject = dueToday
                 ? S["Payment due today: {0}", amount].Value
                 : S["Payment reminder: {0} outstanding", amount].Value,
@@ -143,7 +145,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             return false;
         }
 
-        var amount = FormatAmount(transaction.OutstandingAmount, transaction.Currency);
+        var amount = CurrencyFormat.WithCode(transaction.OutstandingAmount, transaction.Currency);
         var title = GetTitle(transaction);
         var due = await DocumentDates.ToSiteDueDateAsync(_localClock, transaction.DueUtc.Value);
         var paymentMethod = transaction.AutoCollection?.PaymentMethodDescription;
@@ -154,6 +156,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         var reminder = transaction.AutoCollection is not null
             ? new Reminder
             {
+                Values = BuildValues(transaction, amount, due, default),
                 Subject = S["Upcoming payment: {0} on {1:d}", amount, due].Value,
                 Summary = string.IsNullOrEmpty(paymentMethod)
                     ? S["{0} for {1} will be charged to your card on file on {2:d}.", amount, title, due].Value
@@ -172,6 +175,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             invoice = await PrepareInvoiceAsync(transaction, cancellationToken);
             reminder = new Reminder
             {
+                Values = BuildValues(transaction, amount, due, invoice),
                 Subject = S["Payment due on {1:d}: {0}", amount, due].Value,
                 Summary = S["A payment of {0} for {1} is due on {2:d}.", amount, title, due].Value,
                 Body = S["This is a reminder that a payment of {0} for {1} is due on {2:d}.", amount, title, due].Value + invoice.Instructions,
@@ -213,18 +217,24 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             return false;
         }
 
-        var amount = FormatAmount(transaction.OutstandingAmount, transaction.Currency);
+        var amount = CurrencyFormat.WithCode(transaction.OutstandingAmount, transaction.Currency);
         var title = GetTitle(transaction);
         var invoice = await PrepareInvoiceAsync(transaction, cancellationToken);
         var numbered = !string.IsNullOrEmpty(transaction.InvoiceNumber);
 
         // The invoice itself, not a reminder: it asks for the payment for the first time.
-        var body = transaction.DueUtc.HasValue
-            ? S["Here is your invoice for {0}: {1}, due on {2:d}.", title, amount, await DocumentDates.ToSiteDueDateAsync(_localClock, transaction.DueUtc.Value)].Value
+        var due = transaction.DueUtc.HasValue
+            ? await DocumentDates.ToSiteDueDateAsync(_localClock, transaction.DueUtc.Value)
+            : (DateTime?)null;
+
+        var body = due.HasValue
+            ? S["Here is your invoice for {0}: {1}, due on {2:d}.", title, amount, due.Value].Value
             : S["Here is your invoice for {0}: {1}.", title, amount].Value;
 
         var reminder = new Reminder
         {
+            Kind = TransactionEmailKinds.PaymentRequest,
+            Values = BuildValues(transaction, amount, due, invoice),
             Subject = numbered
                 ? S["Invoice {0}", transaction.InvoiceNumber].Value
                 : S["Invoice for {0}", title].Value,
@@ -345,6 +355,38 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         return html;
     }
 
+    // What the store's template of the message can use besides the transaction itself: the links, the number, what is
+    // owed and when, already formatted for the payer.
+    private static Dictionary<string, string> BuildValues(Transaction transaction, string amount, DateTime? due, InvoiceDetails invoice)
+    {
+        var values = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [TransactionEmailKinds.AmountDueValueName] = amount,
+        };
+
+        if (!string.IsNullOrEmpty(invoice.PayUrl))
+        {
+            values[TransactionEmailKinds.PayUrlValueName] = invoice.PayUrl;
+        }
+
+        if (!string.IsNullOrEmpty(invoice.InvoiceUrl))
+        {
+            values[TransactionEmailKinds.DocumentUrlValueName] = invoice.InvoiceUrl;
+        }
+
+        if (!string.IsNullOrEmpty(transaction.InvoiceNumber))
+        {
+            values[TransactionEmailKinds.DocumentNumberValueName] = transaction.InvoiceNumber;
+        }
+
+        if (due.HasValue)
+        {
+            values[TransactionEmailKinds.DueDateValueName] = due.Value.ToString("d", CultureInfo.CurrentCulture);
+        }
+
+        return values;
+    }
+
     private string GetTitle(Transaction transaction)
         => string.IsNullOrEmpty(transaction.Title)
             ? S["your recent purchase"].Value
@@ -356,8 +398,9 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             transaction.GetGuestContact(),
             new CustomerOwnerMessage
             {
-                Kind = TransactionEmailKinds.PaymentReminder,
+                Kind = reminder.Kind,
                 Models = new Dictionary<string, object>(StringComparer.Ordinal) { [TransactionEmailKinds.TransactionModelName] = transaction },
+                Values = reminder.Values ?? new Dictionary<string, string>(StringComparer.Ordinal),
                 Subject = reminder.Subject,
                 Summary = reminder.Summary,
                 TextBody = reminder.Body,
@@ -365,17 +408,12 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             },
             cancellationToken);
 
-    private static string FormatAmount(decimal amount, string currency)
-    {
-        var formatted = CurrencyScale.Format(amount, currency);
-
-        return string.IsNullOrEmpty(currency)
-            ? formatted
-            : $"{currency} {formatted}";
-    }
-
     private sealed class Reminder
     {
+        public string Kind { get; init; } = TransactionEmailKinds.PaymentReminder;
+
+        public IReadOnlyDictionary<string, string> Values { get; init; }
+
         public string Subject { get; init; }
 
         public string Summary { get; init; }

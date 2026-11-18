@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Carts.Core;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Api;
@@ -62,8 +63,8 @@ internal static class OrderCheckoutApiEndpoints
         {
             var code = result.Failure switch
             {
-                CartCheckoutFailure.EmptyCart => ApiProblems.Codes.EmptyCart,
-                CartCheckoutFailure.OutOfStock => ApiProblems.Codes.OutOfStock,
+                CartCheckoutFailure.EmptyCart => CommerceProblemCodes.EmptyCart,
+                CartCheckoutFailure.OutOfStock => CommerceProblemCodes.OutOfStock,
                 CartCheckoutFailure.Concurrency => ApiProblems.Codes.Concurrency,
                 _ => ApiProblems.Codes.NotAvailable,
             };

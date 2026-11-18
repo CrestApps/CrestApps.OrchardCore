@@ -71,7 +71,7 @@ public static class SigningKeyJwk
     /// <param name="algorithm">The algorithm.</param>
     /// <param name="privateJwk">The key pair as a JSON Web Key.</param>
     /// <returns>An <see cref="RsaKeySecret"/> for RS256, a <see cref="TextSecret"/> for ES256.</returns>
-    public static ISecret ToSecret(string algorithm, JsonObject privateJwk)
+    public static Secret ToSecret(string algorithm, JsonObject privateJwk)
     {
         ArgumentNullException.ThrowIfNull(privateJwk);
 
@@ -110,7 +110,7 @@ public static class SigningKeyJwk
     /// <param name="kid">The key id, set on the result.</param>
     /// <returns>The key pair as a JSON Web Key, or <see langword="null"/> when the secret holds no private key of the
     /// algorithm.</returns>
-    public static JsonObject FromSecret(string algorithm, ISecret secret, string kid)
+    public static JsonObject FromSecret(string algorithm, Secret secret, string kid)
     {
         try
         {

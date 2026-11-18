@@ -1,0 +1,3 @@
+@model ShapeViewModel<EmployeePayItem>
+
+<a asp-action="Delete" asp-controller="PayItems" asp-route-profileId="@Model.Value.ProfileId" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete the pay item? To stop it from a day on, give it a last day instead."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
