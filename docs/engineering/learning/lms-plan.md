@@ -1338,3 +1338,14 @@ Every finding was fixed test first on this branch (or is explained), one commit 
 | 4 Erasure after H4 | Still revokes: `CredentialAwardEraser` revokes directly and H4 did not change it. Proven by `CredentialDataTests.Erase_RevokesEachAward_KeepsItsSlot_AndRemovesThePersonalData` (unit) and `LearningCredentialsDataTests.PersonalData_ExportsTheCredentials_AndErasureRevokesThem` (integration), both passing after H4. | no change |
 
 **Not built.** Catching up on issuing after an enrollment review is cleared. `IEnrollmentService.ClearReviewAsync` only records who cleared the review and why; it notifies no observer. The course credential (`CredentialEnrollmentObserver`) and course education credits (`EducationCreditEnrollmentObserver`) run once, from `IEnrollmentObserver.CompletedAsync`, and skip a completion that does not support issuing at that moment (`CompletionEvidence.SupportsIssuing`: failed, under review, or resting on a browser result). So both cases have the gap: a learning path completed through a course under review earns no path credential or path credits once the review is cleared (`CredentialLearningPathObserver` and `LearningPathCreditsObserver` run when the path completes), and a course completion that did not support issuing when it happened (for example a failed completion that a later regrade turns into a pass, which opens a review) earns no course credential or credits when the review is cleared. A completion that was already awarded keeps its award through a review unless staff revoke it from the review card. Catching up needs a "review cleared" observer call (or a re-check of the issuing rules when a review is cleared) in Learning, used by Credentials, Certifications and Programs.
+
+### Phase 8: browser pass 2026-11-18 (branch `ma/learning-phase-8`)
+
+Fixed test first on this branch; the red and green counts are in each commit.
+
+| Bug | Fix | Commit |
+| --- | --- | --- |
+| Review launches report `entry = ab-initio` | A spec bug: SCORM 1.2 and SCORM 2004 give `ab-initio` only for the first launch (of an attempt), `resume` after suspend and empty otherwise. A review now gives the entry of the session it reopens. | `8f4e7cbb2` |
+| The external tools deployment step has no title | `LearningExternalToolsDeploymentStepDisplayDriver` with its views; a guard test fails for any Learning deployment step without a display driver. | `85e655950` |
+| Workflow hint shows `{ x }` (Award Credential) | The Liquid example is an argument of the localized hint. | `422686669` |
+| GET/POST route guard | The credential award, external tool, package upload and statement pages say `HttpGet`. | `9c2174fd0` |
