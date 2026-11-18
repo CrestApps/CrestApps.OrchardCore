@@ -813,3 +813,14 @@ Build environment for this work: SDK 10.0.403 (the repository's `global.json` ro
 | R2-E Busy as a literal | Busy is a code; the player retries the opening call and the watched share. | `18c5a5ea8` |
 
 Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 of 13; the whole `CrestApps.OrchardCore.Tests` assembly 15,827 of 15,828 with one skipped, where the one failure was a Learning bug from phase 1 (the workflow event editors referenced a partial Razor could not resolve from `Views/Items`; moved to `Views/Shared`, the guard re-run green); JavaScript lint and asset suites 27 of 27. Honest notes: findings 5 and 6 first failed as a compile error (the store and the error code did not exist), not as an observed assertion; the instructor enrollment integration test (R1-9) was written with the fix, while its handler test failed first; the player's busy retry (R2-E) has no automated test. Not re-checked in the browser after the rounds: the course editor with the moved key, the player retry and the instructor's enrollment form.
+
+**Browser pass 2026-11-18.** Fixed test first on this branch, or judged and written down; the red and green counts are in each commit.
+
+| Bug | Fix | Commit |
+| --- | --- | --- |
+| GET/POST route collisions (with Assessments' override and grade scale saves) | A guard test fails for any routed Learning action without an HTTP method attribute; the enrollment pages say `HttpGet`. Each later phase fixes its own controllers. | `8eca15851` |
+| Course staff see only Courses in the Learning menu; instructors miss **Enroll a learner** | The Enrollments item asks for the permission the person holds (View enrollments, else Manage own courses); the button shows to anyone the enroll form accepts. | `4366a0593` |
+| "A key is set" after a failed course create | The editor says a key is set only for a course saved before. | `d82f83fb2` |
+| Learner erasure works only through a linked customer | Why: only the Customers privacy action runs the personal data service, a customer added by hand has no user id, and Learning finds records by user id. The contributor now adds the user id of the account with the request's e-mail address. | `bd44512cb` |
+| Learners get 403 on the notification center | Decision, documented: learners read notices through the Notifications delivery methods (e-mail); the center is an admin page and learners do not get the admin. | `8c75c52cd` |
+| Breadcrumb under the navbar on My learning and My transcript | Not changed: The Blog Theme floats its navbar over the page (`#mainNav` is absolutely positioned) and expects every page to fill its `Header` zone with a masthead, as its own templates do. Learner pages, like the other CrestApps storefront pages, render in the theme's content zone; on the Storefront theme they sit below the navbar. | none |
