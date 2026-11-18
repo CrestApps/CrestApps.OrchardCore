@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.Users;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Learning.IntegrationTests;
 
@@ -42,12 +43,20 @@ public sealed class CourseSettingsGuardTests
             await contentManager.PublishAsync(course);
         });
 
+        string importedVersionId = null;
+
         await AsUserAsync("learner2", async services =>
         {
             var contentManager = services.GetRequiredService<IContentManager>();
-            var imported = await contentManager.CloneAsync(await contentManager.GetAsync(_fixture.CourseId, VersionOptions.Published));
 
-            imported.ContentItemId = _fixture.CourseId;
+            // A copy that is not stored, as an import file brings it: CloneAsync stores a new item, and giving that stored
+            // clone the course's id left the shared course with two latest versions (review round 9, the Deep Linking
+            // test that failed only after this one).
+            var published = await contentManager.GetAsync(_fixture.CourseId, VersionOptions.Published);
+            var imported = System.Text.Json.JsonSerializer.Deserialize<ContentItem>(System.Text.Json.JsonSerializer.Serialize(published));
+
+            imported.Id = 0;
+            imported.ContentItemVersionId = importedVersionId = global::OrchardCore.IdGenerator.GenerateId();
             imported.Alter<CoursePart>(part =>
             {
                 part.Staff = [new CourseStaffMember { UserId = _fixture.SpareLearnerId, Role = LearningConstants.CourseStaffRoles.Instructor }];
@@ -62,6 +71,13 @@ public sealed class CourseSettingsGuardTests
         Assert.Equal(EnrollmentMode.Open, stored.EnrollmentMode);
         Assert.DoesNotContain(stored.Staff, member => member.UserId == _fixture.SpareLearnerId);
         Assert.Contains(stored.Staff, member => member.UserId == _fixture.InstructorId);
+
+        // The import was stored (as the latest version), and the shared course is left with one latest version, so the
+        // tests that read its draft after this one see it.
+        var latest = await _fixture.InTenantAsync(async services => await services.GetRequiredService<global::YesSql.ISession>()
+            .QueryIndex<global::OrchardCore.ContentManagement.Records.ContentItemIndex>(index => index.ContentItemId == _fixture.CourseId && index.Latest)
+            .ListAsync());
+        Assert.Equal(importedVersionId, Assert.Single(latest).ContentItemVersionId);
     }
 
     [Fact]
