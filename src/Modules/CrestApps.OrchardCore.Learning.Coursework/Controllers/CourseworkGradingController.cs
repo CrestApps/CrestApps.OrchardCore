@@ -75,6 +75,7 @@ public sealed class CourseworkGradingController : Controller
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="shapeFactory">The shape factory.</param>
     /// <returns>The list.</returns>
+    [HttpGet]
     [Admin("learning/coursework/{courseworkId}/submissions", "LearningCourseworkSubmissions")]
     public async Task<IActionResult> Index(string courseworkId, PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
     {
@@ -117,6 +118,7 @@ public sealed class CourseworkGradingController : Controller
     /// </summary>
     /// <param name="id">The submission.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/coursework/submissions/{id}", "LearningCourseworkGradeSubmission")]
     public async Task<IActionResult> Submission(string id)
     {
