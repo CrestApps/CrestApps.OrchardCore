@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using CrestApps.Core;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
@@ -66,6 +67,42 @@ internal static class AIConfigurationGuard
         {
             // When the running assistant cannot be worked out, everything counts as protected.
             return AIProtectedConfiguration.Everything;
+        }
+    }
+
+    /// <summary>
+    /// Gets the deployments and provider connections the assistant running the current AI turn talks to. Outside an
+    /// AI turn nothing is protected.
+    /// </summary>
+    /// <param name="services">The services of the tool invocation.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The protected deployments and connections.</returns>
+    public static async Task<AIProtectedModels> GetProtectedModelsAsync(IServiceProvider services, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var invocation = AIInvocationScope.Current;
+
+        if (invocation is null)
+        {
+            return AIProtectedModels.None;
+        }
+
+        var configuration = await GetProtectedAsync(services, cancellationToken);
+
+        if (ReferenceEquals(configuration, AIProtectedConfiguration.Everything))
+        {
+            return AIProtectedModels.Everything;
+        }
+
+        try
+        {
+            return await BuildProtectedModelsAsync(services, invocation, configuration, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // When the running assistant's models cannot be worked out, every one counts as protected.
+            return AIProtectedModels.Everything;
         }
     }
 
@@ -344,6 +381,72 @@ internal static class AIConfigurationGuard
         }
 
         return configuration;
+    }
+
+    private static async Task<AIProtectedModels> BuildProtectedModelsAsync(IServiceProvider services, AIInvocationContext invocation, AIProtectedConfiguration configuration, CancellationToken cancellationToken)
+    {
+        var deploymentManager = services.GetService<IAIDeploymentManager>();
+
+        if (deploymentManager is null)
+        {
+            return AIProtectedModels.Everything;
+        }
+
+        var models = new AIProtectedModels();
+        var profileManager = services.GetRequiredService<IAIProfileManager>();
+
+        // A profile that names no deployment uses the site's default, so the defaults always count.
+        var requested = new List<(string Slot, string Name)>
+        {
+            (AIDeploymentSlotNames.Chat, null),
+            (AIDeploymentSlotNames.Utility, null),
+        };
+
+        foreach (var profileId in configuration.ProfileIds.Order(StringComparer.Ordinal))
+        {
+            var profile = await profileManager.FindByIdAsync(profileId, cancellationToken);
+
+            if (profile is not null)
+            {
+                requested.Add((AIDeploymentSlotNames.Chat, profile.ChatDeploymentName));
+                requested.Add((AIDeploymentSlotNames.Utility, profile.UtilityDeploymentName));
+            }
+        }
+
+        if (invocation.ToolExecutionContext?.Resource is ChatInteraction interaction)
+        {
+            requested.Add((AIDeploymentSlotNames.Chat, interaction.ChatDeploymentName));
+            requested.Add((AIDeploymentSlotNames.Utility, interaction.UtilityDeploymentName));
+        }
+
+        foreach (var (slot, name) in requested)
+        {
+            var deploymentName = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+
+            if (deploymentName is not null)
+            {
+                models.Add(await deploymentManager.FindByNameAsync(deploymentName, cancellationToken));
+            }
+
+            models.Add(await deploymentManager.ResolveSlotAsync(slot, deploymentName: deploymentName, cancellationToken: cancellationToken));
+        }
+
+        var personaManager = services.GetService<IAIPersonaManager>();
+
+        if (personaManager is not null)
+        {
+            foreach (var personaName in configuration.PersonaNames.Order(StringComparer.OrdinalIgnoreCase))
+            {
+                var persona = await personaManager.FindByNameAsync(personaName, cancellationToken);
+
+                if (!string.IsNullOrWhiteSpace(persona?.VoiceDeploymentName))
+                {
+                    models.Add(await deploymentManager.FindByNameAsync(persona.VoiceDeploymentName.Trim(), cancellationToken));
+                }
+            }
+        }
+
+        return models;
     }
 
     private static async Task<string> GetAdminWidgetProfileIdAsync(IServiceProvider services)
