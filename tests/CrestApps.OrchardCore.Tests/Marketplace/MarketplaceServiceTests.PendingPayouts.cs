@@ -234,6 +234,98 @@ public sealed partial class MarketplaceServiceTests
         Assert.Equal(DisbursementStatus.Settled, Assert.Single(_disbursements.Store.Entries).Status);
     }
 
+    /// <summary>
+    /// K8: a transfer whose answer was lost leaves its disbursement submitted, and the generic settle path (the "Settle
+    /// Disbursement Batches" workflow or a staff click) settled it with no trace number. The payout was then recorded
+    /// paid without asking Stripe. Stripe made this one, so the payout is paid with Stripe's transfer, and nothing is sent
+    /// again.
+    /// </summary>
+    [Fact]
+    public async Task APayoutSettledWithoutATraceNumber_ThatStripeMade_IsPaidWithStripesTransfer()
+    {
+        // Arrange
+        var stripe = new FakeStripe { LoseNextTransferAnswer = true };
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false, PayoutProvider = MarketplaceConstants.StripeConnectPayoutProvider }, CreateStripeProvider(stripe));
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, await SettleAsStaffAsync());
+        Assert.Null(Assert.Single(_disbursements.Store.Entries).TraceNumber);
+
+        // Act
+        var (paid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        var transfer = Assert.Single(stripe.Transfers);
+        var payout = Assert.Single(_payouts);
+        var disbursement = Assert.Single(_disbursements.Store.Entries);
+
+        Assert.Empty(failures);
+        Assert.Equal(48.6m, paid);
+        Assert.Equal(VendorPayoutStatus.Paid, payout.Status);
+        Assert.Equal(transfer.Id, payout.TransferId);
+        Assert.Equal(DisbursementStatus.Settled, disbursement.Status);
+        Assert.Equal(transfer.Id, disbursement.TraceNumber);
+    }
+
+    /// <summary>
+    /// K8: as above, but Stripe never made the transfer (it answered with a rate limit). The payout is not recorded paid:
+    /// the disbursement is marked returned, the payout failed, and the next run pays the earnings once, under a new key.
+    /// </summary>
+    [Fact]
+    public async Task APayoutSettledWithoutATraceNumber_ThatStripeNeverMade_IsNotPaid_AndIsSentOnceByTheNextRun()
+    {
+        // Arrange
+        var stripe = new FakeStripe { TransferStatus = HttpStatusCode.TooManyRequests };
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false, PayoutProvider = MarketplaceConstants.StripeConnectPayoutProvider }, CreateStripeProvider(stripe));
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        Assert.Empty(stripe.Transfers);
+        Assert.Equal(DisbursementStatus.Submitted, Assert.Single(_disbursements.Store.Entries).Status);
+
+        stripe.TransferStatus = HttpStatusCode.OK;
+
+        Assert.Equal(1, await SettleAsStaffAsync());
+
+        // Act: the run after the settle finds no transfer; the one after it pays.
+        var (secondPaid, secondFailures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0m, secondPaid);
+        Assert.Single(secondFailures);
+        Assert.Empty(stripe.Transfers);
+        Assert.Equal(VendorPayoutStatus.Failed, Assert.Single(_payouts).Status);
+        Assert.Equal(DisbursementStatus.Returned, Assert.Single(_disbursements.Store.Entries).Status);
+        Assert.All(_earnings, earning => Assert.Equal(VendorEarningStatus.Available, earning.Status));
+
+        var (thirdPaid, thirdFailures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        var transfer = Assert.Single(stripe.Transfers);
+
+        Assert.Empty(thirdFailures);
+        Assert.Equal(48.6m, thirdPaid);
+        Assert.Equal([VendorPayoutStatus.Failed, VendorPayoutStatus.Paid], _payouts.Select(payout => payout.Status));
+        Assert.Equal(transfer.Id, _payouts[1].TransferId);
+        Assert.Equal([DisbursementStatus.Returned, DisbursementStatus.Settled], _disbursements.Store.Entries.Select(entry => entry.Status));
+        Assert.All(_earnings, earning => Assert.Equal(VendorEarningStatus.PaidOut, earning.Status));
+    }
+
+    // What a staff member's "Settle" click on the released batch does (the workflow settles the same way, by age).
+    private async Task<int> SettleAsStaffAsync()
+    {
+        var disbursement = Assert.Single(_disbursements.Store.Entries);
+        var batch = await _disbursements.Batches.FindByIdAsync(disbursement.BatchId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(DisbursementBatchStatus.Released, batch.Status);
+
+        return await _disbursements.Service.SettleBatchAsync(batch, TestContext.Current.CancellationToken);
+    }
+
     private Disbursement StripeDisbursement(string id, string key)
         => new()
         {

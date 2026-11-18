@@ -26,8 +26,8 @@ public interface IVendorPayoutProvider : IDisbursementProvider
 {
     /// <summary>
     /// Looks for the transfer an earlier submission of a payout's <paramref name="disbursement"/> made, when that
-    /// submission's outcome isn't known (the disbursement is still submitted). It is asked before the payout is given up
-    /// on, because the provider may no longer hold its idempotency key (Stripe keeps one for 24 hours).
+    /// submission's outcome isn't known (the disbursement is still submitted, or was settled without a trace number by
+    /// the generic settle path). It is asked before the payout is given up on or recorded paid, because the provider may no longer hold its idempotency key (Stripe keeps one for 24 hours).
     /// </summary>
     /// <param name="disbursement">The payout's disbursement.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
@@ -684,6 +684,9 @@ public sealed class MarketplaceService
 
         switch (disbursement.Status)
         {
+            case DisbursementStatus.Settled when string.IsNullOrEmpty(disbursement.TraceNumber):
+                return await ConfirmSettledAsync(disbursements, provider, disbursement, payout, cancellationToken);
+
             case DisbursementStatus.Settled:
                 return (VendorPayoutResult.Paid(disbursement.TraceNumber), disbursement.ItemId);
 
@@ -723,6 +726,41 @@ public sealed class MarketplaceService
             default:
                 return (VendorPayoutResult.Unsettled(S["The payout of order {0} is in a batch that wasn't released. It stays pending until it is.", payout.OrderNumber].Value), disbursement.ItemId);
         }
+    }
+
+    // A payout provider settles a disbursement with its transfer's ID, so one settled without it was settled by the
+    // generic settle path (the "Settle Disbursement Batches" workflow or a staff click) while its outcome wasn't known.
+    // The provider says whether the transfer was made: found, the payout is paid with it; not found, the disbursement is
+    // returned and the payout refused, so the next run sends its earnings once under a new key; not answered, it stays
+    // pending and the next run asks again.
+    private async Task<(VendorPayoutResult Result, string DisbursementId)> ConfirmSettledAsync(
+        IDisbursementService disbursements,
+        IVendorPayoutProvider provider,
+        Disbursement disbursement,
+        VendorPayout payout,
+        CancellationToken cancellationToken)
+    {
+        var found = await provider.FindTransferAsync(disbursement, cancellationToken);
+
+        if (found is null)
+        {
+            var reason = S["No transfer was made for the payout of order {0}, although its disbursement was settled.", payout.OrderNumber].Value;
+
+            return await disbursements.MarkClosedAsync(disbursement, DisbursementStatus.Returned, null, reason, cancellationToken)
+                ? (VendorPayoutResult.Refused(reason), disbursement.ItemId)
+                : (VendorPayoutResult.Unsettled(reason), disbursement.ItemId);
+        }
+
+        if (found.RetryLater || found.Failure is not null || string.IsNullOrEmpty(found.TransferId))
+        {
+            return (found with { RetryLater = true, Failure = found.Failure ?? S["Whether the payout of order {0} was made isn't known yet. The next payout run asks again.", payout.OrderNumber].Value }, disbursement.ItemId);
+        }
+
+        disbursement.TraceNumber = found.TransferId;
+
+        await _payoutServices.DisbursementManager.UpdateAsync(disbursement, cancellationToken: cancellationToken);
+
+        return (VendorPayoutResult.Paid(found.TransferId), disbursement.ItemId);
     }
 
     private async Task ReleaseAsync(VendorEarning earning, DateTime now, CancellationToken cancellationToken)
