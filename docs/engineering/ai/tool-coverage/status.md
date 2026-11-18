@@ -34,7 +34,7 @@ Tools that run Orchard Core's settings display drivers (`getSiteSettings`, `upda
 | 18 | User display name and avatar, content access control, structured data check, tenant hierarchy (parent and platform) | [22](22-crestapps-platform-and-parties.md) | 24 | 24 | 0 | c0e525064..691457a10 |
 | 19 | Time zone maps, address check, phone number check, phone verification queue, territories and geocoding, accounts | [22](22-crestapps-platform-and-parties.md) | 18 | 18 | 0 | a5ab3a301..31309e94e |
 | 20 | Accounts B2B (business buying, punchout, price lists), customers (store credit, loyalty points, data requests), teams | [22](22-crestapps-platform-and-parties.md) | 18 | 18 | 0 | e704df3ab..759d49928 |
-| 21 | Skills and certificates, staff (records, badges, capabilities) | [22](22-crestapps-platform-and-parties.md) | 22 | 21 | 1 | 5fbe402d4..2d5e10ea6 |
+| 21 | Skills and certificates, staff (records, badges, capabilities) | [22](22-crestapps-platform-and-parties.md) | 22 | 21 | 1 | 5fbe402d4..e6e730e0c |
 
 Orchard Core part (batches 1 to 10): 189 planned new tools, 132 built, 57 deferred. Left out on purpose: the four template tools (`listTemplates`, `getTemplate`, `saveTemplate`, `deleteTemplate`), because pull request 1321 adds shape template tools; and the six "existing, improve" rows (`listWorkflowTypes`, `getWorkflowType`, `listWorkflowActivities` and three AI tools), because phase 1 does not change existing tools.
 
