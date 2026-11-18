@@ -27,6 +27,13 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.Accounts
 {
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.AI"})]
+    public sealed class AIToolsStartup : OrchardCore.Modules.StartupBase
+    {
+        public AIToolsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Accounts.AIToolsStartup> stringLocalizer) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     public static class AccountsPermissions
     {
         public static readonly OrchardCore.Security.Permissions.Permission ManageAccountMembers;
@@ -47,6 +54,14 @@ namespace CrestApps.OrchardCore.Accounts
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Locations")]
     [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.AI"})]
+    public sealed class LocationsAIToolsStartup : OrchardCore.Modules.StartupBase
+    {
+        public LocationsAIToolsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Accounts.LocationsAIToolsStartup> stringLocalizer) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Locations")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
             "CrestApps.OrchardCore.Recipes"})]
     public sealed class LocationsRecipesSchemaStartup : OrchardCore.Modules.StartupBase
     {
@@ -57,6 +72,14 @@ namespace CrestApps.OrchardCore.Accounts
     public sealed class LocationsStartup : OrchardCore.Modules.StartupBase
     {
         public LocationsStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Members")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.AI"})]
+    public sealed class MembersAIToolsStartup : OrchardCore.Modules.StartupBase
+    {
+        public MembersAIToolsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Accounts.MembersAIToolsStartup> stringLocalizer) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Members")]
@@ -91,6 +114,14 @@ namespace CrestApps.OrchardCore.Accounts
     {
         public Startup() { }
         public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Team")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.AI"})]
+    public sealed class TeamAIToolsStartup : OrchardCore.Modules.StartupBase
+    {
+        public TeamAIToolsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Accounts.TeamAIToolsStartup> stringLocalizer) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Team")]
