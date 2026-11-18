@@ -44,6 +44,8 @@ The person needs an e-mail address: the credential names them by a protected cod
 
 To revoke one, click **Revoke** (on the award or in the row's menu), write why, and click **Revoke**. The verification page says the credential is revoked at once, and so does the site's revocation list that other verifiers check. A revocation cannot be undone; you can award the credential again by hand.
 
+Some revocations happen by themselves: when a certificate is revoked, the credentials it earned are revoked too, and so are the credentials of a quiz attempt that is voided or no longer passes after a regrade. When a completed enrollment is flagged for review, nothing is revoked until you decide: the review card on the enrollment's page offers **Revoke the credential** for each credential the completion earned.
+
 ## For learners: My credentials
 
 Learners open **My credentials** from the account menu or the user menu. For each credential they can:

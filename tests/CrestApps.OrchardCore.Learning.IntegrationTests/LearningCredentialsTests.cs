@@ -61,11 +61,73 @@ public sealed class LearningCredentialsTests
 
         var awards = await _fixture.InTenantAsync(services => services.GetRequiredService<ICredentialAwardService>().ListForUserAsync(userId));
 
-        // Assert
-        var award = Assert.Single(awards);
+        // Assert: other tests may add definitions on the same course, so only this definition's award is checked.
+        var award = Assert.Single(awards, candidate => candidate.DefinitionId == definitionId);
 
-        Assert.Equal(definitionId, award.DefinitionId);
         Assert.Equal(CredentialsConstants.RuleKinds.CourseCompleted, award.RuleKind);
+    }
+
+    [Fact]
+    public async Task Round9H4_AnEnrollmentFlaggedForReview_OffersToRevokeItsCredential_AndTheActionRevokesIt()
+    {
+        // Arrange: a completion awards the credential, then the enrollment is flagged for review.
+        await UseSiteAddressAsync();
+        var definitionId = await CreateDefinitionAsync("Review badge", _fixture.OtherCourseId);
+        var userId = await _fixture.InTenantAsync(services => LearningSiteFixture.CreateUserAsync(services, "credreview1"));
+        var enrollmentId = await _fixture.InTenantAsync(async services =>
+        {
+            var enrollments = services.GetRequiredService<IEnrollmentService>();
+            var result = await enrollments.EnrollAsync(new EnrollmentRequest
+            {
+                UserId = userId,
+                CourseId = _fixture.OtherCourseId,
+                Source = LearningConstants.EnrollmentSources.Manual,
+                SourceId = "credentials-review-test",
+            });
+
+            Assert.True(result.Succeeded, result.ErrorCode);
+            Assert.True((await enrollments.ChangeStatusAsync(result.Enrollment.ItemId, EnrollmentStatus.Completed, "admin", "Finished in class")).Succeeded);
+
+            return result.Enrollment.ItemId;
+        });
+
+        var award = Assert.Single(await _fixture.InTenantAsync(services => services.GetRequiredService<ICredentialAwardService>().ListForUserAsync(userId)), candidate => candidate.SourceId == enrollmentId);
+
+        await _fixture.InTenantAsync(async services =>
+        {
+            var store = services.GetRequiredService<CrestApps.OrchardCore.Learning.Core.Services.EnrollmentStore>();
+            var enrollment = await store.FindByIdAsync(enrollmentId);
+
+            enrollment.Review = new EnrollmentReview { Reason = LearningReviewReasons.ResultChangedAfterCompletion, FlaggedUtc = DateTime.UtcNow };
+            await store.SaveAsync(enrollment);
+            await services.GetRequiredService<global::YesSql.ISession>().SaveChangesAsync();
+        });
+
+        using var http = await _fixture.CreateClientAsync("admin");
+
+        // Act
+        var page = await http.GetStringAsync($"Admin/learning/enrollments/{enrollmentId}", TestContext.Current.CancellationToken);
+        var action = System.Text.RegularExpressions.Regex.Match(page, "action=\"(?<url>[^\"]*revoke-from-review/" + enrollmentId + "/" + award.ItemId + ")\"");
+
+        Assert.True(action.Success, "The review card offers no revocation of the credential.");
+        Assert.False((await _fixture.InTenantAsync(services => services.GetRequiredService<ICredentialAwardService>().FindByIdAsync(award.ItemId))).IsRevoked);
+
+        using var form = new FormUrlEncodedContent(new Dictionary<string, string> { ["__RequestVerificationToken"] = LearningSiteFixture.Token(page) });
+        var posted = await http.PostAsync(System.Net.WebUtility.HtmlDecode(action.Groups["url"].Value).TrimStart('/'), form, TestContext.Current.CancellationToken);
+        var after = await _fixture.InTenantAsync(services => services.GetRequiredService<ICredentialAwardService>().FindByIdAsync(award.ItemId));
+
+        // Assert
+        Assert.True(posted.StatusCode is HttpStatusCode.OK or HttpStatusCode.Redirect or HttpStatusCode.Found, posted.StatusCode.ToString());
+        Assert.True(after.IsRevoked);
+        Assert.False(string.IsNullOrWhiteSpace(after.RevokedReason));
+
+        // The definition stays out of the other tests' completions of the same course.
+        await _fixture.InTenantAsync(async services =>
+        {
+            var contentManager = services.GetRequiredService<IContentManager>();
+
+            await contentManager.RemoveAsync(await contentManager.GetAsync(definitionId, VersionOptions.Latest));
+        });
     }
 
     [Fact]

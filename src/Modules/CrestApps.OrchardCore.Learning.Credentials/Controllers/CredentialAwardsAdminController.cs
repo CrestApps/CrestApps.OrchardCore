@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Learning.Credentials.Core.Services;
 using CrestApps.OrchardCore.Learning.Credentials.Models;
 using CrestApps.OrchardCore.Learning.Credentials.Services;
 using CrestApps.OrchardCore.Learning.Credentials.ViewModels;
+using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -361,6 +362,47 @@ public sealed class CredentialAwardsAdminController : Controller
         }
 
         return View(await RevokeModelAsync(award, model));
+    }
+
+    /// <summary>
+    /// Revokes, from the review card of an enrollment, a credential that its completion awarded. Managing the
+    /// enrollment allows it, while the review is open, for an award of the course completed rule made from it.
+    /// </summary>
+    /// <param name="enrollmentId">The enrollment.</param>
+    /// <param name="awardId">The award.</param>
+    /// <param name="enrollments">The enrollments.</param>
+    /// <returns>The enrollment's page.</returns>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Admin("learning/credential-awards/revoke-from-review/{enrollmentId}/{awardId}", "LearningCredentialAwardRevokeFromReview")]
+    public async Task<IActionResult> RevokeFromReview(string enrollmentId, string awardId, [FromServices] IEnrollmentStore enrollments)
+    {
+        var enrollment = await enrollments.FindByIdAsync(enrollmentId, HttpContext.RequestAborted);
+
+        if (enrollment is null || !enrollment.NeedsReview || !await _authorizationService.AuthorizeAsync(User, LearningPermissions.ManageEnrollments, enrollment))
+        {
+            return Forbid();
+        }
+
+        var award = await _awards.FindByIdAsync(awardId, HttpContext.RequestAborted);
+
+        if (award is null || award.RuleKind != CredentialsConstants.RuleKinds.CourseCompleted || award.SourceId != enrollment.ItemId)
+        {
+            return Forbid();
+        }
+
+        var result = await _awards.RevokeAsync(award.ItemId, User.FindFirstValue(ClaimTypes.NameIdentifier), S["Revoked after the review of enrollment {0}.", enrollment.Number ?? enrollment.ItemId], HttpContext.RequestAborted);
+
+        if (result.Succeeded)
+        {
+            await _notifier.SuccessAsync(H["The credential is revoked. Clear the review when you have recorded your decision."]);
+        }
+        else
+        {
+            await _notifier.ErrorAsync(H["{0}", Refusal(result.ErrorCode)]);
+        }
+
+        return Redirect(Url.Action("Detail", "Enrollments", new { area = "CrestApps.OrchardCore.Learning", id = enrollmentId }));
     }
 
     private async Task PopulateAsync(AwardCredentialViewModel model)

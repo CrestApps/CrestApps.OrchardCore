@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.Learning.Credentials.Services;
 using CrestApps.OrchardCore.Learning.Credentials.ViewModels;
 using CrestApps.OrchardCore.Learning.Credentials.Workflows;
 using CrestApps.OrchardCore.Learning.Programs;
+using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
@@ -61,6 +62,7 @@ public sealed class Startup : StartupBase
         services.TryAddScoped<LearnerUserLookup>();
         services.AddDisplayDriver<CredentialAwardRow, CredentialAwardRowDisplayDriver>();
         services.AddPersonalDataContributor<CredentialsPersonalDataContributor>();
+        services.AddScoped<IEnrollmentReviewActionProvider, CredentialReviewActionProvider>();
     }
 }
 

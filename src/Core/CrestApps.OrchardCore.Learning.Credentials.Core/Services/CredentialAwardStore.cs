@@ -56,6 +56,17 @@ public sealed class CredentialAwardStore : DocumentCatalog<CredentialAward, Cred
             .FirstOrDefaultAsync(cancellationToken);
 
     /// <summary>
+    /// Lists the awards a rule of a kind made from a source, revoked ones included.
+    /// </summary>
+    /// <param name="ruleKind">The rule kind.</param>
+    /// <param name="sourceId">The source id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The awards.</returns>
+    public async Task<IReadOnlyList<CredentialAward>> ListBySourceAsync(string ruleKind, string sourceId, CancellationToken cancellationToken = default)
+        => (await Session.Query<CredentialAward, CredentialAwardIndex>(index => index.RuleKind == ruleKind && index.SourceId == sourceId, collection: CollectionName)
+            .ListAsync(cancellationToken)).ToArray();
+
+    /// <summary>
     /// Lists a person's awards, newest first.
     /// </summary>
     /// <param name="userId">The recipient.</param>

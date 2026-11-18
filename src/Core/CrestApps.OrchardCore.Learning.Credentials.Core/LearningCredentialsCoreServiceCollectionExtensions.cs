@@ -36,6 +36,7 @@ public static class LearningCredentialsCoreServiceCollectionExtensions
         services.TryAddScoped<ICredentialAwardService, DefaultCredentialAwardService>();
         services.TryAddScoped<ICredentialAwardQueue, DeferredCredentialAwardQueue>();
         services.TryAddScoped<CredentialRuleTrigger>();
+        services.TryAddScoped<CredentialSourceRevoker>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IEnrollmentObserver, CredentialEnrollmentObserver>());
 
         return services;
