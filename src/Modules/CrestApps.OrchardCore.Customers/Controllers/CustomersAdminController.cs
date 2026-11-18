@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Json;
 using CrestApps.Core;
@@ -39,8 +38,6 @@ public sealed class CustomersAdminController : Controller
 {
     private const string OptionsSearch = "Options.Search";
     private const string OptionsFilter = "Options.Filter";
-
-    private static readonly EmailAddressAttribute _emailAddress = new();
 
     private static readonly JsonSerializerOptions _exportOptions = new(JsonSerializerDefaults.Web)
     {
@@ -103,30 +100,7 @@ public sealed class CustomersAdminController : Controller
         options ??= new CustomersIndexOptions();
 
         var pager = new Pager(pagerParameters, _pagerOptions);
-        var query = new CustomerQuery { Search = options.Search };
-
-        switch (options.Filter)
-        {
-            case CustomerListFilter.Active:
-                query.Status = CustomerStatus.Active;
-                break;
-            case CustomerListFilter.WithAccount:
-                query.Status = CustomerStatus.Active;
-                query.HasAccount = true;
-                break;
-            case CustomerListFilter.Guests:
-                query.Status = CustomerStatus.Active;
-                query.HasAccount = false;
-                break;
-            case CustomerListFilter.Businesses:
-                query.Status = CustomerStatus.Active;
-                query.Kind = CustomerKind.Business;
-                break;
-            case CustomerListFilter.Disabled:
-                query.Status = CustomerStatus.Disabled;
-                break;
-        }
-
+        var query = CustomerEditorRules.ToQuery(options.Filter, options.Search);
         var (count, customers) = await _store.PageAsync(query, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
 
         options.Filters =
@@ -258,18 +232,12 @@ public sealed class CustomersAdminController : Controller
     // Recent orders, and the merges that joined guests to this customer or this guest to an account.
     private async Task AddHistoryAsync(CustomerEditViewModel model, Customer customer)
     {
-        if (HttpContext.RequestServices.GetService<IOrderStore>() is { } orders)
-        {
-            // An account holder's orders include those from before the customer record existed.
-            var (count, recent) = await orders.PageAsync(new OrderQuery
-            {
-                UserId = customer.UserId,
-                CustomerId = string.IsNullOrEmpty(customer.UserId) ? customer.ItemId : null,
-                Statuses = [OrderStatus.Paid, OrderStatus.AwaitingPayment],
-            }, 0, 20, HttpContext.RequestAborted);
+        var history = await CustomerEditorRules.GetHistoryAsync(customer, _store, HttpContext.RequestServices.GetService<IOrderStore>(), HttpContext.RequestAborted);
 
+        if (history.HasOrders)
+        {
             model.HasOrders = true;
-            model.Orders = recent
+            model.Orders = history.Orders
                 .Select(order => new CustomerOrderSummary
                 {
                     OrderId = order.ItemId,
@@ -281,23 +249,13 @@ public sealed class CustomersAdminController : Controller
                 .ToArray();
         }
 
-        if (!string.IsNullOrEmpty(customer.MergedIntoCustomerId) && await _store.FindByIdAsync(customer.MergedIntoCustomerId, HttpContext.RequestAborted) is { } into)
+        if (history.MergedInto is { } into)
         {
             model.MergedInto = new CustomerMergeSummary { CustomerId = into.ItemId, Name = into.GetName() };
-            model.MergedUtc = customer.MergedUtc;
+            model.MergedUtc = history.MergedUtc;
         }
 
-        var merged = new List<CustomerMergeSummary>();
-
-        foreach (var mergedId in customer.MergedCustomerIds ?? [])
-        {
-            if (await _store.FindByIdAsync(mergedId, HttpContext.RequestAborted) is { } guest)
-            {
-                merged.Add(new CustomerMergeSummary { CustomerId = guest.ItemId, Name = guest.GetName() });
-            }
-        }
-
-        model.MergedCustomers = merged;
+        model.MergedCustomers = [.. history.MergedCustomers.Select(guest => new CustomerMergeSummary { CustomerId = guest.ItemId, Name = guest.GetName() })];
         model.PrivacyLog = customer.PrivacyLog ?? [];
     }
 
@@ -452,7 +410,7 @@ public sealed class CustomersAdminController : Controller
     {
         var customer = string.IsNullOrEmpty(customerId) ? null : await _store.FindByIdAsync(customerId, HttpContext.RequestAborted);
 
-        return customer?.Status is CustomerStatus.Anonymized or CustomerStatus.Merged ? null : customer;
+        return CustomerEditorRules.IsEditable(customer) ? customer : null;
     }
 
     private async Task<bool> TrySaveAsync(Customer customer)
@@ -528,76 +486,31 @@ public sealed class CustomersAdminController : Controller
 
     private void Validate(CustomerEditViewModel model, Customer customer)
     {
-        // A customer with an account takes the account's email, so it is not edited here.
-        var email = string.IsNullOrEmpty(customer.UserId) ? model.Email?.Trim() : customer.Email;
-
-        if (string.IsNullOrEmpty(customer.UserId) && !string.IsNullOrEmpty(email) && !_emailAddress.IsValid(email))
+        foreach (var problem in CustomerEditorRules.Check(model, customer))
         {
-            ModelState.AddModelError(nameof(model.Email), S["Enter a valid email address."]);
-        }
-
-        if (model.Kind == CustomerKind.Business && string.IsNullOrWhiteSpace(model.CompanyName))
-        {
-            ModelState.AddModelError(nameof(model.CompanyName), S["A business needs a company name."]);
-        }
-
-        if (string.IsNullOrWhiteSpace(model.DisplayName) &&
-            string.IsNullOrWhiteSpace(model.FirstName) &&
-            string.IsNullOrWhiteSpace(model.LastName) &&
-            string.IsNullOrWhiteSpace(model.CompanyName) &&
-            string.IsNullOrEmpty(email))
-        {
-            ModelState.AddModelError(string.Empty, S["Enter a name, a company or an email, so the customer can be found again."]);
-        }
-
-        if (model.Status == CustomerStatus.Anonymized)
-        {
-            ModelState.AddModelError(nameof(model.Status), S["A customer is anonymized by erasing them, not by changing their status."]);
+            switch (problem)
+            {
+                case CustomerEditProblem.InvalidEmail:
+                    ModelState.AddModelError(nameof(model.Email), S["Enter a valid email address."]);
+                    break;
+                case CustomerEditProblem.CompanyNameRequired:
+                    ModelState.AddModelError(nameof(model.CompanyName), S["A business needs a company name."]);
+                    break;
+                case CustomerEditProblem.NameRequired:
+                    ModelState.AddModelError(string.Empty, S["Enter a name, a company or an email, so the customer can be found again."]);
+                    break;
+                case CustomerEditProblem.AnonymizedStatus:
+                    ModelState.AddModelError(nameof(model.Status), S["A customer is anonymized by erasing them, not by changing their status."]);
+                    break;
+            }
         }
     }
 
     private static void Apply(CustomerEditViewModel model, Customer customer, DateTime now)
-    {
-        customer.Kind = model.Kind;
-        customer.Status = model.Status;
-        customer.DisplayName = Trim(model.DisplayName);
-        customer.FirstName = Trim(model.FirstName);
-        customer.LastName = Trim(model.LastName);
-        customer.CompanyName = Trim(model.CompanyName);
-        customer.TaxId = Trim(model.TaxId);
-        customer.IsTaxExempt = model.IsTaxExempt;
-        customer.TaxExemptionReason = model.IsTaxExempt ? Trim(model.TaxExemptionReason) : null;
-        customer.Phone = Trim(model.Phone);
-        customer.AcceptsMarketing = model.AcceptsMarketing;
-
-        if (string.IsNullOrEmpty(customer.UserId))
-        {
-            customer.Email = Trim(model.Email);
-        }
-
-        customer.ModifiedUtc = now;
-    }
+        => CustomerEditorRules.Apply(model, customer, now);
 
     private static CustomerEditViewModel ToViewModel(Customer customer)
-        => new()
-        {
-            CustomerId = customer.ItemId,
-            UserId = customer.UserId,
-            CreatedUtc = customer.CreatedUtc,
-            LastActivityUtc = customer.LastActivityUtc,
-            Kind = customer.Kind,
-            Status = customer.Status,
-            DisplayName = customer.DisplayName,
-            FirstName = customer.FirstName,
-            LastName = customer.LastName,
-            CompanyName = customer.CompanyName,
-            TaxId = customer.TaxId,
-            IsTaxExempt = customer.IsTaxExempt,
-            TaxExemptionReason = customer.TaxExemptionReason,
-            Email = customer.Email,
-            Phone = customer.Phone,
-            AcceptsMarketing = customer.AcceptsMarketing,
-        };
+        => CustomerEditorRules.ToViewModel(customer);
 
     private static void CopyInput(CustomerEditViewModel from, CustomerEditViewModel to)
     {
@@ -640,9 +553,6 @@ public sealed class CustomersAdminController : Controller
 
         return model;
     }
-
-    private static string Trim(string value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static RouteValueDictionary FilterRouteValues(CustomersIndexOptions options, PagerParameters pagerParameters)
     {
