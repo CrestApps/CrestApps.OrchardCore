@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Learning;
 using CrestApps.OrchardCore.Learning.Classes;
 using CrestApps.OrchardCore.Learning.Classes.Core.Services;
@@ -533,6 +535,42 @@ public sealed class ClassRegistrationTests
             Assert.Equal(ClassesConstants.SessionCancelledNotificationType, notice.Message.Type);
             Assert.Contains("The trainer is ill", notice.Message.TextBody);
         });
+    }
+
+    [Fact]
+    public async Task ARegisteredLearnersOwnCalendar_ShowsTheirClassSession()
+    {
+        // Arrange: browser pass 2026-11-18. A session without a room calendar was on nobody's calendar.
+        var (h, session) = await CreateAsync();
+        await using var _ = h;
+        var ana = await EnrollAsync(h, "ana");
+        var ben = await EnrollAsync(h, "ben");
+        await RegisterAsync(h, ana, session);
+        var anaCalendar = await h.CreateCalendarAsync(CalendarTestHarness.Personal, "Ana", calendar =>
+            calendar.OwnerId = "ana");
+        var benCalendar = await h.CreateCalendarAsync(CalendarTestHarness.Personal, "Ben", calendar =>
+            calendar.OwnerId = "ben");
+        var meeting = session.Meetings[0];
+
+        // Act
+        Task<IReadOnlyList<CalendarOccurrence>> ReadAsync(Calendar calendar)
+            => h.RunAsync(services => services.GetRequiredService<ICalendarQueryService>().GetOccurrencesAsync(new CalendarOccurrenceQuery
+            {
+                CalendarIds = [calendar.ItemId],
+                FromUtc = meeting.StartUtc.AddDays(-1),
+                ToUtc = meeting.EndUtc.AddDays(1),
+                IncludeEventSources = true,
+            }));
+
+        var anas = await ReadAsync(anaCalendar);
+        var bens = await ReadAsync(benCalendar);
+
+        // Assert
+        var occurrence = Assert.Single(anas);
+        Assert.Equal(meeting.StartUtc, occurrence.StartUtc);
+        Assert.Equal(anaCalendar.ItemId, occurrence.Event.CalendarId);
+        Assert.Equal("Forklift practical", occurrence.Event.Title);
+        Assert.Empty(bens);
     }
 
     private static async Task<SchedulingSession> SaveSessionAsync(CalendarTestHarness h, string typeId, IList<string> resourceIds, string classItemId, int capacity)

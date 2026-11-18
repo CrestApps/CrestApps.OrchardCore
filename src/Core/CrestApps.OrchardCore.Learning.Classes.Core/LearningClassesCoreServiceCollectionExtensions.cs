@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Learning;
 using CrestApps.OrchardCore.Learning.Classes;
 using CrestApps.OrchardCore.Learning.Classes.Core.Services;
@@ -37,6 +38,7 @@ public static class LearningClassesCoreServiceCollectionExtensions
         });
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAppointmentObserver, ClassAttendanceObserver>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAppointmentObserver, ClassSessionCancelledObserver>());
+        services.AddCalendarEventSource<ClassSessionCalendarEventSource>();
         services.AddEnrollmentObserver<ClassEnrollmentObserver>();
         services.AddCourseItemKind<ClassPart>(ClassesConstants.ClassKind, kind =>
         {
