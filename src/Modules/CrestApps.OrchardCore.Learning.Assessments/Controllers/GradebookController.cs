@@ -58,6 +58,7 @@ public sealed class GradebookController : Controller
     /// </summary>
     /// <param name="model">The course and scale chosen.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/gradebook", "LearningGradebook")]
     public async Task<IActionResult> Index(GradebookViewModel model)
     {

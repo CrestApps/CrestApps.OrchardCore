@@ -79,6 +79,7 @@ public sealed class GradingController : Controller
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="shapeFactory">The shape factory.</param>
     /// <returns>The list.</returns>
+    [HttpGet]
     [Admin("learning/grading", "LearningGrading")]
     public async Task<IActionResult> Index(PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
     {
@@ -107,6 +108,7 @@ public sealed class GradingController : Controller
     /// </summary>
     /// <param name="id">The attempt.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/grading/attempts/{id}", "LearningGradingAttempt")]
     public async Task<IActionResult> Attempt(string id)
     {
@@ -256,6 +258,7 @@ public sealed class GradingController : Controller
     /// </summary>
     /// <param name="quizId">The quiz.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/quizzes/{quizId}/overrides", "LearningQuizOverrides")]
     public async Task<IActionResult> Overrides(string quizId)
     {

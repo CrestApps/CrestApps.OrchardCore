@@ -41,6 +41,7 @@ public sealed class GradeScalesController : Controller
     /// <summary>
     /// Lists the grade scales.
     /// </summary>
+    [HttpGet]
     [Admin("learning/grade-scales", "LearningGradeScales")]
     public async Task<IActionResult> Index(PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
     {
@@ -65,6 +66,7 @@ public sealed class GradeScalesController : Controller
     /// <summary>
     /// Shows the editor of a new scale.
     /// </summary>
+    [HttpGet]
     [Admin("learning/grade-scales/new", "LearningGradeScalesCreate")]
     public async Task<IActionResult> Create()
     {
@@ -89,6 +91,7 @@ public sealed class GradeScalesController : Controller
     /// <summary>
     /// Shows the editor of a scale.
     /// </summary>
+    [HttpGet]
     [Admin("learning/grade-scales/{id}", "LearningGradeScalesEdit")]
     public async Task<IActionResult> Edit(string id)
     {
