@@ -22,7 +22,7 @@
     {
         <div class="alert alert-warning sticky-top d-flex justify-content-between align-items-center" role="timer" aria-live="off" data-learning-timer data-deadline="@deadline.ToString("O")" data-server-now="@Clock.UtcNow.ToString("O")">
             <span>@T["Time left"]: <strong data-learning-timer-text>&nbsp;</strong></span>
-            <span class="small">@T["Due"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(deadline, DateTimeKind.Utc), Format: "t"))</span>
+            <span class="small">@T["Due"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(deadline, DateTimeKind.Utc), Format: "g"))</span>
         </div>
     }
 
