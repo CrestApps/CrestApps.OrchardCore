@@ -99,11 +99,20 @@ public sealed class LearningScoringHelpTests
         using var admin = await _site.CreateClientAsync("admin");
         var html = await admin.GetStringAsync($"Admin/learning/grading/attempts/{setup.AttemptId}", TestContext.Current.CancellationToken);
 
+        // The site has no AI model, so the suggestion the endpoint would record is recorded here, as it does (round 9,
+        // M12: the flag comes from the server, not from the form).
+        await _site.InTenantAsync(async services =>
+        {
+            var users = services.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>>();
+            var adminId = await users.GetUserIdAsync(await users.FindByNameAsync("admin"));
+
+            return await services.GetRequiredService<IAssessmentAttemptService>().RecordScoringHelpAsync(setup.AttemptId, 0, adminId);
+        });
+
         var response = await admin.PostAsync($"Admin/learning/grading/attempts/{setup.AttemptId}/grade", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["score0"] = "2",
             ["comment0"] = "Names two of the three.",
-            ["aiAssisted0"] = "true",
             ["__RequestVerificationToken"] = LearningSiteFixture.Token(html),
         }), TestContext.Current.CancellationToken);
         var attempt = await _site.InTenantAsync(async services => await services.GetRequiredService<AssessmentAttemptStore>().FindByIdAsync(setup.AttemptId));

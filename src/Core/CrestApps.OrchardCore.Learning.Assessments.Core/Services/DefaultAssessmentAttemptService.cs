@@ -349,9 +349,14 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
         {
             foreach (var (index, score) in scores ?? new Dictionary<int, ManualScore>())
             {
-                target.Items[index].ManualScore = score.Points;
-                target.Items[index].GraderComment = string.IsNullOrWhiteSpace(score.Comment) ? null : score.Comment.Trim();
-                target.Items[index].AIAssisted = score.AIAssisted;
+                var item = target.Items[index];
+
+                // AI-assisted when scoring help gave this grader a suggestion for the item, or when an assisted score is
+                // saved again unchanged; never because the form says so (review round 9, M12).
+                item.AIAssisted = string.Equals(item.ScoringHelpGivenTo, actor, StringComparison.Ordinal) || (item.AIAssisted && item.ManualScore == score.Points);
+                item.ScoringHelpGivenTo = null;
+                item.ManualScore = score.Points;
+                item.GraderComment = string.IsNullOrWhiteSpace(score.Comment) ? null : score.Comment.Trim();
             }
 
             target.Feedback = string.IsNullOrWhiteSpace(feedback) ? target.Feedback : feedback.Trim();
@@ -427,6 +432,22 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
 
         return new AttemptResult { Attempt = attempt };
     }
+
+    /// <inheritdoc />
+    public Task<AttemptResult> RecordScoringHelpAsync(string attemptId, int index, string grader, CancellationToken cancellationToken = default)
+        => WriteAsync(attemptId, async (attempt, notifications) =>
+        {
+            if (string.IsNullOrEmpty(grader) || index < 0 || index >= attempt.Items.Count)
+            {
+                return AttemptResult.Fail(AttemptErrors.InvalidScore);
+            }
+
+            // The write gate commits the session under the attempt's lock.
+            attempt.Items[index].ScoringHelpGivenTo = grader;
+            await _attemptStore.UpdateAsync(attempt, cancellationToken);
+
+            return new AttemptResult { Attempt = attempt };
+        }, cancellationToken);
 
     /// <inheritdoc />
     public Task<AttemptResult> VoidAsync(string attemptId, string actor, string reason, CancellationToken cancellationToken = default)

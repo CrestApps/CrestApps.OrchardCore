@@ -27,12 +27,58 @@ public sealed class AIAssistedGradeRecordTests
         await h.RunAsync(service => service.SaveResponseAsync(attempt.ItemId, "learner", 0, new AttemptResponse { Texts = ["Heat, fuel and oxygen."] }));
         await h.RunAsync(service => service.SubmitAsync(attempt.ItemId, "learner"));
 
-        var assisted = await h.RunAsync(service => service.GradeAsync(attempt.ItemId, new Dictionary<int, ManualScore> { [0] = new() { Points = 3, AIAssisted = true } }, null, "grader"));
+        await h.RunAsync(service => service.RecordScoringHelpAsync(attempt.ItemId, 0, "grader"));
+        var assisted = await h.RunAsync(service => service.GradeAsync(attempt.ItemId, new Dictionary<int, ManualScore> { [0] = new() { Points = 3 } }, null, "grader"));
         var changed = await h.RunAsync(service => service.GradeAsync(attempt.ItemId, new Dictionary<int, ManualScore> { [0] = new() { Points = 4 } }, null, "grader"));
 
         Assert.True(assisted.Attempt.Items[0].AIAssisted);
         Assert.False(changed.Attempt.Items[0].AIAssisted);
         Assert.Equal(AttemptStatus.Graded, changed.Attempt.Status);
+    }
+
+    [Fact]
+    public async Task Round9M12_AFlagSentByTheBrowser_WithoutASuggestion_IsNotRecorded()
+    {
+        await using var h = await AssessmentTestHarness.CreateAsync();
+        var attempt = await SubmittedEssayAsync(h);
+
+        var claimed = await h.RunAsync(service => service.GradeAsync(attempt.ItemId, new Dictionary<int, ManualScore> { [0] = new() { Points = 3, AIAssisted = true } }, null, "grader"));
+
+        Assert.False(claimed.Attempt.Items[0].AIAssisted);
+    }
+
+    [Fact]
+    public async Task Round9M12_ASuggestionIssuedToTheGrader_MarksTheirNextScore_AndAnUnchangedScoreKeepsTheMark()
+    {
+        await using var h = await AssessmentTestHarness.CreateAsync();
+        var attempt = await SubmittedEssayAsync(h);
+
+        await h.RunAsync(service => service.RecordScoringHelpAsync(attempt.ItemId, 0, "grader"));
+        var assisted = await h.RunAsync(service => service.GradeAsync(attempt.ItemId, new Dictionary<int, ManualScore> { [0] = new() { Points = 3 } }, null, "grader"));
+
+        // The grader saves another question; the form sends the first essay again, unchanged, with no flag.
+        var other = await h.RunAsync(service => service.GradeAsync(attempt.ItemId, new Dictionary<int, ManualScore> { [0] = new() { Points = 3 }, [1] = new() { Points = 2 } }, null, "grader"));
+        var changed = await h.RunAsync(service => service.GradeAsync(attempt.ItemId, new Dictionary<int, ManualScore> { [0] = new() { Points = 1 } }, null, "grader"));
+
+        Assert.True(assisted.Attempt.Items[0].AIAssisted);
+        Assert.True(other.Attempt.Items[0].AIAssisted);
+        Assert.False(other.Attempt.Items[1].AIAssisted);
+        Assert.False(changed.Attempt.Items[0].AIAssisted);
+    }
+
+    private static async Task<AssessmentAttempt> SubmittedEssayAsync(AssessmentTestHarness h)
+    {
+        h.Courses.AddCourse("course1");
+        h.Questions.AddEssay("essay", points: 4);
+        h.Questions.AddEssay("essay2", points: 4);
+        h.AddQuiz("course1", "quiz", quiz => quiz.QuestionIds = ["essay", "essay2"], completionMode: CompletionModes.Graded);
+        await h.EnrollAsync("learner", "course1");
+        var attempt = (await h.StartAsync("learner", "quiz")).Attempt;
+        await h.RunAsync(service => service.SaveResponseAsync(attempt.ItemId, "learner", 0, new AttemptResponse { Texts = ["Heat, fuel and oxygen."] }));
+        await h.RunAsync(service => service.SaveResponseAsync(attempt.ItemId, "learner", 1, new AttemptResponse { Texts = ["Water."] }));
+        await h.RunAsync(service => service.SubmitAsync(attempt.ItemId, "learner"));
+
+        return attempt;
     }
 
     [Fact]

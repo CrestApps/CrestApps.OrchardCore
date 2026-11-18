@@ -108,6 +108,12 @@ public sealed class AttemptItem
     public bool AIAssisted { get; set; }
 
     /// <summary>
+    /// Gets or sets the grader to whom scoring help gave a suggestion for this item since its last manual score. The next
+    /// score that grader saves is AI-assisted; recorded on the server, never sent by the browser.
+    /// </summary>
+    public string ScoringHelpGivenTo { get; set; }
+
+    /// <summary>
     /// Gets the score that counts: the grader score when there is one, else the automatic score.
     /// </summary>
     public decimal? Score => ManualScore ?? AutoScore;

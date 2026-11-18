@@ -57,6 +57,17 @@ public interface IAssessmentAttemptService
     Task<AttemptResult> GradeAsync(string attemptId, IDictionary<int, ManualScore> scores, string feedback, string actor, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Records that scoring help gave a grader a suggestion for an item: the next score that grader saves for it is
+    /// AI-assisted. A score kept unchanged afterwards keeps the mark.
+    /// </summary>
+    /// <param name="attemptId">The attempt.</param>
+    /// <param name="index">The item's position.</param>
+    /// <param name="grader">The grader.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<AttemptResult> RecordScoringHelpAsync(string attemptId, int index, string grader, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Scores the attempt again from its own items, such as after a key was corrected on it, keeping the old score.
     /// </summary>
     /// <param name="attemptId">The attempt.</param>
@@ -133,7 +144,8 @@ public sealed class StartAttemptRequest
 public sealed class ManualScore
 {
     /// <summary>
-    /// Gets or sets whether the grader used scoring help (a suggestion from AI) for this score.
+    /// Gets or sets whether the grader says they used scoring help. Not trusted: the attempt service decides from the
+    /// suggestion it recorded (<see cref="IAssessmentAttemptService.RecordScoringHelpAsync"/>).
     /// </summary>
     public bool AIAssisted { get; set; }
 

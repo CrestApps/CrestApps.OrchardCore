@@ -205,7 +205,6 @@ public sealed class GradingController : Controller
                 {
                     Points = points,
                     Comment = Request.Form["comment" + item.Index].ToString(),
-                    AIAssisted = string.Equals(Request.Form["aiAssisted" + item.Index].ToString(), bool.TrueString, StringComparison.OrdinalIgnoreCase),
                 };
             }
         }

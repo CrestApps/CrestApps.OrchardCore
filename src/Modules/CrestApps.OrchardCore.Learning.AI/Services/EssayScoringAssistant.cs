@@ -117,7 +117,16 @@ public sealed class EssayScoringAssistant
             ["answer"] = answer,
         };
 
-        return await SuggestAsync(input, item.Points, null, AttemptCommentLength, cancellationToken);
+        var result = await SuggestAsync(input, item.Points, null, AttemptCommentLength, cancellationToken);
+
+        // The server records that this grader was given a suggestion: the grade they save next is AI-assisted.
+        if (result.Suggestion is not null && user?.FindFirstValue(ClaimTypes.NameIdentifier) is { Length: > 0 } grader &&
+            _services.GetService<CrestApps.OrchardCore.Learning.Assessments.Services.IAssessmentAttemptService>() is { } attempts)
+        {
+            await attempts.RecordScoringHelpAsync(attemptId, index, grader, cancellationToken);
+        }
+
+        return result;
     }
 
     /// <summary>
