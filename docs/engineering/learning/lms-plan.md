@@ -1035,3 +1035,11 @@ The ten new workflow activities are listed in the workflow designer's activity l
 **Not checked in the browser.** The Training segment on a shift plan (the test site has no staff or published schedules; covered by Workforce tests on a real store that publish a schedule), an offer that runs out, cancelling a whole session, the meeting link, and the calendar event of a session.
 
 **Fixed while verifying.** The sessions list failed to render its rows (the row views took the row instead of `ShapeViewModel<T>`); an integration test now opens the sessions and roster pages. A learner whose enrollment completed was told to enroll; the panel now uses the newest enrollment when none is open. Three learner pages from Phases 3 and 4 had no breadcrumb, which the view lint (tests/js/lint) refuses.
+
+**Browser pass 2026-11-18.** Fixed test first on this branch; the red and green counts are in each commit.
+
+| Bug | Fix | Commit |
+| --- | --- | --- |
+| Cancelling a session tells nobody, although the page says it does | `ClassSessionCancelledObserver` sends each learner whose place went with the cancelled session a **Class session cancelled** notification with the reason; a place given up by the learner or an ending enrollment tells nobody. | `58cc71a47` |
+| Class sessions appear on no attendee's calendar | `ClassSessionCalendarEventSource` (a Calendars event source) shows each meeting of a confirmed or attended place on the learner's own calendar, room or no room. | `32c1238cf` |
+| GET/POST route guard | The class session pages say `HttpGet`. | `9058f9654` |
