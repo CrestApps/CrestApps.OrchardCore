@@ -1345,7 +1345,7 @@ Fixed test first on this branch; the red and green counts are in each commit.
 
 | Bug | Fix | Commit |
 | --- | --- | --- |
-| Review launches report `entry = ab-initio` | A spec bug: SCORM 1.2 and SCORM 2004 give `ab-initio` only for the first launch (of an attempt), `resume` after suspend and empty otherwise. A review now gives the entry of the session it reopens. | `8f4e7cbb2` |
-| The external tools deployment step has no title | `LearningExternalToolsDeploymentStepDisplayDriver` with its views; a guard test fails for any Learning deployment step without a display driver. | `85e655950` |
-| Workflow hint shows `{ x }` (Award Credential) | The Liquid example is an argument of the localized hint. | `422686669` |
-| GET/POST route guard | The credential award, external tool, package upload and statement pages say `HttpGet`. | `9c2174fd0` |
+| Review launches report `entry = ab-initio` | A spec bug: SCORM 1.2 and SCORM 2004 give `ab-initio` only for the first launch (of an attempt), `resume` after suspend and empty otherwise. A review now gives the entry of the session it reopens. | `bd8bbcbe8` |
+| The external tools deployment step has no title | `LearningExternalToolsDeploymentStepDisplayDriver` with its views; a guard test fails for any Learning deployment step without a display driver. | `7c8e31164` |
+| Workflow hint shows `{ x }` (Award Credential) | The Liquid example is an argument of the localized hint. | `2d7a73b15` |
+| GET/POST route guard | The credential award, external tool, package upload and statement pages say `HttpGet`. | `8067d6ade` |
