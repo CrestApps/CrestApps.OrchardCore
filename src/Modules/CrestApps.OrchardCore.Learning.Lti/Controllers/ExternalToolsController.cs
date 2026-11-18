@@ -62,6 +62,7 @@ public sealed class ExternalToolsController : CatalogAdminController<ExternalToo
     protected override LocalizedHtmlString DeletedNotification
         => H["The tool has been removed. Its course items no longer launch."];
 
+    [HttpGet]
     [Admin("learning/external-tools", "LearningExternalToolsIndex")]
     public Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -77,6 +78,7 @@ public sealed class ExternalToolsController : CatalogAdminController<ExternalToo
     public Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
         => IndexFilterPostAsync(model, pagerParameters);
 
+    [HttpGet]
     [Admin("learning/external-tools/create", "LearningExternalToolsCreate")]
     public Task<IActionResult> Create()
         => CreateAsync();
@@ -87,6 +89,7 @@ public sealed class ExternalToolsController : CatalogAdminController<ExternalToo
     public Task<IActionResult> CreatePost()
         => CreatePostAsync();
 
+    [HttpGet]
     [Admin("learning/external-tools/edit/{id}", "LearningExternalToolsEdit")]
     public Task<IActionResult> Edit(string id)
         => EditAsync(id);

@@ -69,6 +69,7 @@ public sealed class PackagesAdminController : Controller
     /// </summary>
     /// <param name="contentItemId">The package item.</param>
     /// <returns>The form.</returns>
+    [HttpGet]
     [Admin("learning/packages/{contentItemId}/upload", "LearningPackageUpload")]
     public async Task<IActionResult> Upload(string contentItemId)
     {

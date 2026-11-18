@@ -100,6 +100,7 @@ public sealed class CredentialAwardsAdminController : Controller
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="shapeFactory">The shape factory.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/credential-awards", "LearningCredentialAwards")]
     public async Task<IActionResult> Index(CredentialAwardListOptions options, PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
     {
@@ -193,6 +194,7 @@ public sealed class CredentialAwardsAdminController : Controller
     /// The form to award a credential by hand.
     /// </summary>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/credential-awards/new", "LearningCredentialAwardsNew")]
     public async Task<IActionResult> Award()
     {
@@ -270,6 +272,7 @@ public sealed class CredentialAwardsAdminController : Controller
     /// </summary>
     /// <param name="id">The award id.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/credential-awards/{id}", "LearningCredentialAward")]
     public async Task<IActionResult> Display(string id)
     {
@@ -307,6 +310,7 @@ public sealed class CredentialAwardsAdminController : Controller
     /// </summary>
     /// <param name="id">The award id.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/credential-awards/{id}/revoke", "LearningCredentialAwardRevoke")]
     public async Task<IActionResult> Revoke(string id)
     {

@@ -77,6 +77,7 @@ public sealed class StatementsAdminController : Controller
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="shapeFactory">The shape factory.</param>
     /// <returns>The list.</returns>
+    [HttpGet]
     [Admin("learning/statements", "LearningStatements")]
     public async Task<IActionResult> Index(StatementListOptions options, PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
     {
@@ -143,6 +144,7 @@ public sealed class StatementsAdminController : Controller
     /// </summary>
     /// <param name="id">The statement id.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/statements/{id}", "LearningStatement")]
     public async Task<IActionResult> Display(string id)
     {
