@@ -148,11 +148,12 @@ public sealed class XapiStatementsResource
 
         var parameters = new Dictionary<string, string>(request.Query, StringComparer.Ordinal);
         long? sequenceBound = null;
+        long? after = null;
         var skip = 0;
 
         if (parameters.TryGetValue("more", out var more))
         {
-            if (parameters.Count > 1 || !TryReadMore(more, out parameters, out skip, out sequenceBound))
+            if (parameters.Count > 1 || !TryReadMore(more, out parameters, out skip, out sequenceBound, out after))
             {
                 return XapiResponse.Error(400, "The more parameter is not a link this LRS made.");
             }
@@ -216,6 +217,7 @@ public sealed class XapiStatementsResource
             Ascending = ascending,
             Skip = skip,
             MaxSequence = sequenceBound,
+            AfterSequence = after,
         };
 
         var error = ReadFilters(parameters, query);
@@ -243,7 +245,7 @@ public sealed class XapiStatementsResource
         {
             parameters.Remove("more");
             parameters["limit"] = requestedLimit.ToString(CultureInfo.InvariantCulture);
-            nextLink = request.EndpointPath.TrimEnd('/') + "/statements?more=" + Uri.EscapeDataString(WriteMore(parameters, skip + page.Records.Count, query.MaxSequence ?? 0));
+            nextLink = request.EndpointPath.TrimEnd('/') + "/statements?more=" + Uri.EscapeDataString(WriteMore(parameters, page.Records[^1].Sequence, query.MaxSequence ?? 0));
         }
 
         var result = new JsonObject
@@ -490,23 +492,25 @@ public sealed class XapiStatementsResource
         }
     }
 
-    private static string WriteMore(Dictionary<string, string> parameters, int skip, long sequence)
+    // The link names the last statement of the page (keyset paging), not how many to skip.
+    private static string WriteMore(Dictionary<string, string> parameters, long after, long sequence)
     {
         var token = new JsonObject
         {
             ["p"] = JsonSerializer.SerializeToNode(parameters),
-            ["s"] = skip,
+            ["a"] = after,
             ["q"] = sequence,
         };
 
         return Convert.ToBase64String(Encoding.UTF8.GetBytes(token.ToJsonString())).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 
-    private static bool TryReadMore(string more, out Dictionary<string, string> parameters, out int skip, out long? sequence)
+    private static bool TryReadMore(string more, out Dictionary<string, string> parameters, out int skip, out long? sequence, out long? after)
     {
         parameters = null;
         skip = 0;
         sequence = null;
+        after = null;
 
         try
         {
@@ -516,13 +520,14 @@ public sealed class XapiStatementsResource
 
             var token = JsonNode.Parse(Encoding.UTF8.GetString(Convert.FromBase64String(text)))?.AsObject();
 
-            if (token?["p"] is not JsonObject values || token["s"] is null || token["q"] is null)
+            if (token?["p"] is not JsonObject values || (token["s"] is null && token["a"] is null) || token["q"] is null)
             {
                 return false;
             }
 
             parameters = values.ToDictionary(pair => pair.Key, pair => pair.Value?.GetValue<string>(), StringComparer.Ordinal);
-            skip = token["s"].GetValue<int>();
+            skip = token["s"]?.GetValue<int>() ?? 0;
+            after = token["a"]?.GetValue<long>();
             sequence = token["q"].GetValue<long>();
 
             return skip >= 0 && !parameters.ContainsKey("more") && parameters.Keys.All(_queryParameters.Contains);

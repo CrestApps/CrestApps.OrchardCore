@@ -250,6 +250,13 @@ public sealed class XapiStatementStore : DocumentCatalog<XapiStatementRecord, Xa
             statements = statements.Where(index => index.Sequence <= maxSequence);
         }
 
+        if (filter.AfterSequence is { } after)
+        {
+            statements = filter.Ascending
+                ? statements.Where(index => index.Sequence > after)
+                : statements.Where(index => index.Sequence < after);
+        }
+
         if (!string.IsNullOrEmpty(scope.ActorHash))
         {
             statements = statements.Where(index => index.ActorHash == scope.ActorHash);
@@ -271,7 +278,7 @@ public sealed class XapiStatementStore : DocumentCatalog<XapiStatementRecord, Xa
             : statements.OrderByDescending(index => index.Sequence);
 
         var limit = Math.Max(filter.Limit, 1);
-        var page = (await ordered.Skip(Math.Max(filter.Skip, 0)).Take(limit + 1).ListAsync(cancellationToken)).ToList();
+        var page = (await ordered.Skip(filter.AfterSequence is null ? Math.Max(filter.Skip, 0) : 0).Take(limit + 1).ListAsync(cancellationToken)).ToList();
 
         return new XapiQueryResult
         {

@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Learning.Xapi.Core.Http;
 using CrestApps.OrchardCore.Learning.Xapi.Core.Validation;
 using CrestApps.OrchardCore.Learning.Xapi.Models;
 using Microsoft.Extensions.Options;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -24,8 +25,12 @@ namespace CrestApps.OrchardCore.Learning.Xapi.Core.Services;
 /// </summary>
 public sealed class XapiDocumentsResource
 {
+    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
+
     private readonly XapiDocumentStore _store;
     private readonly ISession _session;
+    private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
     private readonly XapiOptions _options;
 
@@ -35,11 +40,13 @@ public sealed class XapiDocumentsResource
     public XapiDocumentsResource(
         XapiDocumentStore store,
         ISession session,
+        IDistributedLock distributedLock,
         IClock clock,
         IOptions<XapiOptions> options)
     {
         _store = store;
         _session = session;
+        _distributedLock = distributedLock;
         _clock = clock;
         _options = options.Value;
     }
@@ -72,14 +79,32 @@ public sealed class XapiDocumentsResource
             return refusal;
         }
 
-        return request.Method switch
+        if (!write)
         {
-            "GET" or "HEAD" => await GetAsync(scope, documentId, request, cancellationToken),
-            "PUT" => await PutAsync(kind, scope, documentId, request, merge: false, cancellationToken),
-            "POST" => await PutAsync(kind, scope, documentId, request, merge: true, cancellationToken),
-            "DELETE" => await DeleteAsync(kind, scope, documentId, request, cancellationToken),
-            _ => XapiResponse.Error(405, "A document resource takes GET, HEAD, PUT, POST and DELETE."),
-        };
+            return request.Method is "GET" or "HEAD"
+                ? await GetAsync(scope, documentId, request, cancellationToken)
+                : XapiResponse.Error(405, "A document resource takes GET, HEAD, PUT, POST and DELETE.");
+        }
+
+        // A write reads the document, then creates, merges or deletes it: one write at a time per document (or per
+        // scope, for deleting every state), so no merge is lost and no document is made twice.
+        var key = "LearningXapi:Document:" + XapiAgents.Hash(string.Join('|', kind, scope.ActivityId, scope.AgentKey, scope.Registration, documentId ?? "*"));
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(key, _lockTimeout, _lockExpiration);
+
+        if (!locked)
+        {
+            return XapiResponse.Error(503, "The document is being written. Try again.");
+        }
+
+        await using (locker)
+        {
+            return request.Method switch
+            {
+                "PUT" => await PutAsync(kind, scope, documentId, request, merge: false, cancellationToken),
+                "POST" => await PutAsync(kind, scope, documentId, request, merge: true, cancellationToken),
+                _ => await DeleteAsync(kind, scope, documentId, request, cancellationToken),
+            };
+        }
     }
 
     /// <summary>

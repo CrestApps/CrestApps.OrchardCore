@@ -81,8 +81,14 @@ public sealed class XapiStatementQuery
     /// <summary>Gets or sets how many statements to return.</summary>
     public int Limit { get; set; }
 
-    /// <summary>Gets or sets how many statements to skip, for a <c>more</c> link.</summary>
+    /// <summary>Gets or sets how many statements to skip, for a <c>more</c> link made before keyset paging.</summary>
     public int Skip { get; set; }
+
+    /// <summary>
+    /// Gets or sets the sequence of the last statement of the page before, for a <c>more</c> link: the next page starts
+    /// after it, so a statement voided or stored between pages moves nothing.
+    /// </summary>
+    public long? AfterSequence { get; set; }
 
     /// <summary>Gets or sets whether the oldest statements come first.</summary>
     public bool Ascending { get; set; }

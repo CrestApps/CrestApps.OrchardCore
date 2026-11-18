@@ -495,6 +495,11 @@ public sealed class XapiStatementService
             prepared.Add(statement);
         }
 
+        if (attachments.Sum(attachment => (long)(attachment.Content?.Length ?? 0)) > _options.MaxAttachmentBytes)
+        {
+            return PreparedWrite.Fail(413, $"The attachments of a request may have at most {_options.MaxAttachmentBytes} bytes.");
+        }
+
         var attachmentError = CheckAttachments(prepared, attachments);
 
         if (attachmentError is not null)

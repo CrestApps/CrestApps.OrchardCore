@@ -291,6 +291,15 @@ public sealed class XapiAuthenticator
             return null;
         }
 
+        // A token issued to a person through a client (its subject is the person, not the client) would make every
+        // person of that client share the client's own statements: only client credentials tokens are taken.
+        var subject = principal.FindFirstValue(OpenIddictConstants.Claims.Subject);
+
+        if (!string.IsNullOrEmpty(subject) && !string.Equals(subject, clientId, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
         return await ClientAsync(principal, clientId, principal.Identity.Name ?? clientId);
     }
 
