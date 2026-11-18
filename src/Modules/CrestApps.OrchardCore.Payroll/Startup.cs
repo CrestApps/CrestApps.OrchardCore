@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Payroll.Handlers;
 using CrestApps.OrchardCore.Payroll.Core.Handlers;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Payroll.AuditTrail;
 using CrestApps.OrchardCore.Payroll.Core;
@@ -150,6 +151,8 @@ public sealed class PayrollStartup : StartupBase
     {
         services.AddPayrollCore();
         services.AddPayrollFilingsCore();
+        // The liabilities page posts a deposit's amount from a number input.
+        services.AddInvariantNumberInputs();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Employer>, EmployerHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxDeposit>, TaxDepositHandler>());
         services.AddDataMigration<PayrollMigrations>()

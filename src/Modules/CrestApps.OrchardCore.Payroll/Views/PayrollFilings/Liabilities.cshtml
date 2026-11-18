@@ -1,5 +1,6 @@
 @model PayrollLiabilitiesViewModel
 @using System.Globalization
+@using CrestApps.OrchardCore.Currencies
 
 <zone Name="Title">
     <breadcrumb name="PayrollLiabilities" title="@T["Liabilities"]" />
@@ -70,7 +71,7 @@ else
                 </div>
                 <div class="col-6 col-md-2">
                     <label for="NewDeposit_Amount" class="form-label">@T["Amount"]</label>
-                    <input id="NewDeposit_Amount" name="NewDeposit.Amount" class="form-control" inputmode="decimal" />
+                    <input id="NewDeposit_Amount" name="NewDeposit.Amount" type="number" step="@CurrencyScale.GetInputStep(Model.Currency)" min="0" class="form-control" />
                 </div>
                 <div class="col-6 col-md-2">
                     <label for="NewDeposit_PaidOn" class="form-label">@T["Paid on"]</label>
