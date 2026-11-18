@@ -1040,7 +1040,7 @@ The tool needs **Manage AI profiles**. Documents are added and removed on the pr
 | `deleteAIFileSource` | Deletes a file source and queues the removal of what it ingested. Asks for approval. |
 | `runAIFileSource` | Queues a run that reads the folder or server and ingests new and changed files after the reply; `listAIFileSources` shows its result once it has run. Asks for approval. |
 
-The tools need **Manage file sources**. No FTP or SFTP password, private key, passphrase or proxy password is returned or taken: the list reports whether one is stored, and the save result links to the page where a person enters it. A folder can only be inside the tenant's own `file-sources` folder. Hosts and ports are checked as the editors check them (a host, and a port from 1 to 65535), and a host or port cannot change while a credential is stored for it. An SFTP file source needs a password or a private key, so it is created on its page. Saving or deleting a file source queues a full synchronization of its data source.
+The tools need **Manage file sources**. No FTP or SFTP password, private key, passphrase or proxy password is returned or taken: the list reports whether one is stored, and the save result links to the page where a person enters it. A folder can only be inside the tenant's own `file-sources` folder. Hosts and ports are checked as the editors check them (a host, and a port from 1 to 65535), and a host or port cannot change while a credential is stored for it. An SFTP file source needs a password or a private key, so it is created on its page. Saving or deleting a file source queues a full synchronization of its data source. From inside a chat, a file source that feeds a data source the running assistant answers from cannot be saved or deleted.
 
 ### AI web crawler tools
 
@@ -1053,7 +1053,7 @@ The tools need **Manage file sources**. No FTP or SFTP password, private key, pa
 | `deleteAIWebCrawler` | Deletes a web crawler; its pages stop being refreshed. Asks for approval. |
 | `runAIWebCrawler` | Re-crawls one website now and queues its new, changed and removed pages for indexing, returning the counts. Asks for approval. |
 
-The tools need **Manage web crawlers**. Addresses are checked as the crawler editor checks them: an absolute `http` or `https` base or sitemap URL, and valid regular expressions for the URL patterns. Nothing stops a crawler from reaching an address on the server's own network, so confirm the address before approving.
+The tools need **Manage web crawlers**. Addresses are checked as the crawler editor and the sitemap strategy check them: each given base or sitemap URL must be absolute, at least one of them must use `http` or `https`, and the URL patterns must be valid regular expressions. Nothing stops a crawler from reaching an address on the server's own network, so confirm the address before approving. From inside a chat, a crawler that feeds a data source the running assistant answers from cannot be saved or deleted.
 
 ### Analytics tools
 

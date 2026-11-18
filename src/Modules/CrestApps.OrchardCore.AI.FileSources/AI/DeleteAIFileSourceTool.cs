@@ -76,6 +76,11 @@ public sealed class DeleteAIFileSourceTool : AIFunction
             return $"Nothing was deleted: no file source has the ID '{id}'. Call listAIFileSources to find it.";
         }
 
+        if (await AIModuleTools.FeedsRunningAssistantAsync(services, [fileSource.AIDataSourceId], cancellationToken))
+        {
+            return AIModuleTools.RunningAssistantRefusal($"the file source '{fileSource.DisplayText}'", FileSourceToolSupport.GetEditPath(services, fileSource.ItemId));
+        }
+
         if (!await manager.DeleteAsync(fileSource, cancellationToken))
         {
             return $"Unable to remove the file source '{fileSource.DisplayText}'.";

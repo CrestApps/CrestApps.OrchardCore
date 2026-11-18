@@ -8,6 +8,7 @@ using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Agent.DataSources;
+using CrestApps.OrchardCore.AI.Agent.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.DataConnectors;
 using CrestApps.OrchardCore.DataConnectors.Models;
@@ -322,6 +323,31 @@ public sealed class AIDataSourceToolTests
         // Assert
         Assert.StartsWith("Refused:", result);
         Assert.Empty(_dataSources.Deleted);
+    }
+
+    [Fact]
+    public async Task RunningAssistantGuard_ProtectsOnlyTheRunningAssistantsDataSource()
+    {
+        // Arrange
+        var services = BuildServices();
+        var running = AddProfileUsing("ds-1");
+        var guard = new AIRunningAssistantGuard(services);
+
+        // Act
+        var outsideTurn = await guard.IsProtectedDataSourceAsync("ds-1", TestContext.Current.CancellationToken);
+        bool own;
+        bool other;
+
+        using (AIConfigurationToolHarness.BeginTurn(running))
+        {
+            own = await guard.IsProtectedDataSourceAsync("ds-1", TestContext.Current.CancellationToken);
+            other = await guard.IsProtectedDataSourceAsync("ds-2", TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        Assert.False(outsideTurn);
+        Assert.True(own);
+        Assert.False(other);
     }
 
     [Fact]

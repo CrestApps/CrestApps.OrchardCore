@@ -75,6 +75,11 @@ public sealed class DeleteAIWebCrawlerTool : AIFunction
             return $"Nothing was deleted: no web crawler has the ID '{id}'. Call listAIWebCrawlers to find it.";
         }
 
+        if (await AIModuleTools.FeedsRunningAssistantAsync(services, [crawler.AIDataSourceId], cancellationToken))
+        {
+            return AIModuleTools.RunningAssistantRefusal($"the web crawler '{crawler.DisplayText}'", WebCrawlerToolSupport.GetEditPath(services, crawler.ItemId));
+        }
+
         if (!await services.GetRequiredService<ISourceCatalogManager<WebCrawler>>().DeleteAsync(crawler, cancellationToken))
         {
             return $"The web crawler '{crawler.DisplayText}' could not be deleted.";

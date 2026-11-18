@@ -29,6 +29,7 @@ public sealed class FileSourceAIToolTests
 
     private readonly FakeSourceCatalogManager<FileSource> _fileSources = new();
     private readonly FakeSourceCatalogManager<AIDataSource> _dataSources = new();
+    private readonly FakeRunningAssistantGuard _guard = new();
 
     public FileSourceAIToolTests()
     {
@@ -306,6 +307,61 @@ public sealed class FileSourceAIToolTests
     }
 
     [Fact]
+    public async Task Save_AcceptsValidateAnyCertificate_AFlagIsNotASecret()
+    {
+        // Arrange
+        var services = BuildServices();
+        var source = AddFtpSource("ftp-1", password: Canary);
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveAIFileSourceTool(), services, new()
+        {
+            ["id"] = source.ItemId,
+            ["ftp"] = JsonSerializer.SerializeToElement(new { validateAnyCertificate = true }),
+        });
+
+        // Assert
+        Assert.Equal("updated", AgentToolTestContext.ReadJson(result).GetProperty("saved").GetString());
+        Assert.True(FileSourceToolSupport.GetMember(FileSourceToolSupport.ReadConnection(source, FileSourceToolSupport.FtpConnectionKey), "ValidateAnyCertificate").GetValue<bool>());
+    }
+
+    [Fact]
+    public async Task Save_RefusesToPointAFileSourceAtTheRunningAssistantsDataSource()
+    {
+        // Arrange
+        var services = BuildServices();
+        _guard.ProtectedDataSourceIds.Add("file-ds");
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveAIFileSourceTool(), services, new()
+        {
+            ["connector"] = FileSystemIngestionConnector.ConnectorName,
+            ["displayText"] = "Manuals",
+            ["aiDataSourceId"] = "file-ds",
+        });
+
+        // Assert
+        Assert.StartsWith("Refused:", result);
+        Assert.Empty(_fileSources.Created);
+    }
+
+    [Fact]
+    public async Task Delete_RefusesAFileSourceThatFeedsTheRunningAssistant()
+    {
+        // Arrange
+        var services = BuildServices();
+        var source = AddSftpSource();
+        _guard.ProtectedDataSourceIds.Add("file-ds");
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIFileSourceTool(), services, new() { ["id"] = source.ItemId });
+
+        // Assert
+        Assert.StartsWith("Refused:", result);
+        Assert.Empty(_fileSources.Deleted);
+    }
+
+    [Fact]
     public async Task Delete_DeletesTheFileSourceAndSaysTheCleanupWasQueued()
     {
         // Arrange
@@ -413,6 +469,7 @@ public sealed class FileSourceAIToolTests
 
         services.AddSingleton<ISourceCatalogManager<FileSource>>(_fileSources);
         services.AddSingleton<ISourceCatalogManager<AIDataSource>>(_dataSources);
+        services.AddSingleton<IAIRunningAssistantGuard>(_guard);
         services.AddSingleton<ITenantFileSourceRoot>(new FakeTenantRoot());
         services.Configure<IngestionConnectorOptions>(options =>
         {

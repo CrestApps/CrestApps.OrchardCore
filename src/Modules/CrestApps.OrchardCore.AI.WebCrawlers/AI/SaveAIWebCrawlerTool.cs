@@ -80,7 +80,7 @@ public sealed class SaveAIWebCrawlerTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Creates a web crawler for a website, or updates one by id: name, Web AI data source, enabled state, schedule and sitemap settings. Saving queues a full synchronization of the data source, which crawls the site and spends embedding tokens in the background. The addresses are checked as the crawler editor checks them (absolute http or https addresses); the server fetches whatever address is given, so confirm it with the user.";
+    public override string Description => "Creates a web crawler for a website, or updates one by id: name, Web AI data source, enabled state, schedule and sitemap settings. Saving queues a full synchronization of the data source, which crawls the site and spends embedding tokens in the background. Each given address must be absolute and the base or the sitemap URL must use http or https, as the crawler editor and the sitemap strategy check; the server fetches whatever address is given, so confirm it with the user. A crawler that feeds the data source of the running assistant cannot be changed.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -155,6 +155,12 @@ public sealed class SaveAIWebCrawlerTool : AIFunction
         }
 
         changes(working);
+
+        // What a crawler reads becomes what the assistant answers from, so a turn cannot point one at its own knowledge.
+        if (await AIModuleTools.FeedsRunningAssistantAsync(services, [existing?.AIDataSourceId, working.AIDataSourceId], cancellationToken))
+        {
+            return AIModuleTools.RunningAssistantRefusal($"the web crawler '{working.DisplayText}'", existing is null ? WebCrawlerToolSupport.GetIndexPath(services) : WebCrawlerToolSupport.GetEditPath(services, existing.ItemId));
+        }
 
         var validation = await manager.ValidateAsync(working, cancellationToken);
 

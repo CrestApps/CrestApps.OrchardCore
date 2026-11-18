@@ -6,6 +6,17 @@ using CrestApps.Core.Services;
 namespace CrestApps.OrchardCore.Tests.Agent.AIKnowledge;
 
 /// <summary>
+/// Protects the data sources it is given, as the AI Agent module's guard does for the running assistant's.
+/// </summary>
+internal sealed class FakeRunningAssistantGuard : CrestApps.OrchardCore.AI.Core.IAIRunningAssistantGuard
+{
+    public HashSet<string> ProtectedDataSourceIds { get; } = new(StringComparer.Ordinal);
+
+    public Task<bool> IsProtectedDataSourceAsync(string dataSourceId, CancellationToken cancellationToken = default)
+        => Task.FromResult(dataSourceId is not null && ProtectedDataSourceIds.Contains(dataSourceId));
+}
+
+/// <summary>
 /// An in-memory catalog of records kept by source, such as data sources, file sources and web crawlers, that records what
 /// the tools create, update and delete. The catalog handlers do not run; <see cref="Validate"/> stands in for them.
 /// </summary>

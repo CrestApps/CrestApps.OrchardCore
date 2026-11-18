@@ -198,6 +198,13 @@ public sealed class SaveAIFileSourceTool : AIFunction
 
         changes(working);
 
+        // What a file source reads becomes what the assistant answers from, so a turn cannot point one at its own
+        // knowledge.
+        if (await AIModuleTools.FeedsRunningAssistantAsync(services, [existing?.AIDataSourceId, working.AIDataSourceId], cancellationToken))
+        {
+            return AIModuleTools.RunningAssistantRefusal($"the file source '{working.DisplayText}'", existing is null ? FileSourceToolSupport.GetIndexPath(services) : FileSourceToolSupport.GetEditPath(services, existing.ItemId));
+        }
+
         var validation = await manager.ValidateAsync(working, cancellationToken);
 
         if (!validation.Succeeded)

@@ -115,8 +115,8 @@ public sealed class AIKnowledgeToolRegistrationTests
         // The File Sources module does not reference the FTP and SFTP packages, so it reads their settings by name.
         Assert.Equal(CrestApps.Core.AI.Ftp.FtpIngestionConnector.ConnectorName, FileSourceToolSupport.FtpConnectorName);
         Assert.Equal(CrestApps.Core.AI.Sftp.SftpIngestionConnector.ConnectorName, FileSourceToolSupport.SftpConnectorName);
-        Assert.Equal(typeof(FtpMetadata).Name, FileSourceToolSupport.FtpConnectionKey);
-        Assert.Equal(typeof(SftpMetadata).Name, FileSourceToolSupport.SftpConnectionKey);
+        Assert.Equal(FileSourceToolSupport.FtpConnectionKey, typeof(FtpMetadata).Name);
+        Assert.Equal(FileSourceToolSupport.SftpConnectionKey, typeof(SftpMetadata).Name);
 
         foreach (var (_, member) in FileSourceToolSupport.FtpFields)
         {

@@ -86,6 +86,45 @@ public static class AIModuleTools
     }
 
     /// <summary>
+    /// Whether any of the data sources feeds the assistant running the current AI turn, through
+    /// <see cref="IAIRunningAssistantGuard"/>. Nothing is protected when no guard is registered.
+    /// </summary>
+    /// <param name="services">The services of the tool invocation.</param>
+    /// <param name="dataSourceIds">The IDs of the data sources; blanks are ignored.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> when one of them is protected.</returns>
+    public static async Task<bool> FeedsRunningAssistantAsync(IServiceProvider services, IEnumerable<string> dataSourceIds, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var guard = services.GetService<IAIRunningAssistantGuard>();
+
+        if (guard is null || dataSourceIds is null)
+        {
+            return false;
+        }
+
+        foreach (var id in dataSourceIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal))
+        {
+            if (await guard.IsProtectedDataSourceAsync(id, cancellationToken))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// The refusal a tool returns when a change would alter what the running assistant answers from.
+    /// </summary>
+    /// <param name="what">What would change, such as "the web crawler 'Docs'".</param>
+    /// <param name="path">The admin page where a person can make the change, or <see langword="null"/>.</param>
+    /// <returns>The sentence for the model.</returns>
+    public static string RunningAssistantRefusal(string what, string path)
+        => $"Refused: {what} feeds a data source the assistant running this chat answers from. An assistant cannot change its own knowledge from a chat. A person can make this change on the admin page{(string.IsNullOrEmpty(path) ? "." : $": {path}")}";
+
+    /// <summary>
     /// Writes a result as JSON.
     /// </summary>
     /// <param name="value">The result, built from an explicit list of fields.</param>

@@ -1,5 +1,6 @@
 using CrestApps.Core.AI;
 using CrestApps.OrchardCore.AI.Agent.DataSources;
+using CrestApps.OrchardCore.AI.Agent.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -30,6 +31,10 @@ public sealed class AIDataSourcesToolsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Lets the file source and web crawler tools, which live in their own modules, refuse to change what feeds the
+        // running assistant's data sources.
+        services.AddScoped<IAIRunningAssistantGuard, AIRunningAssistantGuard>();
+
         services.AddCoreAITool<SaveAIDataSourceTool>(SaveAIDataSourceTool.TheName)
             .WithTitle(S["Save AI Data Source"])
             .WithDescription(S["Creates an AI data source of a given source type, or updates an existing one by id. Use it after listAIDataSources shows the source types; an existing data source whose configuration is locked can only be renamed. Prefer a data connection or the default connection over typing credentials; credentials are never taken."])

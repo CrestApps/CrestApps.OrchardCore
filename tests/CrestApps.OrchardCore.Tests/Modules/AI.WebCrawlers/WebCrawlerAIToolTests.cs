@@ -28,6 +28,7 @@ public sealed class WebCrawlerAIToolTests
 {
     private readonly FakeSourceCatalogManager<WebCrawler> _crawlers = new();
     private readonly FakeSourceCatalogManager<AIDataSource> _dataSources = new();
+    private readonly FakeRunningAssistantGuard _guard = new();
     private readonly Mock<IWebCrawlerReindexPlanner> _planner = new();
 
     public WebCrawlerAIToolTests()
@@ -231,6 +232,44 @@ public sealed class WebCrawlerAIToolTests
     }
 
     [Fact]
+    public async Task Save_RefusesACrawlerThatFeedsTheRunningAssistant()
+    {
+        // Arrange
+        var services = BuildServices();
+        var crawler = AddCrawler();
+        _guard.ProtectedDataSourceIds.Add("web-ds");
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveAIWebCrawlerTool(), services, new()
+        {
+            ["id"] = crawler.ItemId,
+            ["sitemap"] = JsonSerializer.SerializeToElement(new { baseUrl = "https://attacker.example.com" }),
+        });
+
+        // Assert
+        Assert.StartsWith("Refused:", result);
+        Assert.Empty(_crawlers.Updated);
+        Assert.True(crawler.TryGet<SitemapWebCrawlerMetadata>(out var metadata));
+        Assert.Equal("https://docs.example.com", metadata.BaseUrl);
+    }
+
+    [Fact]
+    public async Task Delete_RefusesACrawlerThatFeedsTheRunningAssistant()
+    {
+        // Arrange
+        var services = BuildServices();
+        var crawler = AddCrawler();
+        _guard.ProtectedDataSourceIds.Add("web-ds");
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new DeleteAIWebCrawlerTool(), services, new() { ["id"] = crawler.ItemId });
+
+        // Assert
+        Assert.StartsWith("Refused:", result);
+        Assert.Empty(_crawlers.Deleted);
+    }
+
+    [Fact]
     public async Task Delete_DeletesTheCrawlerAndSaysTheCleanupWasQueued()
     {
         // Arrange
@@ -321,6 +360,7 @@ public sealed class WebCrawlerAIToolTests
 
         services.AddSingleton<ISourceCatalogManager<WebCrawler>>(_crawlers);
         services.AddSingleton<ISourceCatalogManager<AIDataSource>>(_dataSources);
+        services.AddSingleton<IAIRunningAssistantGuard>(_guard);
         services.AddSingleton(_planner.Object);
         services.Configure<WebCrawlerStrategyOptions>(options => options.AddOrUpdate(
             WebCrawlerConstants.Strategies.Sitemap,
