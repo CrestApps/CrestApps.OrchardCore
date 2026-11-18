@@ -86,6 +86,12 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
     /// </summary>
     public List<IUserEventHandler> UserEventHandlers { get; } = [];
 
+    /// <summary>
+    /// What the external provider returns when a confirmation page signs in through it again (K5), as Identity reads it
+    /// from the external cookie, with the account id the challenge was bound to; or <see langword="null"/>.
+    /// </summary>
+    public (ExternalLoginInfo Info, string BoundTo)? ExternalLogin { get; set; }
+
     private string ConnectionString => $"Data Source={_databasePath};Pooling=False";
 
     /// <summary>
@@ -230,6 +236,7 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
             [new RecordingRevocation(Revoked)],
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.TestOptionsMonitor<RegistrationOptions>(Registration),
             CreateClock(),
+            requestServices.GetRequiredService<IDataProtectionProvider>(),
             NullLogger<EmailOwnershipProof>.Instance);
 
     private SignInManager<IUser> CreateSignInManager(UserManager<IUser> manager)
@@ -241,6 +248,10 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
         signInManager.Setup(s => s.SignInWithClaimsAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<IEnumerable<Claim>>()))
             .Callback((IUser user, bool _, IEnumerable<Claim> claims) => SignIns.Add(new SignIn(user, [.. claims])))
             .Returns(Task.CompletedTask);
+
+        // Identity refuses an external cookie whose challenge was bound to another account (its XSRF check).
+        signInManager.Setup(s => s.GetExternalLoginInfoAsync(It.IsAny<string>()))
+            .ReturnsAsync((string expectedXsrf) => ExternalLogin is { } login && login.BoundTo == expectedXsrf ? login.Info : null);
 
         return signInManager.Object;
     }
@@ -322,6 +333,9 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
 
         services.AddLogging();
         services.AddHttpContextAccessor();
+
+        // The confirmation page signs out of the external cookie after a fresh sign-in through a login (K5).
+        services.AddSingleton(Mock.Of<Microsoft.AspNetCore.Authentication.IAuthenticationService>());
         services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
         services.AddIdentityCore<IUser>();
 

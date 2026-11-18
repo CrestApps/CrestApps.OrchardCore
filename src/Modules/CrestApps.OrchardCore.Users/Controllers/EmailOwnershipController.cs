@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Users.Core.Services;
 using CrestApps.OrchardCore.Users.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -98,7 +99,7 @@ public sealed class EmailOwnershipController : Controller
             return NotFound();
         }
 
-        var view = CreateView(account, model.ReturnUrl);
+        var view = CreateView(account, model.ReturnUrl, _proof.ReadKeptLogin(model.Token, account), model.Token);
 
         if (!await _codes.TryCountSendAsync(account.Email, ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted))
         {
@@ -127,7 +128,8 @@ public sealed class EmailOwnershipController : Controller
             return NotFound();
         }
 
-        var view = CreateView(account, model.ReturnUrl);
+        var keptLogin = _proof.ReadKeptLogin(model.Token, account);
+        var view = CreateView(account, model.ReturnUrl, keptLogin, model.Token);
 
         if (!await _codes.TryCountVerifyAsync(ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted))
         {
@@ -137,13 +139,15 @@ public sealed class EmailOwnershipController : Controller
         }
 
         // The mailbox and one credential don't say whose the others are: a password can be set again with the mailbox
-        // alone, and a login linked from a code session, while somebody else's stays. So only what this request shows
-        // is kept: the password it is signed in with or the one typed here, or the external login it is signed in
-        // through. A wrong password is refused before the code is looked at, so it never spends the code, and it counts
-        // toward the lockout as at sign-in.
-        var passwordShown = view.PasswordShown;
+        // alone, and a login linked from a code session, while somebody else's stays. So only what this flow shows is
+        // kept: the password typed here, and the external login signed in through again at its provider on this page.
+        // Nothing is taken from the session's cookie, which can be older than the account's credentials and still be
+        // re-issued with the current security stamp (Orchard Core's "Reset authenticator app" refreshes it, K5). A wrong
+        // password is refused before the code is looked at, so it never spends the code, and it counts toward the lockout
+        // as at sign-in.
+        var passwordShown = false;
 
-        if (!view.CredentialsShown && !string.IsNullOrEmpty(model.Password))
+        if (!string.IsNullOrEmpty(model.Password))
         {
             if (string.IsNullOrEmpty(account.PasswordHash) || !await _userManager.CheckPasswordAsync(account, model.Password))
             {
@@ -165,7 +169,7 @@ public sealed class EmailOwnershipController : Controller
         }
 
         var proof = check == EmailSignInCodeCheck.Right
-            ? await _proof.RecordAsync(account, passwordShown, view.ShownLoginProvider, HttpContext.RequestAborted)
+            ? await _proof.RecordAsync(account, passwordShown, keptLogin, HttpContext.RequestAborted)
             : EmailProofResult.Failed;
 
         if (proof == EmailProofResult.Failed)
@@ -210,25 +214,77 @@ public sealed class EmailOwnershipController : Controller
         return H["Your email address is confirmed. The password and other sign-ins this account had before were removed: sign in with a code, or set a new password with \"Forgot your password?\"."];
     }
 
-    // What the confirmation pages show: which of the account's credentials this request already shows, and whether the
-    // account has a password to type instead.
-    private EmailSignInViewModel CreateView(User account, string returnUrl)
+    // K5: to keep one of the account's external logins, the owner signs in through it again here, and the login whose key
+    // the provider returns is the one kept. The challenge is bound to the account (Identity's XSRF check on the external
+    // cookie), so a sign-in started for another account is refused.
+    [HttpPost("sign-in/email/confirm/login", Name = "EmailSignInConfirmLogin")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmLogin(string provider, string returnUrl = null)
     {
-        var passwordShown = UserCredentialsProof.ShowsPassword(User, account);
-        var shownLoginProvider = passwordShown ? null : UserCredentialsProof.ShownLoginProvider(User, account);
-        var credentialsShown = passwordShown || shownLoginProvider is not null;
+        if (await FindAccountAsync() is not { } account ||
+            string.IsNullOrEmpty(provider) ||
+            account.LoginInfos?.Any(login => string.Equals(login.LoginProvider, provider, StringComparison.Ordinal)) != true)
+        {
+            return NotFound();
+        }
 
-        return new EmailSignInViewModel
+        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+
+        var redirectUrl = Url.RouteUrl("EmailSignInConfirmLoginCallback", new { returnUrl });
+
+        return Challenge(_signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl, account.UserId), provider);
+    }
+
+    [HttpGet("sign-in/email/confirm/login/callback", Name = "EmailSignInConfirmLoginCallback")]
+    public async Task<IActionResult> ConfirmLoginCallback(string returnUrl = null, string remoteError = null)
+    {
+        if (await FindAccountAsync() is not { } account)
+        {
+            return NotFound();
+        }
+
+        var info = remoteError is null ? await _signInManager.GetExternalLoginInfoAsync(account.UserId) : null;
+
+        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+
+        if (UserEmailOwnership.IsVerified(account.Properties, account.Email))
+        {
+            return RedirectToLocal(returnUrl);
+        }
+
+        var login = info is null
+            ? null
+            : account.LoginInfos?.FirstOrDefault(candidate =>
+                string.Equals(candidate.LoginProvider, info.LoginProvider, StringComparison.Ordinal) &&
+                string.Equals(candidate.ProviderKey, info.ProviderKey, StringComparison.Ordinal));
+
+        if (login is null)
+        {
+            ModelState.AddModelError(nameof(EmailSignInViewModel.Email), S["That sign-in isn't one of this account's, so it can't be kept. Sign in with the account you use here."]);
+
+            return View(nameof(Confirm), CreateView(account, returnUrl));
+        }
+
+        var token = _proof.ProtectStep(EmailOwnershipProof.KeptLoginStep, account, login);
+
+        return View(nameof(Confirm), CreateView(account, returnUrl, login, token));
+    }
+
+    // What the confirmation pages show: the external login the owner just signed in through again (kept), the account's
+    // other logins they can sign in through to keep instead, and whether the account has a password to type.
+    private static EmailSignInViewModel CreateView(User account, string returnUrl, UserLoginInfo keptLogin = null, string token = null)
+        => new()
         {
             Email = account.Email,
             ReturnUrl = returnUrl,
+            Token = keptLogin is null ? null : token,
             HasCredentials = UserCredentialsProof.HasCredentials(account),
-            CredentialsShown = credentialsShown,
-            PasswordShown = passwordShown,
-            ShownLoginProvider = shownLoginProvider,
-            AsksPassword = !credentialsShown && !string.IsNullOrEmpty(account.PasswordHash),
+            KeptLoginProvider = keptLogin is null ? null : keptLogin.ProviderDisplayName ?? keptLogin.LoginProvider,
+            KeepableLogins = (account.LoginInfos ?? [])
+                .DistinctBy(login => login.LoginProvider, StringComparer.Ordinal)
+                .ToDictionary(login => login.LoginProvider, login => login.ProviderDisplayName ?? login.LoginProvider, StringComparer.Ordinal),
+            AsksPassword = !string.IsNullOrEmpty(account.PasswordHash),
         };
-    }
 
     // The signed-in account, when a code can confirm its address: the accounts code sign-in serves, and one that signs
     // in only through an external provider, on a site that allows local sign-in.

@@ -66,14 +66,45 @@ public sealed class EmailOwnershipStaleSessionTests : IAsyncLifetime
         Assert.Equal(stamps.AfterRemove, stamps.AfterAdd);
 
         var view = Assert.IsType<EmailSignInViewModel>(Assert.IsType<ViewResult>(asked).Model);
-        Assert.False(view.CredentialsShown);
-        Assert.Null(view.ShownLoginProvider);
+        Assert.Null(view.KeptLoginProvider);
 
         Assert.IsType<LocalRedirectResult>(confirmed);
         var account = await FindAsync();
         Assert.Empty(account.LoginInfos);
         Assert.Null(account.PasswordHash);
         Assert.True(UserEmailOwnership.IsVerified(account.Properties, account.Email));
+    }
+
+    // K5 (fifth fix-verification review): Orchard Core's "Reset authenticator app" calls RefreshSignInAsync, which
+    // re-issues the owner's stale cookie with the account's current security stamp and its old provider claim. The
+    // confirmation page no longer reads the cookie to decide what to keep, so the squatter's login still goes.
+    [Fact]
+    public async Task ASessionRefreshedWithTheCurrentStampAfterTheSwap_StillKeepsNoLogin()
+    {
+        // Arrange: the swap, then the owner's browser refreshed: the current stamp, and "GitHub" still in the cookie.
+        await CreateAccountAsync();
+        await _harness.InRequestAsync(async services =>
+        {
+            var manager = services.GetRequiredService<UserManager<IUser>>();
+            var account = await manager.FindByIdAsync("user-1");
+
+            Assert.True((await manager.RemoveLoginAsync(account, "GitHub", OwnersLogin)).Succeeded);
+            Assert.True((await manager.AddLoginAsync(account, new UserLoginInfo("GitHub", "github-squatter", "GitHub"))).Succeeded);
+
+            return account;
+        });
+
+        var refreshed = await _harness.SignInClaimsAsync("user-1", new Claim(ClaimTypes.AuthenticationMethod, "GitHub"));
+        await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", null, refreshed).Confirm(new EmailSignInViewModel()));
+        var code = _harness.Sender.Sent[^1].Code;
+
+        // Act
+        await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", null, refreshed).ConfirmCode(new EmailSignInViewModel { Code = code }));
+
+        // Assert
+        var confirmedAccount = await FindAsync();
+        Assert.Empty(confirmedAccount.LoginInfos);
+        Assert.True(UserEmailOwnership.IsVerified(confirmedAccount.Properties, confirmedAccount.Email));
     }
 
     [Fact]

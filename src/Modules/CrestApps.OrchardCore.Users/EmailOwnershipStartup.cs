@@ -59,6 +59,9 @@ public sealed class EmailOwnershipStartup : StartupBase
         services.AddScoped<ILoginFormEvent, EmailOwnershipLoginFormEvent>();
         services.AddScoped<IUserClaimsProvider, EmailOwnershipClaimsProvider>();
 
+        // An external sign-in whose provider asserted the account's own address as verified proves it, when nothing else
+        // signs in to the account, so a code never takes a genuine passwordless account back.
+        services.AddScoped<IExternalLoginEventHandler, EmailOwnershipExternalLoginHandler>();
         services.Configure<MvcOptions>(options => options.Filters.Add<EmailOwnershipNoticeFilter>());
 
         // Counted on the shared attempt limiter, across nodes, whether or not Rate Limits is on.

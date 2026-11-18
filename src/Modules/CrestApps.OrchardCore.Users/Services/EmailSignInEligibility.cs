@@ -10,8 +10,11 @@ namespace CrestApps.OrchardCore.Users.Services;
 /// not using two-factor sign-in, which a code would get around, not in a role kept to password sign-in (Administrator
 /// by default), and, to sign in, not one that signs in only through an external provider whose address is proved, whose
 /// own checks a code would get around too. One whose address isn't proved may be somebody else's registration with the
-/// owner's address, so a code takes it back instead: its logins are removed when the code proves the address (see
-/// <see cref="Controllers.EmailSignInController"/>), and nobody signs in through them again.
+/// owner's address, or the owner's own passwordless account that no provider proved, so a right code only offers to take
+/// it back: the owner chooses to remove its logins and use their email, and only then is anything removed and the
+/// address proved (see <see cref="Controllers.EmailSignInController"/>). A code never signs in to it with its logins
+/// kept. An external sign-in whose provider asserted the same address as verified proves it
+/// (<see cref="EmailOwnershipExternalLoginHandler"/>), so such an account gets no code at all.
 /// </summary>
 public sealed class EmailSignInEligibility
 {

@@ -7,26 +7,36 @@
 <div class="container my-5" style="max-width: 480px">
     <h1 class="h3 mb-2">@T["Confirm it's you"]</h1>
     <p class="text-muted">@T["Confirming that {0} is yours links what was placed with it before you had an account, such as guest orders. We'll email a six-digit code to it.", Model.Email]</p>
-    @if (Model.PasswordShown)
+    @if (Model.HasCredentials)
     {
-        <p class="text-muted">@T["You signed in with this account's password, so it stays. Confirming removes the account's other sign-ins, such as external logins, and signs out its other sessions, because they may not be yours."]</p>
+        <p class="text-muted">@T["Confirming removes the sign-ins this account had before its email was confirmed, and signs out its other sessions, because they may not be yours. You keep only what you show here: the password, if you type it with the code, and a sign-in you use again below."]</p>
     }
-    else if (Model.ShownLoginProvider is not null)
+    @if (Model.KeptLoginProvider is not null)
     {
-        <p class="text-muted">@T["You signed in with {0}, so that sign-in stays. Confirming removes this account's password and its other sign-ins, and signs out its other sessions, because they may not be yours.", Model.ShownLoginProvider]</p>
+        <div class="alert alert-success">@T["You signed in with {0} again, so that sign-in stays.", Model.KeptLoginProvider]</div>
     }
-    else if (Model.AsksPassword)
+    else if (Model.KeepableLogins.Count > 0)
     {
-        <p class="text-muted">@T["If you know this account's password, enter it with the code to keep it. Either way, confirming removes the other sign-ins this account had before its email was confirmed, and signs out its other sessions, because they may not be yours. Without the password it is removed too: afterwards, sign in with a code, or set a new password with \"Forgot your password?\"."]</p>
-    }
-    else if (Model.HasCredentials)
-    {
-        <p class="text-muted">@T["Confirming removes the sign-ins this account had before its email was confirmed, and signs out its other sessions, because they may not be yours. To keep one of them, sign in with it first, then confirm. Afterwards, sign in with a code, or set a password with \"Forgot your password?\"."]</p>
+        <div class="card mb-3">
+            <div class="card-body">
+                <p class="mb-2">@T["To keep one of this account's sign-ins, sign in with it again first:"]</p>
+                @foreach (var login in Model.KeepableLogins)
+                {
+                    <form action="@Url.RouteUrl("EmailSignInConfirmLogin")" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="provider" value="@login.Key" />
+                        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                        <button type="submit" class="btn btn-outline-secondary btn-sm mb-1">@T["Keep {0}", login.Value]</button>
+                    </form>
+                }
+            </div>
+        </div>
     }
 
     <form action="@Url.RouteUrl("EmailSignInConfirm")" method="post" class="card">
         @Html.AntiForgeryToken()
         <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+        <input type="hidden" name="Token" value="@Model.Token" />
         <div class="card-body">
             <span asp-validation-for="Email" class="text-danger small"></span>
         </div>

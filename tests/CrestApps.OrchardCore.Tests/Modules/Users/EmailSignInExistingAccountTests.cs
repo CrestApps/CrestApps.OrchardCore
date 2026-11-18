@@ -181,27 +181,29 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         Assert.Equal(0, merge.Logins);
     }
 
-    // F1, scenario B: the owner signed in with a code, linked their own login, and Orchard Core signed the browser in
-    // again through it. Confirming keeps that login and removes the password somebody else may have set.
+    // F1, scenario B, and K5 (fifth fix-verification review): the owner keeps an external login by signing in through it
+    // again on the confirmation page. The login whose key the provider returns is kept; the password somebody else may
+    // have set is removed. Nothing is read from the session's cookie.
     [Fact]
-    public async Task SignedInThroughTheAccountsLogin_ConfirmingKeepsOnlyThatLogin()
+    public async Task SigningInThroughTheAccountsLoginAgain_ConfirmingKeepsOnlyThatLogin()
     {
         // Arrange
         var stampBefore = await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true });
-        var signedInThroughGitHub = await _harness.SignInClaimsAsync("user-1", new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.AuthenticationMethod, "GitHub"));
-        var asked = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", null, signedInThroughGitHub).Confirm(new EmailSignInViewModel()));
+        _harness.ExternalLogin = (GitHubLogin("github-user-1"), "user-1");
+        var token = await FreshSignInTokenAsync();
+        var asked = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1").Confirm(new EmailSignInViewModel { Token = token }));
         var code = _harness.Sender.Sent[^1].Code;
 
         // Act
-        var confirmed = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", LoginFormEvents(services), signedInThroughGitHub).ConfirmCode(new EmailSignInViewModel { Code = code }));
+        var confirmed = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", LoginFormEvents(services)).ConfirmCode(new EmailSignInViewModel { Code = code, Token = token }));
 
         // Assert
-        Assert.True(Assert.IsType<EmailSignInViewModel>(Assert.IsType<ViewResult>(asked).Model).CredentialsShown);
+        Assert.Equal("GitHub", Assert.IsType<EmailSignInViewModel>(Assert.IsType<ViewResult>(asked).Model).KeptLoginProvider);
         Assert.IsType<LocalRedirectResult>(confirmed);
 
         var account = await FindAsync("user-1");
         Assert.False(await CheckPasswordAsync(account));
-        Assert.Equal("GitHub", Assert.Single(account.LoginInfos).LoginProvider);
+        Assert.Equal("github-user-1", Assert.Single(account.LoginInfos).ProviderKey);
         Assert.NotEqual(stampBefore, account.SecurityStamp);
         Assert.True(UserEmailOwnership.IsVerified(account.Properties, account.Email));
         Assert.Equal(["user-1"], _harness.Revoked);
@@ -212,29 +214,47 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         Assert.Equal(1, merge.Logins);
     }
 
-    // F1: a sign-in names the provider, not which of its accounts was used, so with two logins of that provider neither
-    // is known to be the owner's.
+    // F1 and K5: with two logins of one provider, the fresh sign-in says which of them is the owner's.
     [Fact]
-    public async Task SignedInThroughAProviderTheAccountHasTwoLoginsWith_ConfirmingKeepsNeither()
+    public async Task WithTwoLoginsOfOneProvider_TheFreshSignInKeepsOnlyTheOneItReturned()
     {
         // Arrange
         var user = new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true };
         user.LoginInfos.Add(new UserLoginInfo("GitHub", "github-someone-else", "GitHub"));
         await _harness.CreateUserAsync(user);
-        var signedInThroughGitHub = await _harness.SignInClaimsAsync("user-1", new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.AuthenticationMethod, "GitHub"));
-        await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", null, signedInThroughGitHub).Confirm(new EmailSignInViewModel()));
+        _harness.ExternalLogin = (GitHubLogin("github-user-1"), "user-1");
+        var token = await FreshSignInTokenAsync();
+        await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1").Confirm(new EmailSignInViewModel { Token = token }));
         var code = _harness.Sender.Sent[^1].Code;
 
         // Act
-        await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", LoginFormEvents(services), signedInThroughGitHub).ConfirmCode(new EmailSignInViewModel { Code = code }));
+        await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", LoginFormEvents(services)).ConfirmCode(new EmailSignInViewModel { Code = code, Token = token }));
 
         // Assert
         var account = await FindAsync("user-1");
         Assert.False(await CheckPasswordAsync(account));
-        Assert.Empty(account.LoginInfos);
+        Assert.Equal("github-user-1", Assert.Single(account.LoginInfos).ProviderKey);
         Assert.True(UserEmailOwnership.IsVerified(account.Properties, account.Email));
     }
 
+    // K5: a sign-in through a provider account the user doesn't have here, or one started for another user, keeps nothing.
+    [Theory]
+    [InlineData("github-somebody", "user-1")]
+    [InlineData("github-user-1", "user-2")]
+    public async Task AFreshSignInThatIsntThisAccountsLogin_KeepsNothing(string providerKey, string boundTo)
+    {
+        // Arrange
+        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true });
+        _harness.ExternalLogin = (GitHubLogin(providerKey), boundTo);
+
+        // Act
+        var page = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1").ConfirmLoginCallback());
+
+        // Assert
+        var view = Assert.IsType<EmailSignInViewModel>(Assert.IsType<ViewResult>(page).Model);
+        Assert.Null(view.Token);
+        Assert.Null(view.KeptLoginProvider);
+    }
     // Mild (third fix-verification review): on an account with nothing to remove, the first proof still rotated the
     // stamp and recorded the reset, which ended this browser's sign-in too, and only a removal signed it in again.
     [Fact]
@@ -256,7 +276,7 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
 
     // F2 (third fix-verification review): an account that signs in only through an external provider couldn't confirm
     // its address at all, so the guest orders placed with it never reached it. Confirming signs nobody in, so the code
-    // sign-in's rule against such accounts doesn't apply to it.
+    // sign-in's rule against such accounts doesn't apply to it. The page offers to keep the login by signing in again.
     [Fact]
     public async Task AnAccountThatSignsInOnlyThroughItsLogin_CanConfirm_WhenSignedInThroughIt()
     {
@@ -268,9 +288,10 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         var page = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", null, signedInThroughGitHub).Confirm(returnUrl: null));
 
         // Assert
-        Assert.True(Assert.IsType<EmailSignInViewModel>(Assert.IsType<ViewResult>(page).Model).CredentialsShown);
+        var view = Assert.IsType<EmailSignInViewModel>(Assert.IsType<ViewResult>(page).Model);
+        Assert.Equal("GitHub", Assert.Single(view.KeepableLogins).Key);
+        Assert.False(view.AsksPassword);
     }
-
     // F3 (third fix-verification review): a code signs the address's owner in to an account whose password somebody else
     // may hold. The session says how it began, so every page can say so until the owner confirms.
     [Fact]
@@ -287,18 +308,41 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         Assert.Contains(signIn.Claims, claim => claim.Type == "amr" && claim.Value == "otp");
     }
 
-    // G5 (fourth fix-verification review): somebody registered with the owner's address through their own external
-    // login. A code refused an account with only external logins, and where password reset is off the owner had no way
-    // back. A code now takes such an account back when its address isn't proved: its logins are removed, the address is
-    // proved, and the owner is signed in with nothing of the other person's left.
+    // G5 (fourth fix-verification review) and K4 (fifth): an account with only external logins whose address isn't
+    // proved may be somebody else's registration with the owner's address, or the owner's own passwordless account. A
+    // right code removes nothing by itself: it offers to remove the logins and use the email instead.
     [Fact]
-    public async Task ACode_TakesBackAnAccountWithOnlyAnExternalLogin_WhoseAddressIsntProved()
+    public async Task ACode_OffersToTakeBackAnAccountWithOnlyAnExternalLogin_AndRemovesNothingUntilChosen()
     {
         // Arrange
-        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true }, withPassword: false);
+        var stampBefore = await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true }, withPassword: false);
 
         // Act
         var result = await SignInWithCodeAsync();
+
+        // Assert
+        var view = Assert.IsType<ViewResult>(result);
+        Assert.Equal("TakeBack", view.ViewName);
+        Assert.Equal("GitHub", Assert.IsType<EmailSignInViewModel>(view.Model).LoginProviders);
+
+        var account = await FindAsync("user-1");
+        Assert.Single(account.LoginInfos);
+        Assert.Equal(stampBefore, account.SecurityStamp);
+        Assert.False(UserEmailOwnership.IsVerified(account.Properties, account.Email));
+        Assert.Empty(_harness.SignIns);
+        Assert.Empty(_harness.Revoked);
+        Assert.Empty(_merges);
+    }
+
+    [Fact]
+    public async Task ChoosingToTakeItBack_RemovesTheLogins_ProvesTheAddress_AndSignsIn()
+    {
+        // Arrange
+        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true }, withPassword: false);
+        var offer = Assert.IsType<EmailSignInViewModel>(Assert.IsType<ViewResult>(await SignInWithCodeAsync()).Model);
+
+        // Act
+        var result = await _harness.InRequestAsync(services => _harness.CreateController(services, LoginFormEvents(services)).TakeBack(new EmailSignInViewModel { Token = offer.Token }));
 
         // Assert
         Assert.IsType<LocalRedirectResult>(result);
@@ -312,6 +356,28 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         Assert.Equal(0, Assert.Single(_merges).Logins);
     }
 
+    // The choice is for the account as the code found it: once its credentials change, it is refused.
+    [Fact]
+    public async Task ATakeBackChoice_IsRefused_OnceTheAccountChanged()
+    {
+        // Arrange
+        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true }, withPassword: false);
+        var offer = Assert.IsType<EmailSignInViewModel>(Assert.IsType<ViewResult>(await SignInWithCodeAsync()).Model);
+        await _harness.InRequestAsync(async services =>
+        {
+            var manager = services.GetRequiredService<UserManager<IUser>>();
+
+            return await manager.UpdateSecurityStampAsync(await manager.FindByIdAsync("user-1"));
+        });
+
+        // Act
+        var result = await _harness.InRequestAsync(services => _harness.CreateController(services, LoginFormEvents(services)).TakeBack(new EmailSignInViewModel { Token = offer.Token }));
+
+        // Assert
+        Assert.IsType<ViewResult>(result);
+        Assert.Single((await FindAsync("user-1")).LoginInfos);
+        Assert.Empty(_harness.SignIns);
+    }
     [Fact]
     public async Task AnAccountWithOnlyAnExternalLogin_WhoseAddressIsProved_GetsNoCode()
     {
@@ -346,29 +412,28 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         Assert.False(await CheckPasswordAsync(await FindAsync("user-1")));
     }
 
+    // K5: a session's cookie can be re-issued with the current security stamp after the password changed hands, so even
+    // a session a password began types the password to keep it.
     [Fact]
-    public async Task SignedInWithThePassword_ConfirmingKeepsIt()
+    public async Task SignedInWithThePassword_ConfirmingStillAsksForIt()
     {
         // Arrange: a session a password began carries amr=pwd.
-        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true });
+        await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true }, withLogin: false);
         var signedInWithPassword = await _harness.SignInClaimsAsync("user-1", new System.Security.Claims.Claim("amr", "pwd"));
         var asked = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", null, signedInWithPassword).Confirm(new EmailSignInViewModel()));
         var code = _harness.Sender.Sent[^1].Code;
 
         // Act
-        await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", LoginFormEvents(services), signedInWithPassword).ConfirmCode(new EmailSignInViewModel { Code = code }));
+        await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1", LoginFormEvents(services), signedInWithPassword).ConfirmCode(new EmailSignInViewModel { Code = code, Password = EmailSignInHarness.Password }));
 
         // Assert
-        var view = Assert.IsType<EmailSignInViewModel>(Assert.IsType<ViewResult>(asked).Model);
-        Assert.True(view.CredentialsShown);
-        Assert.False(view.AsksPassword);
+        Assert.True(Assert.IsType<EmailSignInViewModel>(Assert.IsType<ViewResult>(asked).Model).AsksPassword);
 
         var account = await FindAsync("user-1");
         Assert.True(await CheckPasswordAsync(account));
         Assert.True(UserEmailOwnership.IsVerified(account.Properties, account.Email));
         Assert.True(Assert.Single(_merges).HadPassword);
     }
-
     private async Task<IActionResult> SignInWithCodeAsync()
     {
         await _harness.InRequestAsync(services => _harness.CreateController(services).Index(new EmailSignInViewModel { Email = Email }));
@@ -387,6 +452,16 @@ public sealed class EmailSignInExistingAccountTests : IAsyncLifetime
         return [new CustomerMergeLoginFormEvent(mergeServices, NullLogger<CustomerMergeLoginFormEvent>.Instance)];
     }
 
+    private static ExternalLoginInfo GitHubLogin(string providerKey)
+        => new(new System.Security.Claims.ClaimsPrincipal(), "GitHub", providerKey, "GitHub");
+
+    // The owner signs in through GitHub again from the confirmation page; the callback shows the page with the step.
+    private async Task<string> FreshSignInTokenAsync()
+    {
+        var page = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1").ConfirmLoginCallback());
+
+        return Assert.IsType<EmailSignInViewModel>(Assert.IsType<ViewResult>(page).Model).Token;
+    }
     private Task<User> FindAsync(string userId)
         => _harness.InRequestAsync(async services => (User)await services.GetRequiredService<UserManager<IUser>>().FindByIdAsync(userId));
 

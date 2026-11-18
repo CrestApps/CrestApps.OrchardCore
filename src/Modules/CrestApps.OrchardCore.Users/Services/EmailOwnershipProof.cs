@@ -1,4 +1,7 @@
+using System.Security.Cryptography;
+using System.Text.Json;
 using CrestApps.OrchardCore.Users.Core.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -25,12 +28,27 @@ namespace CrestApps.OrchardCore.Users.Services;
 /// </remarks>
 public sealed class EmailOwnershipProof
 {
+    /// <summary>
+    /// The step a right code establishes on the code page for an account that signs in only through external logins
+    /// whose address isn't proved: the owner still chooses to remove them (K4).
+    /// </summary>
+    public const string TakeBackStep = "take-back";
+
+    /// <summary>
+    /// The step a fresh sign-in through one of the account's external logins establishes on the confirmation page: that
+    /// login is kept (K5).
+    /// </summary>
+    public const string KeptLoginStep = "kept-login";
+
+    private static readonly TimeSpan _stepLifetime = TimeSpan.FromMinutes(15);
+
     private readonly UserManager<IUser> _userManager;
     private readonly ISession _session;
     private readonly UserCredentialsResets _credentialsResets;
     private readonly IEnumerable<IUserSignInRevocation> _revocations;
     private readonly IOptionsMonitor<RegistrationOptions> _registrationOptions;
     private readonly IClock _clock;
+    private readonly IDataProtector _stepProtector;
     private readonly ILogger _logger;
 
     public EmailOwnershipProof(
@@ -40,6 +58,7 @@ public sealed class EmailOwnershipProof
         IEnumerable<IUserSignInRevocation> revocations,
         IOptionsMonitor<RegistrationOptions> registrationOptions,
         IClock clock,
+        IDataProtectionProvider dataProtectionProvider,
         ILogger<EmailOwnershipProof> logger)
     {
         _userManager = userManager;
@@ -48,8 +67,87 @@ public sealed class EmailOwnershipProof
         _revocations = revocations;
         _registrationOptions = registrationOptions;
         _clock = clock;
+        _stepProtector = dataProtectionProvider.CreateProtector("CrestApps.Users.EmailOwnershipProof.Step");
         _logger = logger;
     }
+
+    /// <summary>
+    /// Protects what one step of a proof established for the next, posted back in a form: that a right code reached an
+    /// account (<see cref="TakeBackStep"/>), or that the user just signed in again through one of the account's external
+    /// logins (<see cref="KeptLoginStep"/>). It names the account, its security stamp and, for a login, its provider and
+    /// key, and works for 15 minutes; a change of the account's credentials, which rotates the stamp, ends it sooner.
+    /// </summary>
+    /// <param name="step">What the step established: <see cref="TakeBackStep"/> or <see cref="KeptLoginStep"/>.</param>
+    /// <param name="account">The account.</param>
+    /// <param name="login">The login signed in through again, for <see cref="KeptLoginStep"/>.</param>
+    public string ProtectStep(string step, User account, UserLoginInfo login = null)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(step);
+        ArgumentNullException.ThrowIfNull(account);
+
+        var payload = JsonSerializer.Serialize(new ProofStep(step, account.UserId, account.SecurityStamp, (_clock.UtcNow + _stepLifetime).Ticks, login?.LoginProvider, login?.ProviderKey));
+
+        return _stepProtector.Protect(payload);
+    }
+
+    /// <summary>
+    /// The id of the account a protected step is for, when it is a <paramref name="step"/> that is still within its
+    /// lifetime; otherwise <see langword="null"/>. Check it against the account with <see cref="IsStepFor"/>.
+    /// </summary>
+    /// <param name="step">The step expected.</param>
+    /// <param name="protectedStep">The protected step, as posted.</param>
+    public string ReadStepUserId(string step, string protectedStep)
+        => Read(step, protectedStep)?.UserId;
+
+    /// <summary>
+    /// Whether <paramref name="protectedStep"/> is a <paramref name="step"/> for <paramref name="account"/> as it is now:
+    /// within its lifetime, with the account's current security stamp.
+    /// </summary>
+    /// <param name="step">The step expected.</param>
+    /// <param name="protectedStep">The protected step, as posted.</param>
+    /// <param name="account">The account.</param>
+    public bool IsStepFor(string step, string protectedStep, User account)
+        => Read(step, protectedStep) is { } read && Matches(read, account);
+
+    /// <summary>
+    /// The external login a <see cref="KeptLoginStep"/> names, when it is for <paramref name="account"/> as it is now and
+    /// the account still has that login; otherwise <see langword="null"/>.
+    /// </summary>
+    /// <param name="protectedStep">The protected step, as posted.</param>
+    /// <param name="account">The account.</param>
+    public UserLoginInfo ReadKeptLogin(string protectedStep, User account)
+        => Read(KeptLoginStep, protectedStep) is { } read && Matches(read, account)
+            ? account.LoginInfos?.FirstOrDefault(login =>
+                string.Equals(login.LoginProvider, read.LoginProvider, StringComparison.Ordinal) &&
+                string.Equals(login.ProviderKey, read.ProviderKey, StringComparison.Ordinal))
+            : null;
+
+    private ProofStep Read(string step, string protectedStep)
+    {
+        if (string.IsNullOrEmpty(protectedStep))
+        {
+            return null;
+        }
+
+        try
+        {
+            var read = JsonSerializer.Deserialize<ProofStep>(_stepProtector.Unprotect(protectedStep));
+
+            return read is not null && string.Equals(read.Step, step, StringComparison.Ordinal) && read.ExpiresTicks > _clock.UtcNow.Ticks
+                ? read
+                : null;
+        }
+        catch (Exception exception) when (exception is CryptographicException or JsonException or FormatException)
+        {
+            return null;
+        }
+    }
+
+    private static bool Matches(ProofStep read, User account)
+        => account is not null &&
+            !string.IsNullOrEmpty(account.SecurityStamp) &&
+            string.Equals(read.UserId, account.UserId, StringComparison.Ordinal) &&
+            string.Equals(read.SecurityStamp, account.SecurityStamp, StringComparison.Ordinal);
 
     /// <summary>
     /// Whether the account has a password or an external login, which the first proof of its address removes unless the
@@ -75,17 +173,17 @@ public sealed class EmailOwnershipProof
     /// <param name="account">The account whose address a code just proved.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     public Task<EmailProofResult> RecordAsync(User account, CancellationToken cancellationToken = default)
-        => RecordAsync(account, passwordShown: false, shownLoginProvider: null, cancellationToken);
+        => RecordAsync(account, passwordShown: false, shownLogin: null, cancellationToken);
 
     /// <summary>
     /// Confirms the account's address and records it as proved, keeping only the credential the request showed.
     /// </summary>
     /// <param name="account">The account whose address a code just proved.</param>
     /// <param name="passwordShown">Whether the same request showed the account's password, so it is kept.</param>
-    /// <param name="shownLoginProvider">The provider of the external login the same request is signed in through, whose
-    /// login is kept, or <see langword="null"/>.</param>
+    /// <param name="shownLogin">The external login the same flow signed in through again, freshly, at its provider (see
+    /// <see cref="ProtectStep"/>), which is kept when the account still has it; or <see langword="null"/>.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public async Task<EmailProofResult> RecordAsync(User account, bool passwordShown, string shownLoginProvider, CancellationToken cancellationToken = default)
+    public async Task<EmailProofResult> RecordAsync(User account, bool passwordShown, UserLoginInfo shownLogin, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(account);
 
@@ -97,7 +195,7 @@ public sealed class EmailOwnershipProof
 
         if (firstProof)
         {
-            removed = RemoveWhatWasNotShown(account, passwordShown, shownLoginProvider);
+            removed = RemoveWhatWasNotShown(account, passwordShown, shownLogin);
             UserCredentialsProof.ClearChangedInCodeSession(account);
             UserCredentialsResets.Record(account.Properties, now);
             UserEmailOwnership.MarkVerified(account.Properties, account.Email, now);
@@ -128,10 +226,10 @@ public sealed class EmailOwnershipProof
         return removed ? EmailProofResult.CredentialsRemoved : EmailProofResult.SignInsEnded;
     }
 
-    // Keeps the password only when it was shown, and an external login only when the request is signed in through its
-    // provider and it is the account's only login with that provider: the sign-in names the provider, not which of its
-    // accounts was used. The tokens a removed login stored go with it.
-    private static bool RemoveWhatWasNotShown(User account, bool passwordShown, string shownLoginProvider)
+    // Keeps the password only when it was shown, and an external login only when the flow signed in through it again at
+    // its provider, matched by provider and key: a session's cookie names the provider, not which of its accounts was
+    // used, and can be older than the account's logins (G1, K5). The tokens a removed login stored go with it.
+    private static bool RemoveWhatWasNotShown(User account, bool passwordShown, UserLoginInfo shownLogin)
     {
         var removed = false;
 
@@ -146,10 +244,11 @@ public sealed class EmailOwnershipProof
             return removed;
         }
 
-        var shown = shownLoginProvider is null
-            ? []
-            : logins.Where(login => string.Equals(login.LoginProvider, shownLoginProvider, StringComparison.Ordinal)).ToArray();
-        var kept = shown.Length == 1 ? shown[0] : null;
+        var kept = shownLogin is null
+            ? null
+            : logins.FirstOrDefault(login =>
+                string.Equals(login.LoginProvider, shownLogin.LoginProvider, StringComparison.Ordinal) &&
+                string.Equals(login.ProviderKey, shownLogin.ProviderKey, StringComparison.Ordinal));
         var removedProviders = new HashSet<string>(StringComparer.Ordinal);
 
         for (var i = logins.Count - 1; i >= 0; i--)
@@ -208,4 +307,6 @@ public sealed class EmailOwnershipProof
             }
         }
     }
+
+    private sealed record ProofStep(string Step, string UserId, string SecurityStamp, long ExpiresTicks, string LoginProvider, string ProviderKey);
 }

@@ -8,15 +8,21 @@ using OrchardCore.Users.Models;
 namespace CrestApps.OrchardCore.Users.Services;
 
 /// <summary>
-/// Notices, as Orchard Core's user store saves an account, a password or an external login added, changed or removed
-/// from a session an e-mailed code began, while the address isn't proved
-/// (<see cref="UserCredentialsProof.ChangedInCodeSessionPropertyName"/>): the owner linked their own login, or removed
-/// one, next to credentials somebody else may hold, and Orchard Core then signs the browser in again without the code's
-/// mark. Every session of that account is told on every page from then on (<see cref="Filters.EmailOwnershipNoticeFilter"/>).
+/// Notices, as Orchard Core's user store saves an account, two things the Confirm email ownership feature needs:
+/// <list type="bullet">
+/// <item>a password or an external login added, changed or removed from a session an e-mailed code began, while the
+/// address isn't proved (<see cref="UserCredentialsProof.ChangedInCodeSessionPropertyName"/>): the owner linked their
+/// own login, or removed one, next to credentials somebody else may hold, and Orchard Core then signs the browser in
+/// again without the code's mark. Every session of that account is told on every page from then on
+/// (<see cref="Filters.EmailOwnershipNoticeFilter"/>);</item>
+/// <item>an account created in the current request, so an external registration whose provider asserted the same
+/// address as verified can record it as proved (<see cref="EmailOwnershipExternalLoginHandler"/>).</item>
+/// </list>
 /// It reads only the request's own user and the account being saved.
 /// </summary>
 public sealed class EmailOwnershipUserEventHandler : UserEventHandlerBase
 {
+    private const string CreatedItemPrefix = "CrestApps.EmailOwnership.Created:";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
@@ -27,6 +33,24 @@ public sealed class EmailOwnershipUserEventHandler : UserEventHandlerBase
         _clock = clock;
     }
 
+    /// <summary>
+    /// Whether the account was created in <paramref name="httpContext"/>'s request.
+    /// </summary>
+    /// <param name="httpContext">The request.</param>
+    /// <param name="userId">The account's id.</param>
+    public static bool WasCreatedIn(HttpContext httpContext, string userId)
+        => httpContext is not null && !string.IsNullOrEmpty(userId) && httpContext.Items.ContainsKey(CreatedItemPrefix + userId);
+
+    /// <inheritdoc/>
+    public override Task CreatedAsync(UserCreateContext context)
+    {
+        if (context?.User is User { UserId: { Length: > 0 } userId } && _httpContextAccessor.HttpContext is { } httpContext)
+        {
+            httpContext.Items[CreatedItemPrefix + userId] = true;
+        }
+
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public override Task UpdatingAsync(UserUpdateContext context)
