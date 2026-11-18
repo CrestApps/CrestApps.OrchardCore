@@ -65,6 +65,8 @@ internal sealed class CredentialTestHarness : IAsyncDisposable
                 services.AddScoped<CredentialIssuerContext, FixedIssuerContext>();
                 services.RemoveAll<CredentialRecipientResolver>();
                 services.AddScoped<CredentialRecipientResolver, TestRecipientResolver>();
+                services.TryAddScoped(_ => Moq.Mock.Of<CrestApps.OrchardCore.Learning.Programs.Services.ILearningPathService>(paths =>
+                    paths.SupportsIssuingAsync(Moq.It.IsAny<CrestApps.OrchardCore.Learning.Programs.Models.LearningPathProgress>(), Moq.It.IsAny<CancellationToken>()) == Task.FromResult(true)));
                 configure?.Invoke(services);
             },
             CredentialsIndexSchema.CreateAsync,

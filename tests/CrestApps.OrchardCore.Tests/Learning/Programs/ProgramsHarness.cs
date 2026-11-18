@@ -40,7 +40,7 @@ internal sealed class ProgramsHarness
 
     public RecordingRequiredLearningObserver Observer { get; } = new();
 
-    public static async Task<ProgramsHarness> CreateAsync()
+    public static async Task<ProgramsHarness> CreateAsync(Action<IServiceCollection> configure = null)
     {
         ProgramsHarness harness = null;
 
@@ -56,6 +56,7 @@ internal sealed class ProgramsHarness
                 services.AddSingleton<IUserAudienceService>(provider => new FakeAudiences(harness.Audiences));
                 services.AddSingleton(provider => Users());
                 services.AddSingleton<IRequiredLearningObserver>(provider => harness.Observer);
+                configure?.Invoke(services);
             },
             ProgramsIndexSchema.CreateAsync,
             [new LearningPathProgressIndexProvider(), new LearningRequirementIndexProvider(), new RequiredLearningAssignmentIndexProvider()],
@@ -88,6 +89,8 @@ internal sealed class ProgramsHarness
         item.Apply(new LearningPathPart { Sets = sets.ToList() });
         _paths[id] = item;
     }
+
+    public ContentItem Path(string id) => _paths[id];
 
     public async Task CompleteCourseAsync(string userId, string courseId)
     {

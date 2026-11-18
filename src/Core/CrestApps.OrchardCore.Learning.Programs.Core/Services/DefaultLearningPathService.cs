@@ -216,6 +216,29 @@ public sealed class DefaultLearningPathService : ILearningPathService
     }
 
     /// <inheritdoc/>
+    public async Task<bool> SupportsIssuingAsync(LearningPathProgress progress, CancellationToken cancellationToken = default)
+    {
+        if (progress?.CompletedUtc is null || string.IsNullOrEmpty(progress.UserId))
+        {
+            return false;
+        }
+
+        var path = await LoadPathAsync(progress.PathId);
+
+        if (path is null)
+        {
+            return false;
+        }
+
+        var evidence = (await _enrollmentStore.ListByUserAsync(progress.UserId, cancellationToken))
+            .Where(CompletionEvidence.SupportsIssuing)
+            .Select(enrollment => enrollment.CourseId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        return LearningPathRules.OpenStage(path, evidence) >= LearningPathRules.Stages(path).Count;
+    }
+
+    /// <inheritdoc/>
     public Task<LearningPathProgress> FindProgressAsync(string pathId, string userId, CancellationToken cancellationToken = default)
         => string.IsNullOrEmpty(pathId) || string.IsNullOrEmpty(userId) ? Task.FromResult<LearningPathProgress>(null) : FindFreshAsync(pathId, userId, cancellationToken);
 

@@ -19,6 +19,17 @@ public static class CompletionEvidence
         => enrollment is not null && enrollment.Passed != false && !enrollment.NeedsReview;
 
     /// <summary>
+    /// Tells whether a completed enrollment may support what is issued on it, such as a digital credential, education
+    /// credits or a learning path's credential: it is completed, it counts as evidence (<see cref="CountsAsEvidence"/>)
+    /// and it does not rest on a result the browser reported (<see cref="RestsOnABrowserResult(Enrollment)"/>). Every
+    /// module that issues on a completion, directly or through a learning path, asks this.
+    /// </summary>
+    /// <param name="enrollment">The enrollment.</param>
+    /// <returns><see langword="true"/> when the completion may support what is issued on it.</returns>
+    public static bool SupportsIssuing(Enrollment enrollment)
+        => enrollment is { Status: EnrollmentStatus.Completed } && CountsAsEvidence(enrollment) && !RestsOnABrowserResult(enrollment);
+
+    /// <summary>
     /// Tells whether a completion rests on a result the browser reported, such as a learning package's own status or
     /// score: the result of a required item of the completion snapshot was reported by the browser and its item did not
     /// let such a result count. The browser can be changed by the learner, so by default such a completion supports

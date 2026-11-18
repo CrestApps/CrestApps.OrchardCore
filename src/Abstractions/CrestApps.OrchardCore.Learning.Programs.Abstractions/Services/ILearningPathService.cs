@@ -24,6 +24,16 @@ public interface ILearningPathService
     Task EvaluateCourseAsync(string userId, string courseId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Tells whether a person's completed path may support what is issued on it, such as the path's digital credential
+    /// or its education credits (which can meet a certification's credits requirement). The path's rule is applied
+    /// again counting only the courses whose completion supports issuing
+    /// (<see cref="CrestApps.OrchardCore.Learning.Services.CompletionEvidence.SupportsIssuing"/>): a failed course, one
+    /// under review, or one resting on a result the browser reported does not count, even though it completes the path
+    /// for the learner.
+    /// </summary>
+    Task<bool> SupportsIssuingAsync(LearningPathProgress progress, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds a person's progress on a path.
     /// </summary>
     Task<LearningPathProgress> FindProgressAsync(string pathId, string userId, CancellationToken cancellationToken = default);

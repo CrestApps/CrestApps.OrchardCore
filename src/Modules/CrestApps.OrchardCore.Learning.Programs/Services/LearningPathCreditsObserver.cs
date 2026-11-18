@@ -12,7 +12,10 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Learning.Programs.Services;
 
 /// <summary>
-/// Awards the education credits of a learning path when a person completes it, once per path progress.
+/// Awards the education credits of a learning path when a person completes it, once per path progress, and only when
+/// the completed path may support what is issued on it (<see cref="ILearningPathService.SupportsIssuingAsync"/>).
+/// Credits meet a certification's credits requirement, so this also keeps a path completed through a course that is no
+/// evidence from certifying anyone.
 /// </summary>
 internal sealed class LearningPathCreditsObserver : ILearningPathObserver
 {
@@ -32,6 +35,11 @@ internal sealed class LearningPathCreditsObserver : ILearningPathObserver
             var path = await _services.GetRequiredService<IContentManager>().GetAsync(progress.PathId, VersionOptions.Published);
 
             if (path is null || !path.TryGet<EducationCreditsPart>(out var part) || part.Awards.Count == 0)
+            {
+                return;
+            }
+
+            if (!await _services.GetRequiredService<ILearningPathService>().SupportsIssuingAsync(progress, cancellationToken))
             {
                 return;
             }

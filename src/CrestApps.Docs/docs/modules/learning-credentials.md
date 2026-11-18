@@ -38,7 +38,7 @@ The part is `CredentialDefinitionPart`. Rule kinds are open strings registered w
 | --- | --- | --- |
 | `CourseCompleted` | An enrollment in the course completes, and Learning's completion evidence rules let it count: not failed, not under review, and not resting on a required item's result reported by the browser unless the item allows it (`CompletionEvidence`). | Learning |
 | `QuizPassed` | A quiz attempt passes, scored by the site, in an enrollment that counts as evidence. | Learning Assessments |
-| `LearningPathCompleted` | A learning path completes. | Learning Paths |
+| `LearningPathCompleted` | A learning path completes, and its rule still holds counting only the courses whose completion supports issuing (`CompletionEvidence.SupportsIssuing`: completed, not failed, not under review, not resting on a browser result). A path completed through any other course earns nothing, though it is completed for the learner (`ILearningPathService.SupportsIssuingAsync`). | Learning Paths |
 | `CertificationIssued` | A Skills certificate is issued or renewed for a user, or for a staff member with a user account. | Learning Certifications |
 | `Manual` | Staff with **Award and revoke digital credentials** award it under **Learning → Credential Awards → Award a credential**. | |
 | `Workflow` | The **Award Credential** workflow task runs. | Workflows |

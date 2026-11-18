@@ -89,4 +89,4 @@ An exemption keeps a reason, who granted it and an optional evidence file in the
 ```
 
 - **Personal data**: a person's path progress and required learning states, with the exemption reason and evidence name, are exported and deleted with the evidence files.
-- **Education credits**: with Learning Certifications on, a learning path with the Education Credits part awards its credits when a person completes it.
+- **Education credits**: with Learning Certifications on, a learning path with the Education Credits part awards its credits when a person completes it, and only when the path's rule holds with the courses whose completion supports issuing (`ILearningPathService.SupportsIssuingAsync`, built on `CompletionEvidence.SupportsIssuing`): a course that was failed, is under review or rests on a result the browser reported does not count. The path's digital credential follows the same rule, so neither can meet a certification through such a course.

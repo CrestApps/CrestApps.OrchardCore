@@ -23,10 +23,7 @@ public sealed class CredentialEnrollmentObserver : IEnrollmentObserver
     /// <inheritdoc/>
     public Task CompletedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
     {
-        if (enrollment is null ||
-            enrollment.Status != EnrollmentStatus.Completed ||
-            !CompletionEvidence.CountsAsEvidence(enrollment) ||
-            CompletionEvidence.RestsOnABrowserResult(enrollment))
+        if (!CompletionEvidence.SupportsIssuing(enrollment))
         {
             return Task.CompletedTask;
         }
