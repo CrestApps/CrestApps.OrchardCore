@@ -59,6 +59,21 @@ public static partial class Scorm2004Rules
     }
 
     /// <summary>
+    /// Gives the entry of a review launch, which starts no new learner attempt: <c>ab-initio</c> when the learner never
+    /// launched the package, <c>resume</c> when the attempt it reopens was suspended, and empty otherwise (SCORM 2004 RTE
+    /// 4.2.8, <c>cmi.entry</c>). The attempt's data and exit are kept, as a review changes nothing.
+    /// </summary>
+    /// <param name="cmi">The data.</param>
+    /// <param name="firstSession">Whether the learner never launched the package before.</param>
+    /// <returns>The entry.</returns>
+    public static string ReviewEntry(Scorm2004Cmi cmi, bool firstSession)
+    {
+        ArgumentNullException.ThrowIfNull(cmi);
+
+        return firstSession ? "ab-initio" : string.Equals(cmi.Exit, "suspend", StringComparison.Ordinal) ? "resume" : string.Empty;
+    }
+
+    /// <summary>
     /// Terminates a session: adds the session time to the total time of the attempt once.
     /// </summary>
     /// <param name="cmi">The data.</param>

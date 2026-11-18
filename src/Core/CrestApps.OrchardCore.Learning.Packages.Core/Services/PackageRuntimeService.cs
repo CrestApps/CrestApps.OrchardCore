@@ -578,6 +578,10 @@ public sealed class PackageRuntimeService
         {
             Scorm12Rules.BeginSession(cmi, firstSession);
         }
+        else
+        {
+            cmi.Entry = Scorm12Rules.ReviewEntry(cmi, firstSession);
+        }
 
         cmi.StudentId = userId;
         cmi.StudentName = Truncate(studentName ?? string.Empty, 255);
@@ -597,7 +601,11 @@ public sealed class PackageRuntimeService
 
         cmi.Edition = standard == PackagesConstants.Standards.Scorm2004FourthEdition ? 4 : 3;
 
-        if (!review && Scorm2004Rules.BeginSession(cmi, firstSession, part.ObjectiveIds ?? []))
+        if (review)
+        {
+            cmi.Entry = Scorm2004Rules.ReviewEntry(cmi, firstSession);
+        }
+        else if (Scorm2004Rules.BeginSession(cmi, firstSession, part.ObjectiveIds ?? []))
         {
             state.Attempts++;
         }

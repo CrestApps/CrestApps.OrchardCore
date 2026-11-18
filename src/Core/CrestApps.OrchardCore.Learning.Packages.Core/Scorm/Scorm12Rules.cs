@@ -27,6 +27,21 @@ public static class Scorm12Rules
     }
 
     /// <summary>
+    /// Gives the entry of a review launch, which starts no new session of record: <c>ab-initio</c> when the learner never
+    /// launched the package, <c>resume</c> after a session that exited with <c>suspend</c>, and empty otherwise (SCORM 1.2
+    /// RTE, <c>cmi.core.entry</c>). The earlier session's exit is kept, as a review changes nothing.
+    /// </summary>
+    /// <param name="cmi">The data.</param>
+    /// <param name="firstSession">Whether the learner never launched the package before.</param>
+    /// <returns>The entry.</returns>
+    public static string ReviewEntry(Scorm12Cmi cmi, bool firstSession)
+    {
+        ArgumentNullException.ThrowIfNull(cmi);
+
+        return firstSession ? "ab-initio" : string.Equals(cmi.Exit, "suspend", StringComparison.Ordinal) ? "resume" : string.Empty;
+    }
+
+    /// <summary>
     /// Sets the lesson status from the mastery score when the content sent a raw score without passing or failing the
     /// learner itself: passed when the raw score reaches the mastery score, failed otherwise. It applies to a status of
     /// <c>not attempted</c>, <c>completed</c> or <c>browsed</c>; the content's own <c>passed</c> or <c>failed</c> stands,

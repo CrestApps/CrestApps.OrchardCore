@@ -130,4 +130,25 @@ public sealed class PackageProgressScorm2004Tests
         Assert.Equal("kept", state.Cmi2004.Location);
         Assert.Equal(before.State, (await h.ProgressAsync(enrollment.ItemId, Item)).State);
     }
+
+    [Theory]
+    [InlineData("normal", "")]
+    [InlineData("suspend", "resume")]
+    public async Task Review_ReportsTheEntryOfTheAttemptItReopens(string exit, string entry)
+    {
+        // SCORM 2004 RTE cmi.entry: ab-initio only for the first access of a new learner attempt, resume after a suspended
+        // session, and empty otherwise. A review starts no attempt, so it is never ab-initio.
+        await using var h = await PackageTestHarness.CreateAsync();
+        await h.AddScorm2004PackageAsync();
+        var enrollment = await h.EnrollAsync("ana");
+        var first = await h.LaunchAsync("ana", Item);
+        await h.ApplyAsync("ana", first, finish: true, changes: [("cmi.location", "p3"), ("cmi.exit", exit)]);
+        await h.ChangeEnrollmentAsync(enrollment.ItemId, e => e.Status = EnrollmentStatus.Completed);
+
+        await h.LaunchAsync("ana", Item);
+        var launched = await h.StateAsync(enrollment.ItemId, Item);
+
+        Assert.Equal("review", launched.Cmi2004.Mode);
+        Assert.Equal(entry, launched.Cmi2004.Entry);
+    }
 }

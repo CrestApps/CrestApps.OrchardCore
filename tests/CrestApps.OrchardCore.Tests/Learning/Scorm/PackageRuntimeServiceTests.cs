@@ -360,4 +360,21 @@ public sealed class PackageRuntimeServiceTests
         await h.ChangeEnrollmentAsync(enrollment.ItemId, e => e.Status = EnrollmentStatus.Withdrawn);
         Assert.Null(await h.RunAsync(services => services.GetRequiredService<PackageRuntimeService>().OpenFileAsync(launch.Token, "index.html")));
     }
+
+    [Fact]
+    public async Task Review_AfterASessionThatEndedNormally_ReportsNoEntry()
+    {
+        // SCORM 1.2 RTE cmi.core.entry: ab-initio the first time, resume after a suspended session, empty otherwise.
+        await using var h = await PackageTestHarness.CreateAsync();
+        var enrollment = await h.EnrollAsync("ana");
+        var first = await h.LaunchAsync("ana");
+        await h.ApplyAsync("ana", first, finish: true, changes: [("cmi.core.lesson_status", "passed")]);
+        await h.ChangeEnrollmentAsync(enrollment.ItemId, e => e.Status = EnrollmentStatus.Completed);
+
+        var review = await h.LaunchAsync("ana");
+
+        Assert.True(review.Review);
+        Assert.Equal("ab-initio", first.State.Cmi.Entry);
+        Assert.Equal(string.Empty, review.State.Cmi.Entry);
+    }
 }
