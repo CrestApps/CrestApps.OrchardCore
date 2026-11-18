@@ -65,8 +65,8 @@ public sealed class SubmissionReportDataSet : IndexedReportDataSet<Submission, S
         AddField("SubmissionId", S["Submission ID"], DataFieldType.Text, record => record.ItemId, group).Identifier();
         AddField("EnrollmentId", S["Enrollment"], DataFieldType.Text, record => record.EnrollmentId, group).Identifier();
         AddField("UserId", S["Learner"], DataFieldType.Text, record => record.UserId, group).Identifier(ReportDataReferences.User());
-        AddField("CourseId", S["Course"], DataFieldType.Text, record => record.CourseId, group).Identifier();
-        AddField("CourseworkId", S["Coursework"], DataFieldType.Text, record => record.CourseworkId, group).Identifier();
+        AddField("CourseId", S["Course"], DataFieldType.Text, record => record.CourseId, group).Identifier(ReportDataReferences.ContentItem(LearningConstants.ContentTypes.Course));
+        AddField("CourseworkId", S["Coursework"], DataFieldType.Text, record => record.CourseworkId, group).Identifier(ReportDataReferences.ContentItem(CourseworkConstants.ContentTypes.Coursework));
         AddField("CourseworkTitle", S["Coursework title"], DataFieldType.Text, record => record.CourseworkTitle, group);
         AddField("Attempt", S["Attempt"], DataFieldType.Integer, record => record.Attempt, group);
         AddField("Current", S["Latest attempt"], DataFieldType.Boolean, record => record.Current, group);
