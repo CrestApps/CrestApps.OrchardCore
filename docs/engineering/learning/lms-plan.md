@@ -1069,7 +1069,7 @@ The ten new workflow activities are listed in the workflow designer's activity l
 
 | Bug | Fix | Commit |
 | --- | --- | --- |
-| "Grade again" leads a grader to a 403 | The grading form and **Return for resubmission** show on graded work only to someone with Override grades. | `1bc1ae005` |
-| Data sets show raw ids (Submissions) | The course and coursework ids reference their content items, as the learner and grader already referenced the users. | `d108faca0` |
-| Workflow hint shows `{ x }` (Return Coursework For Resubmission) | The Liquid example is an argument of the localized hint. | `381d36df7` |
-| GET/POST route guard | The coursework grading pages say `HttpGet`. | `f67bb7271` |
+| "Grade again" leads a grader to a 403 | The grading form and **Return for resubmission** show on graded work only to someone with Override grades. | `926a4a0ab` |
+| Data sets show raw ids (Submissions) | The course and coursework ids reference their content items, as the learner and grader already referenced the users. | `35fa42159` |
+| Workflow hint shows `{ x }` (Return Coursework For Resubmission) | The Liquid example is an argument of the localized hint. | `7c4f3eca6` |
+| GET/POST route guard | The coursework grading pages say `HttpGet`. | `66015a23a` |
