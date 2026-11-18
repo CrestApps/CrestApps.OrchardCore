@@ -1,8 +1,11 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
+using Dapper;
 using YesSql;
 using YesSql.Services;
+using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 
@@ -151,16 +154,38 @@ public sealed class AssessmentAttemptStore : DocumentCatalog<AssessmentAttempt, 
     {
         const int pageSize = 1000;
 
+        // Only the row id and the user id are read. The index's decimal columns (Percent, Score) come back from SQLite as
+        // an integer on one row and a real on the next, and a typed row reader built from the first row throws on the
+        // next one, so the whole index row is never mapped here.
+        var configuration = Session.Store.Configuration;
+        var dialect = configuration.SqlDialect;
+        var id = dialect.QuoteForColumnName("Id");
+        var builder = new SqlBuilder(configuration.TablePrefix, dialect);
+
+        builder.Select();
+        builder.Selector($"{id}, {dialect.QuoteForColumnName(nameof(AssessmentAttemptIndex.UserId))}");
+        builder.Table(configuration.TableNameConvention.GetIndexTable(typeof(AssessmentAttemptIndex), CollectionName), null, configuration.Schema);
+        builder.WhereAnd($"{dialect.QuoteForColumnName(nameof(AssessmentAttemptIndex.QuizId))} = @QuizId");
+        builder.WhereAnd($"{dialect.QuoteForColumnName(nameof(AssessmentAttemptIndex.Passed))} = @Passed");
+        builder.WhereAnd($"{dialect.QuoteForColumnName(nameof(AssessmentAttemptIndex.SubmittedUtc))} >= @SinceUtc");
+        builder.WhereAnd($"{id} > @AfterId");
+        builder.OrderBy(id);
+        builder.Take(pageSize.ToString(CultureInfo.InvariantCulture));
+
+        var sql = builder.ToSqlString();
         var users = new HashSet<string>(StringComparer.Ordinal);
+
+        // The statement runs on the session's own transaction, so it first has to see what this unit of work wrote.
+        await Session.FlushAsync(cancellationToken);
+        var transaction = await Session.BeginTransactionAsync(cancellationToken);
 
         for (var afterId = 0L; ;)
         {
-            var rows = (await Session.QueryIndex<AssessmentAttemptIndex>(
-                index => index.QuizId == quizId && index.Passed == true && index.SubmittedUtc >= sinceUtc && index.Id > afterId,
-                collection: CollectionName)
-                .OrderBy(index => index.Id)
-                .Take(pageSize)
-                .ListAsync(cancellationToken)).ToArray();
+            var rows = (await transaction.Connection.QueryAsync<PassedAttemptRow>(new CommandDefinition(
+                sql,
+                new { QuizId = quizId, Passed = true, SinceUtc = sinceUtc, AfterId = afterId },
+                transaction,
+                cancellationToken: cancellationToken))).ToArray();
 
             users.UnionWith(rows.Select(row => row.UserId));
 
@@ -171,6 +196,13 @@ public sealed class AssessmentAttemptStore : DocumentCatalog<AssessmentAttempt, 
 
             afterId = rows[^1].Id;
         }
+    }
+
+    private sealed class PassedAttemptRow
+    {
+        public long Id { get; set; }
+
+        public string UserId { get; set; }
     }
 
     public async Task<IReadOnlyList<AssessmentAttempt>> ListPassedSinceAsync(string quizId, DateTime sinceUtc, int take, CancellationToken cancellationToken = default)
