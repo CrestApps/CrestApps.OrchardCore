@@ -9,6 +9,6 @@
     }
     @if (Model.Value.Lines.Count > 0)
     {
-        <div>@string.Join(", ", Model.Value.Lines.Select(line => T["{0} × {1}", line.Quantity, line.Title].Value))</div>
+        <div>@string.Join(", ", Model.Value.Lines.Select(line => T.GetString("{0} × {1}", line.Quantity, line.Title).Value))</div>
     }
 </div>
