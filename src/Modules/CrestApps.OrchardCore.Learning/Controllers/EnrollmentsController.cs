@@ -94,6 +94,7 @@ public sealed class EnrollmentsController : Controller
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="shapeFactory">The shape factory.</param>
     /// <returns>The list.</returns>
+    [HttpGet]
     [Admin("learning/enrollments", "LearningEnrollments")]
     public async Task<IActionResult> Index(
         EnrollmentListViewModel model,
@@ -153,6 +154,7 @@ public sealed class EnrollmentsController : Controller
     /// </summary>
     /// <param name="courseId">The course to preselect.</param>
     /// <returns>The form.</returns>
+    [HttpGet]
     [Admin("learning/enrollments/new", "LearningEnrollmentsCreate")]
     public async Task<IActionResult> Create(string courseId)
     {
@@ -239,6 +241,7 @@ public sealed class EnrollmentsController : Controller
     /// </summary>
     /// <param name="id">The enrollment.</param>
     /// <returns>The page.</returns>
+    [HttpGet]
     [Admin("learning/enrollments/{id}", "LearningEnrollmentsDetail")]
     public async Task<IActionResult> Detail(string id)
     {
