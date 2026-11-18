@@ -37,9 +37,15 @@ public class DisbursementViewModel
     public bool IsBusinessPayee { get; set; }
 
     /// <summary>
-    /// Gets or sets the amount, as invariant-culture text.
+    /// Gets or sets the amount, bound by the invariant number binder; <see langword="null"/> when empty or unreadable.
     /// </summary>
-    public string Amount { get; set; }
+    public decimal? Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currency the amount is in, when known, which sets the input's step.
+    /// </summary>
+    [BindNever]
+    public string Currency { get; set; }
 
     /// <summary>
     /// Gets or sets a memo.

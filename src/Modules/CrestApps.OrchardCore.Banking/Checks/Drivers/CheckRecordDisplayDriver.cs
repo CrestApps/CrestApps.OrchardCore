@@ -89,7 +89,8 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
             model.PayeeName = check.PayeeName;
             model.PayeeAddress = payeeAddress;
             model.PayeeAddressEditor = addressEditor;
-            model.Amount = check.Amount > 0 ? check.Amount.ToString(CultureInfo.InvariantCulture) : null;
+            model.Amount = check.Amount > 0 ? check.Amount : null;
+            model.Currency = check.Currency;
             model.CheckDate = (check.CheckDate == default ? today : check.CheckDate).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             model.Memo = check.Memo;
             model.BankAccountOptions = accounts
@@ -127,7 +128,8 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
         await _addressEditor.PopulateAsync(model.PayeeAddress, AddressOptions(model.PayeeAddress.Country));
         check.Memo = string.IsNullOrWhiteSpace(model.Memo) ? null : model.Memo.Trim();
 
-        if (decimal.TryParse(model.Amount?.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) && amount > 0)
+        // An amount that can't be read is also a model error from the binder, so it is never saved as another number.
+        if (model.Amount is decimal amount && amount > 0m)
         {
             check.Amount = amount;
         }

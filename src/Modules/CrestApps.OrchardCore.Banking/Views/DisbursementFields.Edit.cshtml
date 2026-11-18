@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Currencies
 @model DisbursementViewModel
 
 <div class="card mb-3">
@@ -22,7 +23,7 @@
         <div class="ocat-wrapper" asp-validation-class-for="Amount">
             <label asp-for="Amount" class="ocat-label ocat-label-required">@T["Amount"]</label>
             <div class="ocat-end ocat-limited-wrapper">
-                <input asp-for="Amount" class="form-control" inputmode="decimal" autocomplete="off" />
+                <input asp-for="Amount" type="number" step="@CurrencyScale.GetInputStep(Model.Currency)" min="0" class="form-control" autocomplete="off" />
                 <span asp-validation-for="Amount" class="text-danger"></span>
             </div>
         </div>

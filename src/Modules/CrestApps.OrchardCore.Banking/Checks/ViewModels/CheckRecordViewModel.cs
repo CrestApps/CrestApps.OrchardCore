@@ -6,7 +6,7 @@ using OrchardCore.DisplayManagement;
 namespace CrestApps.OrchardCore.Banking.Checks.ViewModels;
 
 /// <summary>
-/// The editor of a check written by hand. The amount is bound as invariant text.
+/// The editor of a check written by hand.
 /// </summary>
 public class CheckRecordViewModel
 {
@@ -37,9 +37,15 @@ public class CheckRecordViewModel
 
 
     /// <summary>
-    /// Gets or sets the amount, as invariant text.
+    /// Gets or sets the amount, bound by the invariant number binder; <see langword="null"/> when empty or unreadable.
     /// </summary>
-    public string Amount { get; set; }
+    public decimal? Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currency the amount is in, when known, which sets the input's step.
+    /// </summary>
+    [BindNever]
+    public string Currency { get; set; }
 
     /// <summary>
     /// Gets or sets the check date, as yyyy-MM-dd.

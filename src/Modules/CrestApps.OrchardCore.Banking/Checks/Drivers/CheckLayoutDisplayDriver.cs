@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Banking.Checks.Models;
 using CrestApps.OrchardCore.Banking.Checks.Services;
 using CrestApps.OrchardCore.Banking.Checks.ViewModels;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
@@ -78,7 +79,7 @@ internal sealed class CheckLayoutDisplayDriver : DisplayDriver<CheckLayout>
             model.MicrFontSize = Text(layout.MicrFontSize);
             model.MicrSymbolCharacters = layout.MicrSymbolCharacters;
             model.PayerName = layout.PayerName;
-            model.SecondSignatureAbove = layout.SecondSignatureAbove?.ToString(CultureInfo.InvariantCulture);
+            model.SecondSignatureAbove = layout.SecondSignatureAbove;
             model.HasSignature = layout.HasSignature;
             model.HasSecondSignature = layout.HasSecondSignature;
             model.HasMicrFont = layout.HasMicrFont;
@@ -150,17 +151,14 @@ internal sealed class CheckLayoutDisplayDriver : DisplayDriver<CheckLayout>
         layout.OffsetY = Number(model.OffsetY, nameof(model.OffsetY), context) ?? 0;
         layout.MicrFontSize = Number(model.MicrFontSize, nameof(model.MicrFontSize), context) ?? 12;
 
-        if (string.IsNullOrWhiteSpace(model.SecondSignatureAbove))
-        {
-            layout.SecondSignatureAbove = null;
-        }
-        else if (decimal.TryParse(model.SecondSignatureAbove.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var threshold))
-        {
-            layout.SecondSignatureAbove = threshold;
-        }
-        else
+        // An amount that can't be read is a model error from the binder, and the stored one is kept.
+        if (model.SecondSignatureAbove < 0m)
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.SecondSignatureAbove), S["Enter the amount with digits and a period, such as 5000.00."]);
+        }
+        else if (context.Updater.ModelState.GetFieldValidationState(Prefix + "." + nameof(model.SecondSignatureAbove)) != ModelValidationState.Invalid)
+        {
+            layout.SecondSignatureAbove = model.SecondSignatureAbove;
         }
 
         foreach (var field in model.Fields ?? [])
