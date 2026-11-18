@@ -1318,6 +1318,78 @@ Each tool needs the permission of the child tenants page action it mirrors: **Vi
 
 The tools need **Manage the tenant hierarchy**. A policy change is applied on top of the stored policy, so a field not given, such as the blocked features or the allowed recipes, keeps its value; lists given replace the stored lists, and recipes must be setup recipes of the site. Session times are given in minutes and hours, as in the policy editor. A tenant's connection string, secret and database settings are never returned.
 
+### Time zone map tools
+
+**Available when:** `CrestApps.OrchardCore.TimeZones` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listTimeZoneMaps` | Lists the friendly time zone names shown in time zone pickers and the time zone each maps to, with an optional name filter. |
+| `saveTimeZoneMap` | Creates a friendly time zone name for a time zone id, or changes the time zone of the name given. |
+| `deleteTimeZoneMap` | Deletes a friendly time zone name, so pickers no longer offer it. Records that already store the time zone id keep working. Asks for approval. |
+
+The tools need **Manage time zone maps**. A map is found by its name, as the `TimeZoneMaps` recipe step finds it, and the Time Zones editor cannot rename one, so neither can the tool. The time zone must be a valid IANA id (use `listTimeZones`), a name and a time zone each have one map, and maps saved or deleted earlier in the same chat message are taken into account.
+
+### Address check tool
+
+**Available when:** `CrestApps.OrchardCore.Addresses` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `validateAddress` | Checks a postal address against its country's rules and returns the problems per field, the normalized address, the lines as printed, and which fields that country uses and requires. |
+
+The tool needs a signed-in caller and no permission, as the address format endpoint is public. It runs the checks of the shared address editor, so its messages are the ones an address form shows. It checks the form of an address, not that the place exists.
+
+### Phone number check tool
+
+**Available when:** `CrestApps.OrchardCore.PhoneNumbers` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `normalizePhoneNumber` | Parses a phone number for a region and returns whether it is valid, its E.164 form, display form, region and time zones, and the value to store. |
+
+The tool needs a signed-in caller and no permission. The value to store is the E.164 form, or the number as typed when that form would drop part of it (an extension, for one), as every editor stores phone numbers.
+
+### Phone number verification tools
+
+**Available when:** `CrestApps.OrchardCore.PhoneNumbers.Verifications` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listPhoneNumberVerifications` | Lists the phone numbers queued for or checked by verification, with status, provider, attempts, last error and next due date, and the count per status; filter by number, status and sort. |
+| `retryPhoneNumberVerifications` | Re-queues phone verifications for the given content item ids, or for all failed ones, for the enabled lookup provider. Asks for approval. |
+
+Listing needs **Run 'Phone Number Verifications' Report** and retrying **Verify phone numbers**, as the Phone Verifications Queue does. Retrying fails when no provider is enabled. The re-queued records are verified by the **Phone Number Revalidation** background task at its next run (every five minutes), with the configured delay between requests; each lookup is a billable provider call. Provider keys are never returned.
+
+### Geo, territory and geocoding tools
+
+**Available when:** `CrestApps.OrchardCore.Geo` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listServiceTerritories` | Lists the service territories with parent, postal codes, time zone, travel speed, members and whether a shape is drawn; pass an id to also get its GeoJSON shape and the member kinds that can be assigned. |
+| `saveServiceTerritory` | Creates or updates a service territory: name, parent, GeoJSON shape or postal codes, time zone, travel speed and members by kind. Members of kinds you do not pass are kept. |
+| `deleteServiceTerritory` | Deletes a service territory. Its child territories move up to its parent. Asks for approval. |
+| `findServiceTerritory` | Finds which service territory covers a latitude and longitude or a postal code. |
+| `geocodeAddress` | Looks up the coordinates of an address, or the address of coordinates, with the configured maps provider. Asks for approval. |
+| `getGeocodingStatus` | Reports the background geocoding queue (waiting, done, failed), the last error, and which providers are selected. |
+
+The territory tools need **Manage service territories** and run the same checks as the territory editor. The parent must exist, the time zone must be one the time zone pickers offer, and each member must be one its kind lists. The geocoding tools need **Manage maps and geocoding settings**. `geocodeAddress` is a billable call to the provider chosen under **Settings, Maps and Geocoding** and fails when none is chosen; `findServiceTerritory` never geocodes. Map provider keys are never accepted or returned, and anything that looks like a key in a provider's error is hidden.
+
+### Account tools
+
+**Available when:** `CrestApps.OrchardCore.Accounts` with `CrestApps.OrchardCore.AI` on; `setAccountMembers` with `CrestApps.OrchardCore.Accounts.Members`, the location tools with `CrestApps.OrchardCore.Accounts.Locations`, and `setAccountTeam` with `CrestApps.OrchardCore.Accounts.Team`
+
+| Function | Description |
+| --- | --- |
+| `listAccounts` | Finds accounts by name across every account content type and returns id, name, type, status, member count, locations and owner. |
+| `setAccountMembers` | Replaces the users who sign in for an account and their role (Member or Admin), by user name or email. Asks for approval. |
+| `saveAccountLocation` | Adds a named location to an account or updates one by its location id, after checking the address against its country's rules. |
+| `deleteAccountLocation` | Removes a location from an account by its location id. Asks for approval. |
+| `setAccountTeam` | Sets the staff member who owns an account and the other staff on its account team, by staff member id. |
+
+`listAccounts` needs **List content** and searches only the account types the caller may view. The other tools need **Edit content** on the account, and `setAccountMembers` also needs **Manage the users who sign in for accounts**. Saving an account with `createOrUpdateContentItem` skips the rules of the account editor's members, locations and team parts; these tools apply them: each member must be an existing user who belongs to no other account (nothing changes when one does not qualify), a location's address is checked against its country's rules and addressed to the account, and team members must be staff. A published account with no pending draft is published again with the change, which needs **Publish content**; an account with unpublished changes is changed only with `saveAsDraft`. Orders and work orders keep their own copy of a removed location's address.
+
 ## Tool permissions
 
 Tool permissions decide who may **attach** a tool, and, for chat interactions, who may **use** it. They do not limit who may use the tools of an AI profile: for a profile, the profile itself is the authorization boundary.

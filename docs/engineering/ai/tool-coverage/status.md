@@ -32,6 +32,7 @@ Tools that run Orchard Core's settings display drivers (`getSiteSettings`, `upda
 | 16 | Reports, Report Builder | [21](21-crestapps-ai-knowledge-reports-data.md) | 20 | 20 | 0 | 315b52b64..282d0b85c |
 | 17 | Report subscriptions, webhooks | [21](21-crestapps-ai-knowledge-reports-data.md) | 12 | 12 | 0 | ce6012f49..e67d74f04 |
 | 18 | User display name and avatar, content access control, structured data check, tenant hierarchy (parent and platform) | [22](22-crestapps-platform-and-parties.md) | 24 | 24 | 0 | c0e525064..691457a10 |
+| 19 | Time zone maps, address check, phone number check, phone verification queue, territories and geocoding, accounts | [22](22-crestapps-platform-and-parties.md) | 18 | 18 | 0 | a5ab3a301..31309e94e |
 
 Orchard Core part (batches 1 to 10): 189 planned new tools, 132 built, 57 deferred. Left out on purpose: the four template tools (`listTemplates`, `getTemplate`, `saveTemplate`, `deleteTemplate`), because pull request 1321 adds shape template tools; and the six "existing, improve" rows (`listWorkflowTypes`, `getWorkflowType`, `listWorkflowActivities` and three AI tools), because phase 1 does not change existing tools.
 
@@ -118,6 +119,14 @@ Almost every deferral has one cause: the service the admin page uses exists only
 | `grantChildTenantAccess` | 18 | Stricter than `AccessGrantManager.AddAsync`: child roles must be among those the Access screen offers (`GetChildRolesAsync`), and the child tenant must not be one the platform changed |
 | `saveParentTenant` | 18 | Refuses to make a parent when `TenantHierarchy:PlatformDomain` is not configured and there is no request host (the service would build the host on `localhost`). Recipe names must be setup recipes of the site, which the editor's list enforces and the service does not |
 | `detachChildTenant` | 18 | Orphans only, as the page offers it; the service would detach any child |
+| `saveTimeZoneMap` | 19 | Finds a map by its name and cannot rename one, as the Time Zones editor cannot. Stricter than the editor: it runs the time zone map handler's checks (valid IANA id, one map per time zone), which the admin controller skips. A time zone freed by a delete earlier in the same chat message is still seen as taken by the handler, which reads the cached document |
+| `validateAddress` | 19 | Lists the countries only when the country is missing or unknown, and a country's regions only when the region is unknown |
+| `listPhoneNumberVerifications`, `retryPhoneNumberVerifications` | 19 | Retrying re-queues the records for the Phone Number Revalidation background task (every five minutes) instead of verifying them at the end of the call as the queue page does; at most 100 ids per call. The queued verification itself was not run by a test |
+| `listServiceTerritories` | 19 | A shape longer than 20,000 characters is not returned (`shapeTruncated`); 25 postal codes per territory in summaries (all with an id); 50 members offered per kind |
+| `saveServiceTerritory` | 19 | Stricter than the editor: the parent must exist, the time zone must be one the time zone pickers offer, a member kind must be one a module lists and each id one its kind lists |
+| `geocodeAddress` | 19 | At most five candidates. A provider's error is relayed with key-like values hidden; any other failure gets a fixed sentence |
+| `setAccountTeam` | 19 | Stricter than the team editor: every id must be a staff member |
+| Account write tools | 19 | As `setContentItemAccessRoles`: a pending draft is changed only with `saveAsDraft`, publishing needs **Publish content**, and when content validation fails after the draft version was created, that version is still saved by the session. `saveAccountLocation` needs an address for a new location; an update without one keeps the stored address |
 
 ## Batch 11: the AI configuration guard inside the tools
 
@@ -284,6 +293,27 @@ Open points for the owner:
 
 - Attribution: `ChildTenantManager.RecordAsync` and `AccessGrantManager.AddAsync` (`CreatedByName`) read the actor from `HttpContext`. Only creating a child tenant passes the caller explicitly (`ActorUserId`, `ActorUserName`). On a long-polling connection with the CrestApps.Core package in use (see "How tools find the caller"), the audit events and new grants of the other tools would carry no user.
 - The queued setup runs while the chat call's shell scope is disposed, which the hub invocation awaits, so the call returns only when the child tenant's setup has finished; with SignalR's one invocation per connection, the person's next message may wait for it. Whether the streamed reply reaches the person before the setup starts was not checked, as for the deferred `importOrchardCoreRecipe` path.
+
+## Batch 19: time zones, addresses, phone numbers, geo and accounts
+
+No tool of batch 19 was deferred. None of the six modules referenced `AI.Core`; each now references the `CrestApps.Core.AI` package and registers its tools in an `AIToolsStartup` gated on `AIFeatureIds.Area`. Accounts has four startups, one per feature (`AIToolsStartup`, `MembersAIToolsStartup`, `LocationsAIToolsStartup`, `TeamAIToolsStartup`), so its public API baseline changed (commit 31309e94e). TimeZones, Phone Number Verifications, Geo and Accounts have their own internal base class; the single Addresses and PhoneNumbers tools read the caller themselves. Every base refuses an argument its schema does not declare, so no map or verification provider key can be passed in. TimeZones and PhoneNumbers gained `InternalsVisibleTo` for the test project.
+
+Shared value types: an address argument is read by `AddressArguments` (Addresses.Abstractions, public), which `validateAddress`, `geocodeAddress` and `saveAccountLocation` share; it reads the postal fields of `Address` only, never coordinates. Points are `GeoPoint`; phone numbers go through `IPhoneNumberService.TryParse` and `PhoneNumberNormalization.ToE164OrTrimmed`.
+
+Extractions (behavior-preserving; the admin code calls them now):
+
+- `PhoneNumberVerificationRecordsService` (Phone Number Verifications module, public because the controller takes it): the query, status filter, sort, counts, failed-id lookup, re-queueing and deferred processing of `RecordsController`.
+- `TerritoryCommands` (Geo module): the territory editor's member merge (now given the kinds to replace; the controller passes every listed kind, the tool only the kinds given), the re-parenting of children on delete, and the geocoding queue counts of `GeoSettingsDisplayDriver`.
+- `AccountMemberRules` (Accounts module): the user resolution, de-duplication, one-account rule and contact link of `AccountMembersPartDisplayDriver`, returning the problems; the driver keeps its messages.
+- `AccountLocationRules` (Accounts module): the address editor options, the address addressed to the account and the location id and default name of `AccountLocationsPartDisplayDriver`.
+
+Scope: the time zone map catalog reads a cached document until the scope commits, so `TimeZoneMapScopeChanges` keeps the maps saved or deleted in the chat message, as batch 8 did for URL rewrites. Territories are YesSql documents and need no such record.
+
+Approval: deleting a time zone map, a territory or an account location, retrying verifications, geocoding (a billable lookup) and setting account members. Phone verification lookups do not message customers; retrying asks for approval because each lookup is billable.
+
+Checked claim: removing an account location leaves orders and work orders unchanged, because they store a copy of the `Address`, not the location id (`AccountLocationsShippingAddressSource` offers the address; `WorkOrder.ServiceAddress` is an `Address`).
+
+Tests: refusal tests (not signed in, without the permission, with the account as the resource for the account writes) for all 18 tools; the territory and geocoding-status tools run on the real territory manager, resolver and geocode request store over SQLite; the verification tools on a SQLite store with the content item and verification indexes and the real records service; the address and phone tools on the real address services and `DefaultPhoneNumberService`; the time zone and account tools with doubles of the managers, content manager, user manager and staff directory. No map or verification provider was called, and no tool was run in a live chat hub.
 
 ## Notes for the maintainer
 
