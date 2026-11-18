@@ -83,7 +83,7 @@ All are anonymous, send `X-Content-Type-Options: nosniff`, `X-Robots-Tag: noinde
 | `GET /learning/credentials/status/{n}` | The `BitstringStatusListCredential`, computed from the awards on each request (`Cache-Control: no-store`); signed as a JWT when the request accepts `application/vc+jwt` or `application/jwt`, or at `/status/{n}/jwt`. |
 | `GET /learning/credentials/verify/{code}` | The verification page. |
 
-The base address is the site's **Base URL** when it is set, else the address of the request (with the tenant prefix). Set the base URL so credentials awarded by background work carry the right addresses.
+The base address is the site's **Base URL**. Without it nothing is awarded (`NoIssuerAddress`; the Credential Awards page says so to admins): the address of the request is never used, because its `Host` header is the client's choice, and a credential signed for that host would name an issuer, a key and a status list that outside verifiers fetch from it.
 
 ## Verification page
 

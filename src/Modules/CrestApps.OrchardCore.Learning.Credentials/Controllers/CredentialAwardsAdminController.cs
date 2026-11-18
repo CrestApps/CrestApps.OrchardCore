@@ -110,6 +110,12 @@ public sealed class CredentialAwardsAdminController : Controller
 
         options ??= new CredentialAwardListOptions();
 
+        // Without the site's base URL nothing can be awarded: say so where the awards are managed.
+        if (await _issuerContext.GetAsync() is null)
+        {
+            await _notifier.WarningAsync(H["No credential can be awarded until the site's base URL is set under Settings > General: credentials name the site by that address, never by the address of a request."]);
+        }
+
         var filter = new CredentialAwardAdminFilter
         {
             DefinitionId = Clean(options.Definition),

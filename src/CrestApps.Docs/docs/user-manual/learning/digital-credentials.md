@@ -16,7 +16,7 @@ A digital credential is a badge or certificate that the site signs, so anyone ca
 
 <AskYourAdmin />
 
-Your administrator sets the site's **Base URL** in the site settings, so every credential carries the site's public address.
+Your administrator sets the site's **Base URL** in the site settings, so every credential carries the site's public address. Until it is set, no credential is awarded, and the **Credential Awards** page says so.
 
 ## Define a credential
 

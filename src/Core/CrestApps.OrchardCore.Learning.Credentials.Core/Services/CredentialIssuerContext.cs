@@ -4,8 +4,10 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Learning.Credentials.Core.Services;
 
 /// <summary>
-/// Tells who the issuer is and where its addresses live: the site's base URL when it is set, else the address of the
-/// current request.
+/// Tells who the issuer is and where its addresses live: the site's base URL. Without it there is no issuer and nothing
+/// is awarded (<c>NoIssuerAddress</c>): the address of the current request is never used, because its Host header is
+/// the client's choice, and a credential signed for that host would name an issuer, a key and a status list that
+/// outside verifiers fetch from it.
 /// </summary>
 public class CredentialIssuerContext
 {
@@ -31,11 +33,6 @@ public class CredentialIssuerContext
     {
         var site = await _siteService.GetSiteSettingsAsync();
         var baseUrl = site.BaseUrl;
-
-        if (string.IsNullOrWhiteSpace(baseUrl) && _httpContextAccessor.HttpContext?.Request is { Host.HasValue: true } request)
-        {
-            baseUrl = $"{request.Scheme}://{request.Host}{request.PathBase}";
-        }
 
         if (string.IsNullOrWhiteSpace(baseUrl))
         {
