@@ -57,4 +57,19 @@ public sealed class EnrollmentAdminTests
         var enrollment = Assert.Single(enrollments);
         Assert.Equal(_fixture.CourseId, enrollment.CourseId);
     }
+
+    [Fact]
+    public async Task AnInstructor_IsOfferedTheEnrollALearnerButton()
+    {
+        // Arrange
+        using var instructor = await _fixture.CreateClientAsync("instructor1");
+
+        // Act
+        var response = await instructor.GetAsync("Admin/learning/enrollments", TestContext.Current.CancellationToken);
+        var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Enroll a learner", html);
+    }
 }

@@ -117,7 +117,8 @@ public sealed class EnrollmentsController : Controller
             return Forbid();
         }
 
-        model.CanManage = await _authorizationService.AuthorizeAsync(User, LearningPermissions.ManageEnrollments);
+        // Instructors and assistants enroll learners into their own courses, so they are offered the button too.
+        model.CanManage = await _listService.GetEnrollableCourseIdsAsync(User) is not { Count: 0 };
         model.List = new AdminListContext<Enrollment>
         {
             Source = page.Value.Items.ToList(),
