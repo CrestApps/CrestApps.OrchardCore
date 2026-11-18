@@ -1,7 +1,6 @@
-using System.Security.Cryptography;
 using System.Text.Json;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Users.Core.Services;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -40,6 +39,8 @@ public sealed class EmailOwnershipProof
     /// </summary>
     public const string KeptLoginStep = "kept-login";
 
+    private const string StepPurpose = "CrestApps.Users.EmailOwnershipProof.Step";
+
     private static readonly TimeSpan _stepLifetime = TimeSpan.FromMinutes(15);
 
     private readonly UserManager<IUser> _userManager;
@@ -48,7 +49,7 @@ public sealed class EmailOwnershipProof
     private readonly IEnumerable<IUserSignInRevocation> _revocations;
     private readonly IOptionsMonitor<RegistrationOptions> _registrationOptions;
     private readonly IClock _clock;
-    private readonly IDataProtector _stepProtector;
+    private readonly SignedTokenService _signedTokens;
     private readonly ILogger _logger;
 
     public EmailOwnershipProof(
@@ -58,7 +59,7 @@ public sealed class EmailOwnershipProof
         IEnumerable<IUserSignInRevocation> revocations,
         IOptionsMonitor<RegistrationOptions> registrationOptions,
         IClock clock,
-        IDataProtectionProvider dataProtectionProvider,
+        SignedTokenService signedTokens,
         ILogger<EmailOwnershipProof> logger)
     {
         _userManager = userManager;
@@ -67,7 +68,7 @@ public sealed class EmailOwnershipProof
         _revocations = revocations;
         _registrationOptions = registrationOptions;
         _clock = clock;
-        _stepProtector = dataProtectionProvider.CreateProtector("CrestApps.Users.EmailOwnershipProof.Step");
+        _signedTokens = signedTokens;
         _logger = logger;
     }
 
@@ -87,7 +88,7 @@ public sealed class EmailOwnershipProof
 
         var payload = JsonSerializer.Serialize(new ProofStep(step, account.UserId, account.SecurityStamp, (_clock.UtcNow + _stepLifetime).Ticks, login?.LoginProvider, login?.ProviderKey));
 
-        return _stepProtector.Protect(payload);
+        return _signedTokens.Protect(StepPurpose, payload, _stepLifetime);
     }
 
     /// <summary>
@@ -131,13 +132,18 @@ public sealed class EmailOwnershipProof
 
         try
         {
-            var read = JsonSerializer.Deserialize<ProofStep>(_stepProtector.Unprotect(protectedStep));
+            if (_signedTokens.Unprotect(StepPurpose, protectedStep) is not { } payload)
+            {
+                return null;
+            }
+
+            var read = JsonSerializer.Deserialize<ProofStep>(payload);
 
             return read is not null && string.Equals(read.Step, step, StringComparison.Ordinal) && read.ExpiresTicks > _clock.UtcNow.Ticks
                 ? read
                 : null;
         }
-        catch (Exception exception) when (exception is CryptographicException or JsonException or FormatException)
+        catch (Exception exception) when (exception is JsonException or FormatException)
         {
             return null;
         }

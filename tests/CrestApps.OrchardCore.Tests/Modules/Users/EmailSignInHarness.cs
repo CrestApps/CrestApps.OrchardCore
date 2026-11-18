@@ -236,7 +236,7 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
             [new RecordingRevocation(Revoked)],
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.TestOptionsMonitor<RegistrationOptions>(Registration),
             CreateClock(),
-            requestServices.GetRequiredService<IDataProtectionProvider>(),
+            new CrestApps.OrchardCore.Core.Services.SignedTokenService(requestServices.GetRequiredService<IDataProtectionProvider>(), CreateClock()),
             NullLogger<EmailOwnershipProof>.Instance);
 
     private SignInManager<IUser> CreateSignInManager(UserManager<IUser> manager)

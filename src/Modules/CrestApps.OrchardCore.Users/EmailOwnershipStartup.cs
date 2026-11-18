@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Users.Core;
@@ -39,6 +40,7 @@ public sealed class EmailOwnershipStartup : StartupBase
         services.AddScoped<EmailSignInCodes>();
         services.AddScoped<IEmailSignInCodeSender, EmailSignInCodeSender>();
         services.AddScoped<EmailSignInEligibility>();
+        services.AddSignedLinks();
         services.AddScoped<EmailOwnershipProof>();
         services.AddScoped<IEmailOwnershipConfirmationPage, EmailOwnershipConfirmationPage>();
 

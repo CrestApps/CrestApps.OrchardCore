@@ -356,7 +356,7 @@ public sealed class EmailSignInControllerTests
             codeSender ?? Mock.Of<IEmailSignInCodeSender>(),
             CreateSiteService(),
             _loginFormEvents,
-            new EmailOwnershipProof(_userManager.Object, Mock.Of<global::YesSql.ISession>(), new UserCredentialsResets(_cache, new ShellSettings { Name = "Default" }, Options.Create(new SecurityStampValidatorOptions()), NullLogger<UserCredentialsResets>.Instance), [], new CrestApps.OrchardCore.Tests.Telephony.Doubles.TestOptionsMonitor<global::OrchardCore.Users.Models.RegistrationOptions>(new()), clock.Object, new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider(), NullLogger<EmailOwnershipProof>.Instance),
+            new EmailOwnershipProof(_userManager.Object, Mock.Of<global::YesSql.ISession>(), new UserCredentialsResets(_cache, new ShellSettings { Name = "Default" }, Options.Create(new SecurityStampValidatorOptions()), NullLogger<UserCredentialsResets>.Instance), [], new CrestApps.OrchardCore.Tests.Telephony.Doubles.TestOptionsMonitor<global::OrchardCore.Users.Models.RegistrationOptions>(new()), clock.Object, new CrestApps.OrchardCore.Core.Services.SignedTokenService(new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider(), clock.Object), NullLogger<EmailOwnershipProof>.Instance),
             Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
             new EmailSignInEligibility(_userManager.Object, Options.Create(new EmailSignInOptions())),
             NullLogger<EmailSignInController>.Instance,
