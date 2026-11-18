@@ -19,7 +19,7 @@ public sealed class SubmissionDataSetReferenceTests
     public void TheCourseCourseworkLearnerAndGraderIds_ReferenceWhatTheyIdentify()
     {
         // Arrange
-        IRecordDataSet submissions = new SubmissionReportDataSet(Mock.Of<ISession>(), Mock.Of<IAuthorizationService>(), new PassThroughStringLocalizer<SubmissionReportDataSet>());
+        var submissions = new SubmissionReportDataSet(Mock.Of<ISession>(), Mock.Of<IAuthorizationService>(), new PassThroughStringLocalizer<SubmissionReportDataSet>());
 
         // Act
         DataFieldReference Reference(string field)
@@ -31,4 +31,7 @@ public sealed class SubmissionDataSetReferenceTests
         Assert.NotNull(Reference("UserId"));
         Assert.NotNull(Reference("GraderId"));
     }
+
+    private static IEnumerable<DataField> Fields(IRecordDataSet dataSet)
+        => dataSet.Fields;
 }
