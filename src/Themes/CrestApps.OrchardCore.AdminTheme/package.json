@@ -1,0 +1,10 @@
+{
+  "name": "crestapps.orchardcore.admintheme",
+  "version": "1.0.0",
+  "description": "The CrestApps admin theme",
+  "license": "ISC",
+  "dependencies": {
+    "@fontsource/lato": "5.3.0"
+  },
+  "private": true
+}

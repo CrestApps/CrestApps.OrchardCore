@@ -1,0 +1,138 @@
+// ---------------------------------------------------------------------------
+// The editor of a color scheme an admin adds: a light and a dark preview, each a small mock of the admin drawn with
+// the tokens of the scheme being edited. The previews carry 'data-ca-scheme="custom-preview"', whose rules the editor
+// fetches from the server as the colors change, so they show exactly what the scheme will look like.
+// ---------------------------------------------------------------------------
+
+.ca-scheme-previews {
+    display: grid;
+    gap: 1rem;
+
+    @media (min-width: 992px) {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.ca-scheme-preview {
+    // Tokens the light mode leaves to Bootstrap; set here so a light preview stays light on a dark page.
+    --ca-preview-body: #212529;
+
+    display: flex;
+    min-height: 15rem;
+    overflow: hidden;
+    border: var(--bs-border-width) solid var(--bs-border-color);
+    border-radius: var(--ca-radius);
+    background-color: var(--ca-page-bg);
+    background-image: var(--ca-page-gradient);
+    color: var(--ca-preview-body);
+    font-size: 0.8125rem;
+
+    &[data-bs-theme="dark"] {
+        --ca-preview-body: var(--ca-body-color);
+    }
+}
+
+.ca-scheme-preview-menu {
+    flex: 0 0 9.5rem;
+    padding: 0.75rem 0.5rem;
+    background-color: var(--ca-menu-bg);
+    background-image: var(--ca-menu-gradient);
+    color: var(--ca-menu-color);
+
+    > div {
+        margin-bottom: 2px;
+        padding: 0.375rem 0.625rem;
+        border-radius: 0.5rem;
+    }
+
+    .ca-scheme-preview-brand {
+        margin-bottom: 0.5rem;
+        color: var(--ca-menu-strong);
+        font-weight: 700;
+    }
+
+    .ca-scheme-preview-current {
+        background-color: var(--ca-menu-active-bg);
+        color: var(--ca-menu-active-color);
+        font-weight: 700;
+    }
+}
+
+.ca-scheme-preview-page {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.625rem;
+    min-width: 0;
+    padding: 0.875rem;
+
+    .ca-scheme-preview-heading {
+        color: var(--ca-heading);
+        font-size: 1.125rem;
+        font-weight: 700;
+    }
+
+    .ca-scheme-preview-card {
+        overflow: hidden;
+        border: var(--bs-border-width) solid var(--ca-border);
+        border-radius: var(--bs-border-radius);
+        background-color: var(--ca-surface);
+    }
+
+    .ca-scheme-preview-toolbar {
+        padding: 0.375rem 0.625rem;
+        background-color: var(--ca-toolbar-bg);
+        color: var(--ca-toolbar-fg);
+        font-weight: 700;
+    }
+
+    .ca-scheme-preview-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.375rem 0.625rem;
+        border-top: var(--bs-border-width) solid var(--ca-border);
+    }
+
+    .ca-scheme-preview-link {
+        color: var(--ca-link);
+        text-decoration: underline;
+    }
+
+    .ca-scheme-preview-muted {
+        color: var(--ca-muted);
+    }
+
+    .ca-scheme-preview-label {
+        color: var(--ca-label);
+    }
+
+    .ca-scheme-preview-field {
+        height: 1.75rem;
+        border: var(--bs-border-width) solid var(--ca-control-border);
+        border-radius: var(--bs-border-radius-sm);
+        background-color: var(--ca-surface);
+    }
+
+    .ca-scheme-preview-button {
+        align-self: flex-start;
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--bs-border-radius-sm);
+        background-color: var(--ca-primary);
+        color: var(--ca-on-primary);
+        font-weight: 700;
+    }
+}
+
+// The color fields: the native picker beside the hex value it keeps in step with.
+.ca-color-field {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 16rem;
+
+    .form-control-color {
+        flex: 0 0 3rem;
+    }
+}

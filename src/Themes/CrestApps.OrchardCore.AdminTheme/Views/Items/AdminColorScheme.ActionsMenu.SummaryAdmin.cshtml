@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.AdminTheme.Models
+@model ShapeViewModel<AdminColorScheme>
+
+<a asp-action="Delete" asp-route-id="@Model.Value.Id" class="dropdown-item text-danger"
+   data-title="@T["Delete"]" data-message="@T["Delete the color scheme {0}? Users who picked it go back to the site's default scheme.", Model.Value.Name]"
+   data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

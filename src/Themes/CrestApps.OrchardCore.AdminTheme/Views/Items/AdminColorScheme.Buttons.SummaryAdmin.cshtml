@@ -1,0 +1,4 @@
+@using CrestApps.OrchardCore.AdminTheme.Models
+@model ShapeViewModel<AdminColorScheme>
+
+<a asp-action="Edit" asp-route-id="@Model.Value.Id" class="btn btn-primary btn-sm">@T["Edit"]</a>

@@ -1,0 +1,45 @@
+[
+  {
+    "action": "vite",
+    "name": "crestapps-admin-theme.css",
+    "source": "Assets/scss/admin-theme.scss",
+    "dest": "wwwroot/styles/admin-theme.css"
+  },
+  {
+    "action": "vite",
+    "name": "crestapps-admin-theme-login.css",
+    "source": "Assets/scss/login.scss",
+    "dest": "wwwroot/styles/login.css"
+  },
+  {
+    "action": "vite",
+    "name": "crestapps-admin-theme-scheme.js",
+    "source": "Assets/js/color-scheme.js",
+    "dest": "wwwroot/scripts/color-scheme.js"
+  },
+  {
+    "action": "vite",
+    "name": "crestapps-admin-theme-scheme-editor.js",
+    "source": "Assets/js/color-scheme-editor.js",
+    "dest": "wwwroot/scripts/color-scheme-editor.js"
+  },
+  {
+    "action": "copy",
+    "name": "crestapps-admin-theme-lato",
+    "source": [
+      "node_modules/@fontsource/lato/files/lato-latin-400-normal.woff2",
+      "node_modules/@fontsource/lato/files/lato-latin-700-normal.woff2",
+      "node_modules/@fontsource/lato/files/lato-latin-900-normal.woff2",
+      "node_modules/@fontsource/lato/files/lato-latin-400-italic.woff2",
+      "node_modules/@fontsource/lato/files/lato-latin-ext-400-normal.woff2",
+      "node_modules/@fontsource/lato/files/lato-latin-ext-700-normal.woff2",
+      "node_modules/@fontsource/lato/files/lato-latin-ext-900-normal.woff2",
+      "node_modules/@fontsource/lato/files/lato-latin-ext-400-italic.woff2",
+      "node_modules/@fontsource/lato/LICENSE"
+    ],
+    "dest": "wwwroot/fonts/",
+    "tags": [
+      "vendor"
+    ]
+  }
+]
