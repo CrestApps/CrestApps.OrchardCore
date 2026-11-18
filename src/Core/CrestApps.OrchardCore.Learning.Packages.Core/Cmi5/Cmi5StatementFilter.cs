@@ -138,6 +138,24 @@ public sealed class Cmi5StatementFilter : IXapiStatementFilter
                 continue;
             }
 
+            // A launch token writes into its own session only: a token of an ended session cannot write into a newer
+            // session or another AU's (review round 9).
+            if (isCmi5Launch && registration == launch.Registration &&
+                !string.Equals(XapiAgents.Text(statement["context"]?["extensions"]?[Cmi5Vocabulary.Extensions.SessionId]), launch.SessionId, StringComparison.Ordinal))
+            {
+                context.Reject(403, "The statement is not of the session of the launch.");
+
+                return;
+            }
+
+            // Any other client may write into a registration only about its learner.
+            if (!isCmi5Launch && !IsLearner(statement["actor"], entry.State.UserId))
+            {
+                context.Reject(403, "A statement of a cmi5 registration must be about the registration's learner.");
+
+                return;
+            }
+
             var error = Cmi5Rules.CheckAndApply(statement, entry.State.Cmi5, entry.Part.Cmi5, now);
 
             if (error is not null)
@@ -173,4 +191,10 @@ public sealed class Cmi5StatementFilter : IXapiStatementFilter
 
         await _session.SaveChangesAsync();
     }
+
+    // The learner of a registration is the account the launch gave the user, on any home page.
+    private static bool IsLearner(JsonNode actor, string userId)
+        => !string.IsNullOrEmpty(userId) &&
+            actor?["account"] is JsonObject account &&
+            string.Equals(XapiAgents.Text(account["name"]), userId, StringComparison.Ordinal);
 }

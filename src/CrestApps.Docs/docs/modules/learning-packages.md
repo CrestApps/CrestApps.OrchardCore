@@ -184,7 +184,7 @@ The fetch URL (`POST /learning/cmi5/fetch/<token>`) answers any origin. The firs
 
 The Learning Record Store checks every statement sent with a cmi5 auth token, and every statement with the cmi5 category in a cmi5 registration whoever sends it, against the cmi5 rules of section 9; a statement that breaks one refuses the whole request with 403:
 
-- every AU statement carries the session id and the publisher's AU id of the context template, and its session must be open: not terminated, not abandoned, not expired;
+- every AU statement carries the session id and the publisher's AU id of the context template, and its session must be open: not terminated, not abandoned, not expired; a launch token writes only into its own session (a token of an ended session cannot write into a newer one or another AU's), and another client may write into a registration only statements about the registration's learner;
 - `initialized` comes first in a session, and once; nothing comes after `terminated`;
 - a cmi5 statement (with the cmi5 category) uses `initialized`, `completed`, `passed`, `failed` or `terminated`; `launched`, `satisfied`, `abandoned` and `waived` are the LMS's; its object is the AU's activity id;
 - `completed` needs `result.completion` true, `passed` `result.success` true and `failed` `result.success` false; all three need the Normal launch mode and the moveOn category; `completed` and `passed` come once per registration and `failed` never after `passed`;

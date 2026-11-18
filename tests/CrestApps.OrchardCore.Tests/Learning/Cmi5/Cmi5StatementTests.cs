@@ -178,6 +178,36 @@ public sealed class Cmi5StatementTests
     }
 
     [Fact]
+    public async Task Round9Low_ALaunchToken_WritesOnlyIntoItsOwnSession()
+    {
+        // Arrange: ana launches the first AU, then the second; each launch has a session and a token of its own.
+        await using var h = await Cmi5TestHarness.CreateAsync();
+        await h.EnrollAsync("ana");
+        var first = await AuAsync(h, "ana");
+        var second = await AuAsync(h, "ana", au: 1);
+
+        // Act: the first launch's token sends a statement of the second session.
+        var crossed = await (second with { Credential = first.Credential }).PostAsync(second.Statement(Cmi5Vocabulary.Verbs.Initialized));
+        var own = await second.PostAsync(second.Statement(Cmi5Vocabulary.Verbs.Initialized));
+
+        // Assert
+        Assert.Equal(403, crossed.Status);
+        Assert.Equal(200, own.Status);
+    }
+
+    [Fact]
+    public async Task Round9Low_AnotherClient_CannotChangeTheLearnersCmi5State_WithAStatementAboutSomeoneElse()
+    {
+        await using var h = await Cmi5TestHarness.CreateAsync();
+        await h.EnrollAsync("ana");
+        var au = await AuAsync(h, "ana");
+        var client = XapiTestHarness.Client("tool", write: true);
+        var someoneElse = au with { Actor = XapiSamples.Agent("mailto:someone@example.com") };
+
+        Assert.Equal(403, (await someoneElse.PostAsync(someoneElse.Statement(Cmi5Vocabulary.Verbs.Initialized), client)).Status);
+    }
+
+    [Fact]
     public void MoveOn_AndTheItemResult_FollowTheCourse()
     {
         var course = Cmi5TestHarness.SampleCourse();
