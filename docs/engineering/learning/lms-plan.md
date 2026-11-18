@@ -1401,4 +1401,4 @@ Fixed test first on this branch; the red and green counts are in each commit.
 
 | Bug | Fix | Commit |
 | --- | --- | --- |
-| GET/POST route guard | `AuthoringController.Index` says `HttpGet`; every routed Learning action now declares its HTTP method. | `2fdc59d48` |
+| GET/POST route guard | `AuthoringController.Index` says `HttpGet`; every routed Learning action now declares its HTTP method. | `c4be61cbe` |
