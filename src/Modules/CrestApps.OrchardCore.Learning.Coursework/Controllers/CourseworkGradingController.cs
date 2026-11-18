@@ -175,7 +175,6 @@ public sealed class CourseworkGradingController : Controller
             Feedback = model.Feedback,
             Reason = model.Reason,
             CanOverrideGrades = canOverride,
-            AIAssisted = model.AIAssisted,
         }, HttpContext.RequestAborted);
 
         if (result.Error == SubmissionErrors.OverrideRequired)

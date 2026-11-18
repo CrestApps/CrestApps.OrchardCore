@@ -177,7 +177,16 @@ public sealed class EssayScoringAssistant
             }).ToArray());
         }
 
-        return await SuggestAsync(input, part.MaxPoints, criteria, CourseworkConstants.MaxFeedbackLength, cancellationToken);
+        var result = await SuggestAsync(input, part.MaxPoints, criteria, CourseworkConstants.MaxFeedbackLength, cancellationToken);
+
+        // The server records that this grader was given a suggestion: the grade they save next is AI-assisted (review
+        // round 10, item 1).
+        if (result.Suggestion is not null && user?.FindFirstValue(ClaimTypes.NameIdentifier) is { Length: > 0 } grader)
+        {
+            await submissions.RecordScoringHelpAsync(submission.ItemId, grader, cancellationToken);
+        }
+
+        return result;
     }
 
     private async Task<EssayScoringResult> SuggestAsync(JsonObject input, decimal maxPoints, IReadOnlyList<RubricCriterion> criteria, int maxFeedbackLength, CancellationToken cancellationToken)

@@ -140,6 +140,12 @@ public sealed class Submission : CatalogItem
     public bool AIAssisted { get; set; }
 
     /// <summary>
+    /// Gets or sets the grader to whom scoring help gave a suggestion for this submission since its last grade. The next
+    /// grade that grader saves is AI-assisted; recorded on the server, never sent by the browser.
+    /// </summary>
+    public string ScoringHelpGivenTo { get; set; }
+
+    /// <summary>
     /// Gets or sets who returned the work for resubmission.
     /// </summary>
     public string ReturnedBy { get; set; }

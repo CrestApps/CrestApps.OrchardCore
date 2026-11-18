@@ -82,6 +82,62 @@ public sealed class AIAssistedGradeRecordTests
     }
 
     [Fact]
+    public async Task Round10_1_ACourseworkFlagSentByTheBrowser_WithoutASuggestion_IsNotRecorded()
+    {
+        await using var h = await CourseworkTestHarness.CreateAsync();
+        var submitted = await SubmittedCourseworkAsync(h);
+
+        var claimed = await h.RunAsync(services => services.GetRequiredService<ISubmissionService>().GradeAsync(new GradeSubmissionRequest
+        {
+            SubmissionId = submitted.ItemId,
+            Actor = "grader",
+            Points = 70,
+            AIAssisted = true,
+        }));
+
+        Assert.True(claimed.Succeeded, claimed.Error);
+        Assert.False(claimed.Submission.AIAssisted);
+        Assert.False((await h.FindAsync(submitted.ItemId)).AIAssisted);
+    }
+
+    [Fact]
+    public async Task Round10_1_ASuggestionIssuedToTheGrader_MarksTheirNextGrade_AndTheSameScoreKeepsTheMark()
+    {
+        await using var h = await CourseworkTestHarness.CreateAsync();
+        var submitted = await SubmittedCourseworkAsync(h);
+        var service = (Func<IServiceProvider, ISubmissionService>)(services => services.GetRequiredService<ISubmissionService>());
+
+        // A suggestion given to another grader marks nothing of this grader's.
+        await h.RunAsync(services => service(services).RecordScoringHelpAsync(submitted.ItemId, "another-grader"));
+        var unassisted = await h.RunAsync(services => service(services).GradeAsync(new GradeSubmissionRequest { SubmissionId = submitted.ItemId, Actor = "grader", Points = 60 }));
+
+        await h.RunAsync(services => service(services).RecordScoringHelpAsync(submitted.ItemId, "grader"));
+        var assisted = await h.RunAsync(services => service(services).GradeAsync(new GradeSubmissionRequest { SubmissionId = submitted.ItemId, Actor = "grader", Points = 70, Reason = "With help" }));
+        var sameScore = await h.RunAsync(services => service(services).GradeAsync(new GradeSubmissionRequest { SubmissionId = submitted.ItemId, Actor = "grader", Points = 70, Reason = "Feedback only" }));
+        var changed = await h.RunAsync(services => service(services).GradeAsync(new GradeSubmissionRequest { SubmissionId = submitted.ItemId, Actor = "grader", Points = 50, Reason = "Second look" }));
+
+        Assert.False(unassisted.Submission.AIAssisted);
+        Assert.True(assisted.Submission.AIAssisted);
+        Assert.True(sameScore.Submission.AIAssisted);
+        Assert.False(changed.Submission.AIAssisted);
+        Assert.Null((await h.FindAsync(submitted.ItemId)).ScoringHelpGivenTo);
+    }
+
+    private static async Task<Submission> SubmittedCourseworkAsync(CourseworkTestHarness h)
+    {
+        h.Courses.AddCourse("course1");
+        h.Courses.AddItem("course1", "lesson1");
+        h.AddCoursework("course1", "essay1", part =>
+        {
+            part.SubmissionType = CourseworkSubmissionType.Text;
+            part.MaxPoints = 100;
+        });
+        await h.EnrollAsync("ana", "course1");
+
+        return (await h.SubmitAsync("ana", "essay1", "Answer")).Submission;
+    }
+
+    [Fact]
     public async Task SubmissionGrade_SavedWithHelp_IsMarkedAIAssisted_AndTheHistoryKeepsIt()
     {
         await using var h = await CourseworkTestHarness.CreateAsync();
@@ -95,12 +151,12 @@ public sealed class AIAssistedGradeRecordTests
         await h.EnrollAsync("ana", "course1");
         var submitted = await h.SubmitAsync("ana", "essay1", "Answer");
 
+        await h.RunAsync(services => services.GetRequiredService<ISubmissionService>().RecordScoringHelpAsync(submitted.Submission.ItemId, "grader"));
         var assisted = await h.RunAsync(services => services.GetRequiredService<ISubmissionService>().GradeAsync(new GradeSubmissionRequest
         {
             SubmissionId = submitted.Submission.ItemId,
             Actor = "grader",
             Points = 70,
-            AIAssisted = true,
         }));
         var regraded = await h.RunAsync(services => services.GetRequiredService<ISubmissionService>().GradeAsync(new GradeSubmissionRequest
         {

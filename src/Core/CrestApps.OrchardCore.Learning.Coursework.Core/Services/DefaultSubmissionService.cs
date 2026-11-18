@@ -337,6 +337,11 @@ internal sealed class DefaultSubmissionService : ISubmissionService
 
             var now = _clock.UtcNow;
 
+            // AI-assisted when scoring help gave this grader a suggestion for the work, or when an assisted grade is
+            // saved again with the same score; never because the form says so (review round 10, item 1).
+            var aiAssisted = string.Equals(submission.ScoringHelpGivenTo, request.Actor, StringComparison.Ordinal)
+                || (regrade && submission.AIAssisted && submission.RawScore == score.Percent && submission.Points == score.Points);
+
             if (regrade)
             {
                 previous = KeepGrade(submission, request.Actor, now, request.Reason.Trim());
@@ -354,7 +359,8 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             submission.Feedback = string.IsNullOrWhiteSpace(request.Feedback) ? submission.Feedback : request.Feedback.Trim();
             submission.GraderId = request.Actor;
             submission.GradedUtc = now;
-            submission.AIAssisted = request.AIAssisted;
+            submission.AIAssisted = aiAssisted;
+            submission.ScoringHelpGivenTo = null;
 
             await _store.UpdateAsync(submission, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
@@ -370,6 +376,34 @@ internal sealed class DefaultSubmissionService : ISubmissionService
         }
 
         return result;
+    }
+
+    /// <inheritdoc />
+    public async Task<SubmissionResult> RecordScoringHelpAsync(string submissionId, string grader, CancellationToken cancellationToken = default)
+    {
+        var existing = string.IsNullOrEmpty(submissionId) ? null : await _store.FindByIdAsync(submissionId, cancellationToken);
+
+        if (existing is null || string.IsNullOrEmpty(grader))
+        {
+            return SubmissionResult.Fail(SubmissionErrors.NotFound);
+        }
+
+        return await RunLockedAsync(existing.EnrollmentId, existing.CourseworkId, async () =>
+        {
+            var submission = await _store.FindFreshAsync(existing.ItemId, cancellationToken);
+
+            if (submission is null)
+            {
+                return SubmissionResult.Fail(SubmissionErrors.NotFound);
+            }
+
+            submission.ScoringHelpGivenTo = grader;
+
+            await _store.UpdateAsync(submission, cancellationToken);
+            await _session.SaveChangesAsync(cancellationToken);
+
+            return new SubmissionResult { Submission = submission };
+        }, cancellationToken);
     }
 
     public async Task<SubmissionResult> ReturnAsync(string submissionId, string feedback, string actor, bool canOverrideGrades = true, CancellationToken cancellationToken = default)

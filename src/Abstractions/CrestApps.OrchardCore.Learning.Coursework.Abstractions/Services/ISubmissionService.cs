@@ -34,6 +34,16 @@ public interface ISubmissionService
     Task<SubmissionResult> GradeAsync(GradeSubmissionRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Records that scoring help gave a grader a suggestion for a submission: the next grade that grader saves for it is
+    /// AI-assisted. A grade saved again with the same score keeps the mark.
+    /// </summary>
+    /// <param name="submissionId">The submission.</param>
+    /// <param name="grader">The grader.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The submission, or why nothing was recorded.</returns>
+    Task<SubmissionResult> RecordScoringHelpAsync(string submissionId, string grader, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns the current submission to the learner to hand in again, with feedback. Any grade it had stops counting.
     /// </summary>
     /// <param name="submissionId">The submission.</param>
@@ -159,7 +169,8 @@ public sealed class GradeSubmissionRequest
     public bool CanOverrideGrades { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets whether the grader used scoring help (a suggestion from AI) for this grade.
+    /// Gets or sets whether the grader says they used scoring help. Not trusted and not read: the submission service
+    /// decides from the suggestion it recorded (<see cref="ISubmissionService.RecordScoringHelpAsync"/>).
     /// </summary>
     public bool AIAssisted { get; set; }
 }
