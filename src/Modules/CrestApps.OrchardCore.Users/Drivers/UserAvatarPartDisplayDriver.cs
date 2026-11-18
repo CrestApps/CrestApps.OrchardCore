@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using CrestApps.OrchardCore.Users.Models;
+using CrestApps.OrchardCore.Users.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.StaticFiles;
@@ -130,16 +131,11 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
         var field = part.Avatar;
         var settings = GetDefaultSettings();
 
-        if (settings.AllowedExtensions?.Length > 0)
+        for (var i = 0; i < field.Paths.Length; i++)
         {
-            for (var i = 0; i < field.Paths.Length; i++)
+            if (!UserAvatarRules.IsAllowedExtension(field.Paths[i], settings.AllowedExtensions))
             {
-                var extension = Path.GetExtension(field.Paths[i]);
-
-                if (!settings.AllowedExtensions.Contains(extension))
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["Media extension is not allowed. Only media with '{0}' extensions are allowed.", string.Join(", ", settings.AllowedExtensions)]);
-                }
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["Media extension is not allowed. Only media with '{0}' extensions are allowed.", string.Join(", ", settings.AllowedExtensions)]);
             }
         }
 
@@ -178,19 +174,9 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
     {
         if (_mediaFieldSettings == null)
         {
-            var extensions = new List<string>();
-
-            foreach (var extension in _mediaOptions.AllowedFileExtensions)
-            {
-                if (_contentTypeProvider.TryGetContentType(extension, out var contentType) && contentType.StartsWith("image/"))
-                {
-                    extensions.Add(extension);
-                }
-            }
-
             _mediaFieldSettings = new MediaFieldSettings()
             {
-                AllowedExtensions = extensions.ToArray(),
+                AllowedExtensions = UserAvatarRules.GetAllowedExtensions(_mediaOptions, _contentTypeProvider),
                 AllowAnchors = true,
                 Required = _userAvatarOptions.CurrentValue.Required,
             };
