@@ -88,6 +88,54 @@ public sealed class LearningCourseworkPagesTests
     }
 
     [Fact]
+    public async Task AGraderWithoutOverrideGrades_IsNotOfferedGradeAgain_OnGradedWork()
+    {
+        // Arrange: browser pass 2026-11-18. Grading graded work needs Override grades, and the form ended in a 403 page.
+        var title = "Graded report " + Guid.NewGuid().ToString("n")[..6];
+        var submissionId = await _fixture.InTenantAsync(async services =>
+        {
+            var contentManager = services.GetRequiredService<IContentManager>();
+            var item = await contentManager.NewAsync(CourseworkConstants.ContentTypes.Coursework);
+
+            item.DisplayText = title;
+            item.Apply(new CourseworkPart { MaxPoints = 20 });
+            await contentManager.CreateAsync(item, VersionOptions.Published);
+
+            var submission = new Submission
+            {
+                ItemId = IdGenerator.GenerateId(),
+                EnrollmentId = _fixture.EnrollmentId,
+                UserId = _fixture.EnrolledUserId,
+                CourseId = _fixture.CourseId,
+                CourseworkId = item.ContentItemId,
+                CourseworkTitle = title,
+                Text = "Graded already",
+                SubmittedUtc = DateTime.UtcNow.AddHours(-2),
+                Status = SubmissionStatus.Graded,
+                Score = 60,
+                Points = 12,
+                MaxPoints = 20,
+                GraderId = "admin",
+                GradedUtc = DateTime.UtcNow.AddHours(-1),
+            };
+
+            await services.GetRequiredService<SubmissionStore>().CreateAsync(submission);
+
+            return submission.ItemId;
+        });
+
+        // Act: instructor1 grades the course (Manage own courses) but does not hold Override grades.
+        using var instructor = await _fixture.CreateClientAsync("instructor1");
+        var page = await instructor.GetAsync($"Admin/learning/coursework/submissions/{submissionId}", TestContext.Current.CancellationToken);
+        var html = await page.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("Graded already", html);
+        Assert.DoesNotContain("Grade again", html);
+    }
+
+    [Fact]
     public async Task TheRubricAndCourseworkEditors_Open()
     {
         // Arrange: the rubric editor once failed on a partial view it could not find.

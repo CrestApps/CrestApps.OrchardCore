@@ -252,7 +252,11 @@ public sealed class CourseworkGradingController : Controller
         model.Part = part;
         model.Rubric = rubric;
         model.EarlierAttempts = earlier;
-        model.CanGrade = submission.Current && submission.Status != SubmissionStatus.Returned;
+        // Grading or returning work that is already graded needs Override grades, as the posts check, so a grader
+        // without it is not offered a form that ends in a refusal.
+        model.CanGrade = submission.Current
+            && submission.Status != SubmissionStatus.Returned
+            && (submission.Status != SubmissionStatus.Graded || await _authorizationService.AuthorizeAsync(User, AssessmentPermissions.OverrideGrades));
         (model.DaysLate, model.LatePenaltyPercent) = CourseworkLatePolicy.Resolve(submission, part);
         model.Names = await NamesAsync(submission.History.Select(grade => grade.GraderId)
             .Concat(submission.History.Select(grade => grade.ReplacedBy))

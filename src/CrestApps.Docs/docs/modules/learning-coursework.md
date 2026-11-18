@@ -95,7 +95,7 @@ The events carry `SubmissionId`, `UserId`, `CourseworkId`, `CourseId`, `Enrollme
 
 ## Permissions
 
-Coursework adds no permission of its own. Grading uses the rule of the quiz grading pages (`GradingScope`): everyone with **Grade assessments**, or the graders, instructors and assistants on the staff of the course who also hold **Manage the courses you teach**. Grading graded work again needs **Override grades**. Learners need **Access learning** to hand work in.
+Coursework adds no permission of its own. Grading uses the rule of the quiz grading pages (`GradingScope`): everyone with **Grade assessments**, or the graders, instructors and assistants on the staff of the course who also hold **Manage the courses you teach**. Grading graded work again needs **Override grades**; a grader without it sees graded work without the grading form and the **Return for resubmission** button. Learners need **Access learning** to hand work in.
 
 ## Pages
 
