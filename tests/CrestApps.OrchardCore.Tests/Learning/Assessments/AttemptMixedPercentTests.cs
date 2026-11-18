@@ -24,7 +24,7 @@ public sealed class AttemptMixedPercentTests
         Assert.Equal(["learner-a", "learner-b"], users.Order(StringComparer.Ordinal));
     }
 
-    private static Task AddPassedAttemptsAsync(AssessmentTestHarness h)
+    private static Task<bool> AddPassedAttemptsAsync(AssessmentTestHarness h)
         => h.RunAsync(async services =>
         {
             var store = services.GetRequiredService<AssessmentAttemptStore>();
