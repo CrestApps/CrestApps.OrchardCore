@@ -46,6 +46,7 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<PhoneNumberVerificationsPermissionProvider>();
         services.AddContactMethods();
         services.AddScoped<IPhoneNumberVerificationQueueProcessor, PhoneNumberVerificationQueueProcessor>();
+        services.AddScoped<PhoneNumberVerificationRecordsService>();
         services.AddSingleton<IPhoneNumberVerificationRequestDelayer, DefaultPhoneNumberVerificationRequestDelayer>();
 
         services.AddContentPart<PhoneNumberVerificationPart>()
