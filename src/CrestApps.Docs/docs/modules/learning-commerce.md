@@ -85,7 +85,7 @@ With [Advanced SEO](./advanced-seo) on, the Learning module describes a course a
 | --- | --- |
 | Notifications | **Course seat given** tells a person their account gave them a seat. |
 | Workflows | Events **Course Seats Purchased**, **Course Seat Given** and **Licence Pool Running Low**, and the **Give Course Seat** task. |
-| Data | The **Learning commerce** data source with the **Licence pools** and **Seat holders** data sets, behind **View learning reports**. |
+| Data | The **Learning commerce** data source with the **Licence pools** and **Seat holders** data sets, behind **View learning reports**. Their ids name what they identify (the course and account content items, the pool, the person), so a Report Builder report joins the Contents, Users and Licence pools data sets to show titles and names instead of ids. |
 | Personal data | Exports a person's seats and purchases. Erasing the person takes their seats back (each released on the seat ledger, its enrollment or invitation ended) and clears the person from the seats and the purchases, which stay so the ledger and a later refund still find them; the account keeps its pools. |
 
 ## Not in this version

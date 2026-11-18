@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Learning.Commerce.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Commerce.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
@@ -22,6 +23,7 @@ public sealed class LearningCommerceDataSource : RecordDataSource, IDataSource
 
     public static string Name => LearningCommerceConstants.DataSourceName;
 
+
     public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<LearningCommerceDataSource>("Learning commerce");
 
     public static LocalizationSource Description { get; } = LocalizationSource.Create<LearningCommerceDataSource>("The course seats accounts bought and who holds them.");
@@ -40,8 +42,8 @@ public sealed class LicensePoolReportDataSet : IndexedReportDataSet<LicensePool,
         var group = S["Licence pool"].Value;
 
         AddField("PoolId", S["Pool ID"], DataFieldType.Text, record => record.ItemId, group).Identifier();
-        AddField("AccountId", S["Account"], DataFieldType.Text, record => record.AccountId, group).Identifier();
-        AddField("CourseId", S["Course"], DataFieldType.Text, record => record.CourseId, group).Identifier();
+        AddField("AccountId", S["Account"], DataFieldType.Text, record => record.AccountId, group).Identifier(ReportDataReferences.ContentItem(AccountsConstants.ContentTypes.Account));
+        AddField("CourseId", S["Course"], DataFieldType.Text, record => record.CourseId, group).Identifier(ReportDataReferences.ContentItem(LearningConstants.ContentTypes.Course));
         AddField("Title", S["Title"], DataFieldType.Text, record => record.Title, group);
         AddField("Seats", S["Seats bought"], DataFieldType.Integer, record => record.Seats, group);
         AddField("State", S["State"], DataFieldType.Text, record => record.State.ToString(), group);
@@ -71,8 +73,8 @@ public sealed class LicenseSeatReportDataSet : IndexedReportDataSet<LicenseSeat,
         var group = S["Seat"].Value;
 
         AddField("SeatId", S["Seat ID"], DataFieldType.Text, record => record.ItemId, group).Identifier();
-        AddField("PoolId", S["Pool"], DataFieldType.Text, record => record.PoolId, group).Identifier();
-        AddField("AccountId", S["Account"], DataFieldType.Text, record => record.AccountId, group).Identifier();
+        AddField("PoolId", S["Pool"], DataFieldType.Text, record => record.PoolId, group).Identifier(new DataFieldReference(LearningCommerceConstants.DataSourceName, LicensePoolReportDataSet.DataSetName, "PoolId"));
+        AddField("AccountId", S["Account"], DataFieldType.Text, record => record.AccountId, group).Identifier(ReportDataReferences.ContentItem(AccountsConstants.ContentTypes.Account));
         AddField("UserId", S["Person"], DataFieldType.Text, record => record.UserId, group).Identifier(ReportDataReferences.User());
         AddField("State", S["State"], DataFieldType.Text, record => record.State.ToString(), group);
         AddField("GivenBy", S["Given by"], DataFieldType.Text, record => record.GivenBy, group);
