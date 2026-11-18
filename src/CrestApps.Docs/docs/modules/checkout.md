@@ -298,6 +298,7 @@ A **tender** is part of a checkout's total paid from a balance the buyer holds r
 | `ICheckoutTenderService` (`DefaultCheckoutTenderService`) | Decides how much each chosen balance pays, and takes it off what the payment provider charges. |
 | `ICheckoutTenderLedger` (`CheckoutTenderLedger`) | Holds what each balance pays while the buyer pays the rest, takes it off when the checkout completes, lets it go when it doesn't, and puts it back for a refund. |
 | `TenderHoldPaymentGate` | An `ICheckoutPaymentGate` that holds the balances before a payment begins. |
+| `IBalanceLedgerArchive` (`BalanceLedgerArchive`, Checkout.Core) | Keeps a balance's document small: called from the balance store's save, it keeps the latest `BalanceLedger.RecentEntryCount` (50) changes on the balance and moves older ones to their own `BalanceLedgerEntryRecord`s, indexed by kind of balance, balance and reference (`BalanceLedgerEntryIndex`, `CheckoutTenderMigrations.UpdateFrom1Async`), so finding a change by its reference is a keyed lookup. Gift cards (`GiftCard`) and store credit (`StoreCredit`) use it. |
 | `TenderCheckoutHandler` | A checkout handler that redeems the holds while completing and releases them on cancel, failure and expiry. |
 
 ### Providers
@@ -328,7 +329,7 @@ Tenders never pay a recurring obligation: the agreement the provider sets up is 
 
 The invoice exposes the result through computed members that aren't serialized: `TenderTotal` (what the tenders pay), `TenderTaxAmount` (their share of the tax) and `AmountDue` (`GrandTotal - TenderTotal`, never below zero). `DefaultCheckoutEngine.GetObligationAmounts` charges the one-time obligation `InitialPaymentAmount`, with a tax of `Math.Min(Math.Max(0, TaxAmount - TenderTaxAmount), gross)`, so the payment the provider reports still splits into the amount and the tax the invoice expects. For example, $90 of goods with $10 tax and a $95 gift card: the card is charged $5, all of it tax, and the gift card carries the other $5 of tax.
 
-`CheckoutInvoiceSummary` shows **Total** (`GrandTotal`), a line per tender and **Due now** (`AmountDue`) when there are tenders, and **Due now** alone otherwise. The Stripe panel offers wallet buttons for `AmountDue`.
+`CheckoutInvoiceSummary` (`CheckoutInvoiceSummaryViewModel`) shows **Total** (`GrandTotal`), a line per tender and **Due now** (`AmountDue`) when there are tenders, and **Due now** alone otherwise. On the payment step a method whose capabilities say `DefersPayment` (the radio carries `data-defers-payment`) turns the label into **Due later** and the button into **Place order** (`checkoutPayment.initialize({ deferredSubmitLabel })`); on the confirmation the label reads **Due later** for such a checkout and **Paid** for one a gateway charged. The Stripe panel offers wallet buttons for `AmountDue`.
 
 ### The ledger
 

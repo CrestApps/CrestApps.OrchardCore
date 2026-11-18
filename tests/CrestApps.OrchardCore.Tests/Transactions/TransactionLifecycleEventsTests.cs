@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.Tasks;
+using CrestApps.OrchardCore.Transactions.ViewModels;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -18,6 +19,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Users.Services;
 using Xunit;
@@ -131,6 +134,58 @@ public sealed class TransactionLifecycleEventsTests
         Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal([("transaction-1", TransactionStatus.Outstanding, TransactionStatus.Canceled)], events.StatusChanges);
         Assert.Equal([("transaction-1", "Financial aid approved.")], events.Canceled);
+    }
+
+    /// <summary>
+    /// Review 1: the console recorded neither how a payment was made nor when it arrived. The time is entered in the site's
+    /// time zone and stored in UTC.
+    /// </summary>
+    [Fact]
+    public async Task RecordPayment_FromTheConsole_KeepsTheMethodAndTheReceivedTimeInUtc()
+    {
+        // Arrange
+        var store = new FakeTransactionStore(CreateOutstanding());
+        var localClock = new Mock<global::OrchardCore.Modules.ILocalClock>();
+        localClock.Setup(clock => clock.GetLocalTimeZoneAsync()).ReturnsAsync(Mock.Of<global::OrchardCore.Modules.ITimeZone>(zone => zone.TimeZoneId == "America/New_York"));
+        var controller = CreateAdminController(TransactionManagerFactory.Create(store), localClock.Object);
+
+        // Act
+        await controller.RecordPayment(new RecordPaymentViewModel
+        {
+            TransactionId = "transaction-1",
+            Amount = 10m,
+            PaymentMethod = "Bank transfer",
+            ReceivedAt = new DateTime(2026, 7, 1, 9, 0, 0, DateTimeKind.Unspecified),
+        });
+
+        // Assert
+        var payment = (await store.FindByIdAsync("transaction-1", TestContext.Current.CancellationToken)).Events.Single(entry => entry.Type == TransactionEventType.PaymentRecorded);
+        // The label of a common method is stored as its stable key.
+        Assert.Equal(TransactionsConstants.OfflinePaymentMethods.BankTransfer, payment.PaymentMethod);
+        Assert.Equal(new DateTime(2026, 7, 1, 13, 0, 0, DateTimeKind.Utc), payment.ReceivedUtc);
+    }
+
+    [Fact]
+    public async Task Reverse_FromTheConsole_TakesTheEntryBack_AndNeedsAReason()
+    {
+        // Arrange
+        var store = new FakeTransactionStore(CreateOutstanding());
+        var manager = TransactionManagerFactory.Create(store);
+        var controller = CreateAdminController(manager);
+        await controller.RecordPayment(new RecordPaymentViewModel { TransactionId = "transaction-1", Amount = 10m });
+        var paymentId = (await store.FindByIdAsync("transaction-1", TestContext.Current.CancellationToken)).Events.Single(entry => entry.Type == TransactionEventType.PaymentRecorded).Id;
+
+        // Act
+        await controller.Reverse("transaction-1", paymentId, "  ");
+        var afterRefused = await store.FindByIdAsync("transaction-1", TestContext.Current.CancellationToken);
+        var refused = afterRefused.Events.Any(entry => entry.Type == TransactionEventType.Reversed);
+        await controller.Reverse("transaction-1", paymentId, "Recorded twice");
+
+        // Assert
+        var transaction = await store.FindByIdAsync("transaction-1", TestContext.Current.CancellationToken);
+        Assert.False(refused);
+        Assert.Single(transaction.Events, entry => entry.Type == TransactionEventType.Reversed && entry.ReversesEventId == paymentId);
+        Assert.Equal(0m, transaction.AmountPaid);
     }
 
     [Fact]
@@ -331,10 +386,11 @@ public sealed class TransactionLifecycleEventsTests
             manager,
             services.BuildServiceProvider(),
             new TestClock(_now),
+            NullLogger<TransactionRefundHandler>.Instance,
             new PassThroughStringLocalizer<TransactionRefundHandler>());
     }
 
-    private static AdminController CreateAdminController(ITransactionManager manager)
+    private static AdminController CreateAdminController(ITransactionManager manager, global::OrchardCore.Modules.ILocalClock localClock = null)
     {
         var authorizationService = new Mock<IAuthorizationService>();
         authorizationService
@@ -353,6 +409,9 @@ public sealed class TransactionLifecycleEventsTests
             new TestClock(_now),
             Mock.Of<INotifier>(),
             Options.Create(new TransactionSourceOptions()),
+            Mock.Of<IDisplayManager<Transaction>>(),
+            Mock.Of<IUpdateModelAccessor>(),
+            localClock ?? Mock.Of<global::OrchardCore.Modules.ILocalClock>(),
             new PassThroughHtmlLocalizer<AdminController>(),
             new PassThroughStringLocalizer<AdminController>(),
             new SourceTextLocalizerFactory());

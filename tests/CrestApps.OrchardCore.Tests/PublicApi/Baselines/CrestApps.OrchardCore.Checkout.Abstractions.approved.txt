@@ -508,6 +508,11 @@ namespace CrestApps.OrchardCore.Checkout.Models
         public CheckoutReferenceNumber() { }
         public string Number { get; set; }
     }
+    public sealed class CheckoutRequestedAmount
+    {
+        public CheckoutRequestedAmount() { }
+        public decimal Amount { get; set; }
+    }
     public sealed class CheckoutSettings
     {
         public CheckoutSettings() { }
@@ -852,6 +857,10 @@ namespace CrestApps.OrchardCore.Checkout.Services
         public CheckoutDiscountRedemptionContext(CrestApps.OrchardCore.Checkout.CheckoutFlow flow, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.DiscountLine> discounts) { }
         public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.DiscountLine> Discounts { get; }
         public CrestApps.OrchardCore.Checkout.CheckoutFlow Flow { get; }
+    }
+    public static class CheckoutKeptPaymentMethods
+    {
+        public static System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.SavedPaymentMethod> ReadAsync(CrestApps.OrchardCore.Transactions.Services.IPaymentAttemptStore attemptStore, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Checkout.Services.ICheckoutSavedPaymentMethodProvider> providers, string sessionId, Microsoft.Extensions.Logging.ILogger logger, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class CheckoutObligations
     {
@@ -1333,6 +1342,7 @@ namespace CrestApps.OrchardCore.Checkout.Services
     public sealed class StartCheckoutRequest
     {
         public StartCheckoutRequest() { }
+        public decimal? Amount { get; set; }
         public CrestApps.OrchardCore.Checkout.CheckoutContactInfo Contact { get; set; }
         public string OwnerId { get; set; }
         public CrestApps.OrchardCore.Checkout.CheckoutPriceSelection PriceSelection { get; set; }

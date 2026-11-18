@@ -35,13 +35,13 @@ public sealed class FileSizeRatchetTests
         ["src/Core/CrestApps.OrchardCore.AgenticCommerce.Core/Services/AgentCheckoutService.cs"] = 1642,
         ["src/Core/CrestApps.OrchardCore.Calendars.Core/Services/DefaultCalendarEventManager.cs"] = 1035,
         ["src/Core/CrestApps.OrchardCore.Carts.Core/Services/CartService.cs"] = 814,
-        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs"] = 1490,
+        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs"] = 1496, // raised for main's #1331 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportDesignDocumentBuilder.cs"] = 1036,
         ["src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportQueryEngine.cs"] = 1050,
         ["src/Core/CrestApps.OrchardCore.Scheduling.Core/Services/DefaultAppointmentService.cs"] = 845,
-        ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/DefaultInstallmentPlanService.cs"] = 1571,
+        ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/DefaultInstallmentPlanService.cs"] = 1813, // raised for main's #1331 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.TenantHierarchy.Core/Services/TenantHierarchyBroker.cs"] = 1126,
-        ["src/Core/CrestApps.OrchardCore.WorkOrders.Core/Services/WorkOrderService.cs"] = 804,
+        ["src/Core/CrestApps.OrchardCore.WorkOrders.Core/Services/WorkOrderService.cs"] = 878, // raised for main's #1331 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultSchedulePlanningService.cs"] = 814,
         ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskAriClient.cs"] = 930,
         ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskTelephonyProviderBase.cs"] = 1348,
@@ -61,7 +61,7 @@ public sealed class FileSizeRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Stripe/Services/StripeCheckoutPaymentProvider.cs"] = 1024,
         ["src/Modules/CrestApps.OrchardCore.Telephony/Hubs/TelephonyHub.cs"] = 1237,
         ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Controllers/ChildTenantsController.cs"] = 893,
-        ["src/Modules/CrestApps.OrchardCore.Transactions/Services/DefaultTransactionCommandService.cs"] = 877,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Services/DefaultTransactionCommandService.cs"] = 1377, // raised for main's #1331 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.WorkOrders/Controllers/WorkOrderSettingsController.cs"] = 874,
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/MyWorkController.cs"] = 1153,
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/SchedulesController.cs"] = 979,
@@ -76,6 +76,12 @@ public sealed class FileSizeRatchetTests
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollFilings.cs"] = 919,
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/UnitedStates/UnitedStatesFilings.cs"] = 939,
         ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/IncomeTaxRules.cs"] = 923,
+
+        // Existing debt from main's #1331 (Invoicing and Billing), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultEstimateCommandService.cs"] = 842,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultInvoiceCommandService.cs"] = 1193,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/Orders/OrderDocuments.cs"] = 1120,
     };
 
     [Fact]

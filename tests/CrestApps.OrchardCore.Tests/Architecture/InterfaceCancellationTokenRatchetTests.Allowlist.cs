@@ -206,5 +206,10 @@ public sealed partial class InterfaceCancellationTokenRatchetTests
         ["src/Abstractions/CrestApps.OrchardCore.Banking.Abstractions/Checks/Services/ICheckFileStore.cs: ICheckFileStore.WriteAsync"] = 1,
         ["src/Abstractions/CrestApps.OrchardCore.Banking.Abstractions/Disbursements/Services/IDisbursementFileStore.cs: IDisbursementFileStore.WriteAsync"] = 1,
         ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/Services/IEmployerManager.cs: IPayrollScopeService.AuthorizeAsync"] = 1,
+
+        // Existing debt from main's #1331 (Invoicing and Billing), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/BalanceLedgerArchive.cs: IBalanceLedgerArchive.ArchiveAsync"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/BalanceLedgerArchive.cs: IBalanceLedgerArchive.SaveAsync"] = 1,
     };
 }

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.PayLater.Models;
 using Microsoft.Extensions.Hosting;
@@ -24,16 +25,19 @@ public sealed class PayLaterCheckoutPaymentProvider : OfflineCheckoutPaymentProv
     public const string ProcessorKey = "pay-later";
 
     private readonly ISiteService _siteService;
+    private readonly PayLaterDueDateResolver _dueDates;
 
     internal readonly IStringLocalizer S;
 
     public PayLaterCheckoutPaymentProvider(
         ISiteService siteService,
+        PayLaterDueDateResolver dueDates,
         IHostEnvironment hostEnvironment,
         IStringLocalizer<PayLaterCheckoutPaymentProvider> stringLocalizer)
         : base(hostEnvironment)
     {
         _siteService = siteService;
+        _dueDates = dueDates;
         S = stringLocalizer;
     }
 
@@ -62,12 +66,15 @@ public sealed class PayLaterCheckoutPaymentProvider : OfflineCheckoutPaymentProv
     };
 
     /// <inheritdoc/>
-    public override async Task<DateTime?> GetDueUtcAsync(DateTime now)
-    {
-        var settings = await _siteService.GetSettingsAsync<PayLaterSettings>();
+    public override Task<DateTime?> GetDueUtcAsync(DateTime now)
+        => _dueDates.GetDueUtcAsync(now, default);
 
-        return settings.NetTermDays > 0 ? now.AddDays(settings.NetTermDays) : null;
-    }
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The payer's own payment term wins, then the one chosen for Pay Later, then the number of days in its settings.
+    /// </remarks>
+    public override Task<DateTime?> GetDueUtcAsync(DateTime now, PartyRef payer, CancellationToken cancellationToken = default)
+        => _dueDates.GetDueUtcAsync(now, payer, cancellationToken);
 
     /// <inheritdoc/>
     /// <remarks>

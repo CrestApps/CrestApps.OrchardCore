@@ -46,7 +46,9 @@ public sealed class TenantProvisioningAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
+            // The id is what the Subscriptions icon template is keyed on, whichever feature adds the item.
             .Add(S["Subscriptions"], S["Subscriptions"].PrefixPosition(), subscriptions => subscriptions
+                .Id("subscriptions")
                 .Add(S["Site provisioning"], S["Site provisioning"].PrefixPosition("5"), provisioning => provisioning
                     .Action(_adminRouteValues)
                     .Permission(SubscriptionPermissions.ManageSubscriptions)

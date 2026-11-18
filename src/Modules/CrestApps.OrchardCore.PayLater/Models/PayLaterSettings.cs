@@ -28,4 +28,11 @@ public sealed class PayLaterSettings
     /// Gets or sets the largest order total that may be paid later, or <see langword="null"/> for no limit.
     /// </summary>
     public decimal? MaxOrderAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the payment term (from the Payment Terms feature) a Pay Later balance follows when
+    /// the payer has no term of their own, such as Net 30 or the end of the month. When set it replaces
+    /// <see cref="NetTermDays"/>; when empty, or when the term is gone or disabled, the number of days applies.
+    /// </summary>
+    public string PaymentTermId { get; set; }
 }

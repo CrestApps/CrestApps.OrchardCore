@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -111,18 +112,41 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
             return;
         }
 
+        // Paid through a checkout of its own, such as the order an invoice bills: paying it here would settle it without
+        // that checkout ever hearing of it.
+        if (await IsPaidElsewhereAsync(transaction))
+        {
+            context.Reject(S["{0} is paid through its own checkout, such as its order's. Pay it from its own pay link.", GetTitle(transaction)]);
+
+            return;
+        }
+
         if (string.IsNullOrEmpty(session.Currency))
         {
             session.Currency = transaction.Currency;
         }
+
+        // The payer may have asked to pay part of the balance. The transaction decides whether it takes part payments
+        // and how small one may be.
+        var requested = session.TryGet<CheckoutRequestedAmount>(out var requestedAmount) ? requestedAmount.Amount : (decimal?)null;
+
+        if (!TransactionStateMachine.TryGetPaymentAmount(transaction, requested, out var amountToPay))
+        {
+            context.Reject(S["The smallest payment accepted is {0}.", CurrencyFormat.WithCode(amountToPay, transaction.Currency)]);
+
+            return;
+        }
+
+        var paysInPart = amountToPay < transaction.OutstandingAmount;
 
         // The balance already exists, so it must be paid now: a provider that only records a promise to pay later
         // can't settle it, and is neither offered nor accepted.
         session.SettlesExistingBalance = true;
 
         // A promotion code may be used: what it takes off the invoice is recorded on the transaction as a discount
-        // when the checkout completes, so the balance is settled rather than left owing the discount.
-        session.AcceptsDiscountsOnBalance = true;
+        // when the checkout completes, so the balance is settled rather than left owing the discount. A part payment
+        // takes no code: a code is used up only when the balance is settled, so it could be applied again and again.
+        session.AcceptsDiscountsOnBalance = !paysInPart;
 
         // What the payment is for, so a coupon limited to a source, a kind of charge or one customer can be checked.
         session.Put(new CheckoutDiscountScope
@@ -152,7 +176,7 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
                     Description = string.IsNullOrEmpty(transaction.Title)
                         ? S["Outstanding payment"].Value
                         : transaction.Title,
-                    Amount = transaction.OutstandingAmount,
+                    Amount = amountToPay,
                     Plan = null,
 
                     // The transaction already carries its own tax, decided when it was raised. Settling it is
@@ -247,6 +271,20 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
 
     // A checkout that settles several transactions with one payment: each is a line of its own, at what is still owed on
     // it. They are paid together only when one customer owes them all in one currency and each still has a balance.
+    // Whether a module pays the transaction through a page of its own (ITransactionPayUrlProvider).
+    private async Task<bool> IsPaidElsewhereAsync(Transaction transaction)
+    {
+        foreach (var provider in _serviceProvider.GetServices<ITransactionPayUrlProvider>())
+        {
+            if (!string.IsNullOrEmpty(await provider.GetPayUrlAsync(transaction)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private async Task ActivateSeveralAsync(CheckoutFlowActivatingContext context)
     {
         var session = context.Session;
@@ -273,6 +311,13 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
             if (!TransactionStateMachine.CanRecordPayment(transaction))
             {
                 context.Reject(S["{0} can no longer be paid.", GetTitle(transaction)]);
+
+                continue;
+            }
+
+            if (await IsPaidElsewhereAsync(transaction))
+            {
+                context.Reject(S["{0} is paid through its own checkout, such as its order's, so it can't be paid with other balances. Pay it from its own pay link.", GetTitle(transaction)]);
 
                 continue;
             }
@@ -463,10 +508,20 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
     }
 
     // Who owes the transaction: an account, or a guest known by their email when they have no id.
+    // Who owes the transaction: the payer it names (an account owes what its buyers placed on its terms), else its owner.
     private static string GetOwnerKey(Transaction transaction)
-        => string.IsNullOrEmpty(transaction.OwnerId)
+    {
+        var payer = transaction.GetPayer();
+
+        if (!payer.IsEmpty && !string.Equals(payer.Kind, CrestApps.OrchardCore.Parties.Models.PartyKinds.Guest, StringComparison.Ordinal))
+        {
+            return $"payer|{payer}";
+        }
+
+        return string.IsNullOrEmpty(transaction.OwnerId)
             ? $"{transaction.OwnerKind}|email|{transaction.GuestContactEmail?.Trim().ToUpperInvariant()}"
             : $"{transaction.OwnerKind}|{transaction.OwnerId}";
+    }
 
     private string GetTitle(Transaction transaction)
         => string.IsNullOrEmpty(transaction.Title)

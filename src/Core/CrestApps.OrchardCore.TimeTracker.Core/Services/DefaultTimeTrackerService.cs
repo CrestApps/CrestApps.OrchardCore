@@ -242,6 +242,12 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         }
 
         var entry = await FindAsync(entryId, cancellationToken);
+
+        if (!string.IsNullOrEmpty(entry.BilledInvoiceId))
+        {
+            return TimeTrackerResult.Fail(S["This time is billed on an invoice, so it can't be changed. Take it off the invoice first."]);
+        }
+
         var before = await DescribeAsync(entry, cancellationToken);
 
         if (entry.EndUtc is not null && endUtc is null)
@@ -270,6 +276,37 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
     }
 
     /// <inheritdoc/>
+    public async Task<TimeTrackerResult> SetBilledAsync(string entryId, string invoiceId, string lineId, CancellationToken cancellationToken = default)
+    {
+        var entry = string.IsNullOrEmpty(entryId) ? null : await FindAsync(entryId, cancellationToken);
+
+        if (entry is null)
+        {
+            return TimeTrackerResult.Fail(S["The entry doesn't exist."]);
+        }
+
+        if (!string.IsNullOrEmpty(invoiceId))
+        {
+            if (entry.IsOpen)
+            {
+                return TimeTrackerResult.Fail(S["Time still running can't be billed."]);
+            }
+
+            if (!string.IsNullOrEmpty(entry.BilledInvoiceId) && !string.Equals(entry.BilledInvoiceId, invoiceId, StringComparison.Ordinal))
+            {
+                return TimeTrackerResult.Fail(S["This time is billed on another invoice already."]);
+            }
+        }
+
+        entry.BilledInvoiceId = string.IsNullOrEmpty(invoiceId) ? null : invoiceId;
+        entry.BilledLineId = string.IsNullOrEmpty(invoiceId) ? null : lineId;
+
+        await _entries.UpdateAsync(entry, cancellationToken);
+
+        return new TimeTrackerResult { Entry = entry };
+    }
+
+    /// <inheritdoc/>
     public async Task<TimeTrackerResult> DeleteAsync(string entryId, string actor, string reason, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(reason))
@@ -287,6 +324,11 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         if (await KeptElsewhereAsync(entry, cancellationToken) is { } kept)
         {
             return kept;
+        }
+
+        if (!string.IsNullOrEmpty(entry.BilledInvoiceId))
+        {
+            return TimeTrackerResult.Fail(S["This time is billed on an invoice, so it can't be removed. Take it off the invoice first."]);
         }
 
         var before = await DescribeAsync(entry, cancellationToken);

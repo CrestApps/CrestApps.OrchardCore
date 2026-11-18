@@ -126,7 +126,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutPaymentGate, TenderHoldPaymentGate>();
         services.AddScoped<ICheckoutHandler, TenderCheckoutHandler>();
         services.AddDataMigration<CheckoutTenderMigrations>()
-            .AddIndexProvider<CheckoutTenderHoldIndexProvider>();
+            .AddIndexProvider<CheckoutTenderHoldIndexProvider>()
+            .AddIndexProvider<BalanceLedgerEntryIndexProvider>();
+        services.AddScoped<IBalanceLedgerArchive, BalanceLedgerArchive>();
         services.AddScoped<CheckoutCouponService>();
         services.AddDisplayDriver<CheckoutFlow, CouponCheckoutFlowDisplayDriver>();
         services.AddPermissionProvider<CheckoutPermissionsProvider>();

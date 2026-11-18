@@ -45,11 +45,21 @@ The account's name is its title. `B2BAccount` reads an account content item toge
 
 A buyer is linked to the account's contact with their email by the Account Members feature, when the account is saved (see [Account members](accounts.md#account-members)).
 
+### Billing profile
+
+The feature registers `B2BAccountBillingProfileSource`, a source of the `Account` party kind's [billing profile](parties.md#billing-a-party). It runs after the Accounts source, which gave the account's name and billing location, and adds:
+
+- `TaxId`: the account's tax or VAT number, trimmed. A document billed to the account, and the [tax profile of the account](taxation.md#tax-profile-of-a-party), take it.
+- `BillingEmail`: the contact's e-mail when the account has none yet, else an address in `CopyTo`, so invoices reach it besides the contact.
+- While the account buys as a business: `NetDays` from `Terms.NetDays` when it offers terms, and `CreditLimit` from `Terms.CreditLimit`.
+
+`B2BCheckoutTaxProfileHandler` puts the account's tax number on a buyer's checkout with `CustomerTaxProfile.SetTaxNumber`, the same rule the tax profile of an account party uses.
+
 ## Payment terms and the Business account step
 
 `B2BCheckoutHandler` adds a `business` step (order 3, after contact and shipping) to an account buyer's checkout of an order. `B2BCheckoutStepService.SaveAsync(session, purchaseOrderNumber, requestApproval)` checks the number (required when `RequirePurchaseOrder`, 64 characters at most), puts it and the `AccountId` on the order, and saves the step. An order that already has a purchase order number, such as a quote asked for with one, starts with the step done.
 
-`AccountTermsTenderProvider` (`ICheckoutTenderProvider`, key `account-terms`) puts what the deposit doesn't cover on the account's terms: `GrandTotal × (100 − DepositPercent) / 100`, capped by what's left of the credit limit, in the store's currency only, never for a register sale. The tender reference is `"{accountId}:{sessionId}"`. The amount becomes a transaction due in `NetDays`, with source `account-terms`, owned by the buyer, and with the account as its parent reference (`ParentReferenceType` `Account`, `ParentReferenceId` the account's id). `AccountTermsService.ListInvoicesAsync` returns an account's invoices from that reference, and `GetOwedAsync` sums what is outstanding on them, so what an account owes doesn't change when a buyer leaves.
+`AccountTermsTenderProvider` (`ICheckoutTenderProvider`, key `account-terms`) puts what the deposit doesn't cover on the account's terms: `GrandTotal × (100 − DepositPercent) / 100`, capped by what's left of the credit limit, in the store's currency only, never for a register sale. The tender reference is `"{accountId}:{sessionId}"`. The amount becomes a transaction due in `NetDays`, with source `account-terms`, owned by the buyer, and with the account as its parent reference (`ParentReferenceType` `Account`, `ParentReferenceId` the account's id) and as its payer (`DeferredBalanceDebit.Payer`, `PayerKind` `Account`), so the account's admins see and pay it on **My Transactions** while the buyer who ordered sees it as their own. `AccountTermsService.ListInvoicesAsync` returns an account's invoices from that reference, and `GetOwedAsync` sums what is outstanding on them, so what an account owes doesn't change when a buyer leaves.
 
 `Order.AccountId` (indexed as `OrderIndex.AccountId`, queried with `OrderQuery.AccountId`) is the account an order was placed for.
 
@@ -59,8 +69,7 @@ The feature adds two tabs to an [account's page](accounts.md#the-account-page) w
 for users with `ManageB2BAccounts`:
 
 - **Business** (shown as **Business buying**): its terms, credit limit and budget, what it owes, and its buyers with their roles and contacts.
-- **Invoices**: its terms invoices, newest first, with their status, due date, total and what is still owed, each
-  linked to the transaction.
+- What the account bought on its terms is owed as transactions billed to it (its admins see and pay them on **My Transactions**); its invoices are in the **Invoices** section, from [Invoicing](invoicing.md#customer-pages-and-the-account-page). Accounts B2B no longer lists them there.
 
 Its orders are in the **Orders** tab, from the Orders module. On the editor, the B2B settings are in a **Business** tab.
 

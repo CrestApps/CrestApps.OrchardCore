@@ -312,6 +312,28 @@ public sealed class TransactionReportDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Schema_Transactions_NamesThePayerTheTaxAndTheDocument()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var source = Source(session);
+        var context = new DataSourceContext { User = _user };
+
+        // Act
+        var schema = await source.GetSchemaAsync(CommerceReportDataSets.TransactionSource.Transactions, context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(schema.FindField("PayerId").IsKeyFilterable);
+        Assert.Equal(DataFieldType.Text, schema.FindField("PayerKind").Type);
+        Assert.Equal(DataFieldType.Text, schema.FindField("PayerName").Type);
+        Assert.Equal(DataFieldType.Text, schema.FindField("PayerEmail").Type);
+        Assert.Equal(DataFieldType.Text, schema.FindField("TaxRates").Type);
+        Assert.Equal(DataFieldType.Decimal, schema.FindField("ExchangeRate").Type);
+        Assert.Equal(DataFieldType.Text, schema.FindField("BaseCurrency").Type);
+        Assert.Equal(DataFieldType.Boolean, schema.FindField("AllowPartialPayment").Type);
+    }
+
+    [Fact]
     public async Task Schema_PaymentsAndRefunds_NeverExposeTheirKeys()
     {
         // Arrange

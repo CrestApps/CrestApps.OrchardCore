@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.Core.Models
+@using CrestApps.OrchardCore.Transactions.Core
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PaymentTermsCreate" title="@T["New payment term"]">
+        <breadcrumb-item id="PaymentTerms" action="Index" controller="PaymentTerms" area="CrestApps.OrchardCore.Transactions" permission="@TransactionsPermissions.ManagePaymentTerms.Name">@T["Payment terms"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

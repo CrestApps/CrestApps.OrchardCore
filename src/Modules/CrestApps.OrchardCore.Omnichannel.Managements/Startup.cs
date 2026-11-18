@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Tools;
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.Reports;
@@ -74,6 +75,9 @@ public sealed class Startup : StartupBase
         services.AddContactMethods();
         services.AddScoped<IContentHandler, OmnichannelContactTimeZoneHandler>();
         services.AddScoped<IContentHandler, OmnichannelContactMethodIdsHandler>();
+
+        // A CRM contact can be billed: its name, e-mail, phone and address reach its billing profile.
+        services.AddPartyBillingProfileSource<ContactBillingProfileSource>();
 
         services
             .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>()

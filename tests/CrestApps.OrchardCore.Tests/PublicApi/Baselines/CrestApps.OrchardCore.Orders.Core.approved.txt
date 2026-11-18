@@ -281,7 +281,9 @@ namespace CrestApps.OrchardCore.Orders.Core.Models
         public string AddsToOrderNumber { get; set; }
         public string CreatedBy { get; set; }
         public System.DateTime? DueUtc { get; set; }
+        public bool NotEmailed { get; set; }
         public string Note { get; set; }
+        public string SentAs { get; set; }
         public System.DateTime? SentUtc { get; set; }
     }
     public sealed class OrderLine
@@ -586,7 +588,8 @@ namespace CrestApps.OrchardCore.Orders.Core.Services
     }
     public sealed class GiftCardStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.Orders.Core.Models.GiftCard, CrestApps.OrchardCore.Orders.Core.Indexes.GiftCardIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>, CrestApps.OrchardCore.Orders.Core.Services.IGiftCardStore
     {
-        public GiftCardStore(YesSql.ISession session, OrchardCore.Modules.IClock clock) { }
+        public const string Ledger = "GiftCard";
+        public GiftCardStore(YesSql.ISession session, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.Checkout.Core.Services.IBalanceLedgerArchive archive) { }
         protected override bool CheckConcurrency { get; }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Models.GiftCard> GetByCodeAsync(string code, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>> ListByOrderAsync(string orderId, System.Threading.CancellationToken cancellationToken = default) { }
@@ -594,6 +597,7 @@ namespace CrestApps.OrchardCore.Orders.Core.Services
                 "Count",
                 "Cards"})]
         public System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>>> PageAsync(CrestApps.OrchardCore.Orders.Core.Services.GiftCardQuery query, int skip, int take, System.Threading.CancellationToken cancellationToken = default) { }
+        protected override System.Threading.Tasks.ValueTask SavingAsync(CrestApps.OrchardCore.Orders.Core.Models.GiftCard record) { }
     }
     public sealed class GiftCardTenderProvider : CrestApps.OrchardCore.Checkout.Services.ICheckoutTenderProvider
     {
@@ -617,6 +621,11 @@ namespace CrestApps.OrchardCore.Orders.Core.Services
                 "Count",
                 "Cards"})]
         System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>>> PageAsync(CrestApps.OrchardCore.Orders.Core.Services.GiftCardQuery query, int skip, int take, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOrderDocumentSender
+    {
+        System.Threading.Tasks.Task<string> GetInvoiceUrlAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, bool forStaff, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Services.OrderDocumentSendResult> SendAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IOrderEmailSectionProvider
     {
@@ -728,6 +737,21 @@ namespace CrestApps.OrchardCore.Orders.Core.Services
     {
         public static string Current() { }
         public static System.IDisposable Use(string culture) { }
+    }
+    public static class OrderDocumentLinks
+    {
+        public static System.Threading.Tasks.Task<string> GetInvoiceUrlAsync(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Orders.Core.Services.IOrderDocumentSender> senders, CrestApps.OrchardCore.Orders.Core.Models.Order order, bool forStaff, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class OrderDocumentSendResult
+    {
+        public OrderDocumentSendResult() { }
+        public string DocumentNumber { get; set; }
+        public bool Emailed { get; set; }
+        public System.Collections.Generic.IList<string> Errors { get; }
+        public string Message { get; set; }
+        public string Note { get; set; }
+        public bool Sent { get; }
+        public CrestApps.OrchardCore.Orders.Core.Services.OrderDocumentSendResult Fail(string error) { }
     }
     public static class OrderEmailKinds
     {

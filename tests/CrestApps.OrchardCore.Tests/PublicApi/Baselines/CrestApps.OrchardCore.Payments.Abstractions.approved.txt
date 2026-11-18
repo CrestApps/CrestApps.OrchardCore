@@ -2,6 +2,7 @@ namespace CrestApps.OrchardCore.Payments
 {
     public static class BalanceLedger
     {
+        public const int RecentEntryCount = 50;
         public static decimal ChangeBalance<TEntry>(decimal balance, decimal amount, string currency, System.Collections.Generic.IList<TEntry> activity, string reason, System.DateTime utcNow, string sessionId = null, string actor = null)
             where TEntry : CrestApps.OrchardCore.Payments.BalanceLedgerEntry, new () { }
     }
@@ -24,10 +25,19 @@ namespace CrestApps.OrchardCore.Payments
         public string PlanInterval { get; set; }
         public string SubscriptionId { get; set; }
     }
+    public sealed class DefaultMoneyFormatter : CrestApps.OrchardCore.Payments.IMoneyFormatter
+    {
+        public DefaultMoneyFormatter() { }
+        public string Format(decimal amount, string currency, System.Globalization.CultureInfo culture = null) { }
+    }
     public enum GatewayMode
     {
         Live = 0,
         Testing = 1,
+    }
+    public interface IMoneyFormatter
+    {
+        string Format(decimal amount, string currency, System.Globalization.CultureInfo culture = null);
     }
     public interface IPaymentEvent
     {

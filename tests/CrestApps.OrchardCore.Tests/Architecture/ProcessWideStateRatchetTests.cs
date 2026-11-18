@@ -19,7 +19,6 @@ public sealed partial class ProcessWideStateRatchetTests
         ["src/Core/CrestApps.OrchardCore.Core/Deployments/CatalogDeploymentSerializer.cs"] = 1,
         ["src/Core/CrestApps.OrchardCore.Core/Deployments/CatalogRecordSerializer.cs"] = 1,
         ["src/Core/CrestApps.OrchardCore.DataConnectors.Core/DataSources/ImportedDataSource.cs"] = 1,
-        ["src/Core/CrestApps.OrchardCore.Products.Core/Services/ProductPriceFormatter.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Telephony/Services/TransientDatabaseErrors.cs"] = 1,
 
         // Live-call state still per node (CQ-1 step 3): the voicemail claim and the turn-based fillers.
@@ -35,6 +34,11 @@ public sealed partial class ProcessWideStateRatchetTests
         // remove as it is paid down.
         ["src/Abstractions/CrestApps.OrchardCore.Payroll.Abstractions/PayrollPermissionTemplates.cs"] = 1,
         ["src/Core/CrestApps.OrchardCore.Pdf.Core/PdfFontSet.cs"] = 1,
+
+        // Existing debt from main's #1331 (Invoicing and Billing), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Abstractions/CrestApps.OrchardCore.Abstractions/Currencies/CurrencyFormat.cs"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/InvoiceLedgerAvailability.cs"] = 1,
     };
 
     [Fact]

@@ -1,0 +1,30 @@
+@model ExchangeRateSettingsViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="BaseCurrency">
+    <label asp-for="BaseCurrency" class="ocat-label">@T["Reporting currency"]</label>
+    <div class="ocat-limited">
+        <input asp-for="BaseCurrency" class="form-control" maxlength="3" placeholder="USD" />
+        <span asp-validation-for="BaseCurrency"></span>
+        <span class="hint">@T["The currency the store reports in. A document issued in another currency records the rate of its day to this one."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ProviderName">
+    <label asp-for="ProviderName" class="ocat-label">@T["Fetch rates from"]</label>
+    <div class="ocat-end">
+        <select asp-for="ProviderName" asp-items="Model.Providers" class="form-select">
+            <option value="">@T["Nowhere: rates are entered by hand"]</option>
+        </select>
+        <span asp-validation-for="ProviderName"></span>
+        <span class="hint">@T["A provider fetches each day's rates of the currencies below. Rates entered by hand are never replaced."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Currencies">
+    <label asp-for="Currencies" class="ocat-label">@T["Currencies to fetch"]</label>
+    <div class="ocat-end">
+        <input asp-for="Currencies" class="form-control" placeholder="EUR, GBP" />
+        <span asp-validation-for="Currencies"></span>
+        <span class="hint">@T["Three-letter codes separated by commas, for the provider to fetch."]</span>
+    </div>
+</div>

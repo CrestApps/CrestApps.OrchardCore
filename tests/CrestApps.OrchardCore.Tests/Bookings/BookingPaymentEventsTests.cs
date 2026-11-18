@@ -148,6 +148,85 @@ public sealed class BookingPaymentEventsTests
     }
 
     [Fact]
+    public async Task RecordDeclinedAsync_KeepsTheBalanceScheduledWithItsRetry_AndReportsAFailureThatIsNotFinal()
+    {
+        // Arrange: the saved card charge service declined the first charge and charges again tomorrow.
+        _bookings.Add(NewBooking("b1", BookingStatus.Confirmed, total: 500m, confirmed: true));
+        _balance = NewBalance();
+
+        var transaction = NewBalanceTransaction();
+
+        transaction.AutoCharge = new TransactionAutoCharge { Attempts = 1, NextAttemptUtc = _now.AddDays(1), RetryDays = BookingBalanceCharger.RetryDays };
+
+        // Act
+        await CreateCharger().RecordDeclinedAsync(transaction, "Insufficient funds", _now.AddDays(1), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal((BookingBalanceStatus.Scheduled, 1, "Insufficient funds", _now.AddDays(1)), (_balance.Status, _balance.Attempts, _balance.LastFailure, _balance.NextAttemptUtc));
+
+        var failed = Assert.Single(_recorder.Failed);
+
+        Assert.False(failed.IsFinal);
+        Assert.Equal("Insufficient funds", failed.Reason);
+    }
+
+    [Fact]
+    public async Task RecordAbandonedAsync_LeavesTheBalanceToTheBuyer_AndReportsAFinalFailureOnce()
+    {
+        // Arrange
+        _bookings.Add(NewBooking("b1", BookingStatus.Confirmed, total: 500m, confirmed: true));
+        _balance = NewBalance();
+
+        var charger = CreateCharger();
+
+        // Act: the last retry was declined; the event raised again changes nothing.
+        await charger.RecordAbandonedAsync(NewBalanceTransaction(), "Card expired", TestContext.Current.CancellationToken);
+        await charger.RecordAbandonedAsync(NewBalanceTransaction(), "Card expired", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal((BookingBalanceStatus.Failed, (DateTime?)null), (_balance.Status, _balance.NextAttemptUtc));
+
+        var failed = Assert.Single(_recorder.Failed);
+
+        Assert.True(failed.IsFinal);
+        Assert.Equal("Card expired", failed.Reason);
+    }
+
+    [Fact]
+    public void NewAutoCharge_ChargesTheDepositsCardOnTheDueDate_ThreeTimesADayApart()
+    {
+        // Act
+        var charge = BookingBalanceCharger.NewAutoCharge("deposit-session", _now);
+
+        // Assert
+        Assert.Equal(("deposit-session", (string)null, _now), (charge.SourceSessionId, charge.SavedPaymentMethodId, charge.NextAttemptUtc));
+        Assert.Equal([1, 1], charge.RetryDays);
+        Assert.Equal(TimeSpan.FromDays(1), charge.GetRetryDelay(2));
+        Assert.Null(charge.GetRetryDelay(3));
+    }
+
+    [Fact]
+    public async Task BalancePaymentHandler_SettlesTheBalance_WhenItsInvoiceIsPaidInFull()
+    {
+        // Arrange
+        _bookings.Add(NewBooking("b1", BookingStatus.Confirmed, total: 500m, confirmed: true));
+        _balance = NewBalance();
+
+        var transaction = NewBalanceTransaction();
+
+        transaction.Amount = 400m;
+        transaction.TotalAmount = 400m;
+        transaction.AmountPaid = 400m;
+        transaction.Status = TransactionStatus.Paid;
+
+        // Act
+        await CreateBalancePaymentHandler().PaymentRecordedAsync(new TransactionPaymentRecordedContext(transaction, new TransactionEvent { Amount = 400m }), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(BookingBalanceStatus.Paid, _balance.Status);
+    }
+
+    [Fact]
     public async Task BalancePaymentHandler_ReportsTheBalancePayment()
     {
         // Arrange
@@ -378,15 +457,12 @@ public sealed class BookingPaymentEventsTests
             CreateBalanceStore().Object,
             CreateBookingStore().Object,
             transactions.Object,
-            Mock.Of<ICheckoutEngine>(),
-            Mock.Of<ICheckoutSessionStore>(),
-            Mock.Of<IPaymentAttemptStore>(),
-            [],
             new LocalLock(NullLogger<LocalLock>.Instance),
             CreateClock(),
             NullLogger<BookingBalanceCharger>.Instance,
             new PassThroughLocalizer<BookingBalanceCharger>(),
-            [_recorder]);
+            [_recorder],
+            Mock.Of<ISavedPaymentMethodChargeService>());
     }
 
     private BookingBalancePaymentHandler CreateBalancePaymentHandler()

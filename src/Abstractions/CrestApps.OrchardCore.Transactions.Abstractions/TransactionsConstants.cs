@@ -45,6 +45,12 @@ public static class TransactionsConstants
         public const string Notification = "CrestApps.OrchardCore.Transactions.Notification";
 
         public const string Receipts = "CrestApps.OrchardCore.Transactions.Receipts";
+
+        /// <summary>
+        /// The catalog of payment terms (net days, due on receipt, end of month, a day of the next month, and an
+        /// early-payment discount) that invoices, account terms, pay-later purchases and work orders read.
+        /// </summary>
+        public const string PaymentTerms = "CrestApps.OrchardCore.Transactions.PaymentTerms";
     }
 
     /// <summary>
@@ -125,6 +131,59 @@ public static class TransactionsConstants
     }
 
     /// <summary>
+    /// The display types of a transaction other modules add shapes to.
+    /// </summary>
+    public static class DisplayTypes
+    {
+        /// <summary>
+        /// The administration detail page of one transaction. Its zones are <c>Content</c> (the main column) and
+        /// <c>Actions</c> (the side column).
+        /// </summary>
+        public const string DetailAdmin = "DetailAdmin";
+    }
+
+    /// <summary>
+    /// The names of the events the ledger publishes to webhooks when the Commerce Webhooks feature is on.
+    /// </summary>
+    public static class WebhookEvents
+    {
+        /// <summary>
+        /// A transaction was recorded.
+        /// </summary>
+        public const string Created = "transaction.created";
+
+        /// <summary>
+        /// A payment was applied to a transaction, online or recorded by staff.
+        /// </summary>
+        public const string PaymentRecorded = "transaction.payment-recorded";
+
+        /// <summary>
+        /// Nothing more is owed on a transaction.
+        /// </summary>
+        public const string Settled = "transaction.settled";
+
+        /// <summary>
+        /// A transaction was found unpaid after its due date, for the first time.
+        /// </summary>
+        public const string Overdue = "transaction.overdue";
+
+        /// <summary>
+        /// A transaction was canceled.
+        /// </summary>
+        public const string Canceled = "transaction.canceled";
+
+        /// <summary>
+        /// Money was given back on a transaction.
+        /// </summary>
+        public const string Refunded = "transaction.refunded";
+
+        /// <summary>
+        /// A payment recorded by hand or an adjustment was taken back with a reversing entry, so it is owed again.
+        /// </summary>
+        public const string EntryReversed = "transaction.entry-reversed";
+    }
+
+    /// <summary>
     /// The well-known settlement methods recorded on a settled transaction.
     /// </summary>
     public static class SettlementMethods
@@ -143,5 +202,59 @@ public static class TransactionsConstants
         /// Nothing more was owed once an adjustment (a discount, waiver, credit or write-off) was recorded.
         /// </summary>
         public const string Adjusted = "adjusted";
+
+        /// <summary>
+        /// The payer's customer credit paid toward the transaction.
+        /// </summary>
+        public const string CustomerCredit = "customer-credit";
+    }
+
+    /// <summary>
+    /// The business document kinds the ledger prints, each with its own document template.
+    /// </summary>
+    public static class BusinessDocumentKinds
+    {
+        /// <summary>
+        /// The payment request of a transaction its owner pays themselves, shown to customers as its invoice.
+        /// </summary>
+        public const string PaymentRequest = "PaymentRequest";
+    }
+
+    /// <summary>
+    /// The stable keys of the common ways money recorded by hand arrives (<see cref="Models.TransactionEvent.PaymentMethod"/>).
+    /// The record payment form offers them, staff may still type another, and a report groups payments by these keys
+    /// whatever the language of the person who recorded them.
+    /// </summary>
+    public static class OfflinePaymentMethods
+    {
+        /// <summary>
+        /// Cash.
+        /// </summary>
+        public const string Cash = "cash";
+
+        /// <summary>
+        /// A check.
+        /// </summary>
+        public const string Check = "check";
+
+        /// <summary>
+        /// A bank transfer.
+        /// </summary>
+        public const string BankTransfer = "bank-transfer";
+
+        /// <summary>
+        /// A card taken on a card terminal in person.
+        /// </summary>
+        public const string CardTerminal = "card-terminal";
+
+        /// <summary>
+        /// Any other way.
+        /// </summary>
+        public const string Other = "other";
+
+        /// <summary>
+        /// The keys, in the order they are offered.
+        /// </summary>
+        public static readonly IReadOnlyList<string> All = [Cash, Check, BankTransfer, CardTerminal, Other];
     }
 }

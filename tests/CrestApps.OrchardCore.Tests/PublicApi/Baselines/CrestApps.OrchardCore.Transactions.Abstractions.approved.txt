@@ -1,13 +1,5 @@
 namespace CrestApps.OrchardCore.Transactions.FinancialDocuments
 {
-    public sealed class FinancialDocumentContext
-    {
-        public FinancialDocumentContext(string referenceType, string referenceId, string currency, CrestApps.OrchardCore.Transactions.FinancialDocuments.FinancialDocumentReason reason) { }
-        public string Currency { get; }
-        public CrestApps.OrchardCore.Transactions.FinancialDocuments.FinancialDocumentReason Reason { get; }
-        public string ReferenceId { get; }
-        public string ReferenceType { get; }
-    }
     public enum FinancialDocumentKind
     {
         Receipt = 0,
@@ -27,32 +19,34 @@ namespace CrestApps.OrchardCore.Transactions.FinancialDocuments
         public CrestApps.OrchardCore.Transactions.FinancialDocuments.FinancialDocumentKind Kind { get; }
         public string Series { get; }
     }
-    public sealed class FinancialDocumentPolicyResult
+    public static class FinancialDocumentSeries
     {
-        public FinancialDocumentPolicyResult(System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Transactions.FinancialDocuments.FinancialDocumentKind> documents, bool persistImmutableCopy, bool requiresFormalNumber) { }
-        public System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Transactions.FinancialDocuments.FinancialDocumentKind> Documents { get; }
-        public bool PersistImmutableCopy { get; }
-        public bool RequiresFormalNumber { get; }
-    }
-    public enum FinancialDocumentReason
-    {
-        PaymentSettled = 0,
-        PartiallyPaid = 1,
-        Refunded = 2,
-        ChargedBack = 3,
-        WrittenOff = 4,
+        public const long FirstNumber = 1001;
+        public static CrestApps.OrchardCore.Numbering.NumberSeriesFormat GetDefaultFormat(CrestApps.OrchardCore.Transactions.FinancialDocuments.FinancialDocumentKind kind) { }
+        public static string GetName(CrestApps.OrchardCore.Transactions.FinancialDocuments.FinancialDocumentKind kind) { }
     }
     public interface IFinancialDocumentNumberGenerator
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.FinancialDocuments.FinancialDocumentNumber> GenerateAsync(CrestApps.OrchardCore.Transactions.FinancialDocuments.FinancialDocumentNumberRequest request, System.Threading.CancellationToken cancellationToken = default);
     }
-    public interface IFinancialDocumentPolicy
-    {
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.FinancialDocuments.FinancialDocumentPolicyResult> EvaluateAsync(CrestApps.OrchardCore.Transactions.FinancialDocuments.FinancialDocumentContext context, System.Threading.CancellationToken cancellationToken = default);
-    }
 }
 namespace CrestApps.OrchardCore.Transactions.Models
 {
+    public readonly struct EarlyPaymentDiscount : System.IEquatable<CrestApps.OrchardCore.Transactions.Models.EarlyPaymentDiscount>
+    {
+        public EarlyPaymentDiscount(System.DateOnly Deadline, decimal Amount) { }
+        public decimal Amount { get; init; }
+        public System.DateOnly Deadline { get; init; }
+        public bool AppliesOn(System.DateOnly paidOn) { }
+    }
+    public sealed class PartyCollectionSettings : CrestApps.Core.Models.CatalogItem
+    {
+        public PartyCollectionSettings() { }
+        public bool LateFeesExempt { get; set; }
+        public System.DateTime ModifiedUtc { get; set; }
+        public CrestApps.OrchardCore.Parties.Models.PartyRef Party { get; set; }
+        public bool RemindersPaused { get; set; }
+    }
     public sealed class PaymentAttempt : CrestApps.Core.Models.CatalogItem, CrestApps.OrchardCore.Models.ITimestampedModel
     {
         public PaymentAttempt() { }
@@ -109,6 +103,8 @@ namespace CrestApps.OrchardCore.Transactions.Models
     }
     public static class PaymentIssueKinds
     {
+        public const string AutoChargeFailed = "AutoChargeFailed";
+        public const string CreditNotReconciled = "CreditNotReconciled";
         public const string DeclineSpike = "DeclineSpike";
         public const string DiscountRedemptionFailed = "DiscountRedemptionFailed";
         public const string GatewaySubscriptionChangeFailed = "GatewaySubscriptionChangeFailed";
@@ -149,6 +145,29 @@ namespace CrestApps.OrchardCore.Transactions.Models
         public System.Collections.Generic.IList<CrestApps.OrchardCore.Taxation.Models.TaxLine> TaxLines { get; set; }
         public System.DateTime UpdatedUtc { get; set; }
     }
+    public sealed class PaymentTerm : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.OrchardCore.Models.IAuditedModel
+    {
+        public PaymentTerm() { }
+        public string Author { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public int DayOfMonth { get; set; }
+        public int Days { get; set; }
+        public string Description { get; set; }
+        public int? DiscountDays { get; set; }
+        public decimal? DiscountPercent { get; set; }
+        public bool Enabled { get; set; }
+        public CrestApps.OrchardCore.Transactions.Models.PaymentTermKind Kind { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Name { get; set; }
+        public string OwnerId { get; set; }
+    }
+    public enum PaymentTermKind
+    {
+        DueOnReceipt = 0,
+        NetDays = 1,
+        EndOfMonth = 2,
+        DayOfNextMonth = 3,
+    }
     public enum RefundStatus
     {
         Requested = 0,
@@ -161,40 +180,51 @@ namespace CrestApps.OrchardCore.Transactions.Models
     public sealed class Transaction : CrestApps.Core.Models.CatalogItem, CrestApps.OrchardCore.Models.ITimestampedModel
     {
         public Transaction() { }
+        public bool AllowPartialPayment { get; set; }
         public decimal Amount { get; set; }
         public decimal AmountAdjusted { get; set; }
         public decimal AmountPaid { get; set; }
         public decimal AmountRefunded { get; set; }
+        public CrestApps.OrchardCore.Transactions.Models.TransactionAutoCharge AutoCharge { get; set; }
         public CrestApps.OrchardCore.Transactions.Models.TransactionAutoCollection AutoCollection { get; set; }
+        public string BaseCurrency { get; set; }
         public System.DateTime? BecameOverdueUtc { get; set; }
         public string CheckoutSessionId { get; set; }
         public System.DateTime CreatedUtc { get; set; }
         public string Currency { get; set; }
         public System.DateTime? DueUtc { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.Transactions.Models.TransactionEvent> Events { get; init; }
+        public decimal? ExchangeRate { get; set; }
         public string GuestContactEmail { get; set; }
         public string GuestContactName { get; set; }
         public long Id { get; set; }
         public string InvoiceNumber { get; set; }
         public System.DateTime? LastReminderSentUtc { get; set; }
+        public decimal? MinimumPayment { get; set; }
         public string ObligationId { get; set; }
         public decimal OutstandingAmount { get; }
         public string OwnerId { get; set; }
         public CrestApps.OrchardCore.Customers.Models.CustomerOwnerKind OwnerKind { get; set; }
         public string ParentReferenceId { get; set; }
         public string ParentReferenceType { get; set; }
+        public CrestApps.OrchardCore.Addresses.Models.ContactInfo PayerContact { get; set; }
+        public string PayerId { get; set; }
+        public string PayerKind { get; set; }
         public string PaymentAttemptId { get; set; }
         public CrestApps.OrchardCore.Transactions.Models.TransactionRecurrence Recurrence { get; set; }
         public string ReferenceId { get; set; }
         public string ReferenceType { get; set; }
         public string ReferenceVersionId { get; set; }
         public int ReminderCount { get; set; }
+        public int ReminderStepsSent { get; set; }
+        public bool RemindersPaused { get; set; }
         public System.DateTime? SettledUtc { get; set; }
         public string SettlementMethod { get; set; }
         public string SettlementReference { get; set; }
         public string Source { get; set; }
         public CrestApps.OrchardCore.Transactions.Models.TransactionStatus Status { get; set; }
         public decimal TaxAmount { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Taxation.Models.TaxLine> TaxLines { get; set; }
         public string Title { get; set; }
         public decimal TotalAmount { get; set; }
         public System.DateTime? UpcomingReminderSentUtc { get; set; }
@@ -207,11 +237,30 @@ namespace CrestApps.OrchardCore.Transactions.Models
         Credit = 2,
         WriteOff = 3,
     }
+    public sealed class TransactionAutoCharge
+    {
+        public TransactionAutoCharge() { }
+        public int Attempts { get; set; }
+        public System.DateTime? LastAttemptUtc { get; set; }
+        public string LastFailure { get; set; }
+        public System.DateTime NextAttemptUtc { get; set; }
+        public int[] RetryDays { get; set; }
+        public string SavedPaymentMethodId { get; set; }
+        public string SourceSessionId { get; set; }
+        public System.TimeSpan? GetRetryDelay(int declinedSoFar) { }
+    }
     public sealed class TransactionAutoCollection
     {
         public TransactionAutoCollection() { }
         public string PaymentMethodDescription { get; set; }
         public string ProviderKey { get; set; }
+    }
+    public enum TransactionCreditState
+    {
+        None = 0,
+        Pending = 1,
+        Settled = 2,
+        Failed = 3,
     }
     public sealed class TransactionEvent
     {
@@ -221,13 +270,22 @@ namespace CrestApps.OrchardCore.Transactions.Models
         public CrestApps.OrchardCore.Transactions.Models.TransactionAdjustmentKind? AdjustmentKind { get; set; }
         public decimal? Amount { get; set; }
         public System.DateTime CreatedUtc { get; set; }
+        public decimal? CreditChange { get; set; }
+        public CrestApps.OrchardCore.Transactions.Models.TransactionCreditState CreditState { get; set; }
+        public decimal? CreditedAmount { get; set; }
+        public string DocumentId { get; set; }
+        public string DocumentKind { get; set; }
+        public string DocumentNumber { get; set; }
         public string Id { get; set; }
         public string Message { get; set; }
         public string Method { get; set; }
         public string PaymentAttemptId { get; set; }
+        public string PaymentMethod { get; set; }
         public string Reason { get; set; }
         public string ReceiptNumber { get; set; }
+        public System.DateTime? ReceivedUtc { get; set; }
         public string Reference { get; set; }
+        public string ReversesEventId { get; set; }
         public CrestApps.OrchardCore.Transactions.Models.TransactionEventType Type { get; set; }
     }
     public enum TransactionEventType
@@ -242,11 +300,17 @@ namespace CrestApps.OrchardCore.Transactions.Models
         Adjusted = 7,
         InvoiceSent = 8,
         PaymentFailed = 9,
+        Reversed = 10,
     }
     public static class TransactionOwnerExtensions
     {
         public static CrestApps.OrchardCore.Customers.Models.CustomerContact GetGuestContact(this CrestApps.OrchardCore.Transactions.Models.Transaction transaction) { }
         public static CrestApps.OrchardCore.Customers.Models.CustomerOwner GetOwner(this CrestApps.OrchardCore.Transactions.Models.Transaction transaction) { }
+    }
+    public static class TransactionPayerExtensions
+    {
+        public static CrestApps.OrchardCore.Parties.Models.PartyRef GetPayer(this CrestApps.OrchardCore.Transactions.Models.Transaction transaction) { }
+        public static void SetPayer(this CrestApps.OrchardCore.Transactions.Models.Transaction transaction, CrestApps.OrchardCore.Parties.Models.PartyRef payer) { }
     }
     public sealed class TransactionRecurrence
     {
@@ -278,6 +342,12 @@ namespace CrestApps.OrchardCore.Transactions.Models
 }
 namespace CrestApps.OrchardCore.Transactions.Services
 {
+    public interface IPartyCollectionSettingsService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Models.PartyCollectionSettings> GetAsync(CrestApps.OrchardCore.Parties.Models.PartyRef party, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.PartyCollectionExclusions> GetExclusionsAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task SaveAsync(CrestApps.OrchardCore.Parties.Models.PartyRef party, bool remindersPaused, bool lateFeesExempt, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IPaymentAttemptStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Transactions.Models.PaymentAttempt>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.Transactions.Models.PaymentAttempt>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Models.PaymentAttempt> GetByIdempotencyKeyAsync(string idempotencyKey, System.Threading.CancellationToken cancellationToken = default);
@@ -307,15 +377,40 @@ namespace CrestApps.OrchardCore.Transactions.Services
         System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Transactions.Models.PaymentRefund>> GetBySessionAsync(string sessionId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.Transactions.Models.PaymentRefund>> PageAsync(int page, int pageSize, CrestApps.OrchardCore.Transactions.Services.PaymentRefundQuery query, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IPaymentTermCalculator
+    {
+        System.DateOnly GetDueDate(CrestApps.OrchardCore.Transactions.Models.PaymentTerm term, System.DateOnly issueDate);
+        CrestApps.OrchardCore.Transactions.Models.EarlyPaymentDiscount? GetEarlyPaymentDiscount(CrestApps.OrchardCore.Transactions.Models.PaymentTerm term, System.DateOnly issueDate, decimal amount, string currency);
+    }
+    public interface IPaymentTermManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Transactions.Models.PaymentTerm>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.Transactions.Models.PaymentTerm>
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Transactions.Models.PaymentTerm>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISavedPaymentMethodChargeService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.SavedPaymentMethodChargeResult> CancelAsync(string transactionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.SavedPaymentMethodChargeResult> ChargeAsync(string transactionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> ChargeDueAsync(System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.SavedPaymentMethodChargeResult> ScheduleAsync(CrestApps.OrchardCore.Transactions.Services.SavedPaymentMethodChargeRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.SavedPaymentMethodChargeResult> ScheduleAsync(string transactionId, string savedPaymentMethodId, System.DateTime chargeOnUtc, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ITransactionCommandService
     {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> AdjustAsync(string transactionId, CrestApps.OrchardCore.Transactions.Services.TransactionAdjustmentRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> AdjustAsync(string transactionId, decimal amount, CrestApps.OrchardCore.Transactions.Models.TransactionAdjustmentKind kind, string reason, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> ApplyCreditAsync(string transactionId, decimal amount, string note, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> CancelAsync(string transactionId, string reason, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> CancelUnpaidAsync(string transactionId, string reason, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> ChargeKeptPaymentMethodAsync(string transactionId, string sourceSessionId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> ChargeSavedPaymentMethodAsync(string transactionId, string savedPaymentMethodId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> MarkPaidAsync(string transactionId, string note, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> ReconcileCreditAsync(string transactionId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> RecordOfflinePaymentAsync(string transactionId, decimal amount, string reference, string note, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> RecordPaymentAsync(string transactionId, CrestApps.OrchardCore.Transactions.Services.TransactionPaymentRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> RefundAsync(string transactionId, decimal? amount, string reason, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> ReverseAsync(string transactionId, string eventId, string reason, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> SendInvoiceAsync(string transactionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult> SetRemindersPausedAsync(string transactionId, bool paused, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ITransactionCustomerLinkService
     {
@@ -331,14 +426,18 @@ namespace CrestApps.OrchardCore.Transactions.Services
     }
     public interface ITransactionEventHandler
     {
+        System.Threading.Tasks.Task AutoChargeAbandonedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, string reason, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task AutoChargeDeclinedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, string reason, System.DateTime nextAttemptUtc, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task BecameOverdueAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task CanceledAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, string reason, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task CreatedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RefundedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, CrestApps.OrchardCore.Transactions.Models.TransactionEvent refund, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task ReversedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, CrestApps.OrchardCore.Transactions.Models.TransactionEvent reversal, CrestApps.OrchardCore.Transactions.Models.TransactionEvent reversed, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task StatusChangedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, CrestApps.OrchardCore.Transactions.Models.TransactionStatus previous, CrestApps.OrchardCore.Transactions.Models.TransactionStatus current, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ITransactionInvoiceBuilder
     {
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.Receipts.Models.ReceiptDocument> BuildAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.BusinessDocuments.Models.BusinessDocument> BuildAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ITransactionInvoiceService
     {
@@ -356,6 +455,10 @@ namespace CrestApps.OrchardCore.Transactions.Services
     {
         System.Threading.Tasks.Task<string> CreatePayUrlAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, System.Threading.CancellationToken cancellationToken = default);
         string GetTransactionId(string token);
+    }
+    public interface ITransactionPayUrlProvider
+    {
+        System.Threading.Tasks.Task<string> GetPayUrlAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ITransactionPaymentHandler
     {
@@ -382,12 +485,24 @@ namespace CrestApps.OrchardCore.Transactions.Services
     }
     public interface ITransactionStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Transactions.Models.Transaction>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.Transactions.Models.Transaction>
     {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Transactions.Models.Transaction>> GetByCheckoutSessionAsync(string checkoutSessionId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Models.Transaction> GetByObligationAsync(string checkoutSessionId, string obligationId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Transactions.Models.Transaction>> GetByParentReferenceAsync(string parentReferenceType, string parentReferenceId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Transactions.Models.Transaction>> GetComingDueAsync(System.DateTime afterUtc, System.DateTime untilUtc, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Transactions.Models.Transaction>> GetDueForRenewalAsync(System.DateTime asOfUtc, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Transactions.Models.Transaction>> GetOutstandingDueAsync(System.DateTime asOfUtc, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.Transactions.Models.Transaction>> PageAsync(int page, int pageSize, CrestApps.OrchardCore.Transactions.Services.TransactionQuery query, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ITransactionVisibilityService
+    {
+        System.Threading.Tasks.Task<bool> CanViewAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, string userId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionQuery> CreateQueryAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class PartyCollectionExclusions
+    {
+        public PartyCollectionExclusions(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Transactions.Models.PartyCollectionSettings> settings) { }
+        public bool AreRemindersPaused(CrestApps.OrchardCore.Transactions.Models.Transaction transaction) { }
+        public bool IsLateFeeExempt(CrestApps.OrchardCore.Parties.Models.PartyRef party) { }
     }
     public sealed class PaymentAttemptQuery
     {
@@ -404,6 +519,26 @@ namespace CrestApps.OrchardCore.Transactions.Services
         public string SessionId { get; set; }
         public CrestApps.OrchardCore.Transactions.Models.RefundStatus? Status { get; set; }
     }
+    public sealed class SavedPaymentMethodChargeRequest
+    {
+        public SavedPaymentMethodChargeRequest() { }
+        public System.DateTime ChargeOnUtc { get; set; }
+        public int[] RetryDays { get; set; }
+        public string SavedPaymentMethodId { get; set; }
+        public string SourceSessionId { get; set; }
+        public string TransactionId { get; set; }
+    }
+    public sealed class SavedPaymentMethodChargeResult
+    {
+        public SavedPaymentMethodChargeResult() { }
+        public CrestApps.OrchardCore.Transactions.Services.SavedPaymentMethodChargeStatus? ChargeStatus { get; set; }
+        public System.Collections.Generic.IList<string> Errors { get; }
+        public bool HandedOver { get; set; }
+        public System.DateTime? NextAttemptUtc { get; set; }
+        public bool Succeeded { get; }
+        public CrestApps.OrchardCore.Transactions.Models.Transaction Transaction { get; set; }
+        public CrestApps.OrchardCore.Transactions.Services.SavedPaymentMethodChargeResult Fail(string error) { }
+    }
     public enum SavedPaymentMethodChargeStatus
     {
         NotCharged = 0,
@@ -413,15 +548,28 @@ namespace CrestApps.OrchardCore.Transactions.Services
         RequiresAuthentication = 4,
         Failed = 5,
     }
+    public sealed class TransactionAdjustmentRequest
+    {
+        public TransactionAdjustmentRequest() { }
+        public decimal Amount { get; set; }
+        public string DocumentId { get; set; }
+        public string DocumentKind { get; set; }
+        public string DocumentNumber { get; set; }
+        public CrestApps.OrchardCore.Transactions.Models.TransactionAdjustmentKind Kind { get; set; }
+        public string Reason { get; set; }
+    }
     public sealed class TransactionCommandResult
     {
         public TransactionCommandResult() { }
         public CrestApps.OrchardCore.Transactions.Services.SavedPaymentMethodChargeStatus ChargeStatus { get; set; }
+        public decimal CreditedAmount { get; set; }
         public System.Collections.Generic.IList<string> Errors { get; }
         public CrestApps.OrchardCore.Transactions.Models.TransactionEvent Event { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.Transactions.Models.PaymentRefund> Refunds { get; }
         public bool Succeeded { get; }
         public CrestApps.OrchardCore.Transactions.Models.Transaction Transaction { get; set; }
+        public decimal UnappliedAmount { get; set; }
+        public System.Collections.Generic.IList<string> Warnings { get; }
         public CrestApps.OrchardCore.Transactions.Services.TransactionCommandResult Fail(string message) { }
     }
     public sealed class TransactionCustomerPageResult<TModel>
@@ -443,9 +591,13 @@ namespace CrestApps.OrchardCore.Transactions.Services
     public abstract class TransactionEventHandlerBase : CrestApps.OrchardCore.Transactions.Services.ITransactionEventHandler
     {
         protected TransactionEventHandlerBase() { }
+        public virtual System.Threading.Tasks.Task AutoChargeAbandonedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, string reason, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task AutoChargeDeclinedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, string reason, System.DateTime nextAttemptUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public virtual System.Threading.Tasks.Task BecameOverdueAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, System.Threading.CancellationToken cancellationToken = default) { }
         public virtual System.Threading.Tasks.Task CanceledAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, string reason, System.Threading.CancellationToken cancellationToken = default) { }
         public virtual System.Threading.Tasks.Task CreatedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task RefundedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, CrestApps.OrchardCore.Transactions.Models.TransactionEvent refund, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task ReversedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, CrestApps.OrchardCore.Transactions.Models.TransactionEvent reversal, CrestApps.OrchardCore.Transactions.Models.TransactionEvent reversed, System.Threading.CancellationToken cancellationToken = default) { }
         public virtual System.Threading.Tasks.Task StatusChangedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, CrestApps.OrchardCore.Transactions.Models.TransactionStatus previous, CrestApps.OrchardCore.Transactions.Models.TransactionStatus current, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class TransactionPaymentRecordedContext
@@ -454,6 +606,16 @@ namespace CrestApps.OrchardCore.Transactions.Services
         public CrestApps.OrchardCore.Transactions.Models.TransactionEvent Payment { get; }
         public CrestApps.OrchardCore.Transactions.Models.Transaction Transaction { get; }
     }
+    public sealed class TransactionPaymentRequest
+    {
+        public TransactionPaymentRequest() { }
+        public decimal Amount { get; set; }
+        public bool CreditExcess { get; set; }
+        public string Note { get; set; }
+        public string PaymentMethod { get; set; }
+        public System.DateTime? ReceivedUtc { get; set; }
+        public string Reference { get; set; }
+    }
     public sealed class TransactionQuery
     {
         public TransactionQuery() { }
@@ -461,6 +623,7 @@ namespace CrestApps.OrchardCore.Transactions.Services
         public bool OutstandingOnly { get; set; }
         public string OwnerId { get; set; }
         public CrestApps.OrchardCore.Customers.Models.CustomerOwnerKind? OwnerKind { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Parties.Models.PartyRef> Payers { get; set; }
         public string ReferenceId { get; set; }
         public string ReferenceType { get; set; }
         public string Search { get; set; }
@@ -487,8 +650,14 @@ namespace CrestApps.OrchardCore.Transactions
 {
     public static class TransactionEmailKinds
     {
+        public const string AmountDueValueName = "AmountDue";
+        public const string DocumentNumberValueName = "DocumentNumber";
+        public const string DocumentUrlValueName = "DocumentUrl";
+        public const string DueDateValueName = "DueDate";
+        public const string PayUrlValueName = "PayUrl";
         public const string PaymentReceipt = "payment-receipt";
         public const string PaymentReminder = "payment-reminder";
+        public const string PaymentRequest = "payment-request";
         public const string Refund = "payment-refund";
         public const string TransactionModelName = "Transaction";
     }
@@ -498,11 +667,29 @@ namespace CrestApps.OrchardCore.Transactions
         public const string CustomerPagesConfigurationSection = "CrestApps:Transactions:CustomerPages";
         public const string SettingsGroupId = "transactions";
         public const string SettlementStepKey = "TransactionSettlement";
+        public static class BusinessDocumentKinds
+        {
+            public const string PaymentRequest = "PaymentRequest";
+        }
+        public static class DisplayTypes
+        {
+            public const string DetailAdmin = "DetailAdmin";
+        }
         public static class Features
         {
             public const string Area = "CrestApps.OrchardCore.Transactions";
             public const string Notification = "CrestApps.OrchardCore.Transactions.Notification";
+            public const string PaymentTerms = "CrestApps.OrchardCore.Transactions.PaymentTerms";
             public const string Receipts = "CrestApps.OrchardCore.Transactions.Receipts";
+        }
+        public static class OfflinePaymentMethods
+        {
+            public const string BankTransfer = "bank-transfer";
+            public const string CardTerminal = "card-terminal";
+            public const string Cash = "cash";
+            public const string Check = "check";
+            public const string Other = "other";
+            public static readonly System.Collections.Generic.IReadOnlyList<string> All;
         }
         public static class ReferenceTypes
         {
@@ -521,6 +708,7 @@ namespace CrestApps.OrchardCore.Transactions
         public static class SettlementMethods
         {
             public const string Adjusted = "adjusted";
+            public const string CustomerCredit = "customer-credit";
             public const string Offline = "offline";
             public const string Online = "online";
         }
@@ -530,6 +718,16 @@ namespace CrestApps.OrchardCore.Transactions
             public const string Receipt = "TransactionReceipt";
             public const string Statement = "TransactionStatement";
         }
+        public static class WebhookEvents
+        {
+            public const string Canceled = "transaction.canceled";
+            public const string Created = "transaction.created";
+            public const string EntryReversed = "transaction.entry-reversed";
+            public const string Overdue = "transaction.overdue";
+            public const string PaymentRecorded = "transaction.payment-recorded";
+            public const string Refunded = "transaction.refunded";
+            public const string Settled = "transaction.settled";
+        }
     }
 }
 namespace CrestApps.OrchardCore.Transactions.ViewModels
@@ -537,7 +735,7 @@ namespace CrestApps.OrchardCore.Transactions.ViewModels
     public class TransactionInvoiceViewModel
     {
         public TransactionInvoiceViewModel() { }
-        public CrestApps.OrchardCore.Receipts.Models.ReceiptDocument Invoice { get; set; }
+        public CrestApps.OrchardCore.BusinessDocuments.Models.BusinessDocument Invoice { get; set; }
         public bool IsAdministrator { get; set; }
         public string PayUrl { get; set; }
         public CrestApps.OrchardCore.Transactions.Models.Transaction Transaction { get; set; }

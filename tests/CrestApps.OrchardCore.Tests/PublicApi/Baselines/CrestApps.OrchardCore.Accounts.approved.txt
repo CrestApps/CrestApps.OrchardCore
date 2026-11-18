@@ -129,6 +129,7 @@ namespace CrestApps.OrchardCore.Accounts.ViewModels
         public CrestApps.OrchardCore.Addresses.Core.Editing.AddressEditorViewModel Address { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public OrchardCore.DisplayManagement.IShape AddressEditor { get; set; }
+        public bool IsBilling { get; set; }
         public string LocationId { get; set; }
         public string Name { get; set; }
     }

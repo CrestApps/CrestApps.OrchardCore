@@ -12,7 +12,7 @@ A work order is a job done for a customer, such as a repair or an installation. 
 | --- | --- |
 | **Menu** | Field Service > Work Orders, Work Order Types, Checklists, Service Levels, Sub-statuses |
 | **Permission** | Manage work orders, or View work orders to see them; Manage work order settings for the types, checklists, service levels and sub-statuses |
-| **Feature** | Work Orders; Service Agreements for recurring visits; Inventory for parts, Transactions for invoices, Geo for territories, Assets for equipment |
+| **Feature** | Work Orders; Service Agreements for recurring visits; Inventory for parts, Invoicing (or Transactions) for invoices, Geo for territories, Assets for equipment |
 
 <AskYourAdmin />
 
@@ -68,7 +68,7 @@ On a work order's page:
 - **Record signature** with the name of who signed.
 - Add a note. The history shows every change, newest first.
 
-When the work order is in progress, select **Complete**. If something is missing, such as a required answer or the signature, the page says what. A billed work order then gets its invoice, linked under **About**.
+When the work order is in progress, select **Complete**. If something is missing, such as a required answer or the signature, the page says what. A billed work order then gets its invoice, linked under **About**. With Invoicing on, it is a numbered invoice with the work order's labor and parts, under **Commerce > Invoices**.
 
 To come back for more work, enter what it is for under **Follow-up** and select **Create follow-up**. The new work order is for the same customer, place and assets, and links back to this one.
 

@@ -2,6 +2,8 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Currencies;
+using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -42,6 +44,7 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly TransactionCreditSettlement _credit;
 
     internal readonly IStringLocalizer S;
 
@@ -83,12 +86,24 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
+        _credit = new TransactionCreditSettlement(transactionManager, distributedLock, session, serviceProvider, clock, logger, stringLocalizer);
     }
 
     /// <inheritdoc/>
     public Task<TransactionCommandResult> RecordOfflinePaymentAsync(string transactionId, decimal amount, string reference, string note, CancellationToken cancellationToken = default)
+        => RecordPaymentAsync(transactionId, new TransactionPaymentRequest { Amount = amount, Reference = reference, Note = note }, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<TransactionCommandResult> RecordPaymentAsync(string transactionId, TransactionPaymentRequest request, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(transactionId, async (transaction, result) =>
+        ArgumentNullException.ThrowIfNull(request);
+
+        var amount = request.Amount;
+        var reference = request.Reference;
+        var note = request.Note;
+        string creditEntryId = null;
+
+        var commandResult = await ExecuteAsync(transactionId, async (transaction, result) =>
         {
             if (amount <= 0m)
             {
@@ -116,6 +131,22 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             }
 
             var now = _clock.UtcNow;
+
+            // Money dated after now was not received yet, so it is recorded as received now.
+            if (request.ReceivedUtc is DateTime receivedUtc && receivedUtc > now)
+            {
+                result.Fail(S["The date the payment was received can't be in the future."]);
+
+                return null;
+            }
+
+            var excess = Math.Max(0m, CurrencyScale.Round(amount - applied, transaction.Currency));
+
+            if (request.CreditExcess && excess > 0m && !CanKeepCredit(transaction, result))
+            {
+                return null;
+            }
+
             var trimmedReference = Trim(reference);
 
             var referenceSuffix = trimmedReference is null
@@ -133,7 +164,24 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
                 S["An offline payment of {0} {1} was recorded.{2}{3}", CurrencyScale.Format(applied, transaction.Currency), transaction.Currency, referenceSuffix, noteSuffix].Value);
 
             payment.Reference = trimmedReference;
+            // A common method is stored as its stable key, whether it was picked or typed by its label, so reports group it
+            // the same in every language.
+            payment.PaymentMethod = _displayText.NormalizeOfflinePaymentMethod(request.PaymentMethod);
+            payment.ReceivedUtc = request.ReceivedUtc;
             await SetActorAsync(payment);
+
+            if (request.CreditExcess && excess > 0m)
+            {
+                // The payment is saved first with the credit it keeps marked as waiting; the credit is added after the save,
+                // with the payment's id as the reference, so a stop in between is completed later and never adds it twice.
+                payment.CreditedAmount = excess;
+                payment.CreditChange = excess;
+                payment.CreditState = TransactionCreditState.Pending;
+                payment.Message += S[" {0} {1} above what was owed is kept as the customer's credit.", CurrencyScale.Format(excess, transaction.Currency), transaction.Currency].Value;
+                result.CreditedAmount = excess;
+                creditEntryId = payment.Id;
+                excess = 0m;
+            }
 
             transaction.Events.Add(payment);
 
@@ -144,7 +192,149 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
 
             result.Event = payment;
 
+            // What was received above what is owed and not kept as credit is not recorded here: the caller decides what
+            // becomes of it.
+            result.UnappliedAmount = excess;
+
             return () => RaisePaymentRecordedAsync(transaction, payment, cancellationToken);
+        }, saveOnFailure: false, save: true, cancellationToken);
+
+        if (commandResult.Succeeded && creditEntryId is not null)
+        {
+            await CompleteCreditAsync(commandResult, transactionId, creditEntryId, cancellationToken);
+        }
+
+        return commandResult;
+    }
+
+    /// <inheritdoc/>
+    public async Task<TransactionCommandResult> ApplyCreditAsync(string transactionId, decimal amount, string note, CancellationToken cancellationToken = default)
+    {
+        string creditEntryId = null;
+
+        var commandResult = await ExecuteAsync(transactionId, async (transaction, result) =>
+        {
+            if (amount <= 0m)
+            {
+                result.Fail(S["Enter an amount of credit greater than zero."]);
+
+                return null;
+            }
+
+            if (!TransactionStateMachine.CanRecordPayment(transaction))
+            {
+                result.Fail(S["This transaction is no longer collectable, so no credit was applied."]);
+
+                return null;
+            }
+
+            var applied = CurrencyScale.Round(Math.Min(amount, transaction.OutstandingAmount), transaction.Currency);
+
+            if (applied <= 0m)
+            {
+                result.Fail(S["The amount is too small to apply to this transaction."]);
+
+                return null;
+            }
+
+            if (!CanKeepCredit(transaction, result))
+            {
+                return null;
+            }
+
+            // Checked now to refuse at once; the spend after the save is what decides, and takes the payment back if the
+            // credit was spent meanwhile.
+            var balance = await _serviceProvider.GetRequiredService<ICustomerCreditService>().GetBalanceAsync(transaction.GetPayer(), transaction.Currency, cancellationToken);
+
+            if (balance < applied)
+            {
+                result.Fail(S["The customer has only {0} {1} of credit.", CurrencyScale.Format(balance, transaction.Currency), transaction.Currency]);
+
+                return null;
+            }
+
+            var now = _clock.UtcNow;
+
+            var noteSuffix = string.IsNullOrWhiteSpace(note)
+                ? string.Empty
+                : S[" Note: {0}", note].Value;
+
+            var payment = TransactionPaymentHandlerExtensions.CreatePaymentEvent(
+                now,
+                applied,
+                TransactionsConstants.SettlementMethods.CustomerCredit,
+                S["{0} {1} of the customer's credit was applied.{2}", CurrencyScale.Format(applied, transaction.Currency), transaction.Currency, noteSuffix].Value);
+
+            payment.CreditChange = -applied;
+            payment.CreditState = TransactionCreditState.Pending;
+            await SetActorAsync(payment);
+
+            transaction.Events.Add(payment);
+            transaction.ApplyPayment(applied, TransactionsConstants.SettlementMethods.CustomerCredit, now, S["The transaction was fully paid and settled."].Value);
+
+            result.Event = payment;
+            creditEntryId = payment.Id;
+
+            return () => RaisePaymentRecordedAsync(transaction, payment, cancellationToken);
+        }, saveOnFailure: false, save: true, cancellationToken);
+
+        if (commandResult.Succeeded && creditEntryId is not null)
+        {
+            await CompleteCreditAsync(commandResult, transactionId, creditEntryId, cancellationToken);
+        }
+
+        return commandResult;
+    }
+
+    /// <inheritdoc/>
+    public async Task<TransactionCommandResult> ReconcileCreditAsync(string transactionId, CancellationToken cancellationToken = default)
+    {
+        var result = new TransactionCommandResult();
+        var settlement = await _credit.SettleAsync(transactionId, cancellationToken);
+
+        result.Transaction = settlement.Transaction;
+
+        foreach (var (_, reason) in settlement.TakenBack)
+        {
+            result.Warnings.Add(S["A payment with customer credit was taken back: {0}", reason].Value);
+        }
+
+        foreach (var (_, reason) in settlement.Failed)
+        {
+            result.Warnings.Add(S["A customer credit change could not be made and was recorded as a payment issue: {0}", reason].Value);
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public Task<TransactionCommandResult> SetRemindersPausedAsync(string transactionId, bool paused, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(transactionId, async (transaction, result) =>
+        {
+            if (transaction.RemindersPaused == paused)
+            {
+                return null;
+            }
+
+            var note = new TransactionEvent
+            {
+                Id = IdGenerator.GenerateId(),
+                CreatedUtc = _clock.UtcNow,
+                Type = TransactionEventType.Note,
+                Message = paused
+                    ? S["The scheduled reminders were paused."].Value
+                    : S["The scheduled reminders were resumed."].Value,
+            };
+
+            await SetActorAsync(note);
+
+            transaction.RemindersPaused = paused;
+            transaction.Events.Add(note);
+            transaction.UpdatedUtc = note.CreatedUtc;
+            result.Event = note;
+
+            return NoFollowUp;
         }, saveOnFailure: false, save: true, cancellationToken);
     }
 
@@ -225,10 +415,89 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
     }
 
     /// <inheritdoc/>
-    public Task<TransactionCommandResult> AdjustAsync(string transactionId, decimal amount, TransactionAdjustmentKind kind, string reason, CancellationToken cancellationToken = default)
+    public Task<TransactionCommandResult> CancelUnpaidAsync(string transactionId, string reason, CancellationToken cancellationToken = default)
     {
         return ExecuteAsync(transactionId, async (transaction, result) =>
         {
+            // Asked again after it succeeded, it changes nothing.
+            if (transaction.Status == TransactionStatus.Canceled)
+            {
+                return NoFollowUp;
+            }
+
+            // Decided here, under the transaction's lock: a payment recorded a moment ago is seen, and it is never canceled
+            // along with the debt.
+            if (transaction.AmountPaid > 0m)
+            {
+                result.Fail(S["{0} {1} was already paid toward this transaction, so it can't be canceled. Refund the payments or move them to the customer's credit first.", CurrencyScale.Format(transaction.AmountPaid, transaction.Currency), transaction.Currency]);
+
+                return null;
+            }
+
+            if (!TransactionStateMachine.CanCancel(transaction))
+            {
+                result.Fail(S["This transaction has already reached a final state and cannot be canceled."]);
+
+                return null;
+            }
+
+            var now = _clock.UtcNow;
+            var trimmedReason = Trim(reason);
+
+            transaction.Status = TransactionStatus.Canceled;
+            transaction.UpdatedUtc = now;
+
+            var canceled = new TransactionEvent
+            {
+                CreatedUtc = now,
+                Type = TransactionEventType.Canceled,
+                Message = trimmedReason is null
+                    ? S["The transaction was canceled."].Value
+                    : S["The transaction was canceled. Reason: {0}", trimmedReason].Value,
+                Reason = trimmedReason,
+            };
+
+            await SetActorAsync(canceled);
+
+            transaction.Events.Add(canceled);
+            result.Event = canceled;
+
+            return null;
+        }, saveOnFailure: false, save: true, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<TransactionCommandResult> AdjustAsync(string transactionId, decimal amount, TransactionAdjustmentKind kind, string reason, CancellationToken cancellationToken = default)
+        => AdjustAsync(transactionId, new TransactionAdjustmentRequest { Amount = amount, Kind = kind, Reason = reason }, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<TransactionCommandResult> AdjustAsync(string transactionId, TransactionAdjustmentRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var amount = request.Amount;
+        var kind = request.Kind;
+        var reason = request.Reason;
+
+        return ExecuteAsync(transactionId, async (transaction, result) =>
+        {
+            // An adjustment recorded for a document is recorded once, so repeating the command after a failure is safe.
+            if (!string.IsNullOrEmpty(request.DocumentId))
+            {
+                var recorded = transaction.Events.FirstOrDefault(entry =>
+                    entry.Type == TransactionEventType.Adjusted &&
+                    string.Equals(entry.DocumentKind, request.DocumentKind, StringComparison.Ordinal) &&
+                    string.Equals(entry.DocumentId, request.DocumentId, StringComparison.Ordinal) &&
+                    !transaction.Events.Any(other => string.Equals(other.ReversesEventId, entry.Id, StringComparison.Ordinal)));
+
+                if (recorded is not null)
+                {
+                    result.Event = recorded;
+
+                    return NoFollowUp;
+                }
+            }
+
             if (!Enum.IsDefined(kind))
             {
                 result.Fail(S["Choose why the amount is adjusted."]);
@@ -284,6 +553,9 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
                 Amount = adjusted,
                 AdjustmentKind = kind,
                 Reason = trimmedReason,
+                DocumentKind = Trim(request.DocumentKind),
+                DocumentId = Trim(request.DocumentId),
+                DocumentNumber = Trim(request.DocumentNumber),
                 Message = trimmedReason is null
                     ? S["{0} of {1} taken off what is owed.", kindName, formatted].Value
                     : S["{0} of {1} taken off what is owed. Reason: {2}", kindName, formatted, trimmedReason].Value,
@@ -303,6 +575,116 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
 
             return null;
         }, saveOnFailure: false, save: true, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<TransactionCommandResult> ReverseAsync(string transactionId, string eventId, string reason, CancellationToken cancellationToken = default)
+    {
+        string creditEntryId = null;
+
+        var commandResult = await ExecuteAsync(transactionId, async (transaction, result) =>
+        {
+            var entry = string.IsNullOrEmpty(eventId)
+                ? null
+                : transaction.Events.FirstOrDefault(candidate => string.Equals(candidate.Id, eventId, StringComparison.Ordinal));
+
+            if (entry is null)
+            {
+                result.Fail(S["The entry to take back could not be found on this transaction."]);
+
+                return null;
+            }
+
+            if (entry.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(entry.PaymentAttemptId))
+            {
+                result.Fail(S["This payment was taken online. Refund it instead of taking it back."]);
+
+                return null;
+            }
+
+            if (!TransactionStateMachine.CanReverse(transaction, entry))
+            {
+                result.Fail(S["This entry can't be taken back: it was taken back already, or the transaction was canceled or refunded."]);
+
+                return null;
+            }
+
+            var trimmedReason = Trim(reason);
+
+            if (trimmedReason is null)
+            {
+                result.Fail(S["Say why the entry is taken back."]);
+
+                return null;
+            }
+
+            // Credit moves back with the entry it belongs to, but only credit that was actually changed: a payment made with
+            // credit gives it back, and a payment whose excess was kept as credit takes that credit back.
+            var creditBack = entry.CreditState == TransactionCreditState.Settled ? -(entry.CreditChange ?? 0m) : 0m;
+            var creditSuffix = string.Empty;
+
+            if (creditBack != 0m)
+            {
+                if (!CanKeepCredit(transaction, result))
+                {
+                    return null;
+                }
+
+                if (creditBack < 0m)
+                {
+                    var balance = await _serviceProvider.GetRequiredService<ICustomerCreditService>().GetBalanceAsync(transaction.GetPayer(), transaction.Currency, cancellationToken);
+
+                    if (balance < -creditBack)
+                    {
+                        result.Fail(S["The customer has only {0} {1} of credit.", CurrencyScale.Format(balance, transaction.Currency), transaction.Currency]);
+                        result.Errors.Add(S["The {0} {1} this payment added to the customer's credit must come back with it.", CurrencyScale.Format(-creditBack, transaction.Currency), transaction.Currency].Value);
+
+                        return null;
+                    }
+
+                    creditSuffix = S[" The {0} {1} it had added to the customer's credit is taken back.", CurrencyScale.Format(-creditBack, transaction.Currency), transaction.Currency].Value;
+                }
+                else
+                {
+                    creditSuffix = S[" {0} {1} is given back to the customer's credit.", CurrencyScale.Format(creditBack, transaction.Currency), transaction.Currency].Value;
+                }
+            }
+
+            var amount = CurrencyScale.Round(entry.Amount.Value, transaction.Currency);
+            var formatted = $"{CurrencyScale.Format(amount, transaction.Currency)} {transaction.Currency}";
+
+            var reversal = TransactionReversal.Apply(
+                transaction,
+                entry,
+                trimmedReason,
+                entry.Type == TransactionEventType.PaymentRecorded
+                    ? S["The payment of {0} was taken back, so it is owed again. Reason: {1}", formatted, trimmedReason].Value + creditSuffix
+                    : S["The adjustment of {0} was taken back, so it is owed again. Reason: {1}", formatted, trimmedReason].Value,
+                owed => S["The transaction owes {0} again, so it is no longer settled.", owed].Value,
+                _clock.UtcNow);
+
+            if (creditBack != 0m)
+            {
+                // Saved first, waiting; the credit moves after the save, keyed by the reversal's id.
+                reversal.CreditChange = creditBack;
+                reversal.CreditState = TransactionCreditState.Pending;
+                creditEntryId = reversal.Id;
+            }
+
+            await SetActorAsync(reversal);
+
+            result.Event = reversal;
+
+            // Told after the save, so a workflow or webhook never hears of a reversal that was not kept.
+            return () => _serviceProvider.GetServices<ITransactionEventHandler>().ReversedAsync(transaction, reversal, entry, _logger, cancellationToken);
+        }, saveOnFailure: false, save: true, cancellationToken);
+
+        if (commandResult.Succeeded && creditEntryId is not null)
+        {
+            await CompleteCreditAsync(commandResult, transactionId, creditEntryId, cancellationToken);
+        }
+
+        return commandResult;
     }
 
     /// <inheritdoc/>
@@ -459,7 +841,52 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
     }
 
     /// <inheritdoc/>
-    public async Task<TransactionCommandResult> ChargeSavedPaymentMethodAsync(string transactionId, string savedPaymentMethodId, CancellationToken cancellationToken = default)
+    public Task<TransactionCommandResult> ChargeSavedPaymentMethodAsync(string transactionId, string savedPaymentMethodId, CancellationToken cancellationToken = default)
+        => ChargeCardAsync(transactionId, async (transaction, paymentMethods, sessionStore) =>
+        {
+            var saved = string.IsNullOrEmpty(savedPaymentMethodId)
+                ? null
+                : await paymentMethods.FindByIdAsync(savedPaymentMethodId, cancellationToken);
+
+            // Only the owner's own card may pay their transaction: an identifier can name anyone's card.
+            if (saved?.PaymentMethod is null ||
+                string.IsNullOrEmpty(transaction.OwnerId) ||
+                !string.Equals(saved.OwnerId, transaction.OwnerId, StringComparison.Ordinal))
+            {
+                return (null, null, S["The saved card could not be found among the cards the transaction's owner kept."].Value);
+            }
+
+            return (saved.PaymentMethod, saved.ItemId, null);
+        }, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<TransactionCommandResult> ChargeKeptPaymentMethodAsync(string transactionId, string sourceSessionId, CancellationToken cancellationToken = default)
+        => ChargeCardAsync(transactionId, async (transaction, paymentMethods, sessionStore) =>
+        {
+            var source = string.IsNullOrEmpty(sourceSessionId)
+                ? null
+                : await sessionStore.GetAsync(sourceSessionId, cancellationToken);
+
+            // Only a checkout of the transaction's own owner (a guest's for a guest's transaction) lends its card.
+            if (source is null || !string.Equals(source.OwnerId ?? string.Empty, transaction.OwnerId ?? string.Empty, StringComparison.Ordinal))
+            {
+                return (null, null, S["The checkout that kept the card could not be found for the transaction's owner."].Value);
+            }
+
+            var card = _serviceProvider.GetService<IPaymentAttemptStore>() is { } attempts
+                ? await CheckoutKeptPaymentMethods.ReadAsync(attempts, _serviceProvider.GetServices<ICheckoutSavedPaymentMethodProvider>(), sourceSessionId, _logger, cancellationToken)
+                : null;
+
+            return card is null
+                ? (null, null, S["No card was kept when the checkout was paid."].Value)
+                : (card, null, null);
+        }, cancellationToken);
+
+    // Charges a transaction to a card the resolver finds: one of the owner's saved cards, or the card a checkout kept.
+    private async Task<TransactionCommandResult> ChargeCardAsync(
+        string transactionId,
+        Func<Transaction, ISavedPaymentMethodStore, ICheckoutSessionStore, Task<(SavedPaymentMethod Card, string SavedId, string Error)>> resolveCard,
+        CancellationToken cancellationToken)
     {
         var result = new TransactionCommandResult();
         var checkoutEngine = _serviceProvider.GetService<ICheckoutEngine>();
@@ -501,19 +928,35 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             return result.Fail(S["This transaction has no outstanding balance to charge."]);
         }
 
-        var saved = string.IsNullOrEmpty(savedPaymentMethodId)
-            ? null
-            : await paymentMethods.FindByIdAsync(savedPaymentMethodId, cancellationToken);
-
-        // Only the owner's own card may pay their transaction: an identifier can name anyone's card.
-        if (saved?.PaymentMethod is null ||
-            string.IsNullOrEmpty(transaction.OwnerId) ||
-            !string.Equals(saved.OwnerId, transaction.OwnerId, StringComparison.Ordinal))
+        // Money an earlier charge took is applied before anything else: recording it can be interrupted after the
+        // provider took it, and charging again on the strength of the unrecorded balance would take it twice.
+        if (_serviceProvider.GetService<IPaymentAttemptStore>() is { } attemptStore &&
+            _serviceProvider.GetService<ITransactionSettlementService>() is { } settlement)
         {
-            return result.Fail(S["The saved card could not be found among the cards the transaction's owner kept."]);
+            var taken = (await attemptStore.GetByReferenceAsync(TransactionsConstants.ReferenceTypes.Transaction, transaction.ItemId, cancellationToken))
+                .Where(attempt => attempt.State == PaymentAttemptState.Succeeded)
+                .ToArray();
+
+            if (taken.Length > 0 && await settlement.ApplyAsync(transaction, taken, taken[^1].SessionId, cancellationToken))
+            {
+                transaction = await _transactionManager.FindByIdAsync(transactionId, cancellationToken) ?? transaction;
+                result.Transaction = transaction;
+
+                if (!TransactionStateMachine.CanRecordPayment(transaction) || transaction.OutstandingAmount <= 0m)
+                {
+                    return await ChargedAsync(result, transactionId, completed: true, chargedId: null, paymentMethods, cancellationToken);
+                }
+            }
         }
 
-        if (saved.PaymentMethod.IsExpired(_clock.UtcNow))
+        var (card, savedId, cardError) = await resolveCard(transaction, paymentMethods, sessionStore);
+
+        if (card is null)
+        {
+            return result.Fail(cardError ?? S["The saved card could not be found."].Value);
+        }
+
+        if (card.IsExpired(_clock.UtcNow))
         {
             return result.Fail(S["The saved card has expired, so it was not charged."]);
         }
@@ -551,8 +994,8 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             session.SessionId,
             new BeginPaymentOptions
             {
-                ProviderKey = saved.PaymentMethod.ProviderKey,
-                ProviderData = CheckoutPaymentDataKeys.ForOffSessionCharge(saved.PaymentMethod),
+                ProviderKey = card.ProviderKey,
+                ProviderData = CheckoutPaymentDataKeys.ForOffSessionCharge(card),
             },
             cancellationToken);
 
@@ -565,7 +1008,7 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
 
             if (completion.IsCompleted || completion.Status == CheckoutCompletionStatus.Pending)
             {
-                return await ChargedAsync(result, transactionId, completion.IsCompleted, saved.ItemId, paymentMethods, cancellationToken);
+                return await ChargedAsync(result, transactionId, completion.IsCompleted, savedId, paymentMethods, cancellationToken);
             }
 
             status = SavedPaymentMethodChargeStatus.Declined;
@@ -586,7 +1029,7 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
 
         var attemptId = await FindLastAttemptIdAsync(session.SessionId, cancellationToken);
 
-        return await RecordChargeFailureAsync(transactionId, saved.PaymentMethod.Describe(), status, reason, attemptId, cancellationToken);
+        return await RecordChargeFailureAsync(transactionId, card.Describe(), status, reason, attemptId, cancellationToken);
     }
 
     // A follow-up that does nothing: the command changed something that must be saved, but has nothing to raise.
@@ -688,6 +1131,60 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
         });
     }
 
+    // Whether the payer's customer credit can change at all: the Store Credit feature keeps it, and the payer can hold it.
+    // Checked before anything is saved, so a command that needs credit is refused at once instead of leaving a waiting
+    // change that can only fail.
+    private bool CanKeepCredit(Transaction transaction, TransactionCommandResult result)
+    {
+        var credit = _serviceProvider.GetService<ICustomerCreditService>();
+
+        if (credit is null)
+        {
+            result.Fail(S["Customer credit is not available. Enable the Store Credit feature to use it."]);
+
+            return false;
+        }
+
+        if (!credit.CanHold(transaction.GetPayer()))
+        {
+            result.Fail(S["This payer can't hold customer credit."]);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    // Makes the credit change a command's saved entry waits for, and tells the caller what came of it.
+    private async Task CompleteCreditAsync(TransactionCommandResult result, string transactionId, string entryId, CancellationToken cancellationToken)
+    {
+        var settlement = await _credit.SettleAsync(transactionId, cancellationToken);
+
+        if (settlement.Transaction is not null)
+        {
+            result.Transaction = settlement.Transaction;
+            result.Event = settlement.Transaction.Events.FirstOrDefault(entry => string.Equals(entry.Id, entryId, StringComparison.Ordinal)) ?? result.Event;
+        }
+
+        foreach (var (entry, reason) in settlement.TakenBack.Where(item => string.Equals(item.Entry.Id, entryId, StringComparison.Ordinal)))
+        {
+            // The credit was spent meanwhile: the payment was taken back, so the command did not pay anything.
+            result.Fail(reason);
+            result.Errors.Add(S["The payment was taken back, so nothing was paid with credit."].Value);
+        }
+
+        foreach (var (_, reason) in settlement.Failed.Where(item => string.Equals(item.Entry.Id, entryId, StringComparison.Ordinal)))
+        {
+            result.Warnings.Add(S["The customer's credit could not be changed, and a payment issue was recorded for it: {0}", reason].Value);
+        }
+
+        if (settlement.StillPending.Any(entry => string.Equals(entry.Id, entryId, StringComparison.Ordinal)) ||
+            (settlement.Transaction?.Events.Any(entry => string.Equals(entry.Id, entryId, StringComparison.Ordinal) && entry.CreditState == TransactionCreditState.Pending) ?? false))
+        {
+            result.Warnings.Add(S["The customer's credit is busy, so it will be changed in a moment."].Value);
+        }
+    }
+
     // Runs one command under the transaction's lock. The command validates and changes the transaction, and returns a
     // follow-up (such as telling the payment handlers) that runs only once the change is saved, or null when it has
     // nothing to do after the save. A refused command returns null and is not saved, unless it asks to be.
@@ -704,6 +1201,9 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
         {
             return result.Fail(S["The transaction could not be found."]);
         }
+
+        // An entry left waiting for its credit change by a process that stopped is completed before anything else.
+        await _credit.SettleAsync(transactionId, cancellationToken);
 
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockPrefix + transactionId, _lockTimeout, _lockExpiration);
 

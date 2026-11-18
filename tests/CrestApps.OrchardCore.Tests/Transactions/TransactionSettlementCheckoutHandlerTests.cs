@@ -702,6 +702,60 @@ public sealed class TransactionSettlementCheckoutHandlerTests
     }
 
     [Fact]
+    public async Task PaymentGate_APartPaymentOfATransactionStillOwingMore_IsPaid()
+    {
+        // Arrange: the payer asked to pay 40 of the 108 owed.
+        var transaction = CreateOutstandingTransaction();
+
+        transaction.AllowPartialPayment = true;
+        transaction.MinimumPayment = 20m;
+
+        var store = new FakeTransactionStore(transaction);
+        var session = CreateSettlementSession(transaction, "settlement-1");
+
+        session.Put(new CheckoutRequestedAmount { Amount = 40m });
+
+        await CreateHandler(store).ActivatingAsync(new CheckoutFlowActivatingContext(session));
+
+        var gate = new TransactionSettlementPaymentGate(TransactionManagerFactory.Create(store), new PassThroughStringLocalizer<TransactionSettlementPaymentGate>());
+        var context = new CheckoutPaymentBeginningContext(new CheckoutFlow(session), "test");
+
+        // Act
+        await gate.BeginningAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(context.IsRefused);
+    }
+
+    [Fact]
+    public async Task PaymentGate_APartPaymentOfMoreThanIsStillOwed_IsRefused()
+    {
+        // Arrange: the payer asked to pay 40, and another payment left only 30 owing meanwhile.
+        var transaction = CreateOutstandingTransaction();
+
+        transaction.AllowPartialPayment = true;
+        transaction.MinimumPayment = 20m;
+
+        var store = new FakeTransactionStore(transaction);
+        var session = CreateSettlementSession(transaction, "settlement-1");
+
+        session.Put(new CheckoutRequestedAmount { Amount = 40m });
+
+        await CreateHandler(store).ActivatingAsync(new CheckoutFlowActivatingContext(session));
+
+        transaction.AmountPaid = 78m;
+
+        var gate = new TransactionSettlementPaymentGate(TransactionManagerFactory.Create(store), new PassThroughStringLocalizer<TransactionSettlementPaymentGate>());
+        var context = new CheckoutPaymentBeginningContext(new CheckoutFlow(session), "test");
+
+        // Act
+        await gate.BeginningAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(context.IsRefused);
+    }
+
+    [Fact]
     public async Task CompletedAsync_MoneyCollectedForATransactionAlreadyPaid_IsRecordedAsAPaymentIssue()
     {
         // Arrange: the transaction was settled by another checkout while this one was being paid.
@@ -730,6 +784,69 @@ public sealed class TransactionSettlementCheckoutHandlerTests
 
         Assert.Equal(108m, issue.Amount);
         Assert.Equal("settlement-2", issue.ReferenceId);
+    }
+
+    [Fact]
+    public async Task ActivatingAsync_WithARequestedAmount_ChargesItWhenTheTransactionTakesPartPayments()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+
+        transaction.AllowPartialPayment = true;
+        transaction.MinimumPayment = 20m;
+
+        var session = CreateSettlementSession(transaction, "settlement-1");
+
+        session.Put(new CheckoutRequestedAmount { Amount = 40m });
+
+        // Act
+        await CreateHandler(new FakeTransactionStore(transaction)).ActivatingAsync(new CheckoutFlowActivatingContext(session));
+
+        // Assert
+        Assert.Equal(40m, Assert.Single(Assert.Single(session.Steps).BillingItems).Amount);
+
+        // A code is used up only when the balance is settled, so a part payment takes none.
+        Assert.False(session.AcceptsDiscountsOnBalance);
+    }
+
+    [Fact]
+    public async Task ActivatingAsync_WithARequestedAmount_ChargesEverythingWhenTheTransactionTakesNoPartPayments()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        var session = CreateSettlementSession(transaction, "settlement-1");
+
+        session.Put(new CheckoutRequestedAmount { Amount = 40m });
+
+        // Act
+        await CreateHandler(new FakeTransactionStore(transaction)).ActivatingAsync(new CheckoutFlowActivatingContext(session));
+
+        // Assert
+        Assert.Equal(108m, Assert.Single(Assert.Single(session.Steps).BillingItems).Amount);
+        Assert.True(session.AcceptsDiscountsOnBalance);
+    }
+
+    [Fact]
+    public async Task ActivatingAsync_WithARequestedAmountBelowTheSmallestPayment_IsRefused()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+
+        transaction.AllowPartialPayment = true;
+        transaction.MinimumPayment = 20m;
+
+        var session = CreateSettlementSession(transaction, "settlement-1");
+
+        session.Put(new CheckoutRequestedAmount { Amount = 5m });
+
+        var context = new CheckoutFlowActivatingContext(session);
+
+        // Act
+        await CreateHandler(new FakeTransactionStore(transaction)).ActivatingAsync(context);
+
+        // Assert
+        Assert.NotEmpty(context.Errors);
+        Assert.Empty(session.Steps);
     }
 
     private static TransactionSettlementCheckoutHandler CreateHandler(FakeTransactionStore store, InMemoryPaymentAttemptStore attempts = null, params ITransactionPaymentHandler[] paymentHandlers)
@@ -803,6 +920,8 @@ public sealed class TransactionSettlementCheckoutHandlerTests
         var hostEnvironment = new Mock<IHostEnvironment>();
         hostEnvironment.SetupGet(environment => environment.EnvironmentName).Returns("Development");
 
-        return new PayLaterCheckoutPaymentProvider(SiteServiceFactory.Create(new CrestApps.OrchardCore.PayLater.Models.PayLaterSettings { Enabled = true }), hostEnvironment.Object, Mock.Of<IStringLocalizer<PayLaterCheckoutPaymentProvider>>());
+        var siteService = SiteServiceFactory.Create(new CrestApps.OrchardCore.PayLater.Models.PayLaterSettings { Enabled = true });
+
+        return new PayLaterCheckoutPaymentProvider(siteService, new PayLaterDueDateResolver(siteService, Mock.Of<IServiceProvider>()), hostEnvironment.Object, Mock.Of<IStringLocalizer<PayLaterCheckoutPaymentProvider>>());
     }
 }

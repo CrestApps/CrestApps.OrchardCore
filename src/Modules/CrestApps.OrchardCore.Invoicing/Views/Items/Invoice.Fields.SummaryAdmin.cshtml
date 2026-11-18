@@ -1,0 +1,4 @@
+@model ShapeViewModel<InvoiceDetailViewModel>
+
+@* A plain link to the invoice's page; a draft has no number until it is issued. *@
+<a asp-action="Detail" asp-controller="InvoicesAdmin" asp-route-itemId="@Model.Value.Invoice.ItemId">@(string.IsNullOrEmpty(Model.Value.Invoice.Number) ? T["Draft invoice"].Value : Model.Value.Invoice.Number)</a>

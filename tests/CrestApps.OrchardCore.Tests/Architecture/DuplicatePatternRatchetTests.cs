@@ -235,6 +235,11 @@ public sealed class DuplicatePatternRatchetTests
             ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Ucp/UcpRequestFilter.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Services/ChildTenantManager.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Services/DelegatedAccessIssuer.cs"] = 1,
+
+            // Main's #1331 (Invoicing and Billing), reviewed when PR #1319 merged main: the address an estimate was accepted
+            // from, kept with the acceptance as evidence.
+            ["src/Modules/CrestApps.OrchardCore.Invoicing/Controllers/EstimateController.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Invoicing/Controllers/EstimatesAdminController.cs"] = 1,
         },
     };
 

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<RecordInvoicePaymentTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i>
+    @T["Record Invoice Payment"]
+</h4>
+<p>@T["Records a payment received outside the site toward an open invoice."]</p>

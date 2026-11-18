@@ -336,6 +336,47 @@ public static class CommerceReportDataSets
     }
 
     /// <summary>
+    /// The names of the invoicing data source and its data sets.
+    /// </summary>
+    public static class InvoicingSource
+    {
+        /// <summary>
+        /// The technical name of the invoicing data source.
+        /// </summary>
+        public const string Name = "Invoicing";
+
+        /// <summary>
+        /// The invoices data set: one row per invoice.
+        /// </summary>
+        public const string Invoices = "Invoices";
+
+        /// <summary>
+        /// The invoice lines data set: one row per line of an issued invoice.
+        /// </summary>
+        public const string InvoiceLines = "InvoiceLines";
+
+        /// <summary>
+        /// The invoice taxes data set: one row per tax of an issued invoice at one rate.
+        /// </summary>
+        public const string InvoiceTaxes = "InvoiceTaxes";
+
+        /// <summary>
+        /// The credit notes data set: one row per credit note.
+        /// </summary>
+        public const string CreditNotes = "CreditNotes";
+
+        /// <summary>
+        /// The estimates data set: one row per estimate.
+        /// </summary>
+        public const string Estimates = "Estimates";
+
+        /// <summary>
+        /// The recurring plans data set: one row per recurring plan.
+        /// </summary>
+        public const string RecurringPlans = "RecurringPlans";
+    }
+
+    /// <summary>
     /// The names of the subscriptions data source and its data sets.
     /// </summary>
     public static class SubscriptionSource

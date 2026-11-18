@@ -47,8 +47,10 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
 
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
-    private static readonly TimeSpan _transientRetryDelay = TimeSpan.FromHours(1);
 
+    private readonly ISavedPaymentMethodStore _savedPaymentMethodStore;
+    private readonly ISavedPaymentMethodChargeService _chargeService;
+    private readonly ILocalClock _localClock;
     private readonly IInstallmentPlanStore _planStore;
     private readonly ITransactionManager _transactionManager;
     private readonly ICheckoutEngine _checkoutEngine;
@@ -67,6 +69,12 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+
+    // The transaction an administrator is charging now through ChargeAsync, so the charge events it raises in this
+    // scope are told apart from the scheduled charges, and why that charge was not taken.
+    private string _manualChargeTransactionId;
+    private bool _manualChargeEarly;
+    private string _manualChargeFailure;
 
     internal readonly IStringLocalizer S;
 
@@ -92,8 +100,14 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         ISession session,
         IClock clock,
         ILogger<DefaultInstallmentPlanService> logger,
-        IStringLocalizer<DefaultInstallmentPlanService> stringLocalizer)
+        IStringLocalizer<DefaultInstallmentPlanService> stringLocalizer,
+        ISavedPaymentMethodStore savedPaymentMethodStore = null,
+        ISavedPaymentMethodChargeService chargeService = null,
+        ILocalClock localClock = null)
     {
+        _localClock = localClock;
+        _savedPaymentMethodStore = savedPaymentMethodStore;
+        _chargeService = chargeService;
         _planStore = planStore;
         _transactionManager = transactionManager;
         _checkoutEngine = checkoutEngine;
@@ -211,6 +225,164 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         };
 
         return await CreatePlanAsync(planRequest, transaction, checkoutSession, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<InstallmentPlanResult> CreateScheduleAsync(CreateInstallmentScheduleRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var result = new InstallmentPlanResult();
+        var transaction = string.IsNullOrEmpty(request.TransactionId)
+            ? null
+            : await _transactionManager.FindByIdAsync(request.TransactionId, cancellationToken);
+
+        // A schedule set by staff may split a guest's debt too: its payments are invoiced, and only a card schedule
+        // needs a signed-up owner with a kept card.
+        if (transaction is null ||
+            transaction.Status != TransactionStatus.Outstanding ||
+            transaction.AmountPaid > 0m ||
+            transaction.TotalAmount <= 0m ||
+            transaction.Recurrence is not null ||
+            transaction.AutoCollection is not null ||
+            string.IsNullOrEmpty(transaction.OwnerId) ||
+            string.Equals(transaction.ReferenceType, SubscriptionConstants.InstallmentPlans.ReferenceType, StringComparison.Ordinal))
+        {
+            return result.Fail(nameof(request.TransactionId), S["This balance can't be split into a payment schedule: it must be outstanding with nothing paid on it."]);
+        }
+
+        if ((await _planStore.GetBySourceTransactionAsync(transaction.ItemId, cancellationToken)).Any(plan => plan.Status is not InstallmentPlanStatus.Canceled))
+        {
+            return result.Fail(nameof(request.TransactionId), S["This balance is already being paid in installments."]);
+        }
+
+        var currency = transaction.Currency;
+        var now = _clock.UtcNow;
+        var payments = (request.Payments ?? []).Where(entry => entry is not null).ToList();
+
+        if (payments.Count == 0 || payments.Count > MaxInstallments)
+        {
+            return result.Fail(nameof(request.Payments), S["Give the schedule between 1 and {0} payments.", MaxInstallments]);
+        }
+
+        if (payments.Any(entry => entry.Amount <= 0m))
+        {
+            result.Fail(nameof(request.Payments), S["Every payment must be more than zero."]);
+        }
+
+        for (var i = 0; i < payments.Count; i++)
+        {
+            var due = DateTime.SpecifyKind(payments[i].DueUtc, DateTimeKind.Utc);
+
+            // A day's grace: the caller turns a date into the start of that day in its own time zone, which can be the
+            // day before in UTC.
+            if (due < now.AddDays(-1) || i > 0 && due <= DateTime.SpecifyKind(payments[i - 1].DueUtc, DateTimeKind.Utc))
+            {
+                result.Fail(nameof(request.Payments), S["The payments must fall due from today on, each after the one before."]);
+
+                break;
+            }
+        }
+
+        var total = CurrencyScale.Round(payments.Sum(entry => entry.Amount), currency);
+
+        if (total != CurrencyScale.Round(transaction.OutstandingAmount, currency))
+        {
+            result.Fail(nameof(request.Payments), S["The payments add up to {0}, but {1} is owed. Make them add up to what is owed.", CurrencyFormat.WithCode(total, currency), CurrencyFormat.WithCode(transaction.OutstandingAmount, currency)]);
+        }
+
+        SavedPaymentMethod card = null;
+        string cardId = null;
+
+        if (request.CollectionMethod == InstallmentCollectionMethod.AutoCharge)
+        {
+            var kept = transaction.OwnerKind == CustomerOwnerKind.Authenticated && _savedPaymentMethodStore is { } cards
+                ? await cards.GetDefaultAsync(transaction.OwnerId, cancellationToken)
+                : null;
+
+            card = kept?.PaymentMethod;
+            cardId = kept?.ItemId;
+
+            if (card is null || card.IsExpired(now))
+            {
+                result.Fail(nameof(request.CollectionMethod), S["The customer kept no card that can be charged, so the payments can only be invoiced."]);
+            }
+        }
+
+        if (!result.Succeeded)
+        {
+            return result;
+        }
+
+        var title = string.IsNullOrWhiteSpace(request.Title)
+            ? (string.IsNullOrWhiteSpace(transaction.Title) ? S["Payment schedule"].Value : transaction.Title)
+            : request.Title.Trim();
+        var plan = new InstallmentPlan
+        {
+            ItemId = IdGenerator.GenerateId(),
+            Title = title,
+            ReferenceType = string.IsNullOrEmpty(transaction.ReferenceType) || string.IsNullOrEmpty(transaction.ReferenceId) ? null : transaction.ReferenceType,
+            ReferenceId = string.IsNullOrEmpty(transaction.ReferenceType) || string.IsNullOrEmpty(transaction.ReferenceId) ? null : transaction.ReferenceId,
+            SourceTransactionId = transaction.ItemId,
+            OwnerId = transaction.OwnerId,
+            CustomerName = transaction.OwnerKind == CustomerOwnerKind.Guest ? transaction.GuestContactName : transaction.PayerContact?.Name,
+            CustomerEmail = transaction.OwnerKind == CustomerOwnerKind.Guest ? transaction.GuestContactEmail : transaction.PayerContact?.Email,
+            Currency = currency,
+            TotalAmount = total,
+            InstallmentCount = payments.Count,
+            Frequency = InstallmentFrequency.Monthly,
+            FirstDueUtc = DateTime.SpecifyKind(payments[0].DueUtc, DateTimeKind.Utc),
+            CollectionMethod = request.CollectionMethod,
+            PaymentMethod = card,
+            SavedPaymentMethodId = cardId,
+            Status = InstallmentPlanStatus.Active,
+            Notes = request.Notes,
+            CreatedById = CurrentUserId(),
+            CreatedByName = CurrentUserName(),
+            CreatedUtc = now,
+            UpdatedUtc = now,
+            ActivatedUtc = now,
+            Properties = CopyProperties(transaction.Properties),
+        };
+
+        var autoCollection = card is null
+            ? null
+            : new TransactionAutoCollection { ProviderKey = card.ProviderKey, PaymentMethodDescription = card.Describe() };
+
+        for (var i = 0; i < payments.Count; i++)
+        {
+            var payment = new InstallmentPlanPayment
+            {
+                Number = i + 1,
+                DueUtc = DateTime.SpecifyKind(payments[i].DueUtc, DateTimeKind.Utc),
+                Amount = CurrencyScale.Round(payments[i].Amount, currency),
+                Status = InstallmentPaymentStatus.Scheduled,
+            };
+            var paymentTransaction = await CreateTransactionAsync(
+                plan,
+                payment,
+                S["{0} — payment {1} of {2}", title, payment.Number, payments.Count].Value,
+
+                // An invoiced payment is owed from now, due on its date, so the customer can pay it early and is
+                // reminded before it falls due; a charged one waits for its date.
+                autoCollection is null ? TransactionStatus.Outstanding : TransactionStatus.Pending,
+                autoCollection,
+                now,
+                copyFrom: transaction);
+
+            payment.TransactionId = paymentTransaction.ItemId;
+            plan.Payments.Add(payment);
+        }
+
+        AddEvent(plan, InstallmentPlanEventType.Created, card is null
+            ? S["A schedule of {0} payments was set for '{1}'; each is invoiced to the customer on its due date.", payments.Count, transaction.Title].Value
+            : S["A schedule of {0} payments was set for '{1}'; {2} is charged on each due date.", payments.Count, transaction.Title, card.Describe()].Value, actor: plan.CreatedByName);
+
+        await ReplaceSourceTransactionAsync(plan, cancellationToken);
+        await _planStore.CreateAsync(plan, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
+
+        return InstallmentPlanResult.Success(plan);
     }
 
     // Creates a plan waiting for its first payment. A plan made from a transaction takes that payment through the
@@ -417,8 +589,8 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         }
 
         var created = hasDownPayment
-            ? S["The plan was created: {0} today, then {1} payments.", Format(downPayment, currency), request.InstallmentCount].Value
-            : S["The plan was created: {0} payments, the first of {1} taken today.", request.InstallmentCount, Format(firstPayment.Amount, currency)].Value;
+            ? S["The plan was created: {0} today, then {1} payments.", CurrencyFormat.WithCode(downPayment, currency), request.InstallmentCount].Value
+            : S["The plan was created: {0} payments, the first of {1} taken today.", request.InstallmentCount, CurrencyFormat.WithCode(firstPayment.Amount, currency)].Value;
 
         if (sourceTransaction is not null)
         {
@@ -516,8 +688,15 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         }, cancellationToken);
 
     /// <inheritdoc/>
-    public Task<InstallmentPlanResult> ChargeAsync(string planId, int paymentNumber, CancellationToken cancellationToken = default)
-        => MutateAsync(planId, waitForLock: true, async plan =>
+    public async Task<InstallmentPlanResult> ChargeAsync(string planId, int paymentNumber, CancellationToken cancellationToken = default)
+    {
+        string transactionId = null;
+        var dueUtc = DateTime.MinValue;
+        var early = false;
+
+        // Under the plan's lock: checked, and the payment's transaction given a charge to make now. The charge itself is
+        // made after the lock is released, since what it raises updates the plan under that lock.
+        var prepared = await MutateAsync(planId, waitForLock: true, async plan =>
         {
             var result = InstallmentPlanResult.Success(plan);
 
@@ -545,14 +724,217 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
                 return result.Fail(string.Empty, S["There is no saved card on this plan to charge."]);
             }
 
-            var outcome = await ChargePaymentAsync(plan, payment, manual: true, cancellationToken);
+            if (_chargeService is null)
+            {
+                return result.Fail(string.Empty, S["Saved cards are charged through the Transactions feature. Enable it to charge one."]);
+            }
+
+            var transaction = await FindTransactionAsync(payment, cancellationToken);
+
+            if (transaction is null)
+            {
+                return result.Fail(string.Empty, S["The payment's transaction could not be found."]);
+            }
+
+            var now = _clock.UtcNow;
+
+            // Early only while the payment is still on the card schedule: one handed to the customer is charged once.
+            early = transaction.AutoCharge is not null && payment.DueUtc.Date > now.Date;
+
+            if (transaction.AutoCharge is null || early)
+            {
+                // A payment handed to the customer is charged once, with no automatic retry. One charged early keeps
+                // one retry so a decline leaves it on schedule: it is put back on its due date afterwards.
+                var charge = await NewAutoChargeAsync(plan, now);
+
+                charge.RetryDays = early ? [1] : [];
+                transaction.AutoCharge = charge;
+                transaction.AutoCollection = new TransactionAutoCollection
+                {
+                    ProviderKey = plan.PaymentMethod.ProviderKey,
+                    PaymentMethodDescription = plan.PaymentMethod.Describe(),
+                };
+
+                await _transactionManager.UpdateAsync(transaction, data: null, cancellationToken);
+            }
+
+            transactionId = transaction.ItemId;
+            dueUtc = payment.DueUtc;
+
+            return result;
+        }, cancellationToken);
+
+        if (!prepared.Succeeded || transactionId is null)
+        {
+            return prepared;
+        }
+
+        SavedPaymentMethodChargeResult charged;
+
+        _manualChargeTransactionId = transactionId;
+        _manualChargeEarly = early;
+        _manualChargeFailure = null;
+
+        try
+        {
+            charged = await _chargeService.ChargeAsync(transactionId, cancellationToken);
+        }
+        finally
+        {
+            _manualChargeTransactionId = null;
+        }
+
+        var failure = charged.ChargeStatus is SavedPaymentMethodChargeStatus.Succeeded or SavedPaymentMethodChargeStatus.Pending
+            ? null
+            : _manualChargeFailure ?? charged.Transaction?.AutoCharge?.LastFailure ?? string.Join(" ", charged.Errors);
+
+        if (failure is not null && early && charged.Transaction?.AutoCharge is not null)
+        {
+            // Collecting early is a favor, not a deadline: the payment is charged (and retried) from its due date.
+            var plan = await _planStore.FindByIdAsync(planId, cancellationToken);
+            var settings = await _siteService.GetSettingsAsync<InstallmentPlanSettings>();
+
+            await _chargeService.ScheduleAsync(new SavedPaymentMethodChargeRequest
+            {
+                TransactionId = transactionId,
+                SavedPaymentMethodId = plan?.SavedPaymentMethodId,
+                SourceSessionId = string.IsNullOrEmpty(plan?.SavedPaymentMethodId) ? plan?.DownPaymentSessionId : null,
+                ChargeOnUtc = dueUtc,
+                RetryDays = settings.RetryDays ?? [],
+            }, cancellationToken);
+        }
+
+        var result = InstallmentPlanResult.Success(await _planStore.FindByIdAsync(planId, cancellationToken) ?? prepared.Plan);
+
+        if (!string.IsNullOrEmpty(failure))
+        {
+            result.Fail(string.Empty, failure);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Records on the plan a scheduled charge of one of its payments that the card declined, with the retry the saved
+    /// card charge service scheduled, and tells the customer.
+    /// </summary>
+    /// <param name="transaction">The payment's transaction.</param>
+    /// <param name="reason">Why the card declined.</param>
+    /// <param name="nextAttemptUtc">When the card is charged again.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    internal Task<InstallmentPlanResult> RecordDeclinedChargeAsync(Transaction transaction, string reason, DateTime nextAttemptUtc, CancellationToken cancellationToken = default)
+        => MutateAsync(transaction.ReferenceId, waitForLock: true, async plan =>
+        {
+            var result = InstallmentPlanResult.Success(plan);
+            var payment = plan.Payments.FirstOrDefault(candidate => string.Equals(candidate.TransactionId, transaction.ItemId, StringComparison.Ordinal));
+
+            if (payment is null || payment.Status is InstallmentPaymentStatus.Paid or InstallmentPaymentStatus.Canceled)
+            {
+                return result;
+            }
+
+            var now = _clock.UtcNow;
+            var manual = string.Equals(_manualChargeTransactionId, transaction.ItemId, StringComparison.Ordinal);
+
+            payment.LastChargeAttemptUtc = now;
+            payment.LastFailureMessage = reason;
+
+            if (manual)
+            {
+                _manualChargeFailure = reason;
+
+                if (_manualChargeEarly)
+                {
+                    // Charged early: put back on its due date by ChargeAsync, without using up a retry.
+                    payment.NextChargeAttemptUtc = null;
+
+                    AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined when charged early by an administrator ({1}). It will still be charged on {2:d}.", payment.Number, reason, payment.DueUtc].Value, payment.Number, CurrentUserName());
+
+                    return result;
+                }
+            }
+
+            payment.ChargeAttempts = transaction.AutoCharge?.Attempts ?? payment.ChargeAttempts + 1;
+            payment.Status = InstallmentPaymentStatus.Failed;
+            payment.NextChargeAttemptUtc = nextAttemptUtc;
+
+            // The retry is a moment, shown on the site's calendar.
+            var nextAttempt = await ToLocalAsync(nextAttemptUtc);
+
+            if (await FindTransactionAsync(payment, cancellationToken) is { } stored)
+            {
+                await MarkCollectionFailedAsync(stored, reason, cancellationToken);
+            }
+
+            if (manual)
+            {
+                AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined when charged by an administrator ({1}). It will be charged again on {2:d}.", payment.Number, reason, nextAttempt].Value, payment.Number, CurrentUserName());
+            }
+            else
+            {
+                AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined ({1}). It will be charged again on {2:d}.", payment.Number, reason, nextAttempt].Value, payment.Number);
+
+                await NotifyCustomerAsync(
+                    plan,
+                    S["We could not take your payment"].Value,
+                    S["We could not charge {0} for {1} of {2}: {3}. We will try again on {4:d}. If your card has changed, please contact us.", plan.PaymentMethod?.Describe(), plan.Title, CurrencyFormat.WithCode(payment.Amount, plan.Currency), reason, nextAttempt].Value,
+                    cancellationToken);
+            }
 
             UpdateStatus(plan);
 
-            if (outcome is not null)
+            return result;
+        }, cancellationToken);
+
+    /// <summary>
+    /// Hands one of the plan's payments to the customer once the saved card charge service stopped charging it (no retry
+    /// left, or the card's bank asked the cardholder to approve it), and tells them.
+    /// </summary>
+    /// <param name="transaction">The payment's transaction.</param>
+    /// <param name="reason">Why the last charge was not taken.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    internal Task<InstallmentPlanResult> RecordAbandonedChargeAsync(Transaction transaction, string reason, CancellationToken cancellationToken = default)
+        => MutateAsync(transaction.ReferenceId, waitForLock: true, async plan =>
+        {
+            var result = InstallmentPlanResult.Success(plan);
+            var payment = plan.Payments.FirstOrDefault(candidate => string.Equals(candidate.TransactionId, transaction.ItemId, StringComparison.Ordinal));
+
+            if (payment is null || payment.Status is InstallmentPaymentStatus.Paid or InstallmentPaymentStatus.Canceled)
             {
-                result.Fail(string.Empty, outcome);
+                return result;
             }
+
+            var manual = string.Equals(_manualChargeTransactionId, transaction.ItemId, StringComparison.Ordinal);
+
+            payment.ChargeAttempts++;
+            payment.LastChargeAttemptUtc = _clock.UtcNow;
+            payment.LastFailureMessage = reason;
+            payment.Status = InstallmentPaymentStatus.Failed;
+            payment.NextChargeAttemptUtc = null;
+
+            if (await FindTransactionAsync(payment, cancellationToken) is { } stored)
+            {
+                await HandOverToCustomerAsync(plan, stored, cancellationToken);
+            }
+
+            if (manual)
+            {
+                _manualChargeFailure = reason;
+
+                AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined when charged by an administrator: {1}", payment.Number, reason].Value, payment.Number, CurrentUserName());
+            }
+            else
+            {
+                AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined ({1}) and no retries are left. It is now due from the customer.", payment.Number, reason].Value, payment.Number);
+
+                await NotifyCustomerAsync(
+                    plan,
+                    S["Your payment is overdue"].Value,
+                    S["We could not charge {0} for {1} of {2}: {3}. Please sign in and pay it from your transactions.", plan.PaymentMethod?.Describe(), plan.Title, CurrencyFormat.WithCode(payment.Amount, plan.Currency), reason].Value,
+                    cancellationToken);
+            }
+
+            UpdateStatus(plan);
 
             return result;
         }, cancellationToken);
@@ -606,12 +988,9 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
                     continue;
                 }
 
-                if (payment.NextChargeAttemptUtc is DateTime next && next > now)
-                {
-                    continue;
-                }
-
-                await ChargePaymentAsync(plan, payment, manual: false, cancellationToken);
+                // The saved card charge service charges it and retries it; a payment of a plan that started before
+                // the service charged plans is handed to it here.
+                await EnsureAutoChargeAsync(plan, payment, now, cancellationToken);
             }
 
             UpdateStatus(plan);
@@ -686,7 +1065,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
                 await NotifyCustomerAsync(
                     plan,
                     S["Your payment plan was canceled"].Value,
-                    S["Your payment plan {0} was canceled. {1} of {2} was received and stays received; no further payments will be taken.", plan.Title, Format(plan.AmountPaid, plan.Currency), Format(plan.TotalAmount, plan.Currency)].Value,
+                    S["Your payment plan {0} was canceled. {1} of {2} was received and stays received; no further payments will be taken.", plan.Title, CurrencyFormat.WithCode(plan.AmountPaid, plan.Currency), CurrencyFormat.WithCode(plan.TotalAmount, plan.Currency)].Value,
                     cancellationToken);
             }
 
@@ -817,14 +1196,14 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         if (isDownPayment)
         {
             activated = plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge
-                ? S["The down payment of {0} was received. {1} will be charged on each due date.", Format(firstPayment.Amount, plan.Currency), plan.PaymentMethod.Describe()].Value
-                : S["The down payment of {0} was received. The customer will be invoiced for each payment.", Format(firstPayment.Amount, plan.Currency)].Value;
+                ? S["The down payment of {0} was received. {1} will be charged on each due date.", CurrencyFormat.WithCode(firstPayment.Amount, plan.Currency), plan.PaymentMethod.Describe()].Value
+                : S["The down payment of {0} was received. The customer will be invoiced for each payment.", CurrencyFormat.WithCode(firstPayment.Amount, plan.Currency)].Value;
         }
         else
         {
             activated = plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge
-                ? S["The first payment of {0} was received. {1} will be charged for each remaining payment on its due date.", Format(firstPayment.Amount, plan.Currency), plan.PaymentMethod.Describe()].Value
-                : S["The first payment of {0} was received. The customer will be invoiced for each remaining payment.", Format(firstPayment.Amount, plan.Currency)].Value;
+                ? S["The first payment of {0} was received. {1} will be charged for each remaining payment on its due date.", CurrencyFormat.WithCode(firstPayment.Amount, plan.Currency), plan.PaymentMethod.Describe()].Value
+                : S["The first payment of {0} was received. The customer will be invoiced for each remaining payment.", CurrencyFormat.WithCode(firstPayment.Amount, plan.Currency)].Value;
         }
 
         AddEvent(plan, InstallmentPlanEventType.Activated, activated, paymentNumber: firstPayment.Number);
@@ -866,7 +1245,9 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         {
             CreatedUtc = now,
             Type = TransactionEventType.Canceled,
-            Message = S["Replaced by the installment plan '{0}', which the customer chose at checkout.", plan.Title].Value,
+            Message = string.IsNullOrEmpty(plan.DownPaymentSessionId)
+                ? S["Replaced by the payment schedule '{0}'.", plan.Title].Value
+                : S["Replaced by the installment plan '{0}', which the customer chose at checkout.", plan.Title].Value,
             ActorId = CurrentUserId(),
             ActorName = CurrentUserName(),
         });
@@ -1004,224 +1385,67 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         return null;
     }
 
-    // Charges one payment through the checkout. Returns null when the charge went through (or is still settling),
-    // or the reason it failed.
-    private async Task<string> ChargePaymentAsync(InstallmentPlan plan, InstallmentPlanPayment payment, bool manual, CancellationToken cancellationToken)
+    private async Task<DateTime> ToLocalAsync(DateTime utc)
+        => _localClock is null
+            ? utc
+            : (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+
+    // The charge the saved card charge service makes for a payment collected by card: the card the plan keeps, on a
+    // day, retried on the plan settings' days.
+    private async Task<TransactionAutoCharge> NewAutoChargeAsync(InstallmentPlan plan, DateTime chargeOnUtc)
     {
-        var providerKey = plan.PaymentMethod?.ProviderKey;
+        var settings = await _siteService.GetSettingsAsync<InstallmentPlanSettings>();
 
-        using var telemetry = SubscriptionsTelemetry.StartInstallmentCharge(providerKey, manual, plan.ItemId);
-
-        try
+        return new TransactionAutoCharge
         {
-            return await ChargePaymentCoreAsync(plan, payment, manual, telemetry, cancellationToken);
-        }
-        catch (Exception exception)
-        {
-            telemetry.Fail(exception);
-
-            throw;
-        }
+            SavedPaymentMethodId = plan.SavedPaymentMethodId,
+            SourceSessionId = string.IsNullOrEmpty(plan.SavedPaymentMethodId) ? plan.DownPaymentSessionId : null,
+            RetryDays = settings.RetryDays ?? [],
+            NextAttemptUtc = chargeOnUtc,
+        };
     }
 
-    private async Task<string> ChargePaymentCoreAsync(InstallmentPlan plan, InstallmentPlanPayment payment, bool manual, TelemetryScope telemetry, CancellationToken cancellationToken)
+    // Gives a due payment collected by card the charge the saved card charge service makes, when its transaction has
+    // none yet: a plan that started before the service charged plans. Its charges so far and next retry carry over. A
+    // payment whose charge staff canceled (no automatic collection left) is handed to the customer instead.
+    private async Task EnsureAutoChargeAsync(InstallmentPlan plan, InstallmentPlanPayment payment, DateTime now, CancellationToken cancellationToken)
     {
         var transaction = await FindTransactionAsync(payment, cancellationToken);
 
-        if (transaction is null)
+        if (transaction is null ||
+            transaction.AutoCharge is not null ||
+            transaction.Status is not (TransactionStatus.Pending or TransactionStatus.Failed) ||
+            transaction.OutstandingAmount <= 0m)
         {
-            telemetry.SetOutcome(SubscriptionsTelemetry.ChargeNotFound);
-
-            return S["The payment's transaction could not be found."].Value;
+            return;
         }
 
-        // Money a previous charge of this payment took is applied before anything else. Recording it can be
-        // interrupted after the gateway took it; charging again on the strength of the unrecorded balance would take
-        // it twice.
-        await ApplyTakenChargesAsync(transaction, cancellationToken);
-
-        if (transaction.OutstandingAmount <= 0m)
+        if (transaction.AutoCollection is null)
         {
-            await SyncPaymentsAsync(plan, cancellationToken);
-            telemetry.SetOutcome(SubscriptionsTelemetry.ChargeAlreadyPaid);
+            // Staff canceled the charge on the transaction (Cancel the charge): the customer pays this one themselves.
+            await HandOverToCustomerAsync(plan, transaction, cancellationToken);
 
-            return null;
-        }
-
-        var now = _clock.UtcNow;
-
-        // A charge already handed to the gateway is finished rather than repeated: charging again while the first
-        // one is still settling is how a customer gets billed twice.
-        var previous = await _sessionStore.GetByReferenceAsync(TransactionsConstants.ReferenceTypes.Transaction, transaction.ItemId, cancellationToken: cancellationToken);
-
-        if (previous is not null && previous.Status is CheckoutSessionStatus.AwaitingProvider or CheckoutSessionStatus.PaymentPending)
-        {
-            var pending = await _checkoutEngine.TryCompleteAsync(previous.SessionId, cancellationToken);
-
-            if (pending.IsCompleted || pending.Status == CheckoutCompletionStatus.Pending)
-            {
-                await SyncPaymentsAsync(plan, cancellationToken);
-                telemetry.SetOutcome(SubscriptionsTelemetry.ChargePending);
-
-                return null;
-            }
-        }
-
-        if (previous is not null && previous.Status == CheckoutSessionStatus.Pending)
-        {
-            // A session that never got as far as the gateway is closed so it cannot be paid later by accident.
-            await _checkoutEngine.CancelAsync(previous.SessionId, "Replaced by a new charge.", cancellationToken);
-        }
-
-        var session = await _checkoutEngine.StartAsync(
-            new StartCheckoutRequest
-            {
-                ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
-                ReferenceId = transaction.ItemId,
-                OwnerId = plan.OwnerId,
-                Contact = new CheckoutContactInfo
-                {
-                    DisplayName = plan.CustomerName,
-                    Email = plan.CustomerEmail,
-                },
-            },
-            cancellationToken);
-
-        payment.CheckoutSessionIds.Add(session.SessionId);
-        payment.ChargeAttempts++;
-        payment.LastChargeAttemptUtc = now;
-
-        var outcome = await _checkoutEngine.BeginPaymentAsync(
-            session.SessionId,
-            new BeginPaymentOptions
-            {
-                ProviderKey = plan.PaymentMethod.ProviderKey,
-                ProviderData = CheckoutPaymentDataKeys.ForOffSessionCharge(plan.PaymentMethod),
-            },
-            cancellationToken);
-
-        if (outcome.Succeeded)
-        {
-            var completion = await _checkoutEngine.TryCompleteAsync(session.SessionId, cancellationToken);
-
-            if (completion.IsCompleted || completion.Status == CheckoutCompletionStatus.Pending)
-            {
-                payment.LastFailureMessage = null;
-                payment.NextChargeAttemptUtc = null;
-
-                if (payment.Status != InstallmentPaymentStatus.Paid)
-                {
-                    payment.Status = InstallmentPaymentStatus.Due;
-                }
-
-                await SyncPaymentsAsync(plan, cancellationToken);
-                telemetry.SetOutcome(SubscriptionsTelemetry.ChargeCharged);
-
-                return null;
-            }
-
-            telemetry.SetOutcome(SubscriptionsTelemetry.ChargeDeclined);
-
-            return await RecordChargeFailureAsync(plan, payment, transaction, completion.ErrorMessage ?? S["The payment was declined."].Value, declined: true, manual, cancellationToken);
-        }
-
-        telemetry.SetOutcome(outcome.Declined ? SubscriptionsTelemetry.ChargeDeclined : SubscriptionsTelemetry.ChargeTransientFailure);
-
-        await _checkoutEngine.CancelAsync(session.SessionId, "The charge was not accepted.", cancellationToken);
-
-        return await RecordChargeFailureAsync(
-            plan,
-            payment,
-            transaction,
-            outcome.ProviderErrorMessage ?? outcome.ErrorMessage,
-            outcome.Declined,
-            manual,
-            cancellationToken);
-    }
-
-    private async Task<string> RecordChargeFailureAsync(
-        InstallmentPlan plan,
-        InstallmentPlanPayment payment,
-        Transaction transaction,
-        string reason,
-        bool declined,
-        bool manual,
-        CancellationToken cancellationToken)
-    {
-        var now = _clock.UtcNow;
-
-        payment.LastFailureMessage = reason;
-
-        if (!declined)
-        {
-            // The gateway could not be reached or refused to start: nothing is known about the card, so the
-            // charge is tried again soon without using up one of the card's retries.
-            payment.ChargeAttempts = Math.Max(0, payment.ChargeAttempts - 1);
-            payment.NextChargeAttemptUtc = now.Add(_transientRetryDelay);
-
-            AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} could not be charged and will be tried again shortly: {1}", payment.Number, reason].Value, payment.Number);
-
-            return reason;
-        }
-
-        if (manual && payment.DueUtc.Date > now.Date)
-        {
-            // Collecting early is a favor, not a deadline: a declined early charge leaves the payment on schedule,
-            // so it is still charged (and retried) from its due date, and does not count against the card's retries.
-            payment.ChargeAttempts = Math.Max(0, payment.ChargeAttempts - 1);
             payment.NextChargeAttemptUtc = null;
 
-            AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined when charged early by an administrator ({1}). It will still be charged on {2:d}.", payment.Number, reason, payment.DueUtc].Value, payment.Number, CurrentUserName());
-
-            return reason;
-        }
-
-        payment.Status = InstallmentPaymentStatus.Failed;
-
-        var settings = await _siteService.GetSettingsAsync<InstallmentPlanSettings>();
-        var retryDelay = manual ? null : settings.GetRetryDelay(payment.ChargeAttempts);
-
-        if (retryDelay is TimeSpan delay)
-        {
-            payment.NextChargeAttemptUtc = now.Add(delay);
-
-            await MarkCollectionFailedAsync(transaction, reason, cancellationToken);
-
-            AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined ({1}). It will be charged again on {2:d}.", payment.Number, reason, payment.NextChargeAttemptUtc.Value].Value, payment.Number);
-
-            await NotifyCustomerAsync(
-                plan,
-                S["We could not take your payment"].Value,
-                S["We could not charge {0} for {1} of {2}: {3}. We will try again on {4:d}. If your card has changed, please contact us.", plan.PaymentMethod?.Describe(), plan.Title, Format(payment.Amount, plan.Currency), reason, payment.NextChargeAttemptUtc.Value].Value,
-                cancellationToken);
-        }
-        else
-        {
-            payment.NextChargeAttemptUtc = null;
-
-            if (!manual)
+            if (payment.Status == InstallmentPaymentStatus.Scheduled)
             {
-                // No retries left: the payment becomes an ordinary balance the customer can pay themselves, and the
-                // overdue reminders take over from here.
-                await HandOverToCustomerAsync(plan, transaction, cancellationToken);
-
-                AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined ({1}) and no retries are left. It is now due from the customer.", payment.Number, reason].Value, payment.Number);
-
-                await NotifyCustomerAsync(
-                    plan,
-                    S["Your payment is overdue"].Value,
-                    S["We could not charge {0} for {1} of {2}: {3}. Please sign in and pay it from your transactions.", plan.PaymentMethod?.Describe(), plan.Title, Format(payment.Amount, plan.Currency), reason].Value,
-                    cancellationToken);
+                payment.Status = InstallmentPaymentStatus.Due;
             }
-            else
-            {
-                await MarkCollectionFailedAsync(transaction, reason, cancellationToken);
 
-                AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined when charged by an administrator: {1}", payment.Number, reason].Value, payment.Number, CurrentUserName());
-            }
+            AddEvent(plan, InstallmentPlanEventType.PaymentDue, S["The card charge of payment {0} was canceled, so it is now due from the customer.", payment.Number].Value, payment.Number);
+
+            return;
         }
 
-        return reason;
+        var charge = await NewAutoChargeAsync(plan, payment.NextChargeAttemptUtc ?? now);
+
+        charge.Attempts = payment.ChargeAttempts;
+        charge.LastAttemptUtc = payment.LastChargeAttemptUtc;
+        charge.LastFailure = payment.LastFailureMessage;
+        transaction.AutoCharge = charge;
+        transaction.UpdatedUtc = now;
+
+        await _transactionManager.UpdateAsync(transaction, data: null, cancellationToken);
     }
 
     // A declined charge of a payment that is still collected from the card, by a retry or by an administrator charging it
@@ -1293,7 +1517,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
 
         payment.Status = InstallmentPaymentStatus.Due;
 
-        AddEvent(plan, InstallmentPlanEventType.PaymentDue, S["Payment {0} of {1} is now due.", payment.Number, Format(payment.Amount, plan.Currency)].Value, payment.Number);
+        AddEvent(plan, InstallmentPlanEventType.PaymentDue, S["Payment {0} of {1} is now due.", payment.Number, CurrencyFormat.WithCode(payment.Amount, plan.Currency)].Value, payment.Number);
     }
 
     // Applies to the transaction whatever any checkout for it already collected and is not on it yet. The attempts
@@ -1341,7 +1565,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
 
                     if (payment.Number > 0)
                     {
-                        AddEvent(plan, InstallmentPlanEventType.PaymentReceived, S["Payment {0} of {1} was received.", payment.Number, Format(payment.Amount, plan.Currency)].Value, payment.Number);
+                        AddEvent(plan, InstallmentPlanEventType.PaymentReceived, S["Payment {0} of {1} was received.", payment.Number, CurrencyFormat.WithCode(payment.Amount, plan.Currency)].Value, payment.Number);
                     }
 
                     break;
@@ -1391,14 +1615,29 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         string title,
         TransactionStatus status,
         TransactionAutoCollection autoCollection,
-        DateTime now)
+        DateTime now,
+        Transaction copyFrom = null)
     {
         var transaction = await _transactionManager.NewAsync();
 
         transaction.Title = title;
         transaction.Source = SubscriptionConstants.InstallmentPlans.TransactionSource;
         transaction.OwnerId = plan.OwnerId;
-        transaction.OwnerKind = CustomerOwnerKind.Authenticated;
+        transaction.OwnerKind = copyFrom?.OwnerKind ?? CustomerOwnerKind.Authenticated;
+
+        if (copyFrom is not null)
+        {
+            transaction.GuestContactName = copyFrom.GuestContactName;
+            transaction.GuestContactEmail = copyFrom.GuestContactEmail;
+            transaction.PayerContact = copyFrom.PayerContact;
+            transaction.ExchangeRate = copyFrom.ExchangeRate;
+            transaction.BaseCurrency = copyFrom.BaseCurrency;
+
+            if (copyFrom.GetPayer() is { IsEmpty: false } payer)
+            {
+                transaction.SetPayer(payer);
+            }
+        }
         transaction.ReferenceType = SubscriptionConstants.InstallmentPlans.ReferenceType;
         transaction.ReferenceId = plan.ItemId;
 
@@ -1418,6 +1657,12 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         transaction.UpdatedUtc = now;
         transaction.DueUtc = payment.DueUtc;
         transaction.AutoCollection = autoCollection;
+
+        if (autoCollection is not null && payment.Number > 0 && status == TransactionStatus.Pending)
+        {
+            // Charged on its due date by the saved card charge service, and retried on the plan settings' days.
+            transaction.AutoCharge = await NewAutoChargeAsync(plan, payment.DueUtc);
+        }
         transaction.Events.Add(new TransactionEvent
         {
             CreatedUtc = now,
@@ -1565,7 +1810,4 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
 
     private string CurrentUserName()
         => _httpContextAccessor.HttpContext?.User?.Identity?.Name;
-
-    private static string Format(decimal amount, string currency)
-        => $"{currency} {CurrencyScale.Format(amount, currency)}";
 }

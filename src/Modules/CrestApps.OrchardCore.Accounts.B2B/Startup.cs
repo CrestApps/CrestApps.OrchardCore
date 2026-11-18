@@ -19,6 +19,7 @@ using CrestApps.OrchardCore.Shipping.Services;
 using OrchardCore.Deployment;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Builder;
@@ -60,6 +61,10 @@ public sealed class Startup : StartupBase
         services.AddScoped<IBuyerPriceProvider, B2BPriceProvider>();
         services.AddScoped<B2BAccountService>();
         services.AddScoped<IOrderEventHandler, B2BOrderHandler>();
+
+        // An account's tax number, billing e-mail and terms reach its billing profile, after the Accounts feature (a
+        // dependency, so registered first) named it and gave its billing location.
+        services.AddPartyBillingProfileSource<B2BAccountBillingProfileSource>();
 
         // An account's terms are a tender, like a gift card: they pay what the deposit doesn't, on an invoice due later.
         services.AddScoped<AccountTermsService>();

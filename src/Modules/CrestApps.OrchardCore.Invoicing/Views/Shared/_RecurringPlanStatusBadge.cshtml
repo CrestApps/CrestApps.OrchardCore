@@ -1,0 +1,20 @@
+@model RecurringPlan
+
+@switch (Model.Status)
+{
+    case RecurringPlanStatus.Active:
+        <span class="badge text-bg-success">@T["Active"]</span>
+        break;
+    case RecurringPlanStatus.Paused:
+        <span class="badge text-bg-warning">@T["Paused"]</span>
+        break;
+    case RecurringPlanStatus.Completed:
+        <span class="badge text-bg-info">@T["Completed"]</span>
+        break;
+    case RecurringPlanStatus.Canceled:
+        <span class="badge text-bg-dark">@T["Canceled"]</span>
+        break;
+    default:
+        <span class="badge text-bg-secondary">@T["Draft"]</span>
+        break;
+}

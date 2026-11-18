@@ -31,6 +31,8 @@ public sealed class Startup : StartupBase
     {
         services.AddInvariantNumberInputs();
 
+        // When a Pay Later balance is due: the payer's own payment term, the one chosen for Pay Later, or a number of days.
+        services.AddScoped<PayLaterDueDateResolver>();
         services.AddScoped<PayLaterCheckoutPaymentProvider>();
         services.AddScoped<ICheckoutPaymentProvider>(sp => sp.GetRequiredService<PayLaterCheckoutPaymentProvider>());
         services.AddScoped<ICheckoutRecurringPaymentProvider>(sp => sp.GetRequiredService<PayLaterCheckoutPaymentProvider>());

@@ -195,7 +195,11 @@ public sealed class OfflinePaymentMethodsTests
         => new(SiteService(), Development(), new PassThroughStringLocalizer<CashOnDeliveryCheckoutPaymentProvider>());
 
     private PayLaterCheckoutPaymentProvider PayLater()
-        => new(SiteService(), Development(), new PassThroughStringLocalizer<PayLaterCheckoutPaymentProvider>());
+    {
+        var siteService = SiteService();
+
+        return new(siteService, new PayLaterDueDateResolver(siteService, Mock.Of<IServiceProvider>()), Development(), new PassThroughStringLocalizer<PayLaterCheckoutPaymentProvider>());
+    }
 
     // The settings are read when asked, so a test can change them between calls.
     private ISiteService SiteService()

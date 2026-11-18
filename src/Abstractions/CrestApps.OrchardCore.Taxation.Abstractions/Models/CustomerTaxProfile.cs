@@ -54,4 +54,22 @@ public sealed class CustomerTaxProfile
     /// Gets or sets the business address of the customer.
     /// </summary>
     public Address BusinessAddress { get; set; }
+
+    /// <summary>
+    /// Sets both the tax registration number and the VAT number to a tax or VAT number, trimmed. A blank number changes
+    /// nothing.
+    /// </summary>
+    /// <param name="taxId">The tax or VAT number.</param>
+    public void SetTaxNumber(string taxId)
+    {
+        if (string.IsNullOrWhiteSpace(taxId))
+        {
+            return;
+        }
+
+        var value = taxId.Trim();
+
+        TaxRegistrationNumber = value;
+        VatNumber = value;
+    }
 }

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Transactions;
@@ -101,9 +102,34 @@ public sealed class TransactionRefundHandlerTests
         Assert.Equal(TransactionStatus.Refunded, stored.Status);
     }
 
-    private static TransactionRefundHandler CreateHandler(FakeTransactionStore store, PaymentAttempt attempt = null)
+    [Fact]
+    public async Task RefundSucceeded_TellsTheEventHandlersOnce_WithTheRefundEntry()
+    {
+        // Arrange
+        var store = new FakeTransactionStore(CreatePaidTransaction());
+        var events = new RecordingTransactionEventHandler();
+        var handler = CreateHandler(store, eventHandler: events);
+        var refund = CreateRefund("refund-1", 40m);
+
+        // Act
+        await handler.RefundSucceededAsync(refund, TestContext.Current.CancellationToken);
+        await handler.RefundSucceededAsync(refund, TestContext.Current.CancellationToken);
+
+        // Assert
+        var refunded = Assert.Single(events.Refunded);
+        Assert.Equal("transaction-1", refunded.TransactionId);
+        Assert.Equal("refund-1", refunded.EventId);
+        Assert.Equal(40m, refunded.Amount);
+    }
+
+    private static TransactionRefundHandler CreateHandler(FakeTransactionStore store, PaymentAttempt attempt = null, ITransactionEventHandler eventHandler = null)
     {
         var services = new ServiceCollection();
+
+        if (eventHandler is not null)
+        {
+            services.AddSingleton(eventHandler);
+        }
 
         services.AddSingleton<IPaymentAttemptStore>(new InMemoryPaymentAttemptStore(attempt ?? new PaymentAttempt
         {
@@ -118,6 +144,7 @@ public sealed class TransactionRefundHandlerTests
             TransactionManagerFactory.Create(store),
             services.BuildServiceProvider(),
             new TestClock(new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc)),
+            NullLogger<TransactionRefundHandler>.Instance,
             new PassThroughStringLocalizer<TransactionRefundHandler>());
     }
 

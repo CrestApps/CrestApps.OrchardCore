@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Transactions.Services;
@@ -19,6 +20,13 @@ public sealed class TransactionQuery
     /// separately.
     /// </summary>
     public CustomerOwnerKind? OwnerKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the parties whose debts are listed: a transaction is listed when its payer is one of them. When
+    /// <see cref="OwnerId"/> is set too, a transaction is listed when it has that owner or one of these payers, which is
+    /// how a person sees their own debts and those of the accounts they act for.
+    /// </summary>
+    public IList<PartyRef> Payers { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the exact status to filter by.

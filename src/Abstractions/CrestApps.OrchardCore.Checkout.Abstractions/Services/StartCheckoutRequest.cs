@@ -84,4 +84,11 @@ public sealed class StartCheckoutRequest
     /// confirmation is headed "Order confirmation".
     /// </summary>
     public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets how much of an existing balance the buyer asked to pay, when the checkout settles a balance that
+    /// accepts part payments. The handler of the reference decides whether the amount is accepted;
+    /// <see langword="null"/> pays the whole balance. It is kept on the session as <see cref="Models.CheckoutRequestedAmount"/>.
+    /// </summary>
+    public decimal? Amount { get; set; }
 }

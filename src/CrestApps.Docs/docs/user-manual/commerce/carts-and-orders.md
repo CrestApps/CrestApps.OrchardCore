@@ -245,7 +245,7 @@ With **Wishlists** on, a signed-in shopper can click **Save to wishlist** on a p
 
 ## The buyer's account
 
-A signed-in buyer opens **My account** from the user menu, or `/account` on your site. The account lists what the enabled features offer, as tiles and as a menu beside every account page (pills across the top on a phone):
+A signed-in buyer opens **Account** from the user menu, on your site's pages or in the admin, or `/account` on your site. The account lists what the enabled features offer, as tiles and as a menu beside every account page (pills across the top on a phone):
 
 | Page | What it shows | Feature |
 | --- | --- | --- |

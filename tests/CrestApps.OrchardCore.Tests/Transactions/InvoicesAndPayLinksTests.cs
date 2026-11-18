@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
@@ -103,6 +104,45 @@ public sealed class InvoicesAndPayLinksTests
     }
 
     [Fact]
+    public async Task SendInvoiceAsync_UsesThePaymentRequestTemplate_WithThePayLinkAsAValue()
+    {
+        // Arrange
+        var templates = new RecordingEmailTemplates();
+        var service = CreateReminderService(_ => { }, delivered: true, templates: templates);
+        var transaction = CreateInvoicedTransaction(dueUtc: _now.AddDays(10));
+
+        // Act
+        var result = await service.SendInvoiceAsync(transaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result);
+        var context = Assert.Single(templates.Contexts);
+        Assert.Equal(TransactionEmailKinds.PaymentRequest, context.Kind);
+        Assert.Equal("https://shop.example.com/transactions/pay/token", context.Values[TransactionEmailKinds.PayUrlValueName]);
+        Assert.Equal("INV-1001", context.Values[TransactionEmailKinds.DocumentNumberValueName]);
+        Assert.Same(transaction, context.Models[TransactionEmailKinds.TransactionModelName]);
+    }
+
+    [Fact]
+    public async Task SendReminderAsync_KeepsTheReminderTemplate_WithThePayLinkAsAValue()
+    {
+        // Arrange
+        var templates = new RecordingEmailTemplates();
+        var service = CreateReminderService(_ => { }, delivered: true, templates: templates);
+        var transaction = CreateInvoicedTransaction(dueUtc: _now.AddDays(-3));
+        transaction.Status = TransactionStatus.Outstanding;
+
+        // Act
+        await service.SendReminderAsync(transaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        var context = Assert.Single(templates.Contexts);
+        Assert.Equal(TransactionEmailKinds.PaymentReminder, context.Kind);
+        Assert.Equal("https://shop.example.com/transactions/pay/token", context.Values[TransactionEmailKinds.PayUrlValueName]);
+        Assert.True(context.Values.ContainsKey(TransactionEmailKinds.AmountDueValueName));
+    }
+
+    [Fact]
     public async Task FirstOverdueReminder_OnTheDueDate_SaysThePaymentIsDueToday()
     {
         // Arrange
@@ -168,7 +208,19 @@ public sealed class InvoicesAndPayLinksTests
         return generator;
     }
 
-    private static DefaultTransactionReminderService CreateReminderService(Action<INotificationMessage> onSend, bool delivered, ITransactionManager manager = null)
+    private sealed class RecordingEmailTemplates : ICommerceEmailTemplates
+    {
+        public List<CommerceEmailContext> Contexts { get; } = [];
+
+        public Task<CommerceEmailMessage> ApplyAsync(CommerceEmailContext context, CancellationToken cancellationToken = default)
+        {
+            Contexts.Add(context);
+
+            return Task.FromResult(new CommerceEmailMessage(context.Subject, context.Text, context.Html));
+        }
+    }
+
+    private static DefaultTransactionReminderService CreateReminderService(Action<INotificationMessage> onSend, bool delivered, ITransactionManager manager = null, ICommerceEmailTemplates templates = null)
     {
         var userService = new Mock<IUserService>();
         userService.Setup(candidate => candidate.GetUserByUniqueIdAsync("customer-1")).ReturnsAsync(Mock.Of<IUser>());
@@ -191,6 +243,11 @@ public sealed class InvoicesAndPayLinksTests
         if (manager is not null)
         {
             services.AddSingleton(manager);
+        }
+
+        if (templates is not null)
+        {
+            services.AddSingleton(templates);
         }
 
         return new DefaultTransactionReminderService(

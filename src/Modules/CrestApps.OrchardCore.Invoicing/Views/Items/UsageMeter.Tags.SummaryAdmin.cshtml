@@ -1,0 +1,23 @@
+@model ShapeViewModel<UsageMeter>
+
+@{
+    var meter = Model.Value;
+}
+
+@if (!meter.Enabled)
+{
+    <span class="badge text-bg-secondary">@T["Off"]</span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Code"]">
+    <i class="fa-solid fa-key text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Code"]</span>
+    <code>@meter.Code</code>
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["A period's usage is"]">
+    <i class="fa-solid fa-chart-simple text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["A period's usage is"]</span>
+    @(meter.Aggregation switch
+    {
+        UsageAggregation.Maximum => T["The most at once"],
+        UsageAggregation.Last => T["The latest reading"],
+        _ => T["Added up"],
+    })@(string.IsNullOrEmpty(meter.Unit) ? null : ", " + meter.Unit)
+</span>

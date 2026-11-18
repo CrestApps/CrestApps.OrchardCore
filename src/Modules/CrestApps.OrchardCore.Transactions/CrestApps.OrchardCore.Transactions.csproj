@@ -32,6 +32,9 @@
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="OrchardCore.Settings" />
     <PackageReference Include="OrchardCore.Notifications.Abstractions" />
+    <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
+    <PackageReference Include="OrchardCore.Recipes.Abstractions" />
     <PackageReference Include="OrchardCore.Notifications.Core" />
     <PackageReference Include="OrchardCore.Email.Abstractions" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
@@ -41,8 +44,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Commerce.Core\CrestApps.OrchardCore.Commerce.Core.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Accounts.Abstractions\CrestApps.OrchardCore.Accounts.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Checkout.Abstractions\CrestApps.OrchardCore.Checkout.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Payments.Abstractions\CrestApps.OrchardCore.Payments.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Calendars.Abstractions\CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Transactions.Abstractions\CrestApps.OrchardCore.Transactions.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Receipts.Abstractions\CrestApps.OrchardCore.Receipts.Abstractions.csproj" />

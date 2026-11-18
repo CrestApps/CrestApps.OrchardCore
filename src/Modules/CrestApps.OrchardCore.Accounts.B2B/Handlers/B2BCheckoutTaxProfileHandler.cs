@@ -41,14 +41,12 @@ public sealed class B2BCheckoutTaxProfileHandler : ICheckoutTaxProfileHandler
         profile.Customer ??= new CustomerTaxProfile();
         profile.Customer.CustomerType = CustomerTaxType.B2B;
 
+        // The same rule the tax profile of an account party uses for the tax number its billing profile carries.
+        profile.Customer.SetTaxNumber(account.Part.TaxId);
+
+        // A B2B account and its tax number are set up by the store, not by the buyer, so the number counts as verified.
         if (!string.IsNullOrWhiteSpace(account.Part.TaxId))
         {
-            var taxId = account.Part.TaxId.Trim();
-
-            profile.Customer.TaxRegistrationNumber = taxId;
-            profile.Customer.VatNumber = taxId;
-
-            // A B2B account and its tax number are set up by the store, not by the buyer, so the number counts as verified.
             profile.Customer.TaxRegistrationVerified = true;
         }
     }

@@ -150,13 +150,13 @@
                     <div class="form-check">
                         <input class="form-check-input" type="radio" asp-for="CollectionMethod" id="collection-auto" value="@InstallmentCollectionMethod.AutoCharge" />
                         <label class="form-check-label" for="collection-auto">@T["Charge the card on each due date"]</label>
+                        <span class="hint dashed">@T["The card used for the down payment is kept and charged automatically. The customer is told a few days before each charge. A declined card is retried, then left for the customer to pay."]</span>
                     </div>
-                    <span class="hint dashed">@T["The card used for the down payment is kept and charged automatically. The customer is told a few days before each charge. A declined card is retried, then left for the customer to pay."]</span>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" asp-for="CollectionMethod" id="collection-invoice" value="@InstallmentCollectionMethod.Invoice" />
                         <label class="form-check-label" for="collection-invoice">@T["Invoice the customer for each payment"]</label>
+                        <span class="hint dashed">@T["The customer is reminded before each due date and pays from their transactions. The card is used for the down payment only."]</span>
                     </div>
-                    <span class="hint dashed">@T["The customer is reminded before each due date and pays from their transactions. The card is used for the down payment only."]</span>
                 </div>
             </div>
 

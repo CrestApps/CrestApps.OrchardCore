@@ -1,6 +1,8 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Taxation.Models;
 
 namespace CrestApps.OrchardCore.Transactions.Models;
 
@@ -53,6 +55,27 @@ public sealed class Transaction : CatalogItem, ITimestampedModel
     /// reached for reminders without a user account. Ignored for authenticated owners.
     /// </summary>
     public string GuestContactEmail { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of party that owes the money, one of the party kinds such as <c>Account</c>,
+    /// <c>Customer</c>, <c>User</c> or <c>Contact</c>. Together with <see cref="PayerId"/> it names who the debt belongs
+    /// to, which is not always the person who may pay it: an account owes its invoices, and each of its members may pay
+    /// them. Read it with <see cref="TransactionPayerExtensions.GetPayer"/>, which also answers for transactions created
+    /// before the payer was recorded.
+    /// </summary>
+    public string PayerKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the party named by <see cref="PayerKind"/>.
+    /// </summary>
+    public string PayerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the payer's name, e-mail address, phone number and billing address as they were when the debt was
+    /// recorded, so the payer can be addressed without looking the party up, and so a later change to the party does not
+    /// change what the ledger says about this debt. <see langword="null"/> when none was recorded.
+    /// </summary>
+    public ContactInfo PayerContact { get; set; }
 
     /// <summary>
     /// Gets or sets the kind of thing the transaction is for (for example an order or a subscription).
@@ -116,6 +139,25 @@ public sealed class Transaction : CatalogItem, ITimestampedModel
     public decimal TaxAmount { get; set; }
 
     /// <summary>
+    /// Gets or sets the tax owed, broken down by tax and rate, when whoever recorded the debt knew the breakdown. The
+    /// lines add up to <see cref="TaxAmount"/>. It is empty for a debt recorded with a tax total only.
+    /// </summary>
+    public IList<TaxLine> TaxLines { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the rate that turns the amounts of the transaction into <see cref="BaseCurrency"/>, fixed when the
+    /// debt was recorded: one unit of <see cref="Currency"/> is this many units of the base currency.
+    /// <see langword="null"/> when the transaction is in the base currency or no rate was recorded.
+    /// </summary>
+    public decimal? ExchangeRate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ISO-4217 code of the currency the site reports in, which <see cref="ExchangeRate"/> converts to.
+    /// <see langword="null"/> when no rate was recorded.
+    /// </summary>
+    public string BaseCurrency { get; set; }
+
+    /// <summary>
     /// Gets or sets the total amount owed including tax, in <see cref="Currency"/>.
     /// </summary>
     public decimal TotalAmount { get; set; }
@@ -144,6 +186,19 @@ public sealed class Transaction : CatalogItem, ITimestampedModel
     /// reduce <see cref="AmountPaid"/>, so a refunded transaction never turns collectable again.
     /// </summary>
     public decimal AmountRefunded { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the payer may pay part of what is owed online, rather than all of it at once. Staff can
+    /// always record a part payment received offline.
+    /// </summary>
+    public bool AllowPartialPayment { get; set; }
+
+    /// <summary>
+    /// Gets or sets the smallest part payment accepted online, in <see cref="Currency"/>, when
+    /// <see cref="AllowPartialPayment"/> is set. <see langword="null"/> accepts any amount. What is still owed can always
+    /// be paid in full, even when it is less than this.
+    /// </summary>
+    public decimal? MinimumPayment { get; set; }
 
     /// <summary>
     /// Gets or sets the current lifecycle state of the transaction.
@@ -216,6 +271,23 @@ public sealed class Transaction : CatalogItem, ITimestampedModel
     /// a saved card charged on the due date. <see langword="null"/> means the owner pays it themselves.
     /// </summary>
     public TransactionAutoCollection AutoCollection { get; set; }
+
+    /// <summary>
+    /// Gets or sets the charge of the owner's saved payment method scheduled by
+    /// <see cref="Services.ISavedPaymentMethodChargeService"/>, with its attempts, while it is pending.
+    /// </summary>
+    public TransactionAutoCharge AutoCharge { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the reminder sweep leaves the transaction alone, for example while its
+    /// owner disputes it or arranged to pay later.
+    /// </summary>
+    public bool RemindersPaused { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many steps of the staged reminder policy (<c>TransactionReminderSettings.Steps</c>) were sent.
+    /// </summary>
+    public int ReminderStepsSent { get; set; }
 
     /// <summary>
     /// Gets the audit timeline of the transaction.

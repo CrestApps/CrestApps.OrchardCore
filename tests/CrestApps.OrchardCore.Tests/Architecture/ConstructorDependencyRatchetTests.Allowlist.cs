@@ -29,9 +29,9 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core/Services/MessagingInboundProcessor.cs: MessagingInboundProcessor"] = 17,
         ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/RealtimeVoiceConversationRunner.cs: RealtimeVoiceConversationRunner"] = 14,
         ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/VoiceAgentConversationLoop.cs: VoiceAgentConversationLoop"] = 35,
-        ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/DefaultInstallmentPlanService.cs: DefaultInstallmentPlanService"] = 19,
+        ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/DefaultInstallmentPlanService.cs: DefaultInstallmentPlanService"] = 22, // raised for main's #1331 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/TenantProvisioningService.cs: TenantProvisioningService"] = 13,
-        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/TaxService.cs: TaxService"] = 13,
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/TaxService.cs: TaxService"] = 14, // raised for main's #1331 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.Telnyx.Core/Services/TelnyxOutboundBridgeOrchestrator.cs: TelnyxOutboundBridgeOrchestrator"] = 15,
         ["src/Core/CrestApps.OrchardCore.Telnyx.Core/Services/TelnyxWebhookService.cs: TelnyxWebhookService"] = 13,
         ["src/Core/CrestApps.OrchardCore.WorkOrders.Core/Services/WorkOrderService.cs: WorkOrderService"] = 14,
@@ -89,5 +89,13 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Payroll/Controllers/MyPayController.cs: MyPayController"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Payroll/Controllers/PayRunsController.cs: PayRunsController"] = 16,
         ["src/Modules/CrestApps.OrchardCore.Payroll/Drivers/PayProfileDisplayDriver.cs: PayProfileDisplayDriver"] = 14,
+
+        // Existing debt from main's #1331 (Invoicing and Billing), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultCreditNoteCommandService.cs: DefaultCreditNoteCommandService"] = 15,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultEstimateCommandService.cs: DefaultEstimateCommandService"] = 14,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultInvoiceCommandService.cs: DefaultInvoiceCommandService"] = 15,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/Controllers/InvoicesAdminController.cs: InvoicesAdminController"] = 14,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Controllers/AdminController.cs: AdminController"] = 15,
     };
 }

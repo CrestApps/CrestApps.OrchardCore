@@ -398,7 +398,7 @@ A refund at or above the snapshot total returns the full refund; a non-positive 
 
 ## Rounding
 
-Rounding is explicit and controlled by `TaxationOptions` (or `TaxCalculationContext.RoundingLevel`):
+Rounding is one site setting, **Settings > Commerce > Tax calculation** (`TaxCalculationSettings.RoundingLevel`, group `tax-calculation`, permission **Manage taxation**), that the checkout and [invoices](invoicing#tax) both read through `ITaxRoundingLevelProvider`, so a cart and an invoice with the same lines come to the same tax. A calculation can still name its own level (`TaxCalculationContext.RoundingLevel`); a host without site settings falls back to `TaxationOptions.RoundingLevel` (`Line`).
 
 | Level (`TaxRoundingLevel`) | Behavior |
 |-------|----------|
@@ -406,6 +406,20 @@ Rounding is explicit and controlled by `TaxationOptions` (or `TaxCalculationCont
 | `Tax` | Amounts are aggregated per tax type, then rounded. |
 | `Jurisdiction` | Amounts are aggregated per jurisdiction, then rounded. |
 | `Transaction` | The whole transaction is rounded once. |
+| `Rate` (a new site's default) | Amounts are aggregated per tax and rate (its code, name, rate and compound flag), rounded once, and spread back over the lines largest remainder first: the rule EN 16931 asks invoices to follow. |
+
+Two lines of 10.05 at 7.5% come to 1.51 per tax and rate (on the summed 20.10) and to 1.50 line by line (0.75 + 0.75). A new site rounds per tax and rate. A site that already had tax rules when the setting arrived keeps rounding each line (`TaxCalculationSettingsMigrations` stores `Line`), so no checkout total changes on upgrade; staff can switch on the settings page, whose hints show the difference. Changing it changes what the checkout charges from then on; orders and issued invoices keep their amounts. With CrestApps Recipes, `TaxCalculationSettingsSchema` describes it for the Settings step.
+
+## Document tax breakdown
+
+`ITaxBreakdownCalculator` (Taxation.Abstractions, `DefaultTaxBreakdownCalculator` in Taxation.Core) works out a document's tax from the taxes the rules found for its items, for Invoicing's invoices, estimates, credit notes and recurring plans. Its `TaxBreakdownRequest` holds the items (lines and charges, `TaxBreakdownItem`: the amount after the document's discounts and before them, the item's own treatment and reason, its `TaxBreakdownRate`s in percent, and whether it is a charge), the document's treatment and reason (the bill-to's), whether prices include tax, the cash rounding step, and the rounding level (the site's). The `TaxBreakdownResult` has:
+
+- one row per (treatment, code, name, rate, compound): tax worked out on the summed net, a compound tax on the net plus the other taxes, and a row with no tax, with its reason, for each treatment of the items that are not taxed (zero rated, exempt, reverse charged, out of scope, or taxable with no tax), so every item has a category as EN 16931 asks;
+- each item's net before and after the document's discounts and its share of the tax, spread back largest remainder first (`MoneyAllocation`, next to `CurrencyScale`);
+- with prices that include tax, each group of items that share their taxes split once into net and tax (an item with no tax to take out keeps its whole price as net);
+- the tax total, the cash rounding as an explicit amount, and the total.
+
+That is rounding per tax and rate. At any other level, each item's taxes are worked out and rounded the way the checkout's tax service does it (`TaxLineRounding`, which both use), so a cart and an invoice with the same lines come to the same tax at every level. Both round with the site's `ITaxRoundingStrategy`.
 
 `TaxationOptions` also configures `DecimalPlaces`, `MidpointRounding`, and per-currency decimal overrides. By default `DecimalPlaces` is empty and tax is rounded to each currency's precision from `CurrencyScale` (ISO 4217): no decimals for JPY, three for KWD, two for USD, the same precision the payment uses. Set `DecimalPlaces` only to force one precision for every currency; a per-currency override still wins.
 
@@ -453,6 +467,15 @@ The main extension points are:
 | `ITaxDeterminationProvider` | Short-circuits the engine with an external determination. |
 
 An `ITaxDeterminationProvider` whose `CanHandle` returns `true` takes over the entire calculation, which is how third-party tax services can be layered on top of the same abstractions; [TaxJar](#taxjar) is one. Providers are asked by their `Order`, lowest first, and the first that can handle the context determines it. The engine checks that every item is in the context's currency before asking any provider.
+
+### Tax profile of a party
+
+A document billed to a [party](parties.md) (an account, a customer, a user or a CRM contact), such as an invoice, has no checkout to read the buyer from. `IPartyTaxProfileService.GetAsync(party)` (Taxation.Abstractions) builds its `CustomerTaxProfile` instead: it starts from a person with no tax number and no exemption, and every `IPartyTaxProfileProvider.BuildAsync(profile, party)` adds what it knows. Each provider fills what is missing and keeps what another set, so their order doesn't change the result.
+
+- The default provider, `BillingProfilePartyTaxProfileProvider` (Taxation.Core), reads the party's billing profile: an `Account` is a business (`B2B`) taxed at its billing address as its `BusinessAddress`; another party's billing address is its `ResidenceAddress`. The billing profile's tax id fills `TaxRegistrationNumber` and `VatNumber` (`CustomerTaxProfile.SetTaxNumber`), and an exempt party is exempt. A `Customer` party's id is the profile's `CustomerId`.
+- Customers adds `CustomerPartyTaxProfileProvider`: a business customer is a business, and the customer's exemption certificates are listed.
+
+`services.AddTaxationCore()` registers the service and the default provider; a feature that taxes documents without the Sales Tax feature calls `services.AddPartyTaxProfiles()` (Taxation.Core), and a module adds a provider with `services.AddPartyTaxProfileProvider<T>()`.
 
 ## Income tax
 

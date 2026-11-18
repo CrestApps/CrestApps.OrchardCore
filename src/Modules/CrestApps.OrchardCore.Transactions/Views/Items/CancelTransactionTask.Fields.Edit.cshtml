@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Transactions.Workflows
+
+@model TransactionTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="TransactionId" class="form-label">@T["Transaction id"]</label>
+    <input asp-for="TransactionId" class="form-control code" />
+    <span class="hint">@T["The id of the transaction. In a workflow started by a transaction event, write Workflow.Input.TransactionId in Liquid."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Reason" class="form-label">@T["Reason"]</label>
+    <input asp-for="Reason" class="form-control code" />
+    <span class="hint">@T["Optional. Kept on the transaction's timeline."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="OutputName" class="form-label">@T["Output name"]</label>
+    <input asp-for="OutputName" class="form-control code" />
+    <span class="hint">@T["The name the transaction is saved under in the workflow output. Leave empty for Transaction."]</span>
+</div>

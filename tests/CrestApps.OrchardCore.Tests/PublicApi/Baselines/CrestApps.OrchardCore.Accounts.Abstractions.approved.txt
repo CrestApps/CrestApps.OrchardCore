@@ -58,6 +58,7 @@ namespace CrestApps.OrchardCore.Accounts.Models
     {
         public AccountLocation() { }
         public CrestApps.OrchardCore.Addresses.Models.Address Address { get; set; }
+        public bool IsBilling { get; set; }
         public string LocationId { get; set; }
         public string Name { get; set; }
     }
@@ -66,6 +67,7 @@ namespace CrestApps.OrchardCore.Accounts.Models
         public AccountLocationsPart() { }
         public System.Collections.Generic.List<CrestApps.OrchardCore.Accounts.Models.AccountLocation> Locations { get; set; }
         public CrestApps.OrchardCore.Accounts.Models.AccountLocation FindLocation(string locationId) { }
+        public CrestApps.OrchardCore.Accounts.Models.AccountLocation GetBillingLocation() { }
     }
     public sealed class AccountMember
     {
@@ -131,5 +133,7 @@ namespace CrestApps.OrchardCore.Accounts.Services
     {
         System.Threading.Tasks.Task<OrchardCore.ContentManagement.ContentItem> FindAccountAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<string> FindOtherAccountIdAsync(string userId, string exceptAccountId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> GetMemberUserIdsAsync(string accountId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Accounts.Models.AccountMember>> GetMembersAsync(string accountId, System.Threading.CancellationToken cancellationToken = default);
     }
 }

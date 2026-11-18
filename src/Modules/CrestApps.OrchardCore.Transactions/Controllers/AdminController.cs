@@ -1,5 +1,7 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Transactions.Core;
@@ -18,6 +20,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -47,6 +50,9 @@ public sealed class AdminController : Controller
     private readonly INotifier _notifier;
     private readonly TransactionSourceOptions _sourceOptions;
     private readonly IStringLocalizerFactory _localizerFactory;
+    private readonly IDisplayManager<Transaction> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly ILocalClock _localClock;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -62,6 +68,9 @@ public sealed class AdminController : Controller
     /// <param name="clock">The clock used to timestamp notes.</param>
     /// <param name="notifier">The notifier used to surface confirmation messages.</param>
     /// <param name="sourceOptions">The registered transaction sources used to build the source filter.</param>
+    /// <param name="displayManager">The display manager that builds the detail page from the display drivers of a transaction.</param>
+    /// <param name="updateModelAccessor">The accessor of the model updater the display drivers are given.</param>
+    /// <param name="localClock">The clock that converts a time entered in the site's time zone to UTC.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="localizerFactory">The localizer factory that translates the registered transaction sources' names.</param>
@@ -75,6 +84,9 @@ public sealed class AdminController : Controller
         IClock clock,
         INotifier notifier,
         IOptions<TransactionSourceOptions> sourceOptions,
+        IDisplayManager<Transaction> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
+        ILocalClock localClock,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer,
         IStringLocalizerFactory localizerFactory,
@@ -90,6 +102,9 @@ public sealed class AdminController : Controller
         _notifier = notifier;
         _sourceOptions = sourceOptions.Value;
         _localizerFactory = localizerFactory;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
+        _localClock = localClock;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -220,17 +235,13 @@ public sealed class AdminController : Controller
             return NotFound();
         }
 
-        var model = new TransactionDetailViewModel
+        // The page is built by the display drivers of Transaction, so another module can add a card to it.
+
+        return View(new TransactionDetailPageViewModel
         {
             Transaction = transaction,
-            OwnerName = await ResolveOwnerNameAsync(transaction.OwnerId) ?? TransactionOwnerNames.GuestName(transaction, S["{0} (guest)"].Value),
-            Reference = await DescribeReferenceAsync(transaction),
-            CanManage = true,
-            CanSendReminder = _reminderService is not null,
-            ShowReceipts = HttpContext.RequestServices.GetService<ITransactionReceiptBuilder>() is not null,
-        };
-
-        return View(model);
+            Shape = await _displayManager.BuildDisplayAsync(transaction, _updateModelAccessor.ModelUpdater, TransactionsConstants.DisplayTypes.DetailAdmin),
+        });
     }
 
     /// <summary>
@@ -295,9 +306,67 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var result = await _commandService.RecordOfflinePaymentAsync(model.TransactionId, model.Amount, model.Reference, model.Note);
+        // The received time is entered in the site's time zone and stored in UTC.
+        var receivedUtc = model.ReceivedAt.HasValue
+            ? await _localClock.ToUtcLenientAsync(model.ReceivedAt.Value)
+            : (DateTime?)null;
 
-        return await CompleteAsync(result, model.TransactionId, H["The payment was recorded."]);
+        var result = await _commandService.RecordPaymentAsync(model.TransactionId, new TransactionPaymentRequest
+        {
+            Amount = model.Amount,
+            PaymentMethod = string.IsNullOrWhiteSpace(model.PaymentMethod) ? null : model.PaymentMethod.Trim(),
+            ReceivedUtc = receivedUtc,
+            Reference = model.Reference,
+            Note = model.Note,
+            CreditExcess = model.CreditExcess,
+        });
+
+        if (result.Succeeded && result.UnappliedAmount > 0m)
+        {
+            // Nothing above the balance is recorded unless it was kept as credit, so say what is left to give back.
+            await _notifier.WarningAsync(H["{0} {1} was more than was owed and was not recorded. Give it back, or record the payment again keeping the rest as customer credit.", CurrencyScale.Format(result.UnappliedAmount, result.Transaction.Currency), result.Transaction.Currency]);
+        }
+
+        return await CompleteAsync(result, model.TransactionId, result.CreditedAmount > 0m
+            ? H["The payment was recorded, and {0} {1} above what was owed was added to the customer's credit.", CurrencyScale.Format(result.CreditedAmount, result.Transaction.Currency), result.Transaction.Currency]
+            : H["The payment was recorded."]);
+    }
+
+    /// <summary>
+    /// Pays toward a transaction with its payer's customer credit.
+    /// </summary>
+    /// <param name="model">The credit to apply.</param>
+    [HttpPost]
+    public async Task<IActionResult> ApplyCredit(ApplyCreditViewModel model)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions))
+        {
+            return Forbid();
+        }
+
+        var result = await _commandService.ApplyCreditAsync(model.TransactionId, model.Amount, model.Note);
+
+        return await CompleteAsync(result, model.TransactionId, H["The customer's credit was applied."]);
+    }
+
+    /// <summary>
+    /// Takes back a payment recorded by hand or an adjustment with a reversing entry, so it is owed again. Neither entry is
+    /// removed from the timeline.
+    /// </summary>
+    /// <param name="itemId">The transaction identifier.</param>
+    /// <param name="eventId">The id of the timeline entry to take back.</param>
+    /// <param name="reason">Why the entry is taken back; required.</param>
+    [HttpPost]
+    public async Task<IActionResult> Reverse(string itemId, string eventId, string reason)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions))
+        {
+            return Forbid();
+        }
+
+        var result = await _commandService.ReverseAsync(itemId, eventId, reason);
+
+        return await CompleteAsync(result, itemId, H["The entry was taken back. What it paid or took off is owed again."]);
     }
 
     /// <summary>
@@ -316,6 +385,59 @@ public sealed class AdminController : Controller
         var result = await _commandService.MarkPaidAsync(itemId, note);
 
         return await CompleteAsync(result, itemId, H["The transaction was marked as paid."]);
+    }
+
+    /// <summary>
+    /// Pauses or resumes the scheduled reminders of a transaction.
+    /// </summary>
+    /// <param name="itemId">The transaction identifier.</param>
+    /// <param name="paused">Whether its reminders are paused.</param>
+    [HttpPost]
+    public async Task<IActionResult> PauseReminders(string itemId, bool paused)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions))
+        {
+            return Forbid();
+        }
+
+        var result = await _commandService.SetRemindersPausedAsync(itemId, paused);
+
+        return await CompleteAsync(result, itemId, paused ? H["The scheduled reminders were paused."] : H["The scheduled reminders were resumed."]);
+    }
+
+    /// <summary>
+    /// Cancels the scheduled charge of the owner's saved card, so the owner pays the balance themselves.
+    /// </summary>
+    /// <param name="itemId">The transaction identifier.</param>
+    /// <param name="charges">The saved card charges.</param>
+    [HttpPost]
+    public async Task<IActionResult> CancelAutoCharge(string itemId, [FromServices] ISavedPaymentMethodChargeService charges)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions))
+        {
+            return Forbid();
+        }
+
+        var result = await charges.CancelAsync(itemId);
+
+        if (result.Transaction is null && result.Errors.Count > 0)
+        {
+            return NotFound();
+        }
+
+        if (result.Succeeded)
+        {
+            await _notifier.SuccessAsync(H["The scheduled charge was canceled. The owner pays the balance themselves."]);
+        }
+        else
+        {
+            foreach (var error in result.Errors)
+            {
+                await _notifier.WarningAsync(new LocalizedHtmlString(error, "{0}", false, error));
+            }
+        }
+
+        return RedirectToAction(nameof(Detail), new { itemId });
     }
 
     /// <summary>
@@ -436,6 +558,12 @@ public sealed class AdminController : Controller
             }
         }
 
+        // What followed the saved change but did not finish with it, such as a customer credit change left for later.
+        foreach (var warning in result.Warnings)
+        {
+            await _notifier.WarningAsync(new LocalizedHtmlString(warning, "{0}", false, warning));
+        }
+
         return RedirectToAction(nameof(Detail), new { itemId });
     }
 
@@ -490,25 +618,6 @@ public sealed class AdminController : Controller
         }
 
         return items;
-    }
-
-    // What the transaction paid for, such as an order, named and linked by the module that owns it.
-    private async Task<CheckoutReferenceDescription> DescribeReferenceAsync(Transaction transaction)
-    {
-        if (string.IsNullOrEmpty(transaction.ReferenceType) || string.IsNullOrEmpty(transaction.ReferenceId))
-        {
-            return null;
-        }
-
-        foreach (var describer in HttpContext.RequestServices.GetServices<ICheckoutReferenceDescriber>())
-        {
-            if (await describer.DescribeAsync(transaction.ReferenceType, transaction.ReferenceId, HttpContext.RequestAborted) is { Text.Length: > 0 } description)
-            {
-                return description;
-            }
-        }
-
-        return null;
     }
 
     private async Task<string> ResolveOwnerNameAsync(string ownerId)

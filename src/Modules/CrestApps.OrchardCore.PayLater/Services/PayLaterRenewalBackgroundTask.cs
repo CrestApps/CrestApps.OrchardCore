@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.PayLater.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -70,7 +69,8 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
             return;
         }
 
-        var settings = await siteService.GetSettingsAsync<PayLaterSettings>();
+        // Each cycle falls due under the payer's terms, as the first one did.
+        var dueDates = new PayLaterDueDateResolver(siteService, serviceProvider);
 
         foreach (var transaction in due)
         {
@@ -87,7 +87,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
             try
             {
-                run.AddItems(1, await RenewAsync(transactionManager, filters, distributedLock, localizer, localClock, settings, transaction, now, cancellationToken)
+                run.AddItems(1, await RenewAsync(transactionManager, filters, distributedLock, localizer, localClock, dueDates, transaction, now, cancellationToken)
                     ? "renewed"
                     : "skipped");
             }
@@ -108,7 +108,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
         IDistributedLock distributedLock,
         IStringLocalizer localizer,
         ILocalClock localClock,
-        PayLaterSettings settings,
+        PayLaterDueDateResolver dueDates,
         Transaction transaction,
         DateTime now,
         CancellationToken cancellationToken)
@@ -147,7 +147,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
             return false;
         }
 
-        var next = await BuildNextCycleAsync(transactionManager, localizer, localClock, settings, current, now);
+        var next = await BuildNextCycleAsync(transactionManager, localizer, localClock, dueDates, current, now, cancellationToken);
 
         // The source is marked before the new cycle is created so a crash between the two leaves the
         // schedule stopped rather than invoicing the same period on every later sweep.
@@ -209,14 +209,15 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
         ITransactionManager transactionManager,
         IStringLocalizer localizer,
         ILocalClock localClock,
-        PayLaterSettings settings,
+        PayLaterDueDateResolver dueDates,
         Transaction source,
-        DateTime now)
+        DateTime now,
+        CancellationToken cancellationToken)
     {
         var recurrence = source.Recurrence;
         var periodStart = recurrence.PeriodEndUtc;
 
-        var next = await transactionManager.NewAsync();
+        var next = await transactionManager.NewAsync(cancellationToken: cancellationToken);
 
         next.Title = source.Title;
         next.Source = source.Source;
@@ -228,6 +229,13 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
         next.ReferenceId = source.ReferenceId;
         next.ReferenceVersionId = source.ReferenceVersionId;
         next.CheckoutSessionId = source.CheckoutSessionId;
+
+        // The same party owes every cycle, so its invoice and reminders go to whoever owed the first.
+        next.PayerKind = source.PayerKind;
+        next.PayerId = source.PayerId;
+        next.PayerContact = source.PayerContact;
+        next.ParentReferenceType = source.ParentReferenceType;
+        next.ParentReferenceId = source.ParentReferenceId;
 
         // Each cycle needs its own obligation id: the checkout's per-obligation uniqueness check would
         // otherwise treat the new period as a duplicate of the first one and skip it.
@@ -247,8 +255,8 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
         next.CreatedUtc = now;
         next.UpdatedUtc = now;
         // A renewal always has a due date, or it never becomes overdue and the agreement never lapses. With no payment
-        // terms it is due on the first day of the period it bills.
-        next.DueUtc = periodStart.AddDays(Math.Max(0, settings.NetTermDays));
+        // term and no number of days it is due on the first day of the period it bills.
+        next.DueUtc = await dueDates.GetDueUtcAsync(periodStart, source.GetPayer(), cancellationToken) ?? periodStart;
 
         next.Recurrence = new TransactionRecurrence
         {

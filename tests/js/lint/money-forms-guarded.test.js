@@ -11,9 +11,10 @@ const modulesDirectory = join('src', 'Modules');
 const forms = [
     ['CrestApps.OrchardCore.Orders/Views/OrdersAdmin/_OrderActions.cshtml', 'Refund'],
     ['CrestApps.OrchardCore.Orders/Views/OrdersAdmin/_OrderActions.cshtml', 'Cancel'],
-    ['CrestApps.OrchardCore.Transactions/Views/Admin/Detail.cshtml', 'RecordPayment'],
-    ['CrestApps.OrchardCore.Transactions/Views/Admin/Detail.cshtml', 'Adjust'],
-    ['CrestApps.OrchardCore.Transactions/Views/Admin/Detail.cshtml', 'MarkPaid'],
+    ['CrestApps.OrchardCore.Transactions/Views/TransactionActions.DetailAdmin.cshtml', 'RecordPayment'],
+    ['CrestApps.OrchardCore.Transactions/Views/TransactionActions.DetailAdmin.cshtml', 'ApplyCredit'],
+    ['CrestApps.OrchardCore.Transactions/Views/TransactionActions.DetailAdmin.cshtml', 'Adjust'],
+    ['CrestApps.OrchardCore.Transactions/Views/TransactionActions.DetailAdmin.cshtml', 'MarkPaid'],
     ['CrestApps.OrchardCore.Marketplace/Views/VendorsAdmin/Detail.cshtml', 'PayOut'],
     ['CrestApps.OrchardCore.Marketplace/Views/VendorsAdmin/Detail.cshtml', 'Release'],
     ['CrestApps.OrchardCore.Bookings/Views/BookingsAdmin/Detail.cshtml', 'ChargeBalance'],

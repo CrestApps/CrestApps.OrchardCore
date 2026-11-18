@@ -1,0 +1,48 @@
+@model InvoiceCreditNotesViewModel
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+
+@{
+    var currency = Model.Invoice.Currency;
+    string Money(decimal amount) => string.IsNullOrEmpty(currency) ? amount.ToString("0.00") : MoneyFormatter.Format(amount, currency);
+}
+
+@if (Model.CreditNotes.Count > 0 || Model.CanCredit)
+{
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>@T["Credit notes"]</span>
+            @if (Model.CanCredit)
+            {
+                <form asp-action="Create" asp-controller="CreditNotesAdmin" method="post">
+                    <input type="hidden" name="invoiceId" value="@Model.Invoice.ItemId" />
+                    <button type="submit" class="btn btn-sm btn-secondary">@T["New credit note"]</button>
+                </form>
+            }
+        </div>
+        @if (Model.CreditNotes.Count == 0)
+        {
+            <div class="card-body text-muted">@T["Correct an issued invoice with a credit note: it lowers what is owed, refunds, or keeps the amount as the customer's credit."]</div>
+        }
+        else
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var creditNote in Model.CreditNotes)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <a asp-action="Detail" asp-controller="CreditNotesAdmin" asp-route-itemId="@creditNote.ItemId">@(string.IsNullOrEmpty(creditNote.Number) ? T["Draft credit note"].Value : creditNote.Number)</a>
+                            @if (!string.IsNullOrEmpty(creditNote.Reason))
+                            {
+                                <span class="d-block small text-muted">@creditNote.Reason</span>
+                            }
+                        </span>
+                        <span class="text-nowrap">
+                            @Money(creditNote.Totals?.Total ?? 0m)
+                            <span class="badge @(creditNote.Status == CreditNoteStatus.Issued ? "text-bg-success" : "text-bg-secondary")">@(creditNote.Status == CreditNoteStatus.Issued ? T["Issued"] : T["Draft"])</span>
+                        </span>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+}

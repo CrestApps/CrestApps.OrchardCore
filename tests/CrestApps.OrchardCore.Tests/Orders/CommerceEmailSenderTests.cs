@@ -35,7 +35,7 @@ public sealed class CommerceEmailSenderTests
             .ReturnsAsync(new CommerceEmailMessage("Templated", "Templated text", "<p>Templated</p>"));
 
         var order = new Order { OrderNumber = "261021-MAIL01" };
-        var sender = new CommerceEmailSender(Services(EmailService(succeeds: true)), templates.Object, NullLogger<CommerceEmailSender>.Instance);
+        var sender = new CommerceEmailSender(Services(EmailService(succeeds: true)), templates.Object, NullLogger<CommerceEmailSender>.Instance, CommerceEmailSenders.Localizer);
 
         // Act
         var sent = await sender.SendAsync(Email(OrderEmailKinds.Confirmation, order), _ => Task.FromResult(Content()), TestContext.Current.CancellationToken);
@@ -58,7 +58,7 @@ public sealed class CommerceEmailSenderTests
     {
         // Arrange
         var templates = new Mock<ICommerceEmailTemplates>(MockBehavior.Strict);
-        var sender = new CommerceEmailSender(Services(EmailService(succeeds: true)), templates.Object, NullLogger<CommerceEmailSender>.Instance);
+        var sender = new CommerceEmailSender(Services(EmailService(succeeds: true)), templates.Object, NullLogger<CommerceEmailSender>.Instance, CommerceEmailSenders.Localizer);
 
         // Act
         var sent = await sender.SendAsync(Email(kind: null), _ => Task.FromResult(Content()), TestContext.Current.CancellationToken);

@@ -81,6 +81,42 @@ window.checkoutPayment = (function () {
             var panel = panels[i];
             panel.classList.toggle('d-none', panel.getAttribute('data-checkout-payment-panel') !== key);
         }
+
+        syncDeferredText();
+    }
+
+    // A method that collects nothing now (Pay Later, bank transfer) places the order rather than paying for it, and
+    // what the summary shows is due later, so the button and the total say so. The page's own words come back when a
+    // method that pays now is chosen again.
+    function syncDeferredText() {
+        var checked = document.querySelector('input[name="checkout-payment-method"]:checked');
+        var deferred = !!checked && checked.getAttribute('data-defers-payment') === 'true';
+        var label = document.querySelector('#checkout-submit .checkout-submit-label');
+
+        // The page gives the words on the label itself (data-deferred-text), so the view keeps them out of its script.
+        var deferredText = label && (label.getAttribute('data-deferred-text') || config.deferredSubmitLabel);
+
+        if (label && deferredText) {
+            if (!label.hasAttribute('data-default-text')) {
+                label.setAttribute('data-default-text', label.textContent);
+            }
+
+            label.textContent = deferred ? deferredText : label.getAttribute('data-default-text');
+        }
+
+        var dueLabels = document.querySelectorAll('[data-checkout-due-label]');
+
+        for (var i = 0; i < dueLabels.length; i++) {
+            var dueLabel = dueLabels[i];
+
+            if (!dueLabel.hasAttribute('data-default-text')) {
+                dueLabel.setAttribute('data-default-text', dueLabel.textContent);
+            }
+
+            dueLabel.textContent = deferred
+                ? dueLabel.getAttribute('data-deferred-text') || dueLabel.getAttribute('data-default-text')
+                : dueLabel.getAttribute('data-default-text');
+        }
     }
 
     async function postJson(url, body) {
@@ -293,6 +329,7 @@ window.checkoutPayment = (function () {
             maxStatusAttempts: 30,
             genericErrorMessage: 'Your payment could not be completed. Please try again.',
             selectMethodMessage: 'Please choose a payment method.',
+            deferredSubmitLabel: 'Place order',
             stillProcessingMessage: 'Your payment is still being processed. You will receive a confirmation once it completes.'
         }, options || {});
 

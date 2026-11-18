@@ -95,6 +95,9 @@ internal sealed class FakeTransactionStore : ITransactionStore
             string.Equals(t.CheckoutSessionId, checkoutSessionId, StringComparison.Ordinal) &&
             string.Equals(t.ObligationId, obligationId, StringComparison.Ordinal)));
 
+    public Task<IReadOnlyList<Transaction>> GetByCheckoutSessionAsync(string checkoutSessionId, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<Transaction>>([.. _transactions.Values.Where(t => string.Equals(t.CheckoutSessionId, checkoutSessionId, StringComparison.Ordinal)).OrderBy(t => t.CreatedUtc)]);
+
     public Task<IReadOnlyList<Transaction>> GetByParentReferenceAsync(string parentReferenceType, string parentReferenceId, CancellationToken cancellationToken = default)
     {
         var results = _transactions.Values
@@ -141,12 +144,22 @@ internal sealed class FakeTransactionStore : ITransactionStore
 
     private static bool Matches(Transaction transaction, TransactionQuery query)
     {
-        if (!string.IsNullOrEmpty(query.OwnerId) && !string.Equals(transaction.OwnerId, query.OwnerId, StringComparison.Ordinal))
-        {
-            return false;
-        }
+        var payers = (query.Payers ?? []).Where(payer => !payer.IsEmpty).ToArray();
+        var isOwner =
+            (string.IsNullOrEmpty(query.OwnerId) || string.Equals(transaction.OwnerId, query.OwnerId, StringComparison.Ordinal)) &&
+            (!query.OwnerKind.HasValue || transaction.OwnerKind == query.OwnerKind.Value);
 
-        if (query.OwnerKind.HasValue && transaction.OwnerKind != query.OwnerKind.Value)
+        if (payers.Length > 0)
+        {
+            // Like the real store: the owner's own transactions or those one of the named parties owes.
+            var ownerNamed = !string.IsNullOrEmpty(query.OwnerId);
+
+            if (!(ownerNamed && isOwner) && !payers.Contains(transaction.GetPayer()))
+            {
+                return false;
+            }
+        }
+        else if (!isOwner)
         {
             return false;
         }

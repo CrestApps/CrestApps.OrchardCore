@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Accounts.Models;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Accounts.Services;
@@ -23,4 +24,20 @@ public interface IAccountMemberService
     /// <param name="exceptAccountId">The account being edited, which is not counted.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     Task<string> FindOtherAccountIdAsync(string userId, string exceptAccountId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the user ids of the members of the published version of an account, each once, or none when the account
+    /// isn't found or has no members.
+    /// </summary>
+    /// <param name="accountId">The account's content item id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<IReadOnlyList<string>> GetMemberUserIdsAsync(string accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the members of the published version of an account with what each may do for it, or none when the account
+    /// isn't found or has no members.
+    /// </summary>
+    /// <param name="accountId">The account's content item id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<IReadOnlyList<AccountMember>> GetMembersAsync(string accountId, CancellationToken cancellationToken = default);
 }

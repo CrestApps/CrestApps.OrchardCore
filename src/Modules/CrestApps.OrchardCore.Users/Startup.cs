@@ -57,6 +57,10 @@ public sealed class Startup : StartupBase
         services.AddUserSearchService();
         services.AddPasswordConfirmation();
         services.AddPartySource<UserPartySource>();
+
+        // A user is billed under their display name at their e-mail address, and acts for themselves.
+        services.AddPartyBillingProfileSource<UserBillingProfileSource>();
+        services.AddPartyMemberSource<UserPartyMemberSource>();
         services.AddPermissionProvider<UserSearchPermissionProvider>();
         services.AddDisplayDriver<UserMenu, DisplayNameUserMenuDisplayDriver>();
         // services.AddShapeTableProvider<NavbarShapeTableProvider>();

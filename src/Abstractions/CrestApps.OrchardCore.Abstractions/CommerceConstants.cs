@@ -1,7 +1,8 @@
 namespace CrestApps.OrchardCore.Commerce;
 
 /// <summary>
-/// Provides shared constant values for the Commerce module that owns the common Commerce admin menu.
+/// Provides shared constant values for the Commerce module: the Commerce Foundation feature that owns the common
+/// Commerce admin menu and customer account, and the Commerce feature, the store layer on top of it.
 /// </summary>
 public static class CommerceConstants
 {
@@ -11,10 +12,21 @@ public static class CommerceConstants
     public static class Features
     {
         /// <summary>
-        /// The Commerce feature that registers the shared Commerce admin menu and its icon. It is enabled
-        /// by dependency only, so any module that contributes to the Commerce menu should depend on it.
+        /// The Commerce feature: the store layer, with the store's setup guide (Commerce › Set up your store) and the
+        /// roles it adds for a store's staff. It is enabled by dependency only and brings <see cref="Foundation"/>; the
+        /// store modules (products, carts, checkout, orders, shipping and the like) depend on it.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Commerce";
+
+        /// <summary>
+        /// The Commerce Foundation feature: what several features share without turning on the store. It registers the
+        /// top-level Commerce admin menu and its icon, the customer account (<c>/account</c> and its menu), the helpers
+        /// of the commerce admin lists, customers' access to the admin pages of their own data, and the export and
+        /// anonymization of a person's commerce data. It is enabled by dependency only; a building block that adds to
+        /// the Commerce menu or the account without being part of a store, such as transactions, taxation, exchange
+        /// rates or customers, depends on it rather than on <see cref="Area"/>.
+        /// </summary>
+        public const string Foundation = "CrestApps.OrchardCore.Commerce.Foundation";
 
         /// <summary>
         /// The Commerce Webhooks feature. Modules register what tells webhooks about their records behind

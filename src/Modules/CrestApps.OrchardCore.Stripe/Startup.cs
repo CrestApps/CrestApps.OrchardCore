@@ -227,7 +227,7 @@ public sealed class StripeWorkflowsStartup : StartupBase
 /// <summary>
 /// The buyer's saved cards in their storefront account, when the Commerce account is there.
 /// </summary>
-[RequireFeatures(CheckoutConstants.Features.Area, CrestApps.OrchardCore.Commerce.CommerceConstants.Features.Area)]
+[RequireFeatures(CheckoutConstants.Features.Area, CrestApps.OrchardCore.Commerce.CommerceConstants.Features.Foundation)]
 public sealed class CommerceAccountStartup : StartupBase
 {
     /// <inheritdoc/>

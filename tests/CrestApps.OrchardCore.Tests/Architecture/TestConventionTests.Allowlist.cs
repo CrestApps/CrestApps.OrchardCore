@@ -130,5 +130,9 @@ public sealed partial class TestConventionTests
         // remove as it is paid down.
         ["tests/CrestApps.OrchardCore.Tests/Disbursements/DisbursementReviewFixesTests.cs"] = 1,
         ["tests/CrestApps.OrchardCore.Tests/Disbursements/DisbursementsTestContext.cs"] = 1,
+
+        // Existing debt from main's #1331 (Invoicing and Billing), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["tests/CrestApps.OrchardCore.Tests/Invoicing/InvoiceNumberingTests.cs"] = 1,
     };
 }

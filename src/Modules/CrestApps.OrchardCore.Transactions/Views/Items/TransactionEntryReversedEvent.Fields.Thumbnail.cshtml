@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Transactions.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TransactionEntryReversedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i>
+    @T["Transaction Entry Taken Back"]
+</h4>
+<p>@T["Starts when a payment recorded by hand or an adjustment is taken back, so it is owed again."]</p>
