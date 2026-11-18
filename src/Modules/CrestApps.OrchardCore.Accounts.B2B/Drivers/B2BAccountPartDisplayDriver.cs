@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
@@ -148,33 +147,23 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
     // member who leaves the account loses both.
     private async Task<bool> ApplyAsync(B2BAccountPartViewModel model, B2BAccountPart part, ModelStateDictionary modelState)
     {
-        if (model.NetDays is < 0 or > 365)
+        foreach (var problem in B2BAccountSettingsRules.CheckTerms(model.NetDays, model.DepositPercent, model.CreditLimit, model.MonthlyBudget))
         {
-            modelState.AddModelError(Key(nameof(model.NetDays)), S["Enter the days an invoice is due in, from 0 to 365, or leave it blank for no terms."]);
-        }
-
-        if (model.DepositPercent is < 0m or > 100m)
-        {
-            modelState.AddModelError(Key(nameof(model.DepositPercent)), S["Enter a deposit from 0 to 100 percent."]);
-        }
-
-        if (model.CreditLimit is < 0m || model.MonthlyBudget is < 0m)
-        {
-            modelState.AddModelError(Key(nameof(model.CreditLimit)), S["A credit limit or budget can't be negative."]);
-        }
-
-        var members = Members(part.ContentItem);
-        var limits = new List<BuyerOrderLimit>();
-
-        foreach (var row in model.OrderLimits ?? [])
-        {
-            if (string.IsNullOrEmpty(row?.UserId) || row.Limit is not > 0m || limits.Any(limit => limit.UserId == row.UserId))
+            switch (problem)
             {
-                continue;
+                case B2BAccountSettingsProblem.NetDaysOutOfRange:
+                    modelState.AddModelError(Key(nameof(model.NetDays)), S["Enter the days an invoice is due in, from 0 to 365, or leave it blank for no terms."]);
+                    break;
+                case B2BAccountSettingsProblem.DepositOutOfRange:
+                    modelState.AddModelError(Key(nameof(model.DepositPercent)), S["Enter a deposit from 0 to 100 percent."]);
+                    break;
+                case B2BAccountSettingsProblem.NegativeAmount:
+                    modelState.AddModelError(Key(nameof(model.CreditLimit)), S["A credit limit or budget can't be negative."]);
+                    break;
             }
-
-            limits.Add(new BuyerOrderLimit { UserId = row.UserId, Limit = row.Limit.Value });
         }
+
+        var limits = B2BAccountSettingsRules.CleanOrderLimits((model.OrderLimits ?? []).Select(row => (row?.UserId, row?.Limit)));
 
         // The procurement system shops as one of the account's members, and never as a site administrator.
         string punchoutUserId = null;
@@ -182,15 +171,15 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
         if (model.PunchoutEnabled)
         {
             punchoutUserId = string.IsNullOrWhiteSpace(model.PunchoutUserId) ? null : model.PunchoutUserId;
-            var punchoutUser = punchoutUserId is null ? null : await _userManager.FindByIdAsync(punchoutUserId);
 
-            if (punchoutUser is null || members.FindMember(punchoutUserId) is null)
+            switch (await B2BAccountSettingsRules.CheckPunchoutUserAsync(punchoutUserId, Members(part.ContentItem), _userManager))
             {
-                modelState.AddModelError(Key(nameof(model.PunchoutUserId)), S["Choose one of the account's members for punchout."]);
-            }
-            else if (await _userManager.IsInRoleAsync(punchoutUser, OrchardCoreConstants.Roles.Administrator))
-            {
-                modelState.AddModelError(Key(nameof(model.PunchoutUserId)), S["A site administrator can't be the punchout buyer. Use a user who only buys."]);
+                case B2BAccountSettingsProblem.PunchoutUserNotMember:
+                    modelState.AddModelError(Key(nameof(model.PunchoutUserId)), S["Choose one of the account's members for punchout."]);
+                    break;
+                case B2BAccountSettingsProblem.PunchoutUserIsAdministrator:
+                    modelState.AddModelError(Key(nameof(model.PunchoutUserId)), S["A site administrator can't be the punchout buyer. Use a user who only buys."]);
+                    break;
             }
         }
 
@@ -199,34 +188,23 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
             return false;
         }
 
-        part.Enabled = model.Enabled;
-        part.TaxId = string.IsNullOrWhiteSpace(model.TaxId) ? null : model.TaxId.Trim();
-        part.BillingEmail = string.IsNullOrWhiteSpace(model.BillingEmail) ? null : model.BillingEmail.Trim();
-        part.Terms = new AccountTerms
+        B2BAccountSettingsRules.ApplySettings(part, new B2BAccountSettings
         {
+            Enabled = model.Enabled,
+            TaxId = model.TaxId,
+            BillingEmail = model.BillingEmail,
             NetDays = model.NetDays,
             DepositPercent = model.DepositPercent,
             CreditLimit = model.CreditLimit,
             RequirePurchaseOrder = model.RequirePurchaseOrder,
-        };
-        part.MonthlyBudget = model.MonthlyBudget;
-        part.PriceListId = string.IsNullOrWhiteSpace(model.PriceListId) ? null : model.PriceListId;
-        part.OrderLimits = limits;
-        part.Punchout ??= new AccountPunchout();
-        part.Punchout.Enabled = model.PunchoutEnabled;
-        part.Punchout.UserId = punchoutUserId;
+            MonthlyBudget = model.MonthlyBudget,
+            PriceListId = model.PriceListId,
+            OrderLimits = limits,
+        });
+        B2BAccountSettingsRules.ApplyPunchout(part, model.PunchoutEnabled, punchoutUserId);
 
         // A new key, asked for or the first; it's shown once.
-        _newPunchoutKey = null;
-
-        if (model.PunchoutEnabled && (model.NewPunchoutKey || string.IsNullOrEmpty(part.Punchout.KeyHash)))
-        {
-            var (key, hash) = PunchoutService.NewKey();
-
-            _newPunchoutKey = key;
-            part.Punchout.KeyHash = hash;
-            part.Punchout.KeyCreatedUtc = _clock.UtcNow;
-        }
+        _newPunchoutKey = B2BAccountSettingsRules.IssuePunchoutKey(part, model.NewPunchoutKey, _clock.UtcNow);
 
         return true;
     }
