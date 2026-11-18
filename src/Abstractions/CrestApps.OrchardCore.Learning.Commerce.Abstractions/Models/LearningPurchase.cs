@@ -90,6 +90,11 @@ public sealed class LearningPurchaseGrant
     public int Seats { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the product said buying it enrolls people in a course that needs a key or an approval.
+    /// </summary>
+    public bool EnrollsWithoutKeyOrApproval { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the grant was made.
     /// </summary>
     public bool Done { get; set; }

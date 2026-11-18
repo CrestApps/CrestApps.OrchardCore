@@ -24,6 +24,7 @@ internal sealed class LearningProductPartDisplayDriver : ContentPartDisplayDrive
         => Initialize<LearningProductPartViewModel>(GetEditorShapeType(context), async model =>
         {
             model.Grants = part.Grants.Select(grant => new LearningProductGrantRow { Kind = grant.Kind, TargetId = grant.TargetId, AccessDays = grant.AccessDays, Seats = grant.Seats }).ToList();
+            model.EnrollsWithoutKeyOrApproval = part.EnrollsWithoutKeyOrApproval;
             model.Courses = (await _courses.ListCoursesAsync(500)).Select(course => new SelectListItem(course.DisplayText, course.ContentItemId)).ToList();
         });
 
@@ -31,7 +32,9 @@ internal sealed class LearningProductPartDisplayDriver : ContentPartDisplayDrive
     {
         var model = new LearningProductPartViewModel();
 
-        await context.Updater.TryUpdateModelAsync(model, Prefix, value => value.Grants);
+        await context.Updater.TryUpdateModelAsync(model, Prefix, value => value.Grants, value => value.EnrollsWithoutKeyOrApproval);
+
+        part.EnrollsWithoutKeyOrApproval = model.EnrollsWithoutKeyOrApproval;
 
         part.Grants = (model.Grants ?? [])
             .Where(row => row.Include)

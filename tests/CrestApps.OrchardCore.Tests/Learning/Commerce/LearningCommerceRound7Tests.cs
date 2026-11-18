@@ -214,6 +214,61 @@ public sealed class LearningCommerceRound7Tests
         Assert.NotNull(gone.Problem);
     }
 
+    [Theory]
+    [InlineData(EnrollmentMode.Key)]
+    [InlineData(EnrollmentMode.Approval)]
+    public async Task TheCart_RefusesACourseThatNeedsAKeyOrApproval_AsACourseOrAsSeats(EnrollmentMode mode)
+    {
+        // Arrange: browser pass 2026-11-18. Buying a key course enrolled the buyer without the key.
+        var (h, _) = await CreateAsync(mode: mode);
+        await using var harness = h;
+
+        // Act
+        var course = await EvaluateAsync(h, quantity: 1);
+        var seats = await EvaluateAsync(h, quantity: 1, contentItemId: "team");
+
+        // Assert
+        Assert.NotNull(course.Problem);
+        Assert.NotNull(seats.Problem);
+    }
+
+    [Fact]
+    public async Task APaidKeyCourse_DoesNotEnrollTheBuyer_AndTheFailureIsRecorded()
+    {
+        // Arrange: browser pass 2026-11-18. The course became a key course after it was put in the cart.
+        var (h, order) = await CreateAsync(mode: EnrollmentMode.Key);
+        await using var _ = h;
+
+        // Act
+        await h.RunAsync(services => services.GetRequiredService<LearningOrderEventHandler>().PaidAsync(new OrderPaidContext(order), TestContext.Current.CancellationToken));
+        await FulfillAsync(h);
+        var enrollments = await h.RunAsync(services => services.GetRequiredService<IEnrollmentStore>().ListByCourseForUserAsync("boss", "c1"));
+        var purchases = await h.RunAsync(services => services.GetRequiredService<LearningPurchaseStore>().ListByOrderAsync(order.ItemId));
+
+        // Assert
+        Assert.Empty(enrollments);
+        Assert.Equal(LearningPurchaseState.Failed, Assert.Single(purchases).State);
+        Assert.Single(order.Notes ?? []);
+    }
+
+    [Fact]
+    public async Task AKeyCourseSoldByAProductThatEnrollsWithoutTheKey_IsSoldAndEnrollsTheBuyer()
+    {
+        // Arrange: the seller decided the purchase is the way in.
+        var (h, order) = await CreateAsync(mode: EnrollmentMode.Key, enrollsWithoutKeyOrApproval: true);
+        await using var _ = h;
+
+        // Act
+        var cart = await EvaluateAsync(h, quantity: 1);
+        await h.RunAsync(services => services.GetRequiredService<LearningOrderEventHandler>().PaidAsync(new OrderPaidContext(order), TestContext.Current.CancellationToken));
+        await FulfillAsync(h);
+        var enrollments = await h.RunAsync(services => services.GetRequiredService<IEnrollmentStore>().ListByCourseForUserAsync("boss", "c1"));
+
+        // Assert
+        Assert.Null(cart.Problem);
+        Assert.Single(enrollments, enrollment => enrollment.IsOpen);
+    }
+
     [Fact]
     public async Task ASinglePersonCourse_CanBeBoughtOnce_ButSeatsInAnyQuantity()
     {
@@ -376,7 +431,9 @@ public sealed class LearningCommerceRound7Tests
         bool flakyAccount = false,
         bool seatsLine = false,
         bool seatsOnly = false,
-        string userId = "boss")
+        string userId = "boss",
+        EnrollmentMode mode = EnrollmentMode.Closed,
+        bool enrollsWithoutKeyOrApproval = false)
     {
         var account = new ContentItem { ContentItemId = "acme", ContentType = "Account", DisplayText = "Acme", Latest = true, Published = true };
 
@@ -390,7 +447,7 @@ public sealed class LearningCommerceRound7Tests
         });
 
         var course = new ContentItem { ContentItemId = "c1", ContentItemVersionId = "v1", ContentType = "Course", DisplayText = "Safety" };
-        course.Apply(new LearningProductPart());
+        course.Apply(new LearningProductPart { EnrollsWithoutKeyOrApproval = enrollsWithoutKeyOrApproval });
 
         var seats = new ContentItem { ContentItemId = "team", ContentItemVersionId = "v2", ContentType = "Product", DisplayText = "Safety for teams" };
         seats.Apply(new LearningProductPart { Grants = [new LearningProductGrant { Kind = LearningProductGrantKind.Seats, TargetId = "c1", Seats = 5 }] });
@@ -478,6 +535,8 @@ public sealed class LearningCommerceRound7Tests
         {
             courses.AddCourse("c1", part =>
             {
+                part.EnrollmentMode = mode;
+
                 if (prerequisite)
                 {
                     part.Prerequisites = [new CoursePrerequisite { Kind = "Course", Id = "other" }];

@@ -33,6 +33,7 @@ internal sealed class LearningPurchaseProcessor
     private readonly LicensePoolStore _poolStore;
     private readonly IEnrollmentService _enrollments;
     private readonly IEnrollmentStore _enrollmentStore;
+    private readonly ICourseStructureService _courses;
     private readonly ILicensePoolService _pools;
     private readonly IAccountMemberService _members;
     private readonly IDistributedLock _locks;
@@ -49,6 +50,7 @@ internal sealed class LearningPurchaseProcessor
         LicensePoolStore poolStore,
         IEnrollmentService enrollments,
         IEnrollmentStore enrollmentStore,
+        ICourseStructureService courses,
         ILicensePoolService pools,
         IAccountMemberService members,
         IDistributedLock locks,
@@ -63,6 +65,7 @@ internal sealed class LearningPurchaseProcessor
         _poolStore = poolStore;
         _enrollments = enrollments;
         _enrollmentStore = enrollmentStore;
+        _courses = courses;
         _pools = pools;
         _members = members;
         _locks = locks;
@@ -210,6 +213,11 @@ internal sealed class LearningPurchaseProcessor
                     return GrantResult.Failed(S["The order has no buyer to enroll in {0}.", grant.Title]);
                 }
 
+                if (await NeedsKeyOrApprovalAsync(grant))
+                {
+                    return GrantResult.Failed(S["{0} needs an enrollment key or an approval, so buying it does not enroll the buyer.", grant.Title]);
+                }
+
                 // The buyer was allowed to pay, so the course is theirs even when a prerequisite is not met yet.
                 var enrolled = await _enrollments.EnrollAsync(new EnrollmentRequest
                 {
@@ -258,6 +266,11 @@ internal sealed class LearningPurchaseProcessor
                     : GrantResult.Failed(S["The buyer could not start {0} ({1}).", grant.Title, started.Error]);
 
             case LearningProductGrantKind.Seats:
+                if (await NeedsKeyOrApprovalAsync(grant))
+                {
+                    return GrantResult.Failed(S["{0} needs an enrollment key or an approval, so no seats were added.", grant.Title]);
+                }
+
                 var accountId = !string.IsNullOrEmpty(purchase.AccountId)
                     ? purchase.AccountId
                     : string.IsNullOrEmpty(purchase.UserId) ? null : (await _members.FindAccountAsync(purchase.UserId, cancellationToken))?.ContentItemId;
@@ -285,6 +298,12 @@ internal sealed class LearningPurchaseProcessor
                 return GrantResult.Failed(S["{0} grants nothing this version knows.", grant.Title]);
         }
     }
+
+    // The cart refuses such a course; this catches a course whose mode changed after it was put in the cart.
+    private async Task<bool> NeedsKeyOrApprovalAsync(LearningPurchaseGrant grant)
+        => !grant.EnrollsWithoutKeyOrApproval
+            && await _courses.GetCourseAsync(grant.TargetId) is { } course
+            && LearningPurchaseRules.NeedsKeyOrApproval(course);
 
     private async Task<LearningPurchaseOutcome> RevokeAsync(LearningPurchase purchase, CancellationToken cancellationToken)
     {

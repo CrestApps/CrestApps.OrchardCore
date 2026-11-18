@@ -10,6 +10,8 @@ public class LearningProductPartViewModel
 {
     public List<LearningProductGrantRow> Grants { get; set; } = [];
 
+    public bool EnrollsWithoutKeyOrApproval { get; set; }
+
     [BindNever]
     public IList<SelectListItem> Courses { get; set; } = [];
 }

@@ -31,6 +31,8 @@ With no grant, buying a course enrolls the buyer in it and buying a learning pat
 
 `LearningCartLineHandler` (an `ICartLineHandler`) refuses a learning product to a guest, because learning is for a signed-in person, and refuses a product with a seat grant to anyone who is not an admin of a business account (`AccountMemberRole.Admin` on the account's `AccountMembersPart`). It also refuses a course that is no longer published, and a course for the buyer whose prerequisites the buyer has not met (checked with the same `ICoursePrerequisiteEvaluator`s as an enrollment, through `CoursePrerequisites.MeetsAsync`). The cart shows the reason on the line, and checkout stops until the line is removed.
 
+A purchase never asks for a course's enrollment key or for an approval, so a course in the `Key` or `Approval` enrollment mode is not sold: the cart refuses a course grant or a seat grant for it unless the product's `LearningProductPart.EnrollsWithoutKeyOrApproval` is true (**Buying it enrolls without the enrollment key or approval** in the editor). The fulfilment checks again with the copy of that flag on the purchase (`LearningPurchaseGrant.EnrollsWithoutKeyOrApproval`), so a course whose mode changed after it went in the cart moves the purchase to `Failed` instead of enrolling anyone. A `Closed` course (only staff and other sources enroll) is sold, because a purchase is one of those sources; an `Open` course is sold too, although anyone may enroll in it for free. Learning paths keep the enrollment controls of their courses, as before.
+
 A course or a learning path is for the buyer alone, so its line is capped at a quantity of one. A product with a seat grant can be bought in any quantity.
 
 ## Grants and refunds

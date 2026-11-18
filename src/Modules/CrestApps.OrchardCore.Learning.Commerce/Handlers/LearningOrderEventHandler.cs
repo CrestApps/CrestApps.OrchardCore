@@ -71,6 +71,7 @@ internal sealed class LearningOrderEventHandler : OrderLineGrantHandlerBase<Lear
                 Title = targetId == item.ContentItemId ? item.DisplayText : (await _contentManager.GetAsync(targetId, VersionOptions.Published))?.DisplayText ?? item.DisplayText,
                 AccessDays = grant.AccessDays,
                 Seats = grant.Kind == LearningProductGrantKind.Seats ? Math.Max(1, grant.Seats) * Math.Max(1, line.Quantity) : 0,
+                EnrollsWithoutKeyOrApproval = context.Part.EnrollsWithoutKeyOrApproval,
             });
         }
 

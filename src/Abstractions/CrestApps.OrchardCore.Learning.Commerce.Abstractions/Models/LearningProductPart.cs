@@ -12,6 +12,13 @@ public sealed class LearningProductPart : ContentPart
     /// Gets or sets the grants; empty grants the course or path the part is on, for oneself.
     /// </summary>
     public List<LearningProductGrant> Grants { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether buying the product enrolls people in a course that needs an enrollment key
+    /// or an approval. A purchase never asks for the key or the approval, so without this a course in either mode is
+    /// not sold, as a course or as seats.
+    /// </summary>
+    public bool EnrollsWithoutKeyOrApproval { get; set; }
 }
 
 /// <summary>

@@ -47,4 +47,9 @@
             }
         </tbody>
     </table>
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="EnrollsWithoutKeyOrApproval" />
+        <label class="form-check-label" asp-for="EnrollsWithoutKeyOrApproval">@T["Buying it enrolls without the enrollment key or approval"]</label>
+        <span class="hint dashed">@T["A purchase never asks for a course's enrollment key or for an approval, so a course that needs either is not sold, as an enrollment or as seats, unless this is ticked."]</span>
+    </div>
 </div>

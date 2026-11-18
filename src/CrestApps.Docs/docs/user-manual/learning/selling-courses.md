@@ -26,6 +26,8 @@ Sell a course in your store like any other product. A person who buys it is enro
 
 The course now shows its price and **Add to cart** on the storefront. A visitor who is not signed in is asked to sign in before they can buy it, because the course goes to their account.
 
+A purchase never asks for an enrollment key or an approval. A course whose **How learners enroll** is **Enrollment key** or **Approval** is not sold, as an enrollment or as seats: the cart says so. To sell such a course anyway, so that buying it is the way in, tick **Buying it enrolls without the enrollment key or approval** under **What buying it grants**. For a course sold only in the store, choose **Closed**: a purchase is one of the ways in it allows.
+
 ## Sell seats to a business
 
 A product with **Seats for an account** can only be bought by an admin of a business account; anyone else sees why in the cart. When the order is paid, the account gets the seats: the number per unit times the quantity bought.

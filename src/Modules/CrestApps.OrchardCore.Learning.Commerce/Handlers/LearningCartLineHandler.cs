@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Carts.Core.Services;
+using CrestApps.OrchardCore.Learning.Commerce.Core.Services;
 using CrestApps.OrchardCore.Learning.Commerce.Models;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
@@ -15,7 +16,9 @@ namespace CrestApps.OrchardCore.Learning.Commerce.Handlers;
 
 /// <summary>
 /// A course is for the person who buys it, so it needs a sign-in, a published course and its prerequisites met, and a
-/// line buys it once; seats are for an account, so only one of its admins can buy them, in any quantity.
+/// line buys it once; seats are for an account, so only one of its admins can buy them, in any quantity. A course that
+/// needs an enrollment key or an approval is not sold, as a course or as seats, unless the product says buying it
+/// enrolls without them (<see cref="LearningProductPart.EnrollsWithoutKeyOrApproval"/>): a purchase asks for neither.
 /// </summary>
 internal sealed class LearningCartLineHandler : ICartLineHandler
 {
@@ -105,6 +108,11 @@ internal sealed class LearningCartLineHandler : ICartLineHandler
             if (course is null)
             {
                 return S["{0} is not open for enrollment.", title];
+            }
+
+            if (!part.EnrollsWithoutKeyOrApproval && LearningPurchaseRules.NeedsKeyOrApproval(course))
+            {
+                return S["{0} needs an enrollment key or an approval, so it is not sold.", title];
             }
 
             // Seats are for other people, so only a course for the buyer needs the buyer to meet its prerequisites.
