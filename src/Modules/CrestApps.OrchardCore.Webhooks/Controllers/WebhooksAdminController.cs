@@ -1,21 +1,17 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Webhooks.Core.Models;
 using CrestApps.OrchardCore.Webhooks.Core.Services;
+using CrestApps.OrchardCore.Webhooks.Services;
 using CrestApps.OrchardCore.Webhooks.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
-using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
-using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 
@@ -33,10 +29,9 @@ public sealed class WebhooksAdminController : Controller
     private readonly IWebhookDeliveryStore _deliveries;
     private readonly WebhookDispatcher _dispatcher;
     private readonly IWebhookEventCatalog _events;
+    private readonly WebhookSubscriptionCommands _commands;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
-    private readonly IHostEnvironment _hostEnvironment;
-    private readonly IClock _clock;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -46,10 +41,9 @@ public sealed class WebhooksAdminController : Controller
         IWebhookDeliveryStore deliveries,
         WebhookDispatcher dispatcher,
         IWebhookEventCatalog events,
+        WebhookSubscriptionCommands commands,
         IAuthorizationService authorizationService,
         INotifier notifier,
-        IHostEnvironment hostEnvironment,
-        IClock clock,
         IHtmlLocalizer<WebhooksAdminController> htmlLocalizer,
         IStringLocalizer<WebhooksAdminController> stringLocalizer)
     {
@@ -57,10 +51,9 @@ public sealed class WebhooksAdminController : Controller
         _deliveries = deliveries;
         _dispatcher = dispatcher;
         _events = events;
+        _commands = commands;
         _authorizationService = authorizationService;
         _notifier = notifier;
-        _hostEnvironment = hostEnvironment;
-        _clock = clock;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -113,16 +106,7 @@ public sealed class WebhooksAdminController : Controller
             return View("Edit", Populate(model));
         }
 
-        var now = _clock.UtcNow;
-        var subscription = new WebhookSubscription
-        {
-            ItemId = IdGenerator.GenerateId(),
-            ProtectedSecret = _dispatcher.NewProtectedSecret(),
-            CreatedUtc = now,
-        };
-
-        Apply(model, subscription);
-        await _subscriptions.CreateAsync(subscription);
+        var subscription = await _commands.CreateAsync(ToInput(model));
 
         // Its secret is on its page, to copy into the receiver.
         await _notifier.SuccessAsync(H["The webhook was added. Copy its signing secret into the system that receives it."]);
@@ -173,8 +157,7 @@ public sealed class WebhooksAdminController : Controller
             return View(Populate(model, subscription));
         }
 
-        Apply(model, subscription);
-        await _subscriptions.UpdateAsync(subscription);
+        await _commands.UpdateAsync(subscription, ToInput(model));
         await _notifier.SuccessAsync(H["The webhook was saved."]);
 
         return RedirectToAction(nameof(Index));
@@ -193,9 +176,7 @@ public sealed class WebhooksAdminController : Controller
             return NotFound();
         }
 
-        subscription.ProtectedSecret = _dispatcher.NewProtectedSecret();
-        subscription.ModifiedUtc = _clock.UtcNow;
-        await _subscriptions.UpdateAsync(subscription);
+        await _commands.RotateSecretAsync(subscription);
         await _notifier.WarningAsync(H["The webhook has a new signing secret. Deliveries are signed with it from now on, so put it in the receiver."]);
 
         return RedirectToAction(nameof(Edit), new { itemId });
@@ -214,22 +195,7 @@ public sealed class WebhooksAdminController : Controller
             return NotFound();
         }
 
-        var now = _clock.UtcNow;
-        var eventId = "evt_" + IdGenerator.GenerateId();
-        var delivery = new WebhookDelivery
-        {
-            ItemId = IdGenerator.GenerateId(),
-            SubscriptionId = subscription.ItemId,
-            EventId = eventId,
-            EventName = WebhookEvents.Ping,
-            Payload = JsonSerializer.Serialize(new { id = eventId, @event = WebhookEvents.Ping, createdUtc = now, data = new { webhookId = subscription.ItemId, name = subscription.Name } }, JsonSerializerOptions.Web),
-            Status = WebhookDeliveryStatus.Pending,
-            NextAttemptUtc = now,
-            CreatedUtc = now,
-        };
-
-        await _deliveries.CreateAsync(delivery, HttpContext.RequestAborted);
-        await _dispatcher.SendAsync(delivery, HttpContext.RequestAborted);
+        var delivery = await _commands.PingAsync(subscription, HttpContext.RequestAborted);
 
         if (delivery.Status == WebhookDeliveryStatus.Delivered)
         {
@@ -253,10 +219,7 @@ public sealed class WebhooksAdminController : Controller
 
         if (await FindSubscriptionAsync(itemId) is { } subscription)
         {
-            await _subscriptions.DeleteAsync(subscription);
-
-            // Its log goes with it; what's left over is cleared with the log's old entries.
-            await _deliveries.DeleteBySubscriptionAsync(subscription.ItemId, take: 1000, HttpContext.RequestAborted);
+            await _commands.DeleteAsync(subscription, HttpContext.RequestAborted);
             await _notifier.SuccessAsync(H["The webhook was deleted. Nothing more is sent to it."]);
         }
 
@@ -360,21 +323,9 @@ public sealed class WebhooksAdminController : Controller
 
     private void Validate(WebhookEditViewModel model)
     {
-        if (string.IsNullOrWhiteSpace(model.Name))
+        foreach (var error in _commands.Validate(ToInput(model)))
         {
-            ModelState.AddModelError(nameof(model.Name), S["Name the webhook, such as the system it feeds."]);
-        }
-
-        if (!IsAllowedUrl(model.Url, _hostEnvironment.IsDevelopment()))
-        {
-            ModelState.AddModelError(nameof(model.Url), S["Enter the full https:// address events are posted to."]);
-        }
-
-        var known = _events.GetEvents().Select(entry => entry.Name).ToHashSet(StringComparer.Ordinal);
-
-        if (!model.AllEvents && !(model.Events ?? []).Any(known.Contains))
-        {
-            ModelState.AddModelError(nameof(model.Events), S["Choose the events to send, or all of them."]);
+            ModelState.AddModelError(error.Key, error.Message);
         }
     }
 
@@ -383,20 +334,17 @@ public sealed class WebhooksAdminController : Controller
     /// developing.
     /// </summary>
     internal static bool IsAllowedUrl(string url, bool isDevelopment)
-        => EgressNetwork.IsAllowedUrl(url, isDevelopment);
+        => WebhookSubscriptionCommands.IsAllowedUrl(url, isDevelopment);
 
-    private void Apply(WebhookEditViewModel model, WebhookSubscription subscription)
-    {
-        var known = _events.GetEvents().Select(entry => entry.Name).ToHashSet(StringComparer.Ordinal);
-
-        subscription.Name = model.Name.Trim();
-        subscription.Url = model.Url.Trim();
-        subscription.IsEnabled = model.IsEnabled;
-        subscription.Events = model.AllEvents
-            ? [WebhookEvents.All]
-            : [.. (model.Events ?? []).Where(known.Contains).Distinct(StringComparer.Ordinal)];
-        subscription.ModifiedUtc = _clock.UtcNow;
-    }
+    private static WebhookSubscriptionInput ToInput(WebhookEditViewModel model)
+        => new()
+        {
+            Name = model.Name,
+            Url = model.Url,
+            IsEnabled = model.IsEnabled,
+            AllEvents = model.AllEvents,
+            Events = model.Events,
+        };
 
     private WebhookEditViewModel Populate(WebhookEditViewModel model, WebhookSubscription subscription = null)
     {

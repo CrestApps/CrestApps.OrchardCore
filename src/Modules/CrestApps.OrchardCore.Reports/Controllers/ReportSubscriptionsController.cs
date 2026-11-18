@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using CrestApps.OrchardCore.Reports.Services;
 using CrestApps.OrchardCore.Reports.Subscriptions;
 using CrestApps.OrchardCore.Reports.Subscriptions.Models;
@@ -28,10 +27,9 @@ namespace CrestApps.OrchardCore.Reports.Controllers;
 [Admin("Reports/subscriptions/{action}/{itemId?}", "ReportSubscriptions{action}")]
 public sealed class ReportSubscriptionsController : Controller
 {
-    private static readonly EmailAddressAttribute _emailAddress = new();
-
     private readonly IReportSubscriptionStore _store;
     private readonly ReportSubscriptionService _service;
+    private readonly ReportSubscriptionEditor _editor;
     private readonly IReportManager _reports;
     private readonly IReportExportManager _exports;
     private readonly IStringLocalizerFactory _localizerFactory;
@@ -40,22 +38,22 @@ public sealed class ReportSubscriptionsController : Controller
     private readonly IClock _clock;
 
     internal readonly IHtmlLocalizer H;
-    internal readonly IStringLocalizer S;
 
     public ReportSubscriptionsController(
         IReportSubscriptionStore store,
         ReportSubscriptionService service,
+        ReportSubscriptionEditor editor,
         IReportManager reports,
         IReportExportManager exports,
         IStringLocalizerFactory localizerFactory,
         IAuthorizationService authorizationService,
         INotifier notifier,
         IClock clock,
-        IHtmlLocalizer<ReportSubscriptionsController> htmlLocalizer,
-        IStringLocalizer<ReportSubscriptionsController> stringLocalizer)
+        IHtmlLocalizer<ReportSubscriptionsController> htmlLocalizer)
     {
         _store = store;
         _service = service;
+        _editor = editor;
         _reports = reports;
         _exports = exports;
         _localizerFactory = localizerFactory;
@@ -63,7 +61,6 @@ public sealed class ReportSubscriptionsController : Controller
         _notifier = notifier;
         _clock = clock;
         H = htmlLocalizer;
-        S = stringLocalizer;
     }
 
     [Admin("Reports/subscriptions", "ReportSubscriptions")]
@@ -222,57 +219,25 @@ public sealed class ReportSubscriptionsController : Controller
 
     private async Task<bool> ApplyAsync(ReportSubscriptionEditViewModel model, ReportSubscription subscription)
     {
-        // Only a report the person can see is theirs to send.
-        if (string.IsNullOrEmpty(model.ReportName) || _reports.GetDescriptor(model.ReportName) is not { } descriptor ||
-            !await _authorizationService.AuthorizeAsync(User, descriptor.Permission))
+        var errors = await _editor.ApplyAsync(User, new ReportSubscriptionInput
         {
-            ModelState.AddModelError(nameof(model.ReportName), S["Choose a report."]);
-            descriptor = null;
+            Name = model.Name,
+            ReportName = model.ReportName,
+            Frequency = model.Frequency,
+            DayOfWeek = model.DayOfWeek,
+            DayOfMonth = model.DayOfMonth,
+            Hour = model.Hour,
+            Recipients = model.Recipients,
+            AttachmentFormat = model.AttachmentFormat,
+            IsEnabled = model.IsEnabled,
+        }, subscription);
+
+        foreach (var error in errors)
+        {
+            ModelState.AddModelError(error.Key, error.Message);
         }
 
-        var recipients = (model.Recipients ?? string.Empty)
-            .Split([',', ';', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (recipients.Count == 0 || recipients.Count > 50 || recipients.Any(address => !_emailAddress.IsValid(address)))
-        {
-            ModelState.AddModelError(nameof(model.Recipients), S["Enter up to 50 email addresses, separated by commas."]);
-        }
-
-        if (model.Hour is < 0 or > 23 || model.DayOfMonth is < 1 or > 28)
-        {
-            ModelState.AddModelError(string.Empty, S["Choose an hour from 0 to 23, and a day of the month from 1 to 28."]);
-        }
-
-        if (!string.IsNullOrWhiteSpace(model.AttachmentFormat) && _exports.GetDescriptor(model.AttachmentFormat) is null)
-        {
-            ModelState.AddModelError(nameof(model.AttachmentFormat), S["Choose a file format, or none."]);
-        }
-        else if (!string.IsNullOrWhiteSpace(model.AttachmentFormat) &&
-            descriptor?.ExportPermission is not null &&
-            !await _authorizationService.AuthorizeAsync(User, descriptor.ExportPermission))
-        {
-            // Attaching the file is exporting the report, which this report allows only with its export permission.
-            ModelState.AddModelError(nameof(model.AttachmentFormat), S["You may not export this report, so no file can be attached. Choose no file format."]);
-        }
-
-        if (!ModelState.IsValid)
-        {
-            return false;
-        }
-
-        subscription.Name = string.IsNullOrWhiteSpace(model.Name) ? _localizerFactory.Localize(descriptor.DisplayName).Value : model.Name.Trim();
-        subscription.ReportName = descriptor.Name;
-        subscription.Frequency = model.Frequency;
-        subscription.DayOfWeek = model.DayOfWeek;
-        subscription.DayOfMonth = model.DayOfMonth;
-        subscription.Hour = model.Hour;
-        subscription.Recipients = string.Join(", ", recipients);
-        subscription.AttachmentFormat = string.IsNullOrWhiteSpace(model.AttachmentFormat) ? null : model.AttachmentFormat;
-        subscription.IsEnabled = model.IsEnabled;
-
-        return true;
+        return ModelState.IsValid;
     }
 
     private async Task<ReportSubscriptionEditViewModel> PopulateAsync(ReportSubscriptionEditViewModel model, ReportSubscription subscription)
