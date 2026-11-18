@@ -21,6 +21,48 @@ public sealed class LearningAuthoringPagesTests
     }
 
     [Fact]
+    public async Task Round9Low_TheLessonList_HoldsOnlyLessonsTheAuthorMayEdit()
+    {
+        // Arrange: a lesson of the admin's course, and an author who may use the assistant and edit their own content only.
+        var title = "Round 9 lesson " + Guid.NewGuid().ToString("n")[..8];
+
+        await _site.InTenantAsync(async services =>
+        {
+            await LearningSiteFixture.RunRecipeAsync(services, new System.Text.Json.Nodes.JsonObject
+            {
+                ["name"] = "Round9AuthoringRole",
+                ["steps"] = new System.Text.Json.Nodes.JsonArray(new System.Text.Json.Nodes.JsonObject
+                {
+                    ["name"] = "Roles",
+                    ["Roles"] = new System.Text.Json.Nodes.JsonArray(LearningSiteFixture.Role(
+                        "Round9Author",
+                        CrestApps.OrchardCore.Learning.AI.LearningAIPermissions.UseAuthoringAssistant.Name,
+                        "AccessAdminPanel",
+                        "EditOwnContent")),
+                }),
+            });
+
+            var userId = await LearningSiteFixture.CreateUserAsync(services, "round9-author");
+            var users = services.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>>();
+            await users.AddToRoleAsync(await users.FindByIdAsync(userId), "Round9Author");
+
+            var contentManager = services.GetRequiredService<global::OrchardCore.ContentManagement.IContentManager>();
+            var lesson = await contentManager.NewAsync(LearningConstants.ContentTypes.PageLesson);
+            lesson.DisplayText = title;
+            lesson.Owner = "someone-else";
+            await contentManager.CreateAsync(lesson, global::OrchardCore.ContentManagement.VersionOptions.Draft);
+        });
+
+        using var author = await _site.CreateClientAsync("round9-author");
+
+        // Act
+        var page = await author.GetStringAsync("Admin/learning/ai/authoring", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.DoesNotContain(title, page, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Page_RendersTheFourPrompts_AndSaysNoModelIsSetUp()
     {
         using var admin = await _site.CreateClientAsync("admin");

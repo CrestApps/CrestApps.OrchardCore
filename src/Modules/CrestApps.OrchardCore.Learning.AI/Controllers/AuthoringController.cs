@@ -275,7 +275,18 @@ public sealed class AuthoringController : Controller
             .Take(MaxListed)
             .ListAsync(HttpContext.RequestAborted);
 
-        model.Lessons = lessons
+        // Only lessons the author may edit: the drafts are made from them (review round 9).
+        var editable = new List<ContentItem>();
+
+        foreach (var lesson in lessons)
+        {
+            if (await _authorizationService.AuthorizeAsync(User, CommonPermissions.EditContent, lesson))
+            {
+                editable.Add(lesson);
+            }
+        }
+
+        model.Lessons = editable
             .Select(item => new SelectListItem(item.DisplayText ?? item.ContentItemId, item.ContentItemId, item.ContentItemId == model.LessonId))
             .ToList();
 
