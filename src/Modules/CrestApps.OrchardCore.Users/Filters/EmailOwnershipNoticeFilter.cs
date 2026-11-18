@@ -26,7 +26,9 @@ namespace CrestApps.OrchardCore.Users.Filters;
 /// It reads the account only on a page (a GET that renders a view) of a session begun with an e-mailed code or marked as
 /// one to an account whose credentials changed in a code session (<see cref="UserCredentialsProof.CredentialsInDoubtClaim"/>,
 /// added when the session's claims are built, see <see cref="Services.EmailOwnershipClaimsProvider"/>): one user read per
-/// such page. Other sessions and other requests cost nothing. The notice goes through Orchard Core's notifier, which
+/// such page. Other sessions and other requests cost nothing. A session that still carries the claim from before the
+/// account was marked (sessions issued before the upgrade, whose claims Orchard Core's stamp refresh copies over) is read
+/// but not warned unless the account is marked. The notice goes through Orchard Core's notifier, which
 /// runs on the result after this.
 /// </remarks>
 public sealed class EmailOwnershipNoticeFilter : IAsyncActionFilter
@@ -63,6 +65,7 @@ public sealed class EmailOwnershipNoticeFilter : IAsyncActionFilter
             context.Controller is EmailOwnershipController or EmailSignInController ||
             !UserCredentialsProof.MayHaveCredentialsInDoubt(httpContext.User) ||
             await _userManager.GetUserAsync(httpContext.User) is not User account ||
+            !(UserCredentialsProof.SignedInWithEmailedCode(httpContext.User) || UserCredentialsProof.ChangedInCodeSession(account)) ||
             !UserCredentialsProof.HasCredentialsNotShown(httpContext.User, account) ||
             await _confirmationPage.GetUrlAsync(account, httpContext.Request.PathBase + httpContext.Request.Path + httpContext.Request.QueryString, httpContext.RequestAborted) is not { } url)
         {

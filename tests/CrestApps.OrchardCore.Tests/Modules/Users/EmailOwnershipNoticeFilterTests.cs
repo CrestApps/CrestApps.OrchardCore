@@ -178,6 +178,16 @@ public sealed class EmailOwnershipNoticeFilterTests : IAsyncLifetime
         Assert.Empty(await RenderPageAsync(await SessionAsync(new Claim(claimType, claimValue))));
     }
 
+    // K3: a session signed in before the upgrade carries the earlier claim, which Orchard Core's stamp refresh copies
+    // over. Its account was never marked, so it isn't warned.
+    [Fact]
+    public async Task ASessionWithTheClaimFromBeforeTheUpgrade_OnAnUnmarkedAccount_IsNotTold()
+    {
+        await CreateAccountAsync();
+
+        Assert.Empty(await RenderPageAsync(await SessionAsync(new Claim(ClaimTypes.AuthenticationMethod, "GitHub"), new Claim(UserCredentialsProof.CredentialsInDoubtClaim, "true"))));
+    }
+
     [Fact]
     public async Task OnceTheAddressIsProved_NothingIsSaid()
     {
