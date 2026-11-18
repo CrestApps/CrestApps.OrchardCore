@@ -3,7 +3,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Learning.Core.Services;
+using CrestApps.OrchardCore.Learning.Packages.Core.Scorm;
 using CrestApps.OrchardCore.Learning.Packages.Core.Services;
+using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.Packages.Models;
 using CrestApps.OrchardCore.Recipes.Core;
 using Json.Schema;
@@ -29,14 +31,16 @@ internal sealed class LearningPackageRuntimeStatesRecipeStep : NamedRecipeStepHa
 
     private readonly PackageRuntimeStore _store;
     private readonly LearnerUserLookup _userLookup;
+    private readonly IEnrollmentStore _enrollments;
 
     internal readonly IStringLocalizer S;
 
-    public LearningPackageRuntimeStatesRecipeStep(PackageRuntimeStore store, LearnerUserLookup userLookup, IStringLocalizer<LearningPackageRuntimeStatesRecipeStep> stringLocalizer)
+    public LearningPackageRuntimeStatesRecipeStep(PackageRuntimeStore store, LearnerUserLookup userLookup, IEnrollmentStore enrollments, IStringLocalizer<LearningPackageRuntimeStatesRecipeStep> stringLocalizer)
         : base(PackagesConstants.RuntimeStatesRecipeStep)
     {
         _store = store;
         _userLookup = userLookup;
+        _enrollments = enrollments;
         S = stringLocalizer;
     }
 
@@ -80,6 +84,26 @@ internal sealed class LearningPackageRuntimeStatesRecipeStep : NamedRecipeStepHa
                 continue;
             }
 
+            // The enrollment must be the named person's, in the named course, and the values must be the standard's: a
+            // recipe row is data like any other (review round 9).
+            var enrollment = await _enrollments.FindByIdAsync(incoming.EnrollmentId);
+
+            if (enrollment is null || !string.Equals(enrollment.UserId, userId, StringComparison.Ordinal) ||
+                (!string.IsNullOrEmpty(incoming.CourseId) && !string.Equals(enrollment.CourseId, incoming.CourseId, StringComparison.Ordinal)))
+            {
+                context.Errors.Add(S["Runtime state {0} names an enrollment that is not of '{1}' in its course; it was skipped.", label, userName]);
+
+                continue;
+            }
+
+            if (PackageStateValues.Problem(incoming) is { } problem)
+            {
+                context.Errors.Add(S["Runtime state {0} has a value outside its standard ({1}); it was skipped.", label, problem]);
+
+                continue;
+            }
+
+            incoming.CourseId = enrollment.CourseId;
             incoming.UserId = userId;
             if (PackagesConstants.Standards.IsScorm2004(incoming.Standard))
             {

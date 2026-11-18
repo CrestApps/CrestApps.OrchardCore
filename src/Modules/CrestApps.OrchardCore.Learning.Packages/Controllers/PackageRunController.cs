@@ -90,6 +90,12 @@ public sealed class PackageRunController : Controller
         // A page starts with the learner's data, so it is never cached.
         Response.Headers.CacheControl = "no-store";
 
+        // The entry says how large the page is: a page over the limit is never read into memory.
+        if (file.Length > MaxHtmlBytes)
+        {
+            return NotFound();
+        }
+
         using var buffer = new MemoryStream();
         await file.Content.CopyToAsync(buffer, HttpContext.RequestAborted);
 

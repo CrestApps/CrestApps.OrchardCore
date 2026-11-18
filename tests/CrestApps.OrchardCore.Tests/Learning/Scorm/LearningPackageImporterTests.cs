@@ -176,6 +176,21 @@ public sealed class LearningPackageImporterTests : IDisposable
         Assert.Empty(_files.Stored);
     }
 
+    [Theory]
+    [InlineData("tools/setup.exe")]
+    [InlineData("server/handler.php")]
+    [InlineData("web.config")]
+    public async Task Round9Low_AFileOfAKindAPackageNeverHolds_IsRefusedWithTheEntry(string name)
+    {
+        using var zip = PackageZip.SingleScoPackage(null, (name, "x"));
+
+        var result = await Importer().ImportAsync("p.zip", zip, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(name, result.Entry);
+        Assert.Empty(_files.Stored);
+    }
+
     [Fact]
     public async Task ExpandedLimit_ComesFromTheOptions()
     {

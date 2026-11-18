@@ -474,6 +474,7 @@ public sealed class PackageRuntimeService
 
         return new PackageFileResult(entry.Open(), contentType, entry.FullName, new ArchiveOwner(archive))
         {
+            Length = entry.Length,
             Launch = launch,
             Standard = part.Standard,
             State = state,

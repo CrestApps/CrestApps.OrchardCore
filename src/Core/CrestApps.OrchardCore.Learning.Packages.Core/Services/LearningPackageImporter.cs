@@ -58,6 +58,9 @@ public static class PackageImportErrors
 
     /// <summary>The protected store refused the package, for instance an antivirus scanner.</summary>
     public const string Refused = "Refused";
+
+    /// <summary>The package holds a file of a kind a package never needs; the entry names it.</summary>
+    public const string FileType = "FileType";
 }
 
 /// <summary>
@@ -255,6 +258,12 @@ public sealed class LearningPackageImporter
             if (!archive.Succeeded)
             {
                 return PackageImportResult.Fail(archive.Error, archive.Entry);
+            }
+
+            // A package is web content: a file of any other kind is refused rather than served under the package's token.
+            if (archive.Files.FirstOrDefault(file => !PackageFileTypes.IsAllowed(file)) is { } refused)
+            {
+                return PackageImportResult.Fail(PackageImportErrors.FileType, refused);
             }
 
             var manifestPath = archive.Files.FirstOrDefault(file => string.Equals(file, "imsmanifest.xml", StringComparison.OrdinalIgnoreCase));

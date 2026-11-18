@@ -198,6 +198,9 @@ public sealed class PackageFileResult : IAsyncDisposable
     /// <summary>Gets the path of the file in the package.</summary>
     public string Path { get; }
 
+    /// <summary>Gets the size of the file, from its entry in the package.</summary>
+    public long Length { get; init; }
+
     /// <summary>Gets whether the file is an HTML page, which gets the run-time API script.</summary>
     public bool IsHtml => ContentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase);
 

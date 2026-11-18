@@ -181,6 +181,7 @@ public sealed class PackagesAdminController : Controller
             PackageImportErrors.NotZip => S["The file is not a .zip file."],
             PackageImportErrors.UploadTooLarge => S["The file is larger than {0} MB.", _options.MaxUploadBytes / (1024 * 1024)],
             PackageImportErrors.Refused => S["The package was refused, for instance by the virus scanner."],
+            PackageImportErrors.FileType => S["The package has a file of a kind a learning package does not hold: {0}.", result.Entry],
             PackageArchiveErrors.InvalidArchive => S["The file is not a valid .zip archive."],
             PackageArchiveErrors.UnsafePath => S["The package has a file with a path that is not allowed: {0}.", result.Entry],
             PackageArchiveErrors.SymbolicLink => S["The package has a symbolic link, which is not allowed: {0}.", result.Entry],
