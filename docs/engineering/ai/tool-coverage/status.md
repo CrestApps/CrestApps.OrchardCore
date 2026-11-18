@@ -30,6 +30,7 @@ Tools that run Orchard Core's settings display drivers (`getSiteSettings`, `upda
 | 14 | AI data sources, AI documents, AI file sources, AI web crawlers | [21](21-crestapps-ai-knowledge-reports-data.md) | 16 | 14 | 2 | c914acfdc..d289a346e |
 | 15 | Data connectors, content transfer | [21](21-crestapps-ai-knowledge-reports-data.md) | 18 | 16 | 2 | 1497ca6f7..c9ae99e26 |
 | 16 | Reports, Report Builder | [21](21-crestapps-ai-knowledge-reports-data.md) | 20 | 20 | 0 | 315b52b64..282d0b85c |
+| 17 | Report subscriptions, webhooks | [21](21-crestapps-ai-knowledge-reports-data.md) | 12 | 12 | 0 | ce6012f49..COMMITS |
 
 Orchard Core part (batches 1 to 10): 189 planned new tools, 132 built, 57 deferred. Left out on purpose: the four template tools (`listTemplates`, `getTemplate`, `saveTemplate`, `deleteTemplate`), because pull request 1321 adds shape template tools; and the six "existing, improve" rows (`listWorkflowTypes`, `getWorkflowType`, `listWorkflowActivities` and three AI tools), because phase 1 does not change existing tools.
 
@@ -103,6 +104,10 @@ Almost every deferral has one cause: the service the admin page uses exists only
 | `saveReportDesign` | 16 | Publishes changes to a published report only (a report that was never published is published in the builder); refused while the report has unpublished changes in the builder; the group must exist (no group is created); named queries and containers are kept as stored |
 | `shareReportDesign`, `restoreReportDesignVersion` | 16 | Refused while the report has unpublished changes in the builder. Restoring copies the version into the draft and publishes it at once, with the report's current sharing, not the version's |
 | Report Builder tools | 16 | A report, view or group created, changed or deleted earlier in the same chat message is not read or changed again until the next reply, because the report, view and group catalogs read the cached document until the scope commits (`ReportToolScopeChanges`); lists say so. Report groups keep their own scoped record, so group tools see each other's changes |
+| `sendReportSubscription` | 17 | Stricter than the catalog row (only **Manage report subscriptions**): it first runs the subscription editor's checks on what is stored, for the caller, as **Save and send** does, so the caller must be able to view the report, and export it when a file is attached; a subscription the caller could not save is not sent |
+| `saveReportSubscription` | 17 | Built-in reports only, as the editor; the caller becomes the person who last saved it (`ModifiedBy`), whose export permission an attachment needs at every run, so an update by someone who may not export the report is refused while a file is attached |
+| `saveWebhook` | 17 | Kind External with approval, not Security (batch brief). Events no enabled module declares are dropped, as the editor drops them, and listed in `ignoredEvents` |
+| Webhook tools | 17 | A signing secret is never returned or accepted (`secret`, `signingSecret`, `protectedSecret` and `webhookSecret` arguments are refused); a new or rotated secret is copied from the webhook's admin page, whose address the results give. `listWebhookEvents` returns names and display names only: the event catalog has no descriptions. `resendWebhookDelivery` needs the webhook id as well as the delivery id and refuses a delivery of another webhook, as the Deliveries page does, so a direct (formatter) delivery is never resent from a chat. `sendWebhookPing` and `resendWebhookDelivery` post during the call, as the admin page does |
 
 ## Batch 11: the AI configuration guard inside the tools
 
@@ -233,6 +238,21 @@ Sharing: publishing a report saves the sharing lists of what is published, so `s
 Display values: `runReport` resolves user display names in a report through `ReportDisplayValueResolver`, as the export and the workflow tasks do. It renders the `UserDisplayName` Razor shape, which builds its view context from the request's `HttpContext`; on a long-polling connection with the CrestApps.Core package in use there is none (see "How tools find the caller"), so a report whose values carry user names would fail there. The tests mock the display helper, so this path was not run.
 
 The tests run the tools on the real report services: the catalogs over an in-memory document manager, drafts, versions and snapshots in a SQLite database the module's migrations create, the sales test data source, the report authorization handler and an in-memory share link manager. The coded report filter drivers of other modules, the email of share links and a view's snapshot refresh (only the live-view answer) were not run.
+
+## Batch 17: report subscriptions and webhooks
+
+No tool of batch 17 was deferred. The report subscription tools reuse `ReportsAIToolBase` and are registered by a third startup of the Reports module, `SubscriptionsAIToolsStartup` (feature `CrestApps.OrchardCore.Reports.Subscriptions`), because the subscription services exist only with that feature. The Webhooks module had no tools: it now references the `CrestApps.Core.AI` package and has its own base class, `WebhooksAIToolBase`, which refuses a caller who is not signed in or lacks `ManageCommerceWebhooks` (the code name of **Manage webhooks**, `WebhookPermissions.ManageWebhooks`) before any argument is read, and `AIToolsStartup` (feature `CrestApps.OrchardCore.Webhooks`).
+
+Extractions (behavior-preserving; the admin code calls them now, commit ce6012f49):
+
+- `ReportSubscriptionEditor` (Reports module, `Subscriptions/Services`): the private `ApplyAsync` of `ReportSubscriptionsController` (report the user may view, recipients split on commas, semicolons and new lines with at most 50 valid addresses, hour and day ranges, attachment format and the report's export permission). It returns the errors with the same keys, which the controller puts in its model state.
+- `WebhookSubscriptionCommands` (Webhooks module, `Services`): `Validate` and `Apply` of `WebhooksAdminController`, adding a webhook with a new secret, rotating the secret, the ping delivery and deleting a webhook then up to 1,000 of its deliveries. The controller's `IsAllowedUrl` forwards to it.
+
+Both moves changed the localization context of the moved strings (now the new types). The subscriptions controller no longer takes an `IStringLocalizer`; `ReportExportPermissionTests` builds it with the editor.
+
+Approval: saving, sending and deleting a subscription, and saving, rotating, deleting, pinging and resending a webhook. Saving or enabling either one sends site data to outside addresses, so it is External with approval; the three lists are not.
+
+The tests run the tools on the real `ReportSubscriptionService`, `ReportSubscriptionEditor`, report and export managers with a test report and a mocked email service, and on the real `WebhookDispatcher` (with a throw-away data protection key and a recording sender) and `WebhookSubscriptionCommands`, over in-memory doubles of the YesSql stores. Secret canaries check that neither a webhook's secret nor its protected form appears in any list, save, rotate or ping result. The YesSql stores, the real email provider, the HTTP sender and the egress guard at send time were not run. `sendReportSubscription` renders user display names through `ReportDisplayValueResolver`, which needs the request's `HttpContext` (see batch 16), so on a long-polling connection with the package in use a report whose values carry user names would fail there.
 
 ## Notes for the maintainer
 

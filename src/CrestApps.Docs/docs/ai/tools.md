@@ -1127,6 +1127,36 @@ One set of tools serves every report a module registers and every designed repor
 
 The data set, query and view tools and creating a report need **Build reports and manage own custom reports and views**; changing, sharing, restoring or deleting a report or view needs **Manage all custom reports and views** on it, which its owner holds; share links also need **Share custom reports publicly and through share links**, and so does sharing with the Anonymous role; the group tools need **Manage report groups**. A report that has unpublished changes in the Report Builder is not published over: the tool names who changed it and asks to publish or discard the draft first. Every user and role a report is shared with must exist. A group is given by its path, such as `Sales / Regional`, and must exist. A share link's address holds a secret token, so `createReportShareLink` emails it to its recipients and returns only its ID, recipients and expiry; the Report Builder shows the address once. A report, view or group changed earlier in the same chat message is changed again only in the next reply, because the change is saved when the reply ends.
 
+### Report subscription tools
+
+**Available when:** `CrestApps.OrchardCore.Reports.Subscriptions` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listReportSubscriptions` | Lists the scheduled report emails with their report, frequency, hour, recipients, attachment format, enabled state, next run, last run and last error, with a name search and paging, or one by ID. |
+| `saveReportSubscription` | Creates a schedule that emails a built-in report daily, weekly or monthly to up to 50 addresses, or changes one by ID, including enabling or disabling it. Asks for approval. |
+| `sendReportSubscription` | Emails a subscription's report now, for the period before now, without moving its schedule, and returns the error when it could not be sent. Asks for approval. |
+| `deleteReportSubscription` | Deletes a report subscription. Asks for approval. |
+
+The tools need **Manage report subscriptions**. Saving goes through the subscription editor's checks for the user: a built-in report they may view, at most 50 valid email addresses, an hour from 0 to 23 in the site's time zone and a day of the month from 1 to 28, and an attachment format only when they may export the report. The user becomes the person who last saved the subscription, whose export permission an attachment needs at every run. Sending runs the same checks on what is stored first, as **Save and send** does, so the user must be able to view the report, and export it when a file is attached. Designed reports are emailed with the Email Report workflow task instead. Emails go out only when the site's email is set up; the results say so when it is not.
+
+### Webhook tools
+
+**Available when:** `CrestApps.OrchardCore.Webhooks` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listWebhooks` | Lists the outbound webhooks with name, URL, events, enabled state and the number of failed deliveries, or one by ID. |
+| `listWebhookEvents` | Lists the events the site can send to webhooks, by group. |
+| `saveWebhook` | Creates a webhook for chosen events, or all events, posting to an https URL, or changes one by ID, including enabling or disabling it. Asks for approval. |
+| `rotateWebhookSecret` | Gives a webhook a new signing secret. Asks for approval. |
+| `deleteWebhook` | Deletes a webhook and its delivery log. Asks for approval. |
+| `sendWebhookPing` | Sends a test `webhook.ping` event now and returns the receiver's status code or the error. Asks for approval. |
+| `listWebhookDeliveries` | Lists the deliveries of one webhook with event, status, attempts, last status code, last error and times, by status. Payloads are not returned. |
+| `resendWebhookDelivery` | Sends one logged delivery of a webhook again and returns the receiver's answer. Asks for approval. |
+
+The tools need **Manage webhooks** (`ManageCommerceWebhooks`), as every action of **Configuration → Webhooks** does. A webhook sends site data to another system, so every change, ping and resend asks for approval. Addresses are checked as the webhook editor checks them: an absolute `https` address the egress guard allows (plain `http` only to this machine in development), and all events or at least one event an enabled module declares; events no module declares are reported and left out. No tool takes or returns a signing secret: a new or rotated secret is copied from the webhook's admin page, whose address the results give. A ping and a resend are sent during the call, as on the admin page.
+
 ### Analytics tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `CrestApps.OrchardCore.AI.Chat.Analytics`
