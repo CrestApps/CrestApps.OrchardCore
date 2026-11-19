@@ -1,0 +1,17 @@
+@model ShapeViewModel<FulfillmentRequest>
+@inject FulfillmentRequestText Text
+
+@{
+    var (css, icon) = Model.Value.Status switch
+    {
+        FulfillmentRequestStatus.Sent => ("bg-success-subtle", "fa-solid fa-circle-check"),
+        FulfillmentRequestStatus.NeedsAttention => ("bg-danger-subtle", "fa-solid fa-triangle-exclamation"),
+        FulfillmentRequestStatus.NothingToSend => ("bg-secondary-subtle", "fa-solid fa-circle-minus"),
+        FulfillmentRequestStatus.Sending => ("bg-warning-subtle", "fa-solid fa-paper-plane"),
+        _ => ("bg-info-subtle", "fa-solid fa-clock"),
+    };
+}
+
+<span class="badge ta-badge @css fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+    <i class="@icon text-secondary me-1" aria-hidden="true"></i>@Text.Status(Model.Value.Status)
+</span>
