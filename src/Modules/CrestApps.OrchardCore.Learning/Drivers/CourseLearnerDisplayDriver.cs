@@ -26,6 +26,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
     private readonly ILearnerProgressService _progressService;
     private readonly IEnumerable<SelfEnrollmentMarker> _selfEnrollment;
     private readonly CourseItemKindOptions _kindOptions;
+    private readonly CourseCategoryService _categories;
     private readonly IClock _clock;
 
     public CourseLearnerDisplayDriver(
@@ -36,6 +37,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
         ILearnerProgressService progressService,
         IEnumerable<SelfEnrollmentMarker> selfEnrollment,
         IOptions<CourseItemKindOptions> kindOptions,
+        CourseCategoryService categories,
         IClock clock)
     {
         _httpContextAccessor = httpContextAccessor;
@@ -45,6 +47,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
         _progressService = progressService;
         _selfEnrollment = selfEnrollment;
         _kindOptions = kindOptions.Value;
+        _categories = categories;
         _clock = clock;
     }
 
@@ -73,6 +76,16 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
         model.KindIcons = _kindOptions.Kinds.ToDictionary(kind => kind.Name, kind => kind.Icon, StringComparer.OrdinalIgnoreCase);
         model.Outline = await _courseStructure.GetOutlineAsync(part.ContentItem);
         model.Schedule = CourseSchedules.Of(part, _clock.UtcNow);
+
+        var tree = await _categories.GetTreeAsync();
+
+        foreach (var categoryId in await _categories.GetCategoryIdsAsync(part.ContentItem))
+        {
+            if (tree.GetPathText(categoryId) is { } path)
+            {
+                model.Categories.Add(path);
+            }
+        }
 
         if (!model.SignedIn)
         {

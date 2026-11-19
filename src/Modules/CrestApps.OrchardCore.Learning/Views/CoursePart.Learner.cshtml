@@ -21,6 +21,10 @@
             {
                 <span class="badge text-bg-light border"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["About {0} minutes", minutes]</span>
             }
+            @foreach (var category in Model.Categories)
+            {
+                <span class="badge text-bg-light border" data-course-category><i class="fa-regular fa-folder me-1" aria-hidden="true"></i>@category</span>
+            }
             <partial name="_CourseDates" model="(part.StartsUtc, part.EndsUtc, Model.Schedule)" />
         </div>
 

@@ -55,6 +55,38 @@ public static class LearningConstants
         /// Lets a learner enroll in an open course, with or without an enrollment key.
         /// </summary>
         public const string SelfEnrollment = "CrestApps.OrchardCore.Learning.SelfEnrollment";
+
+        /// <summary>
+        /// A tree of course categories from an Orchard Core taxonomy: a category field on courses, category browsing in
+        /// the course catalog and a category filter in the admin list of courses.
+        /// </summary>
+        public const string CourseCategories = "CrestApps.OrchardCore.Learning.CourseCategories";
+    }
+
+    /// <summary>
+    /// The names of the course categories: the taxonomy, its term type and the category field of the Course type.
+    /// </summary>
+    public static class CourseCategories
+    {
+        /// <summary>
+        /// The title of the taxonomy the Course Categories feature creates when the site has none.
+        /// </summary>
+        public const string TaxonomyName = "Course categories";
+
+        /// <summary>
+        /// The alias Orchard Core gives a taxonomy titled <see cref="TaxonomyName"/>.
+        /// </summary>
+        public const string TaxonomyAlias = "course-categories";
+
+        /// <summary>
+        /// The content type of the taxonomy's terms, when the feature creates the taxonomy.
+        /// </summary>
+        public const string TermContentType = "CourseCategory";
+
+        /// <summary>
+        /// The name of the taxonomy field on the Course type's own part.
+        /// </summary>
+        public const string FieldName = "Category";
     }
 
     /// <summary>

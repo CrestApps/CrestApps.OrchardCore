@@ -4,7 +4,7 @@
 @{
     // Inside the storefront account the page is framed by the account menu; without it, it stands alone.
     var accountUrl = Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName);
-    Func<object, IHtmlContent> actions = @<text><a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningTranscript")">@T["My transcript"]</a></text>;
+    Func<object, IHtmlContent> actions = @<text><a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningCatalog")">@T["Course catalog"]</a> <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningTranscript")">@T["My transcript"]</a></text>;
     Func<object, IHtmlContent> content = @<text>
     <h2 class="h5">@T["In progress"]</h2>
     @if (Model.Current.Count == 0)

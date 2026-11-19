@@ -1,0 +1,90 @@
+@model CourseCatalogViewModel
+
+@{
+    var title = string.IsNullOrEmpty(Model.CategoryPath) ? T["Course catalog"].Value : Model.CategoryPath;
+}
+
+<div class="container my-4">
+    <div class="product-breadcrumb">
+        <breadcrumb name="LearningCatalog" title="@T["Course catalog"]">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h1 class="h3 mb-0">@title</h1>
+        <form method="get" action="@Url.RouteUrl("LearningCatalog")" class="d-flex gap-2" role="search">
+            @if (!string.IsNullOrEmpty(Model.Category))
+            {
+                <input type="hidden" name="category" value="@Model.Category" />
+            }
+            <label class="visually-hidden" for="learning-catalog-search">@T["Search course titles"]</label>
+            <input id="learning-catalog-search" class="form-control" type="search" name="q" value="@Model.Search" placeholder="@T["Search course titles"]" />
+            <button type="submit" class="btn btn-primary">@T["Search"]</button>
+        </form>
+    </div>
+
+    <div class="row g-4">
+        @if (Model.Categories.Count > 0)
+        {
+            <nav class="col-md-3" aria-label="@T["Course categories"]">
+                <h2 class="h6 text-uppercase text-muted">@T["Categories"]</h2>
+                <div class="list-group" data-course-categories>
+                    <a class="list-group-item list-group-item-action@(string.IsNullOrEmpty(Model.Category) ? " active" : string.Empty)" href="@Url.RouteUrl("LearningCatalog", new { q = Model.Search })" aria-current="@(string.IsNullOrEmpty(Model.Category) ? "page" : null)">@T["All courses"]</a>
+                    @foreach (var category in Model.Categories)
+                    {
+                        <a class="list-group-item list-group-item-action@(category.Selected ? " active" : string.Empty)" style="padding-inline-start: @(1 + category.Level * 1.25)rem" href="@Url.RouteUrl("LearningCatalog", new { category = category.Id, q = Model.Search })" aria-current="@(category.Selected ? "page" : null)" data-category-id="@category.Id">@category.Name</a>
+                    }
+                </div>
+            </nav>
+        }
+
+        <div class="@(Model.Categories.Count > 0 ? "col-md-9" : "col-12")">
+            @if (Model.Courses.Count == 0)
+            {
+                <p class="text-muted">@T["No course matches."]</p>
+            }
+            else
+            {
+                <p class="small text-muted">@T["Courses found: {0}", Model.Total]</p>
+                <div class="row row-cols-1 row-cols-lg-2 g-3 mb-3">
+                    @foreach (var course in Model.Courses)
+                    {
+                        <div class="col">
+                            <article class="card h-100" data-course-id="@course.ContentItemId">
+                                <div class="card-body">
+                                    <h2 class="h6 card-title">
+                                        @if (course.DisplayRouteValues is not null)
+                                        {
+                                            <a href="@Url.RouteUrl(course.DisplayRouteValues)" class="stretched-link text-reset">@course.Title</a>
+                                        }
+                                        else
+                                        {
+                                            @course.Title
+                                        }
+                                    </h2>
+                                    <div class="d-flex flex-wrap gap-1 mb-2">
+                                        @if (!string.IsNullOrEmpty(course.Code))
+                                        {
+                                            <span class="badge text-bg-light border">@course.Code</span>
+                                        }
+                                        @foreach (var path in course.Categories)
+                                        {
+                                            <span class="badge text-bg-light border" data-course-category><i class="fa-regular fa-folder me-1" aria-hidden="true"></i>@path</span>
+                                        }
+                                        <partial name="_CourseDates" model="(course.StartsUtc, course.EndsUtc, course.Schedule)" />
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(course.Summary))
+                                    {
+                                        <p class="card-text small mb-0">@course.Summary</p>
+                                    }
+                                </div>
+                            </article>
+                        </div>
+                    }
+                </div>
+                @await DisplayAsync(Model.Pager)
+            }
+        </div>
+    </div>
+</div>

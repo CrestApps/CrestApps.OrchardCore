@@ -40,6 +40,7 @@ public static class LearningCoreServiceCollectionExtensions
         services.TryAddScoped<CourseListSynchronizer>();
         services.TryAddScoped<LearningUpkeep>();
         services.TryAddScoped<CourseSettingsPolicy>();
+        services.TryAddScoped<CourseCategoryService>();
         services.TryAddScoped<EnrollmentWriteGate>();
         services.TryAddScoped<CourseItemLearnerResolver>();
         services.TryAddScoped<LearningSecretStore>();

@@ -52,3 +52,16 @@ using OrchardCore.Modules.Manifest;
         LearningConstants.Features.LearnerPages,
     ]
 )]
+
+[assembly: Feature(
+    Id = LearningConstants.Features.CourseCategories,
+    Name = "Course Categories",
+    Description = "A tree of course categories from an Orchard Core taxonomy: a category field on the Course type, category browsing in the course catalog, and a category filter in the admin list of courses. A site that already has a \"Course categories\" taxonomy or a category field on courses keeps it.",
+    Category = "Learning",
+    Dependencies =
+    [
+        LearningConstants.Features.Learning,
+        OrchardCoreFeatureIds.Taxonomies,
+        OrchardCoreFeatureIds.TaxonomiesContentsAdminList,
+    ]
+)]

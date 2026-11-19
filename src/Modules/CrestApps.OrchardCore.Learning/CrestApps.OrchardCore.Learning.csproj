@@ -52,6 +52,7 @@
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Roles.Abstractions" />
     <PackageReference Include="OrchardCore.Settings.Core" />
+    <PackageReference Include="OrchardCore.Taxonomies" />
     <PackageReference Include="OrchardCore.Title" />
     <PackageReference Include="OrchardCore.Users.Core" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
@@ -60,6 +61,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Calendars.Abstractions\CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.ContentFields.Abstractions\CrestApps.OrchardCore.ContentFields.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Abstractions\CrestApps.OrchardCore.Learning.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Seo.Abstractions\CrestApps.OrchardCore.Seo.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Staff.Abstractions\CrestApps.OrchardCore.Staff.Abstractions.csproj" />

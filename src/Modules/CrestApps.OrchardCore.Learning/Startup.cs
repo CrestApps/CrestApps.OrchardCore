@@ -126,12 +126,26 @@ public sealed class LearnerPagesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<LearnerPageService>();
+        services.AddScoped<CourseCatalogService>();
         services.AddContentPart<CoursePart>()
             .UseDisplayDriver<CourseLearnerDisplayDriver>();
         services.AddContentPart<VideoLessonPart>()
             .UseDisplayDriver<VideoLessonPlayerDisplayDriver>();
         services.AddDisplayDriver<UserMenu, LearningUserMenuDisplayDriver>();
         services.AddNavigationProvider<LearningAccountMenu>();
+    }
+}
+
+/// <summary>
+/// Course categories: the category field and taxonomy of courses, and the taxonomy filter of the admin list of courses.
+/// </summary>
+[Feature(LearningConstants.Features.CourseCategories)]
+public sealed class CourseCategoriesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<CourseCategoriesMigrations>();
     }
 }
 

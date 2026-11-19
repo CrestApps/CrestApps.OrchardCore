@@ -30,4 +30,9 @@ public class CourseLearnerViewModel
     /// Gets or sets where the course is between its start and end dates.
     /// </summary>
     public CourseSchedule Schedule { get; set; }
+
+    /// <summary>
+    /// Gets or sets the course's categories, each as its path of names, such as "Leadership > Coaching".
+    /// </summary>
+    public IList<string> Categories { get; set; } = [];
 }
