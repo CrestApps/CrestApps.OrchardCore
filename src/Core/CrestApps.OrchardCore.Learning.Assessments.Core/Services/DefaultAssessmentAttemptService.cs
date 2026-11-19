@@ -695,13 +695,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
         {
             var pool = (await _contentSource.GetBankQuestionsAsync(rule.BankId))
                 .Where(question => !used.Contains(question.ContentItemId) && _questionTypes.IsQuestion(question.ContentType))
-                .Where(question =>
-                {
-                    var questionPart = question.Get<QuestionPart>(nameof(QuestionPart));
-
-                    return (string.IsNullOrEmpty(rule.Tag) || (questionPart?.Tags?.Contains(rule.Tag, StringComparer.OrdinalIgnoreCase) ?? false))
-                        && (rule.Difficulty is null || questionPart?.Difficulty == rule.Difficulty);
-                })
+                .Where(question => QuizDrawRuleMatcher.Matches(question.Get<QuestionPart>(nameof(QuestionPart)), rule))
                 .ToList();
 
             for (var i = pool.Count - 1; i > 0; i--)

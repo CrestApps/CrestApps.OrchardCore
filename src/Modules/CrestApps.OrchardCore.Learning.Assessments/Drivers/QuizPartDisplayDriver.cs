@@ -1,10 +1,12 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.ViewModels;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
@@ -21,6 +23,8 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
     private readonly global::YesSql.ISession _session;
     private readonly ILocalClock _localClock;
     private readonly LearningSecretStore _secretStore;
+    private readonly IAssessmentContentSource _contentSource;
+    private readonly QuestionTypeOptions _questionTypes;
 
     internal readonly IStringLocalizer S;
 
@@ -28,11 +32,15 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
         global::YesSql.ISession session,
         ILocalClock localClock,
         LearningSecretStore secretStore,
+        IAssessmentContentSource contentSource,
+        IOptions<QuestionTypeOptions> questionTypes,
         IStringLocalizer<QuizPartDisplayDriver> stringLocalizer)
     {
         _session = session;
         _localClock = localClock;
         _secretStore = secretStore;
+        _contentSource = contentSource;
+        _questionTypes = questionTypes.Value;
         S = stringLocalizer;
     }
 
@@ -41,11 +49,6 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
         {
             model.QuestionIds = [.. part.QuestionIds];
             model.DrawRules = part.DrawRules.Select(rule => new DrawRuleRowViewModel { BankId = rule.BankId, Tag = rule.Tag, Difficulty = rule.Difficulty, Count = rule.Count }).ToList();
-
-            while (model.DrawRules.Count < part.DrawRules.Count + 2)
-            {
-                model.DrawRules.Add(new DrawRuleRowViewModel());
-            }
 
             model.ShuffleQuestions = part.ShuffleQuestions;
             model.TimeLimitMinutes = part.TimeLimitMinutes;
@@ -83,9 +86,7 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         part.QuestionIds = (model.QuestionIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToList();
-        part.DrawRules = model.DrawRules.Where(rule => !string.IsNullOrEmpty(rule.BankId) && rule.Count > 0)
-            .Select(rule => new QuizDrawRule { BankId = rule.BankId, Tag = string.IsNullOrWhiteSpace(rule.Tag) ? null : rule.Tag.Trim(), Difficulty = rule.Difficulty is >= 1 and <= 5 ? rule.Difficulty : null, Count = rule.Count })
-            .ToList();
+        part.DrawRules = await ReadDrawRulesAsync(model.DrawRules ?? [], context);
         part.ShuffleQuestions = model.ShuffleQuestions;
         part.TimeLimitMinutes = model.TimeLimitMinutes is > 0 ? model.TimeLimitMinutes : null;
         part.MaxAttempts = model.MaxAttempts is > 0 ? model.MaxAttempts : null;
@@ -122,5 +123,59 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
         }
 
         return Edit(part, context);
+    }
+
+    // The rules as stored, each checked against what its bank can supply: an attempt draws only the bank's published
+    // questions that match the rule's tag and difficulty, so a rule asking for more could never be met.
+    private async Task<List<QuizDrawRule>> ReadDrawRulesAsync(IList<DrawRuleRowViewModel> rows, UpdatePartEditorContext context)
+    {
+        var rules = new List<QuizDrawRule>();
+        var key = Prefix + "." + nameof(QuizPartViewModel.DrawRules);
+
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var row = rows[i];
+
+            if (row is null)
+            {
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(row.BankId))
+            {
+                context.Updater.ModelState.AddModelError(key, S["Choose the question bank of rule {0}, or remove the rule.", i + 1]);
+
+                continue;
+            }
+
+            if (row.Count < 1)
+            {
+                context.Updater.ModelState.AddModelError(key, S["Rule {0} must draw at least one question.", i + 1]);
+
+                continue;
+            }
+
+            var rule = new QuizDrawRule
+            {
+                BankId = row.BankId,
+                Tag = string.IsNullOrWhiteSpace(row.Tag) ? null : row.Tag.Trim(),
+                Difficulty = row.Difficulty is >= 1 and <= 5 ? row.Difficulty : null,
+                Count = row.Count,
+            };
+
+            var available = (await _contentSource.GetBankQuestionsAsync(rule.BankId))
+                .Count(question => _questionTypes.IsQuestion(question.ContentType) && QuizDrawRuleMatcher.Matches(question.Get<QuestionPart>(nameof(QuestionPart)), rule));
+
+            if (rule.Count > available)
+            {
+                var bank = await _contentSource.GetItemAsync(rule.BankId);
+
+                context.Updater.ModelState.AddModelError(key, S["Rule {0} draws {1} questions, but {2} has only {3} that match.", i + 1, rule.Count, bank?.DisplayText ?? rule.BankId, available]);
+            }
+
+            rules.Add(rule);
+        }
+
+        return rules;
     }
 }

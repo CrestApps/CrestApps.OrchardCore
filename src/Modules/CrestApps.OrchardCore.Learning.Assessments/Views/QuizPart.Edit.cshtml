@@ -1,4 +1,13 @@
 @model QuizPartViewModel
+@using System.Globalization
+
+@{
+    var drawPrefix = Html.NameFor(m => m.DrawRules).ToString();
+}
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<script asp-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-draw-rules.min.js" debug-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-draw-rules.js" depends-on="bootstrap-select" at="Foot"></script>
 
 <div class="card text-bg-theme mb-3">
     <div class="card-header">@T["Questions"]</div>
@@ -12,44 +21,87 @@
             </div>
         </div>
 
-        <h3 class="h6 mt-3">@T["Draw at random"]</h3>
-        <div class="table-responsive">
-            <table class="table table-sm align-middle">
-                <thead>
-                    <tr>
-                        <th scope="col">@T["Question bank"]</th>
-                        <th scope="col">@T["With the tag"]</th>
-                        <th scope="col">@T["Difficulty"]</th>
-                        <th scope="col">@T["How many"]</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (var i = 0; i < Model.DrawRules.Count; i++)
-                    {
-                        <tr>
-                            <td>
-                                <select asp-for="DrawRules[i].BankId" class="form-select form-select-sm" aria-label="@T["Question bank"]">
-                                    <option value="">@T["No rule"]</option>
-                                    @foreach (var bank in Model.BankOptions)
-                                    {
-                                        <option value="@bank.Value" selected="@(bank.Value == Model.DrawRules[i].BankId)">@bank.Text</option>
-                                    }
-                                </select>
-                            </td>
-                            <td><input asp-for="DrawRules[i].Tag" class="form-control form-control-sm" maxlength="100" aria-label="@T["With the tag"]" /></td>
-                            <td><input asp-for="DrawRules[i].Difficulty" type="number" min="1" max="5" class="form-control form-control-sm" aria-label="@T["Difficulty"]" /></td>
-                            <td><input asp-for="DrawRules[i].Count" type="number" min="0" class="form-control form-control-sm" aria-label="@T["How many"]" /></td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-        <span class="hint">@T["Each attempt draws its own questions. A question is never drawn twice in one attempt."]</span>
-
         <div class="form-check mt-3">
             <input asp-for="ShuffleQuestions" type="checkbox" class="form-check-input" />
             <label asp-for="ShuffleQuestions" class="form-check-label">@T["Shuffle the questions in each attempt"]</label>
         </div>
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3" data-draw-rules data-prefix="@drawPrefix" data-summary-url="@Url.RouteUrl("LearningQuestionBankDrawSummary", new { bankId = "__bank__" })" data-available-text="@T["of {0} available"].Value" data-too-many-text="@T["The bank has only {0} questions that match this rule."].Value">
+    <div class="card-header">@T["Draw at random"]</div>
+    <div class="card-body">
+        <span class="hint d-block mb-2">@T["Each attempt draws its own questions. A question is never drawn twice in one attempt."]</span>
+        <span asp-validation-for="DrawRules"></span>
+        @{
+            // A rule row; the template renders it with __index__, which the script renumbers.
+            async Task DrawRule(string index, DrawRuleRowViewModel rule)
+            {
+                var name = drawPrefix + "[" + index + "].";
+
+                <div class="list-group-item" data-draw-rule>
+                    <div class="row g-2 align-items-start">
+                        <div class="col-md-4">
+                            <span class="form-label small d-block mb-1">@T["Question bank"]</span>
+                            <select name="@(name)BankId" class="selectpicker" data-live-search="true" data-width="100%" data-live-search-placeholder="@T["Search banks"]" aria-label="@T["Question bank"]" data-draw-bank>
+                                <option value="" data-hidden="true">@T["Choose a bank"]</option>
+                                @foreach (var bank in Model.BankOptions)
+                                {
+                                    <option value="@bank.Value" selected="@(bank.Value == rule.BankId)">@bank.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="form-label small d-block mb-1">@T["With the tag"]</span>
+                            <select name="@(name)Tag" class="selectpicker" data-live-search="true" data-width="100%" data-live-search-placeholder="@T["Search tags"]" aria-label="@T["With the tag"]" data-draw-tag>
+                                <option value="">@T["Any tag"]</option>
+                                @if (!string.IsNullOrEmpty(rule.Tag))
+                                {
+                                    <option value="@rule.Tag" selected="selected">@rule.Tag</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="form-label small d-block mb-1">@T["Difficulty"]</span>
+                            <select name="@(name)Difficulty" class="selectpicker" data-width="100%" aria-label="@T["Difficulty"]" data-draw-difficulty>
+                                <option value="">@T["Any difficulty"]</option>
+                                @for (var level = 1; level <= 5; level++)
+                                {
+                                    var text = level switch
+                                    {
+                                        1 => T["1 (easy)"].Value,
+                                        5 => T["5 (hard)"].Value,
+                                        _ => level.ToString(CultureInfo.InvariantCulture),
+                                    };
+
+                                    <option value="@level" selected="@(rule.Difficulty == level)">@text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="form-label small d-block mb-1">@T["How many"]</span>
+                            <input type="number" min="1" name="@(name)Count" value="@(rule.Count > 0 ? rule.Count : 1)" class="form-control" aria-label="@T["How many"]" data-draw-count />
+                            <span class="form-text small d-block" data-draw-available aria-live="polite"></span>
+                        </div>
+                        <div class="col-md-1 text-md-end">
+                            <span class="form-label small d-block mb-1 d-none d-md-block">&nbsp;</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-draw-remove title="@T["Remove the rule"]" aria-label="@T["Remove the rule"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        <div class="list-group mb-2" data-draw-rule-rows>
+            @for (var i = 0; i < Model.DrawRules.Count; i++)
+            {
+                await DrawRule(i.ToString(CultureInfo.InvariantCulture), Model.DrawRules[i]);
+            }
+        </div>
+        <p class="text-muted small mb-2" data-draw-empty hidden="@(Model.DrawRules.Count > 0)">@T["No rule yet. Add one to draw questions from a bank."]</p>
+        <template data-draw-rule-template>
+            @{ await DrawRule("__index__", new DrawRuleRowViewModel()); }
+        </template>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-draw-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add rule"]</button>
     </div>
 </div>
 

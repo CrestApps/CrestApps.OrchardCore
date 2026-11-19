@@ -26,6 +26,8 @@ A question type is registered with `AddQuestionType` and scored by an `IQuestion
 
 The quiz editor picks the fixed questions with the `ItemSelector` component, which searches `/Admin/learning/questions/search?query=` (route `LearningQuestionSearch`, `QuestionPickerController`) for published questions by title, 50 at most, and renders only the chosen ones. The search needs **View question banks** or **Manage own courses** and returns titles and question types only. Every other multiple select of the Learning modules is a bootstrap-select picker with a search box.
 
+The **Draw at random** card edits `QuizPart.DrawRules` (a bank, an optional tag and difficulty, and a count; the stored format is unchanged). Its rows are added and removed in the page by the `quiz-draw-rules` script, which reads `/Admin/learning/question-banks/{bankId}/draw-summary` (route `LearningQuestionBankDrawSummary`, the same permissions as the question search): the tags and difficulty of each published question of the bank an attempt can draw. From it the tag picker lists the bank's tags and the row shows how many questions match. Saving refuses a rule without a bank, with a count below one, or asking for more questions than its bank has that match. `QuizDrawRuleMatcher` (Assessments.Core) decides which questions match, for the attempt's draw and for these counts alike: the tag whatever its case, and the difficulty, each only when set.
+
 ## Attempts
 
 `IAssessmentAttemptService` runs an attempt on the server:
