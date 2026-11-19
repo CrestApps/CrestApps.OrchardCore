@@ -146,6 +146,85 @@ public sealed class CouponEditor
             : value.Trim();
 
     /// <summary>
+    /// Fills the coupon's form from a stored coupon, as the editor opens it. Its dates are left in UTC
+    /// (<see cref="CouponEditViewModel.StartsUtc"/> and <see cref="CouponEditViewModel.EndsUtc"/>); the editor shows them
+    /// in the site's time zone.
+    /// </summary>
+    /// <param name="coupon">The stored coupon.</param>
+    /// <returns>The form's values.</returns>
+    public static CouponEditViewModel ToModel(Coupon coupon)
+    {
+        ArgumentNullException.ThrowIfNull(coupon);
+
+        return new CouponEditViewModel
+        {
+            ItemId = coupon.ItemId,
+            Code = coupon.Code,
+            Method = coupon.Method,
+            OnlyGeneratedCodes = coupon.OnlyGeneratedCodes,
+            Description = coupon.Description,
+            Kind = coupon.Kind,
+            Percentage = coupon.Percentage,
+            Amount = coupon.Amount,
+            Currency = coupon.Currency,
+            Target = coupon.Target,
+            IsEnabled = coupon.IsEnabled,
+            StartsUtc = coupon.StartsUtc,
+            EndsUtc = coupon.EndsUtc,
+            MaxRedemptions = coupon.MaxRedemptions,
+            MinimumAmount = coupon.MinimumAmount,
+            MaximumAmount = coupon.MaximumAmount,
+            MaxRedemptionsPerCustomer = coupon.MaxRedemptionsPerCustomer,
+            MinimumQuantity = coupon.MinimumQuantity,
+            BuyQuantity = coupon.BuyQuantity > 0 ? coupon.BuyQuantity : null,
+            GetQuantity = coupon.GetQuantity > 0 ? coupon.GetQuantity : null,
+            MaxApplicationsPerOrder = coupon.MaxApplicationsPerOrder,
+            CombinesWithProductDiscounts = coupon.CombinesWithProductDiscounts,
+            CombinesWithOrderDiscounts = coupon.CombinesWithOrderDiscounts,
+            CombinesWithShippingDiscounts = coupon.CombinesWithShippingDiscounts,
+            RedemptionCount = coupon.RedemptionCount,
+            Sources = string.Join(", ", coupon.Sources ?? []),
+            ReferenceTypes = string.Join(", ", coupon.ReferenceTypes ?? []),
+            CustomerId = coupon.CustomerId,
+            CustomerEmail = coupon.CustomerEmail,
+        };
+    }
+
+    /// <summary>
+    /// Checks a request to generate codes for a coupon: not for an automatic discount, 1 to
+    /// <see cref="CheckoutConstants.MaxGeneratedCodes"/> codes at a time, a prefix of up to 12 letters, digits or dashes,
+    /// and a limit per code above zero when one is given.
+    /// </summary>
+    /// <param name="coupon">The coupon.</param>
+    /// <param name="count">How many codes to generate.</param>
+    /// <param name="prefix">What every code starts with, already trimmed and in upper case, or <see langword="null"/>.</param>
+    /// <param name="usesPerCode">How many times each code may be used, or <see langword="null"/> for no limit.</param>
+    /// <returns>What is wrong, or <see cref="CouponCodeGenerationProblem.None"/>.</returns>
+    public static CouponCodeGenerationProblem CheckCodeGeneration(Coupon coupon, int count, string prefix, int? usesPerCode)
+    {
+        ArgumentNullException.ThrowIfNull(coupon);
+
+        if (coupon.IsAutomatic)
+        {
+            return CouponCodeGenerationProblem.Automatic;
+        }
+
+        if (count is < 1 or > CheckoutConstants.MaxGeneratedCodes)
+        {
+            return CouponCodeGenerationProblem.Count;
+        }
+
+        if (!string.IsNullOrEmpty(prefix) && (prefix.Length > 12 || !prefix.All(character => char.IsAsciiLetterOrDigit(character) || character == '-')))
+        {
+            return CouponCodeGenerationProblem.Prefix;
+        }
+
+        return usesPerCode is <= 0
+            ? CouponCodeGenerationProblem.UsesPerCode
+            : CouponCodeGenerationProblem.None;
+    }
+
+    /// <summary>
     /// Applies a valid coupon as entered.
     /// </summary>
     public static void Apply(CouponEditViewModel model, Coupon coupon)
@@ -186,4 +265,35 @@ public sealed class CouponEditor
         coupon.CustomerId = TrimToNull(model.CustomerId);
         coupon.CustomerEmail = TrimToNull(model.CustomerEmail);
     }
+}
+
+/// <summary>
+/// What is wrong with a request to generate codes for a coupon.
+/// </summary>
+public enum CouponCodeGenerationProblem
+{
+    /// <summary>
+    /// Nothing; the codes can be generated.
+    /// </summary>
+    None,
+
+    /// <summary>
+    /// The coupon is an automatic discount, which has no codes.
+    /// </summary>
+    Automatic,
+
+    /// <summary>
+    /// The count is not between 1 and the most generated at a time.
+    /// </summary>
+    Count,
+
+    /// <summary>
+    /// The prefix is longer than 12 characters or has characters other than letters, digits and dashes.
+    /// </summary>
+    Prefix,
+
+    /// <summary>
+    /// The limit per code is zero or less.
+    /// </summary>
+    UsesPerCode,
 }

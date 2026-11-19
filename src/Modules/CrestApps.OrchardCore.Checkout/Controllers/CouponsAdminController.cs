@@ -291,38 +291,10 @@ public sealed class CouponsAdminController : Controller
             return NotFound();
         }
 
-        var model = new CouponEditViewModel
-        {
-            ItemId = coupon.ItemId,
-            Code = coupon.Code,
-            Method = coupon.Method,
-            OnlyGeneratedCodes = coupon.OnlyGeneratedCodes,
-            Description = coupon.Description,
-            Kind = coupon.Kind,
-            Percentage = coupon.Percentage,
-            Amount = coupon.Amount,
-            Currency = coupon.Currency,
-            Target = coupon.Target,
-            IsEnabled = coupon.IsEnabled,
-            Starts = await ToLocalAsync(coupon.StartsUtc, localClock),
-            Ends = await ToLocalAsync(coupon.EndsUtc, localClock),
-            MaxRedemptions = coupon.MaxRedemptions,
-            MinimumAmount = coupon.MinimumAmount,
-            MaximumAmount = coupon.MaximumAmount,
-            MaxRedemptionsPerCustomer = coupon.MaxRedemptionsPerCustomer,
-            MinimumQuantity = coupon.MinimumQuantity,
-            BuyQuantity = coupon.BuyQuantity > 0 ? coupon.BuyQuantity : null,
-            GetQuantity = coupon.GetQuantity > 0 ? coupon.GetQuantity : null,
-            MaxApplicationsPerOrder = coupon.MaxApplicationsPerOrder,
-            CombinesWithProductDiscounts = coupon.CombinesWithProductDiscounts,
-            CombinesWithOrderDiscounts = coupon.CombinesWithOrderDiscounts,
-            CombinesWithShippingDiscounts = coupon.CombinesWithShippingDiscounts,
-            RedemptionCount = coupon.RedemptionCount,
-            Sources = string.Join(", ", coupon.Sources ?? []),
-            ReferenceTypes = string.Join(", ", coupon.ReferenceTypes ?? []),
-            CustomerId = coupon.CustomerId,
-            CustomerEmail = coupon.CustomerEmail,
-        };
+        var model = CouponEditor.ToModel(coupon);
+
+        model.Starts = await ToLocalAsync(coupon.StartsUtc, localClock);
+        model.Ends = await ToLocalAsync(coupon.EndsUtc, localClock);
 
         await PopulateCurrenciesAsync(model);
         PopulateSources(model);
@@ -432,19 +404,21 @@ public sealed class CouponsAdminController : Controller
 
         prefix = prefix?.Trim().ToUpperInvariant();
 
-        if (coupon.IsAutomatic)
+        var problem = CouponEditor.CheckCodeGeneration(coupon, count, prefix, usesPerCode);
+
+        if (problem == CouponCodeGenerationProblem.Automatic)
         {
             await _notifier.ErrorAsync(H["An automatic discount has no codes to generate."]);
         }
-        else if (count is < 1 or > CheckoutConstants.MaxGeneratedCodes)
+        else if (problem == CouponCodeGenerationProblem.Count)
         {
             await _notifier.ErrorAsync(H["Generate between 1 and {0} codes at a time.", CheckoutConstants.MaxGeneratedCodes]);
         }
-        else if (!string.IsNullOrEmpty(prefix) && (prefix.Length > 12 || !prefix.All(character => char.IsAsciiLetterOrDigit(character) || character == '-')))
+        else if (problem == CouponCodeGenerationProblem.Prefix)
         {
             await _notifier.ErrorAsync(H["A prefix is up to 12 letters, digits or dashes."]);
         }
-        else if (usesPerCode is <= 0)
+        else if (problem == CouponCodeGenerationProblem.UsesPerCode)
         {
             await _notifier.ErrorAsync(H["Leave the uses per code blank for no limit, or enter a number greater than zero."]);
         }
