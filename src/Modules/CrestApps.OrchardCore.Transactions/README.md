@@ -15,8 +15,11 @@ show it to the customer, remind them, let them settle it online, and report on w
 
 - **Transactions** (`CrestApps.OrchardCore.Transactions`) — the ledger, the administration report, the
   customer statement, and the payments and refunds screens.
-- **Transaction Reminders** (`...Notification`) — chases unpaid balances on a configured cadence through
+- **Transaction Reminders** (`...Notification`) — chases unpaid balances on a configured cadence (or staged steps before, on and after the due date, in the site's daytime hours, never for a paused transaction) through
   each user's preferred notification channel.
+- **Payment Terms** (`...PaymentTerms`) — the catalog of payment terms (net days, due on receipt, end of month,
+  a day of the next month, an early-payment discount) under **Commerce > Payment terms**, read through
+  `IPaymentTermManager` and turned into local due dates by `IPaymentTermCalculator`.
 
 ## What a transaction records
 
@@ -45,7 +48,7 @@ payments and refunds** permission rather than coming free with the ability to re
 
 ## Customer pages in the site theme
 
-Besides the customer pages in the admin, a signed-in customer can open their statement at `my-transactions`, an invoice at `my-transactions/invoices/{itemId}` and a payment's receipt at `my-transactions/receipts/{itemId}/{paymentId}`, in the site theme. Each page renders a shape a theme can override: `TransactionStatement`, `TransactionInvoice` and `TransactionReceipt`. `ITransactionCustomerPageService` (Transactions.Abstractions) builds their models with the same ownership checks as the admin pages, so another module can show them in its own pages; `ITransactionInvoiceBuilder` and `ITransactionReceiptBuilder` live in the abstractions too.
+Besides the customer pages in the admin, a signed-in customer can open their statement at `my-transactions`, an invoice (the payment request, a business document of the `PaymentRequest` kind) at `my-transactions/invoices/{itemId}` and a payment's receipt at `my-transactions/receipts/{itemId}/{paymentId}`, in the site theme. Each page renders a shape a theme can override: `TransactionStatement`, `TransactionInvoice` and `TransactionReceipt`. `ITransactionCustomerPageService` (Transactions.Abstractions) builds their models with the same ownership checks as the admin pages (`ITransactionVisibilityService`: what the user owns and what the parties they have billing access to, such as an account they are an admin of, owe), so another module can show them in its own pages; `ITransactionInvoiceBuilder` and `ITransactionReceiptBuilder` live in the abstractions too.
 
 Set `CrestApps:Transactions:CustomerPages:LinkTarget` to `Site` to make the links in receipt and reminder messages open these pages instead of the admin ones.
 
@@ -69,7 +72,7 @@ command returns a result with errors and runs under a lock on the transaction.
 
 Implement `ITransactionEventHandler` (or derive from `TransactionEventHandlerBase`) to hear about every change:
 `CreatedAsync`, `StatusChangedAsync` with the previous and current status, `CanceledAsync` with the reason, and
-`BecameOverdueAsync`, raised once per transaction by the reminder sweep. They run after the save, and a handler
+`BecameOverdueAsync`, raised once per transaction by the reminder sweep, and `RefundedAsync`. They run after the save, and a handler
 that fails is logged without undoing the change. `ITransactionPaymentHandler` and `IPaymentRefundHandler` report
 each payment and refund.
 

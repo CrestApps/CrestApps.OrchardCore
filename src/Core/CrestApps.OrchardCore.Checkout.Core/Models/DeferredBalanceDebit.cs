@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Parties.Models;
+
 namespace CrestApps.OrchardCore.Checkout.Core.Models;
 
 /// <summary>
@@ -35,6 +37,18 @@ public sealed class DeferredBalanceDebit
     /// Gets or sets the ID of the record the invoice belongs to besides the checkout, if any.
     /// </summary>
     public string ParentReferenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the party that owes the balance, such as the business account it is put on, or none for the checkout's
+    /// buyer.
+    /// </summary>
+    public PartyRef Payer { get; set; }
+
+    /// <summary>
+    /// Gets or sets the charge of a saved card the invoice carries from the start, such as the card the checkout kept,
+    /// charged on the due date by the saved card charge service; or <see langword="null"/> when the payer pays it.
+    /// </summary>
+    public CrestApps.OrchardCore.Transactions.Models.TransactionAutoCharge AutoCharge { get; set; }
 
     /// <summary>
     /// Gets or sets what the tender read while preparing the debit and needs again after the invoice is made, such as

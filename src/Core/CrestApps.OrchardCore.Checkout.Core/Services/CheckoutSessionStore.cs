@@ -286,8 +286,9 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
         else
         {
             // Recorded for audit only; the token below is what decides who may resume the session.
-            checkoutSession.IPAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
-            checkoutSession.AgentInfo = _contextAccessor.HttpContext.Request.Headers.UserAgent;
+            // A background task's stand-in request (a scheduled charge) has no remote address or browser.
+            checkoutSession.IPAddress = (await _clientIPAddressAccessor.GetIPAddressAsync())?.ToString();
+            checkoutSession.AgentInfo = httpContext.Request?.Headers.UserAgent;
             checkoutSession.GuestTokenHash = _guestTokenManager.Issue(GuestTokenScope, checkoutSession.SessionId);
         }
 

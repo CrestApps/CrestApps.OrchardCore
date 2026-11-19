@@ -197,6 +197,11 @@ public sealed class CustomerRecordsPortabilityTests
         public Task<StoreCreditAccount> FindAsync(string customerId, string currency, CancellationToken cancellationToken = default)
             => Task.FromResult(Entries.FirstOrDefault(entry => entry.CustomerId == customerId && entry.Currency == currency));
 
+        public Task<StoreCreditAccount> FindAsync(StoreCreditHolder holder, string currency, CancellationToken cancellationToken = default)
+            => Task.FromResult(Entries.FirstOrDefault(entry =>
+                (string.IsNullOrEmpty(holder.CustomerId) ? entry.PartyKind == holder.Party.Kind && entry.PartyId == holder.Party.Id : entry.CustomerId == holder.CustomerId) &&
+                entry.Currency == currency));
+
         public Task<IReadOnlyList<StoreCreditAccount>> ListByCustomerAsync(string customerId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<StoreCreditAccount>>(Entries.Where(entry => entry.CustomerId == customerId).ToList());
     }

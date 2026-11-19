@@ -51,6 +51,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = AccountsConstants.EmailDomainsFeature,
+    Name = "Account E-mail Domains",
+    Description = "Keeps the e-mail domains an account's people write from, such as contoso.com, so other modules file a request from an address on one of them under the account.",
+    Category = "Content Management",
+    Dependencies =
+    [
+        AccountsConstants.Feature,
+    ]
+)]
+
+[assembly: Feature(
     Id = AccountsConstants.LocationsFeature,
     Name = "Account Locations",
     Description = "Keeps the places an account has, such as its head office, its warehouses or the sites where it is serviced, with addresses checked against each country's rules.",

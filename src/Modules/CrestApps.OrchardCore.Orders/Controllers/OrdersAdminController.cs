@@ -133,7 +133,18 @@ public sealed class OrdersAdminController : Controller
 
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId, HttpContext.RequestAborted);
 
-        if (order is null || order.Status == OrderStatus.Draft)
+        if (order is null)
+        {
+            return NotFound();
+        }
+
+        // Invoiced by another module (Invoicing): its invoice is the order's invoice, a sent draft order's included.
+        if (await OrderDocumentLinks.GetInvoiceUrlAsync(HttpContext.RequestServices.GetServices<IOrderDocumentSender>(), order, forStaff: true, HttpContext.RequestAborted) is { } invoiceUrl)
+        {
+            return Redirect(invoiceUrl);
+        }
+
+        if (order.Status == OrderStatus.Draft)
         {
             return NotFound();
         }
@@ -278,27 +289,6 @@ public sealed class OrdersAdminController : Controller
         }
 
         return View(model);
-    }
-
-    [HttpPost]
-    [Admin("orders/{orderId}/notes", "OrdersAddNote")]
-    public async Task<IActionResult> AddNote(string orderId, string text, [FromServices] IOrderService orderService)
-    {
-        if (await FindManagedAsync(orderId) is not { } order)
-        {
-            return NotFound();
-        }
-
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            await _notifier.WarningAsync(H["Write the note first."]);
-        }
-        else
-        {
-            await orderService.AddNoteAsync(order, text, OrderNoteKind.Note, User.Identity?.Name, HttpContext.RequestAborted);
-        }
-
-        return RedirectToAction(nameof(Detail), new { orderId });
     }
 
     [HttpPost]

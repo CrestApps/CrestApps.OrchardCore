@@ -13,7 +13,9 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement;
@@ -661,7 +663,8 @@ public sealed class SmsInboxQueryTests
             store,
             MessagingTestChannels.Resolver(MessagingTestChannels.AcceptingDispatcher().Object),
             Mock.Of<IOmnichannelChannelEndpointManager>(),
-            Mock.Of<IMessageTemplateManager>(),
+            Mock.Of<IMessageTemplateManager>(manager => manager.ListByScopeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()) == Task.FromResult<IReadOnlyList<MessageTemplate>>(Array.Empty<MessageTemplate>())),
+            new LiquidMessageTemplateRenderer(Doubles.LiquidTestClocks.In("UTC"), Doubles.RecipeRoundTrip.Localizer<LiquidMessageTemplateRenderer>(), NullLogger<LiquidMessageTemplateRenderer>.Instance),
             agentProfiles.Object,
             new PermissiveAgentEntitlementPolicy(),
             Mock.Of<IMessagingAvailabilityService>(service => service.Get(It.IsAny<AgentProfile>()) == new MessagingAgentAvailability()),

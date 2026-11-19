@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CreditNoteIssuedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-file-circle-minus" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Credit Note Issued"])
+    </h4>
+</header>

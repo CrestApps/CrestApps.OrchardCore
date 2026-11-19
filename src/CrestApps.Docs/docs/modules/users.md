@@ -67,6 +67,10 @@ For example, the [Messaging Workspace](../omnichannel/messaging-workspace) uses 
 
 Grants are kept on the user's account (`UserRoleGrants`), so no table is added. A module that granted roles before grants were recorded registers an `IRoleGrantSource`, which reports those grants the first time the service touches a user. Memberships and Subscriptions use it.
 
+## My account
+
+The **My Account** feature (`CrestApps.OrchardCore.Users.Account`, turned on by the modules that need it, such as Commerce and Tickets) is the site's "my account" area: `/account` (route `CommerceAccount`, signed-in users only), a **My account** link in Orchard Core's user menu, and the `commerce-account` navigation menu that modules add their pages to with a `NamedNavigationProvider` (`UsersConstants.Account.MenuName`). Each page renders the `CommerceAccountPage` shape (`UsersConstants.Account.PageShape`), which frames it with the `CommerceAccountNavigation` menu; the home page shows a tile per page (`AccountOverview` shape). The names come from when the area belonged to Commerce and are kept, so themes and modules that use them keep working.
+
 ## User Display Name
 
 | | |

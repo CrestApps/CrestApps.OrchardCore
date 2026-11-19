@@ -171,6 +171,7 @@ internal sealed class DefaultUserSearchService : IUserSearchService
                 UserName = user.UserName,
                 NormalizedUserName = user.NormalizedUserName,
                 Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
                 DisplayName = await _displayNameProvider.GetAsync(user, cancellationToken),
                 IsEnabled = user.IsEnabled,
                 AvatarUrl = await GetAvatarUrlAsync(user, cancellationToken),

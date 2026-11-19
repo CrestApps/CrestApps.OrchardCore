@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketReopenedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Ticket Reopened"])
+    </h4>
+</header>

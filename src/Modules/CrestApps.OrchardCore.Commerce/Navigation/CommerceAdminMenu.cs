@@ -28,13 +28,7 @@ public sealed class CommerceAdminMenu : AdminNavigationProvider
                 .Id("commerce")
                 .AddClass("commerce")
                 .AddClass("icon-class-fa-solid")
-                .AddClass("icon-class-fa-store")
-                .Add(S["Set up your store"], S["Set up your store"].PrefixPosition("0"), setup => setup
-                    .Id("commerceSetup")
-                    .Action("Index", "StoreSetup", new { area = CommerceConstants.Features.Area })
-                    .Permission(CommercePermissions.SetUpStore)
-                    .LocalNav())
-            );
+                .AddClass("icon-class-fa-store"));
 
         return ValueTask.CompletedTask;
     }

@@ -96,6 +96,11 @@ public abstract class DeferredBalanceTenderProviderBase : ICheckoutTenderProvide
             transaction.ParentReferenceId = debit.ParentReferenceId;
         }
 
+        if (!debit.Payer.IsEmpty)
+        {
+            transaction.SetPayer(debit.Payer);
+        }
+
         transaction.CheckoutSessionId = session.SessionId;
         transaction.ObligationId = ObligationId;
         transaction.Currency = currency;
@@ -107,6 +112,7 @@ public abstract class DeferredBalanceTenderProviderBase : ICheckoutTenderProvide
         transaction.CreatedUtc = now;
         transaction.UpdatedUtc = now;
         transaction.DueUtc = debit.DueUtc;
+        transaction.AutoCharge = debit.AutoCharge;
         transaction.Events.Add(new TransactionEvent
         {
             CreatedUtc = now,

@@ -2,6 +2,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.TimeTracker.Core.Services;
 using CrestApps.OrchardCore.TimeTracker.Models;
 using CrestApps.OrchardCore.TimeTracker.Services;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -28,6 +29,7 @@ public static class TimeTrackerServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TimeCategory>, TimeCategoryHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TimeStage>, TimeStageHandler>());
         services.TryAddScoped<ITimeTrackerService, DefaultTimeTrackerService>();
+        services.AddResumableStep<TimeEntryChargeStep>();
 
         return services;
     }

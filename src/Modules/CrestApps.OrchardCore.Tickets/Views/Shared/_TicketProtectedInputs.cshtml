@@ -1,0 +1,16 @@
+@* The optional protected item of a requester's form (the portal's new request and reply, the web form): posted as
+   protectedLabel and protectedValue, kept encrypted and shown only to agents who confirm their password. *@
+<details class="mb-3">
+    <summary><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Share a login or other secret (optional)"]</summary>
+    <div class="border rounded p-3 mt-2">
+        <p class="small text-muted">@T["What you give here is kept encrypted, apart from your message, and only the agents allowed to see it can show it, after confirming their password. Don't put passwords in the message itself."]</p>
+        <div class="mb-2">
+            <label for="protected-label" class="form-label">@T["What it is"]</label>
+            <input id="protected-label" name="protectedLabel" class="form-control" maxlength="@CrestApps.OrchardCore.Tickets.Services.ITicketProtectedInformation.MaxLabelLength" placeholder="@T["Such as VPN login"]" autocomplete="off" />
+        </div>
+        <div>
+            <label for="protected-value" class="form-label">@T["The secret"]</label>
+            <input id="protected-value" name="protectedValue" type="password" class="form-control" maxlength="@CrestApps.OrchardCore.Tickets.Services.ITicketProtectedInformation.MaxValueLength" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+        </div>
+    </div>
+</details>

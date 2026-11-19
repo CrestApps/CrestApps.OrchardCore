@@ -1,0 +1,85 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Tickets</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      A help desk on Orchard Core: tickets as content items of any ticket type, desks that keep IT, HR and customer
+      support apart, statuses, priorities and saved views, replies and internal notes on the ticket's timeline, team
+      assignment, service-level targets on business hours, merge and links, and recipe and deployment steps.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Tickets HelpDesk Support ServiceDesk</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="CrestApps.Core.AI" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
+    <PackageReference Include="OrchardCore.ReCaptcha.Core" />
+    <PackageReference Include="OrchardCore.Contents.Core" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.Users.Core" />
+    <PackageReference Include="OrchardCore.Recipes.Abstractions" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+    <PackageReference Include="OrchardCore.Title" />
+    <PackageReference Include="OrchardCore.Settings" />
+    <PackageReference Include="OrchardCore.Notifications.Abstractions" />
+    <PackageReference Include="OrchardCore.Notifications.Core" />
+    <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="OrchardCore.AuditTrail.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.RateLimits.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Accounts.Abstractions\CrestApps.OrchardCore.Accounts.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Attachments.Abstractions\CrestApps.OrchardCore.Attachments.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.ContentFields.Abstractions\CrestApps.OrchardCore.ContentFields.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Tickets.Abstractions\CrestApps.OrchardCore.Tickets.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.BusinessHours.Abstractions\CrestApps.OrchardCore.BusinessHours.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Staff.Abstractions\CrestApps.OrchardCore.Staff.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.TimeTracker.Abstractions\CrestApps.OrchardCore.TimeTracker.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Agreements.Abstractions\CrestApps.OrchardCore.Agreements.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.PersonalData.Core\CrestApps.OrchardCore.PersonalData.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Tickets.Core\CrestApps.OrchardCore.Tickets.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.WorkOrders.Core\CrestApps.OrchardCore.WorkOrders.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Omnichannel.Messaging.Core\CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions\CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions.csproj" />
+    <!-- Carries the Conditional Fields feature the Tickets feature depends on. -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.ContentFields\CrestApps.OrchardCore.ContentFields.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.ServiceLevels\CrestApps.OrchardCore.ServiceLevels.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.SignalR.Core\CrestApps.OrchardCore.SignalR.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Teams\CrestApps.OrchardCore.Teams.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Timeline\CrestApps.OrchardCore.Timeline.csproj" PrivateAssets="none" />
+    <!-- Carries the My Account feature the Tickets Portal feature depends on. -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

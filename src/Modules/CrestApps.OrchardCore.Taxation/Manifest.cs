@@ -25,7 +25,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         TaxationConstants.Feature.Tables,
-        CommerceConstants.Features.Area,
+        CommerceConstants.Features.Foundation,
     ]
 )]
 

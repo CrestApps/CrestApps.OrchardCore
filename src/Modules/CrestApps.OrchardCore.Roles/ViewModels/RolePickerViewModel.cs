@@ -15,6 +15,18 @@ public class RolePickerViewModel
     public string DisplayName { get; set; }
 
     /// <summary>
+    /// Gets or sets the text the picker shows while no role is picked.
+    /// </summary>
+    [BindNever]
+    public string Placeholder { get; set; }
+
+    /// <summary>
+    /// Gets or sets the hint under the picker.
+    /// </summary>
+    [BindNever]
+    public string Hint { get; set; }
+
+    /// <summary>
     /// Gets or sets the roles.
     /// </summary>
     public string[] Roles { get; set; }

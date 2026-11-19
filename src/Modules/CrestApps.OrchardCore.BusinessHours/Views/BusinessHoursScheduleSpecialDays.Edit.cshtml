@@ -1,0 +1,10 @@
+@model BusinessHoursScheduleViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="SpecialDays">
+    <label asp-for="SpecialDays" class="ocat-label">@T["Holidays and special days"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="SpecialDays" class="form-control font-monospace" rows="5" placeholder="2026-12-24 09:00-13:00 Christmas Eve&#10;2026-12-25 Christmas Day"></textarea>
+        <span asp-validation-for="SpecialDays" class="text-danger"></span>
+        <span class="hint">@T["One date per line, written as 2026-12-25. A date alone, or followed by a name, is closed all day. Add hours such as 09:00-13:00 after the date for a day with special hours."]</span>
+    </div>
+</div>

@@ -15,6 +15,16 @@
                     </div>
                 </div>
                 @await DisplayAsync(Model.Locations[i].AddressEditor)
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <div class="form-check">
+                            <input asp-for="Locations[i].IsBilling" type="checkbox" class="form-check-input" />
+                            <label asp-for="Locations[i].IsBilling" class="form-check-label">@T["Billing location"]</label>
+                            <span asp-validation-for="Locations[i].IsBilling" class="text-danger"></span>
+                            <span class="hint dashed">@T["Invoices and other billing documents are addressed here. Mark one location at most; without one, the first location is used."]</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         }
         <span class="hint">@T["The places the account has, such as where its orders are shipped or where it is serviced. Save to add another; leave a location blank to remove it."]</span>

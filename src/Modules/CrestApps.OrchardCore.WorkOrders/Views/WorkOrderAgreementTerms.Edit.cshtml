@@ -1,0 +1,179 @@
+@using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels
+@model WorkOrderAgreementTermsViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header d-flex align-items-center">@T["Visits"]@if (!string.IsNullOrEmpty(Model.AgreementId)) { <a class="ms-auto small" asp-area="CrestApps.OrchardCore.WorkOrders" asp-controller="ServiceAgreements" asp-action="Details" asp-route-id="@Model.AgreementId">@T["Next visits and work orders"]</a> }</div>
+        <div class="card-body">
+            <p class="hint">@T["Each schedule repeats from the start date. Its work order is made the number of days ahead you choose, once for each visit. A schedule covers the agreement's assets unless you choose some of them for it. Leave a row empty to skip it."]</p>
+            <div class="table-responsive mb-3">
+                <table class="table table-sm align-middle">
+                    <thead><tr><th scope="col">@T["Name"]</th><th scope="col">@T["Work order type"]</th><th scope="col">@T["Repeats"]</th><th scope="col">@T["Made ahead (days)"]</th>@if (Model.AssetOptions.Count > 0)
+                        {
+                            <th scope="col">@T["Assets"]</th>
+                        }</tr></thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Schedules.Count; i++)
+                        {
+                            var schedule = Model.Schedules[i];
+                            <tr>
+                                <td><input type="hidden" asp-for="Schedules[i].Id" /><input asp-for="Schedules[i].Name" class="form-control form-control-sm" placeholder="@T["Such as: Annual inspection"]" aria-label="@T["Name"]" /></td>
+                                <td>
+                                    <select asp-for="Schedules[i].TypeId" class="form-select form-select-sm" aria-label="@T["Work order type"]">
+                                        <option value="">@T["Choose…"]</option>
+                                        @foreach (var type in Model.TypeOptions)
+                                        {
+                                            <option value="@type.Value" selected="@(type.Value == schedule.TypeId)">@type.Text</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td>
+                                    <select asp-for="Schedules[i].Rule" class="form-select form-select-sm" aria-label="@T["Repeats"]">
+                                        @foreach (var option in Model.RuleOptions)
+                                        {
+                                            <option value="@option.Value" selected="@(option.Value == (schedule.Rule ?? string.Empty))">@option.Text</option>
+                                        }
+                                    </select>
+                                    <input asp-for="Schedules[i].CustomRule" class="form-control form-control-sm mt-1" placeholder="FREQ=MONTHLY;BYDAY=2SU" aria-label="@T["Custom rule"]" />
+                                </td>
+                                <td><input asp-for="Schedules[i].LeadDays" type="number" min="0" max="365" class="form-control form-control-sm" aria-label="@T["Made ahead (days)"]" style="max-width: 12rem" /></td>
+                                @if (Model.AssetOptions.Count > 0)
+                                {
+                                    <td>
+                                        <select asp-for="Schedules[i].AssetIds" class="selectpicker show-tick btn-group-sm" multiple aria-label="@T["Assets"]" data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3">
+                                            @foreach (var asset in Model.AssetOptions)
+                                            {
+                                                <option value="@asset.Value" selected="@schedule.AssetIds.Contains(asset.Value)">@asset.Text</option>
+                                            }
+                                        </select>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <span class="hint">@T["A custom rule is an iCalendar RRULE, such as FREQ=MONTHLY;BYDAY=2SU for the second Sunday of every month. It is used when Repeats is Custom rule."]</span>
+            </div>
+        </div>
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Pricing"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Pricing" class="ocat-label">@T["Visits are"]</label>
+                <div class="ocat-end">
+                    <select asp-for="Pricing" class="form-select">
+                        <option value="@AgreementPricing.Included">@T["Included: their work orders aren't invoiced"]</option>
+                        <option value="@AgreementPricing.PerVisit">@T["Invoiced at a price per visit"]</option>
+                    </select>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="PricePerVisit" class="ocat-label">@T["Price per visit"]</label>
+                <div class="ocat-end">
+                    <input asp-for="PricePerVisit" type="number" min="0" step="0.01" class="form-control" style="max-width: 12rem" />
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Who and where"]</div>
+        <div class="card-body">
+            @if (Model.CanChooseCustomer)
+            {
+                var initial = string.IsNullOrEmpty(Model.CustomerId) ? "[]" : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.CustomerId, text = string.IsNullOrEmpty(Model.CustomerName) ? Model.CustomerId : Model.CustomerName, selected = true } });
+
+                <div class="ocat-wrapper">
+                    <label class="ocat-label">@T["Customer"]</label>
+                    <div class="ocat-end">
+                        @await Component.InvokeAsync("ItemSelector", new
+                        {
+                            id = "agreement-customer",
+                            inputName = Html.NameFor(m => m.CustomerId).ToString(),
+                            endpoint = Url.Content("~/Admin/api/crestapps/work-orders/customers/search?kind=Customer"),
+                            initialItemsJson = initial,
+                            multiple = false,
+                            enableSearch = true,
+                            buttonText = T["Choose a customer"].Value,
+                            searchPlaceholder = T["Search by name"].Value,
+                            emptyResultsText = T["Nothing found."].Value,
+                            noSelectionText = T["Choose a customer"].Value,
+                            selectedItemsLabel = T["Customer"].Value,
+                            availableItemsLabel = T["Customer"].Value,
+                            smallButton = false,
+                        })
+                        <span class="hint">@T["When the visits are for a person rather than the account."]</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <input type="hidden" asp-for="CustomerId" />
+            }
+            <div class="ocat-wrapper">
+                <label asp-for="ContactName" class="ocat-label">@T["Contact"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ContactName" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ContactPhone" class="ocat-label">@T["Phone"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ContactPhone" type="tel" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ContactEmail" class="ocat-label">@T["Email"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ContactEmail" type="email" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="AddressLine1" class="ocat-label">@T["Street address"]</label>
+                <div class="ocat-end">
+                    <input asp-for="AddressLine1" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="City" class="ocat-label">@T["City"]</label>
+                <div class="ocat-end">
+                    <input asp-for="City" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Region" class="ocat-label">@T["State or region"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Region" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="PostalCode" class="ocat-label">@T["Postal code"]</label>
+                <div class="ocat-end">
+                    <input asp-for="PostalCode" class="form-control" autocomplete="off" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Country" class="ocat-label">@T["Country"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Country" class="form-control" autocomplete="off" maxlength="2" placeholder="US" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="AccessNotes" class="ocat-label">@T["Access notes"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="AccessNotes" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            @if (Model.AssetOptions.Count > 0)
+            {
+            <div class="ocat-wrapper">
+                <label asp-for="AssetIds" class="ocat-label">@T["Assets covered"]</label>
+                <div class="ocat-end">
+                    <select asp-for="AssetIds" asp-items="Model.AssetOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
+                </div>
+            </div>
+            }
+        </div>
+    </div>

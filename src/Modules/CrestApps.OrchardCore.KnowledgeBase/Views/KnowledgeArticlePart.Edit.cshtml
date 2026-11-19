@@ -1,0 +1,7 @@
+@model KnowledgeArticlePartViewModel
+
+<div class="mb-3">
+    <label asp-for="Summary" class="form-label">@T["Summary"]</label>
+    <textarea asp-for="Summary" class="form-control" rows="2" maxlength="1000"></textarea>
+    <span class="hint">@T["One or two sentences shown in lists, searches and suggestions. Search looks at the title and this summary."]</span>
+</div>

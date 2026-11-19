@@ -1,0 +1,20 @@
+[
+  {
+    "action": "vite",
+    "name": "document-lines-editor.js",
+    "source": "Assets/js/document-lines-editor.js",
+    "dest": "wwwroot/Scripts/document-lines-editor.js"
+  },
+  {
+    "action": "vite",
+    "name": "payment-schedule-editor.js",
+    "source": "Assets/js/payment-schedule-editor.js",
+    "dest": "wwwroot/Scripts/payment-schedule-editor.js"
+  },
+  {
+    "action": "vite",
+    "name": "document-lines-editor.css",
+    "source": "Assets/css/document-lines-editor.css",
+    "dest": "wwwroot/Styles/document-lines-editor.css"
+  }
+]

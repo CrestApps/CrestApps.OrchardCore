@@ -1,4 +1,7 @@
-using CrestApps.OrchardCore.Calendars;
+using CrestApps.Core;
+using CrestApps.OrchardCore.ServiceLevels.Core.Services;
+using CrestApps.OrchardCore.ServiceLevels.Models;
+using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.WorkOrders;
 using CrestApps.OrchardCore.WorkOrders.Core;
@@ -13,8 +16,8 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Tests.WorkOrders;
 
 /// <summary>
-/// Work orders take their type's defaults and a number, move only along the status rules, keep the service level
-/// clock (stopping while they wait), can't be completed until their checklist, signature and photos are in, bill their
+/// Work orders take their type's defaults and a number, move only along the status rules, keep their service level
+/// timers on the shared Service Levels block (stopping while they wait), can't be completed until their checklist, signature and photos are in, bill their
 /// lines, and take parts off a stock location.
 /// </summary>
 public sealed class WorkOrderTests
@@ -30,41 +33,13 @@ public sealed class WorkOrderTests
     }
 
     [Fact]
-    public void BusinessMinutes_SkipTheHoursClosed()
-    {
-        // Open 9 to 5 on Friday and Monday; 2 hours from Friday 4 pm end at Monday 10 am.
-        var friday = new DateTime(2026, 11, 6, 0, 0, 0, DateTimeKind.Utc);
-        var open = new[] { new TimeWindow(friday.AddHours(9), friday.AddHours(17)), new TimeWindow(friday.AddDays(3).AddHours(9), friday.AddDays(3).AddHours(17)) };
-        var remaining = TimeSpan.FromHours(2);
-
-        Assert.Equal(friday.AddDays(3).AddHours(10), SlaClock.Add(open, friday.AddHours(16), ref remaining));
-
-        var tooMuch = TimeSpan.FromHours(30);
-
-        Assert.Null(SlaClock.Add(open, friday.AddHours(9), ref tooMuch));
-        Assert.Equal(TimeSpan.FromHours(14), tooMuch);
-    }
-
-    [Fact]
-    public async Task WeeklyHours_CountOnlyTheOpenHours_InTheirTimeZone()
-    {
-        var clock = new SlaClock([]);
-        var policy = new ServiceLevelPolicy { WeeklyHours = new WeeklyHours { Days = WeeklyHours.Weekdays() }, TimeZoneId = "America/New_York" };
-
-        // Friday 4 pm in New York (9 pm UTC), 2 working hours later is Monday 10 am in New York (3 pm UTC).
-        var due = await clock.DueAsync(new DateTime(2026, 11, 6, 21, 0, 0, DateTimeKind.Utc), 120, policy, TestContext.Current.CancellationToken);
-
-        Assert.Equal(new DateTime(2026, 11, 9, 15, 0, 0, DateTimeKind.Utc), due);
-    }
-
-    [Fact]
     public async Task EachKindOfSettingsRecord_IsListedApart_AndReadBackAsSaved()
     {
         await using var setup = await SetupAsync();
 
         await setup.Harness.RunAsync(async services =>
         {
-            var policies = await services.GetRequiredService<WorkOrderSettingManager<ServiceLevelPolicy>>().GetAllAsync();
+            var policies = await services.GetRequiredService<IServiceLevelPolicyManager>().ListByScopeAsync(WorkOrdersConstants.ServiceLevelScope);
             var policy = Assert.Single(policies);
 
             Assert.Equal("Standard", policy.Name);
@@ -72,8 +47,9 @@ public sealed class WorkOrderTests
             Assert.Equal("Boiler service", Assert.Single(await services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>().GetAllAsync()).Name);
             Assert.Empty(await services.GetRequiredService<WorkOrderSettingManager<WorkOrderSubStatus>>().GetAllAsync());
 
-            // A new policy stops the clock while on hold, once: defaults aren't read back twice.
-            Assert.Equal([WorkOrderStatus.OnHold], policy.PauseStatuses);
+            // The Work Orders settings of a shared policy are read back from its properties.
+            Assert.True(policy.TryGet<WorkOrderServiceLevelSettings>(out var settings));
+            Assert.Equal([WorkOrderStatus.OnHold], settings.PauseStatuses);
         });
     }
 
@@ -114,8 +90,8 @@ public sealed class WorkOrderTests
         setup.Now = setup.Now.AddHours(3);
         var resumed = await ChangeAsync(setup, workOrder.ItemId, WorkOrderStatus.InProgress);
 
+        // The policy counts around the clock, so the three hours on hold move the resolution three hours later.
         Assert.Equal(workOrder.CreatedUtc.AddMinutes(30), resumed.Sla.FirstResponseUtc);
-        Assert.Equal(3 * 3600, resumed.Sla.PausedSeconds);
         Assert.Equal(workOrder.Sla.ResolveByUtc.Value.AddHours(3), resumed.Sla.ResolveByUtc);
         Assert.Null(resumed.Sla.PausedSinceUtc);
     }
@@ -168,7 +144,7 @@ public sealed class WorkOrderTests
         await using var setup = await SetupAsync();
         var workOrder = await CreateAsync(setup, WorkOrderPriority.High);
 
-        Task<int> CheckAsync() => setup.Harness.RunAsync(services => services.GetRequiredService<SlaMonitor>().CheckAsync());
+        Task<int> CheckAsync() => setup.Harness.RunAsync(services => services.GetRequiredService<ServiceLevelMonitor>().CheckAsync());
 
         // 2 hours to respond, warned at 80%: 96 minutes.
         setup.Now = workOrder.CreatedUtc.AddMinutes(95);
@@ -237,7 +213,7 @@ public sealed class WorkOrderTests
         var clock = new Mock<IClock>();
         var observer = new Mock<IWorkOrderObserver>();
         var parts = new Mock<IWorkOrderPartsService>();
-        var billing = new Mock<IWorkOrderBilling>();
+        var billing = new Mock<IWorkOrderBilling> { CallBase = true };
 
         clock.SetupGet(c => c.UtcNow).Returns(() => setup.Now);
         observer.Setup(o => o.OnEventAsync(It.IsAny<WorkOrder>(), It.IsAny<string>(), It.IsAny<IReadOnlyDictionary<string, object>>(), It.IsAny<CancellationToken>()))
@@ -278,23 +254,27 @@ public sealed class WorkOrderTests
                 services.AddSingleton(observer.Object);
                 services.AddSingleton(parts.Object);
                 services.AddSingleton(billing.Object);
-                services.AddWorkOrdersCore();
+                services.AddWorkOrdersWithServiceLevels();
             },
-            WorkOrdersIndexSchema.CreateAsync,
-            [new WorkOrderIndexProvider(), new WorkOrderTypeIndexProvider(), new ChecklistTemplateIndexProvider(), new ServiceLevelPolicyIndexProvider(), new WorkOrderSubStatusIndexProvider()],
-            [WorkOrdersConstants.CollectionName]);
+            WorkOrderTestStores.CreateSchemaAsync,
+            [.. WorkOrderTestStores.IndexProviders],
+            WorkOrderTestStores.Collections);
 
         setup.TypeId = await setup.Harness.RunAsync(async services =>
         {
-            var policies = services.GetRequiredService<WorkOrderSettingManager<ServiceLevelPolicy>>();
+            var policies = services.GetRequiredService<IServiceLevelPolicyManager>();
             var policy = await policies.NewAsync();
 
             policy.Name = "Standard";
+            policy.Scope = WorkOrdersConstants.ServiceLevelScope;
             policy.Targets =
             [
-                new ServiceLevelTarget { Priority = WorkOrderPriority.High, ResponseMinutes = 120, ResolveMinutes = 480 },
-                new ServiceLevelTarget { Priority = WorkOrderPriority.Normal, ResponseMinutes = 240, ResolveMinutes = 1440 },
+                new ServiceLevelTarget { Metric = ServiceLevelMetrics.FirstResponse, Priority = nameof(WorkOrderPriority.High), Minutes = 120 },
+                new ServiceLevelTarget { Metric = ServiceLevelMetrics.Resolution, Priority = nameof(WorkOrderPriority.High), Minutes = 480 },
+                new ServiceLevelTarget { Metric = ServiceLevelMetrics.FirstResponse, Priority = nameof(WorkOrderPriority.Normal), Minutes = 240 },
+                new ServiceLevelTarget { Metric = ServiceLevelMetrics.Resolution, Priority = nameof(WorkOrderPriority.Normal), Minutes = 1440 },
             ];
+            policy.Put(new WorkOrderServiceLevelSettings { PauseStatuses = [WorkOrderStatus.OnHold] });
             await policies.CreateAsync(policy);
 
             var checklists = services.GetRequiredService<WorkOrderSettingManager<ChecklistTemplate>>();

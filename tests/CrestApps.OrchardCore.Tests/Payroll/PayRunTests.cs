@@ -692,8 +692,8 @@ public sealed class PayRunTests
                 services.AddPayrollCore();
                 services.AddIncomeTaxCore();
                 services.AddPayrollHandlers();
-                services.AddSingleton<INamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>>(new InMemoryNamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>());
-                services.AddSingleton<INamedCatalog<ApprovalPolicy>>(new InMemoryNamedCatalog<ApprovalPolicy>());
+                services.AddSingleton<INamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>>(new CrestApps.OrchardCore.Tests.Taxation.Fakes.InMemoryNamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>());
+                services.AddSingleton<INamedCatalog<ApprovalPolicy>>(new CrestApps.OrchardCore.Tests.Taxation.Fakes.InMemoryNamedCatalog<ApprovalPolicy>());
                 services.AddSingleton<IApprovalRequestStore>(new InMemoryApprovalRequestStore());
                 // Approvals commits the session as it does on a site: records read before must not be saved twice.
                 services.AddScoped<IApprovalCommitter, YesSqlApprovalCommitter>();

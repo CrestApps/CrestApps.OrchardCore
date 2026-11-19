@@ -191,7 +191,7 @@ public sealed class DispatchTests
         await PlanningKit.GrantSkillAsync(kit.Harness, ana.ItemId, boilers.ItemId);
         await SaveCertificateAsync(kit, ana, gas.ItemId, new DateOnly(2024, 1, 1), new DateOnly(2026, 10, 31));
 
-        var (_, visit) = await kit.AddJobAsync("Boiler down", DispatchKit.Depot, workOrder => workOrder.RequiredSkills = [new RequiredSkill { SkillId = boilers.ItemId }]);
+        var (_, visit) = await kit.AddJobAsync("Boiler down", DispatchKit.Depot, workOrder => workOrder.RequiredSkills = [new SkillRequirement { SkillId = boilers.ItemId }]);
         var found = await kit.CandidatesAsync(visit);
 
         Assert.Empty(found.Candidates);
@@ -224,7 +224,7 @@ public sealed class DispatchTests
 
         Assert.True((await kit.AssignAsync(early, DispatchKit.Monday(8), ana)).Succeeded);
 
-        var (_, visit) = await kit.AddJobAsync("Boiler down", DispatchKit.South, workOrder => workOrder.RequiredSkills = [new RequiredSkill { SkillId = boilers.ItemId }]);
+        var (_, visit) = await kit.AddJobAsync("Boiler down", DispatchKit.South, workOrder => workOrder.RequiredSkills = [new SkillRequirement { SkillId = boilers.ItemId }]);
 
         // Act
         var found = await kit.CandidatesAsync(visit);

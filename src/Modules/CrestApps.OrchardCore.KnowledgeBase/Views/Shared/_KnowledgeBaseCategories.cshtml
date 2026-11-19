@@ -1,0 +1,16 @@
+@model KnowledgeBaseCategoriesViewModel
+
+<nav class="knowledge-base-categories mb-4" aria-label="@T["Categories"]">
+    <h2 class="h6 text-uppercase text-body-secondary">@T["Categories"]</h2>
+    <div class="list-group">
+        <a class="list-group-item list-group-item-action@(Model.AllSelected ? " active" : null)" href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName)">@T["All articles"]</a>
+        @foreach (var category in Model.Categories)
+        {
+            <a class="list-group-item list-group-item-action d-flex justify-content-between@(string.Equals(category.Id, Model.SelectedId, StringComparison.Ordinal) ? " active" : null)"
+               style="padding-left: @(1 + category.Level)rem;"
+               href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName, new { category = category.Id })">
+                <span>@category.Name</span><span class="badge text-bg-light">@category.Count</span>
+            </a>
+        }
+    </div>
+</nav>

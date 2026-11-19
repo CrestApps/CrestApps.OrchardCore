@@ -22,4 +22,8 @@
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+  </ItemGroup>
+
 </Project>

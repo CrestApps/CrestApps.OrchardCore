@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Consent;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
@@ -35,7 +36,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
         // composer shrinks photos to fit.
         Attachments = new MessagingAttachmentCapabilities
         {
-            Formats = MessagingFileFormats.Images,
+            Formats = FileFormats.Images,
             MaxCount = 10,
             MaxTotalBytes = 1024 * 1024,
             ShrinkImagesToFit = true,

@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Tools;
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.Reports;
@@ -38,8 +39,23 @@ using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using YesSql.Filters.Query;
+using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.Timeline;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements;
+
+/// <summary>
+/// Adds the Notes card to contact and lead pages: their timelines.
+/// </summary>
+[RequireFeatures(TimelineConstants.Features.Timeline)]
+public sealed class TimelineStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDisplayDriver, ContactTimelineDisplayDriver>();
+    }
+}
 
 /// <summary>
 /// Registers services and configuration for this feature.
@@ -69,8 +85,15 @@ public sealed class Startup : StartupBase
         services.AddContentPart<OmnichannelContactPart>()
             .UseDisplayDriver<OmnichannelContactPartDisplayDriver>();
         services.AddContactMethods();
+
+        // Contacts are parties: pickers and lists in any module (asset owners, ticket requesters) find and name them.
+        services.TryAddScoped<IOmnichannelContactTypeProvider, ContentDefinitionOmnichannelContactTypeProvider>();
+        services.AddPartySource<ContactPartySource>(PartyKinds.Contact, LocalizationSource.Create<Startup>("Contact"), global::OrchardCore.Contents.CommonPermissions.ListContent);
         services.AddScoped<IContentHandler, OmnichannelContactTimeZoneHandler>();
         services.AddScoped<IContentHandler, OmnichannelContactMethodIdsHandler>();
+
+        // A CRM contact can be billed: its name, e-mail, phone and address reach its billing profile.
+        services.AddPartyBillingProfileSource<ContactBillingProfileSource>();
 
         services
             .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>()

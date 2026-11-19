@@ -1,0 +1,110 @@
+@model DocumentLineRowViewModel
+@using System.Globalization
+
+@* One row of the line items editor. The empty row the editor adds lines from posts as Lines[__index__], renumbered
+   by the script; every row is renumbered after a line is added, removed or moved. *@
+@{
+    var line = Model.Line;
+    var i = Model.Index;
+    var editor = Model.Editor;
+    var hasDetails = !string.IsNullOrWhiteSpace(line.Description);
+    string Invariant(decimal? value) => value?.ToString(CultureInfo.InvariantCulture);
+}
+
+<tr data-line-row data-line-rate="@Invariant(line.TaxRate)" data-line-saved-tax="@Invariant(line.TaxAmount)">
+    <td class="document-line-move text-nowrap">
+        <input type="hidden" name="Lines[@i].Id" value="@line.Id" />
+        <span class="document-line-position" data-line-position>@Model.Position</span>
+        @if (editor.CanAddLines)
+        {
+            <button type="button" class="btn btn-link btn-sm" data-line-move="-1" title="@T["Move up"]" aria-label="@T["Move the line up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-link btn-sm" data-line-move="1" title="@T["Move down"]" aria-label="@T["Move the line down"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
+        }
+    </td>
+    <td data-label="@T["Kind"]">
+        @if (editor.CanEditText)
+        {
+            <select name="Lines[@i].Kind" class="form-select form-select-sm" data-line-field="kind" aria-label="@T["Kind"]">
+                @foreach (var kind in editor.LineKinds)
+                {
+                    <option value="@kind.Value" selected="@string.Equals(kind.Value, line.Kind.ToString(), StringComparison.Ordinal)">@kind.Text</option>
+                }
+            </select>
+        }
+    </td>
+    <td class="document-line-description" data-label="@T["Description"]">
+        @if (editor.CanEditText)
+        {
+            <div class="input-group input-group-sm">
+                <input name="Lines[@i].Name" value="@line.Name" class="form-control" maxlength="255" data-line-field="name" placeholder="@T["What it is"]" aria-label="@T["Description"]" />
+                @if (Model.CanPickProduct)
+                {
+                    <button type="button" class="btn btn-outline-secondary" data-line-product title="@T["Pick a product"]" aria-label="@T["Pick a product"]"><i class="fa-solid fa-box" aria-hidden="true"></i></button>
+                }
+                <button type="button" class="btn btn-outline-secondary" data-line-details aria-expanded="@(hasDetails ? "true" : "false")" title="@T["Details"]" aria-label="@T["Show or hide the details"]"><i class="fa-solid fa-align-left" aria-hidden="true"></i></button>
+            </div>
+            <input type="hidden" name="Lines[@i].ProductId" value="@line.ProductId" data-line-field="productId" />
+            <input type="hidden" name="Lines[@i].Sku" value="@line.Sku" data-line-field="sku" />
+            <div data-line-details-field hidden="@(!hasDetails)">
+                <textarea name="Lines[@i].Description" rows="2" class="form-control form-control-sm mt-1" maxlength="2000" placeholder="@T["Details (optional)"]" aria-label="@T["Details"]">@line.Description</textarea>
+            </div>
+            @if (Model.CanPickProduct)
+            {
+                <div class="position-relative" data-line-product-panel hidden>
+                    <input type="search" class="form-control form-control-sm mt-1" data-line-product-query placeholder="@T["Search products"]" aria-label="@T["Search products"]" autocomplete="off" />
+                    <div class="list-group document-lines-product-results" data-line-product-results hidden></div>
+                </div>
+            }
+        }
+        else
+        {
+            <div>@line.Name</div>
+            @if (hasDetails)
+            {
+                <div class="small text-muted">@line.Description</div>
+            }
+        }
+    </td>
+    <td data-label="@T["Quantity"]" data-line-amount-cell>
+        <input type="number" name="Lines[@i].Quantity" value="@Invariant(line.Quantity)" step="any" min="0" class="form-control form-control-sm document-line-number" data-line-field="quantity" aria-label="@T["Quantity"]" />
+    </td>
+    <td data-label="@T["Unit"]" data-line-amount-cell>
+        @if (editor.CanEditText)
+        {
+            <input name="Lines[@i].Unit" value="@line.Unit" class="form-control form-control-sm" maxlength="32" placeholder="@T["each"]" aria-label="@T["Unit"]" />
+        }
+        else
+        {
+            <span class="small">@line.Unit</span>
+        }
+    </td>
+    <td data-label="@T["Price"]" data-line-amount-cell>
+        <input type="number" name="Lines[@i].UnitPrice" value="@Invariant(line.UnitPrice)" step="any" class="form-control form-control-sm document-line-number" data-line-field="unitPrice" aria-label="@T["Price"]" />
+    </td>
+    <td data-label="@T["Discount %"]" data-line-amount-cell>
+        <input type="number" name="Lines[@i].DiscountPercent" value="@Invariant(line.DiscountPercent)" step="any" min="0" max="100" class="form-control form-control-sm document-line-number" data-line-field="discountPercent" aria-label="@T["Discount %"]" />
+    </td>
+    <td data-label="@T["Tax category"]" data-line-amount-cell>
+        @if (editor.CanEditText)
+        {
+            <select name="Lines[@i].TaxCategoryCode" class="form-select form-select-sm" data-line-field="taxCategory" aria-label="@T["Tax category"]">
+                <option value="">@T["Default"]</option>
+                @foreach (var category in Model.TaxCategories)
+                {
+                    <option value="@category.Value" selected="@string.Equals(category.Value, line.TaxCategoryCode, StringComparison.Ordinal)">@category.Text</option>
+                }
+            </select>
+        }
+        else
+        {
+            <span class="small">@line.TaxCategoryCode</span>
+        }
+    </td>
+    <td class="document-line-amount" data-label="@T["Amount"]" data-line-amount-cell>
+        <span data-line-amount></span>
+        <span class="document-line-tax" data-line-tax></span>
+    </td>
+    <td class="text-end document-line-remove">
+        <button type="button" class="btn btn-link btn-sm text-danger" data-line-remove title="@T["Remove"]" aria-label="@T["Remove the line"]"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </td>
+</tr>

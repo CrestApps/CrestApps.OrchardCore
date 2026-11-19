@@ -33,6 +33,11 @@ internal static class MessagingStorage
     public const int ChannelLength = 50;
 
     /// <summary>
+    /// The maximum stored length, in characters, of a reply template's scope, such as <c>Tickets</c>.
+    /// </summary>
+    public const int TemplateScopeLength = 64;
+
+    /// <summary>
     /// The maximum stored length, in characters, of a customer key: a prefix, the channel and an address.
     /// </summary>
     public const int CustomerKeyLength = 320;

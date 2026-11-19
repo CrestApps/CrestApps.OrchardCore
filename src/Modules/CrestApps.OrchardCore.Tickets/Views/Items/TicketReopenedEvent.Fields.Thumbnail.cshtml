@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketReopenedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+    @T["Ticket Reopened"]
+</h4>
+<p>@T["Starts when a solved ticket is reopened."]</p>

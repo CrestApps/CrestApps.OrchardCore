@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.Tickets.Agreements
+@model TicketAgreementViewModel
+
+@{
+    string Hours(double minutes) => (minutes / 60).ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
+    var balance = Model.Balance;
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h6">@T["Agreement"]</h2>
+        <p class="small mb-1"><a asp-area="CrestApps.OrchardCore.Agreements" asp-controller="Agreements" asp-action="Edit" asp-route-id="@Model.Agreement.ItemId">@Model.Agreement.Number @Model.Agreement.Name</a></p>
+        @if (balance is not null)
+        {
+            var share = Math.Min(100, balance.UsedShare * 100);
+            <div class="progress mb-1" role="progressbar" aria-label="@T["Hours used"]" aria-valuenow="@((int)share)" aria-valuemin="0" aria-valuemax="100" style="height: .5rem">
+                <div class="progress-bar @(balance.UsedShare >= 1 ? "bg-danger" : balance.UsedShare >= 0.8 ? "bg-warning" : null)" style="width: @((int)share)%"></div>
+            </div>
+            <p class="small text-body-secondary mb-0">
+                @T["{0} of {1} hours used, {2} left", Hours(balance.UsedMinutes), Hours(balance.CoveredMinutes), Hours(balance.LeftMinutes)]
+                @if (balance.OverageMinutes > 0)
+                {
+                    <span class="text-danger">@T["Over by {0} hours, billable", Hours(balance.OverageMinutes)]</span>
+                }
+            </p>
+        }
+    </div>
+</div>

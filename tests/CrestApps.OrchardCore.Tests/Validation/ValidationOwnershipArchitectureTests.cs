@@ -44,7 +44,7 @@ public class ValidationOwnershipArchitectureTests
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Multiline);
 
     private static readonly Regex _handlerRegistrationRegex = new(
-        @"ICatalogEntryHandler<\s*(?<entity>\w+)\s*>\s*,\s*(?<implementation>\w+)\s*>",
+        @"ICatalogEntryHandler<\s*(?<entity>\w+)\s*>\s*,\s*(?<implementation>\w+(?:<\s*\w+\s*>)?)\s*>",
         RegexOptions.Compiled);
 
     private static readonly Regex _featureAttributeRegex = new(
@@ -94,6 +94,14 @@ public class ValidationOwnershipArchitectureTests
     /// </summary>
     private static readonly (string DriverPath, string InputMarker, string Justification)[] _editorOnlyInputs =
     [
+        (
+            "src/Modules/CrestApps.OrchardCore.BusinessHours/Drivers/BusinessHoursScheduleDisplayDriver.cs",
+            "nameof(BusinessHoursScheduleViewModel.Days)",
+            "The weekly rows are typed as hh:mm text in the editor; a recipe carries the schedule's windows as minutes, which the handler checks."),
+        (
+            "src/Modules/CrestApps.OrchardCore.BusinessHours/Drivers/BusinessHoursScheduleDisplayDriver.cs",
+            "nameof(BusinessHoursScheduleViewModel.SpecialDays)",
+            "The special days are typed as lines of text in the editor; a recipe carries them as structured date exceptions, which the handler checks."),
         (
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Drivers/VoiceMediaItemDisplayDriver.cs",
             "nameof(VoiceMediaItemViewModel.Audio)",

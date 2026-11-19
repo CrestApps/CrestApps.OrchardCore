@@ -17,4 +17,9 @@ public sealed class MessageTemplateIndex : CatalogItemIndex, INameAwareIndex
     /// Gets or sets the template name.
     /// </summary>
     public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of work the template is for; empty for the messaging workspace.
+    /// </summary>
+    public string Scope { get; set; }
 }

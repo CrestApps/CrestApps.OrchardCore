@@ -3,8 +3,10 @@ using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Geo;
 using CrestApps.OrchardCore.Geo.Core.Services;
 using CrestApps.OrchardCore.Geo.Models;
+using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
+using CrestApps.OrchardCore.WorkOrders;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Workforce;
@@ -70,7 +72,7 @@ public sealed class FieldServiceSetupController : Controller
         var (linked, _) = await workerManager.SearchAsync(new StaffQuery { Capability = DispatchConstants.TechnicianCapability, HasUser = true }, 0, 1, token);
         var types = await services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>().GetAllAsync(token);
         var checklists = await services.GetRequiredService<WorkOrderSettingManager<ChecklistTemplate>>().GetAllAsync(token);
-        var levels = await services.GetRequiredService<WorkOrderSettingManager<ServiceLevelPolicy>>().GetAllAsync(token);
+        var levels = await services.GetRequiredService<IServiceLevelPolicyManager>().ListByScopeAsync(WorkOrdersConstants.ServiceLevelScope, token);
         var model = new WorkforceSetupViewModel { HasRecipes = features.Contains("OrchardCore.Recipes") };
 
         model.Steps.Add(new WorkforceSetupStep
@@ -110,7 +112,7 @@ public sealed class FieldServiceSetupController : Controller
         {
             Title = S["Describe the jobs"],
             Description = S["Work order types with their length, crew, skills, checklists and billing; checklists with the questions asked on site; and service levels with the response and resolution times."],
-            Status = S["Types: {0} · Checklists: {1} · Service levels: {2}", types.Count(), checklists.Count(), levels.Count()],
+            Status = S["Types: {0} · Checklists: {1} · Service levels: {2}", types.Count(), checklists.Count(), levels.Count],
             Done = types.Any(),
             Action = S["Work Order Types"],
             Url = Url.Action("Index", "WorkOrderSettings", new { area = "CrestApps.OrchardCore.WorkOrders", kind = "types" }),

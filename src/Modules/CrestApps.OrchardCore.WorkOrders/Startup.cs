@@ -1,15 +1,17 @@
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Assets;
-using CrestApps.OrchardCore.BusinessHours.Core;
 using CrestApps.OrchardCore.Geo.Services;
 using CrestApps.OrchardCore.Geo;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Parties;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Scheduling;
+using CrestApps.OrchardCore.ServiceLevels;
+using CrestApps.OrchardCore.ServiceLevels.Models;
+using CrestApps.OrchardCore.Timeline;
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Transactions;
-using CrestApps.OrchardCore.WorkOrders.BackgroundTasks;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Drivers;
@@ -35,7 +37,7 @@ using OrchardCore.Workflows.Helpers;
 namespace CrestApps.OrchardCore.WorkOrders;
 
 /// <summary>
-/// Registers work orders, their settings records, the service level monitor and the pages.
+/// Registers work orders, their settings records, their service level scope and the pages.
 /// </summary>
 /// <summary>
 /// Picks the technicians a job should or must not go to from staff.
@@ -58,24 +60,24 @@ public sealed class Startup : StartupBase
         services.AddScoped<Integrations.WorkOrderCustomers>();
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(WorkOrdersConstants.CollectionName));
         services.AddWorkOrdersCore();
+        services.AddRecordSource<WorkOrderRecordSource>();
 
-        // A service level policy's clock runs in the hours of the calendar it names, read through the shared business
-        // hours, so any feature that keeps calendars (the Contact Center business hours) feeds it.
-        services.AddOpenHours();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IServiceHoursProvider, OpenHoursServiceHoursProvider>());
+        // Service levels are the shared ones: the feature depends on Service Levels, which keeps the policies and timers.
+        services.AddServiceLevelPolicyUsage<WorkOrderTypeServiceLevelPolicyUsage>();
+        services.AddTimelineAccessProvider<WorkOrderTimelineAccess>();
+        services.AddServiceLevelTimerAccessProvider<WorkOrderServiceLevelTimerAccess>();
+        services.AddDisplayDriver<ServiceLevelPolicy, WorkOrderServiceLevelPolicyDisplayDriver>();
         services.AddPermissionProvider<WorkOrdersPermissionsProvider>();
         services
             .AddIndexProvider<WorkOrderIndexProvider>()
             .AddIndexProvider<WorkOrderTypeIndexProvider>()
             .AddIndexProvider<ChecklistTemplateIndexProvider>()
-            .AddIndexProvider<ServiceLevelPolicyIndexProvider>()
             .AddIndexProvider<WorkOrderSubStatusIndexProvider>()
             .AddDataMigration<WorkOrdersMigrations>();
 
         services.AddDisplayDriver<WorkOrderRow, WorkOrderRowDisplayDriver>();
         services.AddDisplayDriver<WorkOrder, WorkOrderDisplayDriver>();
         services.AddDisplayDriver<WorkOrderSettingRow, WorkOrderSettingRowDisplayDriver>();
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SlaMonitorBackgroundTask>());
         services.AddScoped<WorkOrderLookups>();
         services.AddNavigationProvider<WorkOrdersAdminMenu>();
     }

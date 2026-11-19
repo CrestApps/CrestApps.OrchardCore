@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.Core.Models
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ExchangeRatesCreate" title="@T["New exchange rate"]">
+        <breadcrumb-item id="ExchangeRatesIndex" action="Index" controller="ExchangeRates" area="@ExchangeRatesConstants.Features.Area" permission="@ExchangeRatesPermissions.ManageExchangeRates.Name">@T["Exchange rates"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

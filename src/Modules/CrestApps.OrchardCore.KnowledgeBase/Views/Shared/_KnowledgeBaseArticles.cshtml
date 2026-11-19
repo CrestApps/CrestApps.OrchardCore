@@ -1,0 +1,15 @@
+@using CrestApps.OrchardCore.KnowledgeBase.Indexes
+@model IReadOnlyList<KnowledgeArticleIndex>
+
+<div class="list-group">
+    @foreach (var article in Model)
+    {
+        <a class="list-group-item list-group-item-action" asp-area="OrchardCore.Contents" asp-controller="Item" asp-action="Display" asp-route-contentItemId="@article.ContentItemId">
+            <div class="fw-semibold">@article.Title</div>
+            @if (!string.IsNullOrWhiteSpace(article.Summary))
+            {
+                <div class="small text-body-secondary">@article.Summary</div>
+            }
+        </a>
+    }
+</div>

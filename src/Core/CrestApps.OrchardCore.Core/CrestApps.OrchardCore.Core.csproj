@@ -11,6 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
@@ -20,7 +24,9 @@
     <PackageReference Include="OrchardCore.Admin.Abstractions" />
     <PackageReference Include="OrchardCore.Deployment.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Email.Abstractions" />
     <PackageReference Include="OrchardCore.FileStorage.Abstractions" />
+    <PackageReference Include="OrchardCore.Liquid.Abstractions" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Recipes.Abstractions" />
     <PackageReference Include="OrchardCore.Roles.Abstractions" />

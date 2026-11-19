@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<InvoiceSentEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+    @T["Invoice Sent"]
+</h4>
+<p>@T["Starts when an invoice is sent to its customer."]</p>

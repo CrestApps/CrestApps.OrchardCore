@@ -29,4 +29,9 @@ public static class PartyKinds
     /// A buyer who checked out without an account; the id is the guest's id.
     /// </summary>
     public const string Guest = "Guest";
+
+    /// <summary>
+    /// The kind a billing profile source gives to contribute to the profile of a party of any kind.
+    /// </summary>
+    public const string Any = "*";
 }

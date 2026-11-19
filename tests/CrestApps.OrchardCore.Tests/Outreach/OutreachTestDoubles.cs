@@ -136,4 +136,10 @@ internal sealed class OpensLaterHoursService : IOpenHoursService
 
     public Task<IReadOnlyList<HoursScheduleOption>> ListSchedulesAsync(CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<HoursScheduleOption>>([]);
+
+    public Task<DateTime> AddOpenTimeAsync(string scheduleId, DateTime fromUtc, TimeSpan duration, string timeZoneId = null, CancellationToken cancellationToken = default)
+        => Task.FromResult((OpensUtc > fromUtc ? OpensUtc : fromUtc) + duration);
+
+    public Task<TimeSpan> GetOpenTimeBetweenAsync(string scheduleId, DateTime fromUtc, DateTime toUtc, string timeZoneId = null, CancellationToken cancellationToken = default)
+        => Task.FromResult(OpensUtc >= toUtc ? TimeSpan.Zero : toUtc - (OpensUtc > fromUtc ? OpensUtc : fromUtc));
 }

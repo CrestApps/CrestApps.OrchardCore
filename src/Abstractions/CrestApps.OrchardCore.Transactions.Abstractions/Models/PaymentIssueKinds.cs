@@ -21,4 +21,17 @@ public static class PaymentIssueKinds
     /// A payment was settled and a discount provider could not record the redemption of its code.
     /// </summary>
     public const string DiscountRedemptionFailed = "DiscountRedemptionFailed";
+
+    /// <summary>
+    /// A customer credit change a ledger entry stands for could not be made, such as credit kept for a payer who can no
+    /// longer hold it, or credit to take back that was spent already: the entry and the credit disagree until someone
+    /// corrects one of them.
+    /// </summary>
+    public const string CreditNotReconciled = "CreditNotReconciled";
+
+    /// <summary>
+    /// A transaction was charged to its owner's saved payment method on its schedule and every retry was declined (or the
+    /// card needed its holder's approval), so the owner was asked to pay it themselves.
+    /// </summary>
+    public const string AutoChargeFailed = "AutoChargeFailed";
 }

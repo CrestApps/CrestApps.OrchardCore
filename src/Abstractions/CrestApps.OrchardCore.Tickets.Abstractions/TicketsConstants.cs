@@ -1,0 +1,338 @@
+namespace CrestApps.OrchardCore.Tickets;
+
+/// <summary>
+/// Names shared by the Tickets module and the modules that build on it.
+/// </summary>
+public static class TicketsConstants
+{
+    /// <summary>
+    /// The record kind of a ticket in a <c>RecordRef</c>: its timeline, files, service-level timers and links.
+    /// </summary>
+    public const string RecordKind = "Ticket";
+
+    /// <summary>
+    /// The scope of ticket service-level policies.
+    /// </summary>
+    public const string ServiceLevelScope = "Tickets";
+
+    /// <summary>
+    /// The YesSql collection that holds the service desk's own records: the desks, statuses, priorities, saved views and
+    /// boards, and the protected information, requester e-mail outbox, backlog snapshots and time-elapsed markers.
+    /// Tickets themselves are content items and stay in the default collection.
+    /// </summary>
+    public const string CollectionName = "ServiceDesk";
+
+    /// <summary>
+    /// The stereotype of a ticket content type.
+    /// </summary>
+    public const string Stereotype = "Ticket";
+
+    /// <summary>
+    /// The content part every ticket type carries.
+    /// </summary>
+    public const string PartName = "TicketPart";
+
+    /// <summary>
+    /// The default ticket content type.
+    /// </summary>
+    public const string DefaultContentType = "Ticket";
+
+    /// <summary>
+    /// The part a ticket category's taxonomy term carries (<see cref="Models.TicketCategoryPart"/>).
+    /// </summary>
+    public const string CategoryPartName = "TicketCategoryPart";
+
+    /// <summary>
+    /// The term type of ticket categories.
+    /// </summary>
+    public const string CategoryTermType = "TicketCategory";
+
+    /// <summary>
+    /// The name ticket field rules read the category by (Conditional Fields).
+    /// </summary>
+    public const string CategoryConditionSource = "TicketCategory";
+
+    /// <summary>
+    /// The group of the tickets' kinds of e-mail and their templates.
+    /// </summary>
+    public const string EmailGroup = "Tickets";
+
+    /// <summary>
+    /// The scope of reply templates offered on tickets.
+    /// </summary>
+    public const string ReplyTemplateScope = "Tickets";
+
+    /// <summary>
+    /// The timeline entry kinds of a ticket.
+    /// </summary>
+    public static class EntryKinds
+    {
+        /// <summary>
+        /// A public reply, from an agent or the requester.
+        /// </summary>
+        public const string Reply = "Reply";
+
+        /// <summary>
+        /// An internal note.
+        /// </summary>
+        public const string Note = "Note";
+
+        /// <summary>
+        /// Something that happened, such as a change of status.
+        /// </summary>
+        public const string Event = "Event";
+    }
+
+    /// <summary>
+    /// The recipe and deployment step names of the ticket settings.
+    /// </summary>
+    public static class RecipeSteps
+    {
+        /// <summary>
+        /// The ticket statuses.
+        /// </summary>
+        public const string Statuses = "TicketStatuses";
+
+        /// <summary>
+        /// The ticket priorities.
+        /// </summary>
+        public const string Priorities = "TicketPriorities";
+
+        /// <summary>
+        /// The desks.
+        /// </summary>
+        public const string Desks = "TicketDesks";
+
+        /// <summary>
+        /// The saved views.
+        /// </summary>
+        public const string Views = "TicketViews";
+
+        /// <summary>
+        /// The boards.
+        /// </summary>
+        public const string Boards = "TicketBoards";
+    }
+
+    /// <summary>
+    /// The channels a ticket or a reply comes from. The value is an open string; channel modules add their own.
+    /// </summary>
+    public static class Channels
+    {
+        /// <summary>
+        /// Written by an agent on the ticket pages.
+        /// </summary>
+        public const string Agent = "Agent";
+
+        /// <summary>
+        /// Written by the requester on the portal.
+        /// </summary>
+        public const string Portal = "Portal";
+
+        /// <summary>
+        /// Sent through the API.
+        /// </summary>
+        public const string Api = "Api";
+
+        /// <summary>
+        /// Sent from a web form widget on the site.
+        /// </summary>
+        public const string WebForm = "WebForm";
+    }
+
+    /// <summary>
+    /// The notification types Tickets sends, each a row of a user's notification preferences. They are stored on the
+    /// notifications, so they never change.
+    /// </summary>
+    public static class NotificationTypes
+    {
+        /// <summary>A ticket was assigned to you.</summary>
+        public const string Assigned = "TicketAssigned";
+
+        /// <summary>A ticket was assigned to a team you are on.</summary>
+        public const string TeamAssigned = "TicketTeamAssigned";
+
+        /// <summary>The requester replied on your ticket.</summary>
+        public const string RequesterReplied = "TicketRequesterReplied";
+
+        /// <summary>Someone added an internal note on your ticket.</summary>
+        public const string NoteAdded = "TicketNoteAdded";
+
+        /// <summary>Someone else moved your ticket to another status.</summary>
+        public const string StatusChanged = "TicketStatusChanged";
+
+        /// <summary>A request waits for your approval.</summary>
+        public const string ApprovalRequested = "TicketApprovalRequested";
+
+        /// <summary>A service-level target of your ticket is close or missed.</summary>
+        public const string ServiceLevel = "TicketServiceLevel";
+
+        /// <summary>A ticket was merged into yours.</summary>
+        public const string Merged = "TicketMerged";
+
+        /// <summary>An agent replied on your request (for a requester who signs in).</summary>
+        public const string Replied = "TicketReplied";
+
+        /// <summary>Your request was received (for a requester who signs in).</summary>
+        public const string RequestReceived = "TicketRequestReceived";
+
+        /// <summary>Your request was solved (for a requester who signs in).</summary>
+        public const string RequestSolved = "TicketRequestSolved";
+
+        /// <summary>You are asked to rate how your solved request was handled (for a requester who signs in).</summary>
+        public const string RatingRequested = "TicketRatingRequested";
+
+        /// <summary>A workflow's Notify About Ticket task.</summary>
+        public const string Workflow = "TicketWorkflow";
+    }
+
+    /// <summary>
+    /// The names of the workflow events Tickets raises.
+    /// </summary>
+    public static class Events
+    {
+        /// <summary>A ticket was created.</summary>
+        public const string Created = "TicketCreated";
+
+        /// <summary>A ticket's values or fields changed.</summary>
+        public const string Updated = "TicketUpdated";
+
+        /// <summary>A ticket moved to another status.</summary>
+        public const string StatusChanged = "TicketStatusChanged";
+
+        /// <summary>A ticket was given to another assignee.</summary>
+        public const string Assigned = "TicketAssigned";
+
+        /// <summary>The requester replied.</summary>
+        public const string CustomerReplied = "TicketCustomerReplied";
+
+        /// <summary>An agent replied to the requester.</summary>
+        public const string AgentReplied = "TicketAgentReplied";
+
+        /// <summary>An internal note was added.</summary>
+        public const string NoteAdded = "TicketNoteAdded";
+
+        /// <summary>A ticket is close to missing a service-level target.</summary>
+        public const string ServiceLevelWarning = "TicketServiceLevelWarning";
+
+        /// <summary>A ticket missed a service-level target.</summary>
+        public const string ServiceLevelBreached = "TicketServiceLevelBreached";
+
+        /// <summary>A ticket was solved.</summary>
+        public const string Solved = "TicketSolved";
+
+        /// <summary>A solved or closed ticket was reopened.</summary>
+        public const string Reopened = "TicketReopened";
+
+        /// <summary>A ticket was closed.</summary>
+        public const string Closed = "TicketClosed";
+
+        /// <summary>A ticket was merged into another.</summary>
+        public const string Merged = "TicketMerged";
+
+        /// <summary>
+        /// A requester rated a ticket.
+        /// </summary>
+        public const string Rated = "TicketRated";
+
+        /// <summary>An agent ran a named action on a ticket.</summary>
+        public const string ActionRequested = "TicketActionRequested";
+
+        /// <summary>A time passed since a moment in a ticket's life.</summary>
+        public const string TimeElapsed = "TicketTimeElapsed";
+    }
+
+    /// <summary>
+    /// The kinds of e-mail Tickets sends requesters, in the <see cref="EmailGroup"/> group.
+    /// </summary>
+    public static class EmailKinds
+    {
+        /// <summary>
+        /// The ticket was received.
+        /// </summary>
+        public const string Received = "ticket-received";
+
+        /// <summary>
+        /// An agent replied.
+        /// </summary>
+        public const string Reply = "ticket-reply";
+
+        /// <summary>
+        /// The ticket was solved.
+        /// </summary>
+        public const string Solved = "ticket-solved";
+
+        /// <summary>
+        /// Asks the requester to rate a solved ticket.
+        /// </summary>
+        public const string Rating = "ticket-rating";
+    }
+
+    /// <summary>
+    /// The rate-limit groups of the requester-facing endpoints, held when Orchard Core's Rate Limits feature is on.
+    /// </summary>
+    public static class RateLimitGroups
+    {
+        /// <summary>
+        /// New requests in the portal, per signed-in requester.
+        /// </summary>
+        public const string PortalCreate = "tickets-portal-create";
+
+        /// <summary>
+        /// Replies and ratings in the portal, per signed-in requester.
+        /// </summary>
+        public const string PortalReply = "tickets-portal-reply";
+
+        /// <summary>
+        /// A guest's replies and ratings from their link, per visitor address.
+        /// </summary>
+        public const string PortalGuest = "tickets-portal-guest";
+
+        /// <summary>
+        /// Ticket Form widget submissions, per visitor (their user, or their address).
+        /// </summary>
+        public const string WebForm = "tickets-web-form";
+    }
+
+    /// <summary>
+    /// The display types of a ticket.
+    /// </summary>
+    public static class DisplayTypes
+    {
+        /// <summary>
+        /// The ticket page of the admin: the drivers of <see cref="Models.TicketPart"/> and other parts add panels.
+        /// </summary>
+        public const string DetailAdmin = "DetailAdmin";
+    }
+
+    /// <summary>
+    /// The feature identifiers of the Tickets module.
+    /// </summary>
+    public static class Features
+    {
+        /// <summary>
+        /// The Tickets feature.
+        /// </summary>
+        public const string Tickets = "CrestApps.OrchardCore.Tickets";
+
+        /// <summary>
+        /// The tickets JSON API, <c>api/tickets/v1</c>.
+        /// </summary>
+        public const string Api = "CrestApps.OrchardCore.Tickets.Api";
+
+        /// <summary>
+        /// The requesters' pages in the site's "my account" area, and the signed link a guest follows from an e-mail.
+        /// </summary>
+        public const string Portal = "CrestApps.OrchardCore.Tickets.Portal";
+
+        /// <summary>
+        /// The Ticket Form widget, which opens a ticket from any page.
+        /// </summary>
+        public const string WebForm = "CrestApps.OrchardCore.Tickets.WebForm";
+
+        /// <summary>
+        /// Approval steps on ticket types.
+        /// </summary>
+        public const string Approvals = "CrestApps.OrchardCore.Tickets.Approvals";
+    }
+}

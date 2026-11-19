@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.BusinessHours.Models;
 namespace CrestApps.OrchardCore.BusinessHours.Services;
 
 /// <summary>
-/// Keeps hours schedules, such as the business hours calendars of the Contact Center. A feature that stores schedules
+/// Keeps hours schedules, such as the schedules of the Business Hours module. A feature that stores schedules
 /// registers one with <see cref="BusinessHoursServiceCollectionExtensions.AddHoursScheduleSource{TSource}"/>, and
 /// <see cref="IOpenHoursService"/> reads it.
 /// </summary>

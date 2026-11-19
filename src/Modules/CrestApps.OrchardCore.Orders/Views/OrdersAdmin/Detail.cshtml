@@ -53,11 +53,30 @@
             }
             else if (order.Quote is { Status: OrderQuoteStatus.Sent, SentUtc: { } quoted })
             {
-                @T["Quote emailed to {0} {1:g}. Waiting for the buyer to accept it by paying.", order.CustomerEmail, await LocalAsync(quoted)]
+                @if (order.Invoice.NotEmailed)
+                {
+                    @T["Quote made as {0} {1:g} but not emailed: email isn't set up, so share its link with the buyer. Waiting for the buyer to accept it.", order.Invoice.SentAs ?? T["a quote"].Value, await LocalAsync(quoted)]
+                }
+                else if (!string.IsNullOrEmpty(order.Invoice.SentAs))
+                {
+                    @T["Quote emailed to {0} {1:g} as {2}. Waiting for the buyer to accept it.", order.CustomerEmail, await LocalAsync(quoted), order.Invoice.SentAs]
+                }
+                else
+                {
+                    @T["Quote emailed to {0} {1:g}. Waiting for the buyer to accept it by paying.", order.CustomerEmail, await LocalAsync(quoted)]
+                }
                 @if (order.Quote.ExpiresUtc is { } offeredUntil)
                 {
                     <span class="d-block small">@T["Offered until {0:D}.", offeredUntil]</span>
                 }
+            }
+            else if (order.Invoice.SentUtc is { } made && order.Invoice.NotEmailed)
+            {
+                @T["Invoice {0} made {1:g} but not emailed: email isn't set up, so share its link with the buyer. Waiting for payment.", order.Invoice.SentAs ?? string.Empty, await LocalAsync(made)]
+            }
+            else if (order.Invoice.SentUtc is { } emailed && !string.IsNullOrEmpty(order.Invoice.SentAs))
+            {
+                @T["Invoice {0} emailed to {1} {2:g}. Waiting for payment.", order.Invoice.SentAs, order.CustomerEmail, await LocalAsync(emailed)]
             }
             else if (order.Invoice.SentUtc is { } sent)
             {

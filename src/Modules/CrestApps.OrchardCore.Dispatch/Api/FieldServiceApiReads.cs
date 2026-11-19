@@ -111,12 +111,12 @@ internal static partial class FieldServiceApiEndpoints
 
     internal static async Task<IResult> ListAgreementsAsync(string status, string q, int? skip, int? take, HttpContext httpContext)
     {
-        if (await DeniedAsync(httpContext, WorkOrdersPermissions.ManageServiceAgreements) is { } denied)
+        if (await DeniedAsync(httpContext, CrestApps.OrchardCore.Agreements.AgreementsPermissions.ViewAgreements) is { } denied)
         {
             return denied;
         }
 
-        var query = httpContext.RequestServices.GetRequiredService<ISession>().Query<ServiceAgreement, ServiceAgreementIndex>(collection: WorkOrdersConstants.CollectionName);
+        var query = httpContext.RequestServices.GetRequiredService<ISession>().Query<CrestApps.OrchardCore.Agreements.Models.Agreement, CrestApps.OrchardCore.Agreements.Core.Indexes.AgreementIndex>(collection: CrestApps.OrchardCore.Agreements.AgreementsConstants.CollectionName);
 
         if (!string.IsNullOrWhiteSpace(status))
         {
@@ -138,29 +138,34 @@ internal static partial class FieldServiceApiEndpoints
         return Json(new
         {
             count,
-            items = items.Select(agreement => new
+            items = items.Select(agreement =>
             {
-                id = agreement.ItemId,
-                number = agreement.Number,
-                name = agreement.Name,
-                status = agreement.Status,
-                customerId = agreement.CustomerId,
-                accountId = agreement.AccountId,
-                startDate = agreement.StartDate,
-                endDate = agreement.EndDate,
-                schedules = agreement.Schedules.Count,
+                var terms = CrestApps.Core.ExtensibleEntityExtensions.TryGet<WorkOrderAgreementTerms>(agreement, out var kept) ? kept : null;
+
+                return new
+                {
+                    id = agreement.ItemId,
+                    number = agreement.Number,
+                    name = agreement.Name,
+                    status = agreement.Status,
+                    customerId = terms?.CustomerId,
+                    accountId = agreement.AccountId,
+                    startDate = agreement.StartDate,
+                    endDate = agreement.EndDate,
+                    schedules = terms?.Schedules.Count ?? 0,
+                };
             }),
         });
     }
 
     internal static async Task<IResult> GetAgreementAsync(string id, HttpContext httpContext)
     {
-        if (await DeniedAsync(httpContext, WorkOrdersPermissions.ManageServiceAgreements) is { } denied)
+        if (await DeniedAsync(httpContext, CrestApps.OrchardCore.Agreements.AgreementsPermissions.ViewAgreements) is { } denied)
         {
             return denied;
         }
 
-        var agreement = await httpContext.RequestServices.GetRequiredService<ServiceAgreementManager>().FindByIdAsync(id);
+        var agreement = await httpContext.RequestServices.GetRequiredService<CrestApps.OrchardCore.Agreements.Services.IAgreementManager>().FindByIdAsync(id);
 
         return agreement is null ? Results.NotFound() : Json(agreement);
     }

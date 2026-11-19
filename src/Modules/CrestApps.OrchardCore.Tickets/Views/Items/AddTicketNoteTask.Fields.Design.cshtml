@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AddTicketNoteTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Add Ticket Note"])
+    </h4>
+</header>

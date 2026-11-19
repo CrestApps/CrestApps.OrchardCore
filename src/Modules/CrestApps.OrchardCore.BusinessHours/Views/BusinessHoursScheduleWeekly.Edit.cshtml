@@ -1,0 +1,51 @@
+@model BusinessHoursScheduleViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Days">
+    <label class="ocat-label">@T["Weekly hours"]</label>
+    <div class="ocat-end">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-1">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Day"]</th>
+                        <th scope="col">@T["Open"]</th>
+                        <th scope="col">@T["From"]</th>
+                        <th scope="col">@T["To"]</th>
+                        <th scope="col">@T["Then from"]</th>
+                        <th scope="col">@T["To"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Days.Count; i++)
+                    {
+                        <tr>
+                            <td>
+                                <input type="hidden" asp-for="Days[i].Day" />
+                                <label asp-for="Days[i].Open" class="form-label mb-0">@Model.Days[i].DayName</label>
+                            </td>
+                            <td>
+                                <div class="form-check">
+                                    <input asp-for="Days[i].Open" class="form-check-input" aria-label="@T["Open on {0}", Model.Days[i].DayName]" />
+                                </div>
+                            </td>
+                            <td>
+                                <input asp-for="Days[i].From" type="time" class="form-control form-control-sm" aria-label="@T["{0} opens at", Model.Days[i].DayName]" />
+                            </td>
+                            <td>
+                                <input asp-for="Days[i].To" type="time" class="form-control form-control-sm" aria-label="@T["{0} closes at", Model.Days[i].DayName]" />
+                            </td>
+                            <td>
+                                <input asp-for="Days[i].SecondFrom" type="time" class="form-control form-control-sm" aria-label="@T["{0} opens again at", Model.Days[i].DayName]" />
+                            </td>
+                            <td>
+                                <input asp-for="Days[i].SecondTo" type="time" class="form-control form-control-sm" aria-label="@T["{0} closes again at", Model.Days[i].DayName]" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <span asp-validation-for="Days" class="text-danger"></span>
+        <span class="hint">@T["Untick a day to close it. Use the second window for a lunch break. A closing time earlier than the opening time runs past midnight, and the same time for both means open all day."]</span>
+    </div>
+</div>

@@ -1,0 +1,46 @@
+@model InvoiceLateFeesViewModel
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+
+@if (Model.Invoice.Kind == InvoiceKind.DebitNote)
+{
+    @if (Model.RelatedInvoice is { } related)
+    {
+        <div class="card mb-3">
+            <div class="card-header">@T["Late fee"]</div>
+            <div class="card-body">
+                @T["This debit note charges a late fee on invoice"]
+                <a asp-controller="InvoicesAdmin" asp-action="Detail" asp-route-itemId="@related.ItemId">@related.Number</a>.
+            </div>
+        </div>
+    }
+}
+else if (Model.DebitNotes.Count > 0 || Model.CanAssess)
+{
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>@T["Late fees"]</span>
+            @if (Model.CanAssess)
+            {
+                <form asp-action="Assess" asp-controller="InvoiceLateFees" asp-route-itemId="@Model.Invoice.ItemId" method="post">
+                    <button type="submit" class="btn btn-sm btn-secondary">@T["Charge the late fee due now"]</button>
+                </form>
+            }
+        </div>
+        @if (Model.DebitNotes.Count == 0)
+        {
+            <div class="card-body text-muted">@T["The invoice is overdue. Its late fees are charged as debit notes under the late-fee policies, at the next run of the task or now."]</div>
+        }
+        <ul class="list-group list-group-flush">
+            @foreach (var debitNote in Model.DebitNotes)
+            {
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <a asp-controller="InvoicesAdmin" asp-action="Detail" asp-route-itemId="@debitNote.ItemId">@(string.IsNullOrEmpty(debitNote.Number) ? T["Draft debit note"].Value : debitNote.Number)</a>
+                        <partial name="_InvoiceStatusBadge" model="debitNote" />
+                    </span>
+                    <span>@MoneyFormatter.Format(debitNote.Totals?.Total ?? 0m, debitNote.Currency)</span>
+                </li>
+            }
+        </ul>
+    </div>
+}

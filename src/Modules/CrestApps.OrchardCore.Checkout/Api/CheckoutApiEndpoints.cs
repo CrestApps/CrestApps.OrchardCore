@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Checkout.Core.Api;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Endpoints;
@@ -215,7 +216,7 @@ internal static class CheckoutApiEndpoints
         if (!outcome.Succeeded)
         {
             return outcome.InvoiceChanged
-                ? ApiProblems.Conflict(ApiProblems.Codes.InvoiceChanged, outcome.ErrorMessage)
+                ? ApiProblems.Conflict(CommerceProblemCodes.InvoiceChanged, outcome.ErrorMessage)
                 : ApiProblems.Validation("paymentMethod", outcome.ErrorMessage);
         }
 

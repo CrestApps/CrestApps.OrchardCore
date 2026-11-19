@@ -84,12 +84,68 @@ const AREAS = [
     technical: '/docs/telephony',
   },
   {
+    title: 'Service Desk',
+    inHero: true,
+    icon: 'life-buoy',
+    text: 'Tickets for customers and employees, desks, service levels, boards, a customer portal and a knowledge base.',
+    user: '/docs/user-manual/service-desk',
+    technical: '/docs/modules/tickets',
+  },
+  {
+    title: 'Knowledge Base',
+    inHero: true,
+    icon: 'book-a',
+    text: 'A help center at /help: articles in categories, who can read each one, search, related articles and what readers found helpful.',
+    user: '/docs/user-manual/knowledge-base',
+    technical: '/docs/modules/knowledge-base',
+  },
+  {
+    title: 'Workforce',
+    inHero: true,
+    icon: 'users',
+    text: 'Workers and teams, shift planning, time off, time clock and time tracking, labor rules and a My Work portal.',
+    user: '/docs/user-manual/workforce/shift-planning',
+    technical: '/docs/modules/workforce',
+  },
+  {
+    title: 'Field Service',
+    inHero: true,
+    icon: 'wrench',
+    text: 'Work orders, assets and dispatch for the technicians you send to a customer site.',
+    user: '/docs/user-manual/field-service/work-orders',
+    technical: '/docs/modules/work-orders',
+  },
+  {
+    title: 'E-Commerce',
+    inHero: true,
+    icon: 'shopping-cart',
+    text: 'Products, carts, checkout, payments, shipping, inventory, orders and returns, markets and a headless API.',
+    user: '/docs/user-manual/commerce',
+    technical: '/docs/modules/commerce',
+  },
+  {
+    title: 'Calendars and Scheduling',
+    inHero: true,
+    icon: 'calendar-days',
+    text: 'Shared calendars and bookable scheduling for people, rooms and resources.',
+    user: '/docs/user-manual/calendars',
+    technical: '/docs/modules/calendars',
+  },
+  {
     title: 'Payroll',
     inHero: true,
     icon: 'banknote',
     text: 'Employers, pay runs with approval, direct deposit and checks, income tax, garnishments, filings and My Pay.',
     user: '/docs/user-manual/finance/payroll-pay-runs',
     technical: '/docs/modules/payroll',
+  },
+  {
+    title: 'Invoicing & Billing',
+    inHero: true,
+    icon: 'file-invoice-dollar',
+    text: 'Invoices, estimates and credit notes, payment terms, reminders and late fees, recurring billing, subscriptions and installment plans.',
+    user: '/docs/user-manual/invoicing-and-billing',
+    technical: '/docs/invoicing-and-billing',
   },
   {
     title: 'Site Administration',
@@ -110,8 +166,8 @@ function HomepageHeader() {
         </Heading>
         <p className={clsx('hero__subtitle', styles.heroDefinition)}>
           Open-source modules that turn an Orchard Core site into a business application: an AI assistant
-          suite, a CRM, a contact center with phones and a dialer, omnichannel messaging and payroll, all managed from
-          the site's admin.
+          suite, a CRM, a contact center with phones and a dialer, omnichannel messaging, a service desk and knowledge base, workforce
+          management, field service, e-commerce, calendars and scheduling, payroll, and invoicing and billing, all managed from the site's admin.
         </p>
         <ul className={styles.heroFacts}>
           {AREAS.filter((area) => area.inHero).map((area) => (
@@ -197,7 +253,7 @@ export default function Home() {
   return (
     <Layout
       title="Documentation"
-      description="The User Manual and the Technical Manual for the CrestApps Orchard Core modules: AI, CRM, Contact Center, Messaging, Phone and Payroll.">
+      description="The User Manual and the Technical Manual for the CrestApps Orchard Core modules: AI, CRM, Contact Center, Messaging, Phone, Service Desk, Knowledge Base, Workforce, Field Service, E-Commerce, Calendars and Scheduling, Payroll, and Invoicing & Billing.">
       <HomepageHeader />
       <main>
         <div className={clsx('container', styles.cards)}>

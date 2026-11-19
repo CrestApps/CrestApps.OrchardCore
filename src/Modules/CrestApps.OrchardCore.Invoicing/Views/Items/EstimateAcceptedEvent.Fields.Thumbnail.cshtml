@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Estimates
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<EstimateAcceptedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-handshake" aria-hidden="true"></i>
+    @T["Estimate Accepted"]
+</h4>
+<p>@T["Starts when the customer accepts an estimate."]</p>

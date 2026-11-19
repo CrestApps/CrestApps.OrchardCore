@@ -1,0 +1,7 @@
+@model TicketFieldCustomerSettingsViewModel
+
+<div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" asp-for="CustomerEditable" />
+    <label class="form-check-label" asp-for="CustomerEditable">@T["Customers fill this in"]</label>
+    <span class="hint dashed">@T["Shown to customers when they open a request of this ticket type in the portal. Leave it off for fields only your agents set, such as a root cause; customers then never see or change it."]</span>
+</div>

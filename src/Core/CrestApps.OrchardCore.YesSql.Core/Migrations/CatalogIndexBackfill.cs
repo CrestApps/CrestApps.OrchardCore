@@ -9,7 +9,8 @@ namespace CrestApps.OrchardCore.YesSql.Core.Migrations;
 /// index table are filled in for the records saved before it.
 /// </summary>
 /// <remarks>
-/// Use a deferred task (<c>ShellScope.AddDeferredTask</c>) to commit one page at a time after activation.
+/// For upgrades that can complete after activation, request an <see cref="Upgrades.IResumableStep"/> through
+/// <see cref="Upgrades.ResumableSteps"/> and call <see cref="ReindexAsync{TRecord, TIndex}(ISession, string, int)"/> from the step.
 /// Use <see cref="ReindexInTransactionAsync{TRecord, TIndex}"/> when the new index data must commit with the migration version. Both methods save
 /// records through the session so store handlers do not run.
 /// </remarks>

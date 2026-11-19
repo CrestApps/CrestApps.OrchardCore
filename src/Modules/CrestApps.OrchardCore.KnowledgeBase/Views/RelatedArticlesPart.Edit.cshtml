@@ -1,0 +1,8 @@
+@model RelatedArticlesPartViewModel
+
+<div class="mb-3" asp-validation-class-for="Count">
+    <label asp-for="Count" class="form-label">@T["Articles to show"]</label>
+    <input asp-for="Count" type="number" min="1" max="@RelatedArticlesPart.MaxCount" class="form-control" style="max-width: 10rem;" />
+    <span asp-validation-for="Count"></span>
+    <span class="hint">@T["Those of the article's category come first, most helpful first, then those whose title or summary share its words. Readers only see the articles they may open."]</span>
+</div>

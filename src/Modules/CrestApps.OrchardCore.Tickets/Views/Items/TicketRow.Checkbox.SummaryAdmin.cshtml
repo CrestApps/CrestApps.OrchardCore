@@ -1,0 +1,6 @@
+@model ShapeViewModel<TicketRow>
+
+<div class="form-check">
+    <input type="checkbox" class="form-check-input" value="@Model.Value.Ticket.ContentItemId" name="itemIds" id="itemIds-@Model.Value.Ticket.ContentItemId">
+    <label class="form-check-label" for="itemIds-@Model.Value.Ticket.ContentItemId">&nbsp;</label>
+</div>

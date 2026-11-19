@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<IssueInvoiceTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-stamp" aria-hidden="true"></i>
+    @T["Issue Invoice"]
+</h4>
+<p>@T["Issues a draft invoice: numbers it and posts it to the ledger."]</p>

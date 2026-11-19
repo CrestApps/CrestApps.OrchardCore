@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
@@ -97,7 +98,7 @@ public sealed class MessagingAttachmentLinks : IMessagingAttachmentUrlProvider
     // A provider may judge a file by its extension, so the link ends in the format's own; the endpoint ignores it.
     private static string PublicFileName(MessagingAttachment attachment)
     {
-        var format = MessagingFileFormats.FindByContentType(attachment.ContentType);
+        var format = FileFormats.FindByContentType(attachment.ContentType);
         var extension = format?.PreferredExtension ?? string.Empty;
 
         return (format?.IsImage == true ? "image" : "file") + extension;

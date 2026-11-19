@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Checkout.Core.Models;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
@@ -37,6 +38,7 @@ public sealed class DeferredBalanceTenderProviderBaseTests
         Assert.Equal(("Pay later", "Test", "s1", "test-later"), (invoice.Title, invoice.Source, invoice.CheckoutSessionId, invoice.ObligationId));
         Assert.Equal((70m, 0m, TransactionStatus.Outstanding, "USD"), (invoice.TotalAmount, invoice.AmountPaid, invoice.Status, invoice.Currency));
         Assert.Equal(("Account", "a1"), (invoice.ParentReferenceType, invoice.ParentReferenceId));
+        Assert.Equal((PartyKinds.Account, "a1"), (invoice.PayerKind, invoice.PayerId));
         Assert.Equal(_now.AddDays(30), invoice.DueUtc);
         Assert.Equal(1, tender.Debited);
     }
@@ -125,6 +127,7 @@ public sealed class DeferredBalanceTenderProviderBaseTests
                 Source = "Test",
                 ParentReferenceType = "Account",
                 ParentReferenceId = "a1",
+                Payer = new PartyRef(PartyKinds.Account, "a1"),
                 DueUtc = _clock.UtcNow.AddDays(30),
                 Message = "Owed in 30 days.",
             });

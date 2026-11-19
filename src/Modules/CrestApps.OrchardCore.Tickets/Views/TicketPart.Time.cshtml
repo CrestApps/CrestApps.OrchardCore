@@ -1,0 +1,111 @@
+@model TicketTimeViewModel
+
+@{
+    string Hours(int minutes) => minutes < 60
+        ? T.GetString("{0} min", minutes).Value
+        : T.GetString("{0} h {1:00} min", minutes / 60, minutes % 60).Value;
+
+    var logId = "ticket-time-log-" + Model.TicketId;
+    var entriesId = "ticket-time-entries-" + Model.TicketId;
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h6">@T["Time"]</h2>
+        @if (Model.Summary.People.Count > 0)
+        {
+            <ul class="list-unstyled small mb-2">
+                @foreach (var person in Model.Summary.People)
+                {
+                    <li class="d-flex justify-content-between"><span>@person.Name</span><span>@Hours(person.Minutes)</span></li>
+                }
+            </ul>
+            @if (Model.Summary.People.Count > 1)
+            {
+                <p class="small fw-semibold mb-2">@T["In all: {0}", Hours(Model.Summary.TotalMinutes)]</p>
+            }
+            @if (Model.Summary.NotBilledMinutes > 0)
+            {
+                <p class="small text-body-secondary mb-2">@T["Not billed: {0}", Hours(Model.Summary.NotBilledMinutes)]</p>
+            }
+            <button type="button" class="btn btn-link btn-sm p-0 mb-2" data-bs-toggle="collapse" data-bs-target="#@entriesId" aria-expanded="false" aria-controls="@entriesId">@T["Entries ({0})", Model.Summary.Entries.Count]</button>
+            <ul class="collapse list-unstyled small border-top pt-2 mb-2" id="@entriesId">
+                @foreach (var entry in Model.Summary.Entries)
+                {
+                    <li class="mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>@entry.Name</span>
+                            <span>@Hours(entry.Minutes)</span>
+                        </div>
+                        <div class="text-body-secondary">
+                            @await DisplayAsync(await New.DateTime(Utc: entry.StartUtc, Format: "g"))
+                            @if (entry.EndUtc is null)
+                            {
+                                <span class="badge text-bg-success fw-normal">@T["Working"]</span>
+                            }
+                            @if (Model.Summary.CanChooseBillable && !entry.Billable)
+                            {
+                                <span class="badge text-bg-light border fw-normal">@T["Not billed"]</span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(entry.Note))
+                        {
+                            <div>@entry.Note</div>
+                        }
+                    </li>
+                }
+                @if (Model.CanCorrect)
+                {
+                    <li><a asp-area="CrestApps.OrchardCore.TimeTracker" asp-controller="TimeEntries" asp-action="Index">@T["Correct time entries"]</a></li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="small text-muted mb-2">@T["No time on this ticket yet."]</p>
+        }
+        @if (Model.CanWork)
+        {
+            <div class="d-flex flex-wrap gap-2">
+                <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="Time" asp-route-id="@Model.TicketId" method="post" class="no-multisubmit">
+                    @if (Model.Summary.WorkingSinceUtc is { } since)
+                    {
+                        <input type="hidden" name="stop" value="true" />
+                        <p class="small mb-2"><span class="badge text-bg-success fw-normal">@T["Working"]</span> @T["since"] @await DisplayAsync(await New.DateTime(Utc: since, Format: "t"))</p>
+                        <button type="submit" class="btn btn-sm btn-secondary">@T["Stop working on this ticket"]</button>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-sm btn-secondary">@T["Start working on this ticket"]</button>
+                    }
+                </form>
+                <button type="button" class="btn btn-sm btn-outline-secondary align-self-end" data-bs-toggle="collapse" data-bs-target="#@logId" aria-expanded="false" aria-controls="@logId">@T["Log time"]</button>
+            </div>
+            <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="TicketTime" asp-action="Log" asp-route-id="@Model.TicketId" method="post" class="collapse no-multisubmit border-top mt-3 pt-3" id="@logId">
+                <div class="mb-2">
+                    <label for="@(logId)-spent" class="form-label small">@T["Time spent"]</label>
+                    <input id="@(logId)-spent" name="Spent" class="form-control form-control-sm" required placeholder="@T["30m, 1h 30m or 1:30"]" />
+                </div>
+                <div class="mb-2">
+                    <label for="@(logId)-started" class="form-label small">@T["Started"]</label>
+                    <input id="@(logId)-started" name="Started" type="datetime-local" class="form-control form-control-sm" />
+                    <span class="hint">@T["Leave it empty when you just finished."]</span>
+                </div>
+                <div class="mb-2">
+                    <label for="@(logId)-note" class="form-label small">@T["Note"]</label>
+                    <textarea id="@(logId)-note" name="Note" rows="2" class="form-control form-control-sm"></textarea>
+                </div>
+                @if (Model.Summary.CanChooseBillable)
+                {
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input" id="@(logId)-billable" name="Billable" value="true" checked />
+                        <input type="hidden" name="Billable" value="false" />
+                        <label class="form-check-label small" for="@(logId)-billable">@T["Billable"]</label>
+                        <span class="hint dashed">@T["Clear it for time not billed to the customer."]</span>
+                    </div>
+                }
+                <button type="submit" class="btn btn-sm btn-primary">@T["Log time"]</button>
+            </form>
+        }
+    </div>
+</div>

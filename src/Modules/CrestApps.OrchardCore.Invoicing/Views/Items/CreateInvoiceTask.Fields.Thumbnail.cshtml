@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CreateInvoiceTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-file-circle-plus" aria-hidden="true"></i>
+    @T["Create Invoice"]
+</h4>
+<p>@T["Creates a draft invoice with one line for a bill-to party."]</p>
