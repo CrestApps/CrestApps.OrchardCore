@@ -145,6 +145,8 @@ With **Learner Pages** on:
 | Transcript | `/learning/transcript` |
 | Player | `/learning/courses/{courseId}/play/{itemId}` |
 
+With the storefront account (the Users module's **My Account** feature) on, My learning and My transcript are entries of the account menu (for people with **Access learning**) and render inside the account frame (the `CommerceAccountPage` shape), with the menu beside them, as do the other Learning pages a learner reads: My required learning, My certifications, My education credits and My credentials. Without it, each page stands alone with a Home breadcrumb.
+
 **My courses** is in Orchard Core's user menu, on the site's pages and in the admin, beside **Profile** and **Security**, for people with **Access learning** (`LearningUserMenuDisplayDriver`, the `UserMenuItems__LearningCourses` shape). It links to My learning and lists the learner's active courses, newest enrollment first, each opening the player, with **See all** when there are more than five. The list comes from one indexed query of the learner's active enrollments, capped at six, and one read of their courses. A theme overrides `UserMenuItems-LearningCourses.cshtml` to change it.
 
 The course page itself is the course's content page, with the outline and an **Enroll** or **Continue** button. The player tracks time and video watching with the `learning-player` script and refuses progress for an enrollment that is not the signed-in person's (404).

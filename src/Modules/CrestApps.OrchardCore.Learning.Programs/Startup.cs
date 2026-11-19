@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Learning.Programs.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Programs.Drivers;
 using CrestApps.OrchardCore.Learning.Programs.Migrations;
 using CrestApps.OrchardCore.Learning.Programs.Models;
+using CrestApps.OrchardCore.Learning.Programs.Navigation;
 using CrestApps.OrchardCore.Learning.Programs.Recipes;
 using CrestApps.OrchardCore.Learning.Programs.Reports;
 using CrestApps.OrchardCore.Learning.Programs.Services;
@@ -51,6 +52,7 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<LearningPathPartDisplayDriver>();
         services.AddDisplayDriver<LearningPathProgress, LearningPathProgressRowDisplayDriver>();
         services.AddPersonalDataContributor<ProgramsPersonalDataContributor>();
+        services.AddNavigationProvider<RequiredLearningAccountMenu>();
     }
 }
 

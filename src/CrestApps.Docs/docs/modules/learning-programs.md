@@ -61,7 +61,7 @@ An exemption keeps a reason, who granted it and an optional evidence file in the
 | Required learning list, editor, people, preview, exemption | `/Admin/learning/required` | `ManageRequiredLearning`; exempting needs `ExemptFromRequiredLearning` |
 | Team learning | `/Admin/learning/team` | `ViewTeamLearning` |
 | People on a path | `/Admin/learning/paths/{id}/people` | Edit the path |
-| My required learning and paths | `/learning/required` | Signed in |
+| My required learning and paths | `/learning/required` | Signed in; an entry of the storefront account menu, framed by it |
 
 ## Integrations
 

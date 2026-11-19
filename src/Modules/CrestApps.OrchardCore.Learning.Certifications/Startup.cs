@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Learning.Certifications.Drivers;
 using CrestApps.OrchardCore.Learning.Certifications.Handlers;
 using CrestApps.OrchardCore.Learning.Certifications.Migrations;
 using CrestApps.OrchardCore.Learning.Certifications.Models;
+using CrestApps.OrchardCore.Learning.Certifications.Navigation;
 using CrestApps.OrchardCore.Learning.Certifications.Pipelines;
 using CrestApps.OrchardCore.Learning.Certifications.Recipes;
 using CrestApps.OrchardCore.Learning.Certifications.Reports;
@@ -82,6 +83,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<ExternalLearningSubmission, ExternalLearningRowDisplayDriver>();
         services.AddPermissionProvider<CreditsPermissionProvider>();
         services.AddNavigationProvider<CreditsAdminMenu>();
+        services.AddNavigationProvider<CertificationsAccountMenu>();
         services.AddProtectedFileArea<ExternalLearningEvidence>(ExternalLearningEvidence.Folder);
         services.AddScoped<IProtectedFileAccessPolicy<ExternalLearningEvidence>, ExternalLearningEvidencePolicy>();
     }

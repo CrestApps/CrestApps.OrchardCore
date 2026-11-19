@@ -1,13 +1,10 @@
 @model IReadOnlyList<Enrollment>
+@using Microsoft.AspNetCore.Html
 
-<div class="container my-4">
-    <div class="product-breadcrumb">
-        <breadcrumb name="LearningTranscript" title="@T["My transcript"]">
-            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
-            <breadcrumb-item id="LearningMyLearning" url="@Url.RouteUrl("LearningMyLearning")">@T["My learning"]</breadcrumb-item>
-        </breadcrumb>
-    </div>
-    <h1 class="h3">@T["My transcript"]</h1>
+@{
+    // Inside the storefront account the page is framed by the account menu; without it, it stands alone.
+    var accountUrl = Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName);
+    Func<object, IHtmlContent> content = @<text>
     <p class="text-muted">@T["Every course you completed, as it was when you completed it."]</p>
 
     @if (Model.Count == 0)
@@ -49,4 +46,28 @@
             </table>
         </div>
     }
-</div>
+    </text>;
+}
+
+@if (accountUrl is not null)
+{
+    <zone Name="Title">
+        <breadcrumb name="LearningTranscript" title="@T["My transcript"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        </breadcrumb>
+    </zone>
+
+    @await DisplayAsync(await New.CommerceAccountPage(Title: T["My transcript"], Content: content(null)))
+}
+else
+{
+    <div class="container my-4">
+        <div class="product-breadcrumb">
+            <breadcrumb name="LearningTranscript" title="@T["My transcript"]">
+                <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            </breadcrumb>
+        </div>
+        <h1 class="h3 mb-3">@T["My transcript"]</h1>
+        @content(null)
+    </div>
+}

@@ -1,18 +1,14 @@
 @model MyCertificationsViewModel
+@using Microsoft.AspNetCore.Html
 
 @{
     ViewData["Title"] = T["My certifications"];
 }
 
-<div class="container my-4">
-    <div class="product-breadcrumb">
-        <breadcrumb name="LearningMyCertifications" title="@T["My certifications"]">
-            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
-            <breadcrumb-item id="LearningMyLearning" url="@Url.RouteUrl("LearningMyLearning")">@T["My learning"]</breadcrumb-item>
-        </breadcrumb>
-    </div>
-    <h1 class="h3 mb-4">@T["My certifications"]</h1>
-
+@{
+    // Inside the storefront account the page is framed by the account menu; without it, it stands alone.
+    var accountUrl = Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName);
+    Func<object, IHtmlContent> content = @<text>
     @if (Model.Entries.Count == 0)
     {
         <p class="text-muted">@T["You are not working towards any certification yet. Completing a course that leads to one adds it here."]</p>
@@ -73,4 +69,28 @@
             </div>
         }
     </div>
-</div>
+    </text>;
+}
+
+@if (accountUrl is not null)
+{
+    <zone Name="Title">
+        <breadcrumb name="LearningMyCertifications" title="@T["My certifications"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        </breadcrumb>
+    </zone>
+
+    @await DisplayAsync(await New.CommerceAccountPage(Title: T["My certifications"], Content: content(null)))
+}
+else
+{
+    <div class="container my-4">
+        <div class="product-breadcrumb">
+            <breadcrumb name="LearningMyCertifications" title="@T["My certifications"]">
+                <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            </breadcrumb>
+        </div>
+        <h1 class="h3 mb-3">@T["My certifications"]</h1>
+        @content(null)
+    </div>
+}

@@ -1,16 +1,11 @@
 @model MyLearningViewModel
+@using Microsoft.AspNetCore.Html
 
-<div class="container my-4">
-    <div class="product-breadcrumb">
-        <breadcrumb name="LearningMyLearning" title="@T["My learning"]">
-            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
-        </breadcrumb>
-    </div>
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <h1 class="h3 mb-0">@T["My learning"]</h1>
-        <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningTranscript")">@T["My transcript"]</a>
-    </div>
-
+@{
+    // Inside the storefront account the page is framed by the account menu; without it, it stands alone.
+    var accountUrl = Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName);
+    Func<object, IHtmlContent> actions = @<text><a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningTranscript")">@T["My transcript"]</a></text>;
+    Func<object, IHtmlContent> content = @<text>
     <h2 class="h5">@T["In progress"]</h2>
     @if (Model.Current.Count == 0)
     {
@@ -83,4 +78,31 @@
             }
         </ul>
     }
-</div>
+    </text>;
+}
+
+@if (accountUrl is not null)
+{
+    <zone Name="Title">
+        <breadcrumb name="LearningMyLearning" title="@T["My learning"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        </breadcrumb>
+    </zone>
+
+    @await DisplayAsync(await New.CommerceAccountPage(Title: T["My learning"], Actions: actions(null), Content: content(null)))
+}
+else
+{
+    <div class="container my-4">
+        <div class="product-breadcrumb">
+            <breadcrumb name="LearningMyLearning" title="@T["My learning"]">
+                <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            </breadcrumb>
+        </div>
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <h1 class="h3 mb-0">@T["My learning"]</h1>
+            @actions(null)
+        </div>
+        @content(null)
+    </div>
+}
