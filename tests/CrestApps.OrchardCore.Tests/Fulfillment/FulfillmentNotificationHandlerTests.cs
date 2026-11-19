@@ -118,7 +118,7 @@ public sealed class FulfillmentNotificationHandlerTests
     }
 
     /// <summary>
-    /// Verifies the displayed sentences for stored status codes, including requests recorded with the old deletion reason.
+    /// Verifies the displayed sentences for unpaid and deleted orders.
     /// </summary>
     /// <param name="reason">The stored reason code.</param>
     /// <param name="status">The stored status argument, if present.</param>
@@ -127,7 +127,6 @@ public sealed class FulfillmentNotificationHandlerTests
     [InlineData(FulfillmentReasons.NotPaid, "Draft", "The order is still a draft.")]
     [InlineData(FulfillmentReasons.NotPaid, "AwaitingPayment", "The order is awaiting payment.")]
     [InlineData(FulfillmentReasons.NotPaid, "Canceled", "The order was canceled.")]
-    [InlineData(FulfillmentReasons.NotPaid, "Deleted", "The order was deleted.")]
     [InlineData(FulfillmentReasons.NotPaid, null, "The order has not been paid.")]
     [InlineData(FulfillmentReasons.OrderDeleted, null, "The order was deleted.")]
     public void Reason_ExplainsTheOrderStatus(string reason, string status, string expected)

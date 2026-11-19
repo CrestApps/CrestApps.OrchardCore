@@ -59,7 +59,6 @@ public sealed class FulfillmentRequestText
             FulfillmentReasons.OrderDeleted => S["The order was deleted."],
             FulfillmentReasons.NotPaid => Argument(0) switch
             {
-                "Deleted" => S["The order was deleted."], // Requests saved before OrderDeleted had its own reason.
                 nameof(OrderStatus.Draft) => S["The order is still a draft."],
                 nameof(OrderStatus.AwaitingPayment) => S["The order is awaiting payment."],
                 nameof(OrderStatus.Canceled) => S["The order was canceled."],

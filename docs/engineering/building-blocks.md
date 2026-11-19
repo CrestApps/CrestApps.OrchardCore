@@ -168,7 +168,7 @@ Rules that follow from the table:
 
 | Concept | Owner | Reuse it through | Do not |
 | --- | --- | --- | --- |
-| Stored records | CrestApps.Core catalogs (`ICatalog`, catalog managers, `CatalogEntryHandlerBase<T>`) and the `DocumentCatalog` base in `CrestApps.OrchardCore.YesSql.Core` | Catalog managers, so handlers run. Use `CatalogIndexBackfill.ReindexAsync` from a resumable step for background index updates or `ReindexInTransactionAsync` when the update must commit with the migration version | Write a custom YesSql store for a CRUD record |
+| Stored records | CrestApps.Core catalogs (`ICatalog`, catalog managers, `CatalogEntryHandlerBase<T>`) and the `DocumentCatalog` base in `CrestApps.OrchardCore.YesSql.Core` | Catalog managers, so handlers run | Write a custom YesSql store for a CRUD record |
 | Created/owner/author stamping | `CrestApps.OrchardCore.Core` | `AuditedCatalogEntryHandlerBase` with `IAuditedModel` | Copy the stamping into each handler or store |
 | Catalog admin pages | `CrestApps.OrchardCore.Core` | `CatalogAdminController<T>` (index on `<admin-list>`, create, edit, delete, bulk actions) | Write another 300-line index/create/edit/delete controller |
 | Status transitions | `CrestApps.OrchardCore.Abstractions` | `TransitionTable<TEnum>` (`CanMove`, `IsTerminal`) | Add another hand-rolled transition dictionary |
