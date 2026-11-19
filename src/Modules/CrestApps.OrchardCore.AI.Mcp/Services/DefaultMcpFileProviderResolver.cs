@@ -1,32 +1,86 @@
 ﻿using CrestApps.Core.AI.Mcp;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
+using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Shell.Configuration;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Services;
 
 /// <summary>
-/// Default file provider resolver that returns the web host's content root file provider.
-/// Additional providers (e.g., media) can be registered by other modules.
+/// Resolves the file provider a <c>file</c> MCP resource reads from.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Without a provider name, files come from the tenant's own <c>McpFiles</c> folder
+/// (<c>App_Data/Sites/{tenant}/McpFiles</c>); while that folder does not exist, no file is found. A provider name
+/// selects a provider registered in <see cref="McpFileProviderOptions"/>; an unknown name resolves to nothing.
+/// </para>
+/// <para>
+/// The content root is never used: it holds <c>appsettings.json</c> and the whole <c>App_Data</c> folder, with every
+/// tenant's database, settings and keys, and an MCP client chooses the file name it reads.
+/// </para>
+/// </remarks>
 public sealed class DefaultMcpFileProviderResolver : IMcpFileProviderResolver
 {
-    private readonly IWebHostEnvironment _webHostEnvironment;
+    /// <summary>
+    /// The name of the tenant folder that holds the files of <c>file</c> resources.
+    /// </summary>
+    public const string TenantFolderName = "McpFiles";
+
+    private readonly ShellSettings _shellSettings;
+    private readonly ShellOptions _shellOptions;
+    private readonly McpFileProviderOptions _options;
+    private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultMcpFileProviderResolver"/> class.
     /// </summary>
-    /// <param name="webHostEnvironment">The web host environment.</param>
-    public DefaultMcpFileProviderResolver(IWebHostEnvironment webHostEnvironment)
+    /// <param name="shellSettings">The shell settings, which name the tenant.</param>
+    /// <param name="shellOptions">The shell options, which locate the tenant's application data folder.</param>
+    /// <param name="options">The named file providers.</param>
+    /// <param name="serviceProvider">The service provider passed to the named provider factories.</param>
+    public DefaultMcpFileProviderResolver(
+        ShellSettings shellSettings,
+        IOptions<ShellOptions> shellOptions,
+        IOptions<McpFileProviderOptions> options,
+        IServiceProvider serviceProvider)
     {
-        _webHostEnvironment = webHostEnvironment;
+        _shellSettings = shellSettings;
+        _shellOptions = shellOptions.Value;
+        _options = options.Value;
+        _serviceProvider = serviceProvider;
     }
 
     /// <summary>
-    /// Performs the resolve operation.
+    /// Resolves the file provider for a resource.
     /// </summary>
-    /// <param name="providerName">The provider name.</param>
+    /// <param name="providerName">The provider name from the resource's <c>{providerName}</c> variable, if any.</param>
+    /// <returns>The provider, or <see langword="null"/> when no provider has that name.</returns>
     public IFileProvider Resolve(string providerName)
     {
-        return _webHostEnvironment.ContentRootFileProvider;
+        if (string.IsNullOrWhiteSpace(providerName))
+        {
+            var root = GetTenantFolder();
+
+            // PhysicalFileProvider refuses paths that leave its root and, by default, dot-prefixed, hidden and
+            // system files.
+            return Directory.Exists(root)
+                ? new PhysicalFileProvider(root)
+                : new NullFileProvider();
+        }
+
+        return _options.Providers.TryGetValue(providerName.Trim(), out var factory)
+            ? factory(_serviceProvider)
+            : null;
     }
+
+    /// <summary>
+    /// Gets the full path of the tenant's MCP files folder.
+    /// </summary>
+    public string GetTenantFolder()
+        => Path.GetFullPath(Path.Combine(
+            _shellOptions.ShellsApplicationDataPath,
+            _shellOptions.ShellsContainerName,
+            _shellSettings.Name,
+            TenantFolderName));
 }

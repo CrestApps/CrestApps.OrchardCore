@@ -302,7 +302,7 @@ The system automatically constructs the full URI by prepending the scheme and a 
 
 | Type | Supported Variables | Description |
 |------|---------------------|-------------|
-| **File** (`file`) | `{providerName}`, `{fileName}` | File access via named file providers |
+| **File** (`file`) | `{providerName}`, `{fileName}` | Files from the tenant's `App_Data/Sites/{tenant}/McpFiles` folder, or from a named file provider a module registers (see below) |
 | **Media** (`media`) | `{path}` | Orchard Core media library files |
 | **Content Item** (`content-item`) | `{contentItemId}`, `{contentItemVersionId}` | Fetch a specific content item by ID or version |
 | **Content Type** (`content-type`) | `{contentType}` | List all published content items of a type |
@@ -325,6 +325,21 @@ Each resource instance has a URI that is auto-constructed by the system as:
 - **`{path}`**: the user-defined path portion with optional variable placeholders
 
 When creating a resource in the admin UI, you only provide the **path** portion. The system automatically prepends the scheme and resource ID.
+
+### Where File resources read from
+
+A **File** resource without a `{providerName}` reads from the tenant's own `App_Data/Sites/{tenant}/McpFiles` folder. Create the folder and put in it only the files you want to share; until it exists, no file is found. Paths that leave the folder, and dot-prefixed, hidden and system files, are refused.
+
+A `{providerName}` selects a provider a module registered in code. An unknown name is reported as not found:
+
+```csharp
+services.Configure<McpFileProviderOptions>(options =>
+{
+    options.AddProvider("handbook", sp => new PhysicalFileProvider("/srv/handbook"));
+});
+```
+
+The MCP client chooses the file name, so everything a provider can reach is readable by every client allowed to read resources. Never register the content root or the application data folder: they hold `appsettings.json`, connection strings, keys and every tenant's database. Earlier versions read **File** resources from the content root; the files of such a resource now have to be moved into the `McpFiles` folder.
 
 ### Registering Custom Resource Types
 
@@ -374,12 +389,12 @@ Resources can be exported and imported via recipes:
       "Resources": [
         {
           "Source": "file",
-          "DisplayText": "Configuration File",
+          "DisplayText": "Product Handbook",
           "Resource": {
-            "Uri": "file://configs/{providerName}/{fileName}",
-            "Name": "config-file",
-            "Description": "Application configuration",
-            "MimeType": "application/json"
+            "Uri": "file://handbook/{fileName}",
+            "Name": "product-handbook",
+            "Description": "Product handbook pages",
+            "MimeType": "text/markdown"
           }
         }
       ]
