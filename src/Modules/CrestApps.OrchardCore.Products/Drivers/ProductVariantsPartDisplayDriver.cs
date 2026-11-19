@@ -1,11 +1,9 @@
-using CrestApps.Core;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.ContentManagement;
@@ -18,8 +16,6 @@ namespace CrestApps.OrchardCore.Products.Drivers;
 /// </summary>
 public sealed class ProductVariantsPartDisplayDriver : ContentPartDisplayDriver<ProductVariantsPart>
 {
-    private static readonly char[] _separators = [',', ';', '\n'];
-
     internal readonly IStringLocalizer S;
 
     public ProductVariantsPartDisplayDriver(IStringLocalizer<ProductVariantsPartDisplayDriver> stringLocalizer)
@@ -31,7 +27,7 @@ public sealed class ProductVariantsPartDisplayDriver : ContentPartDisplayDriver<
     {
         return Initialize<ProductVariantsPartViewModel>(GetEditorShapeType(context), model =>
         {
-            var names = GetOptionNames(context.TypePartDefinition, part);
+            var names = ProductVariantRules.GetOptionNames(context.TypePartDefinition);
 
             model.Options = names
                 .Select(name => new ProductOptionViewModel
@@ -72,7 +68,7 @@ public sealed class ProductVariantsPartDisplayDriver : ContentPartDisplayDriver<
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var names = GetOptionNames(context.TypePartDefinition, part);
+        var names = ProductVariantRules.GetOptionNames(context.TypePartDefinition);
 
         // What was typed into each variant row is kept on the variant first, so a change of values that keeps its
         // combination keeps the SKU and prices just entered.
@@ -88,19 +84,19 @@ public sealed class ProductVariantsPartDisplayDriver : ContentPartDisplayDriver<
                 continue;
             }
 
-            if (entry.Price < 0m)
+            if (!ProductVariantRules.IsValidPrice(entry.Price))
             {
                 context.Updater.ModelState.AddModelError(Prefix, $"{nameof(model.Variants)}[{index}].{nameof(entry.Price)}", S["Enter a price of zero or more."]);
             }
 
-            if (entry.CompareAtPrice < 0m)
+            if (!ProductVariantRules.IsValidPrice(entry.CompareAtPrice))
             {
                 context.Updater.ModelState.AddModelError(Prefix, $"{nameof(model.Variants)}[{index}].{nameof(entry.CompareAtPrice)}", S["Enter a price of zero or more."]);
             }
 
             variant.Sku = entry.Sku?.Trim();
             variant.Price = entry.Price;
-            if (entry.SalePrice < 0m)
+            if (!ProductVariantRules.IsValidPrice(entry.SalePrice))
             {
                 context.Updater.ModelState.AddModelError(Prefix, $"{nameof(model.Variants)}[{index}].{nameof(entry.SalePrice)}", S["Enter a price of zero or more."]);
             }
@@ -111,40 +107,14 @@ public sealed class ProductVariantsPartDisplayDriver : ContentPartDisplayDriver<
             variant.Enabled = entry.Enabled;
         }
 
-        part.Options = names
-            .Select(name => new ProductOption
-            {
-                Name = name,
-                Values = (model.Options?.FirstOrDefault(option => string.Equals(option?.Name, name, StringComparison.OrdinalIgnoreCase))?.Values ?? string.Empty)
-                    .Split(_separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToList(),
-            })
-            .Where(option => option.Values.Count > 0)
-            .ToList();
+        ProductVariantRules.Apply(part, ProductVariantRules.BuildOptions(names, name => ProductVariantRules.SplitValues(
+            model.Options?.FirstOrDefault(option => string.Equals(option?.Name, name, StringComparison.OrdinalIgnoreCase))?.Values)));
 
-        part.Variants = ProductVariants.Combine(part.Options, part.Variants, UniqueId.GenerateId);
-
-        var skus = part.Variants.Where(variant => !string.IsNullOrEmpty(variant.Sku)).GroupBy(variant => variant.Sku, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var duplicate in skus.Where(group => group.Count() > 1))
+        foreach (var duplicate in ProductVariantRules.FindDuplicateSkus(part.Variants))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Variants), S["The SKU '{0}' is used by more than one variant.", duplicate.Key]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Variants), S["The SKU '{0}' is used by more than one variant.", duplicate]);
         }
 
         return Edit(part, context);
-    }
-
-    // The type's options, in their order. Options a product still has values for, but the type no longer lists,
-    // are dropped on the next save.
-    private static string[] GetOptionNames(ContentTypePartDefinition typePartDefinition, ProductVariantsPart part)
-    {
-        var settings = typePartDefinition?.GetSettings<ProductVariantsPartSettings>();
-
-        return (settings?.Options ?? [])
-            .Select(option => option?.Name?.Trim())
-            .Where(name => !string.IsNullOrEmpty(name))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
     }
 }
