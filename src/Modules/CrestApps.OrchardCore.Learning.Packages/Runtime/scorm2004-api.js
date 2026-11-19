@@ -881,59 +881,73 @@
         FRAME_NAME: FRAME_NAME,
     };
 
+    // Connects a page to the player: the API on the page, and the messages that tell the player what the content set,
+    // committed and finished. In strict mode the page is a page of the package in the sandboxed frame (opaque origin
+    // "null"); in bridge mode (launch.bridge) it is the frame page on the package content host, and the package's pages
+    // run in a child frame on the same origin, finding the API by walking up their parents. A message goes to the
+    // player's origin only, and a message passed up from a child is taken only from the expected origin.
+    function connect(root, launch) {
+        // The page the frame tells: the player for the package frame itself (by the name the player gives its frame),
+        // else the package page above this one (a frame of a frameset, or a window the package opened), which passes
+        // it on.
+        function target() {
+            if (root.parent && root.parent !== root) {
+                return root.parent;
+            }
+
+            return root.opener || null;
+        }
+
+        function post(message) {
+            var page = target();
+
+            if (!page) {
+                return;
+            }
+
+            message.protocol = PROTOCOL;
+            message.launchId = launch.launchId;
+
+            try {
+                page.postMessage(message, root.name === FRAME_NAME && launch.playerOrigin ? launch.playerOrigin : '*');
+            } catch (error) {
+                // A closed page; nothing to tell.
+            }
+        }
+
+        var childOrigin = launch.bridge ? root.location.origin : 'null';
+
+        // Messages of the package's own frames and windows are passed up, as they came.
+        root.addEventListener('message', function (event) {
+            var message = event.data;
+
+            if (event.origin !== childOrigin || !message || message.protocol !== PROTOCOL || message.launchId !== launch.launchId || !event.source || event.source === root) {
+                return;
+            }
+
+            var child = false;
+
+            try {
+                child = event.source.parent === root || event.source.opener === root;
+            } catch (error) {
+                child = false;
+            }
+
+            if (child) {
+                post({ type: message.type, element: message.element, value: message.value });
+            }
+        });
+
+        root.API_1484_11 = createApi(launch.cmi, post);
+
+        return root.API_1484_11;
+    }
+
+    root.CrestAppsScorm2004.connect = connect;
+
     var launch = root.CrestAppsScorm2004Launch;
 
-    if (!launch || typeof root.postMessage !== 'function') {
-        return;
+    if (launch && typeof root.postMessage === 'function') {
+        connect(root, launch);
     }
-
-    // The page the frame tells: the player for the package frame itself (by the name the player gives its frame), else
-    // the package page above this one (a frame of a frameset, or a window the package opened), which passes it on.
-    function target() {
-        if (root.parent && root.parent !== root) {
-            return root.parent;
-        }
-
-        return root.opener || null;
-    }
-
-    function post(message) {
-        var page = target();
-
-        if (!page) {
-            return;
-        }
-
-        message.protocol = PROTOCOL;
-        message.launchId = launch.launchId;
-
-        try {
-            page.postMessage(message, root.name === FRAME_NAME && launch.playerOrigin ? launch.playerOrigin : '*');
-        } catch (error) {
-            // A closed page; nothing to tell.
-        }
-    }
-
-    // Messages of the package's own frames and windows are passed up, as they came.
-    root.addEventListener('message', function (event) {
-        var message = event.data;
-
-        if (!message || message.protocol !== PROTOCOL || message.launchId !== launch.launchId || !event.source || event.source === root) {
-            return;
-        }
-
-        var child = false;
-
-        try {
-            child = event.source.parent === root || event.source.opener === root;
-        } catch (error) {
-            child = false;
-        }
-
-        if (child) {
-            post({ type: message.type, element: message.element, value: message.value });
-        }
-    });
-
-    root.API_1484_11 = createApi(launch.cmi, post);
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -3,6 +3,28 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
+	//#region src/Modules/CrestApps.OrchardCore.Learning.Packages/Assets/js/package-frame-messages.js
+	/**
+	* Gets the origin the frame of a launch posts from.
+	* @param {{ contentOrigin?: string|null }} session The launch.
+	* @returns {string} The content host's origin, or "null" in strict mode.
+	*/
+	function frameOrigin(session) {
+		return session?.contentOrigin || "null";
+	}
+	/**
+	* Tells whether a message event comes from the frame of the current launch.
+	* @param {MessageEvent} event The message event.
+	* @param {Window|null} frameWindow The window of the player's frame.
+	* @param {{ contentOrigin?: string|null, protocol: string, launchId: string }|null} session The current launch.
+	* @returns {boolean} true when the player takes the message.
+	*/
+	function isFrameMessage(event, frameWindow, session) {
+		if (!session || !frameWindow || event.source !== frameWindow || event.origin !== frameOrigin(session)) return false;
+		const data = event.data;
+		return !!data && data.protocol === session.protocol && data.launchId === session.launchId;
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Learning.Packages/Assets/js/package-runtime-queue.js
 	var defaultAttempts = 5;
 	var defaultRetryDelay = 250;
@@ -56,6 +78,7 @@
 	//#region src/Modules/CrestApps.OrchardCore.Learning.Packages/Assets/js/learning-package-player.js
 	var defaultProtocol = "crestapps-scorm12";
 	var frameName = "crestapps-package-frame";
+	var strictSandbox = "allow-scripts allow-forms allow-popups";
 	var flushSeconds = 30;
 	function antiforgery(root) {
 		return root.querySelector("input[name=\"__RequestVerificationToken\"]")?.value ?? "";
@@ -115,10 +138,8 @@
 			}, keepalive);
 		};
 		const onMessage = async (event) => {
-			const frame = host.querySelector("iframe");
-			if (!session || !frame || event.source !== frame.contentWindow || event.origin !== "null") return;
+			if (!isFrameMessage(event, host.querySelector("iframe")?.contentWindow ?? null, session)) return;
 			const data = event.data;
-			if (!data || data.protocol !== session.protocol || data.launchId !== session.launchId) return;
 			switch (data.type) {
 				case "set":
 					if (typeof data.element === "string" && typeof data.value === "string") session.pending.push([data.element, data.value]);
@@ -163,6 +184,7 @@
 					token: result.token,
 					launchId: result.launchId,
 					protocol: result.protocol || defaultProtocol,
+					contentOrigin: result.contentOrigin || null,
 					runtimeUrl: result.runtimeUrl,
 					pending: [],
 					finished: false
@@ -175,8 +197,9 @@
 				frame.title = root.dataset.frameTitle;
 				frame.className = "learning-package-frame w-100 border rounded bg-white";
 				frame.style.minHeight = "70vh";
-				frame.setAttribute("sandbox", "allow-scripts allow-forms allow-popups");
-				frame.setAttribute("allow", "fullscreen");
+				frame.setAttribute("sandbox", result.frameSandbox || strictSandbox);
+				frame.setAttribute("allow", "fullscreen; autoplay");
+				frame.setAttribute("allowfullscreen", "");
 				frame.setAttribute("referrerpolicy", "no-referrer");
 				frame.src = result.launchUrl;
 				host.replaceChildren(frame);
