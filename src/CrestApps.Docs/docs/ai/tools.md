@@ -1484,6 +1484,65 @@ The tools write through the Skills services, so their rules apply: unique names,
 
 `saveStaffMember` writes through the staff manager, so its checks apply (unique employee number and user, known teams and time zone, a manager who exists and is not in a loop). A person with a user account takes their name and e-mail from it, and the account can't be changed once linked. Pay, the badge, skills and the cards other modules add to the staff editor are not changed. A new PIN is set on the staff editor, whose address `setStaffBadgePin` returns. A capability added or changed in a message can be given to staff from the next reply.
 
+### Store setup tools
+
+**Available when:** `CrestApps.OrchardCore.Commerce` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `getStoreSetupGuide` | Lists the "Set up your store" steps in order with whether each is done, skipped or optional, what is set up now, the admin page that does it in full, and the fields its quick action takes. |
+| `runStoreSetupStep` | Runs one setup step's quick action with the given field values (for example choose the store currency, save the store details, add a flat shipping rate, add the staff roles) and marks the step done. Asks for approval. |
+| `skipStoreSetupStep` | Marks a setup step as skipped, or clears the skip. It changes only the guide's progress. |
+
+The tools need **Set up the store**, as **Commerce › Set up your store** does. The steps come from the modules that are on, in the guide's order. `runStoreSetupStep` takes only the fields the step declares, needs the required ones, and takes a choice only from the step's list; a step without a quick action is done on the page its result links to. Some quick actions create a content type or staff roles, so running one asks for approval. A step run in a message is reported as run until the next reply, when its status shows what it set up.
+
+### Product and currency tools
+
+**Available when:** `CrestApps.OrchardCore.Products` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listProducts` | Lists products with their content item id, type, SKU, price and currency, sale price and dates, variant count, published state and, when stock is counted, units available. Filters by text, exact SKU of a product or variant, content type, on sale and published or draft, with paging. |
+| `updateProductPricing` | Changes the price, compare-at price, sale price and sale dates of a product, or the prices of one of its variants, with the product editor's checks. Saves a draft unless asked to publish. |
+| `saveProductVariants` | Sets a product's option values (for example Size and Color) and its variants' SKU, prices, image and enabled flag. Variants are made from the options and keep their ids. Saves a draft unless asked to publish. |
+| `listCurrencies` | Lists the currencies products can be priced in, with code and display name. |
+| `saveCurrency` | Adds a currency by its ISO 4217 code and display name, or renames one. |
+| `deleteCurrency` | Deletes a currency no product is priced in; otherwise names the products. Asks for approval. |
+
+`listProducts` needs **List content** and shows only the product types the caller may view. The two product tools need **Edit content** on the product, and **Publish content** to publish; a product with unpublished changes is changed only in its draft, so publishing never publishes someone else's edits. They run the product editor's rules: a price when the product can be bought or shows its price, no negative amount, a sale price below the price, and a sale that ends after it starts. Variants come from the options the content type defines and keep their ids, so stock and past orders still point at them, and no SKU is used by two variants. Every amount must fit its currency's decimal places (whole yen, three decimals for a dinar). Sale dates are in the store's time zone; a variant uses the product's sale dates. Removed variants are listed in the result.
+
+The currency tools need **Manage currencies**. A currency's code never changes once it exists. A currency added, renamed or deleted in a message is not changed again until the next reply.
+
+### Product feed tools
+
+**Available when:** `CrestApps.OrchardCore.Products.Feeds` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `getProductFeedStatus` | Returns the XML and CSV feed addresses, whether an access key and the site's base URL are set, how many items the feed holds, and what Merchant Center would refuse. |
+| `regenerateProductFeedKey` | Makes a new access key for the feed addresses, or removes it so the feed is public. Asks for approval. |
+
+The tools need **Manage product feeds**. The access key is a secret: it is never shown, and the addresses are returned without it. The full addresses, key included, are on **Settings › Commerce › Product feeds**, whose link the results give. A new key stops every address already given to a shopping channel until it is replaced there.
+
+### Inventory tools
+
+**Available when:** `CrestApps.OrchardCore.Inventory` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listStockItems` | Lists the products and variants the store counts, with units on hand, held and available, the low-stock threshold and backorders, filtered by text and by all, low, out of stock or backordered. |
+| `getStockItem` | Returns one stock item, by id, SKU or product and variant, with its level at each location, the units held for orders, the shoppers waiting for a back-in-stock email, and a page of its history. |
+| `adjustStock` | Receives units, corrects up or down, or sets a count at one location, with a reason. |
+| `transferStock` | Moves available units of a stock item between locations without changing the total. |
+| `importStockCounts` | Sets the units on hand of many items at once from rows of SKU (or product and variant) and count, all or nothing, at most 10,000 rows. |
+| `rebuildStockItem` | Recomputes a stock item's units on hand from its movement history. |
+| `syncInventory` | Starts counting products whose type gained the Inventory part and refreshes every stock item's title, SKU and threshold. |
+| `listStockLocations` | Lists the stock locations in the order orders take units from them. |
+| `saveStockLocation` | Adds a stock location or changes its name, address or place in the order. |
+| `deleteStockLocation` | Removes a stock location; the default location can't be removed. Asks for approval. |
+
+Reading needs **View inventory** and every change needs **Manage inventory**, as on **Commerce › Inventory**. Every stock change is a movement in the item's history with the caller as its author and the reason given (a transfer's reason defaults to "From A to B"), and is saved at once, as the page does. When a checkout changed the same stock at the same moment, the tool says so and nothing is changed, and the stock tools refuse further changes until the next reply. A location must be one the store lists; units can still be moved out of a removed location. `importStockCounts` checks every row with the import's own rules before anything changes. The location tools edit the list of **Settings › Commerce › Inventory**: every location needs a name, at most 50 are listed, a location keeps its id, and locations owned by another record, such as a van, are managed with their owner.
+
 ## Tool permissions
 
 Tool permissions decide who may **attach** a tool, and, for chat interactions, who may **use** it. They do not limit who may use the tools of an AI profile: for a profile, the profile itself is the authorization boundary.
