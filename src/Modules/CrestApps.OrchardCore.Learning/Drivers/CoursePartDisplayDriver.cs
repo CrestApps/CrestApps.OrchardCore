@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
@@ -11,12 +12,13 @@ using OrchardCore;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Learning.Drivers;
 
 /// <summary>
-/// The editor of the course part: code, summary, enrollment, completion criteria, gradebook categories, prerequisites
-/// and staff.
+/// The editor of the course part: code, summary, dates, enrollment, completion criteria, gradebook categories,
+/// prerequisites and staff. The dates are entered in the person's time zone and kept in UTC.
 /// </summary>
 internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CoursePart>
 {
@@ -25,6 +27,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IUserSearchService _userSearchService;
     private readonly LearningSecretStore _keyStore;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
@@ -34,6 +37,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         IHttpContextAccessor httpContextAccessor,
         IUserSearchService userSearchService,
         LearningSecretStore keyStore,
+        ILocalClock localClock,
         IStringLocalizer<CoursePartDisplayDriver> stringLocalizer)
     {
         _editorOptions = editorOptions;
@@ -41,6 +45,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         _httpContextAccessor = httpContextAccessor;
         _userSearchService = userSearchService;
         _keyStore = keyStore;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -55,6 +60,8 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
             model.Summary = part.Summary;
             model.Level = part.Level;
             model.EstimatedMinutes = part.EstimatedMinutes;
+            model.Starts = await ToLocalAsync(part.StartsUtc);
+            model.Ends = await ToLocalAsync(part.EndsUtc);
             model.EnrollmentMode = part.EnrollmentMode;
             // A course that was never saved has no key, even when this request wrote one before another part of the
             // form refused the save: the write is thrown away with the item.
@@ -102,6 +109,14 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         if (model.MinimumGrade is < 0 or > 100)
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.MinimumGrade), S["The minimum grade is a percentage from 0 to 100."]);
+        }
+
+        var startsUtc = model.Starts is { } starts ? await _localClock.ToUtcLenientAsync(DateTime.SpecifyKind(starts, DateTimeKind.Unspecified)) : (DateTime?)null;
+        var endsUtc = model.Ends is { } ends ? await _localClock.ToUtcLenientAsync(DateTime.SpecifyKind(ends, DateTimeKind.Unspecified)) : (DateTime?)null;
+
+        if (startsUtc is not null && endsUtc is not null && endsUtc <= startsUtc)
+        {
+            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.Ends), S["The course must end after it starts."]);
         }
 
         if (model.AccessDays is < 1)
@@ -156,6 +171,8 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         part.Summary = model.Summary?.Trim();
         part.Level = model.Level?.Trim();
         part.EstimatedMinutes = model.EstimatedMinutes is > 0 ? model.EstimatedMinutes : null;
+        part.StartsUtc = startsUtc is { } startUtc ? DateTime.SpecifyKind(startUtc, DateTimeKind.Utc) : null;
+        part.EndsUtc = endsUtc is { } endUtc ? DateTime.SpecifyKind(endUtc, DateTimeKind.Utc) : null;
         part.EnrollmentMode = model.EnrollmentMode;
         part.AccessDays = model.AccessDays;
         part.PassMark = model.PassMark;
@@ -275,6 +292,9 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
 
         return categories;
     }
+
+    private async Task<DateTime?> ToLocalAsync(DateTime? utc)
+        => utc is { } value ? (await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc)))).DateTime : null;
 
     private static decimal? ReadDecimal(CoursePart part, string ruleName, string key)
     {

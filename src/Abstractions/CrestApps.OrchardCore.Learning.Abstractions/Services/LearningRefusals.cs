@@ -55,6 +55,11 @@ public static class LearningRefusals
     public const string OpensLater = "OpensLater";
 
     /// <summary>
+    /// The course has not started yet: its items open on its start date.
+    /// </summary>
+    public const string CourseNotStarted = "CourseNotStarted";
+
+    /// <summary>
     /// This item is not part of the course outline.
     /// </summary>
     public const string NotInOutline = "NotInOutline";

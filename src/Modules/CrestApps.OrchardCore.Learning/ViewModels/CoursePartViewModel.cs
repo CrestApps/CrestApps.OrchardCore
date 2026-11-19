@@ -17,6 +17,10 @@ public class CoursePartViewModel
 
     public int? EstimatedMinutes { get; set; }
 
+    public DateTime? Starts { get; set; }
+
+    public DateTime? Ends { get; set; }
+
     public EnrollmentMode EnrollmentMode { get; set; }
 
     public string NewEnrollmentKey { get; set; }

@@ -25,4 +25,9 @@ public class CourseLearnerViewModel
     public CourseOutline Outline { get; set; }
 
     public IDictionary<string, string> KindIcons { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets where the course is between its start and end dates.
+    /// </summary>
+    public CourseSchedule Schedule { get; set; }
 }

@@ -40,6 +40,18 @@ public sealed class CoursePart : ContentPart
     public int? AccessDays { get; set; }
 
     /// <summary>
+    /// Gets or sets when the course starts, in UTC, or <see langword="null"/> when it is open from the start. Before it,
+    /// learners see the course and may enroll, but cannot open its items.
+    /// </summary>
+    public DateTime? StartsUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the course ends, in UTC, or <see langword="null"/> for no end. As in Moodle, the end date does
+    /// not lock the course: learners keep their access, and the course is shown as ended instead of in progress.
+    /// </summary>
+    public DateTime? EndsUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the course pass mark as a percentage, or <see langword="null"/> when the course has no grade.
     /// </summary>
     public decimal? PassMark { get; set; }

@@ -21,7 +21,13 @@
             {
                 <span class="badge text-bg-light border"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["About {0} minutes", minutes]</span>
             }
+            <partial name="_CourseDates" model="(part.StartsUtc, part.EndsUtc, Model.Schedule)" />
         </div>
+
+        @if (Model.Schedule == CourseSchedule.NotStarted && !Model.IsStaff)
+        {
+            <p class="small"><i class="fa-solid fa-hourglass-start me-1" aria-hidden="true"></i>@T["The course has not started yet. You can enroll now and open its items once it starts."]</p>
+        }
 
         @if (Model.IsStaff)
         {

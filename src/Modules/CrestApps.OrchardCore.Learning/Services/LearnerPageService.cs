@@ -8,6 +8,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
 using OrchardCore.ContentManagement.Routing;
 using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Learning.Services;
 
@@ -24,6 +25,7 @@ public sealed class LearnerPageService
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IContentManager _contentManager;
     private readonly CourseItemKindOptions _kindOptions;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearnerPageService"/> class.
@@ -36,6 +38,7 @@ public sealed class LearnerPageService
     /// <param name="contentItemDisplayManager">The content item display manager.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="kindOptions">The course item kinds.</param>
+    /// <param name="clock">The clock.</param>
     public LearnerPageService(
         ICourseStructureService courseStructure,
         ICourseAccessService courseAccess,
@@ -44,7 +47,8 @@ public sealed class LearnerPageService
         CourseReleaseEvaluator releaseEvaluator,
         IContentItemDisplayManager contentItemDisplayManager,
         IContentManager contentManager,
-        IOptions<CourseItemKindOptions> kindOptions)
+        IOptions<CourseItemKindOptions> kindOptions,
+        IClock clock)
     {
         _courseStructure = courseStructure;
         _courseAccess = courseAccess;
@@ -54,6 +58,7 @@ public sealed class LearnerPageService
         _contentItemDisplayManager = contentItemDisplayManager;
         _contentManager = contentManager;
         _kindOptions = kindOptions.Value;
+        _clock = clock;
     }
 
     /// <summary>
@@ -92,7 +97,17 @@ public sealed class LearnerPageService
             KindIcons = KindIcons(),
         };
 
-        if (enrollment is { Status: EnrollmentStatus.Active })
+        var notStarted = CourseSchedules.Of(course.Get<CoursePart>(nameof(CoursePart)), _clock.UtcNow) == CourseSchedule.NotStarted;
+
+        if (enrollment is { Status: EnrollmentStatus.Active } && notStarted)
+        {
+            // Before the course starts, every item waits for its start date.
+            foreach (var entry in outline.Entries)
+            {
+                model.LockedItems[entry.Item.ContentItemId] = LearningRefusals.CourseNotStarted;
+            }
+        }
+        else if (enrollment is { Status: EnrollmentStatus.Active })
         {
             foreach (var entry in outline.Entries)
             {
@@ -149,8 +164,12 @@ public sealed class LearnerPageService
         foreach (var enrollment in await _enrollmentStore.ListByUserAsync(userId))
         {
             var course = await _courseStructure.GetCourseAsync(enrollment.CourseId);
+            var coursePart = course?.Get<CoursePart>(nameof(CoursePart));
             var row = new LearnerCourseViewModel
             {
+                StartsUtc = coursePart?.StartsUtc,
+                EndsUtc = coursePart?.EndsUtc,
+                Schedule = CourseSchedules.Of(coursePart, _clock.UtcNow),
                 Enrollment = enrollment,
                 Title = course?.DisplayText ?? enrollment.Completion?.CourseTitle ?? enrollment.CourseId,
                 Code = (course is not null && course.TryGet<CoursePart>(out var part) ? part.Code : null) ?? enrollment.Completion?.CourseCode,
@@ -164,7 +183,15 @@ public sealed class LearnerPageService
             }
             else if (enrollment.IsOpen && seenOpen.Add(enrollment.CourseId))
             {
-                model.Current.Add(row);
+                // As in Moodle, a course whose end date has passed is a past course, not one in progress; it stays open.
+                if (row.Schedule == CourseSchedule.Ended)
+                {
+                    model.Past.Add(row);
+                }
+                else
+                {
+                    model.Current.Add(row);
+                }
             }
             else if (enrollment.Status == EnrollmentStatus.Expired)
             {

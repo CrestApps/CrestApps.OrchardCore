@@ -13,6 +13,7 @@
     {
         <span class="me-2"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["About {0} minutes", minutes]</span>
     }
+    <partial name="_CourseDates" model="(Model.Part.StartsUtc, Model.Part.EndsUtc, Model.Schedule)" />
     @if (!string.IsNullOrEmpty(Model.Part.Summary))
     {
         <p class="mb-0 mt-1">@Model.Part.Summary</p>

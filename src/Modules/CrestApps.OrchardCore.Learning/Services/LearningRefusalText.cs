@@ -37,6 +37,7 @@ public sealed class LearningRefusalText
             LearningRefusals.NotAvailableYet => S["This item is not available yet."],
             LearningRefusals.NotAvailable => S["This item is not available."],
             LearningRefusals.OpensLater => S["This item opens later."],
+            LearningRefusals.CourseNotStarted => S["The course has not started yet."],
             LearningRefusals.NotInOutline => S["This item is not part of the course outline."],
             LearningRefusals.CompleteEarlierItem => S["Complete the earlier item first."],
             LearningRefusals.ReachEarlierScore => S["Reach the required score on the earlier item first."],

@@ -11,8 +11,8 @@ namespace CrestApps.OrchardCore.Learning.Core.Services;
 /// <summary>
 /// Decides whether a person may open a course item. Course authors (<see cref="LearningPermissions.ManageCourses"/>) and
 /// the course staff always may; anyone may open a free preview; a learner may open an item of a course they have an
-/// active enrollment in, within its access dates, once its release rules are met, and may review a completed course
-/// while its access lasts.
+/// active enrollment in, within its access dates, once the course has started and the item's release rules are met, and
+/// may review a completed course while its access lasts.
 /// </summary>
 public sealed class DefaultCourseAccessService : ICourseAccessService
 {
@@ -167,6 +167,19 @@ public sealed class DefaultCourseAccessService : ICourseAccessService
         {
             access.Reason = CourseItemAccessReason.NotReleased;
             access.LockedReason = LearningRefusals.NotInOutline;
+
+            return access;
+        }
+
+        // Before the course starts, an enrolled learner sees it but opens none of its items. The end date never locks
+        // the course, as in Moodle; the access length after enrollment still ends access above.
+        var coursePart = course.Get<CoursePart>(nameof(CoursePart));
+
+        if (enrollment.Status != EnrollmentStatus.Completed && CourseSchedules.Of(coursePart, now) == CourseSchedule.NotStarted)
+        {
+            access.Reason = CourseItemAccessReason.NotReleased;
+            access.LockedReason = LearningRefusals.CourseNotStarted;
+            access.AvailableFromUtc = coursePart.StartsUtc;
 
             return access;
         }

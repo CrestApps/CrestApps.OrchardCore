@@ -42,6 +42,28 @@
 </div>
 
 <div class="card mb-3">
+    <div class="card-header">@T["Dates"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Starts">
+            <label asp-for="Starts" class="ocat-label">@T["Starts"]</label>
+            <div class="ocat-end">
+                <input asp-for="Starts" type="datetime-local" class="form-control" />
+                <span asp-validation-for="Starts"></span>
+                <span class="hint">@T["Optional, in your time zone. Before this date learners see the course and may enroll, but cannot open its items."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Ends">
+            <label asp-for="Ends" class="ocat-label">@T["Ends"]</label>
+            <div class="ocat-end">
+                <input asp-for="Ends" type="datetime-local" class="form-control" />
+                <span asp-validation-for="Ends"></span>
+                <span class="hint">@T["Optional, in your time zone. As in Moodle, the end date does not lock the course: learners keep their access, and the course is shown as ended instead of in progress. The access length below still ends each learner's access."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
     <div class="card-header">@T["Enrollment"]</div>
     <div class="card-body">
         <div class="ocat-wrapper" asp-validation-class-for="EnrollmentMode">

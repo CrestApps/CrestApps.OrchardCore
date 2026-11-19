@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.ViewModels;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Learning.Drivers;
 
@@ -24,6 +26,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
     private readonly ILearnerProgressService _progressService;
     private readonly IEnumerable<SelfEnrollmentMarker> _selfEnrollment;
     private readonly CourseItemKindOptions _kindOptions;
+    private readonly IClock _clock;
 
     public CourseLearnerDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
@@ -32,7 +35,8 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
         IEnrollmentStore enrollmentStore,
         ILearnerProgressService progressService,
         IEnumerable<SelfEnrollmentMarker> selfEnrollment,
-        IOptions<CourseItemKindOptions> kindOptions)
+        IOptions<CourseItemKindOptions> kindOptions,
+        IClock clock)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
@@ -41,6 +45,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
         _progressService = progressService;
         _selfEnrollment = selfEnrollment;
         _kindOptions = kindOptions.Value;
+        _clock = clock;
     }
 
     public override IDisplayResult Display(CoursePart part, BuildPartDisplayContext context)
@@ -51,6 +56,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
             {
                 model.Part = part;
                 model.CourseId = part.ContentItem.ContentItemId;
+                model.Schedule = CourseSchedules.Of(part, _clock.UtcNow);
             }).Location("Summary", "Meta:5"));
     }
 
@@ -66,6 +72,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
         model.CanSelfEnroll = _selfEnrollment.Any() && part.EnrollmentMode != EnrollmentMode.Closed;
         model.KindIcons = _kindOptions.Kinds.ToDictionary(kind => kind.Name, kind => kind.Icon, StringComparer.OrdinalIgnoreCase);
         model.Outline = await _courseStructure.GetOutlineAsync(part.ContentItem);
+        model.Schedule = CourseSchedules.Of(part, _clock.UtcNow);
 
         if (!model.SignedIn)
         {
