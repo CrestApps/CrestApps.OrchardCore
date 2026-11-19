@@ -1,0 +1,39 @@
+@model FulfillmentPartnersViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-muted">@T["A fulfillment partner is an outside company that makes and ships your products for you, such as a print-on-demand service. Connect each company you use below."]</p>
+    </div>
+</div>
+
+@if (Model.Partners.Count == 0)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-info mb-0" role="status">@T["No fulfillment partner is turned on yet. Turn on a partner's feature under Configuration > Features, then come back to this page."]</div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <ul class="list-unstyled mb-0">
+                @foreach (var partner in Model.Partners)
+                {
+                    <li class="mb-1">
+                        @if (partner.IsConnected)
+                        {
+                            <span class="badge text-bg-success ta-badge fw-normal"><i class="fa-solid fa-link" aria-hidden="true"></i> @T["Connected"]</span>
+                        }
+                        else
+                        {
+                            <span class="badge text-bg-secondary ta-badge fw-normal"><i class="fa-solid fa-link-slash" aria-hidden="true"></i> @T["Not connected"]</span>
+                        }
+                        <span class="ms-1">@partner.DisplayName</span>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+}
