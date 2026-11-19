@@ -44,14 +44,20 @@ Build:
 - **Browser check:** content host `http://127.0.0.1:<port>` with the site browsed at `http://localhost:<port>`. Use real Rise, Storyline 360 and old Articulate packages from the scratchpad (Finding a Hobby and Top Golf are Rise; De-escalation is old Articulate).
 - **Docs:** production setup, which means DNS, the tenant's `RequestUrlHost`, TLS, and auth cookies that stay host-only (no `Domain=`).
 
-## 2. Account pages (bugs Mike found on 2026-11-19)
+## 2. Account pages (bugs Mike found on 2026-11-19) (done on `ma/lms-package-content-host`, not pushed)
+
+Done in `0345585e4` (the menu links follow the pages' own checks, through `IAccountMemberService.FindMembershipAsync`) and `3b2506642` (every Learning and Accounts page in the menu renders inside `CommerceAccountPage`; My transcript, My required learning, My certifications and My education credits are menu entries; `AccountMenuFrameTests` guards the frame). Found on a fresh site: Learning Commerce enabled together with its dependencies did not run its migration until the site restarted, so Course seats failed with a missing `LicensePoolIndex` table for an account admin. Not fixed here; see section 4.
+
 
 - **Course seats and Account members:** both links in "Your account" give a permission error. Reproduce as `admin` and as an account member (bplearner2 in Acme Logistics; bpstaff1). Make the link and the page agree: show the link only to people the page lets in, and make sure account admins get in.
 - **My credentials:** it renders without the "Your account" menu on the left. Every account page must render through the `CommerceAccountPage` frame (`CommerceConstants.Account.PageShape`; see "Storefront account" in `src/CrestApps.Docs/docs/modules/commerce.md`).
 - **Other account pages:** check My learning, My transcript, My certificates, My education credits, My required learning, Notifications, Course seats and Account members.
 - **Guard test:** add a test that fails for any page in the account menu that doesn't render inside the frame.
 
-## 2b. Admin UI consistency (Mike, 2026-11-19)
+## 2b. Admin UI consistency (Mike, 2026-11-19) (done on `ma/lms-package-content-host`, not pushed)
+
+Done in `2d5f2b94b` (selectpickers; the quiz's fixed questions search the server through `ItemSelector`; lint `learning-multiple-selects-use-selectpicker`), `025bc42c0` (cards on every Learning admin editor; lint `learning-admin-edit-views-use-cards`) and `394a2bcd6` plus `127f498d7` (the Draw at random card). Course pickers (prerequisites, path sets, workflow events) stay selectpickers with every course rendered and a search box, not a server search.
+
 
 - **Multiple-select menus become bootstrap-select.** Every multiple `<select>` in the Learning modules (and any other module the stack added) uses bootstrap-select (selectpicker), as the rest of the admin does: searchable, with selected-count text. No jQuery; use the selectpicker's native API (append `<option>`s, then `.refresh()`). Long lists, such as the quiz's question picker, use a search endpoint (the reusable `ItemSelector`/`UserPicker` pattern) instead of rendering every option.
 - **Cards on every edit page.**
@@ -166,6 +172,9 @@ Build, in this order. Items 1-6 cover almost every course; the rest is the long 
 15. **Course images, and images inside summaries and labels.** Import them into the media library.
 
 ## 4. Smaller follow-ups
+
+- **Learning Commerce migration on a fresh site.** Enabling Learning Commerce in one bulk enable with its dependencies (Orders, Commerce, My Account) logged "Updating feature" but left `LearningCommerceMigrations` and `LearningPathProductMigrations` unrun until a restart, so the seats tables were missing. Reproduce with a new site from the Online Store recipe and one POST to `/Admin/Features` enabling the Learning features.
+- **Account menu order.** The storefront account menu does not follow the items' positions (Payment methods and Account members come before Overview); it predates this work.
 
 - **Notifications:**
   - learners without the admin can't change their notification preferences (the Notifications module's editor is only on the admin profile);
