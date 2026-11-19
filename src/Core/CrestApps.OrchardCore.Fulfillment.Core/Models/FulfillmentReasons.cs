@@ -33,7 +33,7 @@ public static class FulfillmentReasons
     /// <summary>The order has no complete shipping address.</summary>
     public const string NoAddress = "NoAddress";
 
-    /// <summary>The order contains a bundle, which partners can't make yet.</summary>
+    /// <summary>Only store-shipped bundles remain.</summary>
     public const string Bundle = "Bundle";
 
     /// <summary>Nothing in the order is left to ship: every unit is already in a shipment.</summary>

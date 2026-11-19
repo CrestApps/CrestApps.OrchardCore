@@ -130,6 +130,63 @@ public sealed class FulfillmentSenderTests : IAsyncLifetime
         Assert.Equal([("l1", 2), ("l2", 1)], Assert.Single(_provider.Received).Lines.Select(line => (line.LineId, line.Quantity)));
     }
 
+    /// <summary>
+    /// Verifies that the partner receives the same shirt quantities that Shipping reserves.
+    /// </summary>
+    [Fact]
+    public async Task SendAsync_OrderWithABundle_SendsThePartnersLines()
+    {
+        // Arrange
+        _harness.Order.Lines[1].BundleItems = [new OrderLineBundleItem { ContentItemId = "mug", Quantity = 2 }];
+        await _harness.RecordAsync();
+
+        // Act
+        var result = await _harness.SendAsync(Partner);
+
+        // Assert
+        Assert.Equal(FulfillmentRequestStatus.Sent, result.Request.Status);
+
+        var sent = Assert.Single(Assert.Single(_provider.Received).Lines);
+        var shipment = Assert.Single(await _harness.LoadShipmentsAsync());
+        var reserved = Assert.Single(shipment.Lines);
+
+        Assert.Equal(("l1", 2), (sent.LineId, sent.Quantity));
+        Assert.Equal(ShipmentStatus.Pending, shipment.Status);
+        Assert.Equal((sent.LineId, sent.Quantity), (reserved.LineId, reserved.Quantity));
+    }
+
+    /// <summary>
+    /// Verifies that a store-packed bundle finishes the request without contacting the partner or alerting staff.
+    /// </summary>
+    [Fact]
+    public async Task SendAsync_OnlyABundleLeft_HasNothingToSendAndNotifiesNobody()
+    {
+        // Arrange
+        _harness.Order.Lines.RemoveAt(0);
+        _harness.Order.Lines[0].BundleItems = [new OrderLineBundleItem { ContentItemId = "mug", Quantity = 2 }];
+        var claimCalls = 0;
+
+        _provider.OnClaim = _ =>
+        {
+            claimCalls++;
+
+            return [];
+        };
+
+        await _harness.RecordAsync();
+
+        // Act
+        var result = await _harness.SendAsync(Partner);
+
+        // Assert
+        Assert.Equal(FulfillmentRequestStatus.NothingToSend, result.Request.Status);
+        Assert.Equal(FulfillmentReasons.Bundle, result.Request.Reason);
+        Assert.Equal(0, claimCalls);
+        Assert.Empty(_provider.Received);
+        Assert.Empty(await _harness.LoadShipmentsAsync());
+        Assert.Empty(_harness.Attention);
+    }
+
     [Fact]
     public async Task SendAsync_PartnerRefuses_FreesTheUnitsAndAsksAPerson()
     {

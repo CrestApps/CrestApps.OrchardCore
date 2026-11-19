@@ -61,7 +61,7 @@ public sealed class FulfillmentRequestText
             FulfillmentReasons.Anonymized => S["The order's personal details were removed."],
             FulfillmentReasons.Pickup => S["The buyer picks this order up, so there is nothing to ship."],
             FulfillmentReasons.NoAddress => S["The order has no complete shipping address."],
-            FulfillmentReasons.Bundle => S["The order has a bundle, which fulfillment partners can't make yet. Ship it yourself."],
+            FulfillmentReasons.Bundle => S["The store ships bundles."],
             FulfillmentReasons.NothingLeft => S["Everything in the order is already in a shipment."],
             FulfillmentReasons.NotClaimed => S["This partner makes none of the items left to ship."],
             FulfillmentReasons.ConflictingClaims => S["\"{0}\" is made by more than one partner ({1}). Link it to one partner only, or ship it yourself, then send again.", Argument(0), Argument(1)],

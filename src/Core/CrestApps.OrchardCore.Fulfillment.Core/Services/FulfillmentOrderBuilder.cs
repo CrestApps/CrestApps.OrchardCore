@@ -108,14 +108,15 @@ public sealed class FulfillmentOrderBuilder
             return FulfillmentOrderCheck.Blocked(order, FulfillmentReasons.NothingLeft, nothingToSend: true);
         }
 
-        if (lines.Any(line => line.BundleItems?.Count > 0))
-        {
-            return FulfillmentOrderCheck.Blocked(order, FulfillmentReasons.Bundle, nothingToSend: false);
-        }
-
         var quantities = lines
+            .Where(line => line.BundleItems is not { Count: > 0 })
             .GroupBy(line => line.LineId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => remaining[group.Key], StringComparer.Ordinal);
+
+        if (quantities.Count == 0)
+        {
+            return FulfillmentOrderCheck.Blocked(order, FulfillmentReasons.Bundle, nothingToSend: true);
+        }
 
         return FulfillmentOrderCheck.Ready(order, ForLines(order, quantities));
     }

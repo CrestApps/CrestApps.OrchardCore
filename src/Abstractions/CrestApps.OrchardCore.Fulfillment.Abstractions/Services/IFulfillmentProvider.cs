@@ -39,7 +39,7 @@ public interface IFulfillmentProvider
     /// provider keeps on products). It never calls the partner. The engine gives a line claimed by two partners to
     /// neither and asks a person, and caps a claim to the quantity left to ship.
     /// </summary>
-    /// <param name="order">The order, with every physical line still to ship.</param>
+    /// <param name="order">The order, with the remaining physical lines the partner can claim. The store ships bundles.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The lines this partner makes; empty when it makes none.</returns>
     Task<IReadOnlyList<FulfillmentLineClaim>> ClaimLinesAsync(FulfillmentOrder order, CancellationToken cancellationToken = default);

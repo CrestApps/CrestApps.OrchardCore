@@ -9,9 +9,9 @@ namespace CrestApps.OrchardCore.YesSql.Core.Migrations;
 /// index table are filled in for the records saved before it.
 /// </summary>
 /// <remarks>
-/// Run it from a deferred task (<c>ShellScope.AddDeferredTask</c>) scheduled by the migration that adds the columns,
-/// not inside the migration: mapping every record again during activation would hold up the tenant. Records are saved
-/// straight through the session rather than through their store, so no store handler runs.
+/// Use a deferred task (<c>ShellScope.AddDeferredTask</c>) to commit one page at a time after activation.
+/// Use <see cref="ReindexInTransactionAsync{TRecord, TIndex}"/> when the new index data must commit with the migration version. Both methods save
+/// records through the session so store handlers do not run.
 /// </remarks>
 public static class CatalogIndexBackfill
 {
@@ -29,7 +29,25 @@ public static class CatalogIndexBackfill
     /// <param name="collection">The collection the records are stored in.</param>
     /// <param name="pageSize">The number of records saved again in each page.</param>
     /// <returns>The number of records saved again.</returns>
-    public static async Task<int> ReindexAsync<TRecord, TIndex>(ISession session, string collection, int pageSize = DefaultPageSize)
+    public static Task<int> ReindexAsync<TRecord, TIndex>(ISession session, string collection, int pageSize = DefaultPageSize)
+        where TRecord : CatalogItem
+        where TIndex : CatalogItemIndex
+        => ReindexAsync<TRecord, TIndex>(session, collection, pageSize, commitEachPage: true);
+
+    /// <summary>
+    /// Maps existing records in the caller's transaction and checks their versions so concurrent changes roll back the migration.
+    /// </summary>
+    /// <typeparam name="TRecord">The catalog record to map.</typeparam>
+    /// <typeparam name="TIndex">An index with a row for each record.</typeparam>
+    /// <param name="session">The session that owns the migration transaction.</param>
+    /// <param name="collection">The collection that stores the records.</param>
+    /// <returns>The number of records mapped.</returns>
+    public static Task<int> ReindexInTransactionAsync<TRecord, TIndex>(ISession session, string collection)
+        where TRecord : CatalogItem
+        where TIndex : CatalogItemIndex
+        => ReindexAsync<TRecord, TIndex>(session, collection, DefaultPageSize, commitEachPage: false);
+
+    private static async Task<int> ReindexAsync<TRecord, TIndex>(ISession session, string collection, int pageSize, bool commitEachPage)
         where TRecord : CatalogItem
         where TIndex : CatalogItemIndex
     {
@@ -52,11 +70,20 @@ public static class CatalogIndexBackfill
 
             foreach (var record in records)
             {
-                await session.SaveAsync(record, checkConcurrency: false, collection);
+                await session.SaveAsync(record, checkConcurrency: !commitEachPage, collection);
                 count++;
             }
 
-            await session.SaveChangesAsync();
+            if (commitEachPage)
+            {
+                await session.SaveChangesAsync();
+            }
+            else
+            {
+                await session.FlushAsync();
+                session.Detach(records, collection);
+            }
+
             total += count;
 
             if (count < pageSize)

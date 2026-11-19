@@ -82,6 +82,33 @@ public sealed class FulfillmentOrderBuilderTests
         Assert.Equal(("l1", "p1", "v1", 2, "Tee (White / S)"), (line.LineId, line.ContentItemId, line.VariantId, line.Quantity, line.Title));
     }
 
+    /// <summary>
+    /// Verifies which lines a partner can see when a shirt and a store-packed bundle share an order.
+    /// </summary>
+    [Fact]
+    public void Describe_BundleAndAClaimableLine_LeavesOutOnlyTheBundle()
+    {
+        // Arrange
+        var order = PaidOrder();
+        order.Lines.Add(new OrderLine
+        {
+            LineId = "gift-box",
+            ProductType = ProductType.Good,
+            Quantity = 1,
+            BundleItems = [new OrderLineBundleItem { ContentItemId = "mug", Quantity = 2 }],
+        });
+
+        // Act
+        var check = FulfillmentOrderBuilder.Describe(order, DefaultShipmentService.GetRemaining(order, []));
+
+        // Assert
+        Assert.True(check.CanSend);
+
+        var shirt = Assert.Single(check.Description.Lines);
+
+        Assert.Equal(("l1", 3), (shirt.LineId, shirt.Quantity));
+    }
+
     [Fact]
     public void Describe_EverythingInAShipment_HasNothingToSend()
     {

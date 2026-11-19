@@ -37,7 +37,9 @@ Some partners also add a card to the product editor, where you choose which of t
 1. Open the paid order under **Commerce > Orders**.
 2. In the **Fulfillment partners** card, click **Send to fulfillment partners**.
 
-Each partner is sent only the items it makes, and only those not shipped yet. The card then shows what each partner answered, why, and which items it was sent:
+Each partner receives only the items it makes that are still available to ship. Your store ships bundles itself. A bundle can share an order with items a partner ships. If only bundles remain, the card shows **Nothing to send** and you receive no fulfillment alert.
+
+The card shows what each partner answered, why, and which items it was sent.
 
 | Status | Meaning |
 | --- | --- |

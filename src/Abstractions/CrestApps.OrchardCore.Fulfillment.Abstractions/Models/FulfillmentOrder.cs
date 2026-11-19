@@ -37,7 +37,7 @@ public sealed class FulfillmentOrder
     public string Phone { get; set; }
 
     /// <summary>
-    /// Gets the physical lines still to ship, with the quantities left: units already in a shipment are not here.
+    /// Gets the physical lines available to partners after excluding store-shipped bundles and units already in a shipment.
     /// When the engine calls <see cref="Services.IFulfillmentProvider.SubmitAsync"/>, only the lines assigned to that
     /// partner are here.
     /// </summary>
