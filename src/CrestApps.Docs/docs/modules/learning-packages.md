@@ -2,6 +2,8 @@
 sidebar_label: Learning Packages
 title: Learning Packages
 description: "The learning package course item of Learning: SCORM 1.2, SCORM 2004 and cmi5 packages imported by authors and run by learners in a sandboxed frame, with the run-time data checked and kept on the server."
+user_manual:
+  - user-manual/learning/learning-packages
 ---
 
 **Learning Packages** (`CrestApps.OrchardCore.Learning.Packages`, with `Learning.Packages.Abstractions` and `Learning.Packages.Core`) adds the **Learning package** course item to [Learning](./learning). Its **Learning SCORM Packages** feature lets an author import a package, learners run it in the course player, and what the package reports count in the learner's progress. It implements:
@@ -68,13 +70,30 @@ Then `imsmanifest.xml` is read:
 
 A clean archive of only the extracted files, under their checked names, is kept in the protected file store (`IProtectedFileStore`), through Orchard Core's file creation pipeline, so an antivirus scanner registered there can refuse it. The temporary folder is always deleted. The package files are not in the media library and no URL serves them except the launch endpoint below.
 
+### File kinds
+
+A package may hold these kinds of file, each served with its content type (`PackageFileTypes`):
+
+| Kind | Extensions |
+| --- | --- |
+| Pages, scripts and styles | `.html`, `.htm`, `.xhtml`, `.js`, `.mjs`, `.css`, `.map`, `.wasm` |
+| Data, manifests and schemas | `.json`, `.xml`, `.xsd`, `.dtd`, `.xsl`, `.txt`, `.csv`, `.md` |
+| Captions | `.vtt`, `.srt` |
+| Images, icons and cursors | `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.webp`, `.bmp`, `.avif`, `.ico`, `.cur` |
+| Fonts | `.woff`, `.woff2`, `.ttf`, `.otf`, `.eot` |
+| Audio and video | MP3, M4A, AAC, FLAC, Ogg (`.ogg`, `.oga`, `.ogv`), WAV, MPEG-4 video (`.m4v` and the MP4 extension), WebM and SWF |
+| 3D models | `.glb`, `.gltf`, `.bin` |
+| Documents | `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx` |
+
+Office files with macros (`.docm`, `.xlsm`), programs and scripts (`.exe`, `.dll`, `.msi`, `.bat`, `.cmd`, `.ps1`, `.sh`, `.vbs`), server pages (`.cshtml`, `.aspx`, `.ashx`, `.asp`, `.php`, `.jsp`) and configuration (`web.config`, `.htaccess`) are refused. Pages and SVG images run under the sandbox like every package file.
+
 ## Running a package
 
 The package panel of the item in the learner player shows the learner's status, score, time and when they last opened the package, and a **Launch** button (**Resume** after a session the package suspended, **Review** once the course is completed). Results are marked as reported by the browser.
 
 ### The sandbox
 
-Package content is untrusted script. It runs in a frame on an **opaque origin**:
+Package content is untrusted script. Without a [package content host](#the-package-content-host) (strict mode, the default), it runs in a frame on an **opaque origin**:
 
 - The player embeds `<iframe sandbox="allow-scripts allow-forms allow-popups">`.
 - Every file of the package is served with `Content-Security-Policy: sandbox allow-scripts allow-forms allow-popups`, without `allow-same-origin`. Even a package file opened directly in a browser tab runs on an opaque origin.
@@ -82,15 +101,54 @@ Package content is untrusted script. It runs in a frame on an **opaque origin**:
 - The responses also carry `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and the content type of the file's extension.
 - They carry `Access-Control-Allow-Origin: *`, because the package's own scripts, fonts and data files are requested from an opaque origin. What opens a file is the launch token in the path, never a cookie, so this gives nothing to a reader who does not already hold the token.
 
+### The package content host
+
+Some packages run in several frames that must reach each other. Articulate Rise and Storyline 360 packages load Articulate's SCORM Driver (`scormdriver/scormdriver.js`) in one frame, which looks for `window.API` by walking `window.parent` and `window.opener`, and the content in another frame, which calls the driver in its parent. In strict mode every page and frame gets an opaque origin of its own, so these calls fail with a `SecurityError` ("Error grabbing 1.2 API ... LMS Initialize Failed") and the content stays blank. Packages that run in a single frame work in strict mode.
+
+Such packages need a **package content host**: a host name of its own that serves only package files, set per tenant under **Settings › Learning packages** (`LearningPackageContentHostSettings.BaseUrl`, permission **Manage learning package settings**, `ManageLearningPackageSettings`, given to administrators). The value is an origin: `http` or `https`, a host name and an optional port, and nothing after it, such as `https://packages.example.com`. It cannot be the host you use for the site. The `Settings` recipe step sets it:
+
+```json
+{
+  "name": "Settings",
+  "LearningPackageContentHostSettings": {
+    "BaseUrl": "https://packages.example.com"
+  }
+}
+```
+
+With a content host set:
+
+- **Routing.** `/learning/packages/run/{token}/{path}` and `/learning/packages/frame/{token}` answer only on the content host; on the site's other hosts they answer 404. Every other path on the content host (pages, the admin, sign-in, APIs, the runtime endpoint) answers 404, so the site never runs there. A middleware that runs before authentication (`PackageContentHostMiddleware`, `ConfigureOrder` just before Orchard Core's authentication) decides this, and removes the `Cookie` and `Authorization` headers of every request on the content host: nothing there is done as a signed-in person, and the launch token in the path is the only credential.
+- **Headers.** The files and the frame page carry `Content-Security-Policy: sandbox allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox; frame-ancestors 'self' <player origin>`, where the player origin is the site origin the learner launched from (it travels in the launch token). They keep `nosniff`, `Referrer-Policy: no-referrer`, and `no-store` for pages. The frames of a package share the content host's origin, which is not the site's, so they reach each other but not the learner's cookies, the player page or the site's endpoints. A window a package opens (such as a Rise attachment) is not sandboxed.
+- **The frame page.** The launch opens `/learning/packages/frame/{token}` on the content host in the player's frame (`sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"`; same origin is safe there because the frame is on another origin than the player). The page defines `window.API` (SCORM 1.2) or `window.API_1484_11` (SCORM 2004) with the learner's data, as the strict mode script does, and loads the package's launch file in a child frame on the same origin, so the driver finds the API by walking up its parents. The package's own pages are served as they are, without the script.
+- **Messages.** The frame page sends what the content sets, commits and finishes to the player by `postMessage`, to the player's origin only, and passes up only messages from its own children on its own origin. The player takes a message only from its own frame, from the content host's origin (which the launch names), with the protocol and the current launch id. The runtime endpoint, the server-side data model and the checks do not change.
+- **cmi5.** A cmi5 AU that is a file of the package is served from the content host too, still in the player's opaque-origin frame (cmi5 AUs talk to the Learning Record Store, not to a frame API).
+
+Without a content host nothing changes: package files are served from the site's own host in strict mode, and `/learning/packages/frame/...` answers 404. The import page says that multi-frame packages need a content host, and an import that finds `scormdriver.js` warns when none is set (`PackageImportResult.UsesScormDriver`).
+
+All packages of the tenant share the content host's origin, so a package can reach another package's storage on that origin in the same browser. Import packages only from authors you trust with script, as for strict mode.
+
+#### Setting up the content host in production
+
+1. **Choose a host whose cookies never include the site's.** The best choice is another registrable domain, such as `example-packages.com` for `learn.example.com`. A subdomain (`packages.example.com`) works only when the site's cookies are host-only, which is Orchard Core's default: no authentication, antiforgery or session cookie may be set with `Domain=example.com`, and no other application on the parent domain may set such cookies either.
+2. **DNS.** Point the host at the same server or load balancer as the site, for example a `CNAME` record from `packages.example.com` to the site's host name (or an `A`/`AAAA` record to the same address). In Azure App Service, add the host as a custom domain of the same app.
+3. **The tenant's host names.** Add the content host to the tenant's **Host names** (`RequestUrlHost`, a comma-separated list in **Tenants** or in `tenants.json`), for example `learn.example.com,packages.example.com`, so requests for it reach the same tenant. A tenant with a URL prefix needs the same prefix on the content host. The Default tenant without host names already answers every host.
+4. **TLS.** Give the content host a certificate (a certificate for both names, or one of its own). Use `https` for both the site and the content host: a page on `https` cannot frame an `http` content host.
+5. **Reverse proxy.** When the site runs behind a proxy, forward the original `Host` (or configure Orchard Core's reverse proxy feature for `X-Forwarded-Host`) so the content host is recognized.
+6. **The site's own policy.** If the site sends a `Content-Security-Policy` with `frame-src` or `child-src`, add the content host to it.
+7. Set **Settings › Learning packages › Package content host** to `https://packages.example.com`, then launch a package and check that it shows.
+
+For local testing, `http://127.0.0.1:<port>` as the content host of a site browsed at `http://localhost:<port>` behaves like production: the two are different origins and the site's cookies are host-only.
+
 ### The launch token
 
 **Launch** posts to `/learning/packages/{itemId}/launch` with the learner's session and antiforgery token. It checks the learner's own enrollment, access window and the item's release rules, starts a session and returns a launch token. The token:
 
 - is made with the tenant's ASP.NET Core Data Protection, with a purpose of its own;
-- is bound to the launch, the enrollment, the package item, the package file and the learner;
+- is bound to the launch, the enrollment, the package item, the package file and the learner, and carries the origin of the player page that launched it (the only origin that may frame the package on a content host);
 - expires after 8 hours (`PackageLaunchTokens.Lifetime`).
 
-The frame loads `/learning/packages/run/{token}/{path}`. The token is in the path, so the package's relative links resolve. Only files of the token's package are served, at normalized paths that cannot leave the package. A token stops opening files when the enrollment is withdrawn or no longer the learner's, or when another package is published into the item.
+In strict mode the frame loads `/learning/packages/run/{token}/{path}`; with a content host it loads the frame page there, which loads the same path on the content host. The token is in the path, so the package's relative links resolve. Only files of the token's package are served, at normalized paths that cannot leave the package. A token stops opening files when the enrollment is withdrawn or no longer the learner's, or when another package is published into the item.
 
 ### The SCORM 1.2 API
 
@@ -102,17 +160,17 @@ For a SCORM 2004 package the script defines `window.API_1484_11` with the eight 
 
 ### Messages to the player
 
-The script tells the player page what the SCO set, committed and finished (terminated) **only through `postMessage`**. The player takes a message only when all of these hold:
+The script tells the player page what the SCO set, committed and finished (terminated) **only through `postMessage`**, to the player's origin. The player takes a message only when all of these hold:
 
 - it comes from its own frame (`event.source`);
-- its origin is `"null"`;
+- its origin is `"null"` in strict mode, or the content host's origin;
 - it carries the protocol name and the id of the current launch.
 
 The player sends the values to `/learning/packages/runtime/{enrollmentId}/{itemId}` with the learner's session and antiforgery token: when the SCO commits or finishes, every 30 seconds, and when the page is left. Its calls go one at a time and in order (a finish waits for the commit before it), each with the next `sequence` number of the launch; a busy or lost answer is sent again with the same values and number before anything newer. The server applies nothing at or below the last number it applied in the launch (`PackageRuntimeState.LastSequence`, reset by each launch) and answers such a call as taken, so an older call never overwrites a newer one. The frame itself never holds a credential that can do more than this launch's runtime calls. When a commit or finish is saved but its result cannot reach the learner's progress because the enrollment stays busy, the state keeps `ResultNotRecorded`; the next launch records that result before it starts a session (for SCORM 2004 a new attempt resets the data the result came from), and is refused as busy while the enrollment still is.
 
 ### The runtime state on the server
 
-The server keeps one runtime state per enrollment and package item (the `LearningPackageRuntime` collection). A runtime call must carry the token of the latest launch by the signed-in learner, for the enrollment and item it names. A call from an older launch (another tab) or after the session finished is refused. Writes to one runtime state run under one lock per enrollment and package. A package may hold only web content (pages, scripts, styles, data, images, fonts, media, manifests and documents); a file of another kind, such as a program or a server page, is refused at import with its name. The `LearningPackageRuntimeStates` recipe step imports a state only into an enrollment of the named person in the named course, and only with status values of the package's standard. The lists of the runtime data take at most the SCORM 2004 smallest permitted maximums (250 interactions, 100 objectives, 10 objective ids and 10 correct responses per interaction, 250 learner comments; `ScormLimits`): a write past a list's limit gets 201 in SCORM 1.2 and 351 in SCORM 2004. A call that would make the stored state larger than 1 MB is refused whole (`StateTooLarge`), and nothing of it is saved.
+The server keeps one runtime state per enrollment and package item (the `LearningPackageRuntime` collection). A runtime call must carry the token of the latest launch by the signed-in learner, for the enrollment and item it names. A call from an older launch (another tab) or after the session finished is refused. Writes to one runtime state run under one lock per enrollment and package. A package may hold only web content; a file of another kind, such as a program or a server page, is refused at import with its name (see [File kinds](#file-kinds)). The `LearningPackageRuntimeStates` recipe step imports a state only into an enrollment of the named person in the named course, and only with status values of the package's standard. The lists of the runtime data take at most the SCORM 2004 smallest permitted maximums (250 interactions, 100 objectives, 10 objective ids and 10 correct responses per interaction, 250 learner comments; `ScormLimits`): a write past a list's limit gets 201 in SCORM 1.2 and 351 in SCORM 2004. A call that would make the stored state larger than 1 MB is refused whole (`StateTooLarge`), and nothing of it is saved.
 
 For a SCORM 1.2 package, every value is replayed through the SCORM 1.2 data model on the server (`Scorm12DataModel`), so a value the browser accepted is never trusted:
 

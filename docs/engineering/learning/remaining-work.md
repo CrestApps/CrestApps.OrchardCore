@@ -13,7 +13,7 @@ This is the hand-off for the next session. Phases 0-9 of `lms-plan.md` are built
 - **Test site:** `http://localhost:5137` runs an older build (`c6505af4a`, .NET 10) from `src/Startup/CrestApps.OrchardCore.Cms.Web/App_Data_Learning`, holding the recreated Moodle courses. Sign in as `admin` / `Password1!` (every test user uses `Password1!`). Restart it on the newest .NET 11 build once item 1 is done, with the content host set to `http://127.0.0.1:5137`.
 - **Moodle comparison:** the local scratchpad has `moodle-gaps.md`, `moodle-inventory.json`/`.md`, `local/built.json` (production id to local id) and `moodle-files/` (78 downloaded packages and files, 703 MB, customer content: never commit). The scratchpad may be cleared, so the lists below repeat what matters.
 
-## 1. SCORM: separate content host and import allowlist (approved by Mike, started)
+## 1. SCORM: separate content host and import allowlist (done on `ma/lms-package-content-host`, not pushed)
 
 Rise and Storyline 360 packages show blank content. They run in several frames that look for the SCORM API through `window.parent`, and the opaque-origin sandbox (CSP `sandbox` without `allow-same-origin`) gives each frame its own origin. 11 of 37 sampled production packages failed this way. Separately, the importer refused 24 of 37 packages for `.cur` and `.docx` files.
 
@@ -111,7 +111,7 @@ There is also the learning path "30 Day Learning Plan" (`4m7gmtf72s7by2097cge1s2
 
 Build, in this order. Items 1-6 cover almost every course; the rest is the long tail.
 
-1. **SCORM compatibility.** Section 1 above; affects 371 courses.
+1. ~~**SCORM compatibility.**~~ Done: section 1 above (`ma/lms-package-content-host`); affects 371 courses.
 2. **A Moodle importer.** A ContentTransfer format, like the QTI import, that reads a Moodle course backup (`.mbz`: `moodle_backup.xml`, `course/`, `sections/`, `activities/`, `files/`) and creates:
    - the course in its category;
    - the sections as outline groups;

@@ -265,6 +265,7 @@ const sidebars = {
                 'user-manual/learning/required-learning',
                 'user-manual/learning/selling-courses',
                 'user-manual/learning/external-tools',
+                'user-manual/learning/learning-packages',
                 'user-manual/learning/digital-credentials',
                 'user-manual/learning/learning-assistant',
             ],
