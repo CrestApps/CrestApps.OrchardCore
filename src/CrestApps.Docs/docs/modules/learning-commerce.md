@@ -73,7 +73,7 @@ A `LicensePool` holds the seats an account bought for one course, under the cour
 
 ## Course seats page
 
-`/account/learning-seats`, linked as **Course seats** in the storefront account menu, shows an account admin each pool with its free seats, the people holding a seat with their progress, and the invited people. The admin gives a seat to a member, invites someone by e-mail and takes a seat back. Anyone who is not an admin of the account is refused, and a pool of another account is refused.
+`/account/learning-seats`, linked as **Course seats** in the storefront account menu for the admins of an account only, shows an account admin each pool with its free seats, the people holding a seat with their progress, and the invited people. The admin gives a seat to a member, invites someone by e-mail and takes a seat back. Anyone who is not an admin of the account is refused, and a pool of another account is refused.
 
 ## Schema.org
 

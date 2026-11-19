@@ -185,7 +185,9 @@ it to the `Account` type at position 4; another account type can be given the pa
   account.
 - **Index.** `AccountMemberIndex` (`AccountContentItemId`, `UserId`, `Published`, `Latest`) holds one row per member
   of each version.
-- **Lookup.** `IAccountMemberService.FindAccountAsync(userId)` returns the published account a user signs in for;
+- **Lookup.** `IAccountMemberService.FindAccountAsync(userId)` returns the published account a user signs in for, and
+  the `FindMembershipAsync(user)` extension returns that account with the signed-in user's member entry and whether
+  they are an admin (`AccountMembership`), so a page and its account menu link agree on who may open it;
   `FindOtherAccountIdAsync(userId, exceptAccountId)` tells an editor the user already belongs to another one;
   `GetMemberUserIdsAsync(accountId)` returns the user ids of the members of the published account, and
   `GetMembersAsync(accountId)` its members with their roles.
@@ -223,8 +225,9 @@ An account admin invites people by e-mail instead of asking an administrator to 
 carries the absolute link `/account/invitations/{token}` (on the site's base URL, or on the address of the request
 that sent it when no base URL is set) and the expiry in the site's time zone.
 
-**Members** in the storefront account menu (`/account/members`) lists an account admin's members and pending
-invitations, invites someone with a role and takes an invitation back. The invitation page asks the person to sign in or
+**Account members** in the storefront account menu (`/account/members`) lists the members of the signed-in user's
+account; an account admin also sees the pending invitations, invites someone with a role and takes an invitation back.
+The menu offers the page only to the members of an account, and the page is not found for anyone else. The invitation page asks the person to sign in or
 register with the invited e-mail and to accept. Workflows get the **Account Invitation Sent** and **Account Invitation
 Accepted** events and the **Invite to Account** task, and the personal-data contributor exports and deletes a person's
 invitations.

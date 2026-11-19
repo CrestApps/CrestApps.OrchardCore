@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Learning.Commerce.Models;
@@ -151,10 +150,8 @@ public sealed class LearningSeatsController : Controller
 
     private async Task<(ContentItem Account, bool IsAdmin)> FindAccountAsync()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var account = string.IsNullOrEmpty(userId) ? null : await _members.FindAccountAsync(userId, HttpContext.RequestAborted);
-        var isAdmin = account is not null && account.TryGet<AccountMembersPart>(out var part) && part.FindMember(userId)?.Role == AccountMemberRole.Admin;
+        var membership = await _members.FindMembershipAsync(User, HttpContext.RequestAborted);
 
-        return (account, isAdmin);
+        return (membership?.Account, membership?.IsAdmin == true);
     }
 }
