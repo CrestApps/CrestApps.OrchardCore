@@ -1543,6 +1543,53 @@ The tools need **Manage product feeds**. The access key is a secret: it is never
 
 Reading needs **View inventory** and every change needs **Manage inventory**, as on **Commerce › Inventory**. Every stock change is a movement in the item's history with the caller as its author and the reason given (a transfer's reason defaults to "From A to B"), and is saved at once, as the page does. When a checkout changed the same stock at the same moment, the tool says so and nothing is changed, and the stock tools refuse further changes until the next reply. A location must be one the store lists; units can still be moved out of a removed location. `importStockCounts` checks every row with the import's own rules before anything changes. The location tools edit the list of **Settings › Commerce › Inventory**: every location needs a name, at most 50 are listed, a location keeps its id, and locations owned by another record, such as a van, are managed with their owner.
 
+### Purchase order tools
+
+**Available when:** `CrestApps.OrchardCore.Inventory.PurchaseOrders` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listPurchaseOrders` | Lists purchase orders with number, supplier, status, location, expected date, units ordered and received, and total; filters by text and status, with paging. |
+| `getPurchaseOrder` | Returns one purchase order, by id or number, with its details and lines (stock item, SKU, ordered, received, outstanding, unit cost). |
+| `savePurchaseOrder` | Creates a draft purchase order (supplier, location, expected date, note, lines, or started from the items that are low on stock) or changes one that is not yet received or canceled. It sends nothing to the supplier. |
+| `markPurchaseOrderOrdered` | Marks a draft purchase order with at least one line as ordered, so its items can be received. It records the status only. |
+| `receivePurchaseOrder` | Records items of an ordered purchase order as arrived, by line and quantity or everything still outstanding, adding them to stock at the order's location. |
+| `cancelPurchaseOrder` | Cancels a purchase order that is not fully received; what already arrived stays in stock. Asks for approval. |
+| `deletePurchaseOrder` | Deletes a draft purchase order; an ordered one can only be canceled. Asks for approval. |
+
+Reading needs **View inventory** and every change needs **Manage inventory**, as on **Commerce › Purchase orders**. A new purchase order gets its number from the same locked sequence as the page (such as `PO-261019-K3QZ7`), so two purchase orders never share one. A draft's lines can be added, removed and their quantities changed; once it is ordered, only the unit costs can change. The tools refuse what the page would quietly ignore: an unknown location, currency or stock item, and a quantity change on an ordered purchase order. Receiving adds the units at the purchase order's location as movements with the caller as their author, never more than is still to come, and is saved at once; when the stock changed at the same moment, nothing is recorded and the tool says so. No tool emails a supplier.
+
+### Coupon tools
+
+**Available when:** `CrestApps.OrchardCore.Checkout` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listCoupons` | Lists coupons and automatic discounts with code, what they take off, dates, use limit and uses so far, and whether each can be used now; filters by text and by active, not available or disabled, and flags enabled coupons with neither a use limit nor an end date. |
+| `getCoupon` | Returns one coupon by id or code with all its rules, its recent uses with what each paid for, uses held by open checkouts, the count of generated codes and how many were used, and its discount link. |
+| `saveCoupon` | Creates or changes a coupon or automatic discount with the coupon editor's rules: kind and amount, dates in the site's time zone, use limits, spend and quantity conditions, buy X get Y, product, category, customer and channel limits, and what it combines with. Asks for approval. |
+| `deleteCoupon` | Deletes a coupon with all its generated codes; orders that used it keep their discount. Asks for approval. |
+| `generateCouponCodes` | Generates 1 to 5,000 unique codes that share a coupon's discount and rules, with an optional prefix and a use limit per code. Asks for approval. |
+
+The tools need **Manage coupons**, as **Commerce › Coupons** does. `saveCoupon` runs the coupon editor's checks (a unique code, a percentage from 1 to 100, a fixed amount with its currency, an end after the start, limits above zero) and, when it changes a coupon, starts from the stored coupon, so only the fields given change; it never changes how often a coupon was used. It always asks for approval, and warns about an enabled coupon with neither a use limit nor an end date. Generated codes are discounts anyone holding one can spend, so no tool returns them: `generateCouponCodes` returns how many were made, and the coupon's page, whose link the results give, downloads them with their use counts. A generated code is not looked up as a coupon.
+
+### Order tools
+
+**Available when:** `CrestApps.OrchardCore.Orders` with `CrestApps.OrchardCore.AI` on
+
+| Function | Description |
+| --- | --- |
+| `listOrders` | Lists orders with number, date, customer, status, channel, fulfilment status, total, refunded amount and whether money is still owed; filters by order number or customer email, status, channel, customer and the days they were placed, and links to the CSV export of the same list. |
+| `getOrder` | Returns one order by id or number: customer and addresses, lines, discounts, shipping, tax, totals, how it was paid, notes, refunds, disputes, payment risk, what can still be refunded and what is still owed, and links to its page, invoice and packing slip. |
+| `addOrderNote` | Adds an internal note to an order's history under the caller's name. The buyer does not see it. |
+| `refundOrder` | Gives back a stated amount in the order's currency, or everything still refundable with `refundAll`, through the payment provider, optionally restocking or as store credit. Needs a new idempotency key on every call. Asks for approval. |
+| `cancelOrder` | Cancels an order with an optional note, optionally restocking what a paid order sold; what is still owed for it is canceled too. It never refunds. Asks for approval. |
+| `resendOrderConfirmation` | Emails a paid order's confirmation to the customer again and notes it on the order. Asks for approval. |
+| `saveDraftOrder` | Creates or changes an order the store puts together for a buyer, or answers a quote request, priced for the buyer and held from stock when saved; it can also price without saving. |
+| `sendOrderInvoice` | Emails the buyer a draft order's invoice, or the quote, with the link to review and pay it. Asks for approval. |
+
+The tools need **Manage orders**, as **Commerce › Orders** does. They act through the order page's own services, so its rules apply. A refund moves money and cannot be undone: `refundOrder` needs the amount and the currency, which must be the order's and fit its decimal places; a refund of everything still refundable needs `refundAll` with that exact amount; and every call needs a new idempotency key, so a second call with the same key is refused instead of refunding twice. Online payments are refunded through the checkout's refund service and the payment provider, newest first, then Pay Later and offline payments, then gift cards and store credit; a payment method that can't refund automatically is recorded for settling by hand, and the result relays what happened. `cancelOrder` never moves money: what was paid stays refundable, and the result says how much. `getOrder` returns only the listed fields: no phone number, no tender reference, and only whether the order has a pay link (the link itself lets anyone pay or see the order, and is on the order's page). `saveDraftOrder` keeps the draft editor's limits (100 lines, 10,000 of a line, a quoted price below 100,000,000) and saves at once, so stock someone else changed at the same moment is reported.
+
 ## Tool permissions
 
 Tool permissions decide who may **attach** a tool, and, for chat interactions, who may **use** it. They do not limit who may use the tools of an AI profile: for a profile, the profile itself is the authorization boundary.
