@@ -18,12 +18,17 @@
         @T.Plural(Model.Taken, "Cancelling the session cancels the place of 1 learner and empties its waitlist. It cannot be undone.", "Cancelling the session cancels the places of {0} learners and empties its waitlist. It cannot be undone.")
     </div>
 
-    <div class="ocat-wrapper" asp-validation-class-for="Reason">
-        <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
-        <div class="ocat-end">
-            <textarea asp-for="Reason" class="form-control" rows="3" maxlength="1000" required></textarea>
-            <span asp-validation-for="Reason"></span>
-            <span class="hint">@T["Kept on each cancelled registration."]</span>
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Cancellation"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="Reason">
+                <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Reason" class="form-control" rows="3" maxlength="1000" required></textarea>
+                    <span asp-validation-for="Reason"></span>
+                    <span class="hint">@T["Kept on each cancelled registration."]</span>
+                </div>
+            </div>
         </div>
     </div>
 

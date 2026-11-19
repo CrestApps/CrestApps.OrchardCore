@@ -1,58 +1,63 @@
 @model QuestionPartViewModel
 
-@if (!string.IsNullOrEmpty(Model.SourceIdentifier))
-{
-    <div class="ocat-wrapper">
-        <span class="ocat-label">@T["Imported from"]</span>
-        <div class="ocat-end">
-            <p class="form-control-plaintext mb-0">@T["Item {0} of {1}", Model.SourceIdentifier, Model.SourceFile ?? string.Empty]</p>
-            <span class="hint">@T["Importing a file with the same item into the same question bank again updates this question."]</span>
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Question"]</div>
+    <div class="card-body">
+        @if (!string.IsNullOrEmpty(Model.SourceIdentifier))
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Imported from"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext mb-0">@T["Item {0} of {1}", Model.SourceIdentifier, Model.SourceFile ?? string.Empty]</p>
+                    <span class="hint">@T["Importing a file with the same item into the same question bank again updates this question."]</span>
+                </div>
+            </div>
+        }
+
+        <div class="ocat-wrapper" asp-validation-class-for="Prompt">
+            <label asp-for="Prompt" class="ocat-label">@T["Question"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Prompt" class="form-control" rows="4"></textarea>
+                <span asp-validation-for="Prompt"></span>
+                <span class="hint">@T["What the learner reads. Simple formatting (bold, lists, links) is kept."]</span>
+            </div>
         </div>
-    </div>
-}
 
-<div class="ocat-wrapper" asp-validation-class-for="Prompt">
-    <label asp-for="Prompt" class="ocat-label">@T["Question"]</label>
-    <div class="ocat-end">
-        <textarea asp-for="Prompt" class="form-control" rows="4"></textarea>
-        <span asp-validation-for="Prompt"></span>
-        <span class="hint">@T["What the learner reads. Simple formatting (bold, lists, links) is kept."]</span>
-    </div>
-</div>
+        <div class="ocat-wrapper" asp-validation-class-for="Points">
+            <label asp-for="Points" class="ocat-label">@T["Points"]</label>
+            <div class="ocat-end ocat-end-sm">
+                <input asp-for="Points" type="number" min="0.01" step="0.01" class="form-control" />
+                <span asp-validation-for="Points"></span>
+            </div>
+        </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="Points">
-    <label asp-for="Points" class="ocat-label">@T["Points"]</label>
-    <div class="ocat-end ocat-end-sm">
-        <input asp-for="Points" type="number" min="0.01" step="0.01" class="form-control" />
-        <span asp-validation-for="Points"></span>
-    </div>
-</div>
+        <div class="ocat-wrapper">
+            <label asp-for="Difficulty" class="ocat-label">@T["Difficulty"]</label>
+            <div class="ocat-end ocat-end-sm">
+                <select asp-for="Difficulty" class="form-select">
+                    <option value="1">@T["1 (easy)"]</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">@T["5 (hard)"]</option>
+                </select>
+            </div>
+        </div>
 
-<div class="ocat-wrapper">
-    <label asp-for="Difficulty" class="ocat-label">@T["Difficulty"]</label>
-    <div class="ocat-end ocat-end-sm">
-        <select asp-for="Difficulty" class="form-select">
-            <option value="1">@T["1 (easy)"]</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">@T["5 (hard)"]</option>
-        </select>
-    </div>
-</div>
+        <div class="ocat-wrapper">
+            <label asp-for="Tags" class="ocat-label">@T["Tags"]</label>
+            <div class="ocat-end">
+                <input asp-for="Tags" class="form-control" maxlength="500" />
+                <span class="hint">@T["Separated by commas. A quiz can draw questions with a tag at random."]</span>
+            </div>
+        </div>
 
-<div class="ocat-wrapper">
-    <label asp-for="Tags" class="ocat-label">@T["Tags"]</label>
-    <div class="ocat-end">
-        <input asp-for="Tags" class="form-control" maxlength="500" />
-        <span class="hint">@T["Separated by commas. A quiz can draw questions with a tag at random."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="GeneralFeedback" class="ocat-label">@T["Feedback"]</label>
-    <div class="ocat-end">
-        <textarea asp-for="GeneralFeedback" class="form-control" rows="2"></textarea>
-        <span class="hint">@T["Shown when the learner reviews the attempt, whatever the answer, if the quiz allows a review."]</span>
+        <div class="ocat-wrapper">
+            <label asp-for="GeneralFeedback" class="ocat-label">@T["Feedback"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="GeneralFeedback" class="form-control" rows="2"></textarea>
+                <span class="hint">@T["Shown when the learner reviews the attempt, whatever the answer, if the quiz allows a review."]</span>
+            </div>
+        </div>
     </div>
 </div>

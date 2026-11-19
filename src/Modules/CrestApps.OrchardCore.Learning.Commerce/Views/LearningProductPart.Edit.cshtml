@@ -7,49 +7,51 @@
     rows.Add(new LearningProductGrantRow { Include = false });
 }
 
-<div class="mb-3">
-    <label class="form-label">@T["What buying it grants"]</label>
-    <span class="hint d-block mb-2">@T["With no row ticked, buying it enrolls the buyer in this course, or starts this learning path. Seats go to the buyer's business account; only an account admin can buy them."]</span>
-    <table class="table table-sm align-middle">
-        <thead>
-            <tr>
-                <th style="width: 4rem">@T["Use"]</th>
-                <th style="width: 12rem">@T["Grants"]</th>
-                <th>@T["Course"]</th>
-                <th style="width: 9rem">@T["Access (days)"]</th>
-                <th style="width: 9rem">@T["Seats per unit"]</th>
-            </tr>
-        </thead>
-        <tbody>
-            @for (var i = 0; i < rows.Count; i++)
-            {
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["What buying it grants"]</div>
+    <div class="card-body">
+        <span class="hint d-block mb-2">@T["With no row ticked, buying it enrolls the buyer in this course, or starts this learning path. Seats go to the buyer's business account; only an account admin can buy them."]</span>
+        <table class="table table-sm align-middle">
+            <thead>
                 <tr>
-                    <td><input type="checkbox" class="form-check-input" name="@(prefix)[@i].Include" value="true" checked="@rows[i].Include" aria-label="@T["Use"]" /><input type="hidden" name="@(prefix)[@i].Include" value="false" /></td>
-                    <td>
-                        <select name="@(prefix)[@i].Kind" class="form-select form-select-sm" aria-label="@T["Grants"]">
-                            <option value="@LearningProductGrantKind.Course" selected="@(rows[i].Kind == LearningProductGrantKind.Course)">@T["Enrollment"]</option>
-                            <option value="@LearningProductGrantKind.LearningPath" selected="@(rows[i].Kind == LearningProductGrantKind.LearningPath)">@T["Learning path"]</option>
-                            <option value="@LearningProductGrantKind.Seats" selected="@(rows[i].Kind == LearningProductGrantKind.Seats)">@T["Seats for an account"]</option>
-                        </select>
-                    </td>
-                    <td>
-                        <select name="@(prefix)[@i].TargetId" class="form-select form-select-sm" aria-label="@T["Course"]">
-                            <option value="">@T["This item"]</option>
-                            @foreach (var course in Model.Courses)
-                            {
-                                <option value="@course.Value" selected="@(course.Value == rows[i].TargetId)">@course.Text</option>
-                            }
-                        </select>
-                    </td>
-                    <td><input type="number" min="0" name="@(prefix)[@i].AccessDays" value="@rows[i].AccessDays" class="form-control form-control-sm" aria-label="@T["Access (days)"]" /></td>
-                    <td><input type="number" min="1" name="@(prefix)[@i].Seats" value="@rows[i].Seats" class="form-control form-control-sm" aria-label="@T["Seats per unit"]" /></td>
+                    <th style="width: 4rem">@T["Use"]</th>
+                    <th style="width: 12rem">@T["Grants"]</th>
+                    <th>@T["Course"]</th>
+                    <th style="width: 9rem">@T["Access (days)"]</th>
+                    <th style="width: 9rem">@T["Seats per unit"]</th>
                 </tr>
-            }
-        </tbody>
-    </table>
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="EnrollsWithoutKeyOrApproval" />
-        <label class="form-check-label" asp-for="EnrollsWithoutKeyOrApproval">@T["Buying it enrolls without the enrollment key or approval"]</label>
-        <span class="hint dashed">@T["A purchase never asks for a course's enrollment key or for an approval, so a course that needs either is not sold, as an enrollment or as seats, unless this is ticked."]</span>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < rows.Count; i++)
+                {
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input" name="@(prefix)[@i].Include" value="true" checked="@rows[i].Include" aria-label="@T["Use"]" /><input type="hidden" name="@(prefix)[@i].Include" value="false" /></td>
+                        <td>
+                            <select name="@(prefix)[@i].Kind" class="form-select form-select-sm" aria-label="@T["Grants"]">
+                                <option value="@LearningProductGrantKind.Course" selected="@(rows[i].Kind == LearningProductGrantKind.Course)">@T["Enrollment"]</option>
+                                <option value="@LearningProductGrantKind.LearningPath" selected="@(rows[i].Kind == LearningProductGrantKind.LearningPath)">@T["Learning path"]</option>
+                                <option value="@LearningProductGrantKind.Seats" selected="@(rows[i].Kind == LearningProductGrantKind.Seats)">@T["Seats for an account"]</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select name="@(prefix)[@i].TargetId" class="form-select form-select-sm" aria-label="@T["Course"]">
+                                <option value="">@T["This item"]</option>
+                                @foreach (var course in Model.Courses)
+                                {
+                                    <option value="@course.Value" selected="@(course.Value == rows[i].TargetId)">@course.Text</option>
+                                }
+                            </select>
+                        </td>
+                        <td><input type="number" min="0" name="@(prefix)[@i].AccessDays" value="@rows[i].AccessDays" class="form-control form-control-sm" aria-label="@T["Access (days)"]" /></td>
+                        <td><input type="number" min="1" name="@(prefix)[@i].Seats" value="@rows[i].Seats" class="form-control form-control-sm" aria-label="@T["Seats per unit"]" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnrollsWithoutKeyOrApproval" />
+            <label class="form-check-label" asp-for="EnrollsWithoutKeyOrApproval">@T["Buying it enrolls without the enrollment key or approval"]</label>
+            <span class="hint dashed">@T["A purchase never asks for a course's enrollment key or for an approval, so a course that needs either is not sold, as an enrollment or as seats, unless this is ticked."]</span>
+        </div>
     </div>
 </div>

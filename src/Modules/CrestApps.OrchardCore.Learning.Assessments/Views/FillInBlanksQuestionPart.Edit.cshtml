@@ -1,19 +1,24 @@
 @model SimpleQuestionViewModel
 
-<div class="ocat-wrapper" asp-validation-class-for="Text">
-    <label asp-for="Text" class="ocat-label">@T["Text with blanks"]</label>
-    <div class="ocat-end">
-        <textarea asp-for="Text" class="form-control" rows="4"></textarea>
-        <span asp-validation-for="Text"></span>
-        <span class="hint">@T["Write each blank as [[answer]], or [[answer|other answer]] when several answers count. Each blank earns its share of the points."]</span>
-    </div>
-</div>
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Answer"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Text">
+            <label asp-for="Text" class="ocat-label">@T["Text with blanks"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Text" class="form-control" rows="4"></textarea>
+                <span asp-validation-for="Text"></span>
+                <span class="hint">@T["Write each blank as [[answer]], or [[answer|other answer]] when several answers count. Each blank earns its share of the points."]</span>
+            </div>
+        </div>
 
-<div class="ocat-wrapper">
-    <div class="ocat-end ocat-start-offset">
-        <div class="form-check">
-            <input asp-for="CaseSensitive" type="checkbox" class="form-check-input" />
-            <label asp-for="CaseSensitive" class="form-check-label">@T["Letter case must match"]</label>
+        <div class="ocat-wrapper">
+            <div class="ocat-end ocat-start-offset">
+                <div class="form-check">
+                    <input asp-for="CaseSensitive" type="checkbox" class="form-check-input" />
+                    <label asp-for="CaseSensitive" class="form-check-label">@T["Letter case must match"]</label>
+                </div>
+            </div>
         </div>
     </div>
 </div>

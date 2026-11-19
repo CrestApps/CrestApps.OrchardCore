@@ -13,26 +13,31 @@
     }
 }
 
-<div class="mb-3" id="@Html.IdFor(m => m.Sets)-editor">
-    <label class="form-label">@T["Course sets"]</label>
-    <span class="hint d-block mb-2">@T["Sets joined by Then open one after another. Sets joined by And are open together and both count; sets joined by Or are alternatives. And binds tighter than Or."]</span>
-    <div data-path-sets>
-        @for (var i = 0; i < sets.Count; i++)
-        {
-            <partial name="LearningPathSetRow" model="@(new LearningPathSetRowModel { Prefix = prefix, Index = i.ToString(System.Globalization.CultureInfo.InvariantCulture), IsFirst = i == 0, Set = sets[i], Courses = Model.Courses })" />
-        }
+<div class="card text-bg-theme mb-3" id="@Html.IdFor(m => m.Sets)-editor">
+    <div class="card-header">@T["Course sets"]</div>
+    <div class="card-body">
+        <span class="hint d-block mb-2">@T["Sets joined by Then open one after another. Sets joined by And are open together and both count; sets joined by Or are alternatives. And binds tighter than Or."]</span>
+        <div data-path-sets>
+            @for (var i = 0; i < sets.Count; i++)
+            {
+                <partial name="LearningPathSetRow" model="@(new LearningPathSetRowModel { Prefix = prefix, Index = i.ToString(System.Globalization.CultureInfo.InvariantCulture), IsFirst = i == 0, Set = sets[i], Courses = Model.Courses })" />
+            }
+        </div>
+        <template data-path-set-template>
+            <partial name="LearningPathSetRow" model="@(new LearningPathSetRowModel { Prefix = prefix, Index = "__index__", Set = new LearningPathSetEditViewModel(), Courses = Model.Courses })" />
+        </template>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-path-add-set><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add a set"]</button>
     </div>
-    <template data-path-set-template>
-        <partial name="LearningPathSetRow" model="@(new LearningPathSetRowModel { Prefix = prefix, Index = "__index__", Set = new LearningPathSetEditViewModel(), Courses = Model.Courses })" />
-    </template>
-    <button type="button" class="btn btn-sm btn-outline-secondary" data-path-add-set><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add a set"]</button>
 </div>
 
-<div class="mb-3">
-    <div class="form-check">
-        <input asp-for="AllowSelfStart" class="form-check-input" />
-        <label asp-for="AllowSelfStart" class="form-check-label">@T["People can start the path themselves"]</label>
-        <span class="hint dashed">@T["Signed-in people who can see the path get a Start button on its page. Otherwise staff or required learning start them."]</span>
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Starting the path"]</div>
+    <div class="card-body">
+        <div class="form-check">
+            <input asp-for="AllowSelfStart" class="form-check-input" />
+            <label asp-for="AllowSelfStart" class="form-check-label">@T["People can start the path themselves"]</label>
+            <span class="hint dashed">@T["Signed-in people who can see the path get a Start button on its page. Otherwise staff or required learning start them."]</span>
+        </div>
     </div>
 </div>
 

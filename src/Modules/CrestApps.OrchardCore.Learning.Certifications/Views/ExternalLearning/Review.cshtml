@@ -40,11 +40,16 @@
     }
     else if (Model.Submission.State == ExternalLearningState.Submitted)
     {
-        <div class="ocat-limited-wrapper">
-            <label asp-for="Note" class="ocat-label">@T["Note"]</label>
-            <div class="ocat-limited">
-                <textarea asp-for="Note" class="form-control" rows="2"></textarea>
-                <span class="hint">@T["Kept with the review and shown to the person."]</span>
+        <div class="card text-bg-theme mb-3">
+            <div class="card-header">@T["Review"]</div>
+            <div class="card-body">
+                <div class="ocat-limited-wrapper">
+                    <label asp-for="Note" class="ocat-label">@T["Note"]</label>
+                    <div class="ocat-limited">
+                        <textarea asp-for="Note" class="form-control" rows="2"></textarea>
+                        <span class="hint">@T["Kept with the review and shown to the person."]</span>
+                    </div>
+                </div>
             </div>
         </div>
 
