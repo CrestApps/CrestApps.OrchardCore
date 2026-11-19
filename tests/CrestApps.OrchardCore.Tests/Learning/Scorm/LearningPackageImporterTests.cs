@@ -34,6 +34,39 @@ public sealed class LearningPackageImporterTests : IDisposable
     }
 
     [Fact]
+    public async Task ArticulatePackage_WithCursorAndOfficeFiles_IsImported_AndItsScormDriverIsNoticed()
+    {
+        using var zip = PackageZip.SingleScoPackage(null, ("scormdriver/scormdriver.js", "var driver;"), ("story_content/arrow.cur", "cur"), ("scormcontent/assets/Biography.docx", "docx"), ("assets/data.xlsx", "xlsx"));
+
+        var result = await Importer().ImportAsync("rise.zip", zip, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded, result.Error);
+        Assert.True(result.UsesScormDriver);
+    }
+
+    [Fact]
+    public async Task PackageWithoutAScormDriver_IsNotMarked()
+    {
+        using var zip = PackageZip.SingleScoPackage();
+
+        var result = await Importer().ImportAsync("p.zip", zip, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded, result.Error);
+        Assert.False(result.UsesScormDriver);
+    }
+
+    [Fact]
+    public async Task PackageWithAServerPage_IsRefused_WithItsName()
+    {
+        using var zip = PackageZip.SingleScoPackage(null, ("Views/Index.cshtml", "@{ }"));
+
+        var result = await Importer().ImportAsync("p.zip", zip, TestContext.Current.CancellationToken);
+
+        Assert.Equal(PackageImportErrors.FileType, result.Error);
+        Assert.Equal("Views/Index.cshtml", result.Entry);
+    }
+
+    [Fact]
     public async Task ApplyTo_WritesTheManifestOntoThePart()
     {
         using var zip = PackageZip.Create(("imsmanifest.xml", ScormManifestSamples.MasteryScore.TrimStart()), ("exam.html", "<html></html>"));

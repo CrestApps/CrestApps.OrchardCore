@@ -13,16 +13,19 @@ namespace CrestApps.OrchardCore.Learning.Packages.Controllers;
 /// <summary>
 /// The learner's side of a learning package. <c>Launch</c> and <c>Runtime</c> are called by the player page with the
 /// learner's session and antiforgery token. <c>Run</c> serves the files of the package to the sandboxed frame, which
-/// has no session: only the launch token in the path opens them, and every response carries a sandbox
-/// Content-Security-Policy without <c>allow-same-origin</c>, so even a package file opened outside the frame runs on an
-/// opaque origin that cannot read the learner's cookies, the player page or the site's endpoints.
+/// has no session: only the launch token in the path opens them. In strict mode (no package content host) every
+/// response carries a sandbox Content-Security-Policy without <c>allow-same-origin</c>, so even a package file opened
+/// outside the frame runs on an opaque origin that cannot read the learner's cookies, the player page or the site's
+/// endpoints. With a content host, the files are served only there, on the content host's own origin (so the frames
+/// of a package reach each other), framed only by the player's origin, and <c>Frame</c> serves the page that holds the
+/// run-time API and the package's launch file.
 /// </summary>
 public sealed class PackageRunController : Controller
 {
     /// <summary>
-    /// The sandbox every package file runs in: scripts, forms and popups, and no same origin.
+    /// The sandbox every package file runs in, in strict mode: scripts, forms and popups, and no same origin.
     /// </summary>
-    public const string SandboxPolicy = "sandbox allow-scripts allow-forms allow-popups";
+    public const string SandboxPolicy = PackageContentHost.StrictSandboxPolicy;
 
     /// <summary>
     /// The largest runtime call: a thousand values of at most 4,096 characters.
@@ -35,6 +38,7 @@ public sealed class PackageRunController : Controller
     internal const long MaxHtmlBytes = 32L * 1024 * 1024;
 
     private readonly PackageRuntimeService _runtime;
+    private readonly PackageContentHostProvider _contentHost;
     private readonly IAuthorizationService _authorizationService;
 
     internal readonly IStringLocalizer S;
@@ -44,10 +48,12 @@ public sealed class PackageRunController : Controller
     /// </summary>
     public PackageRunController(
         PackageRuntimeService runtime,
+        PackageContentHostProvider contentHost,
         IAuthorizationService authorizationService,
         IStringLocalizer<PackageRunController> stringLocalizer)
     {
         _runtime = runtime;
+        _contentHost = contentHost;
         _authorizationService = authorizationService;
         S = stringLocalizer;
     }
@@ -61,7 +67,16 @@ public sealed class PackageRunController : Controller
     [HttpGet("learning/packages/run/{token}/{**path}", Name = "LearningPackageRun")]
     public async Task<IActionResult> Run(string token, string path)
     {
-        SetSandboxHeaders(Response);
+        var onContentHost = IsContentHostRequest(HttpContext);
+
+        if (onContentHost)
+        {
+            SetContentHostHeaders(Response, null);
+        }
+        else
+        {
+            SetSandboxHeaders(Response);
+        }
 
         var file = await _runtime.OpenFileAsync(token, path, HttpContext.RequestAborted);
 
@@ -72,6 +87,11 @@ public sealed class PackageRunController : Controller
 
         Response.RegisterForDisposeAsync(file);
 
+        if (onContentHost)
+        {
+            SetContentHostHeaders(Response, file.Launch.PlayerOrigin);
+        }
+
         if (!file.IsHtml)
         {
             Response.Headers.CacheControl = "private, max-age=3600";
@@ -79,8 +99,9 @@ public sealed class PackageRunController : Controller
             return File(file.Content, file.ContentType);
         }
 
-        // A cmi5 AU talks to the LRS itself: its pages are served as they are, never cached.
-        if (string.Equals(file.Standard, PackagesConstants.Standards.Cmi5, StringComparison.Ordinal))
+        // A cmi5 AU talks to the LRS itself: its pages are served as they are, never cached. On the content host the
+        // frame page holds the run-time API, so the package's own pages are served as they are too.
+        if (onContentHost || string.Equals(file.Standard, PackagesConstants.Standards.Cmi5, StringComparison.Ordinal))
         {
             Response.Headers.CacheControl = "no-store";
 
@@ -111,6 +132,42 @@ public sealed class PackageRunController : Controller
     }
 
     /// <summary>
+    /// Serves the frame page of a launch on the package content host: the run-time API and the package's launch file
+    /// in a child frame. It exists only on the content host.
+    /// </summary>
+    /// <param name="token">The launch token.</param>
+    /// <returns>The page, or not found.</returns>
+    [HttpGet("learning/packages/frame/{token}", Name = "LearningPackageFrame")]
+    public async Task<IActionResult> Frame(string token)
+    {
+        SetContentHostHeaders(Response, null);
+
+        if (!IsContentHostRequest(HttpContext))
+        {
+            return NotFound();
+        }
+
+        var frame = await _runtime.OpenFrameAsync(token, HttpContext.RequestAborted);
+
+        if (frame is null)
+        {
+            return NotFound();
+        }
+
+        SetContentHostHeaders(Response, frame.Launch.PlayerOrigin);
+        Response.Headers.CacheControl = "no-store";
+
+        var contentUrl = Url.RouteUrl("LearningPackageRun", new { token, path = frame.LaunchPath });
+
+        if (!string.IsNullOrEmpty(frame.LaunchQuery))
+        {
+            contentUrl += "?" + frame.LaunchQuery;
+        }
+
+        return Content(PackageFramePage.Build(frame.Launch, frame.State, frame.Standard, contentUrl, S["Learning package"].Value), "text/html; charset=utf-8");
+    }
+
+    /// <summary>
     /// Launches a package for the signed-in learner.
     /// </summary>
     /// <param name="itemId">The package item.</param>
@@ -131,18 +188,29 @@ public sealed class PackageRunController : Controller
             return Forbid();
         }
 
-        var result = await _runtime.LaunchAsync(userId, User.Identity?.Name, itemId, HttpContext.RequestAborted);
+        var contentOrigin = await _contentHost.GetOriginAsync();
+        var result = await _runtime.LaunchAsync(userId, User.Identity?.Name, itemId, PlayerOrigin(Request), HttpContext.RequestAborted);
 
         if (!result.Succeeded)
         {
             return Json(new { launched = false, message = ErrorText(result.Error) });
         }
 
-        var launchUrl = Url.RouteUrl("LearningPackageRun", new { token = result.Token, path = result.Part.LaunchPath });
+        string launchUrl;
 
-        if (!string.IsNullOrEmpty(result.Part.LaunchQuery))
+        if (contentOrigin is not null)
         {
-            launchUrl += "?" + result.Part.LaunchQuery;
+            // The frame page on the content host holds the API and loads the launch file.
+            launchUrl = contentOrigin + Url.RouteUrl("LearningPackageFrame", new { token = result.Token });
+        }
+        else
+        {
+            launchUrl = Url.RouteUrl("LearningPackageRun", new { token = result.Token, path = result.Part.LaunchPath });
+
+            if (!string.IsNullOrEmpty(result.Part.LaunchQuery))
+            {
+                launchUrl += "?" + result.Part.LaunchQuery;
+            }
         }
 
         return Json(new
@@ -152,6 +220,8 @@ public sealed class PackageRunController : Controller
             launchId = result.Launch.LaunchId,
             protocol = PackageShimScript.ProtocolFor(result.Part.Standard),
             launchUrl,
+            contentOrigin,
+            frameSandbox = contentOrigin is null ? PackageContentHost.StrictFrameSandbox : PackageContentHost.ContentHostFrameSandbox,
             runtimeUrl = Url.RouteUrl("LearningPackageRuntime", new { enrollmentId = result.Launch.EnrollmentId, itemId = result.Launch.PackageItemId }),
             review = result.Review,
         });
@@ -206,6 +276,28 @@ public sealed class PackageRunController : Controller
             itemCompleted = result.Progress?.ItemCompleted ?? false,
             courseCompleted = result.Progress?.CourseCompleted ?? false,
         });
+    }
+
+    /// <summary>
+    /// Tells whether a request came in on the package content host.
+    /// </summary>
+    /// <param name="context">The request.</param>
+    /// <returns><see langword="true"/> on the content host.</returns>
+    internal static bool IsContentHostRequest(HttpContext context)
+        => context.Items.TryGetValue(PackageContentHost.ContentRequestItem, out var value) && value is true;
+
+    /// <summary>
+    /// Gets the origin of the page that sent a request on the site's host.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <returns>The origin, or <see langword="null"/>.</returns>
+    internal static string PlayerOrigin(HttpRequest request)
+        => PackageContentHost.TryNormalizeOrigin($"{request.Scheme}://{request.Host}", out var origin) ? origin : null;
+
+    internal static void SetContentHostHeaders(HttpResponse response, string playerOrigin)
+    {
+        SetSandboxHeaders(response);
+        response.Headers.ContentSecurityPolicy = PackageContentHost.ContentHostPolicy(playerOrigin);
     }
 
     internal static void SetSandboxHeaders(HttpResponse response)

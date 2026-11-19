@@ -39,6 +39,7 @@
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Recipes.Abstractions" />
     <PackageReference Include="OrchardCore.ResourceManagement" />
+    <PackageReference Include="OrchardCore.Settings.Core" />
     <PackageReference Include="OrchardCore.Title" />
     <PackageReference Include="OrchardCore.Users.Core" />
   </ItemGroup>

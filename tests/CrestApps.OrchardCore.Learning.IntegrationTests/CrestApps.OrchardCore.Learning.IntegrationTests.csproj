@@ -25,4 +25,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="TestAssets/**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

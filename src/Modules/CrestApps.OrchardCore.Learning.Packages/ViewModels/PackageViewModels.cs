@@ -45,6 +45,21 @@ public class PackageUploadViewModel
 
     /// <summary>Gets or sets whether cmi5 packages are imported.</summary>
     public bool AcceptCmi5 { get; set; }
+
+    /// <summary>Gets or sets whether the tenant has a package content host, which packages in several frames need.</summary>
+    public bool HasContentHost { get; set; }
+
+    /// <summary>Gets or sets whether the person may change the learning package settings.</summary>
+    public bool CanManageSettings { get; set; }
+}
+
+/// <summary>
+/// The package content host settings.
+/// </summary>
+public class LearningPackageContentHostSettingsViewModel
+{
+    /// <summary>Gets or sets the base URL of the package content host.</summary>
+    public string BaseUrl { get; set; }
 }
 
 /// <summary>

@@ -90,6 +90,10 @@ public sealed class PackageImportResult
     /// <summary>Gets or sets the bytes of the files once extracted.</summary>
     public long ExpandedSize { get; set; }
 
+    /// <summary>Gets or sets whether the package carries Articulate's SCORM Driver (<c>scormdriver.js</c>), which Rise and
+    /// Storyline 360 packages run in several frames: such a package needs a package content host.</summary>
+    public bool UsesScormDriver { get; set; }
+
     /// <summary>Gets whether the package was imported.</summary>
     public bool Succeeded => Error is null;
 
@@ -319,6 +323,7 @@ public sealed class LearningPackageImporter
             {
                 File = stored,
                 Manifest = parsed.Manifest,
+                UsesScormDriver = UsesScormDriver(archive.Files),
                 FileCount = archive.Files.Count,
                 ExpandedSize = archive.ExpandedSize,
             };
@@ -399,6 +404,14 @@ public sealed class LearningPackageImporter
             return null;
         }
     }
+
+    /// <summary>
+    /// Tells whether the files of a package include Articulate's SCORM Driver.
+    /// </summary>
+    /// <param name="files">The paths of the files in the package.</param>
+    /// <returns><see langword="true"/> when a file is named <c>scormdriver.js</c>.</returns>
+    public static bool UsesScormDriver(IEnumerable<string> files)
+        => files?.Any(file => string.Equals(Path.GetFileName(file), "scormdriver.js", StringComparison.OrdinalIgnoreCase)) ?? false;
 
     private static async Task<bool> CopyBoundedAsync(Stream source, string path, long maxBytes, CancellationToken cancellationToken)
     {

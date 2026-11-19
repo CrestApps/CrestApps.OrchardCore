@@ -13,7 +13,14 @@ namespace CrestApps.OrchardCore.Learning.Packages.Core.Services;
 /// <param name="PackageItemId">The package course item.</param>
 /// <param name="PackageFileId">The package file the launch runs.</param>
 /// <param name="UserId">The learner.</param>
-public sealed record PackageLaunch(string LaunchId, string EnrollmentId, string PackageItemId, string PackageFileId, string UserId);
+public sealed record PackageLaunch(string LaunchId, string EnrollmentId, string PackageItemId, string PackageFileId, string UserId)
+{
+    /// <summary>
+    /// Gets the origin of the player page that launched the package, when there is one. On a package content host it
+    /// is the only page that may frame the package and that the frame page talks to.
+    /// </summary>
+    public string PlayerOrigin { get; init; }
+}
 
 /// <summary>
 /// Signed, expiring launch tokens, made with the tenant's ASP.NET Core Data Protection (encrypted and authenticated,
@@ -31,6 +38,7 @@ public sealed class PackageLaunchTokens
 
     private const string Purpose = "CrestApps.OrchardCore.Learning.Packages.Launch";
     private const string Version = "v1";
+    private const string VersionWithOrigin = "v2";
 
     private readonly IDataProtector _protector;
     private readonly IClock _clock;
@@ -56,7 +64,18 @@ public sealed class PackageLaunchTokens
         ArgumentNullException.ThrowIfNull(launch);
 
         var expires = (_clock.UtcNow + Lifetime).Ticks.ToString(CultureInfo.InvariantCulture);
-        var payload = string.Join('|', Version, expires, launch.LaunchId, launch.EnrollmentId, launch.PackageItemId, launch.PackageFileId, launch.UserId);
+
+        if (string.IsNullOrEmpty(launch.PlayerOrigin))
+        {
+            return _protector.Protect(string.Join('|', Version, expires, launch.LaunchId, launch.EnrollmentId, launch.PackageItemId, launch.PackageFileId, launch.UserId));
+        }
+
+        if (!PackageContentHost.TryNormalizeOrigin(launch.PlayerOrigin, out var origin) || !string.Equals(origin, launch.PlayerOrigin, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("The player origin is not an origin.", nameof(launch));
+        }
+
+        var payload = string.Join('|', VersionWithOrigin, expires, launch.LaunchId, launch.EnrollmentId, launch.PackageItemId, launch.PackageFileId, launch.UserId, launch.PlayerOrigin);
 
         return _protector.Protect(payload);
     }
@@ -91,13 +110,18 @@ public sealed class PackageLaunchTokens
 
         var parts = payload.Split('|');
 
-        if (parts.Length != 7 || parts[0] != Version || parts.Any(string.IsNullOrEmpty) ||
+        var withOrigin = parts.Length == 8 && parts[0] == VersionWithOrigin;
+
+        if (!(withOrigin || (parts.Length == 7 && parts[0] == Version)) || parts.Any(string.IsNullOrEmpty) ||
             !long.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var expires) ||
             expires <= _clock.UtcNow.Ticks)
         {
             return null;
         }
 
-        return new PackageLaunch(parts[2], parts[3], parts[4], parts[5], parts[6]);
+        return new PackageLaunch(parts[2], parts[3], parts[4], parts[5], parts[6])
+        {
+            PlayerOrigin = withOrigin ? parts[7] : null,
+        };
     }
 }

@@ -70,6 +70,22 @@ public static class PackageShimScript
     /// <param name="standard">The standard of the package, which picks the API script.</param>
     /// <returns>The markup.</returns>
     public static string Build(PackageLaunch launch, PackageRuntimeState state, string playerOrigin, string standard)
+        => Build(launch, state, playerOrigin, standard, bridge: false);
+
+    /// <summary>
+    /// Builds the markup for the frame page of a launch on the package content host. The page is the only one that
+    /// gets the API there: the package's pages run in a child frame on the same origin and find it by walking up their
+    /// parents. The script takes relayed messages only from that origin.
+    /// </summary>
+    /// <param name="launch">The launch.</param>
+    /// <param name="state">The runtime state of the launch, or <see langword="null"/>.</param>
+    /// <param name="playerOrigin">The origin of the player page, the only one the page posts to.</param>
+    /// <param name="standard">The standard of the package, which picks the API script.</param>
+    /// <returns>The markup.</returns>
+    public static string BuildBridge(PackageLaunch launch, PackageRuntimeState state, string playerOrigin, string standard)
+        => Build(launch, state, playerOrigin, standard, bridge: true);
+
+    private static string Build(PackageLaunch launch, PackageRuntimeState state, string playerOrigin, string standard, bool bridge)
     {
         ArgumentNullException.ThrowIfNull(launch);
 
@@ -80,10 +96,10 @@ public static class PackageShimScript
                 Edition = standard == PackagesConstants.Standards.Scorm2004FourthEdition ? 4 : 3,
             };
 
-            return Markup("CrestAppsScorm2004Launch", JsonSerializer.Serialize(new LaunchData<Scorm2004Cmi>(launch.LaunchId, playerOrigin, cmi), _jsonOptions), Scorm2004Script);
+            return Markup("CrestAppsScorm2004Launch", JsonSerializer.Serialize(new LaunchData<Scorm2004Cmi>(launch.LaunchId, playerOrigin, cmi, bridge), _jsonOptions), Scorm2004Script);
         }
 
-        return Markup("CrestAppsScorm12Launch", JsonSerializer.Serialize(new LaunchData<Scorm12Cmi>(launch.LaunchId, playerOrigin, state?.Cmi ?? new Scorm12Cmi()), _jsonOptions), Script);
+        return Markup("CrestAppsScorm12Launch", JsonSerializer.Serialize(new LaunchData<Scorm12Cmi>(launch.LaunchId, playerOrigin, state?.Cmi ?? new Scorm12Cmi(), bridge), _jsonOptions), Script);
     }
 
     private static string Markup(string variable, string data, string script)
@@ -113,5 +129,6 @@ public static class PackageShimScript
     private sealed record LaunchData<TCmi>(
         [property: JsonPropertyName("launchId")] string LaunchId,
         [property: JsonPropertyName("playerOrigin")] string PlayerOrigin,
-        [property: JsonPropertyName("cmi")] TCmi Cmi);
+        [property: JsonPropertyName("cmi")] TCmi Cmi,
+        [property: JsonPropertyName("bridge"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Bridge);
 }

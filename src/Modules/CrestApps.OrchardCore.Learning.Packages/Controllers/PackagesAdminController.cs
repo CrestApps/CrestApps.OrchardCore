@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Learning.Packages.Core.Cmi5;
 using CrestApps.OrchardCore.Learning.Packages.Core.Scorm;
 using CrestApps.OrchardCore.Learning.Packages.Core.Services;
 using CrestApps.OrchardCore.Learning.Packages.Models;
+using CrestApps.OrchardCore.Learning.Packages.Services;
 using CrestApps.OrchardCore.Learning.Packages.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -34,6 +35,7 @@ public sealed class PackagesAdminController : Controller
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly LearningPackageImporter _importer;
+    private readonly PackageContentHostProvider _contentHost;
     private readonly LearningPackageOptions _options;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
@@ -48,6 +50,7 @@ public sealed class PackagesAdminController : Controller
         IContentManager contentManager,
         IAuthorizationService authorizationService,
         LearningPackageImporter importer,
+        PackageContentHostProvider contentHost,
         IOptions<LearningPackageOptions> options,
         INotifier notifier,
         IClock clock,
@@ -57,6 +60,7 @@ public sealed class PackagesAdminController : Controller
         _contentManager = contentManager;
         _authorizationService = authorizationService;
         _importer = importer;
+        _contentHost = contentHost;
         _options = options.Value;
         _notifier = notifier;
         _clock = clock;
@@ -80,7 +84,7 @@ public sealed class PackagesAdminController : Controller
             return refusal;
         }
 
-        return View(BuildModel(item));
+        return View(await BuildModelAsync(item));
     }
 
     /// <summary>
@@ -107,7 +111,7 @@ public sealed class PackagesAdminController : Controller
         {
             ModelState.AddModelError(nameof(package), _options.AcceptCmi5 ? S["Choose a .zip file of a SCORM 1.2, SCORM 2004 or cmi5 package."] : S["Choose a .zip file of a SCORM 1.2 or SCORM 2004 package."]);
 
-            return View(nameof(Upload), BuildModel(item));
+            return View(nameof(Upload), await BuildModelAsync(item));
         }
 
         PackageImportResult result;
@@ -121,7 +125,7 @@ public sealed class PackagesAdminController : Controller
         {
             ModelState.AddModelError(nameof(package), ErrorText(result));
 
-            return View(nameof(Upload), BuildModel(item));
+            return View(nameof(Upload), await BuildModelAsync(item));
         }
 
         var draft = await _contentManager.GetAsync(item.ContentItemId, VersionOptions.DraftRequired);
@@ -135,6 +139,12 @@ public sealed class PackagesAdminController : Controller
             await _notifier.SuccessAsync(H["The cmi5 course \"{0}\" was imported with {1} AUs. Publish the item to give it to learners.", result.Cmi5.Title, result.Cmi5.Aus.Count]);
 
             return RedirectToAction("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = item.ContentItemId });
+        }
+
+        // Articulate's SCORM Driver runs in several frames, which only the package content host lets reach each other.
+        if (result.UsesScormDriver && await _contentHost.GetOriginAsync() is null)
+        {
+            await _notifier.WarningAsync(H["This package uses Articulate's SCORM Driver (Rise or Storyline 360), which runs in several frames. It shows a blank page until a package content host is set under Settings › Learning packages."]);
         }
 
         await _notifier.SuccessAsync(result.Manifest.Scos.Count > 1
@@ -166,7 +176,7 @@ public sealed class PackagesAdminController : Controller
         return (item, null);
     }
 
-    private PackageUploadViewModel BuildModel(ContentItem item)
+    private async Task<PackageUploadViewModel> BuildModelAsync(ContentItem item)
         => new()
         {
             ContentItemId = item.ContentItemId,
@@ -174,6 +184,8 @@ public sealed class PackagesAdminController : Controller
             Part = item.TryGet<LearningPackagePart>(out var part) ? part : null,
             MaxUploadMb = _options.MaxUploadBytes / (1024 * 1024),
             AcceptCmi5 = _options.AcceptCmi5,
+            HasContentHost = await _contentHost.GetOriginAsync() is not null,
+            CanManageSettings = await _authorizationService.AuthorizeAsync(User, LearningPackagesPermissions.ManageLearningPackageSettings),
         };
 
     private string ErrorText(PackageImportResult result)

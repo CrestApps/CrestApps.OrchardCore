@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Packages.Core.Scorm;
 using CrestApps.OrchardCore.Learning.Packages.Models;
 using CrestApps.OrchardCore.Learning.Services;
-using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.ContentManagement;
@@ -29,8 +28,6 @@ public sealed class PackageRuntimeService
     /// The most values one runtime call may carry.
     /// </summary>
     public const int MaxChangesPerRequest = 1000;
-
-    private static readonly FileExtensionContentTypeProvider _contentTypes = new();
 
     private readonly PackageRuntimeStore _store;
     private readonly IPackageContentSource _contentSource;
@@ -93,7 +90,20 @@ public sealed class PackageRuntimeService
     /// <param name="packageItemId">The package item.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The launch, or why it was refused.</returns>
-    public async Task<PackageLaunchResult> LaunchAsync(string userId, string studentName, string packageItemId, CancellationToken cancellationToken = default)
+    public Task<PackageLaunchResult> LaunchAsync(string userId, string studentName, string packageItemId, CancellationToken cancellationToken = default)
+        => LaunchAsync(userId, studentName, packageItemId, null, cancellationToken);
+
+    /// <summary>
+    /// Launches a package for the signed-in learner, from a player page of an origin.
+    /// </summary>
+    /// <param name="userId">The learner.</param>
+    /// <param name="studentName">The name the content shows (<c>cmi.core.student_name</c>).</param>
+    /// <param name="packageItemId">The package item.</param>
+    /// <param name="playerOrigin">The origin of the player page, which the launch token carries to a package content
+    /// host; <see langword="null"/> for none.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The launch, or why it was refused.</returns>
+    public async Task<PackageLaunchResult> LaunchAsync(string userId, string studentName, string packageItemId, string playerOrigin, CancellationToken cancellationToken = default)
     {
         var resolved = await ResolveLaunchAsync(userId, packageItemId, cancellationToken);
 
@@ -107,7 +117,10 @@ public sealed class PackageRuntimeService
         var review = resolved.Review;
         var now = _clock.UtcNow;
         var part = target.Part;
-        var launch = new PackageLaunch(IdGenerator.GenerateId(), enrollment.ItemId, target.Item.ContentItemId, part.PackageFileId, userId);
+        var launch = new PackageLaunch(IdGenerator.GenerateId(), enrollment.ItemId, target.Item.ContentItemId, part.PackageFileId, userId)
+        {
+            PlayerOrigin = playerOrigin,
+        };
         PackageRuntimeState launched = null;
 
         var error = await _writeGate.RunLockedAsync(LockKey(enrollment.ItemId, launch.PackageItemId), async _ =>
@@ -437,28 +450,16 @@ public sealed class PackageRuntimeService
     /// learner's, the package was replaced, or the package has no such file.</returns>
     public async Task<PackageFileResult> OpenFileAsync(string token, string path, CancellationToken cancellationToken = default)
     {
-        var launch = _tokens.Read(token);
         var normalized = PackagePath.Normalize(path);
 
-        if (launch is null || normalized is null)
+        if (normalized is null)
         {
             return null;
         }
 
-        var enrollment = await _enrollments.FindByIdAsync(launch.EnrollmentId, cancellationToken);
+        var (launch, part) = await ReadLaunchAsync(token, cancellationToken);
 
-        if (enrollment is null ||
-            !string.Equals(enrollment.UserId, launch.UserId, StringComparison.Ordinal) ||
-            enrollment.Status is not (EnrollmentStatus.Active or EnrollmentStatus.Completed))
-        {
-            return null;
-        }
-
-        // The package of the token only: a package replaced since the launch is not served under the old token.
-        var item = await _contentSource.GetPublishedAsync(launch.PackageItemId);
-        var part = PackagePart(item);
-
-        if (part is null || !string.Equals(part.PackageFileId, launch.PackageFileId, StringComparison.Ordinal))
+        if (launch is null)
         {
             return null;
         }
@@ -495,10 +496,7 @@ public sealed class PackageRuntimeService
             return null;
         }
 
-        if (!_contentTypes.TryGetContentType(entry.FullName, out var contentType))
-        {
-            contentType = "application/octet-stream";
-        }
+        var contentType = PackageFileTypes.ContentTypeOf(entry.FullName);
 
         var state = contentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase)
             ? await _store.FindAsync(launch.EnrollmentId, launch.PackageItemId, cancellationToken)
@@ -511,6 +509,65 @@ public sealed class PackageRuntimeService
             Standard = part.Standard,
             State = state,
         };
+    }
+
+    /// <summary>
+    /// Opens the frame page of a launch on a package content host: what the page needs to start the run-time API and
+    /// load the package's launch file.
+    /// </summary>
+    /// <param name="token">The launch token.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The launch, or <see langword="null"/> for the same reasons <see cref="OpenFileAsync"/> refuses a file,
+    /// or for a cmi5 package, which has no frame page.</returns>
+    public async Task<PackageFrameResult> OpenFrameAsync(string token, CancellationToken cancellationToken = default)
+    {
+        var (launch, part) = await ReadLaunchAsync(token, cancellationToken);
+
+        if (launch is null ||
+            string.IsNullOrEmpty(part.LaunchPath) ||
+            string.Equals(part.Standard, PackagesConstants.Standards.Cmi5, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return new PackageFrameResult
+        {
+            Launch = launch,
+            Standard = part.Standard,
+            LaunchPath = part.LaunchPath,
+            LaunchQuery = part.LaunchQuery,
+            State = await _store.FindAsync(launch.EnrollmentId, launch.PackageItemId, cancellationToken),
+        };
+    }
+
+    // The launch of a token, while its enrollment is the learner's and open, and the package it launched is still the
+    // item's: a package replaced since the launch is not served under the old token.
+    private async Task<(PackageLaunch Launch, LearningPackagePart Part)> ReadLaunchAsync(string token, CancellationToken cancellationToken)
+    {
+        var launch = _tokens.Read(token);
+
+        if (launch is null)
+        {
+            return default;
+        }
+
+        var enrollment = await _enrollments.FindByIdAsync(launch.EnrollmentId, cancellationToken);
+
+        if (enrollment is null ||
+            !string.Equals(enrollment.UserId, launch.UserId, StringComparison.Ordinal) ||
+            enrollment.Status is not (EnrollmentStatus.Active or EnrollmentStatus.Completed))
+        {
+            return default;
+        }
+
+        var part = PackagePart(await _contentSource.GetPublishedAsync(launch.PackageItemId));
+
+        if (part is null || !string.Equals(part.PackageFileId, launch.PackageFileId, StringComparison.Ordinal))
+        {
+            return default;
+        }
+
+        return (launch, part);
     }
 
     /// <summary>

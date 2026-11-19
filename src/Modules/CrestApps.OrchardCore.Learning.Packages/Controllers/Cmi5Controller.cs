@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Learning.Packages.Core.Cmi5;
 using CrestApps.OrchardCore.Learning.Packages.Core.Services;
+using CrestApps.OrchardCore.Learning.Packages.Services;
 using CrestApps.OrchardCore.Learning.Xapi;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -21,6 +22,7 @@ namespace CrestApps.OrchardCore.Learning.Packages.Controllers;
 public sealed class Cmi5Controller : Controller
 {
     private readonly Cmi5LaunchService _launches;
+    private readonly PackageContentHostProvider _contentHost;
     private readonly IAuthorizationService _authorizationService;
 
     internal readonly IStringLocalizer S;
@@ -30,10 +32,12 @@ public sealed class Cmi5Controller : Controller
     /// </summary>
     public Cmi5Controller(
         Cmi5LaunchService launches,
+        PackageContentHostProvider contentHost,
         IAuthorizationService authorizationService,
         IStringLocalizer<Cmi5Controller> stringLocalizer)
     {
         _launches = launches;
+        _contentHost = contentHost;
         _authorizationService = authorizationService;
         S = stringLocalizer;
     }
@@ -61,6 +65,10 @@ public sealed class Cmi5Controller : Controller
         }
 
         var origin = $"{Request.Scheme}://{Request.Host}{Request.PathBase}";
+
+        // With a package content host, the AU's files are served there (still in the opaque-origin frame the player
+        // makes for cmi5), and only the player's origin may frame them.
+        var contentOrigin = await _contentHost.GetOriginAsync();
         var result = await _launches.LaunchAsync(new Cmi5LaunchRequest
         {
             UserId = userId,
@@ -70,7 +78,8 @@ public sealed class Cmi5Controller : Controller
             EndpointUrl = origin + "/" + XapiConstants.RoutePrefix + "/",
             FetchUrlBase = origin + "/learning/cmi5/fetch/",
             ReturnUrl = origin + "/learning/cmi5/return",
-            RunPathBase = Request.PathBase + "/learning/packages/run/",
+            RunPathBase = contentOrigin + Request.PathBase + "/learning/packages/run/",
+            PlayerOrigin = PackageRunController.PlayerOrigin(Request),
             Language = CultureInfo.CurrentUICulture.Name,
         }, HttpContext.RequestAborted);
 

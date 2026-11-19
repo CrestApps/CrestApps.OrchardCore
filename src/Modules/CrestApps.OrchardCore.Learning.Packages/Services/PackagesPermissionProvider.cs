@@ -11,6 +11,7 @@ internal sealed class PackagesPermissionProvider : IPermissionProvider
     private readonly IEnumerable<Permission> _allPermissions =
     [
         LearningPackagesPermissions.ImportLearningPackages,
+        LearningPackagesPermissions.ManageLearningPackageSettings,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()

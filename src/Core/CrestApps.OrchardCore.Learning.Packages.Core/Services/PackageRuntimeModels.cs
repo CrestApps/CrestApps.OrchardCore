@@ -175,6 +175,27 @@ public sealed class PackageRuntimeResult
 }
 
 /// <summary>
+/// The frame page of a launch on a package content host.
+/// </summary>
+public sealed class PackageFrameResult
+{
+    /// <summary>Gets the launch.</summary>
+    public PackageLaunch Launch { get; init; }
+
+    /// <summary>Gets the standard of the package, which picks the run-time API script.</summary>
+    public string Standard { get; init; }
+
+    /// <summary>Gets the path of the launch file in the package.</summary>
+    public string LaunchPath { get; init; }
+
+    /// <summary>Gets the query the launch file opens with, or <see langword="null"/>.</summary>
+    public string LaunchQuery { get; init; }
+
+    /// <summary>Gets the runtime state of the launch, for the data the page starts with.</summary>
+    public PackageRuntimeState State { get; init; }
+}
+
+/// <summary>
 /// A file of a package opened for a launch. Dispose it once it is sent.
 /// </summary>
 public sealed class PackageFileResult : IAsyncDisposable

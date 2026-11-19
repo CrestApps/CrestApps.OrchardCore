@@ -21,7 +21,7 @@ namespace CrestApps.OrchardCore.Learning.IntegrationTests;
 /// imports a package into a draft.
 /// </summary>
 [Collection(LearningSiteCollection.Name)]
-public sealed class LearningPackagesTests
+public sealed partial class LearningPackagesTests
 {
     private const string Manifest = """
         <?xml version="1.0" encoding="UTF-8"?>

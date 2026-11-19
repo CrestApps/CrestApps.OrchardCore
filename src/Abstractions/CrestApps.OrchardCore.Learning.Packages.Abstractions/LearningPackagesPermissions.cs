@@ -16,4 +16,11 @@ public static class LearningPackagesPermissions
         "ImportLearningPackages",
         LocalizationSource.Create("Import learning packages", typeof(LearningPackagesPermissions)),
         [LearningPermissions.ManageCourses]);
+
+    /// <summary>
+    /// Change the learning package settings, such as the package content host the package files are served from.
+    /// </summary>
+    public static readonly Permission ManageLearningPackageSettings = new(
+        "ManageLearningPackageSettings",
+        LocalizationSource.Create("Manage learning package settings", typeof(LearningPackagesPermissions)));
 }

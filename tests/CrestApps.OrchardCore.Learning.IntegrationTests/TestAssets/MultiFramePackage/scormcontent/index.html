@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Multi-frame content</title>
+    <link rel="stylesheet" href="assets/lesson.css">
+</head>
+<body>
+    <h1>Multi-frame lesson</h1>
+    <p>Driver: <output id="driver">not started</output></p>
+    <p>Learner: <output id="learner"></output></p>
+    <p>Site cookies: <output id="cookies"></output></p>
+    <p>Site page: <output id="site"></output></p>
+    <p><a href="assets/attachment.docx" target="_blank" rel="noopener">Attachment</a></p>
+    <button type="button" id="pass">Pass with 90</button>
+    <button type="button" id="finish">Finish</button>
+    <script>
+        (function () {
+            'use strict';
+
+            function show(id, text) {
+                document.getElementById(id).textContent = text;
+            }
+
+            var driver;
+
+            // The content reaches the driver in its parent frame, as Rise's content does.
+            try {
+                driver = window.parent.Driver;
+                show('driver', driver.initialize() ? 'initialized' : 'failed: ' + driver.log.join('; '));
+                show('learner', driver.studentName());
+            } catch (error) {
+                show('driver', 'blocked: ' + error.name);
+            }
+
+            // The player page is on the site's origin: neither its cookies nor its page can be read from here.
+            try {
+                show('cookies', 'read: ' + window.top.document.cookie);
+            } catch (error) {
+                show('cookies', 'blocked: ' + error.name);
+            }
+
+            try {
+                show('site', 'read: ' + window.top.location.href);
+            } catch (error) {
+                show('site', 'blocked: ' + error.name);
+            }
+
+            document.getElementById('pass').addEventListener('click', function () {
+                show('driver', driver.score(90) && driver.complete() ? 'passed' : 'not saved: ' + driver.log.join('; '));
+            });
+
+            document.getElementById('finish').addEventListener('click', function () {
+                show('driver', driver.finish() ? 'finished' : 'not finished');
+            });
+        })();
+    </script>
+</body>
+</html>

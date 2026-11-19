@@ -8,16 +8,22 @@ using CrestApps.OrchardCore.Learning.Packages.Recipes;
 using CrestApps.OrchardCore.Learning.Packages.Services;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Recipes.Core;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Learning.Packages;
 
@@ -42,7 +48,28 @@ public sealed class Startup : StartupBase
 
         services.AddPermissionProvider<PackagesPermissionProvider>();
         services.AddPersonalDataContributor<PackagesPersonalDataContributor>();
+
+        services.AddScoped<PackageContentHostProvider>();
+        services.AddSiteDisplayDriver<LearningPackageContentHostSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(LearningPackageContentHostSettingsDisplayDriver.GroupId, LearningPackagesPermissions.ManageLearningPackageSettings);
+        services.AddNavigationProvider<PackagesAdminMenu>();
     }
+}
+
+/// <summary>
+/// Keeps the package content host and the site apart: it runs after the reverse proxy and security headers, and before
+/// authentication, so a request on the content host never carries the learner's cookies into the site.
+/// </summary>
+[Feature(PackagesConstants.Features.Scorm)]
+public sealed class ContentHostStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override int ConfigureOrder
+        => OrchardCoreConstants.ConfigureOrder.Authentication - 10;
+
+    /// <inheritdoc />
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => app.UseMiddleware<PackageContentHostMiddleware>();
 }
 
 /// <summary>
@@ -102,6 +129,7 @@ public sealed class RecipesSchemaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IRecipeStep, LearningPackageRuntimeStatesRecipeStepSchema>();
+        services.AddScoped<ISiteSettingsSchemaDefinition, LearningPackageContentHostSettingsSchema>();
         services.AddDeploymentStepSchema<LearningPackageRuntimeStatesDeploymentStepSchema>();
     }
 }

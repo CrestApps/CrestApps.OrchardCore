@@ -55,8 +55,12 @@ public sealed class Cmi5LaunchRequest
     /// <summary>Gets or sets the absolute URL the AU returns to.</summary>
     public string ReturnUrl { get; set; }
 
-    /// <summary>Gets or sets the path of the run endpoint, to which the run token and the file path are added.</summary>
+    /// <summary>Gets or sets the path of the run endpoint, to which the run token and the file path are added: a path on
+    /// the site, or an absolute URL on the package content host.</summary>
     public string RunPathBase { get; set; }
+
+    /// <summary>Gets or sets the origin of the player page, which the run token carries to a package content host.</summary>
+    public string PlayerOrigin { get; set; }
 
     /// <summary>Gets or sets the learner's language, for the learner preferences.</summary>
     public string Language { get; set; }
@@ -463,7 +467,10 @@ public sealed class Cmi5LaunchService
         }
 
         // A file of the package runs in the sandbox, opened by a run token of this session.
-        var runToken = _runTokens.Create(new PackageLaunch(session.SessionId, enrollmentId, itemId, part.PackageFileId, XapiAgents.Text(actor["account"]?["name"])));
+        var runToken = _runTokens.Create(new PackageLaunch(session.SessionId, enrollmentId, itemId, part.PackageFileId, XapiAgents.Text(actor["account"]?["name"]))
+        {
+            PlayerOrigin = request.PlayerOrigin,
+        });
         var url = request.RunPathBase + runToken + "/" + au.Path + "?";
 
         if (!string.IsNullOrEmpty(au.Query))
