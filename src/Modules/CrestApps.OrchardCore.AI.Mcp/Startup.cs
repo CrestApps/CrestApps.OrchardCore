@@ -224,7 +224,7 @@ public sealed class McpServerStartup : StartupBase
             .AddScoped<ICatalogEntryHandler<McpResource>, McpResourceHandler>()
             .AddDisplayDriver<McpResource, McpResourceDisplayDriver>();
 
-        // File resources read only the tenant's own folder (App_Data/Sites/{tenant}/mcp-files), never the content root.
+        // File resources read only the tenant's own folder (App_Data/Sites/{tenant}/McpFiles), never the content root.
         services.AddScoped<IMcpFileProviderResolver, DefaultMcpFileProviderResolver>();
         services.Configure<McpFileResourceOptions>(_shellConfiguration.GetSection(McpFileResourceOptions.SectionName));
 
@@ -232,7 +232,7 @@ public sealed class McpServerStartup : StartupBase
         services.AddCoreAIMcpResourceType<FileResourceTypeHandler>(FileResourceTypeHandler.TypeName, entry =>
         {
             entry.DisplayName = S["File"];
-            entry.Description = S["Reads files from this tenant's MCP files folder (App_Data/Sites/{tenant}/mcp-files)."];
+            entry.Description = S["Reads files from this tenant's MCP files folder (App_Data/Sites/{tenant}/McpFiles)."];
             entry.SupportedVariables =
             [
                 new McpResourceVariable("providerName") { Description = S["The name of the file provider to use."] },

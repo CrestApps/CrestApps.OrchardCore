@@ -367,6 +367,9 @@ public sealed class DependencyInjectionArchitectureTests
         // remove as it is paid down.
         ["src/Core/CrestApps.OrchardCore.Fulfillment.Core/Handlers/FulfillmentOrderEventHandler.cs: FulfillmentOrderEventHandler"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Fulfillment/Services/FulfillmentNotificationHandler.cs: FulfillmentNotificationHandler"] = 1,
+        // Existing debt from main's #1335 (MCP file providers), baselined when PR #1319 merged main; the named provider
+        // factories take the service provider by design. Remove as it is paid down.
+        ["src/Modules/CrestApps.OrchardCore.AI.Mcp/Services/DefaultMcpFileProviderResolver.cs: DefaultMcpFileProviderResolver"] = 1,
     };
 
     /// <summary>

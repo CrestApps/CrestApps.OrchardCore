@@ -21,18 +21,18 @@ public sealed class McpFileResourceTenantRootTests : IDisposable
     public McpFileResourceTenantRootTests()
     {
         _appData = Path.Combine(Path.GetTempPath(), "mcp-file-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(Path.Combine(_appData, "Sites", "TenantA", "mcp-files"));
-        Directory.CreateDirectory(Path.Combine(_appData, "Sites", "TenantB", "mcp-files"));
+        Directory.CreateDirectory(Path.Combine(_appData, "Sites", "TenantA", DefaultMcpFileProviderResolver.TenantFolderName));
+        Directory.CreateDirectory(Path.Combine(_appData, "Sites", "TenantB", DefaultMcpFileProviderResolver.TenantFolderName));
 
         File.WriteAllText(Path.Combine(_appData, "tenants.json"), "{ \"secret\": true }");
-        File.WriteAllText(Path.Combine(_appData, "Sites", "TenantB", "mcp-files", "b.txt"), "tenant B");
-        File.WriteAllText(Path.Combine(_appData, "Sites", "TenantA", "mcp-files", "readme.txt"), "hello");
+        File.WriteAllText(Path.Combine(_appData, "Sites", "TenantB", DefaultMcpFileProviderResolver.TenantFolderName, "b.txt"), "tenant B");
+        File.WriteAllText(Path.Combine(_appData, "Sites", "TenantA", DefaultMcpFileProviderResolver.TenantFolderName, "readme.txt"), "hello");
     }
 
     [Theory]
     [InlineData("../../tenants.json")]
     [InlineData("../../../appsettings.json")]
-    [InlineData("../../TenantB/mcp-files/b.txt")]
+    [InlineData("../../TenantB/McpFiles/b.txt")]
     [InlineData("App_Data/tenants.json")]
     public async Task ReadAsync_OutsideTheTenantFolder_IsNotFound(string fileName)
     {
@@ -65,7 +65,7 @@ public sealed class McpFileResourceTenantRootTests : IDisposable
     [Fact]
     public async Task ReadAsync_ThroughALinkThatPointsOutsideTheTenantFolder_IsNotFound()
     {
-        var folder = Path.Combine(_appData, "Sites", "TenantA", "mcp-files");
+        var folder = Path.Combine(_appData, "Sites", "TenantA", DefaultMcpFileProviderResolver.TenantFolderName);
         string fileName = null;
 
         if (TryCreateFileLink(Path.Combine(folder, "linked.txt"), Path.Combine(_appData, "tenants.json")))
@@ -104,7 +104,7 @@ public sealed class McpFileResourceTenantRootTests : IDisposable
     [Fact]
     public async Task ReadAsync_AFileOverTheLimit_IsRefused()
     {
-        File.WriteAllBytes(Path.Combine(_appData, "Sites", "TenantA", "mcp-files", "big.txt"), new byte[2048]);
+        File.WriteAllBytes(Path.Combine(_appData, "Sites", "TenantA", DefaultMcpFileProviderResolver.TenantFolderName, "big.txt"), new byte[2048]);
 
         var result = await ReadAsync("big.txt", maxBytes: 1024);
 
@@ -130,7 +130,7 @@ public sealed class McpFileResourceTenantRootTests : IDisposable
             ShellsContainerName = "Sites",
         });
 
-        var resolver = new DefaultMcpFileProviderResolver(new ShellSettings { Name = "TenantA" }, shellOptions);
+        var resolver = new DefaultMcpFileProviderResolver(new ShellSettings { Name = "TenantA" }, shellOptions, Options.Create(new McpFileProviderOptions()), serviceProvider: null);
         var handler = new FileResourceTypeHandler(resolver, Options.Create(new McpFileResourceOptions { MaxBytes = maxBytes }), NullLogger<FileResourceTypeHandler>.Instance);
 
         var resource = new McpResource

@@ -137,7 +137,7 @@ The video shows what resources are, the types below, and how to add a File, a Me
 
 Open **Artificial Intelligence > Model Context Protocol > Resources** and click **Add Resource**. **Available Resource Types** lists:
 
-- **File** reads from the site's file providers.
+- **File** shares files from the site's `App_Data/Sites/{tenant}/McpFiles` folder. Ask whoever runs the server to put the files there.
 - **Media** shares files of the media library.
 - **FTP/FTPS** and **SFTP** read from a file server. They are available when the FTP or SFTP resource feature is on.
 - **Recipe**, **Recipe Schema** and **Recipe Step Schema** share the site's recipes with developer tools. You do not need them for everyday documents.
