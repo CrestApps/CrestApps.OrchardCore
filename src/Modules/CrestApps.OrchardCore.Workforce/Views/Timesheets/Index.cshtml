@@ -30,10 +30,13 @@
                         <form asp-action="Lock" method="post" class="d-inline">
                             <input type="hidden" name="calendarId" value="@Model.CalendarId" />
                             <input type="hidden" name="periodStart" value="@Model.PeriodStart.Value.ToString("yyyy-MM-dd")" />
-                            <button type="submit" class="btn btn-primary" data-title="@T["Lock"]" data-message="@T["Lock the approved timesheets of this period? They go to payroll and can no longer change."]">@T.Plural(Model.ApprovedInPeriod, "Lock 1 approved timesheet", "Lock {0} approved timesheets")</button>
+                            <button type="submit" class="btn btn-primary" data-title="@T["Lock"]" data-message="@T["Lock the approved timesheets of this period? They go to payroll and can no longer change."]" data-ok-text="@T["Lock"]" data-ok-class="btn-primary" data-url-af="RemoveUrl">@T.Plural(Model.ApprovedInPeriod, "Lock 1 approved timesheet", "Lock {0} approved timesheets")</button>
                         </form>
                     </div>
                 }
+                <div class="col-auto ms-sm-auto">
+                    <a asp-area="OrchardCore.DataPipelines" asp-controller="Admin" asp-action="Index" class="btn btn-link" title="@T["Locked timesheets are exported by a data pipeline over the Pay inputs data set."]"><i class="fa-solid fa-file-export me-1" aria-hidden="true"></i>@T["Export to payroll"]</a>
+                </div>
             }
         </div>
     </div>
@@ -41,7 +44,7 @@
 
 @if (Model.CalendarOptions.Count == 0)
 {
-    <div class="alert alert-info">@T["Add pay periods and a time clock policy, and give teams the policy, to start keeping timesheets."] <a asp-controller="PayPeriods" asp-action="Index">@T["Pay periods"]</a></div>
+    <div class="alert alert-info">@T["Add a pay schedule and a time clock policy, and give teams the policy, to start keeping timesheets."] <a asp-area="CrestApps.OrchardCore.Payroll" asp-controller="PaySchedules" asp-action="Index">@T["Pay schedules"]</a></div>
 }
 
 <form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">

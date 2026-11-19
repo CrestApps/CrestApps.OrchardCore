@@ -35,6 +35,8 @@ public sealed class StockMovementIndexProvider : IndexProvider<StockMovement>
     public override void Describe(DescribeContext<StockMovement> context)
     {
         context.For<StockMovementIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(movement => new StockMovementIndex
             {
                 ItemId = movement.ItemId,

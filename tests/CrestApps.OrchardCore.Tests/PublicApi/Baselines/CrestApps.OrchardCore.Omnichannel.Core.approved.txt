@@ -1535,6 +1535,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public System.Threading.Tasks.Task<bool> HasOptedOutAsync(OrchardCore.ContentManagement.ContentItem contact, string channel, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task RecordAddressOptOutAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ContactAddressOptOut optOut, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class ContactPartySource : CrestApps.OrchardCore.Parties.Services.IPartySource
+    {
+        public ContactPartySource(YesSql.ISession session, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider contactTypes, CrestApps.OrchardCore.Omnichannel.Core.Services.IContactMethodsAccessor contactMethods) { }
+        public string Kind { get; }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, CrestApps.OrchardCore.Addresses.Models.ContactInfo>> GetContactInfoAsync(System.Collections.Generic.IReadOnlyCollection<string> ids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, string>> GetNamesAsync(System.Collections.Generic.IReadOnlyCollection<string> ids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Parties.Models.PartyOption>> SearchAsync(string query, int count, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class ContactPreferencesConsentSource : CrestApps.OrchardCore.Consent.IConsentSource
     {
         public ContactPreferencesConsentSource(CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver optOutResolver, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Modules.IClock clock) { }

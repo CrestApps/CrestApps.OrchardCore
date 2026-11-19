@@ -1,7 +1,8 @@
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
-/// Evaluates whether a business-hours calendar reports a queue as open at a given moment.
+/// Evaluates whether a Business Hours schedule, which a queue, entry point or dialing profile names by its calendar id,
+/// is open at a given moment.
 /// </summary>
 public interface IBusinessHoursService
 {

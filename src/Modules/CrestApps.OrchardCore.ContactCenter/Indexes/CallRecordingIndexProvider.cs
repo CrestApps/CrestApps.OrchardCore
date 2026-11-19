@@ -22,6 +22,8 @@ public sealed class CallRecordingIndexProvider : IndexProvider<CallRecording>
     {
         context
             .For<CallRecordingIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(recording => new CallRecordingIndex
             {
                 ItemId = recording.ItemId,

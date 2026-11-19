@@ -118,7 +118,7 @@ public sealed class ContactCenterEntryPoint : CatalogItem, INameAwareModel, IMod
     public EntryPointVoicemailDestination VoicemailDestination { get; set; } = EntryPointVoicemailDestination.AgentInbox;
 
     /// <summary>
-    /// Gets or sets the identifier of the business-hours calendar that gates when the entry point is open.
+    /// Gets or sets the identifier of the Business Hours schedule that gates when the entry point is open.
     /// When empty, the entry point is always open.
     /// </summary>
     public string BusinessHoursCalendarId { get; set; }

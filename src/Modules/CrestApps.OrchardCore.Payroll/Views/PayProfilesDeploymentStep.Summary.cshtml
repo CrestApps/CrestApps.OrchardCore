@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Payroll.Deployments
+
+@model ShapeViewModel<PayProfilesDeploymentStep>
+
+<h5>@T["Pay profiles and pay items"]</h5>
+
+@if (Model.Value.IncludeSensitiveData)
+{
+    <span class="badge text-bg-warning">@T["With tax ids"]</span>
+}
+else
+{
+    <span class="badge text-bg-success">@T["Without tax ids"]</span>
+}

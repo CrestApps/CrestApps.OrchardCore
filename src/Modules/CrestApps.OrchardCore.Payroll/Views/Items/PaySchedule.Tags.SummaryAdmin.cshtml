@@ -1,0 +1,21 @@
+@model ShapeViewModel<PaySchedule>
+
+@{
+    var schedule = Model.Value;
+    var frequency = schedule.Frequency switch
+    {
+        PayFrequency.Weekly => T["Every week"],
+        PayFrequency.Biweekly => T["Every two weeks"],
+        PayFrequency.FourWeekly => T["Every four weeks"],
+        PayFrequency.SemiMonthly => T["Twice a month"],
+        PayFrequency.Monthly => T["Every month"],
+        PayFrequency.Quarterly => T["Every quarter"],
+        _ => T["Every year"],
+    };
+}
+
+<span class="badge ta-badge fw-normal"><i class="fa-solid fa-calendar-days text-secondary me-1" aria-hidden="true"></i>@frequency</span>
+@if (!schedule.Enabled)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Off"]</span>
+}

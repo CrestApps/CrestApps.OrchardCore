@@ -13,6 +13,8 @@ public sealed class AsteriskChannelTenantBindingIndexProvider : IndexProvider<As
     {
         context
             .For<AsteriskChannelTenantBindingIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(binding => new AsteriskChannelTenantBindingIndex
             {
                 ChannelId = binding.ChannelId,

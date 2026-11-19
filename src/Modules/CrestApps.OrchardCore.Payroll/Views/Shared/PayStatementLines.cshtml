@@ -1,0 +1,86 @@
+@model PayStatementViewModel
+@using System.Globalization
+@using CrestApps.OrchardCore.Currencies
+
+@{
+    var statement = Model.Statement;
+    string Money(decimal value) => string.IsNullOrEmpty(statement.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.FormatForDisplay(value, statement.Currency) + " " + statement.Currency;
+    string TypeName(PayLineType type) => type switch
+    {
+        PayLineType.Earning => T["Earning"].Value,
+        PayLineType.Deduction => T["Deduction"].Value,
+        PayLineType.EmployerContribution => T["Employer contribution"].Value,
+        PayLineType.ImputedIncome => T["Imputed income"].Value,
+        PayLineType.Reimbursement => T["Reimbursement"].Value,
+        PayLineType.Memo => T["Memo"].Value,
+        _ => T["Tax"].Value,
+    };
+
+    // A statement of salaried pay has no hours or rates: their columns are left out, so the amounts don't wrap.
+    var showHours = statement.Lines.Any(line => line.Hours.HasValue || line.Rate.HasValue);
+    var labelColumns = showHours ? 5 : 3;
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Lines"]</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Line"]</th>
+                        <th scope="col">@T["Type"]</th>
+                        @if (showHours)
+                        {
+                            <th scope="col" class="text-end">@T["Hours"]</th>
+                            <th scope="col" class="text-end">@T["Rate"]</th>
+                        }
+                        <th scope="col" class="text-end">@T["Taxable wages"]</th>
+                        <th scope="col" class="text-end">@T["Amount"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in statement.Lines)
+                    {
+                        <tr>
+                            <td>
+                                <span class="font-monospace me-1">@(line.PayCodeId is { } codeId ? (Model.Codes.TryGetValue(codeId, out var codeText) ? codeText : codeId) : line.TaxCode)</span>@line.Description
+                                @if (line.Cut > 0)
+                                {
+                                    <span class="badge text-bg-warning fw-normal ms-1">@T["{0} cut", Money(line.Cut)]</span>
+                                }
+                            </td>
+                            <td>@TypeName(line.Type)@(line.Type == PayLineType.Tax && line.Payer == PayLinePayer.Employer ? " · " + T["employer"].Value : string.Empty)</td>
+                            @if (showHours)
+                            {
+                                <td class="text-end">@line.Hours?.ToString("0.##", CultureInfo.CurrentCulture)</td>
+                                <td class="text-end">@line.Rate?.ToString("0.####", CultureInfo.CurrentCulture)</td>
+                            }
+                            <td class="text-end text-nowrap">@(line.TaxableWages is { } wages ? Money(wages) : null)</td>
+                            <td class="text-end text-nowrap">@Money(line.Amount)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr><th scope="row" colspan="@labelColumns" class="text-end">@T["Gross"]</th><td class="text-end text-nowrap">@Money(statement.Gross)</td></tr>
+                    <tr><th scope="row" colspan="@labelColumns" class="text-end">@T["Net pay"]</th><td class="text-end text-nowrap fw-bold">@Money(statement.Net)</td></tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+@if (statement.Balances.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Balances on {0}", statement.PayDate.ToString("d", CultureInfo.CurrentCulture)]</div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                @foreach (var balance in statement.Balances)
+                {
+                    <dt class="col-sm-6">@balance.Name</dt>
+                    <dd class="col-sm-6">@(balance.Unit == PayStatementBalance.Days ? T["{0} days", balance.Balance.ToString("0.##", CultureInfo.CurrentCulture)] : T["{0} hours", balance.Balance.ToString("0.##", CultureInfo.CurrentCulture)])</dd>
+                }
+            </dl>
+        </div>
+    </div>
+}

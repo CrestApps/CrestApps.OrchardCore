@@ -81,6 +81,11 @@ public sealed class TimeEntryIndex : CatalogItemIndex
     /// Gets or sets what in the source it stands for.
     /// </summary>
     public string SourceRef { get; set; }
+
+    /// <summary>
+    /// Gets or sets the record the time counts against, as <c>Kind:Id</c>, or <see langword="null"/>.
+    /// </summary>
+    public string ChargedTo { get; set; }
 }
 
 /// <summary>
@@ -105,6 +110,8 @@ public sealed class TimeTrackerIndexProvider : IndexProvider<TimeEntry>
     public override void Describe(DescribeContext<TimeEntry> context)
     {
         context.For<TimeEntryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(entry => new TimeEntryIndex
             {
                 ItemId = entry.ItemId,
@@ -116,6 +123,7 @@ public sealed class TimeTrackerIndexProvider : IndexProvider<TimeEntry>
                 IsOpen = entry.EndUtc is null,
                 Source = entry.Source,
                 SourceRef = entry.SourceRef,
+                ChargedTo = entry.ChargedTo.IsEmpty ? null : entry.ChargedTo.ToString(),
             });
     }
 }
@@ -135,7 +143,10 @@ public sealed class TimeCategoryIndexProvider : IndexProvider<TimeCategory>
 
     /// <inheritdoc/>
     public override void Describe(DescribeContext<TimeCategory> context)
-        => context.For<TimeCategoryIndex>().Map(item => new TimeCategoryIndex { ItemId = item.ItemId, Name = item.Name, Code = item.Code });
+        => context.For<TimeCategoryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(item => new TimeCategoryIndex { ItemId = item.ItemId, Name = item.Name, Code = item.Code });
 }
 
 /// <summary>
@@ -153,7 +164,10 @@ public sealed class TimeStageIndexProvider : IndexProvider<TimeStage>
 
     /// <inheritdoc/>
     public override void Describe(DescribeContext<TimeStage> context)
-        => context.For<TimeStageIndex>().Map(item => new TimeStageIndex { ItemId = item.ItemId, Name = item.Name, Code = item.Code });
+        => context.For<TimeStageIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
+            .Map(item => new TimeStageIndex { ItemId = item.ItemId, Name = item.Name, Code = item.Code });
 }
 
 /// <summary>
@@ -161,6 +175,29 @@ public sealed class TimeStageIndexProvider : IndexProvider<TimeStage>
 /// </summary>
 public static class TimeTrackerIndexSchema
 {
+    // A record kind and an id, such as "Agreement:" and a 26-character id.
+    private const int ChargedToLength = 100;
+
+    private const string ChargedToIndexName = "IDX_TimeEntryIndex_ChargedTo";
+
+    /// <summary>
+    /// Adds what time counts against to a time entry index made before it existed.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddChargedToAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.AlterIndexTableAsync<TimeEntryIndex>(table => table
+            .AddColumn<string>("ChargedTo", column => column.Nullable().WithLength(ChargedToLength)),
+            collection: TimeTrackerConstants.CollectionName);
+
+        await schemaBuilder.AlterIndexTableAsync<TimeEntryIndex>(table => table
+            .CreateIndex(ChargedToIndexName, "ChargedTo", "StartUtc"),
+            collection: TimeTrackerConstants.CollectionName);
+    }
+
     /// <summary>
     /// Creates the tables.
     /// </summary>
@@ -181,7 +218,8 @@ public static class TimeTrackerIndexSchema
             .Column<DateTime>("EndUtc")
             .Column<bool>("IsOpen")
             .Column<string>("Source", column => column.Nullable().WithLength(32))
-            .Column<string>("SourceRef", column => column.Nullable().WithLength(64)),
+            .Column<string>("SourceRef", column => column.Nullable().WithLength(64))
+            .Column<string>("ChargedTo", column => column.Nullable().WithLength(ChargedToLength)),
             collection: collection);
 
         await schemaBuilder.AlterIndexTableAsync<TimeEntryIndex>(table =>
@@ -191,6 +229,7 @@ public static class TimeTrackerIndexSchema
             table.CreateIndex("IDX_TimeEntryIndex_Open", "IsOpen", "UserId");
             table.CreateIndex("IDX_TimeEntryIndex_Start", "StartUtc", "EndUtc");
             table.CreateIndex("IDX_TimeEntryIndex_Source", "Source", "SourceRef");
+            table.CreateIndex(ChargedToIndexName, "ChargedTo", "StartUtc");
         }, collection: collection);
 
         await schemaBuilder.CreateMapIndexTableAsync<TimeCategoryIndex>(table => table

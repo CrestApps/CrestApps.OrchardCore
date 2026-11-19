@@ -23,6 +23,7 @@ public sealed class CallSessionLegIndexProvider : IndexProvider<CallSession>
     {
         context
             .For<CallSessionLegIndex>()
+            .ExclusiveToDocumentType()
             .Map(session => session.Legs
                 .Where(leg => !string.IsNullOrEmpty(leg.ProviderLegId))
                 .Select(leg => new CallSessionLegIndex

@@ -12,6 +12,8 @@ public sealed class PaymentRefundIndexProvider : IndexProvider<PaymentRefund>
     public override void Describe(DescribeContext<PaymentRefund> context)
     {
         context.For<PaymentRefundIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(refund => new PaymentRefundIndex
             {
                 ItemId = refund.ItemId,

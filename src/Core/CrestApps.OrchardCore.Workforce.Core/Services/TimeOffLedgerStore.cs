@@ -40,6 +40,16 @@ internal sealed class TimeOffLedgerStore : DocumentCatalog<TimeOffLedgerEntry, T
         return entries.ToArray();
     }
 
+    public async Task<IReadOnlyList<TimeOffLedgerEntry>> ListPayoutsAsync(DateOnly? through, CancellationToken cancellationToken = default)
+    {
+        var last = through.HasValue ? WorkforceDates.ToKey(through.Value) : int.MaxValue;
+        var entries = await Session.Query<TimeOffLedgerEntry, TimeOffLedgerEntryIndex>(index => index.Kind == TimeOffLedgerKind.Payout && index.EffectiveDate <= last, collection: CollectionName)
+            .OrderBy(index => index.EffectiveDate)
+            .ListAsync(cancellationToken);
+
+        return entries.ToArray();
+    }
+
     public Task<TimeOffLedgerEntry> FindByKeyAsync(string idempotencyKey, CancellationToken cancellationToken = default)
     {
         return Session.Query<TimeOffLedgerEntry, TimeOffLedgerEntryIndex>(index => index.IdempotencyKey == idempotencyKey, collection: CollectionName)

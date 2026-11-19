@@ -1,0 +1,19 @@
+@model MyPayDetailsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PayrollMyPayDetails" title="@T["Your pay details with {0}", Model.EmployerName]">
+        <breadcrumb-item id="PayrollMyPay" action="Index" controller="MyPay" area="CrestApps.OrchardCore.Payroll">@T["My pay"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<p class="text-muted">@T["A new tax election counts from the day you give, on pay that is not approved yet. Pay is deposited only to a bank account of yours that is verified; add or change your accounts under My bank accounts. You get a notice every time these change."]</p>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

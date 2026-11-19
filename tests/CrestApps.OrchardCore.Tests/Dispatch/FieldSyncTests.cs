@@ -44,7 +44,7 @@ public sealed class FieldSyncTests
         var first = await ApplyAsync(kit, ana, outbox);
         var again = await ApplyAsync(kit, ana, outbox);
         var after = Assert.Single(await kit.VisitsOfAsync(workOrder.ItemId));
-        var notes = (await kit.WorkOrderAsync(workOrder.ItemId)).Notes.Count(note => note.Text == "Replaced the igniter.");
+        var notes = (await kit.WorkOrderNotesAsync(workOrder.ItemId)).Count(note => note.Text == "Replaced the igniter.");
 
         Assert.Equal([FieldCommandOutcome.Applied, FieldCommandOutcome.Applied, FieldCommandOutcome.Applied, FieldCommandOutcome.Applied, FieldCommandOutcome.Applied, FieldCommandOutcome.Duplicate], first.Select(result => result.Outcome));
         Assert.All(again, result => Assert.Equal(FieldCommandOutcome.Duplicate, result.Outcome));
@@ -79,7 +79,7 @@ public sealed class FieldSyncTests
             Assert.Equal($"{visit.Number} was given to someone else.", result.Reason);
         });
         Assert.Equal(VisitStatus.Scheduled, after.Status);
-        Assert.DoesNotContain((await kit.WorkOrderAsync(workOrder.ItemId)).Notes, note => note.Text == "On my way.");
+        Assert.DoesNotContain((await kit.WorkOrderNotesAsync(workOrder.ItemId)), note => note.Text == "On my way.");
 
         // Ben's own commands go through.
         Assert.Equal(FieldCommandOutcome.Applied, Assert.Single(await ApplyAsync(kit, ben, Status("k3", visit, VisitStatus.EnRoute))).Outcome);
@@ -316,7 +316,7 @@ public sealed class FieldSyncTests
         Assert.Equal([FieldCommandOutcome.Applied, FieldCommandOutcome.Duplicate, FieldCommandOutcome.Rejected], results.Select(result => result.Outcome));
         Assert.Equal(today.ItemId, created.ParentWorkOrderId);
         Assert.Equal(["boiler"], created.AssetIds);
-        Assert.Contains((await kit.WorkOrderAsync(today.ItemId)).Notes, note => note.Text == $"Follow-up {created.Number}: Fit the new pump");
+        Assert.Contains((await kit.WorkOrderNotesAsync(today.ItemId)), note => note.Text == $"Follow-up {created.Number}: Fit the new pump");
     }
 
     private static FieldCommand Status(string key, ServiceVisit visit, VisitStatus status)

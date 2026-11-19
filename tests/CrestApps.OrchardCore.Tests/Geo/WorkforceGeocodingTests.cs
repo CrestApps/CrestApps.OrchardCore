@@ -56,7 +56,7 @@ public sealed class WorkforceGeocodingTests
             var teams = services.GetRequiredService<ITeamManager>();
             var stored = await teams.FindByIdAsync(team.ItemId);
 
-            stored.GetWorkforceSettings().Location = new WorkforceLocation { Address = "1 City Hall Square, Boston" };
+            stored.Address = new global::CrestApps.OrchardCore.Addresses.Models.Address { AddressLine1 = "1 City Hall Square", City = "Boston" };
             await teams.UpdateAsync(stored);
         });
 

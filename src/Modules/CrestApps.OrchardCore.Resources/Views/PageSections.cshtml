@@ -14,7 +14,8 @@
 @*
     The sections of a record's page (a staff profile, an account): the shapes of the page's Content zone, grouped by the
     tab of their placement (PageSectionPlacement.Location), listed down the side with the selected one on the right, so
-    the list never wraps however many modules add a section. On a phone the list becomes a dropdown. The selected
+    the list never wraps however many modules add a section. Below a large screen the list is a row across the top that
+    scrolls sideways, so the sections are always in sight. The selected
     section is kept in the address's hash. Modules register a section's title, icon and position with AddPageSection.
 
     Shape properties: Zone (the Content zone), Page (the page name the sections are registered for), DefaultSection (the
@@ -69,18 +70,22 @@
 @if (sections.Count > 0)
 {
     @* The admin theme frames a tab pane for its own tab strips; here each section's cards are the frame. *@
+    @* Below the large breakpoint the list is one row across the top that scrolls sideways (Bootstrap's horizontal list group). *@
     <style at="Head">
         [data-page-sections] .page-sections-content > .tab-pane { border: 0; padding: 0; border-radius: 0; }
+        @@media (max-width: 991.98px) {
+            [data-page-sections] .page-sections-nav { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+            [data-page-sections] .page-sections-nav > .list-group-item { flex: 0 0 auto; width: auto; white-space: nowrap; }
+            [data-page-sections] .page-sections-nav > .list-group-item:first-child:not(:last-child) { border-bottom-left-radius: var(--bs-list-group-border-radius); border-top-right-radius: 0; }
+            [data-page-sections] .page-sections-nav > .list-group-item:last-child:not(:first-child) { border-top-right-radius: var(--bs-list-group-border-radius); border-bottom-left-radius: 0; }
+            [data-page-sections] .page-sections-nav > .list-group-item.active { margin-top: 0; }
+            [data-page-sections] .page-sections-nav > .list-group-item + .list-group-item { border-top-width: var(--bs-list-group-border-width); border-left-width: 0; }
+            [data-page-sections] .page-sections-nav > .list-group-item + .list-group-item.active { margin-left: calc(-1 * var(--bs-list-group-border-width)); border-left-width: var(--bs-list-group-border-width); }
+        }
     </style>
     <div class="row g-3" id="@pageId" data-page-sections>
-        <div class="col-12 col-md-4 col-lg-3">
-            <select class="form-select d-md-none mb-2" aria-label="@T["Section"]" data-page-sections-select>
-                @foreach (var pane in sections)
-                {
-                    <option value="@pane.Key">@Label(pane.Name)</option>
-                }
-            </select>
-            <div class="list-group d-none d-md-flex" role="tablist" aria-orientation="vertical">
+        <div class="col-12 col-lg-3">
+            <div class="list-group page-sections-nav" role="tablist" aria-label="@T["Sections"]">
                 @for (var i = 0; i < sections.Count; i++)
                 {
                     var pane = sections[i];
@@ -94,7 +99,7 @@
                 }
             </div>
         </div>
-        <div class="col-12 col-md-8 col-lg-9">
+        <div class="col-12 col-lg-9">
             <div class="tab-content page-sections-content">
                 @for (var i = 0; i < sections.Count; i++)
                 {
@@ -120,39 +125,27 @@
                 return;
             }
 
-            const select = page.querySelector('[data-page-sections-select]');
+            const nav = page.querySelector('.page-sections-nav');
             const tabs = [...page.querySelectorAll('[data-page-sections-tab]')];
 
-            const show = (key, updateHash) => {
-                const tab = tabs.find(entry => entry.dataset.pageSectionsTab === key);
-
-                if (!tab) {
-                    return;
-                }
-
-                bootstrap.Tab.getOrCreateInstance(tab).show();
-
-                if (select) {
-                    select.value = key;
-                }
-
-                if (updateHash) {
-                    history.replaceState(null, '', '#' + key);
+            // On a narrow screen the row scrolls, so the selected section is brought into view.
+            const reveal = tab => {
+                if (nav && nav.scrollWidth > nav.clientWidth) {
+                    nav.scrollLeft = tab.offsetLeft - (nav.clientWidth - tab.offsetWidth) / 2;
                 }
             };
 
             tabs.forEach(tab => tab.addEventListener('shown.bs.tab', () => {
-                if (select) {
-                    select.value = tab.dataset.pageSectionsTab;
-                }
-
+                reveal(tab);
                 history.replaceState(null, '', '#' + tab.dataset.pageSectionsTab);
             }));
 
-            select?.addEventListener('change', () => show(select.value, true));
-
             // A link to a section of the page, such as the one a record's editor returns to, opens that section.
-            show(location.hash.replace(/^#/, ''), false);
+            const linked = tabs.find(entry => entry.dataset.pageSectionsTab === location.hash.replace(/^#/, ''));
+
+            if (linked) {
+                bootstrap.Tab.getOrCreateInstance(linked).show();
+            }
         });
     </script>
 }

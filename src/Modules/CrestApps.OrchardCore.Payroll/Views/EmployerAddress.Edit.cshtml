@@ -1,0 +1,9 @@
+@model EmployerAddressViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Address"]</div>
+    <div class="card-body">
+        <p class="hint">@T["Printed on statements and checks."]</p>
+        @await DisplayAsync(Model.AddressEditor)
+    </div>
+</div>

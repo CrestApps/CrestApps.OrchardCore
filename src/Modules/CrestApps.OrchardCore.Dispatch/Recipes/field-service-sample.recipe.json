@@ -106,6 +106,30 @@
       ]
     },
     {
+      "name": "ServiceLevelPolicies",
+      "Policies": [
+        {
+          "ItemId": "4ff712gq9zvzfks9tqyqgawkmb",
+          "Name": "Standard service",
+          "Scope": "WorkOrders",
+          "WarningPercent": 75,
+          "Targets": [
+            { "Metric": "FirstResponse", "Priority": "Urgent", "Minutes": 120 },
+            { "Metric": "Resolution", "Priority": "Urgent", "Minutes": 480 },
+            { "Metric": "FirstResponse", "Priority": "High", "Minutes": 240 },
+            { "Metric": "Resolution", "Priority": "High", "Minutes": 1440 },
+            { "Metric": "FirstResponse", "Priority": "Normal", "Minutes": 480 },
+            { "Metric": "Resolution", "Priority": "Normal", "Minutes": 2880 },
+            { "Metric": "FirstResponse", "Priority": "Low", "Minutes": 1440 },
+            { "Metric": "Resolution", "Priority": "Low", "Minutes": 7200 }
+          ],
+          "Properties": {
+            "WorkOrderServiceLevelSettings": { "PauseStatuses": [ "OnHold" ] }
+          }
+        }
+      ]
+    },
+    {
       "name": "WorkOrders",
       "Checklists": [
         {
@@ -116,21 +140,6 @@
             { "Id": "flue-co", "Section": "After", "Text": "Flue gas CO reading", "Kind": "Number", "Required": true, "Min": 0, "Max": 1000, "Unit": "ppm" },
             { "Id": "pressure", "Section": "After", "Text": "System pressure", "Kind": "PassFailNA", "Required": true },
             { "Id": "photo", "Section": "After", "Text": "Photo of the data plate", "Kind": "Photo", "MinPhotos": 1 }
-          ]
-        }
-      ],
-      "ServiceLevels": [
-        {
-          "ItemId": "4ff712gq9zvzfks9tqyqgawkmb",
-          "Name": "Standard service",
-          "TimeZoneId": "America/New_York",
-          "WarningPercent": 75,
-          "PauseStatuses": [ "OnHold" ],
-          "Targets": [
-            { "Priority": "Urgent", "ResponseMinutes": 120, "ResolveMinutes": 480 },
-            { "Priority": "High", "ResponseMinutes": 240, "ResolveMinutes": 1440 },
-            { "Priority": "Normal", "ResponseMinutes": 480, "ResolveMinutes": 2880 },
-            { "Priority": "Low", "ResponseMinutes": 1440, "ResolveMinutes": 7200 }
           ]
         }
       ],

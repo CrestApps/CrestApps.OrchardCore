@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Api;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -208,12 +209,17 @@ internal static class PosApiEndpoints
             return ApiProblems.Validation("countedCash", "Give the cash counted in the drawer.");
         }
 
+        if (request.CardTips is < 0m || request.CashTips is < 0m)
+        {
+            return ApiProblems.Validation(request.CardTips is < 0m ? "cardTips" : "cashTips", "Tips can't be less than zero.");
+        }
+
         if (await FindShiftAsync(shiftId, httpContext, shiftStore, registers, shifts) is not { } found)
         {
             return ApiProblems.NotFound();
         }
 
-        return await shifts.CloseAsync(found.Shift, counted, request.Note, httpContext.User, httpContext.RequestAborted)
+        return await shifts.CloseAsync(found.Shift, counted, request.Note, request.CardTips, request.CashTips, httpContext.User, httpContext.RequestAborted)
             ? TypedResults.Ok(await ToApiAsync(found.Shift, shifts, httpContext))
             : ApiProblems.Conflict(PosCodes.ShiftClosed, "The shift is already closed.");
     }
@@ -508,7 +514,9 @@ internal static class PosApiEndpoints
             shift.ClosedByName,
             shift.ClosedUtc,
             ApiMoney.From(summary.Tax, currency),
-            [.. (summary.Departments ?? []).Select(department => new ApiShiftDepartment(department.DepartmentId, department.Name, department.Quantity, ApiMoney.From(department.Total, currency)))]);
+            [.. (summary.Departments ?? []).Select(department => new ApiShiftDepartment(department.DepartmentId, department.Name, department.Quantity, ApiMoney.From(department.Total, currency)))],
+            shift.CardTips is { } card ? ApiMoney.From(card, currency) : null,
+            shift.CashTips is { } cash ? ApiMoney.From(cash, currency) : null);
     }
 }
 

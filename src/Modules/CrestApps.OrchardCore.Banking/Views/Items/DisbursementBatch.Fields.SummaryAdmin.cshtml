@@ -1,0 +1,5 @@
+@model ShapeViewModel<DisbursementBatch>
+@using Microsoft.AspNetCore.Mvc.Localization
+
+<span class="fw-semibold">@(Model.Value.SourceBankAccountName ?? T["No bank account"].Value)</span>
+<span class="text-secondary ms-1">@T.Plural(Model.Value.Count, "1 disbursement", "{0} disbursements")</span>

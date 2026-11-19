@@ -1,4 +1,7 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Payroll.Core;
+using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.TimeTracker.Services;
 using CrestApps.OrchardCore.Workforce.Core.Handlers;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -24,23 +27,21 @@ public static class WorkforceTimeClockServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        // Pay periods and pay codes are Pay Setup's.
+        services.AddPaySetupCore();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPaySetupUsage, TimeClockPaySetupUsage>());
+        services.AddPayInputSource<TimeClockPayInputSource>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayCode>, ShiftDifferentialPayCodeHandler>());
         services.TryAddScoped<TimeClockPolicyStore>();
-        services.TryAddScoped<PayPeriodCalendarStore>();
-        services.TryAddScoped<PayCodeStore>();
         services.TryAddScoped<TimeClockKioskStore>();
         services.TryAddScoped<TimePunchStore>();
         services.TryAddScoped<TimesheetStore>();
         services.TryAddScoped<AttendanceExceptionStore>();
         services.TryAddScoped<PunchCorrectionStore>();
         services.TryAddScoped<PayrollExportBatchStore>();
-        services.TryAddScoped<PayrollCsvSettingsStore>();
         services.TryAddScoped<ITimeClockPolicyManager, TimeClockPolicyManager>();
-        services.TryAddScoped<IPayPeriodCalendarManager, PayPeriodCalendarManager>();
-        services.TryAddScoped<IPayCodeManager, PayCodeManager>();
         services.TryAddScoped<ITimeClockKioskManager, TimeClockKioskManager>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TimeClockPolicy>, TimeClockPolicyCatalogHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayPeriodCalendar>, PayPeriodCalendarCatalogHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayCode>, PayCodeCatalogHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TimeClockKiosk>, TimeClockKioskCatalogHandler>());
         services.TryAddScoped<TimeOffLocks>();
         services.TryAddScoped<WorkerTimeZones>();
@@ -48,11 +49,8 @@ public static class WorkforceTimeClockServiceCollectionExtensions
         services.TryAddScoped<ITimeClockService, DefaultTimeClockService>();
         services.TryAddScoped<ITimesheetService, DefaultTimesheetService>();
         services.TryAddScoped<IAttendanceService, DefaultAttendanceService>();
-        services.TryAddScoped<IPayrollExportService, DefaultPayrollExportService>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayrollExportProvider, CsvPayrollExportProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAttendancePointsHandler, ManagerPointsNotice>());
         services.TryAddScoped<TimesheetRefresher>();
-        services.TryAddScoped<PayCodeSeeder>();
         services.Replace(ServiceDescriptor.Scoped<IWorkedTimeSource, TimeClockWorkedTimeSource>());
 
         return services;

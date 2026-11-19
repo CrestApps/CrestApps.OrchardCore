@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.Resources.Endpoints
+@model CrestApps.OrchardCore.Resources.ViewComponents.RecordPickerViewModel
+
+@{
+    var endpoint = Url.Content($"~/{RecordSearchEndpoints.Pattern}?kind={Uri.EscapeDataString(Model.Kind)}&valueType={Uri.EscapeDataString(Model.ValueType)}");
+}
+
+@await Component.InvokeAsync("ItemSelector", new
+{
+    id = Model.Id,
+    inputName = Model.InputName,
+    endpoint = endpoint,
+    initialItemsJson = Model.InitialItemsJson,
+    multiple = Model.Multiple,
+    enableSearch = true,
+    buttonText = Model.ButtonText ?? string.Format(T["Choose: {0}"].Value, Model.KindDisplayName),
+    searchPlaceholder = T["Search"].Value,
+    emptyResultsText = T["Nothing found."].Value,
+    noSelectionText = T["Nothing chosen."].Value,
+    smallButton = Model.SmallButton,
+    required = Model.Required,
+})

@@ -1,0 +1,3 @@
+@model ShapeViewModel<TicketRow>
+
+<a asp-controller="Tickets" asp-action="Display" asp-route-id="@Model.Value.Ticket.ContentItemId"><span class="text-muted">@Model.Value.Part.Number</span> @Model.Value.Ticket.DisplayText</a>

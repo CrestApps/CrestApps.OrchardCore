@@ -23,4 +23,20 @@ public abstract class TransactionEventHandlerBase : ITransactionEventHandler
     /// <inheritdoc/>
     public virtual Task BecameOverdueAsync(Transaction transaction, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public virtual Task RefundedAsync(Transaction transaction, TransactionEvent refund, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public virtual Task ReversedAsync(Transaction transaction, TransactionEvent reversal, TransactionEvent reversed, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public virtual Task AutoChargeAbandonedAsync(Transaction transaction, string reason, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public virtual Task AutoChargeDeclinedAsync(Transaction transaction, string reason, DateTime nextAttemptUtc, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

@@ -31,32 +31,6 @@ public static class TimeClockIndexSchema
             table.CreateIndex("IDX_TimeClockPolicyIndex_Lookup", "Name", "Enabled");
         }, collection: collection);
 
-        await schemaBuilder.CreateMapIndexTableAsync<PayPeriodCalendarIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Name", column => column.Nullable().WithLength(255))
-            .Column<bool>("Enabled"),
-            collection: collection);
-
-        await schemaBuilder.AlterIndexTableAsync<PayPeriodCalendarIndex>(table =>
-        {
-            table.CreateIndex("IDX_PayPeriodCalendarIndex_ItemId", "ItemId");
-            table.CreateIndex("IDX_PayPeriodCalendarIndex_Lookup", "Name", "Enabled");
-        }, collection: collection);
-
-        await schemaBuilder.CreateMapIndexTableAsync<PayCodeIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Name", column => column.Nullable().WithLength(255))
-            .Column<string>("Code", column => column.Nullable().WithLength(50))
-            .Column<PayCodeKind>("Kind")
-            .Column<bool>("Enabled"),
-            collection: collection);
-
-        await schemaBuilder.AlterIndexTableAsync<PayCodeIndex>(table =>
-        {
-            table.CreateIndex("IDX_PayCodeIndex_ItemId", "ItemId");
-            table.CreateIndex("IDX_PayCodeIndex_Lookup", "Code", "Enabled");
-        }, collection: collection);
-
         await schemaBuilder.CreateMapIndexTableAsync<TimeClockKioskIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Name", column => column.Nullable().WithLength(255))

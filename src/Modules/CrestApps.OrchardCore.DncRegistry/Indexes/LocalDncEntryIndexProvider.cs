@@ -21,6 +21,8 @@ public sealed class LocalDncEntryIndexProvider : IndexProvider<LocalDncEntry>
     public override void Describe(DescribeContext<LocalDncEntry> context)
     {
         context.For<LocalDncEntryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(entry => new LocalDncEntryIndex
             {
                 EntryId = entry.EntryId,

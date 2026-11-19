@@ -1,0 +1,70 @@
+@model EstimatePublicViewModel
+
+<zone Name="Title">
+    <breadcrumb name="InvoicingEstimateView" title="@T["Estimate {0}", Model.Estimate.Number]" />
+</zone>
+
+<style>
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .business-document-print-area,
+        .business-document-print-area * {
+            visibility: visible;
+        }
+
+        .business-document-print-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+
+<div>
+    @if (Model.CanAnswer)
+    {
+        <div class="card mb-3 no-print">
+            <div class="card-body">
+                <form method="post" asp-route="@(InvoicingConstants.RouteNames.EstimateView + "Accept")" asp-route-token="@Model.Token" class="mb-3">
+                    <label for="estimate-accept-name" class="form-label">@T["To accept this estimate, type your name:"]</label>
+                    <div class="input-group">
+                        <input id="estimate-accept-name" name="name" class="form-control" maxlength="255" required autocomplete="name" />
+                        <button type="submit" class="btn btn-success">@T["Accept"]</button>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.Estimate.Terms))
+                    {
+                        <span class="hint">@T["By accepting, you agree to the terms printed on the estimate."]</span>
+                    }
+                </form>
+                <form method="post" asp-route="@(InvoicingConstants.RouteNames.EstimateView + "Decline")" asp-route-token="@Model.Token">
+                    <label for="estimate-decline-reason" class="form-label">@T["Not for you? Tell us why (optional):"]</label>
+                    <div class="input-group">
+                        <input id="estimate-decline-reason" name="reason" class="form-control" maxlength="1000" />
+                        <button type="submit" class="btn btn-outline-danger">@T["Decline"]</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+    else if (Model.IsExpired)
+    {
+        <div class="alert alert-warning no-print">@T["This estimate has expired. Ask us for a new one."]</div>
+    }
+
+    <div class="d-flex flex-wrap gap-2 mb-3 no-print">
+        <a class="btn btn-outline-secondary" href="@Model.PdfUrl">@T["Download PDF"]</a>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print();">@T["Print"]</button>
+    </div>
+
+    <div class="business-document-print-area">
+        @await DisplayAsync(await New.BusinessDocument(Document: Model.Document))
+    </div>
+</div>

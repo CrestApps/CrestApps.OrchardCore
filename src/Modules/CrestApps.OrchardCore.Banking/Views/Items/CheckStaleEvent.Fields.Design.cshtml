@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Banking.Checks.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CheckStaleEvent>
+
+<header><h4><i class="fa-solid fa-hourglass-end" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Check Stale"])</h4></header>
+<p class="hint">@T["Starts when an outstanding check becomes too old to pay. Input: CheckId, Number, BankAccountId, PayeeName, Amount, Currency, CheckDate, SourceKind, SourceId, Status, Change, ReplacedById, Reason and Actor."]</p>

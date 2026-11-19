@@ -30,3 +30,32 @@ index 10ef222..1b87d40 100644
      const hidden = !!hideSearchBarWithNoSearchContext &&
          Array.isArray(searchContextByPaths) &&
          searchContext === "";
+diff --git a/node_modules/@easyops-cn/docusaurus-search-local/dist/server/server/utils/postBuildFactory.js b/node_modules/@easyops-cn/docusaurus-search-local/dist/server/server/utils/postBuildFactory.js
+index ba42137..9451637 100644
+--- a/node_modules/@easyops-cn/docusaurus-search-local/dist/server/server/utils/postBuildFactory.js
++++ b/node_modules/@easyops-cn/docusaurus-search-local/dist/server/server/utils/postBuildFactory.js
+@@ -37,6 +37,12 @@ function postBuildFactory(config, searchIndexFilename) {
+                                 const matchedPaths = [];
+                                 for (const _path of searchContextByPaths) {
+                                     const path = typeof _path === "string" ? _path : _path.path;
++                                    // A context can leave out paths under it (for example the Technical Manual, which is
++                                    // every doc except the User Manual).
++                                    const exclude = typeof _path === "string" ? [] : (_path.exclude || []);
++                                    if (exclude.some((excluded) => uri === excluded || uri.startsWith(`${excluded}/`))) {
++                                        continue;
++                                    }
+                                     if (uri === path || uri.startsWith(`${path}/`)) {
+                                         matchedPaths.push(path);
+                                     }
+diff --git a/node_modules/@easyops-cn/docusaurus-search-local/dist/server/server/utils/validateOptions.js b/node_modules/@easyops-cn/docusaurus-search-local/dist/server/server/utils/validateOptions.js
+index 829b2a4..9216dbd 100644
+--- a/node_modules/@easyops-cn/docusaurus-search-local/dist/server/server/utils/validateOptions.js
++++ b/node_modules/@easyops-cn/docusaurus-search-local/dist/server/server/utils/validateOptions.js
+@@ -35,6 +35,7 @@ const schema = utils_validation_1.Joi.object({
+     searchContextByPaths: utils_validation_1.Joi.array().items(utils_validation_1.Joi.alternatives().try(utils_validation_1.Joi.string(), utils_validation_1.Joi.object({
+         label: utils_validation_1.Joi.alternatives().try(utils_validation_1.Joi.string(), utils_validation_1.Joi.object().pattern(utils_validation_1.Joi.string(), utils_validation_1.Joi.string())),
+         path: utils_validation_1.Joi.string(),
++        exclude: utils_validation_1.Joi.array().items(utils_validation_1.Joi.string()),
+     }))),
+     hideSearchBarWithNoSearchContext: utils_validation_1.Joi.boolean().default(false),
+     useAllContextsWithNoSearchContext: utils_validation_1.Joi.boolean().default(false),

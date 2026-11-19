@@ -1,0 +1,24 @@
+@using CrestApps.OrchardCore.Banking.Models
+@using CrestApps.OrchardCore.Banking.Workflows
+@using Microsoft.AspNetCore.Html
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BankAccountStatusChangedEvent>
+
+<header><h4><i class="fa-solid fa-building-columns" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Bank Account Status Changed"])</h4></header>
+@if (!string.IsNullOrEmpty(Model.Activity.Status))
+{
+    IHtmlContent status = Model.Activity.Status switch
+    {
+        nameof(BankAccountStatus.Unverified) => T["Unverified"],
+        nameof(BankAccountStatus.VerificationSent) => T["Verification sent"],
+        nameof(BankAccountStatus.Verified) => T["Verified"],
+        nameof(BankAccountStatus.Failed) => T["Failed"],
+        nameof(BankAccountStatus.Closed) => T["Closed"],
+        _ => new StringHtmlContent(Model.Activity.Status),
+    };
+
+    <p class="small mb-0">@T["Status: {0}", status]</p>
+}

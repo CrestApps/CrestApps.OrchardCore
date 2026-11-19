@@ -1,0 +1,121 @@
+@model TicketCreateViewModel
+
+@{
+    // The form is one ticket type's, chosen before it (New ticket, or the type page); it can't change here.
+    var typeName = Model.Types.FirstOrDefault(type => type.Selected)?.Text;
+}
+
+<zone Name="Title"><breadcrumb name="TicketsCreate" title="@(string.IsNullOrEmpty(typeName) ? T["New ticket"] : T["New ticket: {0}", typeName])">
+    <breadcrumb-item id="Tickets" action="Index" controller="Tickets" area="CrestApps.OrchardCore.Tickets">@T["Tickets"]</breadcrumb-item>
+</breadcrumb></zone>
+
+<style asp-name="@CrestApps.OrchardCore.Tickets.Services.TicketsResourceConfiguration.FormStyle"></style>
+
+<form asp-action="Create" asp-route-contentType="@Model.ContentType" method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    <input type="hidden" asp-for="AccountId" />
+    <input type="hidden" asp-for="ConversationId" />
+
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Requester"]</label>
+        <div class="ocat-end">
+            @await Component.InvokeAsync("PartyPicker", new { name = Html.NameFor(m => m.Requester).ToString(), selectedValues = string.IsNullOrEmpty(Model.Requester) ? Array.Empty<string>() : new[] { Model.Requester }, buttonText = T["Choose who it is for"].Value })
+            <span class="hint">@T["Someone who is not on the site yet: leave this empty and write their name and e-mail below."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="RequesterName" class="ocat-label">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="RequesterName" class="form-control" autocomplete="off" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="RequesterEmail" class="ocat-label">@T["E-mail"]</label>
+        <div class="ocat-end">
+            <input asp-for="RequesterEmail" type="email" class="form-control" autocomplete="off" />
+        </div>
+    </div>
+
+    @if (Model.Categories.Count > 0)
+    {
+        <div class="ocat-wrapper">
+            <label for="CategoryId" class="ocat-label @(Model.CategoryRequired ? "ocat-label-required" : null)">@T["Category"]</label>
+            <div class="ocat-end">
+                @await DisplayAsync(await New.TaxonomyCascadingPicker(InputName: "CategoryId", InputId: "CategoryId", Choices: Model.Categories, SelectedId: Model.CategoryId, Required: Model.CategoryRequired, EmptyText: T["Choose a category"].Value))
+                <span asp-validation-for="CategoryId" class="text-danger"></span>
+                <span class="hint">@T["The category decides which questions below apply and, when the desk is left to it, where the ticket goes."]</span>
+            </div>
+        </div>
+    }
+
+    <div class="ocat-wrapper">
+        <label asp-for="DeskId" class="ocat-label">@T["Desk"]</label>
+        <div class="ocat-end">
+            <select asp-for="DeskId" asp-items="Model.Desks" class="form-select">
+                @if (Model.Categories.Count > 0)
+                {
+                    <option value="">@T["The category's desk"]</option>
+                }
+            </select>
+            <span asp-validation-for="DeskId" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="PriorityId" class="ocat-label">@T["Priority"]</label>
+        <div class="ocat-end">
+            <select asp-for="PriorityId" asp-items="Model.Priorities" class="form-select">
+                <option value="">@T["The ticket type's default"]</option>
+            </select>
+        </div>
+    </div>
+
+    @* The ticket type's own editor: its title (the subject) and its fields. *@
+    @* The page has its own action bar; the content editor's would sit on top of it. *@
+    @{ Model.Editor.Properties.Remove("Actions"); }
+    <div class="ticket-fields">
+        @await DisplayAsync(Model.Editor)
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Body" class="ocat-label">@T["What it is about"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Body" class="form-control" rows="6"></textarea>
+            <span class="hint">@T["The first message of the ticket, as the requester would write it. The requester sees it."]</span>
+        </div>
+    </div>
+
+    @if (Model.CanAttach)
+    {
+        <div class="ocat-wrapper">
+            <label for="ticket-files" class="ocat-label">@T["Files"]</label>
+            <div class="ocat-end">
+                @await DisplayAsync(await New.FileDropInput(InputName: "files", InputId: "ticket-files", Target: "form"))
+            </div>
+        </div>
+    }
+
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Protected information"]</span>
+        <div class="ocat-end">
+            <div class="row g-2">
+                <div class="col-12 col-md-5">
+                    <label for="ProtectedLabel" class="form-label visually-hidden">@T["Label"]</label>
+                    <input id="ProtectedLabel" name="ProtectedLabel" value="@Model.ProtectedLabel" class="form-control" maxlength="@CrestApps.OrchardCore.Tickets.Services.ITicketProtectedInformation.MaxLabelLength" placeholder="@T["Label, such as VPN login"]" autocomplete="off" />
+                </div>
+                <div class="col-12 col-md-7">
+                    <label for="ProtectedValue" class="form-label visually-hidden">@T["Value"]</label>
+                    <input id="ProtectedValue" name="ProtectedValue" type="password" class="form-control" maxlength="@CrestApps.OrchardCore.Tickets.Services.ITicketProtectedInformation.MaxValueLength" placeholder="@T["Value"]" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+                </div>
+            </div>
+            <span class="hint">@T["Optional. A login or other secret the requester gave: kept encrypted, apart from the ticket, and shown only to agents allowed to, after they confirm their password. More can be added on the ticket."]</span>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button type="submit" class="btn btn-primary">@T["Create"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>

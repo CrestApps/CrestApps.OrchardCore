@@ -1,0 +1,66 @@
+@model AccountInvoicesViewModel
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>@T["Invoices"]</span>
+        @if (Model.CanCreate)
+        {
+            <a asp-area="@InvoicingConstants.Features.Area" asp-controller="InvoicesAdmin" asp-action="Create" asp-route-billTo="@Model.BillTo" class="btn btn-sm btn-secondary">@T["New invoice"]</a>
+        }
+    </div>
+    @if (Model.Totals.Count > 0)
+    {
+        <div class="card-body border-bottom">
+            @foreach (var (currency, due, overdue) in Model.Totals)
+            {
+                <div>
+                    @T["Owes {0}", MoneyFormatter.Format(due, currency)]
+                    @if (overdue > 0m)
+                    {
+                        <span class="badge text-bg-warning ms-1">@T["{0} overdue", MoneyFormatter.Format(overdue, currency)]</span>
+                    }
+                </div>
+            }
+        </div>
+    }
+    @if (Model.Invoices.Count == 0)
+    {
+        <div class="card-body text-muted">@T["No invoices are billed to this account yet."]</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Invoice"]</th>
+                        <th scope="col">@T["Date"]</th>
+                        <th scope="col">@T["Due"]</th>
+                        <th scope="col" class="text-end">@T["Total"]</th>
+                        <th scope="col" class="text-end">@T["Still due"]</th>
+                        <th scope="col">@T["Status"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var invoice in Model.Invoices)
+                    {
+                        <tr>
+                            <td><a asp-area="@InvoicingConstants.Features.Area" asp-controller="InvoicesAdmin" asp-action="Detail" asp-route-itemId="@invoice.ItemId">@(string.IsNullOrEmpty(invoice.Number) ? T["Draft invoice"].Value : invoice.Number)</a></td>
+                            @* Issue and due dates are dates, kept as dates: shown as they are. *@
+                            <td>@invoice.IssueDate?.ToString("d")</td>
+                            <td>@invoice.DueDate?.ToString("d")</td>
+                            <td class="text-end text-nowrap">@(string.IsNullOrEmpty(invoice.Currency) ? null : MoneyFormatter.Format(invoice.Totals?.Total ?? 0m, invoice.Currency))</td>
+                            <td class="text-end text-nowrap">@(string.IsNullOrEmpty(invoice.Currency) || invoice.Status == InvoiceStatus.Draft ? null : MoneyFormatter.Format(invoice.AmountDue, invoice.Currency))</td>
+                            <td><partial name="_InvoiceStatusBadge" model="invoice" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (Model.Count > Model.Invoices.Count)
+        {
+            <div class="card-footer small text-muted">@T["The {0} newest of {1} invoices.", Model.Invoices.Count, Model.Count]</div>
+        }
+    }
+</div>

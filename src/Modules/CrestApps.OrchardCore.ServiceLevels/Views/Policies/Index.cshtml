@@ -1,0 +1,88 @@
+@using CrestApps.OrchardCore.Core.Models
+
+@model ListCatalogEntryViewModel
+
+@{
+    var scopes = ViewData[nameof(ServiceLevelScopeOption)] as IList<ServiceLevelScopeOption> ?? [];
+}
+
+<zone Name="Title">
+    <breadcrumb name="ServiceLevelPolicies" title="@T["Service Levels"]" />
+</zone>
+
+@if (scopes.Count == 0)
+{
+    <div class="alert alert-info">@T["No enabled feature uses service levels yet. Enable a feature that does, such as Work Orders or Tickets, to create policies for it."]</div>
+}
+
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-client-side-search="false">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                @if (scopes.Count > 0)
+                {
+                    @* The kinds of policy (one per feature that uses service levels), chosen in a dialog as in the other lists of sources. *@
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-secondary create" data-bs-toggle="modal" data-bs-target="#modalAddPolicy">@T["Add Policy"]</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="ServiceLevelPolicies" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> There are no service level policies at the moment."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Scope" position="30" title="@T["Details"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<div class="modal fade" id="modalAddPolicy" tabindex="-1" role="dialog" aria-labelledby="add-policy-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="add-policy-title">@T["Available Policy Types"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row row-cols-1 row-cols-md-3 g-2">
+                    @foreach (var scope in scopes)
+                    {
+                        <div class="col">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h4>@scope.DisplayName</h4>
+                                    @if (!string.IsNullOrEmpty(scope.Description))
+                                    {
+                                        <p class="hint">@scope.Description</p>
+                                    }
+                                </div>
+                                <div class="card-footer text-muted text-sm-end">
+                                    <a class="btn btn-primary btn-sm" asp-action="Create" asp-route-scope="@scope.Name">@T["Add"]</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script asp-name="list-management-ui" at="Foot"></script>

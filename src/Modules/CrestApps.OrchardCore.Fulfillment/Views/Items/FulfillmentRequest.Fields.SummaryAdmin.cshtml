@@ -1,0 +1,4 @@
+@using CrestApps.OrchardCore.Orders.Core
+@model ShapeViewModel<FulfillmentRequest>
+
+<a href="@Url.Action("Detail", "OrdersAdmin", new { area = OrderConstants.Features.Orders, orderId = Model.Value.OrderId })">@T["Order {0}", Model.Value.OrderNumber]</a>

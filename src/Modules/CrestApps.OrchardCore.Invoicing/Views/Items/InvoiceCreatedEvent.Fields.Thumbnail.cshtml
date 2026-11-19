@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<InvoiceCreatedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-file-circle-plus" aria-hidden="true"></i>
+    @T["Invoice Created"]
+</h4>
+<p>@T["Starts when a draft invoice is created."]</p>

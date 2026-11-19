@@ -1,0 +1,15 @@
+@using CrestApps.OrchardCore.Approvals.Workflows
+
+@model ApprovalTaskViewModel
+
+<p class="hint">@T["Approves a request as the person the workflow runs for."]</p>
+<div class="mb-3">
+    <label asp-for="RequestId" class="form-label">@T["Request id"]</label>
+    <input asp-for="RequestId" class="form-control code" />
+    <span class="hint">@T["Liquid. Example: {{ Workflow.Input.RequestId }}"]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="Note" class="form-label">@T["Note"]</label>
+    <input asp-for="Note" class="form-control code" />
+    <span class="hint">@T["Liquid."]</span>
+</div>

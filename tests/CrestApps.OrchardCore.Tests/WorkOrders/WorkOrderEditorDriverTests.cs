@@ -218,10 +218,10 @@ public sealed class WorkOrderEditorDriverTests
         => CalendarTestHarness.CreateAsync(
             services =>
             {
-                services.AddWorkOrdersCore();
+                services.AddWorkOrdersWithServiceLevels();
                 configure?.Invoke(services);
             },
-            WorkOrdersIndexSchema.CreateAsync,
-            [new WorkOrderIndexProvider(), new WorkOrderTypeIndexProvider(), new ChecklistTemplateIndexProvider(), new ServiceLevelPolicyIndexProvider(), new WorkOrderSubStatusIndexProvider()],
-            [WorkOrdersConstants.CollectionName]);
+            WorkOrderTestStores.CreateSchemaAsync,
+            [.. WorkOrderTestStores.IndexProviders],
+            WorkOrderTestStores.Collections);
 }

@@ -80,7 +80,9 @@ public sealed class ReportWidgetService
         var maxRows = Math.Clamp(part.MaxRows ?? settings.DefaultMaxRows, 0, 100);
         var minutes = Math.Clamp(part.CacheMinutes, 0, 24 * 60);
         var culture = CultureInfo.CurrentUICulture.Name;
-        var key = $"CrestApps.ReportWidget:{part.ContentItem.ContentItemId}:{part.ContentItem.ModifiedUtc?.Ticks}:{descriptor.Name}:{period}:{content}:{maxRows}:{culture}";
+        // Kept per viewer: a report may show each person only the records they may see.
+        var viewer = user?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var key = $"CrestApps.ReportWidget:{part.ContentItem.ContentItemId}:{part.ContentItem.ModifiedUtc?.Ticks}:{descriptor.Name}:{period}:{content}:{maxRows}:{culture}:{viewer}";
 
         if (minutes > 0 && _memoryCache.TryGetValue(key, out CachedReportWidget cached))
         {
@@ -102,7 +104,7 @@ public sealed class ReportWidgetService
             var filter = new ReportFilter { ReportName = descriptor.Name };
             filter.SetDateRange(new ReportDateRange { FromUtc = fromUtc, ToUtc = toUtc, Key = period.ToString() });
 
-            var document = await ReportTelemetry.RunCodedReportAsync(_reportManager.GetReport(descriptor.Name), descriptor, new ReportContext(filter), cancellationToken);
+            var document = await ReportTelemetry.RunCodedReportAsync(_reportManager.GetReport(descriptor.Name), descriptor, new ReportContext(filter) { User = user }, cancellationToken);
             document.Title = _localizerFactory.Localize(descriptor.DisplayName).Value;
 
             await _displayValueResolver.ResolveNonTableValuesAsync(document);

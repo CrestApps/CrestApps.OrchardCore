@@ -26,6 +26,11 @@ public sealed class UserSearchResult
     public string Email { get; set; }
 
     /// <summary>
+    /// Gets or sets the phone number kept on the user, as it was entered, or <see langword="null"/>.
+    /// </summary>
+    public string PhoneNumber { get; set; }
+
+    /// <summary>
     /// Gets or sets the name to show, from the <see cref="IDisplayNameProvider"/>.
     /// </summary>
     public string DisplayName { get; set; }

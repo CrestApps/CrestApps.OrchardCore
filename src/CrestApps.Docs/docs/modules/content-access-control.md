@@ -21,7 +21,10 @@ Provides a way to control who can access content items.
 This feature allows you to restrict access to content items based on user roles. It depends on
 [Enhanced Roles](roles.md) (`CrestApps.OrchardCore.Roles`) and adds a **Restrict content?** setting
 (`RolePickerPartContentAccessControlSettings.IsContentRestricted`) to the `RolePickerPart` settings on a content
-type. When it is `true`, the roles picked on each item decide who may view that item.
+type. When it is `true`, the roles picked on each item decide who may view that item. The item editor then labels
+the picker *Which roles can see this content* (when the part on the type has no display name of its own), shows
+*Any role* while none is picked, and hints *Leave empty so everyone can see it.* (when the part has no hint); every
+other role picker keeps its name, *Role Picker*.
 
 How administrators turn the restriction on for a content type and how editors restrict an item is described in the
 User Manual: [Restrict Content by Role](../user-manual/administration/content-access-control.md).
@@ -31,19 +34,66 @@ User Manual: [Restrict Content by Role](../user-manual/administration/content-ac
 The feature registers `RoleBasedContentItemAuthorizationHandler`, an `IAuthorizationHandler` for
 `PermissionRequirement`:
 
-- It only acts on the `ViewContent` permission checked against a `ContentItem` resource. Edit, publish and delete
+- It acts on every permission that reads a `ContentItem` resource: view, view own, preview, preview own and list,
+  in general or for a securable type (such as `ViewContent_Handbook`), matched by name. A securable type is checked
+  with its own permissions, so without this a restricted item would leak through them. Edit, publish and delete
   checks are not affected.
 - It collects the role names from every `RolePickerPart` on the content type (named or unnamed) whose settings have
   `IsContentRestricted` set to `true`.
-- If the user is in any of those roles, the requirement succeeds. If roles were collected and the user is in none
-  of them, the handler fails the requirement. If no roles were picked, the item is not restricted.
+- If the user is in any of those roles, a view permission (`ViewContent` or the type's `ViewContent_{Type}`)
+  succeeds; listing and previewing still need their own permission. If roles were collected and the user is in none
+  of them, the handler fails every reading permission. If no roles were picked, the item is not restricted.
+- **Authenticated** stands for anyone signed in and **Anonymous** for a visitor, though Orchard Core never puts
+  either role in a user's claims: an item restricted to Authenticated opens for every signed-in user, one restricted
+  to Anonymous only for visitors, and one restricted to both for everyone. `ContentAccessRoles` (in
+  `CrestApps.OrchardCore.Roles.Core`) works out a reader's roles this way (`GetReaderRoles`, `IsInAnyRole`), so code
+  that filters restricted content matches the handler.
 - It runs even when another handler already succeeded the requirement, as the permission handler does for everyone
   who has **View content**, anonymous visitors included: a restricted item is refused to whoever isn't in its roles.
   Users in the Administrator role see every item.
 
+## Filtering lists and searches in SQL
+
+Authorizing each item is fine for one page, but a list or a search of a restricted type would have to load every
+item to drop the ones its reader can't open. The feature keeps `ContentAccessRoleIndex` (in
+`CrestApps.OrchardCore.Roles.Core.Indexes`) for that: a row for each role allowed to read each published item of a
+restricted type (`ContentItemId`, `ContentType`, `RoleName`). An item with no role picked is open to everyone, so it
+gets two rows, `Anonymous` and `Authenticated`. Drafts and items of types that are not restricted get no row. When
+the feature is first enabled, a deferred task indexes the published items that were restricted before.
+
+Keep a query of published items to what its reader may open with a subquery on the index, matched on the content
+item id against the reader's roles:
+
+```csharp
+var roles = ContentAccessRoles.GetReaderRoles(User).ToArray();
+var query = session.QueryIndex<MyArticleIndex>();
+
+if (!ContentAccessRoles.SeesEverything(User))
+{
+    query = query.Where(index => index.ContentItemId.IsIn<ContentAccessRoleIndex>(
+        row => row.ContentItemId,
+        row => row.RoleName.IsIn(roles)));
+}
+```
+
+Only use it for a content type that has a restricted `RolePickerPart`: items of other types have no row and would
+never be found. The [Knowledge Base](knowledge-base.md) filters the help center, its search and its suggestions this
+way. A module that depends on the index declares the `CrestApps.OrchardCore.ContentAccessControl` feature
+(`ContentAccessControlConstants.Feature`) as a dependency.
+
+## AI knowledge bases
+
+An AI knowledge base built from a content index answers anyone allowed to query its profile, without this module's
+checks. So the module registers `ContentAccessIndexedDocumentVisibility` as an `IIndexedDocumentVisibility`: the AI data
+source sync leaves out every item restricted to roles that leave out `Anonymous`, and removes one restricted after it was
+indexed. Items with no role picked, and items of types without a restricting role picker, stay in. See
+[Restricted content stays out](../ai/data-sources/index.md#restricted-content-stays-out).
+
+## Restrict a content type in code
+
 You can attach the part and set **Restrict content?** using the content definitions user interface or a migration.
 
-Here is an example of how to create or update a content type named `CustomContentType`, where access to its content items is restricted for all roles **except** "Administrator", "Authenticated", and "Anonymous".
+Here is an example of how to create or update a content type named `CustomContentType`, whose items are restricted to the roles picked on them. "Administrator" is left out of the picker because administrators see every item anyway. Keep "Authenticated" in it to let an editor open an item to everyone signed in.
 
 ```csharp
 internal sealed class CustomContentTypeMigrations : DataMigration
@@ -70,7 +120,7 @@ internal sealed class CustomContentTypeMigrations : DataMigration
                     AllowSelectMultiple = true,
                     Required = true,
                     Hint = "Select one or more roles",
-                    ExcludedRoles = ["Administrator", "Authenticated", "Anonymous"],
+                    ExcludedRoles = ["Administrator"],
                 })
             )
         );

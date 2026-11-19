@@ -17,6 +17,30 @@ public interface IOrderStore
     Task<Order> FindByNumberAsync(string orderNumber, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the orders with the given ids. Ids that aren't found are left out. The YesSql store reads them in one
+    /// query; a store that doesn't override this reads them one at a time.
+    /// </summary>
+    /// <param name="ids">The order ids.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The orders found.</returns>
+    async ValueTask<IReadOnlyCollection<Order>> GetAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
+        var orders = new List<Order>();
+
+        foreach (var id in ids.Where(value => !string.IsNullOrEmpty(value)).Distinct(StringComparer.Ordinal))
+        {
+            if (await FindByIdAsync(id, cancellationToken) is { } order)
+            {
+                orders.Add(order);
+            }
+        }
+
+        return orders;
+    }
+
+    /// <summary>
     /// Gets the orders made from a cart that are not paid yet.
     /// </summary>
     Task<IReadOnlyList<Order>> ListUnpaidByCartAsync(string cartId, CancellationToken cancellationToken = default);

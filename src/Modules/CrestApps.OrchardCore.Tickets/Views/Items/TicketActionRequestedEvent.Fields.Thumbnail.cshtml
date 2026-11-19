@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketActionRequestedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-hand-pointer" aria-hidden="true"></i>
+    @T["Ticket Action Requested"]
+</h4>
+<p>@T["Starts when an agent runs this action from a ticket's page."]</p>

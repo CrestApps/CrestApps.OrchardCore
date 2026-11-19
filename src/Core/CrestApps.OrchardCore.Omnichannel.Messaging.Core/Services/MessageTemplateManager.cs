@@ -9,6 +9,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 /// </summary>
 public sealed class MessageTemplateManager : CatalogManager<MessageTemplate>, IMessageTemplateManager
 {
+    private readonly IMessageTemplateStore _store;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MessageTemplateManager"/> class.
     /// </summary>
@@ -21,5 +23,10 @@ public sealed class MessageTemplateManager : CatalogManager<MessageTemplate>, IM
         ILogger<CatalogManager<MessageTemplate>> logger)
         : base(store, handlers, logger)
     {
+        _store = store;
     }
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyList<MessageTemplate>> ListByScopeAsync(string scope, CancellationToken cancellationToken = default)
+        => _store.ListByScopeAsync(scope, cancellationToken);
 }

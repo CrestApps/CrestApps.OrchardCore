@@ -18,6 +18,17 @@ public sealed class CommerceEmail
     public string To { get; init; }
 
     /// <summary>
+    /// Gets the addresses that get a copy of the email, seen by every recipient. Blank addresses are left out.
+    /// </summary>
+    public IReadOnlyList<string> Cc { get; init; } = [];
+
+    /// <summary>
+    /// Gets the addresses that get a copy of the email without the other recipients seeing them. Blank addresses are left
+    /// out.
+    /// </summary>
+    public IReadOnlyList<string> Bcc { get; init; } = [];
+
+    /// <summary>
     /// Gets the records the email is about, by the name the store's template reads them under, such as the order as
     /// <c>{{ Order }}</c>. Each is read as plain values, such as <c>{{ Order.OrderNumber }}</c>.
     /// </summary>

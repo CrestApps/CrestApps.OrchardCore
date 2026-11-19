@@ -1,0 +1,40 @@
+@model TicketApprovalViewModel
+
+@{
+    var part = Model.Ticket.GetOrCreate<TicketPart>();
+}
+
+<zone Name="Title"><breadcrumb name="TicketApprovals" title="@T["Approve {0}", part.Number]"></breadcrumb></zone>
+
+<div class="row g-3">
+    <div class="col-12 col-lg-8">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="h5">@part.Number @Model.Ticket.DisplayText</h2>
+                <p class="text-muted small mb-2">
+                    @if (!string.IsNullOrEmpty(Model.RequesterName))
+                    {
+                        <span>@T["From {0}", Model.RequesterName] ·</span>
+                    }
+                    @T["Opened"] @await DisplayAsync(await New.DateTime(Utc: Model.Ticket.CreatedUtc, Format: "g"))
+                </p>
+                @if (!string.IsNullOrEmpty(Model.FirstMessage))
+                {
+                    <div class="text-break" style="white-space: pre-line">@Model.FirstMessage</div>
+                }
+                @if (Model.CanOpenTicket)
+                {
+                    <a class="btn btn-sm btn-link px-0 mt-2" asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="Display" asp-route-id="@Model.TicketId">@T["Open the ticket"]</a>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="h6">@T["Approval"]</h2>
+                <partial name="_TicketApprovalSteps" model="Model" />
+            </div>
+        </div>
+    </div>
+</div>

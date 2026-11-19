@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.BusinessHours.Services;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -37,8 +38,8 @@ internal static class AdminFormOptionsProviderFactory
         var skills = new Mock<IContactCenterSkillManager>();
         skills.Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
-        var calendars = new Mock<IBusinessHoursCalendarManager>();
-        calendars.Setup(manager => manager.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        var openHours = new Mock<IOpenHoursService>();
+        openHours.Setup(service => service.ListSchedulesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
         var endpoints = new Mock<IOmnichannelChannelEndpointManager>();
         endpoints.Setup(manager => manager.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
@@ -54,7 +55,7 @@ internal static class AdminFormOptionsProviderFactory
             queueManager.Object,
             queueGroups.Object,
             skills.Object,
-            calendars.Object,
+            openHours.Object,
             endpoints.Object,
             agents.Object,
             voiceProviders ?? [],

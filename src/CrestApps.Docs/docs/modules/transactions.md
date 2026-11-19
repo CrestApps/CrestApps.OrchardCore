@@ -6,6 +6,7 @@ description: A provider-agnostic ledger that tracks, reports, and settles outsta
 user_manual:
   - user-manual/commerce/transactions
   - user-manual/commerce/invoices-and-receipts
+  - user-manual/commerce/payment-terms
 ---
 
 | | |
@@ -16,7 +17,7 @@ user_manual:
 | **Abstractions** | `CrestApps.OrchardCore.Transactions.Abstractions` |
 | **Core** | `CrestApps.OrchardCore.Transactions.Core` |
 | **Category** | Commerce |
-| **Depends on** | [Commerce](commerce) |
+| **Depends on** | [Commerce Foundation](commerce#the-commerce-foundation-and-commerce-features) |
 
 The **Transactions** module is a provider-agnostic ledger of *money owed*. It answers a single question for the whole tenant — **"what has not been paid yet?"** — no matter which payment provider or purchase flow created the obligation. A transaction is created whenever a purchase is committed without being settled immediately (for example an offline [Pay Later](pay-later) commitment), and it is updated as reminders are sent and payments are recorded until it reaches a terminal state.
 
@@ -98,6 +99,8 @@ The session keeps the list in `CheckoutSession.References`; its `ReferenceType` 
 - **What the customer sees.** The concealed `TransactionSettlement` step carries one line per transaction, at what it still owes, so the checkout summary lists each one. No promotion code is offered: the session sets `SettlesExistingBalance` and leaves `AcceptsDiscountsOnBalance` off, as described in [Coupons on a checkout that settles an existing balance](checkout.md#coupons-on-a-checkout-that-settles-an-existing-balance). Installments are not offered either; they apply to a checkout for one transaction.
 - **How the payment is applied.** The customer pays once, so the payment ledger has one payment attempt. Its `ReferenceType` is `Transaction` and its `ReferenceId` is empty. When the checkout completes, the confirmed amount is split across the transactions in the order they were listed, each up to what the checkout asked for it and what it still owes, through `ITransactionSettlementService.ApplyShareAsync`. Each transaction records its share as a payment of its own that names the attempt, so its status, its receipt, the payment handlers and the lifecycle events work as for a transaction paid on its own. When the gateway confirms less than was asked, the first transactions are paid in full and the rest are left partly paid. Completing the checkout again applies nothing twice.
 - **Refunds stay per transaction.** **Refund** on a transaction gives back only that transaction's share of the payment, less what was already refunded for it. The refund names the transaction (`PaymentRefund.ReferenceType` and `ReferenceId`), so it is recorded on that one only. A refund of the whole payment, started from **Commerce → Payments** or at the gateway, names no transaction: it is split back over the transactions in the order they were listed, each up to its share.
+- **Debts paid through a page of their own.** A transaction an `ITransactionPayUrlProvider` sends elsewhere (an order's invoice, paid through the order's checkout) is refused by the ledger's checkout, on its own or with others, so it is never settled without the page that owns its payment hearing of it.
+- **One checkout's payment shared by debts of the same checkout.** A purchase checkout's payment can also be applied, by shares, to other transactions that record the same checkout (`CheckoutSessionId`), such as an invoice and the debit note for the shipping its order's checkout added. A refund found by the checkout and obligation goes to that transaction up to its share of the payment, and the rest to the others that took a share (`ITransactionStore.GetByCheckoutSessionAsync`), so none gives back more than it was paid.
 
 :::note[Finding the checkout of one transaction]
 `ICheckoutSessionStore.GetByReferenceAsync("Transaction", id)` and `IPaymentAttemptStore.GetByReferenceAsync("Transaction", id)` find only checkouts for that one transaction. A payment that settled it together with others is found through the transaction's timeline: each `PaymentRecorded` event names its `PaymentAttemptId`.
@@ -113,6 +116,47 @@ Besides chasing what is overdue, the sweep tells the owner a payment is **coming
 its due date (`SendUpcomingReminderAsync`). A transaction that will be collected without the owner acting — an
 installment charged to a saved card — carries a `TransactionAutoCollection` describing the card, and its notice
 says which card will be charged and when instead of asking the owner to pay.
+
+**Staged reminders.** `TransactionReminderSettings.Steps` lists the days, relative to the due date, a reminder is sent
+on, such as `[-3, 0, 7, 14, 30]`. When it is set it replaces the first delay, interval, maximum and upcoming reminder:
+`TransactionReminderSchedule.GetDueStep` gives the latest step whose day has come and that was not sent
+(`Transaction.ReminderStepsSent`), passing over earlier steps missed meanwhile, so an owner never gets several at once.
+A step before the due date is sent as the upcoming notice, the others as reminders. Either way, the sweep:
+
+- skips a transaction whose reminders are paused (`Transaction.RemindersPaused`, set by
+  `ITransactionCommandService.SetRemindersPausedAsync` and the **Pause reminders** button, noted on the timeline);
+- skips every transaction of a party kept out of reminders: the user who owns it or the party that pays it
+  (`PartyCollectionSettings.RemindersPaused`, read once per sweep through `IPartyCollectionSettingsService.GetExclusionsAsync`);
+- sends no owed reminder while a charge of a saved card is scheduled (`Transaction.AutoCharge`);
+- reads the transaction again in a unit of work of its own right before each reminder, and skips it when it was paid,
+  paused or closed meanwhile, or a payment for it is being taken (a checkout `AwaitingProvider` or `PaymentPending`);
+- sends only between `SendFromHour` and `SendUntilHour` (8 and 20 by default) in the site's time zone. The task now runs
+  every hour, so the next run in those hours sends what is due; overdue is still raised at any hour.
+
+#### Charging on a schedule, with retries
+
+`ISavedPaymentMethodChargeService` (`DefaultSavedPaymentMethodChargeService`, in the module) is the one
+charge-and-retry path for every debt collected with a card: invoices charged automatically, installment plan payments
+and booking balances. It charges a transaction on a day and retries a declined card. The charge is
+`Transaction.AutoCharge` (`TransactionAutoCharge`): the card (`SavedPaymentMethodId`, one of the owner's saved cards, or
+`SourceSessionId`, the checkout that kept it, which also reaches a guest's card), the next attempt, the declined
+attempts so far, and the debt's own retry days (`RetryDays`, `null` for the reminder settings' ones, empty for none). A
+module that owns a schedule sets it as the charge's inputs: installment plans their payments' due dates and
+`InstallmentPlanSettings.RetryDays`, Bookings the balance's due date and `[1, 1]`.
+
+| Member | What it does |
+| --- | --- |
+| `ScheduleAsync(id, savedPaymentMethodId, chargeOnUtc)` | Sets `Transaction.AutoCharge` (the card, the next attempt) and `AutoCollection` (the card's description, so the upcoming notice names it). `savedPaymentMethodId` `null` takes the owner's default card (`ISavedPaymentMethodStore.GetDefaultAsync`); refused when the owner kept none that can be charged, or without the Checkout feature. |
+| `ScheduleAsync(SavedPaymentMethodChargeRequest)` | The same with every input: `SavedPaymentMethodId` or `SourceSessionId` (the checkout's owner must be the transaction's, a guest's for a guest's transaction), `ChargeOnUtc` and `RetryDays`. It replaces any charge before, so its declined attempts count from zero. A module that creates the transaction can instead set `Transaction.AutoCharge` before saving it, as installment plans and booking balances do. |
+| `ChargeAsync(id)` | Charges now through `ChargeSavedPaymentMethodAsync`, or `ChargeKeptPaymentMethodAsync` for a card a checkout kept. `Succeeded` or `Pending` removes the charge. `Declined` counts an attempt and moves the next one by the charge's `RetryDays`, or else `ChargeRetryDays` (`[1, 3, 5]` by default, **Retry a declined card after (days)** in the settings), and raises `ITransactionEventHandler.AutoChargeDeclinedAsync` with the next attempt; the reason kept is the provider's own, from the failed charge on the timeline. `Failed` (the provider couldn't be reached) tries again in an hour without counting. `RequiresAuthentication`, a refusal before the provider was asked, or a decline with no retry left hands the transaction to its owner: the charge and `AutoCollection` are removed, a note is added, a `PaymentIssueKinds.AutoChargeFailed` payment issue is recorded, and `ITransactionEventHandler.AutoChargeAbandonedAsync` is raised so the module that owns the debt sends its own notice. |
+| `ChargeDueAsync(utcNow)` | Charges up to 100 transactions whose next attempt is due (`TransactionIndex.AutoChargeNextAttemptUtc`), each in a unit of work of its own. The **Saved Card Charges** background task calls it every hour, at half past. |
+| `CancelAsync(id)` | Removes the scheduled charge; the owner pays themselves. The transaction page's **Cancel the charge** button calls it. |
+
+Each command takes the lock `Transactions:AutoCharge:{id}`. The ledger's charge commands
+(`ChargeSavedPaymentMethodAsync`, `ChargeKeptPaymentMethodAsync`) first apply any succeeded payment attempt for the
+transaction that is not on it yet (`ITransactionSettlementService`), so money a provider took whose recording was
+interrupted is never charged a second time, and they finish a charge still settling instead of starting another.
+`CheckoutKeptPaymentMethods.ReadAsync` (Checkout.Abstractions) reads the card a checkout kept from its settled attempts.
 
 ### Payment receipts
 
@@ -143,6 +187,7 @@ The notice names the amount and what it was for, and the transaction's timeline 
 
 A transaction its owner pays themselves (one that is not charged automatically) is invoiced:
 
+- **The printed invoice.** The invoice a customer opens (the transaction's payment request) is a [business document](business-documents.md) of the kind `PaymentRequest`, built by `ITransactionInvoiceBuilder` (a `BusinessDocument`, the seam an invoicing module replaces): the site's business details from the receipt settings, the charge, each adjustment still in force (one taken back is left off), a tax line per rate from `Transaction.TaxLines` (one *Tax* line when the transaction only has a tax amount), the total still owed, and the payer (`PayerContact`) as the recipient, else the owner. It is printed in the look of the document template for **Payment requests**, read once Business Documents is recorded as enabled, and rendered with the `BusinessDocument` shape.
 - **Invoice numbers.** The first time the owner is told about the payment, by the invoice an administrator sends
   (**Send invoice**, `ITransactionCommandService.SendInvoiceAsync`), the reminder before the due date, the
   notice on the due date, or a reminder an administrator sends, the transaction is numbered `INV-1001`, `INV-1002`
@@ -156,7 +201,9 @@ A transaction its owner pays themselves (one that is not charged automatically) 
   on the payment step and the confirmation, and the confirmation is headed *Payment received*. A link that was
   altered or expired shows nothing about any transaction. Links use the site's **Base URL**
   from the general settings, so set it to the public address; without it, a link made outside a request is left out
-  and the notice asks the owner to sign in instead. `ITransactionPayLinkService` creates and reads them.
+  and the notice asks the owner to sign in instead. `ITransactionPayLinkService` creates and reads them. A transaction paid through a page of
+  its own, such as the checkout of the order an invoice bills, is linked there instead: the first `ITransactionPayUrlProvider` that names
+  a page wins, for the links, the reminders and the ledger's pay page alike.
 - **The invoice page.** With the Receipts module enabled, the transaction's page links its invoice: the same layout
   as a receipt, headed *Invoice*, with a *Due* status until it is paid. Administrators also see the pay link there,
   to send it by hand. The receipt for the payment names the invoice it settled.
@@ -189,6 +236,8 @@ refund of a whole payment that settled several transactions is split back over t
 | Command | What it does |
 | --- | --- |
 | `RecordOfflinePaymentAsync(id, amount, reference, note)` | Records money received outside the site. An amount above what is owed records only what is owed; `TransactionEvent.Reference` keeps the reference. Raises `ITransactionPaymentHandler.PaymentRecordedAsync` (so a receipt is sent). |
+| `RecordPaymentAsync(id, TransactionPaymentRequest)` | Records money received outside the site with its payment method and received time. Money above what is owed is returned in `UnappliedAmount`, or, with `CreditExcess`, added to the payer's [customer credit](#customer-credit) (`TransactionEvent.CreditedAmount`, `TransactionCommandResult.CreditedAmount`). |
+| `ApplyCreditAsync(id, amount, note)` | Pays toward the transaction with the payer's [customer credit](#customer-credit): spends the amount, or what is owed when that is less, and records it as a payment with the settlement method `customer-credit`. Refused when the credit is less than the amount. |
 | `MarkPaidAsync(id, note)` | Records what is still owed as an offline payment and marks the transaction `Paid`. |
 | `CancelAsync(id, reason)` | Cancels a collectable transaction; the reason goes to `TransactionEvent.Reason` and `ITransactionEventHandler.CanceledAsync`. |
 | `AdjustAsync(id, amount, kind, reason)` | Lowers what is owed without money being received. `kind` is a `TransactionAdjustmentKind`: `Discount`, `Waiver`, `Credit` or `WriteOff`. Adds to `Transaction.AmountAdjusted` and records a `TransactionEventType.Adjusted` event (`Amount`, `AdjustmentKind`, `Reason`). An adjustment can never exceed `OutstandingAmount`. When nothing is left to pay, the transaction becomes `Paid` with `SettlementMethod = "adjusted"`, so it is never reminded. No payment handler runs, because no money moved. Adjustments are printed as negative lines on the invoice and noted on each receipt. |
@@ -197,6 +246,17 @@ refund of a whole payment that settled several transactions is split back over t
 | `ChargeSavedPaymentMethodAsync(id, savedPaymentMethodId)` | Charges what is still owed to a card the transaction's owner kept (`ISavedPaymentMethodStore`, see [Kept payment methods](checkout.md#kept-payment-methods)), without the owner present. See [Charging a kept card](#charging-a-kept-card). Needs the **Checkout** feature and a provider that can charge saved payment methods. |
 
 Each command returns a `TransactionCommandResult`: `Succeeded`, `Errors` (messages ready to show), the `Transaction` as saved (`null` when no transaction has that id), the timeline `Event` it recorded, the `Refunds` it requested, and, for a charge of a kept card, its `ChargeStatus`. A command takes a distributed lock on the transaction (`IDistributedLock`), loads it, checks the transaction accepts the command (`TransactionStateMachine`), saves it through `ITransactionManager` (which raises the lifecycle events) and commits the session before releasing the lock, so concurrent commands never overwrite each other; a conflict comes back as an error. Payment handlers run after that commit. The service does not check permissions; the caller decides who may run a command. The signed-in user is recorded as the event's actor.
+
+### Customer credit
+
+No money is left unaccounted. What a payer pays above a balance can be kept as their **customer credit**, and their credit pays toward a balance like any other payment. The credit is the payer's [store credit](customers.md#store-credit): the Customers **Store Credit** feature registers `ICustomerCreditService` (Customers.Abstractions, `StoreCreditCustomerCreditService`), and Transactions offers credit only when it is registered.
+
+- **Who can hold it.** Every payer a debt can have except a guest: a user (`PartyKinds.User`, on their customer record, made the first time they are given credit), a customer record (`PartyKinds.Customer`), and any other party, such as a business account (`PartyKinds.Account`), on store credit of its own keyed by the party. `ICustomerCreditService.CanHold(party)` says so, and the transaction page shows the payer's credit for an account payer too. Staff apply credit through **Manage transactions**; a customer may spend a party's credit themselves only with billing access to it (`ICustomerCreditService.CanSpendAsync`: their own, or an account they are an admin of).
+- **Excess to credit.** `RecordPaymentAsync` with `TransactionPaymentRequest.CreditExcess` keeps what was received above the balance as the payer's credit, and refuses the payment at once when the payer can't hold credit or the feature is off. The payment keeps `CreditedAmount`. On **Record payment**, the checkbox **Keep anything above what is owed as customer credit** sets it; without it, the console warns that the rest was not recorded.
+- **Applying credit.** `ApplyCreditAsync` spends the credit, never more than the payer has, and records a payment with `TransactionsConstants.SettlementMethods.CustomerCredit`. The transaction page shows **Apply customer credit** when the payer has credit in the transaction's currency.
+- **Taking back.** Taking back a payment made with credit gives the credit back; taking back a payment whose excess was kept as credit takes that credit back, and is refused when it was spent already.
+- **The entry first, the credit after it.** A command saves its timeline entry first, as the durable intent: the entry carries the change in `TransactionEvent.CreditChange` with `CreditState = Pending` (and the transaction index flags it in `PendingCredit`). The credit is then changed with the entry's reference (`Transaction:{transactionId}:{entryId}`, stored as `StoreCreditActivity.Reference`), so repeating it changes nothing, and the entry is marked `Settled`. Nothing is undone and the transaction is saved once.
+- **Finishing what a stop left.** An entry a stopped process left `Pending` is completed the next time a command loads the transaction, and by the **Transaction Payment Reminders** background task, which completes up to 100 such transactions each run. `ITransactionCommandService.ReconcileCreditAsync(id)` completes them on demand. A spend that finds too little credit (it was spent elsewhere meanwhile) takes its payment back with a reversing entry. A change that can't be made (the feature was turned off, or the payer can't hold credit) marks the entry `Failed` and records a payment issue of kind `PaymentIssueKinds.CreditNotReconciled` through `IPaymentIssueRecorder` for someone to handle. What did not finish with the command comes back in `TransactionCommandResult.Warnings`, which the transaction page shows.
 
 ```csharp
 public sealed class RegistrationPayments
@@ -276,10 +336,18 @@ The command spends a card without its owner present, so only server code may cal
 | `StatusChangedAsync(transaction, previous, current)` | After `ITransactionManager.UpdateAsync` saved a status different from the one the transaction was loaded with (or last saved with). Once per such save; a save that leaves the status as it was raises nothing, so reminders, notes and invoice numbers never raise it. |
 | `CanceledAsync(transaction, reason)` | Right after `StatusChangedAsync` reported a change to `Canceled`. The reason is the `TransactionEvent.Reason` of the newest `Canceled` timeline event, or `null` when none was given. |
 | `BecameOverdueAsync(transaction)` | Once per transaction, by the reminder sweep, the first time it finds the transaction `Outstanding` or `PartiallyPaid` with money owed after the day it was due (a payment due today is not overdue yet). `Transaction.BecameOverdueUtc` records that it was raised, so it is never raised twice. |
+| `RefundedAsync(transaction, refund)` | Once per refund, after the refund was recorded on the timeline (`refund` is that `Refunded` entry, with the amount this transaction gave back). A refund reported twice by the provider raises it once. |
+| `ReversedAsync(transaction, reversal, reversed)` | Once, after a payment recorded by hand or an adjustment was taken back with a reversing entry (`reversal`, with the reason; `reversed` is the entry taken back), so what it paid or took off is owed again. |
+
+`RefundedAsync` and `ReversedAsync` have default implementations that do nothing, so a handler that implements `ITransactionEventHandler` directly and was written before them keeps compiling.
 
 Every place a transaction changes goes through the manager, so the events cover the console (**Cancel**, **Mark paid**, **Record payment**), an online settlement, a refund that brings what was kept to zero (`Refunded`), an installment charge that was declined (`Failed`, then `Outstanding` once no retries are left, or `Paid` when a retry goes through), and a canceled installment plan. The manager diffs the status itself, so a consumer no longer needs a catalog handler that re-reads every save.
 
-Handlers run after the save, and they are resolved when the event is raised (not injected into the manager), so a handler may depend on `ITransactionManager`. A handler that throws is logged and does not undo the change or stop the other handlers, the same as `ITransactionPaymentHandler`. The overdue sweep is part of the **Transaction Reminders** feature's background task (`TransactionReminderBackgroundTask`, every 6 hours). It runs even when **Enabled** is turned off in the reminder settings, which only stops the reminders themselves.
+Handlers run after the save, and they are resolved when the event is raised (not injected into the manager), so a handler may depend on `ITransactionManager`. A handler that throws is logged and does not undo the change or stop the other handlers, the same as `ITransactionPaymentHandler`. The overdue sweep is part of the **Transaction Reminders** feature's background task (`TransactionReminderBackgroundTask`, every hour). It runs even when **Enabled** is turned off in the reminder settings, which only stops the reminders themselves.
+
+`AutoChargeDeclinedAsync(transaction, reason, nextAttemptUtc)` is raised when a scheduled charge was declined and a retry
+is set, so the module that owns the debt records it and tells the customer (installment plans, booking balances); a
+charge that could not be made at all is retried within the hour without it. `AutoChargeAbandonedAsync(transaction, reason)` is raised once when `ISavedPaymentMethodChargeService` stops charging a saved card and hands the transaction to its owner. It does nothing by default.
 
 ```csharp
 public sealed class RegistrationPaymentStatusHandler : TransactionEventHandlerBase
@@ -300,6 +368,48 @@ public sealed class RegistrationPaymentStatusHandler : TransactionEventHandlerBa
 services.AddScoped<ITransactionEventHandler, RegistrationPaymentStatusHandler>();
 ```
 
+### Message templates
+
+Every message about a transaction has a kind, so a store writes its own template of each one under **Settings → Commerce → Emails** without changing the others. Each template reads the transaction as `{{ Transaction }}` and these values:
+
+| Kind | Sent when | Feature |
+| --- | --- | --- |
+| `payment-request` | The first request to pay a debt: **Send invoice** on the transaction, or `ITransactionCommandService.SendInvoiceAsync`. | Transaction Reminders |
+| `payment-reminder` | A reminder before, on or after the due date, from the sweep or sent by hand. | Transaction Reminders |
+| `payment-receipt` | After every payment. | Send Payment Receipts |
+| `payment-refund` | After every refund. | Send Payment Receipts |
+
+The request and the reminders pass `{{ PayUrl }}` (the link that pays it without signing in, when one could be made), `{{ DocumentUrl }}` (the printable invoice, when the payer can open one), `{{ DocumentNumber }}`, `{{ AmountDue }}` (formatted with its currency) and `{{ DueDate }}` (a short date in the site's time zone). The names are constants on `TransactionEmailKinds`. Before this release the request used the reminder template.
+
+### Workflows
+
+With **Workflows** on, the ledger starts these events, all in the **Transactions** category: **Transaction Created**, **Transaction Payment Recorded**, **Transaction Settled** (nothing more is owed), **Transaction Overdue**, **Transaction Canceled**, **Transaction Refunded** and **Transaction Entry Taken Back** (a payment recorded by hand or an adjustment was taken back; its input adds `Reason`, `ReversedEventId` and `ReversedEventType`). Each can be limited to some sources and some reference types (comma-separated, without regard to case). The workflow input holds `TransactionId`, `Title`, `Source`, `Status`, `Currency`, `TotalAmount`, `AmountPaid`, `AmountAdjusted`, `AmountRefunded`, `OutstandingAmount`, `OwnerId`, `PayerKind`, `PayerId`, `ReferenceType`, `ReferenceId`, `InvoiceNumber` and `DueUtc`; a payment or a refund also gives `EventId`, `Amount`, `Method` and `Reference`, and a cancellation `Reason`. The events start after the request's work is saved, so a workflow that runs a command on the same transaction never waits on the lock of the command that raised the event.
+
+Three tasks run ledger commands: **Record Transaction Payment** (amount, payment method, reference, note), **Cancel Transaction** (reason) and **Adjust Transaction** (amount, kind `Discount`, `Waiver`, `Credit` or `WriteOff`, reason). Their fields are Liquid. Each ends with `Done`, `NotFound` or `Failed`, and writes the transaction and the command's `Errors` to the output named `Transaction` (or the name you give). The tasks have schemas for the CrestApps Recipes feature.
+
+### Webhooks
+
+With **Commerce Webhooks** on, the ledger publishes `transaction.created`, `transaction.payment-recorded`, `transaction.settled`, `transaction.overdue`, `transaction.canceled`, `transaction.refunded` and `transaction.entry-reversed` (`TransactionsConstants.WebhookEvents`). The payload holds `transaction` (its id, title, source, status, currency, amounts, payer, reference, invoice number and dates) and, for a payment, a refund or a reversal, `entry` (the timeline entry, with its reason and document number); a reversal also has `reversedEntry`, the entry taken back, so a system that mirrored the payment learns it was withdrawn. Each delivery has a stable event id built from the transaction and the entry, so a receiver can drop a repeat.
+
+### Adding a card to the transaction page
+
+The administration page of a transaction is built by the display drivers of `Transaction` for the display type `TransactionsConstants.DisplayTypes.DetailAdmin` (`DetailAdmin`). The Transactions module places the summary (`Content:5`), the timeline (`Content:20`) and the actions (`Actions:5`). Another module adds a card with its own driver, such as the document a transaction was posted for:
+
+```csharp
+public sealed class InvoiceTransactionDisplayDriver : DisplayDriver<Transaction>
+{
+    public override IDisplayResult Display(Transaction transaction, BuildDisplayContext context)
+    {
+        if (context.DisplayType != TransactionsConstants.DisplayTypes.DetailAdmin || transaction.ReferenceType != "Invoice")
+        {
+            return null;
+        }
+
+        return View("InvoiceTransactionCard_DetailAdmin", transaction).Location(TransactionsConstants.DisplayTypes.DetailAdmin, "Content:10");
+    }
+}
+```
+
 ## Using the module
 
 ### Customer statement — "My Transactions"
@@ -313,7 +423,7 @@ The same statement, and the customer's invoices and receipts, are also available
 Users with the **Manage transactions** permission get a **Commerce → Transactions** report. It searches by title, and its list header filters by status (including an *outstanding* view) and by **source**, from the sources registered by the enabled features. Each row shows the owner, source, total, outstanding balance and due date as badges. Opening a transaction reveals its full timeline and the management actions, each of which asks for confirmation before it changes anything:
 
 - **Send reminder** — deliver a payment reminder now. Available only when the **Transaction Reminders** feature is enabled.
-- **Record payment** — record a full or partial payment received offline, with an optional reference.
+- **Record payment** — record a full or partial payment received offline, with an optional reference, how it arrived and when. The payment method field suggests the common methods; one picked or typed by its label or key is stored as its stable key from `TransactionsConstants.OfflinePaymentMethods` (`cash`, `check`, `bank-transfer`, `card-terminal`, `other`), so reports and webhooks group payments the same in every language, and any other text is kept as typed. The timeline shows the localized label.
 - **Mark paid** — settle the remaining balance offline.
 - **Adjust or waive** — lower what is owed by a discount, waiver, credit or write-off, never more than is outstanding.
 - **Send invoice** — send the invoice now, with its pay link. Available only when the **Transaction Reminders** feature is enabled, and not for a transaction collected automatically.
@@ -339,8 +449,8 @@ The admin routes keep working and are named too: `AdminStatement` (`Admin/my-tra
 The admin pages and the site pages build their documents through the same `ITransactionCustomerPageService`, so they apply the same rules:
 
 - A visitor who is not signed in is sent to the sign-in page by the site pages (the admin redirects them as it does for any admin page).
-- The statement needs **View own transactions** and lists only transactions owned by the viewer's account (`OwnerKind` `Authenticated` and `OwnerId` equal to the user's identifier).
-- An invoice or a receipt needs **View own transactions** or **Manage transactions**; neither answers `403`. A customer sees only a transaction their account owns. A guest transaction is never shown to an account, even one that shares its identifier: a guest reaches their invoice through the signed [pay link](#invoices-and-pay-links). A user with **Manage transactions** sees any invoice or receipt, and the model's `IsAdministrator` is `true`.
+- The statement needs **View own transactions** and lists the transactions the viewer may see as their own, decided by `ITransactionVisibilityService` (Transactions.Abstractions): those their account owns (`OwnerKind` `Authenticated` and `OwnerId` equal to the user's identifier) and those whose payer is a party they have billing access to (`IPartyMembershipService` with `PartyAccess.Billing`): their customer record, or a business account they are an **admin** of. An account admin sees, opens and pays all of the account's debts, whoever placed the order; a plain member (a buyer) sees only the transactions they own, also those billed to the account. A guest payer is never matched. See [Access levels](parties.md#access-levels-member-and-billing).
+- An invoice or a receipt needs **View own transactions** or **Manage transactions**; neither answers `403`. A customer sees only a transaction `ITransactionVisibilityService` lets them see: one their account owns or one owed by a party they have billing access to. A guest transaction is never shown to an account, even one that shares its identifier: a guest reaches their invoice through the signed [pay link](#invoices-and-pay-links). A user with **Manage transactions** sees any invoice or receipt, and the model's `IsAdministrator` is `true`.
 - Someone else's transaction, an invoice that was never issued (no `InvoiceNumber`), an event that is not a recorded payment, and a site without the Receipts module all answer `404`, so identifiers cannot be probed.
 
 ### Shapes
@@ -432,6 +542,57 @@ OrchardCore__CrestApps__Transactions__CustomerPages__LinkTarget=Site
 | `LinkTarget` | `Admin` (the `Admin/...` customer pages) or `Site` (the `my-transactions/...` pages in the site theme) | `Admin` |
 
 A module can also set it in code with `services.Configure<TransactionCustomerPagesOptions>(options => options.LinkTarget = TransactionCustomerLinkTarget.Site)` (`CrestApps.OrchardCore.Transactions.Core`). See also [Configuration](../configuration.md#transaction-customer-pages).
+
+## Payment terms
+
+The **Payment Terms** feature (`CrestApps.OrchardCore.Transactions.PaymentTerms`) keeps the store's payment terms, a small catalog that invoices, account terms, pay-later purchases and work orders read instead of storing a bare number of days. Staff keep it under **Commerce > Payment terms** (permission **Manage payment terms**).
+
+A `PaymentTerm` (`CrestApps.OrchardCore.Transactions.Abstractions`, namespace `CrestApps.OrchardCore.Transactions.Models`) has a `Name`, a `Kind` and its numbers, an optional early-payment discount and `Enabled`:
+
+| `Kind` | Due on |
+| --- | --- |
+| `DueOnReceipt` | The issue date. |
+| `NetDays` | The issue date plus `Days`. |
+| `EndOfMonth` | The last day of the issue month plus `Days`. |
+| `DayOfNextMonth` | Day `DayOfMonth` of the month after the issue month, or its last day when the month is shorter. |
+
+`DiscountPercent` with `DiscountDays` offers a discount for paying within that many days of the issue date, the last day included.
+
+Read the terms through `IPaymentTermManager` (a catalog manager with `GetEnabledAsync`) and turn one into dates with `IPaymentTermCalculator`:
+
+```csharp
+var term = await paymentTermManager.FindByIdAsync(termId);
+var dueDate = paymentTermCalculator.GetDueDate(term, issueDate);
+var discount = paymentTermCalculator.GetEarlyPaymentDiscount(term, issueDate, total, currency);
+```
+
+Both work on `DateOnly` local dates in the site's time zone; convert the due date to a UTC time only when storing it on the ledger (`Transaction.DueUtc` is the end of the due date in the site's zone). The discount is rounded to the currency with `CurrencyScale`. A due date is never before the issue date.
+
+The terms travel with recipes and deployment plans: the step is `PaymentTerms`, with the terms under `Terms`, matched by `ItemId`:
+
+```json
+{
+  "name": "PaymentTerms",
+  "Terms": [
+    { "ItemId": "4paymentterm00000000000001", "Name": "Net 30", "Kind": "NetDays", "Days": 30, "Enabled": true },
+    { "ItemId": "4paymentterm00000000000002", "Name": "2/10 net 30", "Kind": "NetDays", "Days": 30, "DiscountPercent": 2, "DiscountDays": 10, "Enabled": true }
+  ]
+}
+```
+
+The recipe step and the deployment step have schemas for the CrestApps Recipes feature.
+
+## Keeping a party out of reminders and late fees
+
+`PartyCollectionSettings` (Transactions.Abstractions; `PartyCollectionSettingsIndex` in the `Transactions` collection, migration step 6) is kept once per party: **reminders paused** and **late fees exempt**. `IPartyCollectionSettingsService` gets and saves it, and `GetExclusionsAsync` reads the excluded parties for a sweep (`PartyCollectionExclusions.AreRemindersPaused(transaction)` for the owner user or the payer, `IsLateFeeExempt(party)`). `PartyCollectionSettingsBillingProfileSource` puts both into the party's billing profile (`PartyBillingProfile.RemindersPaused` and `LateFeesExempt`) for any kind of party: a billing profile source of kind `PartyKinds.Any` (`*`) contributes to every party. Nothing is copied onto debts or invoices; the reminder sweep and Invoicing's late fees read it when they run. An account's page (Overview section, with Accounts) and a customer's page (with Customers) have a **Reminders and late fees** card (**Manage transactions**) to change it.
+
+## Moving the ledger between sites
+
+With **Deployment** enabled, the **Transactions** deployment step exports the whole ledger in one `Transactions` recipe step: every transaction with its timeline (`Events`), and, while Checkout keeps them, the payment attempts and refunds, and the payment issues, under `Transactions`, `PaymentAttempts`, `PaymentRefunds` and `PaymentIssues`. Each record carries everything but the storing site's document id, including when it was made and last changed.
+
+`TransactionLedgerImporter` (Transactions.Core) imports the step. Records are written to their stores as they are, never through the ledger's commands: nothing is posted, numbered, e-mailed or announced to the event handlers, workflows or webhooks. A record the site already has (by `ItemId`) is kept as it is, so a recipe never rewrites a ledger. Payment attempts and refunds need the Checkout feature on the importing site; without it the step reports an error and imports the rest. `TransactionLedgerExporter.ExportAsync(ids)` writes the same step for a set of transactions with the attempts made toward them and their refunds: the Invoicing deployment step uses it to carry the transactions of the invoices it exports. With CrestApps Recipes, the recipe and deployment steps have schemas.
+
+Receipt numbers on imported payments are kept; the importing site's receipt series does not know them.
 
 ## Registering a transaction source
 
@@ -567,6 +728,7 @@ The outstanding transactions are those with the status `Outstanding` or `Partial
 | **Manage transaction settings** | Configure the transaction reminder settings. |
 | **View own transactions** | View and pay your own transactions. |
 | **Manage payments and refunds** | View the payment and refund ledgers and issue a refund. It is deliberately separate from managing transactions, because giving money back is the one action in the suite that cannot be undone and should not come free with the ability to read the outstanding report. |
+| **Manage payment terms** | Create, change and delete the payment terms (Payment Terms feature). |
 
 ## Enabling the feature
 
@@ -576,7 +738,7 @@ Add the package to your Orchard Core project:
 dotnet add package CrestApps.OrchardCore.Transactions
 ```
 
-Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Transactions**. Enabling it also enables the **[Commerce](commerce)** feature it depends on, which owns the shared Commerce admin menu and icon.
+Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Transactions**. Enabling it also enables the **[Commerce Foundation](commerce#the-commerce-foundation-and-commerce-features)** feature it depends on, which owns the shared Commerce admin menu and icon; it does not turn on the store's setup guide.
 
 Enable **[Checkout](checkout)** as well if you want customers to settle outstanding balances online. To send manual and scheduled payment reminders, enable the **Transaction Reminders** feature (`CrestApps.OrchardCore.Transactions.Notification`); it depends on the OrchardCore **[Notifications](https://docs.orchardcore.net/en/latest/reference/modules/Notifications/)** feature, which is enabled automatically as a dependency.
 

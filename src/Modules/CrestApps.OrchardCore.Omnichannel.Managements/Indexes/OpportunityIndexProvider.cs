@@ -14,6 +14,8 @@ internal sealed class OpportunityIndexProvider : IndexProvider<ContentItem>
     {
         context
             .For<OpportunityIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(CreateIndex);
     }
 

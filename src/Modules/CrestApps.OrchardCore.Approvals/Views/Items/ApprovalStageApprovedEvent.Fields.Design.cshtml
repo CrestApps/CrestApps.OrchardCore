@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Approvals.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ApprovalStageApprovedEvent>
+
+<header><h4><i class="fa-solid fa-forward-step" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Approval Stage Approved"])</h4></header>
+<p class="hint">@T["Starts when enough approvers approve a stage that isn't the last, and the next stage starts. Stage is the new stage and ApproverUserNames its approvers. The workflow's correlation id is the request id. Input: RequestId, SubjectKind, SubjectId, Title, PolicyId, PolicyTitle, Status, Change, RequesterName, ApproverUserNames (comma separated, for Notify User Task), Decider, Note, DueUtc, Stage, Amount and Currency."]</p>
+@if (!string.IsNullOrEmpty(Model.Activity.ApprovalType))
+{
+    <p class="small mb-0">@T["Type: {0}", Model.Activity.ApprovalType]</p>
+}

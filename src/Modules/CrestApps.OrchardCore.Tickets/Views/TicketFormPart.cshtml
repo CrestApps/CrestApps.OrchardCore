@@ -1,0 +1,78 @@
+@using CrestApps.OrchardCore.Tickets.WebForm
+@model TicketFormViewModel
+
+<section id="ticket-form-@Model.WidgetId" class="ticket-form my-4">
+    @if (!Model.Ready)
+    {
+        <p class="text-body-secondary">@T["This form isn't set up yet."]</p>
+    }
+    else if (!string.IsNullOrEmpty(Model.SentNumber))
+    {
+        <div class="alert alert-success" role="status">@Model.SuccessMessage</div>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(Model.Error))
+        {
+            <div class="alert alert-warning" role="alert">@Model.Error</div>
+        }
+
+        <form method="post" asp-route="TicketFormSubmit" asp-route-widgetId="@Model.WidgetId" asp-route-returnUrl="@(Context.Request.PathBase + Context.Request.Path)" class="no-multisubmit">
+            @if (!Model.SignedIn)
+            {
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="ticket-form-name-@Model.WidgetId" class="form-label">@T["Your name"]</label>
+                        <input id="ticket-form-name-@Model.WidgetId" name="name" class="form-control" maxlength="200" autocomplete="name" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="ticket-form-email-@Model.WidgetId" class="form-label">@T["Your e-mail"]</label>
+                        <input id="ticket-form-email-@Model.WidgetId" name="email" type="email" class="form-control" maxlength="254" autocomplete="email" required />
+                    </div>
+                </div>
+            }
+
+            @if (Model.Categories.Count > 0)
+            {
+                <div class="mb-3">
+                    <label for="CategoryId" class="form-label">@T["What is it about?"]</label>
+                    @await DisplayAsync(await New.TaxonomyCascadingPicker(InputName: "CategoryId", InputId: "CategoryId", Choices: Model.Categories, Required: Model.CategoryRequired, EmptyText: T["Choose one"].Value))
+                </div>
+            }
+
+            @if (Model.AsksForSubject)
+            {
+                <div class="mb-3">
+                    <label for="ticket-form-subject-@Model.WidgetId" class="form-label">@T["Subject"]</label>
+                    <input id="ticket-form-subject-@Model.WidgetId" name="subject" class="form-control" maxlength="200" required />
+                </div>
+            }
+
+            @* The ticket type's own form: its title (the subject) and the fields customers fill in, with their rules. *@
+            @if (Model.Editor is not null)
+            {
+                Model.Editor.Properties.Remove("Actions");
+                @await DisplayAsync(Model.Editor)
+            }
+
+            <div class="mb-3">
+                <label for="ticket-form-body-@Model.WidgetId" class="form-label">@T["How can we help?"]</label>
+                <textarea id="ticket-form-body-@Model.WidgetId" name="body" class="form-control" rows="5" required></textarea>
+            </div>
+
+            @* A trap for robots: hidden from people and screen readers. *@
+            <div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
+                <label>@T["Leave this empty"] <input type="text" name="@TicketFormGuard.TrapFieldName" tabindex="-1" autocomplete="off" /></label>
+            </div>
+
+            @if (Model.ShowChallenge)
+            {
+                <div class="mb-3"><shape type="ReCaptcha" /></div>
+            }
+
+            <partial name="_TicketProtectedInputs" />
+
+            <button type="submit" class="btn btn-primary">@T["Send"]</button>
+        </form>
+    }
+</section>

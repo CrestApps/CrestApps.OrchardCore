@@ -40,8 +40,7 @@ internal sealed class DocumentNumberSequence : INumberSequence, IAsyncDisposable
 
         await HoldLockAsync(series);
 
-        var records = await _session.Query<NumberSequenceRecord>().ListAsync(cancellationToken);
-        var record = records.FirstOrDefault(candidate => string.Equals(candidate.Series, series, StringComparison.Ordinal));
+        var record = await FindAsync(series, cancellationToken);
 
         if (record is null)
         {
@@ -60,6 +59,39 @@ internal sealed class DocumentNumberSequence : INumberSequence, IAsyncDisposable
         await _session.SaveAsync(record, checkConcurrency: true, cancellationToken: cancellationToken);
 
         return record.Last;
+    }
+
+    public async Task<long?> GetLastAsync(string series, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(series);
+
+        var record = await FindAsync(series, cancellationToken);
+
+        return record?.Last;
+    }
+
+    public async Task SetNextAsync(string series, long next, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(series);
+        ArgumentOutOfRangeException.ThrowIfLessThan(next, 1);
+
+        await HoldLockAsync(series);
+
+        var record = await FindAsync(series, cancellationToken) ?? new NumberSequenceRecord
+        {
+            Series = series,
+        };
+
+        record.Last = next - 1;
+
+        await _session.SaveAsync(record, checkConcurrency: true, cancellationToken: cancellationToken);
+    }
+
+    private async Task<NumberSequenceRecord> FindAsync(string series, CancellationToken cancellationToken)
+    {
+        var records = await _session.Query<NumberSequenceRecord>().ListAsync(cancellationToken);
+
+        return records.FirstOrDefault(candidate => string.Equals(candidate.Series, series, StringComparison.Ordinal));
     }
 
     private async Task HoldLockAsync(string series)

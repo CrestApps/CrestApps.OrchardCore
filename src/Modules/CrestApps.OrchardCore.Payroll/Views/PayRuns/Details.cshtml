@@ -1,0 +1,299 @@
+@model PayRunDetailsViewModel
+@using System.Globalization
+@using CrestApps.OrchardCore.Currencies
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@{
+    var run = Model.Run;
+    string Money(decimal value) => string.IsNullOrEmpty(Model.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.FormatForDisplay(value, Model.Currency) + " " + Model.Currency;
+    var blockers = Model.Issues.Count(issue => issue.Issue.IsBlocker);
+    string StatusText(PayRunStatus status) => status switch
+    {
+        PayRunStatus.Draft => T["Draft"].Value,
+        PayRunStatus.Calculating => T["Calculating"].Value,
+        PayRunStatus.Calculated => T["Calculated"].Value,
+        PayRunStatus.PendingApproval => T["Waiting for approval"].Value,
+        PayRunStatus.Approved => T["Approved"].Value,
+        PayRunStatus.Processing => T["Processing"].Value,
+        PayRunStatus.Paid => T["Paid"].Value,
+        PayRunStatus.PartiallyPaid => T["Partly paid"].Value,
+        PayRunStatus.Failed => T["Failed"].Value,
+        _ => T["Cancelled"].Value,
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="PayrollPayRunsDetails" title="@T["Pay run {0}", run.Number]">
+        <breadcrumb-item id="PayrollPayRuns" action="Index" controller="PayRuns" area="CrestApps.OrchardCore.Payroll">@T["Pay runs"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card mb-3">
+    <div class="card-header d-flex align-items-center">
+        <span class="me-auto">@T["{0} · {1}", Model.EmployerName, run.Type]</span>
+        <span class="badge @(run.Status is PayRunStatus.Approved or PayRunStatus.Paid ? "text-bg-success" : "ta-badge") fw-normal">@StatusText(run.Status)</span>
+    </div>
+    <div class="card-body">
+        <p class="mb-1">@T["Period {0} to {1}, paid {2}.", run.PeriodStart.ToString("d", CultureInfo.CurrentCulture), run.PeriodEnd.ToString("d", CultureInfo.CurrentCulture), run.PayDate.ToString("d", CultureInfo.CurrentCulture)]</p>
+        @if (!string.IsNullOrEmpty(Model.ScheduleName))
+        {
+            <p class="mb-1 text-muted">@T["Pay schedule: {0}", Model.ScheduleName]</p>
+        }
+        @if (run.CalculatedUtc is { } calculated)
+        {
+            <p class="mb-1 text-muted">@T["Calculated {0} by {1}.", (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(calculated, DateTimeKind.Utc))).DateTime.ToString("g", CultureInfo.CurrentCulture), run.PreparedBy ?? string.Empty]</p>
+        }
+        @if (!string.IsNullOrEmpty(Model.ApprovalStatus))
+        {
+            <p class="mb-0">@T["Approval: {0}.", Model.ApprovalStatus] @if (!string.IsNullOrEmpty(Model.ApprovalUrl)) { <a href="@Model.ApprovalUrl">@T["Open the approval request"]</a> }</p>
+        }
+    </div>
+</div>
+
+@if (Model.CanDecide)
+{
+    <div class="card mb-3 border-success">
+        <div class="card-header">@T["Your approval"]</div>
+        <div class="card-body">
+            <form asp-action="Decide" asp-route-id="@run.ItemId" method="post">
+                <div class="mb-2">
+                    <label for="decide-note" class="form-label">@T["Note"]</label>
+                    <input id="decide-note" name="note" class="form-control" />
+                </div>
+                <button type="submit" name="decision" value="Approve" class="btn btn-success">@T["Approve"]</button>
+                <button type="submit" name="decision" value="Reject" class="btn btn-outline-danger">@T["Reject"]</button>
+            </form>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrEmpty(Model.DecideRefusal))
+{
+    <div class="alert alert-info">@Model.DecideRefusal</div>
+}
+
+@if (run.Status != PayRunStatus.Draft && run.Status != PayRunStatus.Canceled)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Totals"]</div>
+        <div class="card-body">
+            <div class="row row-cols-2 row-cols-md-4 g-2">
+                <div><div class="text-muted small">@T["Statements"]</div><div>@run.Totals.Statements</div></div>
+                <div><div class="text-muted small">@T["Gross"]</div><div>@Money(run.Totals.Gross)</div></div>
+                <div><div class="text-muted small">@T["Employees' taxes"]</div><div>@Money(run.Totals.EmployeeTaxes)</div></div>
+                <div><div class="text-muted small">@T["Deductions"]</div><div>@Money(run.Totals.Deductions)</div></div>
+                <div><div class="text-muted small">@T["Net pay"]</div><div class="fw-bold">@Money(run.Totals.Net)</div></div>
+                <div><div class="text-muted small">@T["Employer's taxes"]</div><div>@Money(run.Totals.EmployerTaxes)</div></div>
+                <div><div class="text-muted small">@T["Employer contributions"]</div><div>@Money(run.Totals.EmployerContributions)</div></div>
+                <div><div class="text-muted small">@T["Cash needed"]</div><div class="fw-bold">@Money(run.Totals.CashNeeded)</div></div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (run.Status is PayRunStatus.Paid or PayRunStatus.PartiallyPaid)
+{
+    // Banking sends what processing handed it: deposits wait to be batched into a bank file and checks to be printed.
+    // Each link shows only while its Banking feature is on (its route exists).
+    var disbursementsUrl = Url.RouteUrl("DisbursementsIndex", new { Status = "Pending" });
+    var checksUrl = Url.RouteUrl("ChecksIndex", new { Status = "Issued" });
+
+    if (disbursementsUrl is not null || checksUrl is not null)
+    {
+        <div class="card mb-3">
+            <div class="card-header">@T["Next: send the pay"]</div>
+            <div class="card-body">
+                <p class="mb-2">@T["Deposits wait to be batched into a bank file, and checks wait in the check register to be printed."]</p>
+                @if (disbursementsUrl is not null)
+                {
+                    <a class="btn btn-sm btn-outline-primary me-2" href="@disbursementsUrl"><i class="fa-solid fa-building-columns me-1" aria-hidden="true"></i>@T["Batch the deposits"]</a>
+                }
+                @if (checksUrl is not null)
+                {
+                    <a class="btn btn-sm btn-outline-primary" href="@checksUrl"><i class="fa-solid fa-money-check me-1" aria-hidden="true"></i>@T["Print the checks"]</a>
+                }
+            </div>
+        </div>
+    }
+}
+
+@if (Model.Issues.Count > 0)
+{
+    <div class="alert @(blockers > 0 ? "alert-warning" : "alert-info")">
+        @if (blockers > 0)
+        {
+            <strong>@T.Plural(blockers, "1 blocker: fix it and calculate again before submitting.", "{0} blockers: fix them and calculate again before submitting.")</strong>
+        }
+        <ul class="mb-0">
+            @foreach (var (issue, staffName) in Model.Issues)
+            {
+                <li>@(issue.IsBlocker ? "⛔ " : string.Empty)@(staffName is null ? string.Empty : staffName + ": ")@issue.Message</li>
+            }
+        </ul>
+    </div>
+}
+
+@if (Model.Questions.Count > 0)
+{
+    <div class="alert alert-warning">
+        <strong>@T.Plural(Model.Questions.Count, "1 employee asked about their pay:", "{0} employees asked about their pay:")</strong>
+        <ul class="mb-0">
+            @foreach (var (staffName, note) in Model.Questions)
+            {
+                <li>@staffName: @note</li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="card mb-3" id="inputs">
+    <div class="card-header">@T["Inputs of this run"]</div>
+    <div class="card-body">
+        <p class="hint">@T["Hours and amounts for this run only, such as a bonus. Hours from the time clock and other sources are read when the run is calculated. A file of inputs can be saved with a data pipeline and its Save pay inputs step."]</p>
+        @if (Model.Inputs.Count > 0)
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Person"]</th>
+                            <th scope="col">@T["Pay code"]</th>
+                            <th scope="col" class="text-end">@T["Hours"]</th>
+                            <th scope="col" class="text-end">@T["Amount"]</th>
+                            <th scope="col">@T["Note"]</th>
+                            <th scope="col"><span class="visually-hidden">@T["Actions"]</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (input, staffName, code) in Model.Inputs)
+                        {
+                            <tr>
+                                <td>@staffName</td>
+                                <td class="font-monospace">@code</td>
+                                <td class="text-end">@input.Hours?.ToString("0.##", CultureInfo.CurrentCulture)</td>
+                                <td class="text-end">@(input.Amount is { } amount ? Money(amount) : null)</td>
+                                <td class="small">@input.Note <span class="text-muted">@input.Origin</span></td>
+                                <td class="text-end">
+                                    @if (Model.CanPrepare && run.IsOpen)
+                                    {
+                                        <form asp-action="DeleteInput" asp-route-id="@run.ItemId" asp-route-inputId="@input.ItemId" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">@T["Remove"]</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        @if (Model.CanPrepare && run.IsOpen)
+        {
+            <form asp-action="AddInput" asp-route-id="@run.ItemId" method="post" class="row g-2 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label asp-for="NewInput.StaffMemberId" class="form-label">@T["Person"]</label>
+                    <select asp-for="NewInput.StaffMemberId" asp-items="Model.StaffOptions" class="form-select"><option value="">@T["Choose…"]</option></select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label asp-for="NewInput.PayCodeId" class="form-label">@T["Pay code"]</label>
+                    <select asp-for="NewInput.PayCodeId" asp-items="Model.CodeOptions" class="form-select"><option value="">@T["Choose…"]</option></select>
+                </div>
+                <div class="col-6 col-md-1">
+                    <label asp-for="NewInput.Hours" class="form-label">@T["Hours"]</label>
+                    <input asp-for="NewInput.Hours" class="form-control" inputmode="decimal" />
+                </div>
+                <div class="col-6 col-md-2">
+                    <label asp-for="NewInput.Amount" class="form-label">@T["Amount"]</label>
+                    <input asp-for="NewInput.Amount" class="form-control" inputmode="decimal" />
+                </div>
+                <div class="col-12 col-md-2">
+                    <label asp-for="NewInput.Note" class="form-label">@T["Note"]</label>
+                    <input asp-for="NewInput.Note" class="form-control" />
+                </div>
+                <div class="col-12 col-md-1">
+                    <button type="submit" class="btn btn-secondary w-100">@T["Add"]</button>
+                </div>
+                <div class="col-12">
+                    <details>
+                        <summary class="small">@T["A take-home amount, or an amount earned in earlier weeks"]</summary>
+                        <div class="row g-2 align-items-end mt-1">
+                            <div class="col-12 col-md-4">
+                                <div class="form-check">
+                                    <input asp-for="NewInput.IsNet" type="checkbox" class="form-check-input" />
+                                    <label asp-for="NewInput.IsNet" class="form-check-label">@T["The amount is what the person takes home"]</label>
+                                    <span class="hint dashed">@T["The gross is worked out so the taxes on it are paid too (a gross-up). One a person a run."]</span>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label asp-for="NewInput.EarnedFrom" class="form-label">@T["Earned from"]</label>
+                                <input asp-for="NewInput.EarnedFrom" type="date" class="form-control" />
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label asp-for="NewInput.EarnedTo" class="form-label">@T["Earned to"]</label>
+                                <input asp-for="NewInput.EarnedTo" type="date" class="form-control" />
+                            </div>
+                            <div class="col-12">
+                                <span class="hint">@T["For a bonus or commission earned in weeks already paid: the overtime of those weeks is paid again on the regular rate it raises."]</span>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Register"]</div>
+    <div class="card-body">
+        <admin-list name="PayrollPayRunStatements" context="Model.Statements"
+                    show-select-all="false"
+                    empty-message="@T["No statement yet: calculate the run."]">
+            <admin-list-list item-css-class="list-group-item" />
+            <admin-list-grid>
+                <admin-list-column name="Name" position="20" title="@T["Person"]" />
+                <admin-list-column name="Details" position="30" title="@T["Pay"]" width="auto" />
+                <admin-list-column type="Actions" title="@T["Actions"]" />
+            </admin-list-grid>
+        </admin-list>
+    </div>
+</div>
+
+@{
+    var canWork = Model.CanPrepare && run.IsOpen;
+    var canProcess = Model.CanProcess && run.Status is PayRunStatus.Approved or PayRunStatus.PartiallyPaid or PayRunStatus.Failed;
+}
+@if (canWork || canProcess)
+{
+    <form method="post" class="no-multisubmit">
+        <div class="action-bar-bottom">
+            @if (canProcess)
+            {
+                <a class="btn btn-success" href="@Url.Action("Process", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Process and pay"]" data-message="@T["Process the pay run? Its statements become final and net pay is paid: deposits go to the bank file and checks to the check register."]" data-ok-text="@T["Process and pay"]" data-ok-class="btn-primary">@(run.Status == PayRunStatus.Approved ? T["Process and pay"] : T["Pay what is left"])</a>
+            }
+            @if (canWork)
+            {
+                @if (run.Status is PayRunStatus.PendingApproval or PayRunStatus.Approved)
+                {
+                    @* An approval is for one calculation: calculating again withdraws it, so it asks first. *@
+                    <a class="btn btn-secondary" href="@Url.Action("Calculate", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Calculate again"]" data-message="@T["Calculate the run again? Its approval is withdrawn, and the run must be submitted for approval again."]" data-ok-text="@T["Calculate again"]" data-ok-class="btn-primary">@T["Calculate again"]</a>
+                }
+                else
+                {
+                    <button class="btn @(canProcess ? "btn-secondary" : "btn-primary")" type="submit" formaction="@Url.Action("Calculate", new { id = run.ItemId })">@T["Calculate"]</button>
+                }
+                @if (run.Status == PayRunStatus.Calculated)
+                {
+                    @if (Model.Questions.Count > 0)
+                    {
+                        <a class="btn btn-success@(blockers > 0 ? " disabled" : null)" aria-disabled="@(blockers > 0 ? "true" : null)" tabindex="@(blockers > 0 ? "-1" : null)" href="@Url.Action("Submit", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Submit for approval"]" data-message="@T.Plural(Model.Questions.Count, "An employee asked about their pay and it hasn't changed since. Submit the run anyway?", "{0} employees asked about their pay and it hasn't changed since. Submit the run anyway?")" data-ok-text="@T["Submit for approval"]" data-ok-class="btn-primary">@T["Submit for approval"]</a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" type="submit" formaction="@Url.Action("Submit", new { id = run.ItemId })" disabled="@(blockers > 0)">@T["Submit for approval"]</button>
+                    }
+                }
+                <a class="btn btn-danger action-bar-secondary" href="@Url.Action("Cancel", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Cancel the run"]" data-message="@T["Cancel the pay run? Its draft statements are removed and it can't be calculated again."]" data-ok-text="@T["Cancel the run"]" data-cancel-text="@T["Keep it"]">@T["Cancel the run"]</a>
+            }
+        </div>
+    </form>
+}

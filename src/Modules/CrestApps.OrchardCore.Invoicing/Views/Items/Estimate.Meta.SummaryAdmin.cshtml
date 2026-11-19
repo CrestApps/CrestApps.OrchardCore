@@ -1,0 +1,29 @@
+@model ShapeViewModel<EstimateRowViewModel>
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+
+@{
+    var estimate = Model.Value.Estimate;
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.BillToName))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Prepared for"]">
+        <i class="fa-regular fa-user text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Prepared for"]</span>
+        @Model.Value.BillToName
+    </span>
+}
+@if (!string.IsNullOrEmpty(estimate.Currency))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Total"]">
+        <i class="fa-solid fa-sack-dollar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Total"]</span>
+        @MoneyFormatter.Format(estimate.Totals?.Total ?? 0m, estimate.Currency)
+    </span>
+}
+@* The expiry date is a date in the site's time zone, kept as a date: it is shown as it is. *@
+@if (estimate.ExpiryDate is { } expiry && estimate.Status == EstimateStatus.Sent)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Valid until"]">
+        <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Valid until"]</span>
+        @expiry.ToString("d")
+    </span>
+}

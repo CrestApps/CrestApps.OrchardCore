@@ -1,8 +1,10 @@
 using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Transactions.Services;
@@ -17,6 +19,7 @@ public sealed class TransactionRefundHandler : IPaymentRefundHandler
     private readonly ITransactionManager _transactionManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
@@ -24,18 +27,21 @@ public sealed class TransactionRefundHandler : IPaymentRefundHandler
     /// Initializes a new instance of the <see cref="TransactionRefundHandler"/> class.
     /// </summary>
     /// <param name="transactionManager">The transaction manager.</param>
-    /// <param name="serviceProvider">The service provider the optional payment attempt store is resolved from.</param>
+    /// <param name="serviceProvider">The service provider the optional payment attempt store and the transaction event handlers are resolved from.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="logger">The logger for event handlers that fail.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public TransactionRefundHandler(
         ITransactionManager transactionManager,
         IServiceProvider serviceProvider,
         IClock clock,
+        ILogger<TransactionRefundHandler> logger,
         IStringLocalizer<TransactionRefundHandler> stringLocalizer)
     {
         _transactionManager = transactionManager;
         _serviceProvider = serviceProvider;
         _clock = clock;
+        _logger = logger;
         S = stringLocalizer;
     }
 
@@ -59,22 +65,52 @@ public sealed class TransactionRefundHandler : IPaymentRefundHandler
 
         if (SharedPaymentAttempts.PaysSeveralTransactions(attempt))
         {
-            await SplitAsync(refund, attempt, cancellationToken);
+            await SplitAsync(refund, attempt, await SharedPaymentAttempts.GetTransactionIdsAsync(_serviceProvider, attempt, cancellationToken), cancellationToken);
 
             return;
         }
 
-        await RecordAsync(await FindTransactionAsync(refund, attempt, cancellationToken), refund, refund.RefundGrossAmount, cancellationToken);
+        var transaction = await FindTransactionAsync(refund, attempt, cancellationToken);
+
+        // The checkout's payment also paid other debts of the same checkout (an invoice's debit note for the shipping its
+        // order's checkout added): the refund is split over them, this one first, each up to its share. Without this the
+        // whole refund went on this one, more than it was paid, and the others kept saying paid.
+        if (await GetSharedWithAsync(transaction, refund, attempt, cancellationToken) is { Count: > 1 } shared)
+        {
+            await SplitAsync(refund, attempt, shared, cancellationToken);
+
+            return;
+        }
+
+        await RecordAsync(transaction, refund, refund.RefundGrossAmount, cancellationToken);
     }
 
-    // A refund of a payment that settled several transactions, made for none of them in particular (from the payments
-    // page or the gateway's dashboard): it is split back over them in the order the checkout listed them, each up to
-    // what it still has of the payment.
-    private async Task SplitAsync(PaymentRefund refund, PaymentAttempt attempt, CancellationToken cancellationToken)
+    // The transaction first, then the other transactions of the checkout that recorded a share of the same payment.
+    private async Task<IReadOnlyList<string>> GetSharedWithAsync(Transaction transaction, PaymentRefund refund, PaymentAttempt attempt, CancellationToken cancellationToken)
+    {
+        if (transaction is null ||
+            attempt is null ||
+            string.IsNullOrEmpty(refund.SessionId) ||
+            SharedPaymentAttempts.GetAppliedAmount(transaction, attempt.ItemId) <= 0m ||
+            _serviceProvider.GetService<ITransactionStore>() is not { } store)
+        {
+            return [];
+        }
+
+        var others = await store.GetByCheckoutSessionAsync(refund.SessionId, cancellationToken);
+
+        return [transaction.ItemId, .. others
+            .Where(other => !string.Equals(other.ItemId, transaction.ItemId, StringComparison.Ordinal) && SharedPaymentAttempts.GetAppliedAmount(other, attempt.ItemId) > 0m)
+            .Select(other => other.ItemId)];
+    }
+
+    // A refund of a payment that settled several transactions: it is split back over them in the order given (the order
+    // the checkout listed them, or the one the refund was made for first), each up to what it still has of the payment.
+    private async Task SplitAsync(PaymentRefund refund, PaymentAttempt attempt, IReadOnlyList<string> transactionIds, CancellationToken cancellationToken)
     {
         var left = refund.RefundGrossAmount;
 
-        foreach (var transactionId in await SharedPaymentAttempts.GetTransactionIdsAsync(_serviceProvider, attempt, cancellationToken))
+        foreach (var transactionId in transactionIds)
         {
             if (left <= 0m)
             {
@@ -128,7 +164,8 @@ public sealed class TransactionRefundHandler : IPaymentRefundHandler
 
         transaction.AmountRefunded = CurrencyScale.Round(transaction.AmountRefunded + amount, transaction.Currency);
         transaction.UpdatedUtc = now;
-        transaction.Events.Add(new TransactionEvent
+
+        var entry = new TransactionEvent
         {
             Id = refund.ItemId,
             CreatedUtc = now,
@@ -139,7 +176,9 @@ public sealed class TransactionRefundHandler : IPaymentRefundHandler
             Message = string.IsNullOrWhiteSpace(refund.Reason)
                 ? S["A refund of {0} was given back to the customer.", formatted].Value
                 : S["A refund of {0} was given back to the customer. Reason: {1}", formatted, refund.Reason].Value,
-        });
+        };
+
+        transaction.Events.Add(entry);
 
         // Only a full refund changes the status: after a partial one the customer still has part of what they
         // paid for, so the transaction stays paid.
@@ -155,6 +194,7 @@ public sealed class TransactionRefundHandler : IPaymentRefundHandler
         }
 
         await _transactionManager.UpdateAsync(transaction, data: null, cancellationToken);
+        await _serviceProvider.GetServices<ITransactionEventHandler>().RefundedAsync(transaction, entry, _logger, cancellationToken);
     }
 
     // A pay-link checkout names the transaction on its payment; a purchase checkout created the transaction for

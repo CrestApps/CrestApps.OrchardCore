@@ -1,0 +1,8 @@
+@model CrestApps.OrchardCore.Agreements.ViewModels.AgreementReportFilterViewModel
+
+<div class="col p-1">
+    <label asp-for="AgreementId" class="form-label">@T["Agreement"]</label>
+    <select asp-for="AgreementId" asp-items="Model.Agreements" class="form-select">
+        <option value="">@T["Every active agreement"]</option>
+    </select>
+</div>

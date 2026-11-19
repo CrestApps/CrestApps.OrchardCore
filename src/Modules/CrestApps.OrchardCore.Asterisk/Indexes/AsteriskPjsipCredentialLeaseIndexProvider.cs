@@ -13,6 +13,8 @@ public sealed class AsteriskPjsipCredentialLeaseIndexProvider : IndexProvider<As
     {
         context
             .For<AsteriskPjsipCredentialLeaseIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(lease => new AsteriskPjsipCredentialLeaseIndex
             {
                 AuthorizationUser = lease.AuthorizationUser,

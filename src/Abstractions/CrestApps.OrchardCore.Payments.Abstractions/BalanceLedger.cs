@@ -7,6 +7,12 @@ namespace CrestApps.OrchardCore.Payments;
 public static class BalanceLedger
 {
     /// <summary>
+    /// How many of its latest changes a balance keeps in its own document; older ones move to their own records, so the
+    /// document never grows with the balance's history.
+    /// </summary>
+    public const int RecentEntryCount = 50;
+
+    /// <summary>
     /// Adds <paramref name="amount"/> (negative to spend) to a balance, never below zero and rounded to the currency's
     /// precision, and appends an entry with the change that was actually made.
     /// </summary>

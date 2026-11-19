@@ -270,7 +270,7 @@ public sealed class DefaultInstallmentPlanServiceTests
     }
 
     [Fact]
-    public async Task ProcessAsync_WhenAPaymentFallsDue_ChargesTheSavedCardOnceAndRecordsIt()
+    public async Task ActivateAsync_HandsEachPaymentToTheSavedCardChargeService_OnItsDueDate()
     {
         // Arrange
         var context = new TestContextBuilder();
@@ -279,206 +279,135 @@ public sealed class DefaultInstallmentPlanServiceTests
 
         context.Clock.UtcNow = plan.Payments[1].DueUtc.AddHours(1);
 
-        // Act
+        // Act: the plan's sweep on the first due date.
         await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
 
-        // Assert
-        var charge = Assert.Single(context.Engine.Begun.Skip(1));
+        // Assert: each payment carries its charge (the card the down payment kept, on its due date, retried on the plan
+        // settings' days), and the plan charges nothing itself: the saved card charge service does.
+        foreach (var payment in plan.Payments.Where(payment => payment.Number > 0))
+        {
+            var charge = (await context.Transactions.FindByIdAsync(payment.TransactionId, TestContext.Current.CancellationToken)).AutoCharge;
 
-        Assert.Equal(ProviderKey, charge.Options.ProviderKey);
-        Assert.True(CheckoutPaymentDataKeys.IsSet(charge.Options.ProviderData, CheckoutPaymentDataKeys.OffSession));
-        Assert.Equal("pm_saved", charge.Options.ProviderData[CheckoutPaymentDataKeys.SavedPaymentMethodReference]);
-        Assert.Equal(CustomerId, context.Engine.Started.Last().OwnerId);
+            Assert.Equal((plan.DownPaymentSessionId, (string)null, payment.DueUtc), (charge.SourceSessionId, charge.SavedPaymentMethodId, charge.NextAttemptUtc));
+            Assert.Equal([1, 3, 5], charge.RetryDays);
+        }
 
-        Assert.Equal(InstallmentPaymentStatus.Paid, plan.Payments[1].Status);
-        Assert.Equal(InstallmentPaymentStatus.Scheduled, plan.Payments[2].Status);
-        Assert.Equal(InstallmentPlanStatus.Active, plan.Status);
-
-        // A second sweep the same day charges nothing more.
-        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
-
-        Assert.Equal(2, context.Engine.Begun.Count);
+        Assert.Single(context.Engine.Begun);
+        Assert.Empty(context.Charges.Charged);
+        Assert.Equal(InstallmentPaymentStatus.Scheduled, plan.Payments[1].Status);
     }
 
     [Fact]
-    public async Task ProcessAsync_WhenTheCardIsDeclined_SchedulesARetryAndMarksThePlanPastDue()
+    public async Task ProcessAsync_ForADuePaymentWithoutItsCharge_HandsItToTheSavedCardChargeService()
     {
-        // Arrange
+        // Arrange: a payment of a plan that started before the service charged plans: declined once, retried tomorrow.
         var context = new TestContextBuilder();
         var service = context.Build();
         var plan = await CreateActivePlanAsync(context, service);
+        var payment = plan.Payments[1];
+        var transaction = await context.Transactions.FindByIdAsync(payment.TransactionId, TestContext.Current.CancellationToken);
 
-        context.Engine.OnBegin = _ => new PaymentBeginOutcome { Succeeded = false, Declined = true, ProviderErrorMessage = "Your card has insufficient funds." };
-        context.Clock.UtcNow = plan.Payments[1].DueUtc.AddHours(1);
+        transaction.AutoCharge = null;
+        transaction.Status = TransactionStatus.Failed;
+        payment.Status = InstallmentPaymentStatus.Failed;
+        payment.ChargeAttempts = 1;
+        payment.LastFailureMessage = "Declined.";
+        payment.NextChargeAttemptUtc = payment.DueUtc.AddDays(1);
+        context.Clock.UtcNow = payment.DueUtc.AddHours(2);
 
         // Act
         await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        var payment = plan.Payments[1];
+        Assert.NotNull(transaction.AutoCharge);
+        Assert.Equal((1, payment.DueUtc.AddDays(1), "Declined.", plan.DownPaymentSessionId), (transaction.AutoCharge.Attempts, transaction.AutoCharge.NextAttemptUtc, transaction.AutoCharge.LastFailure, transaction.AutoCharge.SourceSessionId));
+    }
 
+    [Fact]
+    public async Task ProcessAsync_ForAPaymentWhoseChargeStaffCanceled_HandsItToTheCustomerWhenDue()
+    {
+        // Arrange: staff canceled the payment's charge on its transaction (the saved card charge service's CancelAsync).
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var plan = await CreateActivePlanAsync(context, service);
+        var payment = plan.Payments[1];
+        var transaction = await context.Transactions.FindByIdAsync(payment.TransactionId, TestContext.Current.CancellationToken);
+
+        transaction.AutoCharge = null;
+        transaction.AutoCollection = null;
+        context.Clock.UtcNow = payment.DueUtc.AddHours(1);
+
+        // Act
+        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(transaction.AutoCharge);
+        Assert.Equal(TransactionStatus.Outstanding, transaction.Status);
+        Assert.Equal(InstallmentPaymentStatus.Due, payment.Status);
+    }
+
+    [Fact]
+    public async Task ADeclinedCharge_IsRecordedWithItsRetry_MarksThePlanPastDue_AndTellsTheCustomer()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var plan = await CreateActivePlanAsync(context, service);
+        var payment = plan.Payments[1];
+        var transaction = await context.Transactions.FindByIdAsync(payment.TransactionId, TestContext.Current.CancellationToken);
+
+        context.Clock.UtcNow = payment.DueUtc.AddHours(1);
+        context.TransactionEvents.StatusChanges.Clear();
+
+        // Act: the saved card charge service declined the charge and retries it tomorrow.
+        await context.DeclineAsync(transaction, "Your card has insufficient funds.");
+
+        // Assert
         Assert.Equal(InstallmentPaymentStatus.Failed, payment.Status);
         Assert.Equal(1, payment.ChargeAttempts);
         Assert.Equal("Your card has insufficient funds.", payment.LastFailureMessage);
         Assert.Equal(context.Clock.UtcNow.AddDays(1), payment.NextChargeAttemptUtc);
         Assert.Equal(InstallmentPlanStatus.PastDue, plan.Status);
-        Assert.Single(context.Engine.Canceled);
-
-        // Before the retry is due nothing is charged.
-        context.Clock.UtcNow = context.Clock.UtcNow.AddHours(12);
-        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
-
-        Assert.Equal(2, context.Engine.Begun.Count);
-    }
-
-    [Fact]
-    public async Task ProcessAsync_WhenTheCardIsDeclined_MarksTheTransactionFailedWithOneStatusChange()
-    {
-        // Arrange
-        var context = new TestContextBuilder();
-        var service = context.Build();
-        var plan = await CreateActivePlanAsync(context, service);
-        var transactionId = plan.Payments[1].TransactionId;
-
-        context.Engine.OnBegin = _ => new PaymentBeginOutcome { Succeeded = false, Declined = true, ProviderErrorMessage = "Your card has insufficient funds." };
-        context.Clock.UtcNow = plan.Payments[1].DueUtc.AddHours(1);
-        context.TransactionEvents.StatusChanges.Clear();
-
-        // Act
-        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert
-        var transaction = await context.Transactions.FindByIdAsync(transactionId, TestContext.Current.CancellationToken);
-
         Assert.Equal(TransactionStatus.Failed, transaction.Status);
-        Assert.Equal([(transactionId, TransactionStatus.Pending, TransactionStatus.Failed)], context.TransactionEvents.StatusChanges);
+        Assert.Equal([(transaction.ItemId, TransactionStatus.Pending, TransactionStatus.Failed)], context.TransactionEvents.StatusChanges);
+        context.Notifications.Verify(
+            notifications => notifications.SendAsync(It.IsAny<object>(), It.Is<INotificationMessage>(message => message.Subject.Contains("could not take", StringComparison.OrdinalIgnoreCase)), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task ProcessAsync_AfterTheLastRetryFails_HandsThePaymentToTheCustomer()
+    public async Task AnAbandonedCharge_HandsThePaymentToTheCustomer()
     {
         // Arrange
         var context = new TestContextBuilder { Settings = new InstallmentPlanSettings { RetryDays = [1] } };
         var service = context.Build();
         var plan = await CreateActivePlanAsync(context, service);
-
-        context.Engine.OnBegin = _ => new PaymentBeginOutcome { Succeeded = false, Declined = true, ProviderErrorMessage = "Declined." };
-        context.Clock.UtcNow = plan.Payments[1].DueUtc.AddHours(1);
-
-        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
-
-        context.Clock.UtcNow = context.Clock.UtcNow.AddDays(1).AddMinutes(1);
-
-        // Act
-        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert
         var payment = plan.Payments[1];
         var transaction = await context.Transactions.FindByIdAsync(payment.TransactionId, TestContext.Current.CancellationToken);
 
+        context.Clock.UtcNow = payment.DueUtc.AddHours(1);
+        await context.DeclineAsync(transaction, "Declined.");
+        context.Clock.UtcNow = context.Clock.UtcNow.AddDays(1).AddMinutes(1);
+
+        // Act: the retry is declined too, and no retry is left.
+        await context.DeclineAsync(transaction, "Declined.");
+
+        // Assert
         Assert.Equal(2, payment.ChargeAttempts);
+        Assert.Equal(InstallmentPaymentStatus.Failed, payment.Status);
         Assert.Null(payment.NextChargeAttemptUtc);
         Assert.Equal(TransactionStatus.Outstanding, transaction.Status);
         Assert.Null(transaction.AutoCollection);
         Assert.Equal(InstallmentPlanStatus.PastDue, plan.Status);
+        context.Notifications.Verify(
+            notifications => notifications.SendAsync(It.IsAny<object>(), It.Is<INotificationMessage>(message => message.Subject.Contains("overdue", StringComparison.OrdinalIgnoreCase)), It.IsAny<CancellationToken>()),
+            Times.Once);
 
-        // A payment handed to the customer is not charged again by the schedule.
+        // A payment handed to the customer is not given a charge again by the schedule.
         context.Clock.UtcNow = context.Clock.UtcNow.AddDays(10);
         await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.Equal(3, context.Engine.Begun.Count);
-    }
-
-    [Fact]
-    public async Task ProcessAsync_WhenTheGatewayCannotBeReached_RetriesSoonWithoutUsingARetry()
-    {
-        // Arrange
-        var context = new TestContextBuilder();
-        var service = context.Build();
-        var plan = await CreateActivePlanAsync(context, service);
-
-        context.Engine.OnBegin = _ => new PaymentBeginOutcome { Succeeded = false, Declined = false, ErrorMessage = "The payment could not be started." };
-        context.Clock.UtcNow = plan.Payments[1].DueUtc.AddHours(1);
-
-        // Act
-        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert
-        var payment = plan.Payments[1];
-
-        Assert.NotEqual(InstallmentPaymentStatus.Failed, payment.Status);
-        Assert.Equal(0, payment.ChargeAttempts);
-        Assert.Equal(context.Clock.UtcNow.AddHours(1), payment.NextChargeAttemptUtc);
-    }
-
-    [Fact]
-    public async Task ProcessAsync_WhileAChargeIsStillSettling_FinishesItInsteadOfChargingAgain()
-    {
-        // Arrange
-        var context = new TestContextBuilder();
-        var service = context.Build();
-        var plan = await CreateActivePlanAsync(context, service);
-
-        context.Engine.CompletionStatus = CheckoutCompletionStatus.Pending;
-        context.Clock.UtcNow = plan.Payments[1].DueUtc.AddHours(1);
-
-        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
-
-        Assert.Equal(InstallmentPaymentStatus.Due, plan.Payments[1].Status);
-
-        context.Engine.CompletionStatus = CheckoutCompletionStatus.Completed;
-
-        // Act
-        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(2, context.Engine.Begun.Count);
-        Assert.Equal(InstallmentPaymentStatus.Paid, plan.Payments[1].Status);
-    }
-
-    [Fact]
-    public async Task ProcessAsync_WhenAChargeWasTakenButNeverRecorded_AppliesItInsteadOfChargingAgain()
-    {
-        // Arrange
-        var context = new TestContextBuilder();
-        var service = context.Build();
-        var plan = await CreateActivePlanAsync(context, service);
-        var payment = plan.Payments[1];
-        var transaction = await context.Transactions.FindByIdAsync(payment.TransactionId, TestContext.Current.CancellationToken);
-        var unpaidStatus = transaction.Status;
-        var eventCount = transaction.Events.Count;
-
-        context.Clock.UtcNow = payment.DueUtc.AddHours(1);
-
-        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
-
-        // The request that recorded the charge failed after the gateway took the money, so everything it wrote was
-        // rolled back: the plan forgot it charged the card and the transaction never saw the payment. Only the
-        // payment attempt, committed before the charge, survives.
-        Assert.Single(await context.Attempts.GetByReferenceAsync(TransactionsConstants.ReferenceTypes.Transaction, transaction.ItemId, TestContext.Current.CancellationToken));
-
-        payment.CheckoutSessionIds.Clear();
-        payment.ChargeAttempts = 0;
-        payment.Status = InstallmentPaymentStatus.Due;
-        payment.PaidUtc = null;
-        transaction.Status = unpaidStatus;
-        transaction.AmountPaid = 0m;
-        transaction.SettledUtc = null;
-
-        while (transaction.Events.Count > eventCount)
-        {
-            transaction.Events.RemoveAt(transaction.Events.Count - 1);
-        }
-
-        // Act
-        await service.ChargeAsync(plan.ItemId, payment.Number, TestContext.Current.CancellationToken);
-        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(2, context.Engine.Begun.Count);
-        Assert.Equal(TransactionStatus.Paid, transaction.Status);
-        Assert.Equal(payment.Amount, transaction.AmountPaid);
-        Assert.Equal(InstallmentPaymentStatus.Paid, payment.Status);
+        Assert.Null(transaction.AutoCharge);
     }
 
     [Fact]
@@ -534,28 +463,33 @@ public sealed class DefaultInstallmentPlanServiceTests
     }
 
     [Fact]
-    public async Task ChargeAsync_WhenDeclined_ReportsWhyAndSchedulesNoAutomaticRetry()
+    public async Task ChargeAsync_ChargesThroughTheSavedCardChargeService_AndReportsWhyItWasDeclined()
     {
         // Arrange
         var context = new TestContextBuilder();
         var service = context.Build();
         var plan = await CreateActivePlanAsync(context, service);
+        var payment = plan.Payments[3];
 
-        context.Engine.OnBegin = _ => new PaymentBeginOutcome { Succeeded = false, Declined = true, ProviderErrorMessage = "Your card was declined." };
-        context.Clock.UtcNow = plan.Payments[3].DueUtc.AddHours(1);
+        context.Charges.OnCharge = transaction => context.DeclineAsync(transaction, "Your card was declined.");
+        context.Clock.UtcNow = payment.DueUtc.AddHours(1);
 
         // Act
         var result = await service.ChargeAsync(plan.ItemId, 3, TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert: one of the payment's charges, so its retries go on as scheduled.
         Assert.False(result.Succeeded);
         Assert.Contains(result.Errors, error => error.Value == "Your card was declined.");
-        Assert.Equal(InstallmentPaymentStatus.Failed, plan.Payments[3].Status);
-        Assert.Null(plan.Payments[3].NextChargeAttemptUtc);
+        Assert.Equal([payment.TransactionId], context.Charges.Charged);
+        Assert.Equal(InstallmentPaymentStatus.Failed, payment.Status);
+        Assert.Equal(context.Clock.UtcNow.AddDays(1), payment.NextChargeAttemptUtc);
+        context.Notifications.Verify(
+            notifications => notifications.SendAsync(It.IsAny<object>(), It.Is<INotificationMessage>(message => message.Subject.Contains("could not take", StringComparison.OrdinalIgnoreCase)), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
-    public async Task ChargeAsync_WhenAnEarlyChargeIsDeclined_KeepsThePaymentOnScheduleAndChargesItWhenDue()
+    public async Task ChargeAsync_WhenAnEarlyChargeIsDeclined_PutsThePaymentBackOnItsDueDate()
     {
         // Arrange
         var context = new TestContextBuilder();
@@ -563,7 +497,7 @@ public sealed class DefaultInstallmentPlanServiceTests
         var plan = await CreateActivePlanAsync(context, service);
         var payment = plan.Payments[1];
 
-        context.Engine.OnBegin = _ => new PaymentBeginOutcome { Succeeded = false, Declined = true, ProviderErrorMessage = "Your card was declined." };
+        context.Charges.OnCharge = transaction => context.DeclineAsync(transaction, "Your card was declined.");
 
         // Act
         var result = await service.ChargeAsync(plan.ItemId, payment.Number, TestContext.Current.CancellationToken);
@@ -575,13 +509,12 @@ public sealed class DefaultInstallmentPlanServiceTests
         Assert.Equal(0, payment.ChargeAttempts);
         Assert.Equal(InstallmentPlanStatus.Active, plan.Status);
 
-        // The card works again by the due date, and the payment is charged then as planned.
-        context.Engine.OnBegin = _ => new PaymentBeginOutcome { Succeeded = true };
-        context.Clock.UtcNow = payment.DueUtc.AddHours(1);
+        var rescheduled = context.Charges.Scheduled.Last();
+        var charge = (await context.Transactions.FindByIdAsync(payment.TransactionId, TestContext.Current.CancellationToken)).AutoCharge;
 
-        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
-
-        Assert.Equal(InstallmentPaymentStatus.Paid, payment.Status);
+        Assert.Equal((payment.TransactionId, payment.DueUtc, plan.DownPaymentSessionId), (rescheduled.TransactionId, rescheduled.ChargeOnUtc, rescheduled.SourceSessionId));
+        Assert.Equal([1, 3, 5], rescheduled.RetryDays);
+        Assert.Equal((payment.DueUtc, 0), (charge.NextAttemptUtc, charge.Attempts));
     }
 
     [Fact]
@@ -596,9 +529,67 @@ public sealed class DefaultInstallmentPlanServiceTests
         var result = await service.ChargeAsync(plan.ItemId, 2, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Succeeded);
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors.Select(error => error.Value)));
+        Assert.Equal([plan.Payments[2].TransactionId], context.Charges.Charged);
         Assert.Equal(InstallmentPaymentStatus.Paid, plan.Payments[2].Status);
         Assert.Equal(InstallmentPaymentStatus.Scheduled, plan.Payments[1].Status);
+    }
+
+    [Fact]
+    public async Task ChargeAsync_BeforeTheDueDate_ForAPaymentHandedToTheCustomer_LeavesItWithTheCustomerWhenDeclined()
+    {
+        // Arrange: staff canceled the payment's charge before its due date, so the customer pays it.
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var plan = await CreateActivePlanAsync(context, service);
+        var payment = plan.Payments[1];
+        var transaction = await context.Transactions.FindByIdAsync(payment.TransactionId, TestContext.Current.CancellationToken);
+
+        transaction.AutoCharge = null;
+        transaction.AutoCollection = null;
+        transaction.Status = TransactionStatus.Outstanding;
+        context.Charges.OnCharge = charged => context.DeclineAsync(charged, "Your card was declined.");
+
+        // Act
+        var result = await service.ChargeAsync(plan.ItemId, payment.Number, TestContext.Current.CancellationToken);
+
+        // Assert: charged once, and not put back on the card's schedule.
+        Assert.False(result.Succeeded);
+        Assert.Empty(context.Charges.Scheduled);
+        Assert.Null(transaction.AutoCharge);
+        Assert.Equal(TransactionStatus.Outstanding, transaction.Status);
+        Assert.Equal(InstallmentPaymentStatus.Failed, payment.Status);
+    }
+
+    [Fact]
+    public async Task ChargeAsync_ForAPaymentHandedToTheCustomer_ChargesItOnceWithoutRetries()
+    {
+        // Arrange: the payment's charges ran out and it was handed to the customer.
+        var context = new TestContextBuilder { Settings = new InstallmentPlanSettings { RetryDays = [] } };
+        var service = context.Build();
+        var plan = await CreateActivePlanAsync(context, service);
+        var payment = plan.Payments[1];
+        var transaction = await context.Transactions.FindByIdAsync(payment.TransactionId, TestContext.Current.CancellationToken);
+
+        context.Clock.UtcNow = payment.DueUtc.AddHours(1);
+        await context.DeclineAsync(transaction, "Declined.");
+
+        int[] retryDays = null;
+
+        context.Charges.OnCharge = charged =>
+        {
+            retryDays = charged.AutoCharge?.RetryDays;
+
+            return context.PayAsync(charged);
+        };
+
+        // Act
+        var result = await service.ChargeAsync(plan.ItemId, payment.Number, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal([], retryDays);
+        Assert.Equal(InstallmentPaymentStatus.Paid, payment.Status);
     }
 
     [Fact]
@@ -885,6 +876,106 @@ public sealed class DefaultInstallmentPlanServiceTests
     }
 
     [Fact]
+    public async Task CreateScheduleAsync_TakesAPaymentDueAtTheStartOfTodayInTheSitesZone_ButNotOneDaysAgo()
+    {
+        // Arrange: late in the evening in the site's zone it is already tomorrow in UTC, so the start of the site's
+        // today is the day before in UTC.
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var balance = new Transaction
+        {
+            ItemId = "tx-invoice",
+            Title = "Invoice INV-1002",
+            OwnerId = "invoice-2",
+            OwnerKind = CustomerOwnerKind.Guest,
+            ReferenceType = "Invoice",
+            ReferenceId = "invoice-2",
+            Currency = "USD",
+            Amount = 200m,
+            TotalAmount = 200m,
+            Status = TransactionStatus.Outstanding,
+            CreatedUtc = _now,
+            UpdatedUtc = _now,
+        };
+        await context.Transactions.CreateAsync(balance, TestContext.Current.CancellationToken);
+
+        // Act
+        var daysAgo = await service.CreateScheduleAsync(new CreateInstallmentScheduleRequest
+        {
+            TransactionId = balance.ItemId,
+            Payments = [new() { DueUtc = _now.AddDays(-2), Amount = 100m }, new() { DueUtc = _now.AddDays(30), Amount = 100m }],
+        }, TestContext.Current.CancellationToken);
+        var startOfToday = await service.CreateScheduleAsync(new CreateInstallmentScheduleRequest
+        {
+            TransactionId = balance.ItemId,
+            Payments = [new() { DueUtc = _now.AddHours(-20), Amount = 100m }, new() { DueUtc = _now.AddDays(30), Amount = 100m }],
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(daysAgo.Succeeded);
+        Assert.True(startOfToday.Succeeded, string.Join(" ", startOfToday.Errors.Select(error => error.Value)));
+    }
+
+    [Fact]
+    public async Task CreateScheduleAsync_SplitsAGuestsBalanceIntoDatedPayments_AndReplacesIt()
+    {
+        // Arrange: a $300 balance a guest owes for an account, split $100 in ten days and $200 in forty.
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var balance = new Transaction
+        {
+            ItemId = "tx-invoice",
+            Title = "Invoice INV-1001",
+            OwnerId = "invoice-1",
+            OwnerKind = CustomerOwnerKind.Guest,
+            GuestContactName = "Acme Ltd.",
+            GuestContactEmail = "ap@acme.example",
+            ReferenceType = "Invoice",
+            ReferenceId = "invoice-1",
+            Currency = "USD",
+            Amount = 300m,
+            TotalAmount = 300m,
+            Status = TransactionStatus.Outstanding,
+            CreatedUtc = _now,
+            UpdatedUtc = _now,
+        };
+        balance.SetPayer(new CrestApps.OrchardCore.Parties.Models.PartyRef("Account", "acme"));
+        await context.Transactions.CreateAsync(balance, TestContext.Current.CancellationToken);
+
+        // Act
+        var wrongTotal = await service.CreateScheduleAsync(new CreateInstallmentScheduleRequest
+        {
+            TransactionId = balance.ItemId,
+            Payments = [new() { DueUtc = _now.AddDays(10), Amount = 100m }, new() { DueUtc = _now.AddDays(40), Amount = 150m }],
+        }, TestContext.Current.CancellationToken);
+        var outOfOrder = await service.CreateScheduleAsync(new CreateInstallmentScheduleRequest
+        {
+            TransactionId = balance.ItemId,
+            Payments = [new() { DueUtc = _now.AddDays(40), Amount = 100m }, new() { DueUtc = _now.AddDays(10), Amount = 200m }],
+        }, TestContext.Current.CancellationToken);
+        var created = await service.CreateScheduleAsync(new CreateInstallmentScheduleRequest
+        {
+            TransactionId = balance.ItemId,
+            Payments = [new() { DueUtc = _now.AddDays(10), Amount = 100m }, new() { DueUtc = _now.AddDays(40), Amount = 200m }],
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(wrongTotal.Succeeded);
+        Assert.False(outOfOrder.Succeeded);
+        Assert.True(created.Succeeded, string.Join(" ", created.Errors.Select(error => error.Value)));
+
+        var plan = created.Plan;
+        Assert.Equal((InstallmentPlanStatus.Active, InstallmentCollectionMethod.Invoice, "Invoice", "invoice-1"), (plan.Status, plan.CollectionMethod, plan.ReferenceType, plan.ReferenceId));
+        Assert.Equal([(1, 100m), (2, 200m)], plan.Payments.Select(payment => (payment.Number, payment.Amount)));
+
+        var second = await context.Transactions.FindByIdAsync(plan.Payments[1].TransactionId, TestContext.Current.CancellationToken);
+        Assert.Equal((TransactionStatus.Outstanding, CustomerOwnerKind.Guest, "ap@acme.example", "Invoice", "invoice-1"), (second.Status, second.OwnerKind, second.GuestContactEmail, second.ParentReferenceType, second.ParentReferenceId));
+        Assert.Equal("acme", second.GetPayer().Id);
+        Assert.Equal(_now.AddDays(40), second.DueUtc);
+        Assert.Equal(TransactionStatus.Canceled, (await context.Transactions.FindByIdAsync(balance.ItemId, TestContext.Current.CancellationToken)).Status);
+    }
+
+    [Fact]
     public async Task CreateFromTransactionAsync_AfterTheFirstPayment_KeepsTheCardReplacesTheBalanceAndChargesTheRestAutomatically()
     {
         // Arrange
@@ -911,17 +1002,12 @@ public sealed class DefaultInstallmentPlanServiceTests
             payments.Where(payment => payment.ItemId != plan.FirstPayment.TransactionId),
             payment => Assert.Equal("Visa •••• 4242", payment.AutoCollection?.PaymentMethodDescription));
 
-        // On the next due date the saved card is charged without the customer.
-        context.Clock.UtcNow = plan.Payments[1].DueUtc.AddHours(1);
+        // Each later payment is charged on its due date to the card the customer's checkout kept, by the saved card
+        // charge service.
+        var charge = (await context.Transactions.FindByIdAsync(plan.Payments[1].TransactionId, TestContext.Current.CancellationToken)).AutoCharge;
 
-        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
-
-        var charge = context.Engine.Begun.Last();
-
-        Assert.True(CheckoutPaymentDataKeys.IsSet(charge.Options.ProviderData, CheckoutPaymentDataKeys.OffSession));
-        Assert.Equal("pm_saved", charge.Options.ProviderData[CheckoutPaymentDataKeys.SavedPaymentMethodReference]);
-        Assert.Equal(InstallmentPaymentStatus.Paid, plan.Payments[1].Status);
-        Assert.Equal(InstallmentPaymentStatus.Scheduled, plan.Payments[2].Status);
+        Assert.Equal((checkout.SessionId, plan.Payments[1].DueUtc), (charge.SourceSessionId, charge.NextAttemptUtc));
+        Assert.Equal(InstallmentPaymentStatus.Scheduled, plan.Payments[1].Status);
     }
 
     [Fact]
@@ -1277,8 +1363,58 @@ public sealed class DefaultInstallmentPlanServiceTests
 
         public Mock<INotificationService> Notifications { get; } = new();
 
+        public FakeChargeService Charges { get; private set; }
+
+        public DefaultInstallmentPlanService Service { get; private set; }
+
+        // As the saved card charge service does when the card declines: one more declined charge, and the next one on
+        // the charge's own retry days, or the payment handed over when none is left. Each raises its event.
+        public async Task<SavedPaymentMethodChargeResult> DeclineAsync(Transaction transaction, string reason)
+        {
+            var handler = new InstallmentPlanAutoChargeHandler(Service);
+            var charge = transaction.AutoCharge ?? new TransactionAutoCharge { RetryDays = [] };
+
+            charge.Attempts++;
+            charge.LastFailure = reason;
+
+            if (charge.GetRetryDelay(charge.Attempts) is { } delay)
+            {
+                charge.NextAttemptUtc = Clock.UtcNow.Add(delay);
+                transaction.AutoCharge = charge;
+
+                await handler.AutoChargeDeclinedAsync(transaction, reason, charge.NextAttemptUtc, TestContext.Current.CancellationToken);
+
+                return new SavedPaymentMethodChargeResult { Transaction = transaction, ChargeStatus = SavedPaymentMethodChargeStatus.Declined, NextAttemptUtc = charge.NextAttemptUtc };
+            }
+
+            transaction.AutoCharge = null;
+            transaction.AutoCollection = null;
+
+            await handler.AutoChargeAbandonedAsync(transaction, reason, TestContext.Current.CancellationToken);
+
+            return new SavedPaymentMethodChargeResult { Transaction = transaction, ChargeStatus = SavedPaymentMethodChargeStatus.Declined, HandedOver = true };
+        }
+
+        // As the saved card charge service does when the charge goes through: the ledger records the payment and its
+        // payment handlers run.
+        public async Task<SavedPaymentMethodChargeResult> PayAsync(Transaction transaction)
+        {
+            var amount = transaction.OutstandingAmount;
+
+            transaction.AmountPaid = transaction.TotalAmount;
+            transaction.Status = TransactionStatus.Paid;
+            transaction.SettledUtc = Clock.UtcNow;
+            transaction.AutoCharge = null;
+
+            await new InstallmentPlanTransactionPaymentHandler(Service).PaymentRecordedAsync(new TransactionPaymentRecordedContext(transaction, new TransactionEvent { Amount = amount }), TestContext.Current.CancellationToken);
+
+            return new SavedPaymentMethodChargeResult { Transaction = transaction, ChargeStatus = SavedPaymentMethodChargeStatus.Succeeded };
+        }
+
         public DefaultInstallmentPlanService Build()
         {
+            Charges = new FakeChargeService(this);
+
             Engine = new FakePlanCheckoutEngine(Transactions, Attempts, new InMemoryCheckoutSessionStore());
 
             var provider = new Mock<ICheckoutPaymentProvider>();
@@ -1309,7 +1445,7 @@ public sealed class DefaultInstallmentPlanServiceTests
 
             var transactionManager = TransactionManagerFactory.Create(Transactions, TransactionEvents);
 
-            return new DefaultInstallmentPlanService(
+            Service = new DefaultInstallmentPlanService(
                 Plans,
                 transactionManager,
                 Engine,
@@ -1336,7 +1472,65 @@ public sealed class DefaultInstallmentPlanServiceTests
                 new Mock<ISession>().Object,
                 Clock,
                 NullLogger<DefaultInstallmentPlanService>.Instance,
-                new PassThroughStringLocalizer<DefaultInstallmentPlanService>());
+                new PassThroughStringLocalizer<DefaultInstallmentPlanService>(),
+                chargeService: Charges);
+
+            return Service;
         }
+    }
+
+    /// <summary>
+    /// The saved card charge service as the plan sees it: schedules replace the transaction's charge, and a charge runs
+    /// <see cref="OnCharge"/> (by default it goes through).
+    /// </summary>
+    private sealed class FakeChargeService : ISavedPaymentMethodChargeService
+    {
+        private readonly TestContextBuilder _context;
+
+        public FakeChargeService(TestContextBuilder context)
+        {
+            _context = context;
+        }
+
+        public List<SavedPaymentMethodChargeRequest> Scheduled { get; } = [];
+
+        public List<string> Charged { get; } = [];
+
+        public Func<Transaction, Task<SavedPaymentMethodChargeResult>> OnCharge { get; set; }
+
+        public Task<SavedPaymentMethodChargeResult> ScheduleAsync(string transactionId, string savedPaymentMethodId, DateTime chargeOnUtc, CancellationToken cancellationToken = default)
+            => ScheduleAsync(new SavedPaymentMethodChargeRequest { TransactionId = transactionId, SavedPaymentMethodId = savedPaymentMethodId, ChargeOnUtc = chargeOnUtc }, cancellationToken);
+
+        public async Task<SavedPaymentMethodChargeResult> ScheduleAsync(SavedPaymentMethodChargeRequest request, CancellationToken cancellationToken = default)
+        {
+            Scheduled.Add(request);
+
+            var transaction = await _context.Transactions.FindByIdAsync(request.TransactionId, cancellationToken);
+
+            transaction.AutoCharge = new TransactionAutoCharge
+            {
+                SavedPaymentMethodId = request.SavedPaymentMethodId,
+                SourceSessionId = request.SourceSessionId,
+                RetryDays = request.RetryDays,
+                NextAttemptUtc = request.ChargeOnUtc,
+            };
+
+            return new SavedPaymentMethodChargeResult { Transaction = transaction };
+        }
+
+        public async Task<SavedPaymentMethodChargeResult> ChargeAsync(string transactionId, CancellationToken cancellationToken = default)
+        {
+            Charged.Add(transactionId);
+
+            var transaction = await _context.Transactions.FindByIdAsync(transactionId, cancellationToken);
+
+            return await (OnCharge ?? _context.PayAsync)(transaction);
+        }
+
+        public Task<int> ChargeDueAsync(DateTime utcNow, CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
+
+        public Task<SavedPaymentMethodChargeResult> CancelAsync(string transactionId, CancellationToken cancellationToken = default)
+            => Task.FromResult(new SavedPaymentMethodChargeResult());
     }
 }

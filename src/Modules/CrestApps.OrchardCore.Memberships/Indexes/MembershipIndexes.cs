@@ -28,6 +28,8 @@ public sealed class MembershipIndexProvider : IndexProvider<Membership>
 
     public override void Describe(DescribeContext<Membership> context)
         => context.For<MembershipIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(membership => new MembershipIndex
             {
                 ItemId = membership.ItemId,

@@ -21,6 +21,8 @@ public sealed class SchedulingResourceIndexProvider : IndexProvider<SchedulingRe
     public override void Describe(DescribeContext<SchedulingResource> context)
     {
         context.For<SchedulingResourceIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(resource => new SchedulingResourceIndex
             {
                 ItemId = resource.ItemId,

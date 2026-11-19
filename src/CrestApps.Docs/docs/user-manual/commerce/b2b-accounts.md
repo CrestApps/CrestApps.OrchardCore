@@ -30,7 +30,7 @@ When a buyer's email is the email of one of the account's contacts, the buyer is
 
 ## The account's page
 
-Open the account with **View**. With business buying on, its page has a **Business buying** section with its payment terms, what it owes and its buyers, an **Invoices** section with the invoices for what it bought on its terms, and an **Orders** section with its orders. See [the account's page](../accounts.md#the-accounts-page).
+Open the account with **View**. With business buying on, its page has a **Business buying** section with its payment terms, what it owes and its buyers, an **Invoices** section with its invoices (with [Invoicing](invoicing.md) on), and an **Orders** section with its orders. See [the account's page](../accounts.md#the-accounts-page).
 
 ## Payment terms
 

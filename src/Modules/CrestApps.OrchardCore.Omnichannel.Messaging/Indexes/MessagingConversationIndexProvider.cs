@@ -23,6 +23,8 @@ public sealed class MessagingConversationIndexProvider : IndexProvider<Messaging
     {
         context
             .For<MessagingConversationIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(conversation => new MessagingConversationIndex
             {
                 ItemId = conversation.ItemId,

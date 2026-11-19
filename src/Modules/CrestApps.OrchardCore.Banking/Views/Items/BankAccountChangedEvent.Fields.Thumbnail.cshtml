@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Banking.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<BankAccountChangedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-building-columns" aria-hidden="true"></i> @T["Bank Account Changed"]</h4>
+<p>@T["Starts when a bank account is added, changed or removed."]</p>

@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Checkout.Models;
-using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using OrchardCore;
@@ -14,8 +13,8 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Accounts.B2B.Drivers;
 
 /// <summary>
-/// Adds the Business and Invoices tabs to an account's page: its terms, what it owes and its buyers, and the invoices
-/// it was given for what it bought on its terms. The orders placed for it are in the Orders tab, from the Orders module.
+/// Adds the Business tab to an account's page: its terms, what it owes and its buyers. The account's invoices are in the
+/// Invoices tab, from the Invoicing module, and the orders placed for it in the Orders tab, from the Orders module.
 /// </summary>
 internal sealed class B2BAccountCardsDisplayDriver : ContentDisplayDriver
 {
@@ -58,11 +57,7 @@ internal sealed class B2BAccountCardsDisplayDriver : ContentDisplayDriver
                 model.Account = account;
                 model.Owed = owed;
                 model.Currency = currency ?? (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
-            }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, AccountPageTabs.Location(AccountPageTabs.Business)),
-            Initialize<B2BAccountInvoicesViewModel>("B2BAccountInvoices", async model =>
-            {
-                model.Invoices = await _terms.ListInvoicesAsync(account);
-            }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, AccountPageTabs.Location(AccountPageTabs.Invoices)));
+            }).Location(OrchardCoreConstants.DisplayType.DetailAdmin, AccountPageTabs.Location(AccountPageTabs.Business)));
     }
 }
 
@@ -76,12 +71,4 @@ public class B2BAccountCardsViewModel
     public decimal Owed { get; set; }
 
     public string Currency { get; set; }
-}
-
-/// <summary>
-/// The invoices an account was given for what it bought on its terms, on its page.
-/// </summary>
-public class B2BAccountInvoicesViewModel
-{
-    public IReadOnlyList<Transaction> Invoices { get; set; } = [];
 }

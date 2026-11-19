@@ -267,6 +267,16 @@ Build admin UI the way Orchard Core builds it, and add a new concept only when O
 * Each recipe step has an `IRecipeStep` schema, and each deployment step a deployment step schema, registered in a startup with `[RequireFeatures("CrestApps.OrchardCore.Recipes")]`, so CrestApps Recipes exports their definitions.
 * Every options class bound from configuration (appsettings) is described in the module's `ConfigurationSchema.json`.
 
+#### YesSql Index Declarations
+
+YesSql 6.2 lets an index provider declare what its rows hold, and then runs simpler queries (OrchardCore PR #20201). Every index provider declares what is true of its rows:
+
+* `ExclusiveToDocumentType()` on every `context.For<TIndex>()`. An index type of ours is produced by one provider, for one document type, so its counts can read the index table without joining `Document`. Never produce one index type from providers of two document types; split it into two index types.
+* `SingleRecordPerDocument()` as well when the map returns at most one row per document (a single `new TIndex { ... }` or `null`). Leave it out when the map returns a row per item of a list (phone numbers, attendees, queue memberships...): YesSql then still groups by document, and saving would throw. A query is only left ungrouped when every index it joins declares a single row, so this is what lets a page stop as soon as it is full.
+* A search with `Contains`, `EndsWith` or `NotContains` (a `LIKE '%…%'`) on a large table with a sort calls `NoIndexOptimizations()` first. A text can't seek; without the grouping the database can walk an index of the sort looking for the few matching rows, all of it when none does. An unsorted search with `Take` doesn't need it.
+* A hand-written `IQuery<T>` wrapper overrides `NoIndexOptimizations()`: the interface's default returns `this` and drops the request.
+* `tests/CrestApps.OrchardCore.Tests/Architecture/IndexDeclarationArchitectureTests.cs` guards the first two rules. Add a new multi-row index type to its list.
+
 #### Admin Edit (Form) Page Buttons
 
 Every admin create, edit, settings, import or other form page keeps its buttons in Orchard Core's sticky action bar at the bottom of the screen (OrchardCore PR #19302), so **Save** and **Cancel** stay visible however long the form is. Follow `.agents/skills/crestapps-admin-edit-views/SKILL.md` for every new form page and whenever you touch an existing one.
@@ -414,6 +424,9 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
   Messenger, …) to the Omnichannel Messaging workspace, modeled on the SMS channel: the `IMessagingChannel`
   contract, inbound through the durable provider inbox, channel-only inbound rules, delivery receipts, endpoints,
   wiring, tests and docs.
+- **Example**: `.agents/skills/crestapps-invoicing` — how to bill a module's work as an invoice and build on Invoicing:
+  drafts, the issue/void/credit commands, `IInvoiceObserver`, document contributors, tax providers, visibility, the
+  ledger rules, recipes and personal data.
 - **Example**: `.agents/skills/crestapps-report-data-source` — how to add a data source (connector) to the Report
   Designer (a database, a search index, an API, or a module's own records) by implementing `IReportDataSource`, and
   how to extend the content items source for custom content fields and parts: the security boundary, value types, safe filter

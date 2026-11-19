@@ -22,6 +22,8 @@ public sealed class AgentStateReasonCodeIndexProvider : IndexProvider<AgentState
     {
         context
             .For<AgentStateReasonCodeIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(reasonCode => new AgentStateReasonCodeIndex
             {
                 ItemId = reasonCode.ItemId,

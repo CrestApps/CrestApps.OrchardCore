@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<InvoiceVoidedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-ban" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Invoice Voided"])
+    </h4>
+</header>

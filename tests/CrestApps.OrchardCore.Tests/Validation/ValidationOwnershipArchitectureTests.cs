@@ -44,7 +44,7 @@ public class ValidationOwnershipArchitectureTests
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Multiline);
 
     private static readonly Regex _handlerRegistrationRegex = new(
-        @"ICatalogEntryHandler<\s*(?<entity>\w+)\s*>\s*,\s*(?<implementation>\w+)\s*>",
+        @"ICatalogEntryHandler<\s*(?<entity>\w+)\s*>\s*,\s*(?<implementation>\w+(?:<\s*\w+\s*>)?)\s*>",
         RegexOptions.Compiled);
 
     private static readonly Regex _featureAttributeRegex = new(
@@ -95,9 +95,53 @@ public class ValidationOwnershipArchitectureTests
     private static readonly (string DriverPath, string InputMarker, string Justification)[] _editorOnlyInputs =
     [
         (
+            "src/Modules/CrestApps.OrchardCore.BusinessHours/Drivers/BusinessHoursScheduleDisplayDriver.cs",
+            "nameof(BusinessHoursScheduleViewModel.Days)",
+            "The weekly rows are typed as hh:mm text in the editor; a recipe carries the schedule's windows as minutes, which the handler checks."),
+        (
+            "src/Modules/CrestApps.OrchardCore.BusinessHours/Drivers/BusinessHoursScheduleDisplayDriver.cs",
+            "nameof(BusinessHoursScheduleViewModel.SpecialDays)",
+            "The special days are typed as lines of text in the editor; a recipe carries them as structured date exceptions, which the handler checks."),
+        (
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Drivers/VoiceMediaItemDisplayDriver.cs",
             "nameof(VoiceMediaItemViewModel.Audio)",
             "The uploaded audio file is streamed to the telephony provider by the editor; a recipe carries the resulting media reference, never a file."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Approvals/Drivers/ApprovalPolicyDisplayDriver.cs",
+            "Enter a whole number, or leave it empty.",
+            "The hours and the order are typed as text so a culture never changes them; a recipe carries the numbers, whose ranges the handler checks."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Approvals/Drivers/ApprovalPolicyConditionsDisplayDriver.cs",
+            "Enter an amount with a dot for decimals, or leave it empty.",
+            "The amount conditions are typed as text with a dot so a decimal comma never changes them; a recipe carries the numbers, whose order the handler checks."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Banking/Checks/Drivers/CheckLayoutDisplayDriver.cs",
+            "nameof(model.SecondSignatureAbove)",
+            "The amount is typed as text with a dot so a decimal comma never changes it; a recipe carries the number."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Banking/Checks/Drivers/CheckLayoutDisplayDriver.cs",
+            "The font file is larger than 2 MB.",
+            "The uploaded signature picture or MICR font exists only in the editor; a recipe carries the stored file, never an upload."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Banking/Checks/Drivers/CheckLayoutDisplayDriver.cs",
+            "Upload a TrueType (.ttf) font file.",
+            "The uploaded signature picture or MICR font exists only in the editor; a recipe carries the stored file, never an upload."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Banking/Checks/Drivers/CheckLayoutDisplayDriver.cs",
+            "Enter the measure in points",
+            "Measures are typed as text with a dot so a decimal comma never changes them; a recipe carries the numbers."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Payroll/Drivers/EmployerDisplayDriver.cs",
+            "nameof(EmployerViewModel.Registrations)",
+            "A registration's rate is typed as text with a dot so a decimal comma never changes it; a recipe carries the number, whose range and first day the handler checks."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Payroll/Drivers/GarnishmentOrderDisplayDriver.cs",
+            "Type a number of zero or more, with a dot for decimals.",
+            "Amounts and percents are typed as text with a dot so a decimal comma never changes them; a recipe carries the numbers, whose ranges the handler checks."),
+        (
+            "src/Core/CrestApps.OrchardCore.Taxation.Core/Drivers/IncomeTaxRuleSourceDisplayDriver.cs",
+            "Type a number of zero or more, with a dot for decimals.",
+            "Rates, amounts and wage bases are typed as text with a dot so a decimal comma never changes them; a recipe carries the numbers, whose ranges the handler checks."),
     ];
 
     private static readonly Regex _typeNameRegex = new(

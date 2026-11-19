@@ -83,7 +83,7 @@ var coturn = builder.AddContainer("Coturn", "coturn/coturn", "4.6.3")
 
 var elasticsearchEndpoint = elasticsearch.Resource.PrimaryEndpoint;
 
-var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("OrchardCoreCMS")
+var orchardCore = builder.AddDotnetProject("OrchardCoreCMS", "../CrestApps.OrchardCore.Cms.Web/CrestApps.OrchardCore.Cms.Web.csproj")
     // Injects the ConnectionStrings__vectordb, ConnectionStrings__PostgreSQL and
     // ConnectionStrings__Elasticsearch environment variables.
     .WithReference(vectorStore)
@@ -169,19 +169,19 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
         options.EnvironmentVariables["OrchardCore__CrestApps__Asterisk__Default__TimeoutSeconds"] = "30";
     });
 
-builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("McpClientSample")
+builder.AddDotnetProject("McpClientSample", "../CrestApps.OrchardCore.Samples.McpClient/CrestApps.OrchardCore.Samples.McpClient.csproj")
     .WithReference(orchardCore)
     .WaitFor(orchardCore)
     .WithHttpsEndpoint(5002, name: "HttpsMcpClient")
     .WithEnvironment("Mcp__Endpoint", "https://localhost:5001/mcp");
 
-builder.AddProject<Projects.CrestApps_OrchardCore_Samples_A2AClient>("A2AClientSample")
+builder.AddDotnetProject("A2AClientSample", "../CrestApps.OrchardCore.Samples.A2AClient/CrestApps.OrchardCore.Samples.A2AClient.csproj")
     .WithReference(orchardCore)
     .WaitFor(orchardCore)
     .WithHttpsEndpoint(5003, name: "HttpsA2AClient")
     .WithEnvironment("A2A__Endpoint", "https://localhost:5001");
 
-builder.AddProject<Projects.CrestApps_OrchardCore_Asterisk_Web>("AsteriskWeb")
+builder.AddDotnetProject("AsteriskWeb", "../CrestApps.OrchardCore.Asterisk.Web/CrestApps.OrchardCore.Asterisk.Web.csproj")
     .WithReference(orchardCore)
     .WaitFor(orchardCore)
     .WaitFor(asterisk)

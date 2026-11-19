@@ -1,0 +1,144 @@
+@model CreditNoteDetailViewModel
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@{
+    var creditNote = Model.CreditNote;
+    var currency = creditNote.Currency;
+    string Money(decimal amount) => string.IsNullOrEmpty(currency) ? amount.ToString("0.00") : MoneyFormatter.Format(amount, currency);
+    var title = string.IsNullOrEmpty(creditNote.Number) ? T["Draft credit note"] : T["Credit note {0}", creditNote.Number];
+    var (statusText, statusClass) = creditNote.Status switch
+    {
+        CreditNoteStatus.Issued => (T["Issued"], "text-bg-success"),
+        CreditNoteStatus.Void => (T["Void"], "text-bg-dark"),
+        _ => (T["Draft"], "text-bg-secondary"),
+    };
+    var disposition = creditNote.Disposition switch
+    {
+        CreditNoteDisposition.Refund => T["Refund what was paid"],
+        CreditNoteDisposition.CustomerCredit => T["Keep it as the customer's credit"],
+        CreditNoteDisposition.RefundedElsewhere => T["Record a refund already made, such as the order's"],
+        _ => T["Lower what is owed on the invoice"],
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="CreditNotesDetail" title="@title">
+        <breadcrumb-item id="InvoicesIndex" action="Index" controller="InvoicesAdmin" area="@InvoicingConstants.Features.Area" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Invoices"]</breadcrumb-item>
+        <breadcrumb-item id="InvoicesDetail" action="Detail" controller="InvoicesAdmin" area="@InvoicingConstants.Features.Area" route-itemId="@creditNote.InvoiceId" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Invoice {0}", creditNote.InvoiceNumber]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="d-flex flex-column gap-3 mb-3">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>@title</span>
+                    <span class="badge @statusClass">@statusText</span>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">@T["Credits invoice"]</dt>
+                        <dd class="col-sm-8"><a asp-action="Detail" asp-controller="InvoicesAdmin" asp-route-itemId="@creditNote.InvoiceId">@creditNote.InvoiceNumber</a></dd>
+
+                        <dt class="col-sm-4">@T["Billed to"]</dt>
+                        <dd class="col-sm-8">@(creditNote.BillTo?.Contact?.Name ?? creditNote.BillTo?.Contact?.Email)</dd>
+
+                        @* The issue date is a date in the site's time zone, kept as a date: it is shown as it is. *@
+                        @if (creditNote.IssueDate is { } issueDate)
+                        {
+                            <dt class="col-sm-4">@T["Issued"]</dt>
+                            <dd class="col-sm-8">@issueDate.ToString("d")</dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(creditNote.Reason))
+                        {
+                            <dt class="col-sm-4">@T["Reason"]</dt>
+                            <dd class="col-sm-8">@creditNote.Reason</dd>
+                        }
+
+                        <dt class="col-sm-4">@T["Credit given by"]</dt>
+                        <dd class="col-sm-8">@disposition</dd>
+
+                        <dt class="col-sm-4">@T["Total credited"]</dt>
+                        <dd class="col-sm-8 fw-semibold">@Money(creditNote.Totals?.Total ?? 0m)</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <partial name="_DocumentLines" model="creditNote" />
+
+            @if (creditNote.History.Count > 0)
+            {
+                <div class="card">
+                    <div class="card-header">@T["History"]</div>
+                    <ul class="list-group list-group-flush">
+                        @foreach (var entry in creditNote.History.OrderByDescending(entry => entry.CreatedUtc))
+                        {
+                            <li class="list-group-item">
+                                <div>@entry.Message</div>
+                                <div class="small text-muted">
+                                    @((await LocalAsync(entry.CreatedUtc)).ToString("g"))
+                                    @if (!string.IsNullOrEmpty(entry.ActorName))
+                                    {
+                                        <span>· @entry.ActorName</span>
+                                    }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header">@T["Print"]</div>
+            <div class="card-body d-flex flex-wrap gap-2">
+                <a asp-action="Document" asp-route-itemId="@creditNote.ItemId" class="btn btn-secondary">@T["Print"]</a>
+                <a asp-action="Pdf" asp-route-itemId="@creditNote.ItemId" class="btn btn-secondary">@T["PDF"]</a>
+            </div>
+        </div>
+        @if (Model.CanEdit || Model.CanIssue)
+        {
+            <div class="card mb-3">
+                <div class="card-header">@T["Draft"]</div>
+                <div class="card-body">
+                    <p class="text-muted">@T["A draft credit note credits nothing until it is issued. Issuing it gives it its number and gives the credit."]</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        @if (Model.CanEdit)
+                        {
+                            <a asp-action="Edit" asp-route-itemId="@creditNote.ItemId" class="btn btn-secondary">@T["Edit draft"]</a>
+                        }
+                        @if (Model.CanIssue)
+                        {
+                            <form asp-action="Issue" method="post">
+                                <input type="hidden" name="itemId" value="@creditNote.ItemId" />
+                                <button type="submit" class="btn btn-primary"
+                                        data-url-af="RemoveUrl" data-title="@T["Issue credit note"]" data-message="@T["Issue the credit note for {0}? It gets its number and the credit is given; it can't be changed after.", Money(creditNote.Totals?.Total ?? 0m)]" data-ok-text="@T["Issue"]" data-cancel-text="@T["Cancel"]">
+                                    @T["Issue"]
+                                </button>
+                            </form>
+                            <form asp-action="Delete" method="post">
+                                <input type="hidden" name="itemId" value="@creditNote.ItemId" />
+                                <button type="submit" class="btn btn-outline-danger"
+                                        data-url-af="RemoveUrl" data-title="@T["Delete draft"]" data-message="@T["Delete this draft credit note? This can't be undone."]" data-ok-text="@T["Delete"]" data-cancel-text="@T["Cancel"]">
+                                    @T["Delete draft"]
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<a class="btn btn-link" asp-action="Detail" asp-controller="InvoicesAdmin" asp-route-itemId="@creditNote.InvoiceId">@T["Back to invoice {0}", creditNote.InvoiceNumber]</a>

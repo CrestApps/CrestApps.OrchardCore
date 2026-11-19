@@ -39,6 +39,7 @@ public sealed class AccountMemberIndexProvider : IndexProvider<ContentItem>
     /// <inheritdoc/>
     public override void Describe(DescribeContext<ContentItem> context)
         => context.For<AccountMemberIndex>()
+            .ExclusiveToDocumentType()
             .When(contentItem => contentItem.Has<AccountMembersPart>())
             .Map(contentItem => ((contentItem.TryGet<AccountMembersPart>(out var part) ? part.Members : null) ?? [])
                 .Where(member => !string.IsNullOrEmpty(member?.UserId))

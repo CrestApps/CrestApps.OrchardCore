@@ -55,6 +55,7 @@ public static class WorkforceCoreServiceCollectionExtensions
         services.TryAddScoped<ActivityCodeSeeder>();
         services.AddCalendarAccessContributor<WorkforceCalendarAccessContributor>();
         services.AddCalendarBusyTimeSource<ShiftSegmentBusyTimeSource>();
+        services.AddTeamMemberAvailabilitySource<WorkforceShiftAvailabilitySource>();
 
         services.TryAddScoped<TeamTimeZoneResolver>();
         services.TryAddScoped<WorkerTimeZones>();
@@ -104,7 +105,7 @@ public static class WorkforceCoreServiceCollectionExtensions
             .WithPosition(60)
             .ManagedByCode()
             .AddEventType(WorkforceConstants.EventTypes.Shift, LocalizationSource.Create("Shift", _source), e => e.Color("#2b8a3e").Free().IgnoresCapacity())
-            .AddEventType(WorkforceConstants.EventTypes.TimeOff, LocalizationSource.Create("Time off", _source), e => e.Color("#e8590c").Busy().IgnoresCapacity().AllDayByDefault())
+            .AddEventType(WorkforceConstants.EventTypes.TimeOff, LocalizationSource.Create("Time off", _source), e => e.Color("#e8590c").Busy().IgnoresCapacity().AllDayByDefault().MarksAbsence())
             .AddEventType(WorkforceConstants.EventTypes.Training, LocalizationSource.Create("Training", _source), e => e.Color("#1971c2").Busy())
             .AddEventType(WorkforceConstants.EventTypes.Meeting, LocalizationSource.Create("Meeting", _source), e => e.Color("#6741d9").Busy())
             .AddEventType(WorkforceConstants.EventTypes.OnCall, LocalizationSource.Create("On call", _source), e => e.Color("#f08c00").Free().RequiresAttendee()));

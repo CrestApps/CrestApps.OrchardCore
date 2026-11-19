@@ -1,0 +1,268 @@
+@using Microsoft.AspNetCore.Html
+@using OrchardCore.DisplayManagement
+@model ApprovalPolicyViewModel
+
+@*
+    The stages and their approver rules in use, with buttons to add and remove them. The lists bind through MVC's
+    ".Index" convention (each stage and rule posts its own key), so a removed row leaves no gap to renumber. New rows
+    come from the templates at the end, with __stage__ and __rule__ replaced by fresh keys.
+*@
+@{
+    var stagesName = Html.NameFor(m => m.Stages).ToString();
+    var stagesId = Html.IdFor(m => m.Stages).ToString();
+    var ruleKinds = Model.KindOptions.Where(option => !string.IsNullOrEmpty(option.Value)).ToList();
+
+    async Task<IHtmlContent> RuleAsync(string stageKey, string ruleKey, ApproverRuleViewModel rule)
+    {
+        var ruleName = $"{stagesName}[{stageKey}].Approvers[{ruleKey}]";
+        var ruleId = $"{stagesId}_{stageKey}_Approvers_{ruleKey}";
+        var builder = new HtmlContentBuilder();
+
+        builder.AppendHtml($"<div class=\"ocat-wrapper\" data-approver-rule><input type=\"hidden\" name=\"{stagesName}[{stageKey}].Approvers.Index\" value=\"{ruleKey}\" />");
+        builder.AppendHtml($"<label class=\"ocat-label\" for=\"{ruleId}_Kind\">").Append(T["Who decides"].Value).AppendHtml("</label>");
+        builder.AppendHtml("<div class=\"ocat-end\"><div class=\"row g-2 align-items-start\"><div class=\"col-md-5\">");
+        builder.AppendHtml($"<select id=\"{ruleId}_Kind\" name=\"{ruleName}.Kind\" class=\"form-select\" data-approver-rule-kind>");
+
+        foreach (var option in Model.KindOptions)
+        {
+            var selected = string.Equals(rule.Kind ?? string.Empty, option.Value, StringComparison.OrdinalIgnoreCase) ? " selected" : null;
+            builder.AppendHtml($"<option value=\"{option.Value}\"{selected}>").Append(option.Text).AppendHtml("</option>");
+        }
+
+        builder.AppendHtml("</select></div><div class=\"col-md-6\">");
+
+        foreach (var option in ruleKinds)
+        {
+            var chosen = string.Equals(rule.Kind, option.Value, StringComparison.OrdinalIgnoreCase);
+            var editor = new ApproverRuleValueEditorViewModel
+            {
+                Kind = option.Value,
+                FieldName = $"{ruleName}.Values[{option.Value}]",
+                FieldId = $"{ruleId}_{option.Value}",
+                Value = chosen ? rule.Values?.GetValueOrDefault(option.Value)?.FirstOrDefault() : null,
+            };
+            IShape shape = await New.ApproverRuleValue_Edit(Editor: editor);
+            shape.Metadata.Alternates.Add("ApproverRuleValue_Edit__" + option.Value);
+            builder.AppendHtml($"<div data-approver-rule-value=\"{option.Value}\" class=\"{(chosen ? null : "d-none")}\">");
+            builder.AppendHtml(await DisplayAsync(shape));
+            builder.AppendHtml("</div>");
+        }
+
+        builder.AppendHtml("</div><div class=\"col-md-1 text-end\">");
+        builder.AppendHtml("<button type=\"button\" class=\"btn btn-sm btn-outline-danger\" data-approver-rule-remove title=\"").Append(T["Remove this rule"].Value).AppendHtml("\" aria-label=\"").Append(T["Remove this rule"].Value).AppendHtml("\"><i class=\"fa-solid fa-trash\" aria-hidden=\"true\"></i></button>");
+        builder.AppendHtml("</div></div></div></div>");
+
+        return builder;
+    }
+
+    async Task<IHtmlContent> StageAsync(string stageKey, int number, ApprovalStageViewModel stage)
+    {
+        var stageName = $"{stagesName}[{stageKey}]";
+        var stageId = $"{stagesId}_{stageKey}";
+        var builder = new HtmlContentBuilder();
+
+        builder.AppendHtml($"<div class=\"card mb-3\" data-approval-stage=\"{stageKey}\"><input type=\"hidden\" name=\"{stagesName}.Index\" value=\"{stageKey}\" />");
+        builder.AppendHtml("<div class=\"card-header d-flex align-items-center\"><span class=\"flex-grow-1\" data-approval-stage-number>").AppendHtml(T["Stage {0}", number]).AppendHtml("</span>");
+        builder.AppendHtml("<button type=\"button\" class=\"btn btn-sm btn-outline-danger\" data-approval-stage-remove>").Append(T["Remove stage"].Value).AppendHtml("</button></div>");
+        builder.AppendHtml("<div class=\"card-body\">");
+        builder.AppendHtml($"<div class=\"ocat-wrapper\"><label class=\"ocat-label\" for=\"{stageId}_Title\">").Append(T["Title"].Value).AppendHtml("</label><div class=\"ocat-end\">");
+        builder.AppendHtml($"<input id=\"{stageId}_Title\" name=\"{stageName}.Title\" class=\"form-control\" style=\"max-width: 24rem\" placeholder=\"").Append(T["Such as Manager or Finance"].Value).AppendHtml("\" value=\"").Append(stage.Title ?? string.Empty).AppendHtml("\" /></div></div>");
+        builder.AppendHtml("<div data-approver-rules>");
+
+        for (var r = 0; r < stage.Approvers.Count; r++)
+        {
+            builder.AppendHtml(await RuleAsync(stageKey, r.ToString(System.Globalization.CultureInfo.InvariantCulture), stage.Approvers[r]));
+        }
+
+        builder.AppendHtml("</div><div class=\"ocat-wrapper\"><div class=\"ocat-end-offset\">");
+        builder.AppendHtml("<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" data-approver-rule-add><i class=\"fa-solid fa-plus\" aria-hidden=\"true\"></i> ").Append(T["Add a rule"].Value).AppendHtml("</button></div></div>");
+        builder.AppendHtml($"<div class=\"ocat-wrapper\"><label class=\"ocat-label\" for=\"{stageId}_RequiredApprovals\">").Append(T["Approvals needed"].Value).AppendHtml("</label><div class=\"ocat-end ocat-limited-wrapper\">");
+        builder.AppendHtml($"<input id=\"{stageId}_RequiredApprovals\" name=\"{stageName}.RequiredApprovals\" type=\"number\" min=\"1\" max=\"10\" class=\"form-control\" value=\"{stage.RequiredApprovals}\" />");
+        builder.AppendHtml("<span class=\"hint\">").Append(T["How many different approvers must approve this stage."].Value).AppendHtml("</span></div></div>");
+        builder.AppendHtml("</div></div>");
+
+        return builder;
+    }
+}
+
+<div data-approval-stages data-max-stages="@ApprovalPolicyViewModel.MaxStages" data-max-rules="@ApprovalPolicyViewModel.MaxRules">
+    <p class="hint">@T["Stages are decided one after the other, such as the manager, then finance. A person any rule of the stage names may approve or reject; one rejection at any stage rejects the request. A stage without rules isn't kept."]</p>
+    <span asp-validation-for="Stages" class="text-danger"></span>
+
+    <div data-approval-stage-list>
+        @for (var s = 0; s < Model.Stages.Count; s++)
+        {
+            @await StageAsync(s.ToString(System.Globalization.CultureInfo.InvariantCulture), s + 1, Model.Stages[s])
+        }
+    </div>
+
+    <div class="mb-3">
+        <button type="button" class="btn btn-outline-secondary" data-approval-stage-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add a stage"]</button>
+    </div>
+
+    <template data-approval-stage-template>@await StageAsync("__stage__", 0, new ApprovalStageViewModel { Approvers = [new ApproverRuleViewModel()] })</template>
+    <template data-approver-rule-template>@await RuleAsync("__stage__", "__rule__", new ApproverRuleViewModel())</template>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Built-in rules"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="DueAfterHours">
+            <label asp-for="DueAfterHours" class="ocat-label">@T["Due after (hours)"]</label>
+            <div class="ocat-end ocat-limited-wrapper">
+                <input asp-for="DueAfterHours" class="form-control" inputmode="numeric" />
+                <span asp-validation-for="DueAfterHours" class="text-danger"></span>
+                <span class="hint">@T["Leave empty for no due time. A reminder workflow can use it."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end">
+                <div class="form-check">
+                    <input asp-for="AllowRequesterToApprove" type="checkbox" class="form-check-input" />
+                    <label asp-for="AllowRequesterToApprove" class="form-check-label">@T["Let the person who asked approve their own request"]</label>
+                    <span class="hint dashed">@T["Off by default: nobody approves what they asked for, at any stage."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end">
+                <div class="form-check">
+                    <input asp-for="AllowSubjectToDecide" type="checkbox" class="form-check-input" />
+                    <label asp-for="AllowSubjectToDecide" class="form-check-label">@T["Let a person decide a request about themselves"]</label>
+                    <span class="hint dashed">@T["Off by default: nobody approves their own pay, time or expenses, at any stage."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end">
+                <div class="form-check">
+                    <input asp-for="AllowSamePersonAcrossStages" type="checkbox" class="form-check-input" />
+                    <label asp-for="AllowSamePersonAcrossStages" class="form-check-label">@T["Let one person decide more than one stage"]</label>
+                    <span class="hint dashed">@T["Off by default: each stage is decided by someone who hasn't decided another, as a second pair of eyes. Turn it on when the team is too small."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const root = document.querySelector('[data-approval-stages]');
+
+        if (!root) {
+            return;
+        }
+
+        const list = root.querySelector('[data-approval-stage-list]');
+        const stageTemplate = root.querySelector('[data-approval-stage-template]');
+        const ruleTemplate = root.querySelector('[data-approver-rule-template]');
+        const maxStages = parseInt(root.getAttribute('data-max-stages'), 10);
+        const maxRules = parseInt(root.getAttribute('data-max-rules'), 10);
+        const stageLabel = @Json.Serialize(T["Stage {0}"].Value);
+        let counter = 0;
+
+        // A key no other row of the page uses.
+        const newKey = function () {
+            counter += 1;
+
+            return 'n' + Date.now().toString(36) + counter;
+        };
+
+        // Turns template markup into elements with fresh keys, and starts their pickers.
+        const build = function (template, stageKey) {
+            const html = template.innerHTML
+                .replaceAll('__stage__', stageKey)
+                .replaceAll('__rule__', newKey());
+            const holder = document.createElement('div');
+
+            holder.innerHTML = html;
+
+            const element = holder.firstElementChild;
+
+            return element;
+        };
+
+        const startPickers = function (element) {
+            if (window.CrestAppsItemSelector) {
+                window.CrestAppsItemSelector.initAll(element);
+            }
+
+            if (window.Selectpicker) {
+                element.querySelectorAll('select.selectpicker').forEach(function (select) {
+                    window.Selectpicker.getOrCreateInstance(select);
+                });
+            }
+        };
+
+        const refresh = function () {
+            const stages = list.querySelectorAll('[data-approval-stage]');
+
+            stages.forEach(function (stage, index) {
+                stage.querySelector('[data-approval-stage-number]').textContent = stageLabel.replace('{0}', index + 1);
+
+                const rules = stage.querySelectorAll('[data-approver-rule]').length;
+                stage.querySelector('[data-approver-rule-add]').disabled = rules >= maxRules;
+            });
+
+            root.querySelector('[data-approval-stage-add]').disabled = stages.length >= maxStages;
+        };
+
+        root.addEventListener('click', function (event) {
+            if (event.target.closest('[data-approval-stage-add]')) {
+                const stage = build(stageTemplate, newKey());
+
+                list.appendChild(stage);
+                startPickers(stage);
+                refresh();
+                stage.querySelector('input[type=text], input:not([type])')?.focus();
+
+                return;
+            }
+
+            const addRule = event.target.closest('[data-approver-rule-add]');
+
+            if (addRule) {
+                const stage = addRule.closest('[data-approval-stage]');
+                const rule = build(ruleTemplate, stage.getAttribute('data-approval-stage'));
+
+                stage.querySelector('[data-approver-rules]').appendChild(rule);
+                startPickers(rule);
+                refresh();
+                rule.querySelector('[data-approver-rule-kind]').focus();
+
+                return;
+            }
+
+            const removeRule = event.target.closest('[data-approver-rule-remove]');
+
+            if (removeRule) {
+                removeRule.closest('[data-approver-rule]').remove();
+                refresh();
+
+                return;
+            }
+
+            const removeStage = event.target.closest('[data-approval-stage-remove]');
+
+            if (removeStage) {
+                removeStage.closest('[data-approval-stage]').remove();
+                refresh();
+            }
+        });
+
+        // Shows the value editor of the approver rule kind chosen in each row.
+        root.addEventListener('change', function (event) {
+            const select = event.target.closest('[data-approver-rule-kind]');
+
+            if (!select) {
+                return;
+            }
+
+            select.closest('[data-approver-rule]').querySelectorAll('[data-approver-rule-value]').forEach(function (editor) {
+                editor.classList.toggle('d-none', editor.getAttribute('data-approver-rule-value') !== select.value);
+            });
+        });
+
+        refresh();
+    })();
+</script>

@@ -17,8 +17,26 @@ internal sealed class RecordingTransactionEventHandler : ITransactionEventHandle
 
     public List<string> Overdue { get; } = [];
 
+    public List<(string TransactionId, string EventId, decimal? Amount)> Refunded { get; } = [];
+
+    public List<(string TransactionId, string ReversalId, string ReversedId)> Reversed { get; } = [];
+
     public int Count
-        => Created.Count + StatusChanges.Count + Canceled.Count + Overdue.Count;
+        => Created.Count + StatusChanges.Count + Canceled.Count + Overdue.Count + Refunded.Count + Reversed.Count;
+
+    public Task ReversedAsync(Transaction transaction, TransactionEvent reversal, TransactionEvent reversed, CancellationToken cancellationToken = default)
+    {
+        Reversed.Add((transaction.ItemId, reversal.Id, reversed.Id));
+
+        return Task.CompletedTask;
+    }
+
+    public Task RefundedAsync(Transaction transaction, TransactionEvent refund, CancellationToken cancellationToken = default)
+    {
+        Refunded.Add((transaction.ItemId, refund.Id, refund.Amount));
+
+        return Task.CompletedTask;
+    }
 
     public Task CreatedAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {

@@ -305,7 +305,7 @@
                                 <select name="payCodeId" class="form-select" aria-label="@T["Pay code"]" required>
                                     @foreach (var code in manualCodes)
                                     {
-                                        <option value="@code.ItemId" selected="@(code.Kind == PayCodeKind.Holiday)">@code.Code — @code.Name</option>
+                                        <option value="@code.ItemId" selected="@(code.Kind == PayCodeKinds.Holiday)">@code.Code — @code.Name</option>
                                     }
                                 </select>
                             </div>

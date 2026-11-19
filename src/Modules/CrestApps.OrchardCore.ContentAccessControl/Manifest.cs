@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Roles.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -10,6 +11,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Content Management",
     Dependencies =
     [
-        "CrestApps.OrchardCore.Roles",
+        ContentAccessControlConstants.RolesFeature,
     ]
 )]

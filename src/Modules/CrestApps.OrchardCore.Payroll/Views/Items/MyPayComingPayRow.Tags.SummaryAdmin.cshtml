@@ -1,0 +1,14 @@
+@model ShapeViewModel<MyPayComingPayRow>
+
+@{
+    var statement = Model.Value.Statement;
+}
+
+@if (statement.Review is { } review && review.IsCurrentFor(statement.Net))
+{
+    <span class="badge @(review.Status == PayStatementReviewStatus.Confirmed ? "text-bg-success" : "text-bg-warning") fw-normal">@(review.Status == PayStatementReviewStatus.Confirmed ? T["You said it's right"] : T["You asked about it"])</span>
+}
+else
+{
+    <span class="badge text-bg-primary fw-normal">@T["To review"]</span>
+}

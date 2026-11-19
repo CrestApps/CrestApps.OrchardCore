@@ -114,6 +114,11 @@ public static class CalendarsConstants
         /// The event type every calendar type has, used when a type names no event types or an event names none.
         /// </summary>
         public const string Default = "Event";
+
+        /// <summary>
+        /// The out-of-office event of personal and team calendars; it marks an absence.
+        /// </summary>
+        public const string OutOfOffice = "OutOfOffice";
     }
 
     /// <summary>

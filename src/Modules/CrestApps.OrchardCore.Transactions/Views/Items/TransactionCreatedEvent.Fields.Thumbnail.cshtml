@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Transactions.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TransactionCreatedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i>
+    @T["Transaction Created"]
+</h4>
+<p>@T["Starts when a transaction is recorded."]</p>

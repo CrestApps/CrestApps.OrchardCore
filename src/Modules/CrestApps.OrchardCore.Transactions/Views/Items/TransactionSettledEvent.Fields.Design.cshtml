@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Transactions.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TransactionSettledEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Transaction Settled"])
+    </h4>
+</header>

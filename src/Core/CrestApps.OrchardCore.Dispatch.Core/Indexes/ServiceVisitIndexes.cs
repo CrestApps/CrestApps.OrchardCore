@@ -124,6 +124,8 @@ public sealed class ServiceVisitIndexProvider : IndexProvider<ServiceVisit>
     public override void Describe(DescribeContext<ServiceVisit> context)
     {
         context.For<ServiceVisitIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(visit => new ServiceVisitIndex
             {
                 ItemId = visit.ItemId,
@@ -143,6 +145,7 @@ public sealed class ServiceVisitIndexProvider : IndexProvider<ServiceVisit>
             });
 
         context.For<VisitWorkerIndex>()
+            .ExclusiveToDocumentType()
             .Map(visit => visit.StartUtc is null || visit.EndUtc is null
                 ? []
                 : visit.WorkerIds.Distinct(StringComparer.Ordinal).Select(workerId => new VisitWorkerIndex

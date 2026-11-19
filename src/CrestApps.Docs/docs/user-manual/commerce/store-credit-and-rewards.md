@@ -18,7 +18,7 @@ Store credit and points belong to a customer's account, so only signed-in buyers
 | | |
 | --- | --- |
 | **Menu** | Commerce > Customers (open a customer); Settings > Commerce > Rewards; Settings > Commerce > Referrals |
-| **Permission** | **Manage customers**. Buyers see their own under **My account** with **Manage own customer profile and addresses**, which signed-in users have by default. |
+| **Permission** | **Manage customers**. Buyers see their own under **Account** in the user menu with **Manage own customer profile and addresses**, which signed-in users have by default. |
 | **Feature** | Store Credit, Loyalty Points, Referrals (each needs Customers and Orders) |
 
 <AskYourAdmin />
@@ -172,7 +172,7 @@ The friend's order notes say *Referred by Ana, who was given $10 store credit.*,
 
 ## What buyers see in their account
 
-A signed-in buyer opens these from **My account** on your storefront, alongside their orders and addresses (see [The buyer's account](carts-and-orders.md#the-buyers-account)):
+A signed-in buyer opens these from **Account** in the user menu, alongside their orders and addresses (see [The buyer's account](carts-and-orders.md#the-buyers-account)):
 
 | Page | What it shows | Feature |
 | --- | --- | --- |

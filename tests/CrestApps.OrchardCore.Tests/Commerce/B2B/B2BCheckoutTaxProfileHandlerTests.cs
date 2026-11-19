@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Accounts.B2B.Handlers;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
 using CrestApps.OrchardCore.Accounts.Models;
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
@@ -46,6 +47,31 @@ public sealed class B2BCheckoutTaxProfileHandlerTests
         Assert.Equal("GB123456789", profile.Customer.VatNumber);
         Assert.Equal("c1", profile.Customer.CustomerId);
         Assert.True(profile.Customer.IsTaxExempt);
+    }
+
+    /// <summary>
+    /// At checkout the address that is taxed is the checkout's own billing or shipping address, so the account's business
+    /// address is not added to the profile. A document billed to the account itself is taxed at that address through the
+    /// party tax profile instead (see <c>PartyTaxProfileServiceTests.ABusinessAccountWithATaxNumber_IsTaxedAsABusiness_AtItsBillingLocation</c>).
+    /// </summary>
+    [Fact]
+    public async Task ABusinessAccountBuyer_DoesNotGetTheAccountsAddressOnTheCheckoutProfile()
+    {
+        // Arrange
+        var office = new Address { AddressLine1 = "1 Main St", City = "Seattle", Region = "WA", PostalCode = "98101", Country = "US" };
+        var account = TestB2BAccounts.Create(
+            configure: part => part.TaxId = "GB123456789",
+            members: [new AccountMember { UserId = BuyerId }],
+            locations: [new AccountLocation { LocationId = "hq", Address = office, IsBilling = true }]);
+
+        var provider = new DefaultCheckoutTaxProfileProvider([new B2BCheckoutTaxProfileHandler(Accounts(account))]);
+
+        // Act
+        var profile = await provider.GetProfileAsync(new CheckoutFlow(new CheckoutSession { SessionId = "s1", OwnerId = BuyerId }), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(CustomerTaxType.B2B, profile.Customer.CustomerType);
+        Assert.Null(profile.Customer.BusinessAddress);
     }
 
     [Fact]

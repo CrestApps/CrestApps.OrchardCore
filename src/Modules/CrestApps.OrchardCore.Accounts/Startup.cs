@@ -11,18 +11,23 @@ using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.PageSections;
 using CrestApps.OrchardCore.Parties;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Timeline;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentTypes.Events;
+using OrchardCore.Contents;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -46,7 +51,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<IAccountContentTypeProvider, AccountContentTypeProvider>();
 
         // Accounts are parties: pickers and lists in any module (asset owners, work orders) find and name them.
-        services.AddPartySource<AccountPartySource>();
+        services.AddPartySource<AccountPartySource>(PartyKinds.Account, LocalizationSource.Create<Startup>("Account"), CommonPermissions.ListContent);
+
+        // An account is billed under its name at its billing location; modules that keep more about it add their own
+        // billing profile source after this one.
+        services.AddPartyBillingProfileSource<AccountBillingProfileSource>();
         services.AddScoped<AccountListSynchronizer>();
         services.AddScoped<IContentDefinitionEventHandler, AccountsContentDefinitionEventHandler>();
         services.AddScoped<IContentDisplayDriver, AccountPickerDisplayDriver>();
@@ -67,9 +76,9 @@ public sealed class Startup : StartupBase
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Opportunities, LocalizationSource.Create<Startup>("Opportunities"), "fa-solid fa-handshake", AccountPageTabs.GetPosition(AccountPageTabs.Opportunities));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Leads, LocalizationSource.Create<Startup>("Leads"), "fa-solid fa-user-plus", AccountPageTabs.GetPosition(AccountPageTabs.Leads));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Activities, LocalizationSource.Create<Startup>("Activities"), "fa-solid fa-list-check", AccountPageTabs.GetPosition(AccountPageTabs.Activities));
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Notes, LocalizationSource.Create<Startup>("Notes"), "fa-regular fa-note-sticky", AccountPageTabs.GetPosition(AccountPageTabs.Notes));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Orders, LocalizationSource.Create<Startup>("Orders"), "fa-solid fa-bag-shopping", AccountPageTabs.GetPosition(AccountPageTabs.Orders));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Business, LocalizationSource.Create<Startup>("Business buying"), "fa-solid fa-briefcase", AccountPageTabs.GetPosition(AccountPageTabs.Business));
-        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Invoices, LocalizationSource.Create<Startup>("Invoices"), "fa-solid fa-file-invoice-dollar", AccountPageTabs.GetPosition(AccountPageTabs.Invoices));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Service, LocalizationSource.Create<Startup>("Service"), "fa-solid fa-screwdriver-wrench", AccountPageTabs.GetPosition(AccountPageTabs.Service));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Records, LocalizationSource.Create<Startup>("All records"), "fa-solid fa-folder-open", AccountPageTabs.GetPosition(AccountPageTabs.Records));
     }
@@ -95,6 +104,9 @@ public sealed class MembersStartup : StartupBase
             .AddHandler<AccountMembersPartHandler>();
 
         services.AddScoped<IAccountMemberService, AccountMemberService>();
+
+        // The members of an account act for it wherever a party's members are asked for, such as a billing portal.
+        services.AddPartyMemberSource<AccountPartyMemberSource>();
         services.AddIndexProvider<AccountMemberIndexProvider>();
         services.AddDataMigration<AccountMembersMigrations>();
         services.AddPermissionProvider<AccountMembersPermissionProvider>();
@@ -118,6 +130,20 @@ public sealed class TeamStartup : StartupBase
 }
 
 /// <summary>
+/// Adds the Notes tab to the account page: the account's timeline.
+/// </summary>
+[RequireFeatures(TimelineConstants.Features.Timeline)]
+public sealed class TimelineStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPart<AccountPart>()
+            .UseDisplayDriver<AccountNotesDisplayDriver>();
+    }
+}
+
+/// <summary>
 /// Describes the account team part to CrestApps Recipes.
 /// </summary>
 [Feature(AccountsConstants.TeamFeature)]
@@ -134,6 +160,31 @@ public sealed class TeamRecipesSchemaStartup : StartupBase
 /// <summary>
 /// Registers the locations part and its editor.
 /// </summary>
+/// <summary>
+/// Registers the accounts' e-mail domains.
+/// </summary>
+[Feature(AccountsConstants.EmailDomainsFeature)]
+public sealed class EmailDomainsStartup : StartupBase
+{
+    private readonly IShellConfiguration _shellConfiguration;
+
+    public EmailDomainsStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPart<AccountEmailDomainsPart>()
+            .UseDisplayDriver<AccountEmailDomainsPartDisplayDriver>()
+            .AddHandler<Handlers.AccountEmailDomainsPartHandler>();
+        services.Configure<AccountEmailDomainsOptions>(_shellConfiguration.GetSection("CrestApps:Accounts:EmailDomains"));
+        services.AddIndexProvider<AccountEmailDomainIndexProvider>();
+        services.AddDataMigration<AccountEmailDomainsMigrations>();
+        services.AddScoped<IAccountEmailDomains, AccountEmailDomains>();
+    }
+}
+
 [Feature(AccountsConstants.LocationsFeature)]
 public sealed class LocationsStartup : StartupBase
 {

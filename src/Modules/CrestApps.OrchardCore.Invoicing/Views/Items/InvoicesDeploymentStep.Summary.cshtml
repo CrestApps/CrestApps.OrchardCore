@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.Invoicing.Deployments
+
+@model ShapeViewModel<InvoicesDeploymentStep>
+
+<h5>@T["Invoices"]</h5>
+
+<span class="badge text-bg-success">@T["All invoices"]</span>
+@if (Model.Value.IncludeTransactions)
+{
+    <span class="badge text-bg-success">@T["With their transactions"]</span>
+}

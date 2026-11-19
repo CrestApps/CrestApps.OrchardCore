@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketClosedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-box-archive" aria-hidden="true"></i>
+    @T["Ticket Closed"]
+</h4>
+<p>@T["Starts when a ticket is closed."]</p>

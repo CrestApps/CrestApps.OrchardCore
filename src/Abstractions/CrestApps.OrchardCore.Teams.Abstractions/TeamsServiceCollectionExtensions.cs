@@ -24,4 +24,37 @@ public static class TeamsServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers a source that reports how much work of one kind each team member holds, so team assignment can
+    /// balance that kind of work.
+    /// </summary>
+    /// <typeparam name="TSource">The source.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddTeamMemberLoadSource<TSource>(this IServiceCollection services)
+        where TSource : class, ITeamMemberLoadSource
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITeamMemberLoadSource, TSource>());
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers a source that says which team members can't take new work now.
+    /// </summary>
+    /// <typeparam name="TSource">The source.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddTeamMemberAvailabilitySource<TSource>(this IServiceCollection services)
+        where TSource : class, ITeamMemberAvailabilitySource
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITeamMemberAvailabilitySource, TSource>());
+
+        return services;
+    }
 }

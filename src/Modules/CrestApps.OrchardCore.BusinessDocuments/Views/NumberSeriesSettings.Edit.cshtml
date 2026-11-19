@@ -1,0 +1,110 @@
+@using CrestApps.OrchardCore.Numbering
+@model NumberSeriesSettingsViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["How numbers are written"]</div>
+    <div class="card-body">
+        <p class="mb-1">@T["A pattern is text with tokens in braces: {0} is the number, {1} the number with at least as many digits as zeros, {2} the year, {3} the year in two digits and {4} the month of the day the number is issued, in the site's time zone.", "{seq}", "{seq:0000}", "{yyyy}", "{yy}", "{MM}"]</p>
+        <p class="mb-0 text-muted">@T["A pattern has exactly one {0} token. Numbers that start again each year need {1} or {2}, and each month {3} too, so that no number repeats. A series left as it was registered follows the format of the feature that registered it.", "{seq}", "{yyyy}", "{yy}", "{MM}"]</p>
+    </div>
+</div>
+
+@if (Model.Series.Count == 0)
+{
+    <div class="alert alert-info">@T["No enabled feature registers a number series yet."]</div>
+}
+
+@for (var index = 0; index < Model.Series.Count; index++)
+{
+    var series = Model.Series[index];
+
+    <div class="card text-bg-theme mb-3" data-number-series data-today="@Model.Today">
+        <div class="card-header">
+            @series.Title
+            @if (series.IsCustomized)
+            {
+                <span class="badge ta-badge fw-normal ms-1" data-bs-toggle="tooltip" title="@T["The site chose a format of its own for this series."]">@T["Customized"]</span>
+            }
+        </div>
+        <div class="card-body">
+            <input type="hidden" asp-for="Series[index].Name" />
+            <div class="ocat-wrapper" asp-validation-class-for="Series[index].Pattern">
+                <label asp-for="Series[index].Pattern" class="ocat-label ocat-label-required">@T["Pattern"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Series[index].Pattern" class="form-control" maxlength="@NumberSeriesFormat.MaximumPatternLength" data-number-series-pattern autocomplete="off" />
+                    <span asp-validation-for="Series[index].Pattern" class="text-danger"></span>
+                    <span class="hint">@T["Registered as {0}.", series.DefaultPattern]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="Series[index].FirstNumber">
+                <label asp-for="Series[index].FirstNumber" class="ocat-label">@T["First number"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Series[index].FirstNumber" type="number" min="1" step="1" class="form-control" data-number-series-first />
+                    <span asp-validation-for="Series[index].FirstNumber" class="text-danger"></span>
+                    <span class="hint">@T["Where a new series starts, and where it starts again each year or month. Numbers already issued are not changed."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="Series[index].Reset">
+                <label asp-for="Series[index].Reset" class="ocat-label">@T["Start again"]</label>
+                <div class="ocat-end">
+                    <select asp-for="Series[index].Reset" asp-items="Model.ResetOptions" class="form-select"></select>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Example"]</label>
+                <div class="ocat-end">
+                    <code data-number-series-example>@series.Example</code>
+                    <span class="hint">@T["The first number of the series, written with today's date."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<script at="Foot">
+    (function () {
+        function pad(value, digits) {
+            var text = String(value);
+
+            while (text.length < digits) {
+                text = '0' + text;
+            }
+
+            return text;
+        }
+
+        function write(pattern, first, today) {
+            var parts = today.split('-');
+
+            return pattern.replace(/\{(seq(?::(0+))?|yyyy|yy|MM)\}/g, function (token, name, zeros) {
+                if (name === 'yyyy') {
+                    return parts[0];
+                }
+
+                if (name === 'yy') {
+                    return parts[0].substring(2);
+                }
+
+                if (name === 'MM') {
+                    return parts[1];
+                }
+
+                return pad(first, zeros ? zeros.length : 1);
+            });
+        }
+
+        document.querySelectorAll('[data-number-series]').forEach(function (card) {
+            var pattern = card.querySelector('[data-number-series-pattern]');
+            var first = card.querySelector('[data-number-series-first]');
+            var example = card.querySelector('[data-number-series-example]');
+            var update = function () {
+                var number = parseInt(first.value, 10);
+
+                example.textContent = write(pattern.value || '', isNaN(number) || number < 1 ? 1 : number, card.dataset.today);
+            };
+
+            pattern.addEventListener('input', update);
+            first.addEventListener('input', update);
+        });
+    })();
+</script>

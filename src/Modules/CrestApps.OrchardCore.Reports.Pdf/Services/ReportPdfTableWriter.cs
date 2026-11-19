@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Pdf;
 using CrestApps.OrchardCore.Reports.Models;
 
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
@@ -211,9 +212,9 @@ internal sealed class ReportPdfTableWriter
         var font = bold || (hasStyle && style.Bold)
             ? _flow.Bold
             : _flow.Regular;
-        var color = hasStyle && ReportPdfColor.TryParse(style.Color, out var textColor) ? textColor : ReportPdfTheme.Text;
-        ReportPdfColor? fill = hasStyle && ReportPdfColor.TryParse(style.BackgroundColor, out var background) ? background : null;
-        var lines = ReportPdfText.Wrap(font.Prepare(value), font, _layout.FontSize, Width(index, span) - ReportPdfTableLayout.CellPadding);
+        var color = hasStyle && ReportPdfColors.TryParse(style.Color, out var textColor) ? textColor : ReportPdfTheme.Text;
+        PdfColor? fill = hasStyle && ReportPdfColors.TryParse(style.BackgroundColor, out var background) ? background : null;
+        var lines = PdfText.Wrap(font.Prepare(value), font, _layout.FontSize, Width(index, span) - ReportPdfTableLayout.CellPadding);
 
         return new Cell(lines, font, color, fill, align, index, span);
     }
@@ -288,14 +289,14 @@ internal sealed class ReportPdfTableWriter
         _flow.Advance(height);
     }
 
-    private sealed record Cell(List<string> Lines, ReportPdfFont Font, ReportPdfColor Color, ReportPdfColor? Fill, ReportColumnAlign Align, int Column, int Span);
+    private sealed record Cell(List<string> Lines, PdfFontFace Font, PdfColor Color, PdfColor? Fill, ReportColumnAlign Align, int Column, int Span);
 
     private sealed class Row
     {
         public Row(
             Cell[] cells,
-            ReportPdfColor? fill,
-            ReportPdfColor ruleColor,
+            PdfColor? fill,
+            PdfColor ruleColor,
             double ruleWidth,
             bool topRule)
         {
@@ -309,9 +310,9 @@ internal sealed class ReportPdfTableWriter
 
         public Cell[] Cells { get; }
 
-        public ReportPdfColor? Fill { get; }
+        public PdfColor? Fill { get; }
 
-        public ReportPdfColor RuleColor { get; }
+        public PdfColor RuleColor { get; }
 
         public double RuleWidth { get; }
 

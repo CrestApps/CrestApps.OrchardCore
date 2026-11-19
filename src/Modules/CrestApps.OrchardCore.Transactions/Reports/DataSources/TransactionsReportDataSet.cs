@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Linq.Expressions;
 using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
@@ -80,6 +82,10 @@ public sealed class TransactionsReportDataSet : IndexedReportDataSet<Transaction
         AddField(nameof(Transaction.AmountRefunded), S["Refunded"], DataFieldType.Decimal, record => record.AmountRefunded, money).Description = inCurrency;
         AddField(nameof(Transaction.OutstandingAmount), S["Outstanding"], DataFieldType.Decimal, record => CurrencyScale.Round(record.OutstandingAmount, record.Currency), money).Description = S["What is still owed: the total less what was adjusted and paid, rounded to the currency, in the transaction's currency."].Value;
         AddField(nameof(Transaction.SettlementMethod), S["Settled by"], DataFieldType.Text, record => record.SettlementMethod, money);
+        AddField("TaxRates", S["Tax rates"], DataFieldType.Text, record => FormatTaxRates(record), money).Description = S["The taxes of the breakdown with their rates, such as \"VAT 20%\", when the debt was recorded with one."].Value;
+        AddField(nameof(Transaction.ExchangeRate), S["Exchange rate"], DataFieldType.Decimal, record => record.ExchangeRate, money).Description = S["How many units of the base currency one unit of the transaction's currency was worth when it was recorded."].Value;
+        AddField(nameof(Transaction.BaseCurrency), S["Base currency"], DataFieldType.Text, record => record.BaseCurrency, money);
+        AddField(nameof(Transaction.AllowPartialPayment), S["Part payments allowed"], DataFieldType.Boolean, record => record.AllowPartialPayment, money);
 
         AddField(CreatedUtcField, S["Recorded"], DataFieldType.DateTime, record => record.CreatedUtc, dates);
         AddField(nameof(Transaction.DueUtc), S["Due"], DataFieldType.DateTime, record => record.DueUtc, dates);
@@ -96,7 +102,29 @@ public sealed class TransactionsReportDataSet : IndexedReportDataSet<Transaction
         AddField(nameof(Transaction.GuestContactName), S["Guest name"], DataFieldType.Text, record => record.GuestContactName, owner);
         AddField(nameof(Transaction.GuestContactEmail), S["Guest email"], DataFieldType.Text, record => record.GuestContactEmail, owner);
 
+        var payer = S["Payer"].Value;
+
+        AddField(nameof(Transaction.PayerKind), S["Payer kind"], DataFieldType.Text, record => NullIfEmpty(record.GetPayer()).Kind, payer).Description = S["The kind of party that owes the money, such as Account, Customer or User."].Value;
+        AddField(nameof(Transaction.PayerId), S["Payer ID"], DataFieldType.Text, record => NullIfEmpty(record.GetPayer()).Id, payer).Identifier();
+        AddField("PayerName", S["Payer name"], DataFieldType.Text, record => record.PayerContact?.Name, payer);
+        AddField("PayerEmail", S["Payer email"], DataFieldType.Text, record => record.PayerContact?.Email, payer);
+
         CompleteDescription();
+    }
+
+    private static PartyRef NullIfEmpty(PartyRef party)
+        => party.IsEmpty ? default : party;
+
+    private static string FormatTaxRates(Transaction transaction)
+    {
+        if (transaction.TaxLines is not { Count: > 0 } lines)
+        {
+            return null;
+        }
+
+        return string.Join(", ", lines
+            .Select(line => $"{line.TaxName ?? line.TaxCode} {(line.Rate * 100m).ToString("0.####", CultureInfo.InvariantCulture)}%".Trim())
+            .Distinct(StringComparer.Ordinal));
     }
 
     /// <inheritdoc/>
@@ -111,6 +139,7 @@ public sealed class TransactionsReportDataSet : IndexedReportDataSet<Transaction
             [nameof(Transaction.OwnerId)] = index => index.OwnerId,
             [nameof(Transaction.ReferenceId)] = index => index.ReferenceId,
             [nameof(Transaction.CheckoutSessionId)] = index => index.CheckoutSessionId,
+            [nameof(Transaction.PayerId)] = index => index.PayerId,
         };
 
     /// <inheritdoc/>

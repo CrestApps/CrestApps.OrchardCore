@@ -49,6 +49,33 @@ public sealed class WorkOrderStore : DocumentCatalog<WorkOrder, WorkOrderIndex>
 
         return counts;
     }
+
+    /// <summary>
+    /// Finds the work orders whose number or summary contains a text, newest first, in the database. A blank text
+    /// finds the newest work orders.
+    /// </summary>
+    /// <param name="text">The text, or <see langword="null"/> for the newest work orders.</param>
+    /// <param name="take">The most work orders to return.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The work orders found.</returns>
+    public async Task<IReadOnlyList<WorkOrder>> SearchAsync(string text, int take, CancellationToken cancellationToken = default)
+    {
+        if (take <= 0)
+        {
+            return [];
+        }
+
+        var query = Session.Query<WorkOrder, WorkOrderIndex>(collection: CollectionName);
+
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            var search = text.Trim();
+
+            query = query.Where(index => index.Number.Contains(search) || index.Summary.Contains(search));
+        }
+
+        return await LoadedAsync(await query.OrderByDescending(index => index.CreatedUtc).Take(take).ListAsync(cancellationToken));
+    }
 }
 
 /// <summary>
@@ -190,7 +217,12 @@ internal sealed class ChecklistTemplateHandler : CatalogEntryHandlerBase<Checkli
         foreach (var question in template.Questions)
         {
             question.Id ??= CrestApps.Core.UniqueId.GenerateId();
-            question.Choices = [.. question.Choices.Where(choice => !string.IsNullOrWhiteSpace(choice)).Select(choice => choice.Trim())];
+
+            // A question saved the older way (an import of an older recipe, a template saved before the shared rules)
+            // keeps its condition as a rule from now on.
+            question.Rule = question.GetRule();
+            question.ShowWhen = null;
+            question.Choices =[.. question.Choices.Where(choice => !string.IsNullOrWhiteSpace(choice)).Select(choice => choice.Trim())];
 
             if (question.Kind is ChecklistQuestionKind.Choice or ChecklistQuestionKind.MultiChoice && question.Choices.Count < 2)
             {
@@ -201,59 +233,6 @@ internal sealed class ChecklistTemplateHandler : CatalogEntryHandlerBase<Checkli
             {
                 context.Result.Fail(new ValidationResult(S["The question '{0}' has a lowest number above its highest.", question.Text], [nameof(ChecklistTemplate.Questions)]));
             }
-        }
-
-        return Task.CompletedTask;
-    }
-}
-
-/// <summary>
-/// Checks and stamps service level policies.
-/// </summary>
-internal sealed class ServiceLevelPolicyHandler : CatalogEntryHandlerBase<ServiceLevelPolicy>
-{
-    private readonly IClock _clock;
-
-    internal readonly IStringLocalizer S;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ServiceLevelPolicyHandler"/> class.
-    /// </summary>
-    /// <param name="clock">The clock.</param>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public ServiceLevelPolicyHandler(IClock clock, IStringLocalizer<ServiceLevelPolicyHandler> stringLocalizer)
-    {
-        _clock = clock;
-        S = stringLocalizer;
-    }
-
-    /// <inheritdoc/>
-    public override Task InitializedAsync(InitializedContext<ServiceLevelPolicy> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.CreatedUtc = _clock.UtcNow;
-
-        // A new policy stops the clock while work orders are on hold.
-        context.Model.PauseStatuses = [WorkOrderStatus.OnHold];
-
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public override Task ValidatingAsync(ValidatingContext<ServiceLevelPolicy> context, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(context.Model.Name))
-        {
-            context.Result.Fail(new ValidationResult(S["The name is required."], [nameof(ServiceLevelPolicy.Name)]));
-        }
-
-        if (context.Model.WarningPercent is < 1 or > 99)
-        {
-            context.Result.Fail(new ValidationResult(S["The warning must come between 1 and 99 percent of the way."], [nameof(ServiceLevelPolicy.WarningPercent)]));
-        }
-
-        if (context.Model.Targets.Any(target => target.ResponseMinutes < 0 || target.ResolveMinutes < 0))
-        {
-            context.Result.Fail(new ValidationResult(S["Targets can't be negative."], [nameof(ServiceLevelPolicy.Targets)]));
         }
 
         return Task.CompletedTask;

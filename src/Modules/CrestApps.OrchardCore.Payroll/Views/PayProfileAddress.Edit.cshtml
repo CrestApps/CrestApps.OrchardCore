@@ -1,0 +1,9 @@
+@model PayProfileAddressViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Home address"]</div>
+    <div class="card-body">
+        <p class="hint">@T["For taxes and forms."]</p>
+        @await DisplayAsync(Model.AddressEditor)
+    </div>
+</div>

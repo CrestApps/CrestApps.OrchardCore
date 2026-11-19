@@ -71,9 +71,9 @@ What you see in the app depends on your role. Most people are not administrators
 - **Site Administration**: [users](administration/users.md), [roles](administration/roles.md), [content access](administration/content-access-control.md), [content fields](administration/content-fields.md), [import and export](administration/import-and-export.md), [Do Not Call lists](administration/do-not-call-lists.md), [phone number verification](administration/phone-number-verification.md), [time zones](administration/time-zones.md), [wizards](administration/wizard.md) and [recipes and shared resources](administration/recipes.md).
 - **[Troubleshooting](troubleshooting.md)**: what to do when something doesn't work as expected.
 
-## Searching only the User Manual
+## Searching one manual or both
 
-The search box at the top of every User Manual page searches only this manual. To search the whole site, including the Technical Manual, choose **See all results** at the bottom of the search box, then switch the filter next to the search field from **User Manual** to **Everywhere**.
+The search box at the top of every page searches both manuals. Next to it are two checkboxes, **User Manual** and **Technical Manual**: clear **Technical Manual** to search only this manual, or clear **User Manual** to search only the Technical Manual. At least one stays ticked, and the site remembers your choice. The search results page (**See all results** at the bottom of the search box) has the same two checkboxes. On a phone the search box searches both manuals; use the checkboxes on the search results page.
 
 ## About the screencasts
 

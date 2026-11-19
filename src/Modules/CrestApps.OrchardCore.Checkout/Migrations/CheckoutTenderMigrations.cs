@@ -28,4 +28,24 @@ internal sealed class CheckoutTenderMigrations : DataMigration
 
         return 1;
     }
+
+    // A balance keeps its latest changes in its own document and older ones move to their own records, indexed by
+    // balance and by reference, so a balance with years of history is never read and rewritten whole.
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<BalanceLedgerEntryIndex>(table => table
+            .Column<string>("Ledger", column => column.WithLength(64))
+            .Column<string>("AccountId", column => column.WithLength(26))
+            .Column<string>("Reference", column => column.Nullable().WithLength(BalanceLedgerEntryIndexProvider.ReferenceLength))
+            .Column<DateTime>("CreatedUtc")
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<BalanceLedgerEntryIndex>(table =>
+        {
+            table.CreateIndex("IDX_BalanceLedgerEntryIndex_Reference", "Ledger", "AccountId", "Reference");
+            table.CreateIndex("IDX_BalanceLedgerEntryIndex_Account", "Ledger", "AccountId", "CreatedUtc");
+        });
+
+        return 2;
+    }
 }

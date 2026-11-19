@@ -22,6 +22,8 @@ public sealed class OmnichannelActivityIndexProvider : IndexProvider<Omnichannel
     {
         context
             .For<OmnichannelActivityIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(activity => new OmnichannelActivityIndex()
             {
                 ItemId = activity.ItemId,

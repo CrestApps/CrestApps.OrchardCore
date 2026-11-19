@@ -48,6 +48,8 @@ public sealed class OrderIndexProvider : IndexProvider<Order>
     public override void Describe(DescribeContext<Order> context)
     {
         context.For<OrderIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(order => new OrderIndex
             {
                 ItemId = order.ItemId,

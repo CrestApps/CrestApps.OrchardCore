@@ -97,6 +97,71 @@ public sealed class TransactionMultiSettlementCheckoutHandlerTests
         Assert.Equal(0, sessions.SaveCount);
     }
 
+    /// <summary>
+    /// An account's balances are owed by the account, whichever buyer placed each one: an admin of the account pays them
+    /// together.
+    /// </summary>
+    /// <summary>
+    /// A transaction paid through a checkout of its own (an order's invoice, paid through the order's checkout) is never
+    /// paid with other balances, nor on its own here: the order would never hear of it.
+    /// </summary>
+    [Fact]
+    public async Task StartAsync_WithATransactionPaidThroughItsOwnCheckout_IsRejected()
+    {
+        // Arrange: transaction-2 is an order's invoice.
+        var payUrls = new Mock<ITransactionPayUrlProvider>();
+        payUrls.Setup(provider => provider.GetPayUrlAsync(It.Is<Transaction>(transaction => transaction.ItemId == "transaction-2"), It.IsAny<CancellationToken>())).ReturnsAsync("/orders/view/token/pay");
+        var (engine, sessions) = CreateEngine(new FakeTransactionStore(CreateTransaction("transaction-1", 108m), CreateTransaction("transaction-2", 50m)), payUrls.Object);
+
+        // Act
+        var together = await Assert.ThrowsAsync<CheckoutRejectedException>(() => engine.StartAsync(CreateRequest("transaction-1", "transaction-2"), TestContext.Current.CancellationToken));
+        var alone = await Assert.ThrowsAsync<CheckoutRejectedException>(() => engine.StartAsync(CreateRequest("transaction-2"), TestContext.Current.CancellationToken));
+        var other = await engine.StartAsync(CreateRequest("transaction-1"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(together.Errors, error => error.Contains("paid through its own checkout", StringComparison.Ordinal));
+        Assert.Contains(alone.Errors, error => error.Contains("paid through its own checkout", StringComparison.Ordinal));
+        Assert.Equal("transaction-1", other.ReferenceId);
+        Assert.Equal(1, sessions.SaveCount);
+    }
+
+    [Fact]
+    public async Task StartAsync_WithTransactionsOfDifferentOwnersOwedByTheSamePayer_ListsThemTogether()
+    {
+        // Arrange
+        var first = CreateTransaction("transaction-1", 108m);
+        var second = CreateTransaction("transaction-2", 50m);
+        second.OwnerId = "customer-2";
+        first.SetPayer(new CrestApps.OrchardCore.Parties.Models.PartyRef(CrestApps.OrchardCore.Parties.Models.PartyKinds.Account, "account-1"));
+        second.SetPayer(new CrestApps.OrchardCore.Parties.Models.PartyRef(CrestApps.OrchardCore.Parties.Models.PartyKinds.Account, "account-1"));
+
+        var (engine, _) = CreateEngine(new FakeTransactionStore(first, second));
+
+        // Act
+        var session = await engine.StartAsync(CreateRequest("transaction-1", "transaction-2"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["transaction-1", "transaction-2"], session.References.Select(reference => reference.ReferenceId));
+    }
+
+    [Fact]
+    public async Task StartAsync_WithTransactionsOwedByDifferentPayers_IsRejected()
+    {
+        // Arrange
+        var first = CreateTransaction("transaction-1", 108m);
+        var second = CreateTransaction("transaction-2", 50m);
+        first.SetPayer(new CrestApps.OrchardCore.Parties.Models.PartyRef(CrestApps.OrchardCore.Parties.Models.PartyKinds.Account, "account-1"));
+        second.SetPayer(new CrestApps.OrchardCore.Parties.Models.PartyRef(CrestApps.OrchardCore.Parties.Models.PartyKinds.Account, "account-2"));
+
+        var (engine, _) = CreateEngine(new FakeTransactionStore(first, second));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<CheckoutRejectedException>(() => engine.StartAsync(CreateRequest("transaction-1", "transaction-2"), TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Contains("Transactions of different customers can't be paid together.", exception.Errors);
+    }
+
     [Fact]
     public async Task StartAsync_WithTransactionsInDifferentCurrencies_IsRejected()
     {
@@ -317,9 +382,9 @@ public sealed class TransactionMultiSettlementCheckoutHandlerTests
             CreatedUtc = _now,
         };
 
-    private static (DefaultCheckoutEngine Engine, InMemoryCheckoutSessionStore Sessions) CreateEngine(FakeTransactionStore store)
+    private static (DefaultCheckoutEngine Engine, InMemoryCheckoutSessionStore Sessions) CreateEngine(FakeTransactionStore store, ITransactionPayUrlProvider payUrls = null)
     {
-        var sessions = new InMemoryCheckoutSessionStore([CreateHandler(store, new InMemoryPaymentAttemptStore())]);
+        var sessions = new InMemoryCheckoutSessionStore([CreateHandler(store, new InMemoryPaymentAttemptStore(), payUrls, [])]);
         var attemptStore = new InMemoryPaymentAttemptStore();
         var providerResolver = Mock.Of<ICheckoutPaymentProviderResolver>();
 
@@ -340,8 +405,16 @@ public sealed class TransactionMultiSettlementCheckoutHandlerTests
     }
 
     private static TransactionSettlementCheckoutHandler CreateHandler(FakeTransactionStore store, InMemoryPaymentAttemptStore attempts, params ITransactionPaymentHandler[] paymentHandlers)
+        => CreateHandler(store, attempts, null, paymentHandlers);
+
+    private static TransactionSettlementCheckoutHandler CreateHandler(FakeTransactionStore store, InMemoryPaymentAttemptStore attempts, ITransactionPayUrlProvider payUrls, ITransactionPaymentHandler[] paymentHandlers)
     {
         var services = new ServiceCollection();
+
+        if (payUrls is not null)
+        {
+            services.AddSingleton(payUrls);
+        }
 
         foreach (var paymentHandler in paymentHandlers)
         {

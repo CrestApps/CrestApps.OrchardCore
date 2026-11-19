@@ -1,9 +1,11 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Listing;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
@@ -105,6 +107,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ISubscriptionStore, SubscriptionStore>();
         services.AddScoped<ISubscriptionManager, SubscriptionManager>();
+        services.AddRecordSource<SubscriptionRecordSource>();
         services.AddScoped<ISubscriptionLifecycleService, DefaultSubscriptionLifecycleService>();
         services.AddScoped<ISubscriptionAccessService, DefaultSubscriptionAccessService>();
         services.AddScoped<ISubscriptionLifecycleHandler, EntitlementSubscriptionLifecycleHandler>();
@@ -163,6 +166,9 @@ public sealed class CheckoutStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICheckoutHandler, SubscriptionPlanCheckoutHandler>();
+
+        // A subscription checkout's reference reads as the plan it bought.
+        services.AddScoped<ICheckoutReferenceDescriber, SubscriptionCheckoutReferenceDescriber>();
         services.AddScoped<ICheckoutHandler, UserRegistrationCheckoutHandler>();
         services.AddScoped<ICheckoutHandler, ContentCheckoutHandler>();
         services.AddScoped<ICheckoutHandler, SubscriptionActivationCheckoutHandler>();
@@ -302,6 +308,7 @@ public sealed class InstallmentPlansStartup : StartupBase
         services.AddCommerceEmailSender()
             .AddCommerceEmailKind(InstallmentPlanEmailKinds.Notice, LocalizationSource.Create<InstallmentPlansStartup>("Installment plan notice"), LocalizationSource.Create<InstallmentPlansStartup>("{{ InstallmentPlan }}: the plan."));
         services.AddScoped<ITransactionPaymentHandler, InstallmentPlanTransactionPaymentHandler>();
+        services.AddScoped<ITransactionEventHandler, InstallmentPlanAutoChargeHandler>();
         services.AddScoped<ICommercePersonalDataContributor, InstallmentPlanPersonalDataContributor>();
 
         // The "Choose how to pay" step of a checkout that pays an outstanding transaction. The options come from the

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketTimeElapsedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-clock" aria-hidden="true"></i>
+    @T["Ticket Time Elapsed"]
+</h4>
+<p>@T["Starts once a time has passed in a ticket's life."]</p>

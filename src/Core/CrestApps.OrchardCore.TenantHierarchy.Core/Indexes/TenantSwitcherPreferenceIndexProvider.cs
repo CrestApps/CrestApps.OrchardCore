@@ -21,6 +21,8 @@ public sealed class TenantSwitcherPreferenceIndexProvider : IndexProvider<Tenant
     {
         context
             .For<TenantSwitcherPreferenceIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(document => new TenantSwitcherPreferenceIndex
             {
                 UserId = document.UserId,

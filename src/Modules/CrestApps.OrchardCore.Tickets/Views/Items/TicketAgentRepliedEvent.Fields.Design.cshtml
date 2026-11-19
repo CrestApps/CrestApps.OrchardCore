@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketAgentRepliedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-headset" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Ticket Agent Replied"])
+    </h4>
+</header>

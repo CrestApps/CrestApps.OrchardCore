@@ -1,0 +1,13 @@
+@model MyInvoicesViewModel
+
+<zone Name="Title">
+    <breadcrumb name="InvoicingMyInvoices" title="@T["Invoices"]">
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@{
+    var content = await New.MyInvoicesList(Invoices: Model);
+}
+
+@await DisplayAsync(await New.CommerceAccountPage(Title: T["Invoices"], Content: content))

@@ -1,0 +1,104 @@
+@model InvoiceUnbilledWorkViewModel
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+
+@if (Model.CanManage)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Unbilled work"]</div>
+        <div class="card-body">
+            @if (!Model.HasParty)
+            {
+                <p class="text-muted">@T["Choose a customer (a user, customer or account) to see the charges kept to bill them."]</p>
+            }
+            else if (Model.Charges.Count == 0)
+            {
+                <p class="text-muted">@T["The customer has no unbilled charge in this currency."]</p>
+            }
+            else
+            {
+                <form asp-controller="InvoiceBilling" asp-action="AddCharges" asp-route-itemId="@Model.Invoice.ItemId" method="post">
+                    <ul class="list-group mb-2">
+                        @foreach (var charge in Model.Charges)
+                        {
+                            <li class="list-group-item">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ids" value="@charge.Id" id="charge-@charge.Id" checked />
+                                    @* The day is a date in the site's time zone, kept as a date: it is shown as it is. *@
+                                    <label class="form-check-label" for="charge-@charge.Id">
+                                        @charge.Date.ToString("d") · @charge.Description · @charge.Quantity.ToString("0.##") × @MoneyFormatter.Format(charge.UnitPrice, charge.Currency)
+                                    </label>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                    <button type="submit" class="btn btn-sm btn-primary">@T["Add the charges chosen"]</button>
+                </form>
+            }
+
+            @if (Model.CanBillTime)
+            {
+                <hr />
+                <form method="get" asp-controller="InvoicesAdmin" asp-action="Detail" asp-route-itemId="@Model.Invoice.ItemId" class="row g-2 align-items-end">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">@T["Time of"]</label>
+                        @await Component.InvokeAsync("UserPicker", new
+                        {
+                            audience = "Staff",
+                            name = "timeUser",
+                            selectedValues = string.IsNullOrEmpty(Model.TimeUser) ? Array.Empty<string>() : new[] { Model.TimeUser },
+                            valueType = "userId",
+                            multiple = false,
+                            buttonText = T["Choose a person"].Value,
+                            searchPlaceholder = T["Search people"].Value,
+                            smallButton = false,
+                        })
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label" for="time-from">@T["From"]</label>
+                        <input id="time-from" name="timeFrom" type="date" class="form-control" value="@Model.TimeFrom?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label" for="time-through">@T["Through"]</label>
+                        <input id="time-through" name="timeThrough" type="date" class="form-control" value="@Model.TimeThrough?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label" for="time-rate">@T["Rate an hour"]</label>
+                        <input id="time-rate" name="timeRate" type="number" step="any" min="0" class="form-control" value="@Model.TimeRate?.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <button type="submit" class="btn btn-secondary w-100">@T["Find time"]</button>
+                    </div>
+                </form>
+
+                @if (Model.Time is { } time)
+                {
+                    @if (time.Count == 0)
+                    {
+                        <p class="text-muted mt-2">@T["No ended, unbilled time for this person in these days (and a rate is needed)."]</p>
+                    }
+                    else
+                    {
+                        <form asp-controller="InvoiceBilling" asp-action="AddTime" asp-route-itemId="@Model.Invoice.ItemId" method="post" class="mt-2">
+                            <input type="hidden" name="timeUser" value="@Model.TimeUser" />
+                            <input type="hidden" name="timeFrom" value="@Model.TimeFrom?.ToString("yyyy-MM-dd")" />
+                            <input type="hidden" name="timeThrough" value="@Model.TimeThrough?.ToString("yyyy-MM-dd")" />
+                            <input type="hidden" name="timeRate" value="@Model.TimeRate?.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                            <ul class="list-group mb-2">
+                                @foreach (var entry in time)
+                                {
+                                    <li class="list-group-item">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="ids" value="@entry.Id" id="time-@entry.Id" checked />
+                                            <label class="form-check-label" for="time-@entry.Id">@entry.Description · @entry.Quantity.ToString("0.##") @entry.Unit</label>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                            <button type="submit" class="btn btn-sm btn-primary">@T["Add the time chosen"]</button>
+                        </form>
+                    }
+                }
+            }
+        </div>
+    </div>
+}

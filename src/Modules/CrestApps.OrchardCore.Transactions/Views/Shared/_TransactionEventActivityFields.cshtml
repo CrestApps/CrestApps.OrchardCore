@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.Transactions.Workflows
+
+@model TransactionEventActivityViewModel
+
+<div class="mb-3">
+    <label asp-for="Sources" class="form-label">@T["Sources"]</label>
+    <input asp-for="Sources" class="form-control" />
+    <span class="hint">@T["The sources of the transactions that start the workflow, such as a payment provider, separated by commas. Leave empty for every source."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ReferenceTypes" class="form-label">@T["Reference types"]</label>
+    <input asp-for="ReferenceTypes" class="form-control" />
+    <span class="hint">@T["The kinds of records the transactions are for, such as Invoice or Order, separated by commas. Leave empty for every kind."]</span>
+</div>
+
+<p class="text-muted small">@T["The workflow input holds TransactionId, Title, Source, Status, Currency, TotalAmount, AmountPaid, AmountAdjusted, AmountRefunded, OutstandingAmount, OwnerId, PayerKind, PayerId, ReferenceType, ReferenceId, InvoiceNumber and DueUtc, and for payment and refund events EventId, Amount, Method and Reference."]</p>
