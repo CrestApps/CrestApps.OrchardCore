@@ -113,16 +113,30 @@ public sealed class FulfillmentSender
     {
         ArgumentNullException.ThrowIfNull(order);
 
-        if (!lockAndCommit)
+        if (lockAndCommit)
         {
-            return await RecordCoreAsync(order, cancellationToken);
+            return await TryRecordForSendAsync(order, cancellationToken)
+                ?? await _store.ListByOrderAsync(order.ItemId, cancellationToken);
         }
+
+        return await RecordCoreAsync(order, cancellationToken);
+    }
+
+    /// <summary>
+    /// Takes the order's lock and records requests for a manual send.
+    /// </summary>
+    /// <param name="order">The order to send.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The order's requests, or <see langword="null"/> when another worker holds its lock.</returns>
+    public async Task<IReadOnlyList<FulfillmentRequest>> TryRecordForSendAsync(Order order, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(order);
 
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockKey(order.ItemId), _lockWait, LockExpiration);
 
         if (!locked)
         {
-            return await _store.ListByOrderAsync(order.ItemId, cancellationToken);
+            return null;
         }
 
         await using (locker)

@@ -104,18 +104,42 @@ public sealed class FulfillmentNotificationHandlerTests
 
     [Theory]
     [InlineData(FulfillmentReasons.ConflictingClaims, "\"Tee\" is made by more than one partner (First, Second).")]
-    [InlineData(FulfillmentReasons.NotPaid, "The order is not paid (it is Canceled).")]
     [InlineData(FulfillmentReasons.Sent, "Sent. The partner's order is Tee.")]
     public void Reason_ToldInWordsWithItsValues(string reason, string expected)
     {
         // Arrange
         var text = new FulfillmentRequestText(RecipeRoundTrip.Localizer<FulfillmentRequestText>());
-        var arguments = reason == FulfillmentReasons.NotPaid ? new List<string> { "Canceled" } : ["Tee", "First, Second"];
 
         // Act
-        var sentence = text.Reason(new FulfillmentRequest { Reason = reason, ReasonArguments = arguments }).Value;
+        var sentence = text.Reason(new FulfillmentRequest { Reason = reason, ReasonArguments = ["Tee", "First, Second"] }).Value;
 
         // Assert
         Assert.StartsWith(expected, sentence, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Verifies the displayed sentences for stored status codes, including requests recorded with the old deletion reason.
+    /// </summary>
+    /// <param name="reason">The stored reason code.</param>
+    /// <param name="status">The stored status argument, if present.</param>
+    /// <param name="expected">The sentence displayed to the user.</param>
+    [Theory]
+    [InlineData(FulfillmentReasons.NotPaid, "Draft", "The order is still a draft.")]
+    [InlineData(FulfillmentReasons.NotPaid, "AwaitingPayment", "The order is awaiting payment.")]
+    [InlineData(FulfillmentReasons.NotPaid, "Canceled", "The order was canceled.")]
+    [InlineData(FulfillmentReasons.NotPaid, "Deleted", "The order was deleted.")]
+    [InlineData(FulfillmentReasons.NotPaid, null, "The order has not been paid.")]
+    [InlineData(FulfillmentReasons.OrderDeleted, null, "The order was deleted.")]
+    public void Reason_ExplainsTheOrderStatus(string reason, string status, string expected)
+    {
+        var text = new FulfillmentRequestText(RecipeRoundTrip.Localizer<FulfillmentRequestText>());
+        var request = new FulfillmentRequest { Reason = reason };
+
+        if (status is not null)
+        {
+            request.ReasonArguments.Add(status);
+        }
+
+        Assert.Equal(expected, text.Reason(request).Value);
     }
 }

@@ -224,16 +224,22 @@ public sealed class FulfillmentAdminController : Controller
         }
 
         // Under the order's lock, so two people sending at once share one request per partner.
-        var requests = await _sender.RecordAsync(order, lockAndCommit: true, HttpContext.RequestAborted);
+        var requests = await _sender.TryRecordForSendAsync(order, HttpContext.RequestAborted);
 
-        if (requests.Count == 0)
+        if (requests is null)
+        {
+            await _notifier.InformationAsync(H["Someone else is sending this order. Refresh in a moment."]);
+        }
+        else if (requests.Count == 0)
         {
             await _notifier.WarningAsync(H["No fulfillment partner is connected."]);
         }
-
-        foreach (var request in requests.Where(request => request.Status is not (FulfillmentRequestStatus.Sent or FulfillmentRequestStatus.Sending)))
+        else
         {
-            await NotifyAsync(await _sender.SendAsync(request, HttpContext.RequestAborted));
+            foreach (var request in requests.Where(request => request.Status is not (FulfillmentRequestStatus.Sent or FulfillmentRequestStatus.Sending)))
+            {
+                await NotifyAsync(await _sender.SendAsync(request, HttpContext.RequestAborted));
+            }
         }
 
         return Url.IsLocalUrl(returnUrl)

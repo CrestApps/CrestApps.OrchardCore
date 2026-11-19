@@ -51,7 +51,7 @@ public sealed class FulfillmentOrderBuilder
     {
         if (order is null)
         {
-            return FulfillmentOrderCheck.Blocked(null, FulfillmentReasons.NotPaid, nothingToSend: false, "Deleted");
+            return FulfillmentOrderCheck.Blocked(null, FulfillmentReasons.OrderDeleted, nothingToSend: false);
         }
 
         if (order.Status != OrderStatus.Paid)

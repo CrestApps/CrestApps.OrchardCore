@@ -414,6 +414,25 @@ public sealed class FulfillmentSenderTests : IAsyncLifetime
         Assert.Single(await _harness.LoadRequestsAsync());
     }
 
+    /// <summary>
+    /// Verifies that a deleted order is reported with its own reason and never reaches the partner.
+    /// </summary>
+    [Fact]
+    public async Task SendAsync_DeletedOrder_ExplainsWhyItCannotBeSent()
+    {
+        await _harness.RecordAsync();
+        var request = Assert.Single(await _harness.LoadRequestsAsync());
+        _harness.Order = null;
+
+        var result = await _harness.SendByIdAsync(request.ItemId);
+
+        Assert.Equal(FulfillmentRequestStatus.NeedsAttention, result.Request.Status);
+        Assert.Equal(FulfillmentReasons.OrderDeleted, result.Request.Reason);
+        Assert.Empty(result.Request.ReasonArguments);
+        Assert.Empty(_provider.Received);
+        Assert.Null(result.Request.ShipmentId);
+    }
+
     [Fact]
     public async Task SendAsync_OrderNoLongerPaid_AsksAPersonWithoutCallingThePartner()
     {

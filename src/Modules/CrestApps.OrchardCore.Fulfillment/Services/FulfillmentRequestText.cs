@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Fulfillment.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Models;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Fulfillment.Services;
@@ -55,7 +56,15 @@ public sealed class FulfillmentRequestText
             FulfillmentReasons.Sent => S["Sent."],
             FulfillmentReasons.Waiting => S["Waiting to be sent."],
             FulfillmentReasons.RetryLater => S["The partner asked to wait, so it is sent again later."],
-            FulfillmentReasons.NotPaid => S["The order is not paid (it is {0}).", Argument(0)],
+            FulfillmentReasons.OrderDeleted => S["The order was deleted."],
+            FulfillmentReasons.NotPaid => Argument(0) switch
+            {
+                "Deleted" => S["The order was deleted."], // Requests saved before OrderDeleted had its own reason.
+                nameof(OrderStatus.Draft) => S["The order is still a draft."],
+                nameof(OrderStatus.AwaitingPayment) => S["The order is awaiting payment."],
+                nameof(OrderStatus.Canceled) => S["The order was canceled."],
+                _ => S["The order has not been paid."],
+            },
             FulfillmentReasons.Refunded => S["The order was refunded."],
             FulfillmentReasons.OpenDispute => S["The order has an open payment dispute."],
             FulfillmentReasons.Anonymized => S["The order's personal details were removed."],

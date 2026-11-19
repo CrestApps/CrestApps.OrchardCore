@@ -18,6 +18,9 @@ public static class FulfillmentReasons
     /// <summary>The order is not paid. Arguments: the order status.</summary>
     public const string NotPaid = "NotPaid";
 
+    /// <summary>The order no longer exists.</summary>
+    public const string OrderDeleted = "OrderDeleted";
+
     /// <summary>The order was refunded in full.</summary>
     public const string Refunded = "Refunded";
 
