@@ -1,10 +1,10 @@
+using System.Text.Json;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.ViewModels;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
@@ -18,10 +18,7 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Drivers;
 
 internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
 {
-    private const int MaxOptions = 500;
-
     private readonly global::YesSql.ISession _session;
-    private readonly QuestionTypeOptions _questionTypes;
     private readonly ILocalClock _localClock;
     private readonly LearningSecretStore _secretStore;
 
@@ -29,13 +26,11 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
 
     public QuizPartDisplayDriver(
         global::YesSql.ISession session,
-        IOptions<QuestionTypeOptions> questionTypes,
         ILocalClock localClock,
         LearningSecretStore secretStore,
         IStringLocalizer<QuizPartDisplayDriver> stringLocalizer)
     {
         _session = session;
-        _questionTypes = questionTypes.Value;
         _localClock = localClock;
         _secretStore = secretStore;
         S = stringLocalizer;
@@ -65,16 +60,19 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
             model.HonorStatement = part.HonorStatement;
             model.ReviewPolicy = part.ReviewPolicy;
 
-            var questionTypes = _questionTypes.Types.Select(type => type.ContentType).ToArray();
-            var questions = await _session.Query<ContentItem, ContentItemIndex>(index => index.Published && index.ContentType.IsIn(questionTypes))
-                .OrderBy(index => index.DisplayText)
-                .Take(MaxOptions)
-                .ListAsync();
+            // The fixed questions are searched on the server; only the chosen ones are rendered, in the quiz's order.
+            var chosen = part.QuestionIds.Count == 0
+                ? []
+                : (await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentItemId.IsIn(part.QuestionIds)).ListAsync())
+                    .GroupBy(question => question.ContentItemId)
+                    .ToDictionary(group => group.Key, group => group.First().DisplayText, StringComparer.Ordinal);
             var banks = await _session.Query<ContentItem, ContentItemIndex>(index => index.Published && index.ContentType == AssessmentsConstants.ContentTypes.QuestionBank)
                 .OrderBy(index => index.DisplayText)
                 .ListAsync();
 
-            model.QuestionOptions = questions.Select(question => new SelectListItem(question.DisplayText, question.ContentItemId, part.QuestionIds.Contains(question.ContentItemId))).ToList();
+            model.InitialQuestionsJson = JsonSerializer.Serialize(part.QuestionIds
+                .Where(id => !string.IsNullOrEmpty(id))
+                .Select(id => new { value = id, text = chosen.TryGetValue(id, out var title) && !string.IsNullOrEmpty(title) ? title : id }));
             model.BankOptions = banks.Select(bank => new SelectListItem(bank.DisplayText, bank.ContentItemId)).ToList();
         });
 

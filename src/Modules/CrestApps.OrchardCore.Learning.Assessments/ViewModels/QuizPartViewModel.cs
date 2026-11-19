@@ -58,9 +58,9 @@ public class QuizPartViewModel
     /// <summary>Gets or sets the review policy.</summary>
     public ReviewPolicy ReviewPolicy { get; set; }
 
-    /// <summary>Gets or sets the questions to choose from.</summary>
+    /// <summary>Gets or sets the chosen questions, as the <c>[{ value, text }]</c> the question picker starts with.</summary>
     [BindNever]
-    public IList<SelectListItem> QuestionOptions { get; set; } = [];
+    public string InitialQuestionsJson { get; set; } = "[]";
 
     /// <summary>Gets or sets the banks to choose from.</summary>
     [BindNever]

@@ -2,9 +2,11 @@
 
 @model AttemptEventActivityViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <div class="mb-3">
     <label asp-for="QuizIds" class="form-label">@T["Quizzes"]</label>
-    <select asp-for="QuizIds" asp-items="Model.QuizOptions" class="form-select" multiple size="6"></select>
+    <select asp-for="QuizIds" asp-items="Model.QuizOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3" title="@T["Every quiz"]"></select>
     <span class="hint">@T["The quizzes that start the workflow. Choose none for every quiz."]</span>
 </div>
 

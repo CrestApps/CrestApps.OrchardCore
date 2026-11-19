@@ -38,7 +38,7 @@ Importing the same package (the same file name) into the same bank again updates
 ## Add a quiz to a course
 
 1. Open the course outline and add a **Quiz**.
-2. Choose fixed **Questions** and, or instead, **Random draws**: how many questions to take from a bank, optionally only with a tag.
+2. Choose fixed **Questions** and, or instead, **Random draws**: how many questions to take from a bank, optionally only with a tag. Find fixed questions by typing part of their title in the picker's search box; the chosen questions keep their order, and new ones go after them.
 3. Set the **Time limit**, when the quiz **Opens** and **Closes** (in your time zone), how many **Attempts** are allowed and the **Delay** between them, the **Pass mark** and how attempts combine: the highest, the latest or the average.
 4. Choose the **Navigation**: free, or one question at a time (the learner answers questions in order and cannot go back or read ahead).
 5. Choose when learners may **review** their answers: right away with the score only, once graded, once the quiz closes, or never. With **once the quiz closes**, moving **Closes** later or earlier moves the review of attempts already taken too, except for a learner whose override gave them their own close date.

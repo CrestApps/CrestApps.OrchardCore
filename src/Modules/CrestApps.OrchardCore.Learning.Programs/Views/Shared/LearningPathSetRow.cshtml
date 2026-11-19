@@ -1,5 +1,8 @@
 @model LearningPathSetRowModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
 <div class="card mb-2" data-path-set>
     <div class="card-body py-2">
         <input type="hidden" name="@(Model.Prefix)[@Model.Index].Id" value="@Model.Set.Id" />
@@ -23,7 +26,7 @@
                 </div>
             </div>
             <div class="col">
-                <select name="@(Model.Prefix)[@Model.Index].CourseIds" class="form-select" multiple size="@Math.Min(6, Math.Max(3, Model.Courses.Count))" aria-label="@T["Courses"]">
+                <select name="@(Model.Prefix)[@Model.Index].CourseIds" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" data-selected-text-format="count > 2" title="@T["Choose courses"]" aria-label="@T["Courses"]" data-path-courses>
                     @foreach (var course in Model.Courses)
                     {
                         <option value="@course.Value" selected="@Model.Set.CourseIds.Contains(course.Value)">@course.Text</option>

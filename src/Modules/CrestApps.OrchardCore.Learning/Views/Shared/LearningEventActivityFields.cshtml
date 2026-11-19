@@ -2,9 +2,11 @@
 
 @model LearningEventActivityViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <div class="mb-3">
     <label asp-for="CourseIds" class="form-label">@T["Courses"]</label>
-    <select asp-for="CourseIds" asp-items="Model.CourseOptions" class="form-select" multiple size="6"></select>
+    <select asp-for="CourseIds" asp-items="Model.CourseOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3" title="@T["Every course"]"></select>
     <span class="hint">@T["The courses that start the workflow. Choose none for every course."]</span>
 </div>
 

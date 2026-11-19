@@ -1,5 +1,8 @@
 @model ClassPartViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
 <div class="card text-bg-theme mb-3">
     <div class="card-header">@T["Class"]</div>
     <div class="card-body">
@@ -35,8 +38,8 @@
         <div class="ocat-wrapper" asp-validation-class-for="ResourceIds">
             <label asp-for="ResourceIds" class="ocat-label">@T["Instructors and rooms"]</label>
             <div class="ocat-end">
-                <select asp-for="ResourceIds" asp-items="Model.ResourceOptions" class="form-select" multiple size="5"></select>
-                <span class="hint">@T["Scheduling resources new sessions use. The first one's calendar holds the session. Hold Ctrl to choose several."]</span>
+                <select asp-for="ResourceIds" asp-items="Model.ResourceOptions" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" data-selected-text-format="count > 3" title="@T["Choose instructors and rooms"]"></select>
+                <span class="hint">@T["Scheduling resources new sessions use. The first one's calendar holds the session."]</span>
             </div>
         </div>
     </div>

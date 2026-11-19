@@ -1,5 +1,8 @@
 @model LearningPathPartEditViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
 @{
     var prefix = Html.NameFor(m => m.Sets).ToString();
     var sets = Model.Sets.ToList();
@@ -77,6 +80,13 @@
         editor.querySelector('[data-path-add-set]').addEventListener('click', function () {
             rows.appendChild(template.content.cloneNode(true));
             renumber();
+
+            // A row added from the template was not in the page when the pickers started, so its picker starts here.
+            const courses = rows.lastElementChild.querySelector('[data-path-courses]');
+
+            if (courses && window.Selectpicker) {
+                window.Selectpicker.getOrCreateInstance(courses);
+            }
         });
 
         renumber();

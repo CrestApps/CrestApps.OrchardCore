@@ -24,6 +24,8 @@ description: "Question banks, quizzes in courses, attempts kept on the server, g
 
 A question type is registered with `AddQuestionType` and scored by an `IQuestionScorer`; a site can add its own.
 
+The quiz editor picks the fixed questions with the `ItemSelector` component, which searches `/Admin/learning/questions/search?query=` (route `LearningQuestionSearch`, `QuestionPickerController`) for published questions by title, 50 at most, and renders only the chosen ones. The search needs **View question banks** or **Manage own courses** and returns titles and question types only. Every other multiple select of the Learning modules is a bootstrap-select picker with a search box.
+
 ## Attempts
 
 `IAssessmentAttemptService` runs an attempt on the server:

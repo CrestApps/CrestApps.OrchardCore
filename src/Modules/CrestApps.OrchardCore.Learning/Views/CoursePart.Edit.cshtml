@@ -1,5 +1,8 @@
 @model CoursePartViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
 @{
     var categoriesPrefix = Html.NameFor(m => m.GradeCategories).ToString();
     var categoriesEditorId = Html.IdFor(m => m.GradeCategories) + "-editor";
@@ -82,7 +85,7 @@
         <div class="ocat-wrapper">
             <label asp-for="PrerequisiteCourseIds" class="ocat-label">@T["Prerequisite courses"]</label>
             <div class="ocat-end">
-                <select asp-for="PrerequisiteCourseIds" asp-items="Model.CourseOptions" class="form-select" multiple size="5"></select>
+                <select asp-for="PrerequisiteCourseIds" asp-items="Model.CourseOptions" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" data-selected-text-format="count > 3" title="@T["No prerequisites"]" data-live-search-placeholder="@T["Search courses"]"></select>
                 <span class="hint">@T["Courses a learner must have completed before enrolling."]</span>
             </div>
         </div>

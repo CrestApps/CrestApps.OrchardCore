@@ -6,9 +6,9 @@
         <div class="ocat-wrapper" asp-validation-class-for="QuestionIds">
             <label asp-for="QuestionIds" class="ocat-label">@T["Every attempt includes"]</label>
             <div class="ocat-end">
-                <select asp-for="QuestionIds" asp-items="Model.QuestionOptions" class="form-select" multiple size="8"></select>
+                @await Component.InvokeAsync("ItemSelector", new { id = Html.IdFor(m => m.QuestionIds).ToString(), inputName = Html.NameFor(m => m.QuestionIds).ToString(), endpoint = Url.RouteUrl("LearningQuestionSearch"), initialItemsJson = Model.InitialQuestionsJson, multiple = true, buttonText = T["Choose questions"].Value, searchPlaceholder = T["Search questions by title"].Value, emptyResultsText = T["No published question has this title."].Value, smallButton = false })
                 <span asp-validation-for="QuestionIds"></span>
-                <span class="hint">@T["Published questions, in the order chosen. Hold Ctrl to choose several."]</span>
+                <span class="hint">@T["Published questions, searched by title. The chosen ones keep their order; new ones go after them."]</span>
             </div>
         </div>
 
