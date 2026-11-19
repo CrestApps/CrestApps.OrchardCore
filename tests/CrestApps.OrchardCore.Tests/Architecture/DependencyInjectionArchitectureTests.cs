@@ -363,6 +363,10 @@ public sealed class DependencyInjectionArchitectureTests
         ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: UpdateTicketTask"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketWorkflowServices.cs: TicketTimeElapsedScanner"] = 1,
         ["src/Modules/CrestApps.OrchardCore.WorkOrders/Migrations/ServiceAgreementsMoveStep.cs: ServiceAgreementsMoveStep"] = 1,
+        // Existing debt from main's #1338 (Fulfillment Partners), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Fulfillment.Core/Handlers/FulfillmentOrderEventHandler.cs: FulfillmentOrderEventHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Fulfillment/Services/FulfillmentNotificationHandler.cs: FulfillmentNotificationHandler"] = 1,
     };
 
     /// <summary>

@@ -228,5 +228,8 @@ public sealed partial class InterfaceCancellationTokenRatchetTests
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Legacy/IBusinessHoursCalendarUpgrade.cs: IBusinessHoursCalendarUpgrade.GrantSchedulePermissionsAfterCommitAsync"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Tickets/Services/TicketProtectedReveals.cs: ITicketPasswordConfirmation.CheckAsync"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Tickets/WebForm/TicketFormGuard.cs: ITicketFormChallenge.VerifyAsync"] = 1,
+        // Existing debt from main's #1338 (Fulfillment Partners), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Abstractions/CrestApps.OrchardCore.Fulfillment.Abstractions/Services/IFulfillmentProvider.cs: IFulfillmentProvider.IsConnectedAsync"] = 1,
     };
 }

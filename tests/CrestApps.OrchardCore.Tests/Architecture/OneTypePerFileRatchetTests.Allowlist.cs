@@ -1185,5 +1185,10 @@ public sealed partial class OneTypePerFileRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketWorkflowServices.cs"] = 2,
         ["src/Modules/CrestApps.OrchardCore.Tickets/WorkflowsStartup.cs"] = 6,
         ["src/Modules/CrestApps.OrchardCore.Timeline/Startup.cs"] = 7,
+        // Existing debt from main's #1338 (Fulfillment Partners), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Abstractions/CrestApps.OrchardCore.Fulfillment.Abstractions/FulfillmentConstants.cs"] = 2,
+        ["src/Core/CrestApps.OrchardCore.Fulfillment.Core/Indexes/FulfillmentRequestIndex.cs"] = 3,
+        ["src/Modules/CrestApps.OrchardCore.Fulfillment/Startup.cs"] = 4,
     };
 }
