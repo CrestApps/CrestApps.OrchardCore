@@ -1,11 +1,10 @@
 using System.Text.Encodings.Web;
-using CrestApps.OrchardCore.Commerce.ViewModels;
+using CrestApps.OrchardCore.Commerce.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
-using OrchardCore.Entities;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Commerce.Controllers;
@@ -47,25 +46,7 @@ public sealed class StoreSetupController : Controller
         }
 
         var progress = await _siteService.GetSettingsAsync<StoreSetupSettings>();
-        var model = new StoreSetupViewModel();
-
-        foreach (var step in _steps.OrderBy(step => step.Order).ThenBy(step => step.Name, StringComparer.Ordinal))
-        {
-            var description = await step.DescribeAsync(HttpContext.RequestAborted);
-            var done = description.IsDone ?? progress.Completed.Contains(step.Name, StringComparer.Ordinal);
-
-            model.Steps.Add(new StoreSetupStepViewModel
-            {
-                Name = step.Name,
-                Description = description,
-                IsDone = done,
-                IsSkipped = !done && progress.Skipped.Contains(step.Name, StringComparer.Ordinal),
-            });
-        }
-
-        // The step to do now: the first that's neither done nor skipped, the required ones first.
-        model.Current = model.Steps.FirstOrDefault(step => !step.IsDone && !step.IsSkipped && !step.Description.IsOptional)?.Name
-            ?? model.Steps.FirstOrDefault(step => !step.IsDone && !step.IsSkipped)?.Name;
+        var model = await StoreSetupGuide.DescribeAsync(_steps, progress, HttpContext.RequestAborted);
 
         return View(model);
     }
@@ -88,7 +69,7 @@ public sealed class StoreSetupController : Controller
             .Where(entry => entry.Key.StartsWith(FieldPrefix, StringComparison.Ordinal))
             .ToDictionary(entry => entry.Key[FieldPrefix.Length..], entry => entry.Value.ToString(), StringComparer.Ordinal);
 
-        var result = await step.RunAsync(new StoreSetupActionContext { Values = values }, HttpContext.RequestAborted);
+        var result = await StoreSetupGuide.RunAsync(step, values, _siteService, HttpContext.RequestAborted);
 
         if (result is null)
         {
@@ -97,16 +78,6 @@ public sealed class StoreSetupController : Controller
 
         if (result.Succeeded)
         {
-            await UpdateProgressAsync(progress =>
-            {
-                if (!progress.Completed.Contains(step.Name, StringComparer.Ordinal))
-                {
-                    progress.Completed.Add(step.Name);
-                }
-
-                progress.Skipped.Remove(step.Name);
-            });
-
             await _notifier.SuccessAsync(new LocalizedHtmlString(result.Message.Name, HtmlEncoder.Default.Encode(result.Message.Value)));
 
             // On to the next step.
@@ -132,15 +103,7 @@ public sealed class StoreSetupController : Controller
             return NotFound();
         }
 
-        await UpdateProgressAsync(progress =>
-        {
-            progress.Skipped.Remove(step.Name);
-
-            if (!undo)
-            {
-                progress.Skipped.Add(step.Name);
-            }
-        });
+        await StoreSetupGuide.SkipAsync(step, undo, _siteService);
 
         return RedirectToAction(nameof(Index));
     }
@@ -151,15 +114,5 @@ public sealed class StoreSetupController : Controller
     internal const string FieldPrefix = "setup.";
 
     private IStoreSetupStep FindStep(string name)
-        => _steps.FirstOrDefault(step => string.Equals(step.Name, name, StringComparison.Ordinal));
-
-    private async Task UpdateProgressAsync(Action<StoreSetupSettings> update)
-    {
-        var site = await _siteService.LoadSiteSettingsAsync();
-        var progress = site.GetOrCreate<StoreSetupSettings>();
-
-        update(progress);
-        site.Put(progress);
-        await _siteService.UpdateSiteSettingsAsync(site);
-    }
+        => StoreSetupGuide.Find(_steps, name);
 }
