@@ -419,12 +419,7 @@ public sealed class InventoryAdminController : Controller
         var pager = new Pager(pagerParameters, _pagerOptions);
         var (count, movements) = await _movements.PageAsync(item.ItemId, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
 
-        var holds = await _session.Query<StockReservation, StockReservationIndex>(index =>
-                index.StockItemId == item.ItemId && index.Status == StockReservationStatus.Held,
-                collection: InventoryConstants.CollectionName)
-            .OrderBy(index => index.ExpiresUtc)
-            .Take(50)
-            .ListAsync(HttpContext.RequestAborted);
+        var holds = await StockChanges.ListHoldsAsync(_session, item.ItemId, 50, HttpContext.RequestAborted);
 
         var listed = await _locations.GetLocationsAsync();
         var locations = listed.ToList();
@@ -446,7 +441,7 @@ public sealed class InventoryAdminController : Controller
             Locations = locations,
             ListedLocations = listed,
             Movements = movements,
-            Holds = holds.ToArray(),
+            Holds = holds,
             MovementCount = count,
             WaitingAlerts = HttpContext.RequestServices.GetService(typeof(StockAlertService)) is StockAlertService alerts ? await alerts.CountWaitingAsync(item.ItemId, HttpContext.RequestAborted) : null,
             CanManage = await _authorizationService.AuthorizeAsync(User, InventoryPermissions.ManageInventory),
@@ -456,26 +451,8 @@ public sealed class InventoryAdminController : Controller
 
     // The change is committed here, so a checkout that changed the same stock at the same moment can't be overwritten:
     // the later of the two fails and is asked to try again.
-    private async Task<StockChangeResult> CommitAsync(StockChangeResult result)
-    {
-        if (!result.Succeeded)
-        {
-            return result;
-        }
-
-        try
-        {
-            await _session.SaveChangesAsync(HttpContext.RequestAborted);
-
-            return result;
-        }
-        catch (ConcurrencyException)
-        {
-            await _session.CancelAsync();
-
-            return StockChangeResult.Fail(StockChangeError.Busy);
-        }
-    }
+    private Task<StockChangeResult> CommitAsync(StockChangeResult result)
+        => StockChanges.CommitAsync(_session, result, HttpContext.RequestAborted);
 
     private async Task NotifyAsync(StockChangeResult result, LocalizedHtmlString success)
     {

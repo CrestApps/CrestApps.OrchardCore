@@ -27,7 +27,6 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
 {
     private const int MaxThreshold = 100_000;
     private const int MaxHoldMinutes = 7 * 24 * 60;
-    private const int MaxLocations = 50;
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
@@ -70,8 +69,7 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
                 .Order(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
             // Locations owned by other records, such as vans, are managed with their owner.
-            model.Locations = (await _locationService.GetLocationsAsync())
-                .Where(location => location.OwnerKind is null)
+            model.Locations = StockLocationEditor.GetSiteLocations(await _locationService.GetLocationsAsync())
                 .Select(location => new InventoryLocationViewModel
                 {
                     LocationId = location.LocationId,
@@ -82,7 +80,7 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
                 .ToList();
 
             // A blank row to add a location with, while there is room for one.
-            if (model.Locations.Count < MaxLocations)
+            if (model.Locations.Count < StockLocationEditor.MaxLocations)
             {
                 model.Locations.Add(new InventoryLocationViewModel());
             }
@@ -130,87 +128,22 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        var locations = ParseLocations(model.Locations, context);
+        var (locations, rowsWithoutName) = StockLocationEditor.Parse(model.Locations);
+
+        foreach (var row in rowsWithoutName)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, $"{nameof(InventorySettingsViewModel.Locations)}[{row}].{nameof(InventoryLocationViewModel.Name)}", S["Give the location a name, such as Main warehouse."]);
+        }
 
         if (context.Updater.ModelState.IsValid)
         {
-            await SaveLocationsAsync(locations);
+            await StockLocationEditor.SaveAsync(_locationStore, _clock, locations);
 
             // The locations live in the store now; the settings keep none.
             settings.Locations = [];
         }
 
         return Edit(site, settings, context);
-    }
-
-    // A blank row, such as the one to add a location with, is dropped, and so is one marked for removal, except the
-    // default location: stock counted before there were locations is there. A removed location's units stay on its
-    // items, where they can still be sold and moved to another location.
-    private List<InventoryLocation> ParseLocations(List<InventoryLocationViewModel> rows, UpdateEditorContext context)
-    {
-        var locations = new List<InventoryLocation>();
-
-        for (var i = 0; i < (rows?.Count ?? 0); i++)
-        {
-            var row = rows[i];
-            var isDefault = row?.LocationId == InventoryConstants.DefaultLocationId;
-
-            if (row is null || (row.Remove && !isDefault) || (!isDefault && string.IsNullOrWhiteSpace(row.Name) && string.IsNullOrWhiteSpace(row.Address)))
-            {
-                continue;
-            }
-
-            if (string.IsNullOrWhiteSpace(row.Name))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, $"{nameof(InventorySettingsViewModel.Locations)}[{i}].{nameof(row.Name)}", S["Give the location a name, such as Main warehouse."]);
-            }
-
-            locations.Add(new InventoryLocation
-            {
-                LocationId = string.IsNullOrWhiteSpace(row.LocationId) ? UniqueId.GenerateId() : row.LocationId.Trim(),
-                Name = row.Name?.Trim(),
-                Address = string.IsNullOrWhiteSpace(row.Address) ? null : row.Address.Trim(),
-            });
-        }
-
-        return locations.DistinctBy(location => location.LocationId, StringComparer.Ordinal).Take(MaxLocations).ToList();
-    }
-
-    // Adds, renames and removes the site's own locations in the store, keeping their ids, so stock levels and
-    // movements still point at them.
-    private async Task SaveLocationsAsync(List<InventoryLocation> locations)
-    {
-        var stored = (await _locationStore.GetAllAsync()).Where(location => location.OwnerKind is null).ToDictionary(location => location.ItemId, StringComparer.Ordinal);
-
-        // Their order on the page is the order orders take units from them.
-        for (var i = 0; i < locations.Count; i++)
-        {
-            var location = locations[i];
-
-            if (stored.Remove(location.LocationId, out var existing))
-            {
-                existing.Name = location.Name;
-                existing.Address = location.Address;
-                existing.Position = i + 1;
-                await _locationStore.UpdateAsync(existing);
-            }
-            else
-            {
-                await _locationStore.CreateAsync(new StockLocation
-                {
-                    ItemId = location.LocationId,
-                    Name = location.Name,
-                    Address = location.Address,
-                    Position = i + 1,
-                    CreatedUtc = _clock.UtcNow,
-                });
-            }
-        }
-
-        foreach (var removed in stored.Values.Where(location => location.ItemId != InventoryConstants.DefaultLocationId))
-        {
-            await _locationStore.DeleteAsync(removed);
-        }
     }
 
     private static bool IsEveryone(string role)
