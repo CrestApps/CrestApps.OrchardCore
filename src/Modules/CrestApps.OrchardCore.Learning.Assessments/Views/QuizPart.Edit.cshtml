@@ -43,7 +43,7 @@
                     <div class="row g-2 align-items-start">
                         <div class="col-md-4">
                             <span class="form-label small d-block mb-1">@T["Question bank"]</span>
-                            <select name="@(name)BankId" class="selectpicker" data-live-search="true" data-width="100%" data-live-search-placeholder="@T["Search banks"]" aria-label="@T["Question bank"]" data-draw-bank>
+                            <select name="@(name)BankId" class="selectpicker" title="@T["Choose a bank"]" data-live-search="true" data-width="100%" data-live-search-placeholder="@T["Search banks"]" aria-label="@T["Question bank"]" data-draw-bank>
                                 <option value="" data-hidden="true">@T["Choose a bank"]</option>
                                 @foreach (var bank in Model.BankOptions)
                                 {
