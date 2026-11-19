@@ -51,6 +51,24 @@ Build:
 - **Other account pages:** check My learning, My transcript, My certificates, My education credits, My required learning, Notifications, Course seats and Account members.
 - **Guard test:** add a test that fails for any page in the account menu that doesn't render inside the frame.
 
+## 2b. Admin UI consistency (Mike, 2026-11-19)
+
+- **Multiple-select menus become bootstrap-select.** Every multiple `<select>` in the Learning modules (and any other module the stack added) uses bootstrap-select (selectpicker), as the rest of the admin does: searchable, with selected-count text. No jQuery; use the selectpicker's native API (append `<option>`s, then `.refresh()`). Long lists, such as the quiz's question picker, use a search endpoint (the reusable `ItemSelector`/`UserPicker` pattern) instead of rendering every option.
+- **Cards on every edit page.**
+  - Every Learning admin edit page groups its fields in ocat cards, as the other admin screens do.
+  - A form with only a few fields still gets one card, so every page looks the same.
+  - Buttons stay in the sticky `action-bar-bottom` (see `.agents/skills/crestapps-admin-edit-views/SKILL.md`).
+  - Example of a page with no grouping today: Education credit types (`/Admin/learning/credit-types/edit/{id}`).
+  - Audit every Learning editor, part editor, settings page and modal-free form, and add a guard test (or view lint) that fails for an admin edit view outside a card.
+- **The quiz's "Draw at random" rules.** Today they're a bare table of fixed rows ("No rule" selects, empty tag, difficulty and count boxes). Rebuild them to match the other screens:
+  - a card holding a list of rules;
+  - an **Add rule** button and a remove button per row;
+  - a bank selectpicker, a tag picker (the bank's tags, searchable), a difficulty selector, and a count with the bank's available-question count shown beside it;
+  - validation that the count doesn't exceed what the bank can supply;
+  - the hint text kept.
+
+  Fixed empty rows go away.
+
 ## 3. Moodle migration: features needed to move all 449 production courses
 
 Production has:
