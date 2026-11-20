@@ -91,7 +91,7 @@ public sealed class AccessRestrictionTests
     }
 
     [Fact]
-    public void PathRules_LeaveOutCoursesThatAreNotAvailable()
+    public void PathRules_DoNotWaitForCoursesThatAreNotAvailable_ButNeverSkipASetOfThem()
     {
         // Arrange
         var path = new LearningPathPart
@@ -106,14 +106,14 @@ public sealed class AccessRestrictionTests
         var available = new HashSet<string>(StringComparer.Ordinal) { "c1", "c2", "c3" };
 
         // Act
-        var visible = LearningPathRules.WithAvailableCourses(path, available);
+        var afterFirst = LearningPathRules.OpenStage(path, new HashSet<string>(StringComparer.Ordinal) { "c1" }, available);
+        var allVisible = LearningPathRules.OpenStage(path, new HashSet<string>(StringComparer.Ordinal) { "c1", "c2", "c3" }, available);
+        var hiddenDoneBefore = LearningPathRules.OpenStage(path, new HashSet<string>(StringComparer.Ordinal) { "c1", "hidden2", "c2", "c3" }, available);
 
-        // Assert
-        Assert.Equal(["c1"], visible.Sets[0].CourseIds);
-        Assert.Empty(visible.Sets[1].CourseIds);
-        Assert.Equal(["c2", "c3"], visible.Sets[2].CourseIds);
-        Assert.Equal(2, LearningPathRules.OpenStage(visible, new HashSet<string>(StringComparer.Ordinal) { "c1" }));
-        Assert.Equal(3, LearningPathRules.OpenStage(visible, new HashSet<string>(StringComparer.Ordinal) { "c1", "c2", "c3" }));
+        // Assert: the hidden course of s1 is not waited for, the set of only a hidden course is.
+        Assert.Equal(1, afterFirst);
+        Assert.Equal(1, allVisible);
+        Assert.Equal(3, hiddenDoneBefore);
     }
 
     [Fact]

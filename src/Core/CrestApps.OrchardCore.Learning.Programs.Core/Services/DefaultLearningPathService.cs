@@ -67,7 +67,7 @@ public sealed class DefaultLearningPathService : ILearningPathService
             return new LearningPathStartResult(null, false, S["Choose who starts the path."]);
         }
 
-        var path = await LoadPathAsync(request.PathId);
+        var (path, available) = await LoadPathAsync(request.PathId);
 
         if (path is null)
         {
@@ -95,7 +95,7 @@ public sealed class DefaultLearningPathService : ILearningPathService
             if (progress is null)
             {
                 var completed = await CompletedCoursesAsync(request.UserId, cancellationToken);
-                var open = LearningPathRules.OpenStage(path, completed);
+                var open = LearningPathRules.OpenStage(path, completed, available);
                 var stages = LearningPathRules.Stages(path).Count;
 
                 progress = new LearningPathProgress
@@ -121,7 +121,7 @@ public sealed class DefaultLearningPathService : ILearningPathService
 
         if (created)
         {
-            await AfterChangeAsync(path, progress, justCompleted: progress.State == LearningPathState.Completed, request.Actor, cancellationToken);
+            await AfterChangeAsync(path, available, progress, justCompleted: progress.State == LearningPathState.Completed, request.Actor, cancellationToken);
         }
 
         return new LearningPathStartResult(progress, created);
@@ -170,7 +170,7 @@ public sealed class DefaultLearningPathService : ILearningPathService
     /// <inheritdoc/>
     public async Task<LearningPathProgress> EvaluateAsync(string pathId, string userId, CancellationToken cancellationToken = default)
     {
-        var path = await LoadPathAsync(pathId);
+        var (path, available) = await LoadPathAsync(pathId);
 
         if (path is null || string.IsNullOrEmpty(userId))
         {
@@ -201,7 +201,7 @@ public sealed class DefaultLearningPathService : ILearningPathService
             previous = progress.State;
 
             var completed = await CompletedCoursesAsync(userId, cancellationToken);
-            var open = LearningPathRules.OpenStage(path, completed);
+            var open = LearningPathRules.OpenStage(path, completed, available);
             var stages = LearningPathRules.Stages(path).Count;
             var completedIds = LearningPathRules.CourseIds(path).Where(completed.Contains).ToList();
             var opened = Math.Min(open, Math.Max(0, stages - 1));
@@ -225,7 +225,7 @@ public sealed class DefaultLearningPathService : ILearningPathService
 
         if (changed)
         {
-            await AfterChangeAsync(path, progress, justCompleted: previous != LearningPathState.Completed && progress.State == LearningPathState.Completed, progress.StartedBy, cancellationToken);
+            await AfterChangeAsync(path, available, progress, justCompleted: previous != LearningPathState.Completed && progress.State == LearningPathState.Completed, progress.StartedBy, cancellationToken);
         }
 
         return progress;
@@ -246,7 +246,7 @@ public sealed class DefaultLearningPathService : ILearningPathService
                 continue;
             }
 
-            var path = await LoadPathAsync(progress.PathId);
+            var (path, _) = await LoadPathAsync(progress.PathId);
 
             if (path is not null && LearningPathRules.CourseIds(path).Contains(courseId))
             {
@@ -263,7 +263,8 @@ public sealed class DefaultLearningPathService : ILearningPathService
             return false;
         }
 
-        var path = await LoadPathAsync(progress.PathId);
+        // Issued only on the whole path: a course left out because it is hidden is no evidence.
+        var (path, _) = await LoadPathAsync(progress.PathId);
 
         if (path is null)
         {
@@ -290,11 +291,11 @@ public sealed class DefaultLearningPathService : ILearningPathService
     public Task<(int Count, IReadOnlyList<LearningPathProgress> Items)> PageAsync(string pathId, LearningPathState? state, int skip, int take, CancellationToken cancellationToken = default)
         => _progress.PageAsync(pathId, state, skip, take, cancellationToken);
 
-    private async Task AfterChangeAsync(LearningPathPart path, LearningPathProgress progress, bool justCompleted, string actor, CancellationToken cancellationToken)
+    private async Task AfterChangeAsync(LearningPathPart path, IReadOnlySet<string> available, LearningPathProgress progress, bool justCompleted, string actor, CancellationToken cancellationToken)
     {
         if (progress.State == LearningPathState.InProgress)
         {
-            await EnrollOpenCoursesAsync(path, progress, actor, cancellationToken);
+            await EnrollOpenCoursesAsync(path, available, progress, actor, cancellationToken);
         }
 
         if (justCompleted)
@@ -306,12 +307,12 @@ public sealed class DefaultLearningPathService : ILearningPathService
         }
     }
 
-    private async Task EnrollOpenCoursesAsync(LearningPathPart path, LearningPathProgress progress, string actor, CancellationToken cancellationToken)
+    private async Task EnrollOpenCoursesAsync(LearningPathPart path, IReadOnlySet<string> available, LearningPathProgress progress, string actor, CancellationToken cancellationToken)
     {
         var enrollmentService = _services.GetRequiredService<IEnrollmentService>();
         var completed = progress.CompletedCourseIds.ToHashSet(StringComparer.Ordinal);
 
-        foreach (var courseId in LearningPathRules.CourseIdsThrough(path, progress.OpenedStage).Where(courseId => !completed.Contains(courseId)))
+        foreach (var courseId in LearningPathRules.CourseIdsThrough(path, progress.OpenedStage).Where(courseId => available.Contains(courseId) && !completed.Contains(courseId)))
         {
             var result = await enrollmentService.EnrollAsync(new EnrollmentRequest
             {
@@ -336,22 +337,23 @@ public sealed class DefaultLearningPathService : ILearningPathService
             .Select(enrollment => enrollment.CourseId)
             .ToHashSet(StringComparer.Ordinal);
 
-    private async Task<LearningPathPart> LoadPathAsync(string pathId)
+    private async Task<(LearningPathPart Path, IReadOnlySet<string> Available)> LoadPathAsync(string pathId)
     {
         if (string.IsNullOrEmpty(pathId))
         {
-            return null;
+            return (null, null);
         }
 
         var item = await _contentManager.GetAsync(pathId, VersionOptions.Published);
 
         if (item is null || !item.TryGet<LearningPathPart>(out var part))
         {
-            return null;
+            return (null, null);
         }
 
-        // A hidden (unpublished) or deleted course cannot be taken, so it never holds the path back: the path is read
-        // without it, as Moodle skips hidden courses of a learning plan.
+        // A hidden (unpublished) or deleted course cannot be taken: it is not enrolled, and an every-course set does not
+        // wait for it, as Moodle skips hidden courses of a learning plan. It never completes a set or the path by being
+        // left out (LearningPathRules), and what is issued on the path is decided on all its courses.
         var courses = _services.GetRequiredService<ICourseStructureService>();
         var available = new HashSet<string>(StringComparer.Ordinal);
 
@@ -363,7 +365,7 @@ public sealed class DefaultLearningPathService : ILearningPathService
             }
         }
 
-        return LearningPathRules.WithAvailableCourses(part, available);
+        return (part, available);
     }
 
     private async Task<LearningPathProgress> FindFreshAsync(string pathId, string userId, CancellationToken cancellationToken)

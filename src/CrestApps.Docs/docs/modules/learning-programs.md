@@ -33,7 +33,7 @@ The path editor's **People** page (`/Admin/learning/paths/{id}/people`) lists th
 
 ### Hidden courses
 
-A learning path is read without the courses that are not published (`LearningPathRules.WithAvailableCourses`, used by `DefaultLearningPathService` whenever it loads a path): a hidden or deleted course is neither enrolled nor waited for, an **At least** set counts only the courses that are left, and a stage whose courses are all hidden is complete. A Moodle learning plan that holds hidden courses therefore completes when its visible courses do.
+A course that is not published (hidden or deleted) is never enrolled, and an **All** set does not wait for it (`LearningPathRules` takes the available courses, as `DefaultLearningPathService` reads them), so a Moodle learning plan whose sets mix hidden and visible courses completes when its visible courses do. A hidden course never completes anything by being left out: a set whose courses are all hidden waits for them, an **At least** set keeps its minimum, and a path whose courses are all hidden does not complete when someone starts it. A digital credential, education credits or competencies are issued on a completed path only when every course of the whole path, hidden ones included, was completed with evidence (`SupportsIssuingAsync`).
 
 ## Required learning
 

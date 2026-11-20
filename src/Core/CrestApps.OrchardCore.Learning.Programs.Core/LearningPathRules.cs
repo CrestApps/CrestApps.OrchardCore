@@ -31,15 +31,31 @@ public static class LearningPathRules
     }
 
     /// <summary>
-    /// Decides whether a set is complete: every course, any one, or at least its minimum count.
+    /// Decides whether a set is complete: every course, any one, or at least its minimum count. When the available
+    /// courses are given, a course that is not available (hidden or deleted) is not waited for in an every-course set,
+    /// but it never completes a set by being left out: a set with no available course waits for its courses, and an
+    /// at-least minimum is not lowered.
     /// </summary>
-    public static bool IsSetComplete(LearningPathCourseSet set, IReadOnlySet<string> completedCourseIds)
+    /// <param name="set">The set.</param>
+    /// <param name="completedCourseIds">The courses the person completed.</param>
+    /// <param name="availableCourseIds">The courses that can be taken, or <see langword="null"/> to read every course as available.</param>
+    /// <returns><see langword="true"/> when the set is complete.</returns>
+    public static bool IsSetComplete(LearningPathCourseSet set, IReadOnlySet<string> completedCourseIds, IReadOnlySet<string> availableCourseIds = null)
     {
-        var courses = set.CourseIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+        var courses = (set.CourseIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
 
         if (courses.Length == 0)
         {
             return true;
+        }
+
+        // An every-course set does not wait for a course that cannot be taken, unless none of its courses can: a set
+        // whose courses are all hidden is complete only when the person completed them.
+        var waitFor = availableCourseIds is null ? courses : courses.Where(availableCourseIds.Contains).ToArray();
+
+        if (waitFor.Length == 0)
+        {
+            waitFor = courses;
         }
 
         var done = courses.Count(completedCourseIds.Contains);
@@ -48,14 +64,18 @@ public static class LearningPathRules
         {
             LearningPathSetJoin.Any => done >= 1,
             LearningPathSetJoin.AtLeast => done >= Math.Clamp(set.MinimumCount, 1, courses.Length),
-            _ => done == courses.Length,
+            _ => waitFor.All(completedCourseIds.Contains),
         };
     }
 
     /// <summary>
     /// Decides whether a stage is complete: its sets joined by and all complete, in any group the ors separate.
     /// </summary>
-    public static bool IsStageComplete(IReadOnlyList<LearningPathCourseSet> stage, IReadOnlySet<string> completedCourseIds)
+    /// <param name="stage">The sets of the stage.</param>
+    /// <param name="completedCourseIds">The courses the person completed.</param>
+    /// <param name="availableCourseIds">The courses that can be taken, or <see langword="null"/> to read every course as available.</param>
+    /// <returns><see langword="true"/> when the stage is complete.</returns>
+    public static bool IsStageComplete(IReadOnlyList<LearningPathCourseSet> stage, IReadOnlySet<string> completedCourseIds, IReadOnlySet<string> availableCourseIds = null)
     {
         var groupComplete = true;
 
@@ -73,7 +93,7 @@ public static class LearningPathRules
                 groupComplete = true;
             }
 
-            groupComplete &= IsSetComplete(set, completedCourseIds);
+            groupComplete &= IsSetComplete(set, completedCourseIds, availableCourseIds);
         }
 
         return groupComplete;
@@ -82,13 +102,17 @@ public static class LearningPathRules
     /// <summary>
     /// Works out the stage open to a person: the first stage not complete, or the stage count when all are.
     /// </summary>
-    public static int OpenStage(LearningPathPart path, IReadOnlySet<string> completedCourseIds)
+    /// <param name="path">The path.</param>
+    /// <param name="completedCourseIds">The courses the person completed.</param>
+    /// <param name="availableCourseIds">The courses that can be taken, or <see langword="null"/> to read every course as available.</param>
+    /// <returns>The index of the open stage.</returns>
+    public static int OpenStage(LearningPathPart path, IReadOnlySet<string> completedCourseIds, IReadOnlySet<string> availableCourseIds = null)
     {
         var stages = Stages(path);
 
         for (var index = 0; index < stages.Count; index++)
         {
-            if (!IsStageComplete(stages[index], completedCourseIds))
+            if (!IsStageComplete(stages[index], completedCourseIds, availableCourseIds))
             {
                 return index;
             }
@@ -108,34 +132,4 @@ public static class LearningPathRules
     /// </summary>
     public static IReadOnlyList<string> CourseIdsThrough(LearningPathPart path, int stageIndex)
         => Stages(path).Take(stageIndex + 1).SelectMany(stage => stage).SelectMany(set => set.CourseIds).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
-
-    /// <summary>
-    /// Gets a copy of a path without the courses that are not available, such as hidden (unpublished) ones.
-    /// </summary>
-    /// <param name="path">The path.</param>
-    /// <param name="available">The ids of the available courses.</param>
-    /// <returns>The path learners can complete.</returns>
-    public static LearningPathPart WithAvailableCourses(LearningPathPart path, IReadOnlySet<string> available)
-    {
-        ArgumentNullException.ThrowIfNull(available);
-
-        if (path is null)
-        {
-            return null;
-        }
-
-        return new LearningPathPart
-        {
-            AllowSelfStart = path.AllowSelfStart,
-            Sets = [.. (path.Sets ?? []).Select(set => new LearningPathCourseSet
-            {
-                Id = set.Id,
-                Title = set.Title,
-                Connector = set.Connector,
-                Join = set.Join,
-                MinimumCount = set.MinimumCount,
-                CourseIds = [.. (set.CourseIds ?? []).Where(id => !string.IsNullOrEmpty(id) && available.Contains(id))],
-            })],
-        };
-    }
 }

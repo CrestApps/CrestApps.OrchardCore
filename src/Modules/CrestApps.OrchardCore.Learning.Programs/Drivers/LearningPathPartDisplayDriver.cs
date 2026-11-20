@@ -63,7 +63,8 @@ internal sealed class LearningPathPartDisplayDriver : ContentPartDisplayDriver<L
 
             var titles = (await _contentManager.GetAsync(LearningPathRules.CourseIds(part), VersionOptions.Published))
                 .ToDictionary(item => item.ContentItemId, item => item.DisplayText, StringComparer.Ordinal);
-            var open = LearningPathRules.OpenStage(part, completed);
+            var available = titles.Keys.ToHashSet(StringComparer.Ordinal);
+            var open = LearningPathRules.OpenStage(part, completed, available);
 
             model.Stages = LearningPathRules.Stages(part)
                 .Select((stage, index) => new LearningPathStageViewModel
@@ -77,7 +78,7 @@ internal sealed class LearningPathPartDisplayDriver : ContentPartDisplayDriver<L
                         Connector = set.Connector,
                         Join = set.Join,
                         MinimumCount = set.MinimumCount,
-                        IsComplete = LearningPathRules.IsSetComplete(set, completed),
+                        IsComplete = LearningPathRules.IsSetComplete(set, completed, available),
                         Courses = set.CourseIds
                             .Where(courseId => titles.ContainsKey(courseId))
                             .Select(courseId => new LearningPathCourseViewModel { CourseId = courseId, Title = titles[courseId], IsCompleted = completed.Contains(courseId) })
