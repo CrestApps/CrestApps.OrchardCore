@@ -61,6 +61,12 @@ public sealed class CourseItemPart : ContentPart
     public bool AllowSelfReported { get; set; }
 
     /// <summary>
+    /// Gets or sets where the item was imported from, such as <c>moodle:1a2b3c4d:course:12:cm:345</c>, so importing it
+    /// again updates it; <see langword="null"/> for an item made on the site.
+    /// </summary>
+    public string SourceIdentifier { get; set; }
+
+    /// <summary>
     /// Gets or sets the rules that must all be met before the item opens.
     /// </summary>
     public IList<LearningRuleSettings> ReleaseRules { get; set; } = [];

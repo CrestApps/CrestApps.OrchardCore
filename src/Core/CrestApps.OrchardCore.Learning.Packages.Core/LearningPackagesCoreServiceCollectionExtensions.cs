@@ -26,6 +26,7 @@ public static class LearningPackagesCoreServiceCollectionExtensions
         services.AddOptions<LearningPackageOptions>();
         services.AddProtectedFileArea<LearningPackageFiles>(PackagesConstants.FilesFolder);
         services.TryAddScoped<LearningPackageImporter>();
+        services.TryAddScoped<PackageImportErrorText>();
         services.TryAddScoped<PackageRuntimeStore>();
         services.TryAddScoped<IPackageContentSource, DefaultPackageContentSource>();
         services.TryAddScoped<PackageLaunchTokens>();

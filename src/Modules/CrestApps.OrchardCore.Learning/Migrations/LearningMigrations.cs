@@ -66,8 +66,9 @@ internal sealed class LearningMigrations : DataMigration
         await DefineLessonsAsync();
         await _courseListSynchronizer.SynchronizeAsync();
         await LearningIndexSchema.CreateSecretIndexAsync(SchemaBuilder);
+        await LearningSourceIndexProvider.CreateTableAsync(SchemaBuilder);
 
-        return 4;
+        return 5;
     }
 
     /// <summary>
@@ -123,6 +124,18 @@ internal sealed class LearningMigrations : DataMigration
         await LearningIndexSchema.AddEnrollmentReviewColumnAsync(SchemaBuilder);
 
         return 4;
+    }
+
+    /// <summary>
+    /// Adds the index of courses and course items imported from another system, by where they came from, so importing
+    /// them again updates them.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        await LearningSourceIndexProvider.CreateTableAsync(SchemaBuilder);
+
+        return 5;
     }
 
     private async Task DefinePartsAsync()

@@ -80,7 +80,8 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<EnrollmentIndexProvider>()
             .AddIndexProvider<EnrollmentProgressIndexProvider>()
             .AddIndexProvider<CourseStaffIndexProvider>()
-            .AddIndexProvider<LearningSecretIndexProvider>();
+            .AddIndexProvider<LearningSecretIndexProvider>()
+            .AddIndexProvider<LearningSourceIndexProvider>();
 
         services.AddNumberSequence();
         services.AddLearningCore();

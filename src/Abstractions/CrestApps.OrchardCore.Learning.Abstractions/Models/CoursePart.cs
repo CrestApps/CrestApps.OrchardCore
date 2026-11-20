@@ -52,6 +52,12 @@ public sealed class CoursePart : ContentPart
     public DateTime? EndsUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets where the course was imported from, such as <c>moodle:1a2b3c4d:course:12</c>, so importing it again
+    /// updates it; <see langword="null"/> for a course made on the site.
+    /// </summary>
+    public string SourceIdentifier { get; set; }
+
+    /// <summary>
     /// Gets or sets the course pass mark as a percentage, or <see langword="null"/> when the course has no grade.
     /// </summary>
     public decimal? PassMark { get; set; }
