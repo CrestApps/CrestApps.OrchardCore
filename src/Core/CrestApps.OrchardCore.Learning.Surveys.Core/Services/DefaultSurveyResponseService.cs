@@ -77,15 +77,21 @@ internal sealed class DefaultSurveyResponseService : ISurveyResponseService
             return true;
         }
 
-        // Only the person's own open enrollment, within its access dates, once the item is released to them.
-        var enrollment = (await _enrollments.ListByCourseForUserAsync(userId, survey.CourseId, cancellationToken))
-            .FirstOrDefault(candidate => string.Equals(candidate.UserId, userId, StringComparison.Ordinal) &&
-                string.Equals(candidate.CourseId, survey.CourseId, StringComparison.Ordinal) &&
-                candidate.Status == EnrollmentStatus.Active);
+        // Only the person's own enrollment: an active one, within its access dates, once the item is released to them, or
+        // a completed one, whose learner may review every item of the course.
+        var own = (await _enrollments.ListByCourseForUserAsync(userId, survey.CourseId, cancellationToken))
+            .Where(candidate => string.Equals(candidate.UserId, userId, StringComparison.Ordinal) &&
+                string.Equals(candidate.CourseId, survey.CourseId, StringComparison.Ordinal))
+            .ToArray();
+        var active = own.FirstOrDefault(candidate => candidate.Status == EnrollmentStatus.Active);
 
-        return enrollment is not null
-            && EnrollmentAccess.HasAccess(enrollment, _clock.UtcNow)
-            && (await _release.EvaluateAsync(survey.Entry, enrollment, await _progress.GetAsync(enrollment.ItemId, cancellationToken))).IsReleased;
+        if (active is null)
+        {
+            return own.Any(candidate => candidate.Status == EnrollmentStatus.Completed);
+        }
+
+        return EnrollmentAccess.HasAccess(active, _clock.UtcNow)
+            && (await _release.EvaluateAsync(survey.Entry, active, await _progress.GetAsync(active.ItemId, cancellationToken))).IsReleased;
     }
 
     public async Task<SurveyResponseResult> AnswerAsync(SurveyAnswerRequest request, CancellationToken cancellationToken = default)

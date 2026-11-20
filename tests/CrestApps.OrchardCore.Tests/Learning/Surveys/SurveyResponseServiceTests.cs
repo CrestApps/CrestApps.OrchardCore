@@ -214,6 +214,7 @@ public sealed class SurveyResponseServiceTests
     [InlineData("locked", false)]
     [InlineData("suspended", false)]
     [InlineData("enrolled", true)]
+    [InlineData("completed", true)]
     [InlineData("staff", true)]
     public async Task Round11S2_TheTotals_AreOnlyForCourseStaff_AndLearnersTheItemIsOpenTo(string viewer, bool expected)
     {
@@ -241,6 +242,7 @@ public sealed class SurveyResponseServiceTests
                     new LearningRuleSettings { Name = LearningRuleNames.ItemCompleted, Values = { ["ItemId"] = "lesson1" } },
                 ]);
                 break;
+            case "completed":
             case "suspended":
                 var suspended = await EnrollAsync(h, "ana");
                 await h.RunAsync(async services =>
@@ -248,7 +250,7 @@ public sealed class SurveyResponseServiceTests
                     var store = services.GetRequiredService<EnrollmentStore>();
                     var enrollment = await store.FindByIdAsync(suspended.ItemId);
 
-                    enrollment.Status = EnrollmentStatus.Suspended;
+                    enrollment.Status = viewer == "completed" ? EnrollmentStatus.Completed : EnrollmentStatus.Suspended;
                     await store.SaveAsync(enrollment);
 
                     return true;

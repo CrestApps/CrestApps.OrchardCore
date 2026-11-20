@@ -37,8 +37,9 @@ public interface ISurveyResponseService
 
     /// <summary>
     /// Decides whether a person may see how everyone answered a survey, when the survey shows its totals to learners:
-    /// course staff, or a learner with an open enrollment in the survey's course, within its access dates, to whom the
-    /// item is released. Nobody signed out, not enrolled or not yet given the item sees them.
+    /// course staff, a learner with an active enrollment in the survey's course, within its access dates, to whom the
+    /// item is released, or a learner who completed the course. Nobody signed out, not enrolled, suspended or not yet
+    /// given the item sees them.
     /// </summary>
     /// <param name="surveyId">The survey.</param>
     /// <param name="userId">The person, or <see langword="null"/> when signed out.</param>
