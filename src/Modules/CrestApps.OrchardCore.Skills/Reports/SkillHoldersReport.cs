@@ -73,7 +73,7 @@ internal sealed class SkillHoldersReport : IReport, IReportFilterMetadata
 
         var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
         var category = context.Filter.GetOrDefault<string>(SkillsReportFilters.CategoryKey);
-        var skills = (await _skillManager.GetAllAsync())
+        var skills = (await _skillManager.GetAllAsync(cancellationToken))
             .Where(skill => skill.Enabled)
             .Where(skill => string.IsNullOrEmpty(category) || string.Equals(skill.Category, category, StringComparison.OrdinalIgnoreCase))
             .ToDictionary(skill => skill.ItemId, StringComparer.Ordinal);
