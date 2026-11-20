@@ -23,7 +23,7 @@ public sealed class MoodleBackupReaderTests
         using var folder = new TempFolder();
 
         // Act
-        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(archive), folder.Path, new MoodleBackupLimits());
+        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(archive), folder.Path, new MoodleBackupLimits(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Succeeded, result.Error + " " + result.ErrorDetail);
@@ -110,7 +110,7 @@ public sealed class MoodleBackupReaderTests
         using var folder = new TempFolder();
 
         // Act
-        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(builder.BuildTarGz()), folder.Path, new MoodleBackupLimits());
+        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(builder.BuildTarGz()), folder.Path, new MoodleBackupLimits(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Succeeded, result.Error);
@@ -127,7 +127,7 @@ public sealed class MoodleBackupReaderTests
         using var folder = new TempFolder();
 
         // Act
-        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(builder.BuildZip()), folder.Path, new MoodleBackupLimits());
+        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(builder.BuildZip()), folder.Path, new MoodleBackupLimits(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(Assert.Single(result.Backup.Course.Enrolments).HasPassword);
@@ -143,7 +143,7 @@ public sealed class MoodleBackupReaderTests
         using var folder = new TempFolder();
 
         // Act
-        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(format == "zip" ? builder.BuildZip() : builder.BuildTarGz()), folder.Path, new MoodleBackupLimits());
+        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(format == "zip" ? builder.BuildZip() : builder.BuildTarGz()), folder.Path, new MoodleBackupLimits(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MoodleBackupErrors.UnsafeArchive, result.Error);
@@ -166,7 +166,7 @@ public sealed class MoodleBackupReaderTests
         using var folder = new TempFolder();
 
         // Act
-        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(output.ToArray()), folder.Path, new MoodleBackupLimits());
+        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(output.ToArray()), folder.Path, new MoodleBackupLimits(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MoodleBackupErrors.UnsafeArchive, result.Error);
@@ -179,7 +179,7 @@ public sealed class MoodleBackupReaderTests
         using var folder = new TempFolder();
 
         // Act
-        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(MoodleBackupSamples.WorkplaceSafety().BuildTarGz()), folder.Path, new MoodleBackupLimits { MaxEntries = 5 });
+        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(MoodleBackupSamples.WorkplaceSafety().BuildTarGz()), folder.Path, new MoodleBackupLimits { MaxEntries = 5 }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MoodleBackupErrors.UnsafeArchive, result.Error);
@@ -197,7 +197,7 @@ public sealed class MoodleBackupReaderTests
         using var folder = new TempFolder();
 
         // Act
-        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(builder.BuildZip()), folder.Path, new MoodleBackupLimits());
+        var result = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(builder.BuildZip()), folder.Path, new MoodleBackupLimits(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MoodleBackupErrors.InvalidXml, result.Error);
@@ -223,9 +223,9 @@ public sealed class MoodleBackupReaderTests
         activity.Section(1, 0, null);
 
         // Act
-        var text = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(Encoding.UTF8.GetBytes("plain text")), notAnArchive.Path, new MoodleBackupLimits());
-        var missing = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(zipWithoutBackup.ToArray()), noBackupFile.Path, new MoodleBackupLimits());
-        var notACourse = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(activity.BuildZip()), activityBackup.Path, new MoodleBackupLimits());
+        var text = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(Encoding.UTF8.GetBytes("plain text")), notAnArchive.Path, new MoodleBackupLimits(), TestContext.Current.CancellationToken);
+        var missing = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(zipWithoutBackup.ToArray()), noBackupFile.Path, new MoodleBackupLimits(), TestContext.Current.CancellationToken);
+        var notACourse = await MoodleBackupReader.ExtractAndReadAsync(new MemoryStream(activity.BuildZip()), activityBackup.Path, new MoodleBackupLimits(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MoodleBackupErrors.NotAnArchive, text.Error);

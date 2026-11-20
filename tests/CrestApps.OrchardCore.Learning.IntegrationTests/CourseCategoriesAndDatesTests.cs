@@ -91,8 +91,8 @@ public sealed class CourseCategoriesAndDatesTests
         Assert.Contains("data-course-ends", child, StringComparison.Ordinal);
         Assert.Contains("2031", child, StringComparison.Ordinal);
         Assert.DoesNotContain("UTC", child, StringComparison.Ordinal);
-        Assert.NotNull(inParent);
-        Assert.NotNull(inOther);
+        Assert.False(string.IsNullOrEmpty(inParent.Id));
+        Assert.False(string.IsNullOrEmpty(inOther.Id));
 
         // The course page shows the dates too.
         var page = await anonymous.GetAsync(inChild.Path, TestContext.Current.CancellationToken);
