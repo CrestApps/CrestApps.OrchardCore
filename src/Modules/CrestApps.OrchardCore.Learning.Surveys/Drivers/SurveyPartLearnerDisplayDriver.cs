@@ -62,10 +62,22 @@ internal sealed class SurveyPartLearnerDisplayDriver : ContentPartDisplayDriver<
                 var own = (await _enrollments.ListByCourseForUserAsync(userId, courseId))
                     .Where(candidate => string.Equals(candidate.UserId, userId, StringComparison.Ordinal) && string.Equals(candidate.CourseId, courseId, StringComparison.Ordinal))
                     .ToArray();
-                var enrollment = own.FirstOrDefault(candidate => candidate.IsOpen) ?? own.FirstOrDefault();
+                var enrollment = own.FirstOrDefault(candidate => candidate.IsOpen)
+                    ?? own.FirstOrDefault(candidate => candidate.Status == EnrollmentStatus.Completed)
+                    ?? own.FirstOrDefault();
 
                 model.Enrolled = enrollment is not null;
-                model.EnrollmentActive = enrollment?.Status == EnrollmentStatus.Active;
+
+                // A learner who completed the course answers too: feedback at the end of a course is mostly given then.
+                model.EnrollmentActive = enrollment?.Status == EnrollmentStatus.Active
+                    || (enrollment?.Status == EnrollmentStatus.Completed && enrollment.Grants.Count > 0 && (enrollment.AccessEndsUtc is null || enrollment.AccessEndsUtc > now));
+                model.CannotAnswerReason = enrollment?.Status switch
+                {
+                    EnrollmentStatus.Pending => "Pending",
+                    EnrollmentStatus.Suspended => "Suspended",
+                    _ when enrollment is not null && !model.EnrollmentActive => "AccessEnded",
+                    _ => null,
+                };
 
                 if (enrollment is not null)
                 {
@@ -76,6 +88,11 @@ internal sealed class SurveyPartLearnerDisplayDriver : ContentPartDisplayDriver<
             }
 
             model.CanAnswer = model.EnrollmentActive && !model.Closed && (model.Response is null || part.AllowChangeAnswer);
+
+            if (!model.CanAnswer && model.Enrolled && model.CannotAnswerReason is null)
+            {
+                model.CannotAnswerReason = model.Closed ? "Closed" : model.Response is not null ? "Answered" : "NotOpen";
+            }
 
             // The totals hold everyone's written answers: only course staff, and learners the item is open to, see them.
             if (SurveyRules.LearnerSeesResults(part, model.Response is not null, now) && await CanSeeResultsAsync(model.SurveyId, userId))

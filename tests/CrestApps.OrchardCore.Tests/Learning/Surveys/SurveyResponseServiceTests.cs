@@ -269,6 +269,49 @@ public sealed class SurveyResponseServiceTests
     }
 
     [Fact]
+    public async Task Answer_AfterTheLearnerCompletedTheCourse_IsKept()
+    {
+        // Arrange: the end-of-course feedback is answered once the course is completed, its main use.
+        await using var h = await CreateAsync();
+        var ana = await EnrollAsync(h, "ana");
+        await h.RunAsync(services => services.GetRequiredService<IEnrollmentService>().ChangeStatusAsync(ana.ItemId, EnrollmentStatus.Completed, "admin", "Completed"));
+
+        // Act
+        var result = await AnswerAsync(h, "ana", ("q1", ["5"]), ("q2", ["Yes"]));
+        var found = await h.RunAsync(services => services.GetRequiredService<ISurveyResponseService>().FindAsync(ana.ItemId, Survey));
+
+        // Assert
+        Assert.True(result.Succeeded, result.Error);
+        Assert.Equal(ana.ItemId, result.Response.EnrollmentId);
+        Assert.NotNull(found);
+    }
+
+    [Fact]
+    public async Task Answer_AfterACompletedCoursesAccessEnded_IsRefused()
+    {
+        // Arrange
+        await using var h = await CreateAsync();
+        var ana = await EnrollAsync(h, "ana");
+        await h.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<EnrollmentStore>();
+            var enrollment = await store.FindByIdAsync(ana.ItemId);
+
+            enrollment.Status = EnrollmentStatus.Completed;
+            enrollment.AccessEndsUtc = LearningTestHarness.Now.AddDays(-1);
+            await store.SaveAsync(enrollment);
+
+            return true;
+        });
+
+        // Act
+        var result = await AnswerAsync(h, "ana", ("q1", ["5"]), ("q2", ["Yes"]));
+
+        // Assert
+        Assert.Equal(SurveyErrors.AccessEnded, result.Error);
+    }
+
+    [Fact]
     public void TheSurveyKind_CompletesOnAnswer_OrWhenViewed_AndGivesNoGrade()
     {
         // Arrange

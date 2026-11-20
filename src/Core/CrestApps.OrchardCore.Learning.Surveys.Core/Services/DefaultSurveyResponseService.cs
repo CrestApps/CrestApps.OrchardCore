@@ -110,12 +110,15 @@ internal sealed class DefaultSurveyResponseService : ISurveyResponseService
             return SurveyResponseResult.Fail(SurveyErrors.NotSurvey);
         }
 
-        // Only the learner's own active enrollment in the survey's course; the user id is checked again so another
-        // learner's enrollment is never used.
-        var enrollment = (await _enrollments.ListByCourseForUserAsync(request.UserId, survey.CourseId, cancellationToken))
-            .FirstOrDefault(candidate => string.Equals(candidate.UserId, request.UserId, StringComparison.Ordinal) &&
-                string.Equals(candidate.CourseId, survey.CourseId, StringComparison.Ordinal) &&
-                candidate.Status == EnrollmentStatus.Active);
+        // Only the learner's own active enrollment in the survey's course, or their completed one: feedback at the end of a
+        // course is mostly given once it is completed. The user id is checked again so another learner's enrollment is
+        // never used.
+        var own = (await _enrollments.ListByCourseForUserAsync(request.UserId, survey.CourseId, cancellationToken))
+            .Where(candidate => string.Equals(candidate.UserId, request.UserId, StringComparison.Ordinal) &&
+                string.Equals(candidate.CourseId, survey.CourseId, StringComparison.Ordinal))
+            .ToArray();
+        var enrollment = own.FirstOrDefault(candidate => candidate.Status == EnrollmentStatus.Active)
+            ?? own.FirstOrDefault(candidate => candidate.Status == EnrollmentStatus.Completed);
 
         if (enrollment is null)
         {
@@ -124,14 +127,25 @@ internal sealed class DefaultSurveyResponseService : ISurveyResponseService
 
         var now = _clock.UtcNow;
 
-        if (!EnrollmentAccess.HasAccess(enrollment, now))
+        if (enrollment.Status == EnrollmentStatus.Completed)
         {
-            return SurveyResponseResult.Fail(SurveyErrors.AccessEnded);
+            // A learner who completed the course may answer while they may still review it, as course access decides.
+            if (enrollment.Grants.Count == 0 || (enrollment.AccessEndsUtc is not null && enrollment.AccessEndsUtc <= now))
+            {
+                return SurveyResponseResult.Fail(SurveyErrors.AccessEnded);
+            }
         }
-
-        if (!(await _release.EvaluateAsync(survey.Entry, enrollment, await _progress.GetAsync(enrollment.ItemId, cancellationToken))).IsReleased)
+        else
         {
-            return SurveyResponseResult.Fail(SurveyErrors.NotAvailableYet);
+            if (!EnrollmentAccess.HasAccess(enrollment, now))
+            {
+                return SurveyResponseResult.Fail(SurveyErrors.AccessEnded);
+            }
+
+            if (!(await _release.EvaluateAsync(survey.Entry, enrollment, await _progress.GetAsync(enrollment.ItemId, cancellationToken))).IsReleased)
+            {
+                return SurveyResponseResult.Fail(SurveyErrors.NotAvailableYet);
+            }
         }
 
         if (SurveyRules.IsClosed(survey.Part, now))
