@@ -36,6 +36,17 @@ public interface ISurveyResponseService
     Task<SurveySummary> SummarizeAsync(string surveyId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Decides whether a person may see how everyone answered a survey, when the survey shows its totals to learners:
+    /// course staff, or a learner with an open enrollment in the survey's course, within its access dates, to whom the
+    /// item is released. Nobody signed out, not enrolled or not yet given the item sees them.
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="userId">The person, or <see langword="null"/> when signed out.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns><see langword="true"/> when the person may see the totals.</returns>
+    Task<bool> CanSeeResultsAsync(string surveyId, string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Reads a page of the responses to a survey, newest first.
     /// </summary>
     /// <param name="surveyId">The survey.</param>

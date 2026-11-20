@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Learning.Surveys.Core.Services;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
 using CrestApps.OrchardCore.Learning.Surveys.Services;
 using CrestApps.OrchardCore.Learning.Surveys.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
@@ -15,12 +16,13 @@ namespace CrestApps.OrchardCore.Learning.Surveys.Drivers;
 
 /// <summary>
 /// The survey panel on the survey item in the learner player: the questions to answer, the learner's own answers once
-/// given, and the totals when the survey shows them to learners. Only the signed-in learner's own enrollment and
-/// response are read.
+/// given, and the totals when the survey shows them to learners and the viewer is course staff or a learner the item is
+/// open to (never someone signed out or not enrolled). Only the signed-in learner's own enrollment and response are read.
 /// </summary>
 internal sealed class SurveyPartLearnerDisplayDriver : ContentPartDisplayDriver<SurveyPart>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAuthorizationService _authorizationService;
     private readonly ICourseStructureService _courseStructure;
     private readonly IEnrollmentStore _enrollments;
     private readonly ISurveyResponseService _responses;
@@ -28,12 +30,14 @@ internal sealed class SurveyPartLearnerDisplayDriver : ContentPartDisplayDriver<
 
     public SurveyPartLearnerDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
         ICourseStructureService courseStructure,
         IEnrollmentStore enrollments,
         ISurveyResponseService responses,
         IClock clock)
     {
         _httpContextAccessor = httpContextAccessor;
+        _authorizationService = authorizationService;
         _courseStructure = courseStructure;
         _enrollments = enrollments;
         _responses = responses;
@@ -73,9 +77,23 @@ internal sealed class SurveyPartLearnerDisplayDriver : ContentPartDisplayDriver<
 
             model.CanAnswer = model.EnrollmentActive && !model.Closed && (model.Response is null || part.AllowChangeAnswer);
 
-            if (SurveyRules.LearnerSeesResults(part, model.Response is not null, now))
+            // The totals hold everyone's written answers: only course staff, and learners the item is open to, see them.
+            if (SurveyRules.LearnerSeesResults(part, model.Response is not null, now) && await CanSeeResultsAsync(model.SurveyId, userId))
             {
                 model.Summary = await _responses.SummarizeAsync(model.SurveyId);
             }
         }).Location("Detail", "Content:5");
+
+    private async Task<bool> CanSeeResultsAsync(string surveyId, string userId)
+    {
+        var user = _httpContextAccessor.HttpContext?.User;
+
+        if (string.IsNullOrEmpty(userId) || user is null)
+        {
+            return false;
+        }
+
+        return await _authorizationService.AuthorizeAsync(user, LearningPermissions.ManageCourses)
+            || await _responses.CanSeeResultsAsync(surveyId, userId);
+    }
 }

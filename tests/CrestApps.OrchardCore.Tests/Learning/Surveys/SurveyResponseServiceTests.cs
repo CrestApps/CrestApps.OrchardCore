@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Learning;
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.Surveys;
@@ -205,6 +206,64 @@ public sealed class SurveyResponseServiceTests
 
         // Assert
         Assert.Equal(SurveyErrors.NotAvailableYet, result.Error);
+    }
+
+    [Theory]
+    [InlineData("signed-out", false)]
+    [InlineData("not-enrolled", false)]
+    [InlineData("locked", false)]
+    [InlineData("suspended", false)]
+    [InlineData("enrolled", true)]
+    [InlineData("staff", true)]
+    public async Task Round11S2_TheTotals_AreOnlyForCourseStaff_AndLearnersTheItemIsOpenTo(string viewer, bool expected)
+    {
+        // Arrange: a survey that shows its totals to everyone, already answered by another learner.
+        await using var h = await CreateAsync(part => part.ResultsVisibility = SurveyResultsVisibility.Always);
+        await EnrollAsync(h, "ben");
+        await AnswerAsync(h, "ben", ("q1", ["5"]), ("q2", ["Yes"]), ("q3", ["Private remark"]));
+
+        var userId = viewer switch
+        {
+            "signed-out" => null,
+            "staff" => "teacher",
+            _ => "ana",
+        };
+
+        switch (viewer)
+        {
+            case "staff":
+                h.Courses.Get(Course).Alter<CoursePart>(part => part.Staff = [new CourseStaffMember { UserId = "teacher", Role = LearningConstants.CourseStaffRoles.Instructor }]);
+                break;
+            case "locked":
+                await EnrollAsync(h, "ana");
+                h.Courses.Get(Survey).Alter<CourseItemPart>(part => part.ReleaseRules =
+                [
+                    new LearningRuleSettings { Name = LearningRuleNames.ItemCompleted, Values = { ["ItemId"] = "lesson1" } },
+                ]);
+                break;
+            case "suspended":
+                var suspended = await EnrollAsync(h, "ana");
+                await h.RunAsync(async services =>
+                {
+                    var store = services.GetRequiredService<EnrollmentStore>();
+                    var enrollment = await store.FindByIdAsync(suspended.ItemId);
+
+                    enrollment.Status = EnrollmentStatus.Suspended;
+                    await store.SaveAsync(enrollment);
+
+                    return true;
+                });
+                break;
+            case "enrolled":
+                await EnrollAsync(h, "ana");
+                break;
+        }
+
+        // Act
+        var canSee = await h.RunAsync(services => services.GetRequiredService<ISurveyResponseService>().CanSeeResultsAsync(Survey, userId));
+
+        // Assert
+        Assert.Equal(expected, canSee);
     }
 
     [Fact]

@@ -58,6 +58,36 @@ internal sealed class DefaultSurveyResponseService : ISurveyResponseService
         _logger = logger;
     }
 
+    public async Task<bool> CanSeeResultsAsync(string surveyId, string userId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return false;
+        }
+
+        var survey = await FindSurveyAsync(surveyId);
+
+        if (survey is null)
+        {
+            return false;
+        }
+
+        if (await _courseStructure.IsCourseStaffAsync(userId, survey.CourseId))
+        {
+            return true;
+        }
+
+        // Only the person's own open enrollment, within its access dates, once the item is released to them.
+        var enrollment = (await _enrollments.ListByCourseForUserAsync(userId, survey.CourseId, cancellationToken))
+            .FirstOrDefault(candidate => string.Equals(candidate.UserId, userId, StringComparison.Ordinal) &&
+                string.Equals(candidate.CourseId, survey.CourseId, StringComparison.Ordinal) &&
+                candidate.Status == EnrollmentStatus.Active);
+
+        return enrollment is not null
+            && EnrollmentAccess.HasAccess(enrollment, _clock.UtcNow)
+            && (await _release.EvaluateAsync(survey.Entry, enrollment, await _progress.GetAsync(enrollment.ItemId, cancellationToken))).IsReleased;
+    }
+
     public async Task<SurveyResponseResult> AnswerAsync(SurveyAnswerRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
