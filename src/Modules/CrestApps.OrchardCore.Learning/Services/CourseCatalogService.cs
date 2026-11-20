@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Learning.ViewModels;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Records;
+using OrchardCore.Media;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Taxonomies.Indexing;
@@ -23,6 +24,7 @@ public sealed class CourseCatalogService
     private readonly IContentManager _contentManager;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly CourseCategoryService _categories;
+    private readonly IMediaFileStore _mediaFileStore;
     private readonly IClock _clock;
 
     /// <summary>
@@ -33,12 +35,14 @@ public sealed class CourseCatalogService
         IContentManager contentManager,
         IContentDefinitionManager contentDefinitionManager,
         CourseCategoryService categories,
+        IMediaFileStore mediaFileStore,
         IClock clock)
     {
         _session = session;
         _contentManager = contentManager;
         _contentDefinitionManager = contentDefinitionManager;
         _categories = categories;
+        _mediaFileStore = mediaFileStore;
         _clock = clock;
     }
 
@@ -125,6 +129,7 @@ public sealed class CourseCatalogService
                 StartsUtc = part?.StartsUtc,
                 EndsUtc = part?.EndsUtc,
                 Schedule = CourseSchedules.Of(part, now),
+                CoverUrl = CourseCovers.GetPath(course) is { } cover ? _mediaFileStore.MapPathToPublicUrl(cover) : null,
                 DisplayRouteValues = (await _contentManager.PopulateAspectAsync<ContentItemMetadata>(course)).DisplayRouteValues,
             };
 

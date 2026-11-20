@@ -108,6 +108,11 @@ public class CourseCatalogRowViewModel
     public IList<string> Categories { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the address of its cover picture, or <see langword="null"/> without one.
+    /// </summary>
+    public string CoverUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets when it starts, in UTC.
     /// </summary>
     public DateTime? StartsUtc { get; set; }
