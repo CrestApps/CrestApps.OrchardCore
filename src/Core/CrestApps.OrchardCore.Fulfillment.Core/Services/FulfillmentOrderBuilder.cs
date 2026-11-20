@@ -154,7 +154,8 @@ public sealed class FulfillmentOrderBuilder
                     ContentItemId = line.ContentItemId,
                     VariantId = line.VariantId,
                     Sku = line.Sku,
-                    Title = string.IsNullOrWhiteSpace(line.VariantTitle) ? line.Title : $"{line.Title} ({line.VariantTitle})",
+                    // An order line's title already names its variant, such as "Tee (White / S)".
+                    Title = line.Title,
                     Quantity = quantity,
                 });
             }
