@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Users;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.Title.Models;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Learning.IntegrationTests;
 
@@ -204,6 +205,41 @@ public sealed class CohortEnrollmentTests
         Assert.NotNull(afterAdmin);
     }
 
+    [Fact]
+    public async Task Round11C2_TwoAppliesAtOnce_KeepOneLink_AndAnExtraLinkFoundIsRemoved()
+    {
+        // Arrange: a linked course, and a second link of the same course left by two publishes close together.
+        var (ana, _, _) = await UsersAsync();
+        var cohortId = await CohortAsync(ana);
+        var courseId = await CourseAsync(cohortId);
+
+        await _fixture.InTenantAsync(async services =>
+        {
+            var session = services.GetRequiredService<global::YesSql.ISession>();
+
+            await session.SaveAsync(new CohortLearningLink { TargetId = courseId, PartName = nameof(CoursePart), CohortIds = [cohortId] }, false, LearningConstants.CollectionName);
+            await session.SaveChangesAsync();
+        });
+
+        // Act: two applies at once, then the cohort is unlinked.
+        await Task.WhenAll(
+            _fixture.InTenantAsync(services => services.GetRequiredService<CohortLearningSync>().ApplyAsync(courseId, null)),
+            _fixture.InTenantAsync(services => services.GetRequiredService<CohortLearningSync>().ApplyAsync(courseId, null)));
+
+        var links = await LinksAsync(courseId);
+
+        await LinkAsync(courseId);
+
+        var linksAfterUnlink = await LinksAsync(courseId);
+        var uses = await _fixture.InTenantAsync(services => services.GetRequiredService<ICohortService>().ListUsesAsync(cohortId));
+
+        // Assert
+        Assert.Single(links);
+        Assert.Empty(linksAfterUnlink);
+        Assert.Empty(uses);
+        Assert.Equal(EnrollmentStatus.Withdrawn, (await LatestAsync(ana, courseId)).Status);
+    }
+
     private Task<string> AdminIdAsync()
         => _fixture.InTenantAsync(async services =>
         {
@@ -211,6 +247,12 @@ public sealed class CohortEnrollmentTests
 
             return await users.GetUserIdAsync(await users.FindByNameAsync("admin"));
         });
+
+    private Task<IReadOnlyList<CohortLearningLink>> LinksAsync(string targetId)
+        => _fixture.InTenantAsync<IReadOnlyList<CohortLearningLink>>(async services =>
+            (await services.GetRequiredService<global::YesSql.ISession>()
+                .Query<CohortLearningLink, CohortLearningLinkIndex>(index => index.TargetId == targetId, LearningConstants.CollectionName)
+                .ListAsync()).ToArray());
 
     private async Task<(string Ana, string Ben, string Cid)> UsersAsync()
     {

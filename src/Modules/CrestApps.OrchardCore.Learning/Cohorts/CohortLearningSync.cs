@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -15,7 +16,8 @@ namespace CrestApps.OrchardCore.Learning.Cohorts;
 /// a linked cohort is enrolled, a person who leaves it loses what the cohort gave them, and linking or unlinking a
 /// cohort does the same for all its members. Each course or path is enrolled through the
 /// <see cref="ICohortLearningTarget"/> of the part that marks it. Linking a cohort enrolls everyone in it, so a change
-/// of the linked cohorts applies only when the person who made it may manage enrollments.
+/// of the linked cohorts applies only when the person who made it may manage enrollments; the link of an item is read
+/// and saved under a lock per item.
 /// </summary>
 public sealed class CohortLearningSync
 {
@@ -26,10 +28,14 @@ public sealed class CohortLearningSync
 
     private const string Collection = LearningConstants.CollectionName;
 
+    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
+
     private readonly ISession _session;
     private readonly IContentManager _contentManager;
     private readonly ICohortService _cohorts;
     private readonly IEnumerable<ICohortLearningTarget> _targets;
+    private readonly IDistributedLock _distributedLock;
     private readonly IAuthorizationService _authorizationService;
     private readonly IServiceProvider _services;
     private readonly IClock _clock;
@@ -43,6 +49,7 @@ public sealed class CohortLearningSync
         IContentManager contentManager,
         ICohortService cohorts,
         IEnumerable<ICohortLearningTarget> targets,
+        IDistributedLock distributedLock,
         IAuthorizationService authorizationService,
         IServiceProvider services,
         IClock clock,
@@ -52,6 +59,7 @@ public sealed class CohortLearningSync
         _contentManager = contentManager;
         _cohorts = cohorts;
         _targets = targets;
+        _distributedLock = distributedLock;
         _authorizationService = authorizationService;
         _services = services;
         _clock = clock;
@@ -75,7 +83,9 @@ public sealed class CohortLearningSync
     public async Task<IReadOnlyList<CohortLearningLink>> ListLinksAsync(string cohortId, CancellationToken cancellationToken = default)
         => string.IsNullOrEmpty(cohortId)
             ? []
-            : (await _session.Query<CohortLearningLink, CohortLearningLinkIndex>(index => index.CohortId == cohortId, Collection).ListAsync(cancellationToken)).ToArray();
+            : (await _session.Query<CohortLearningLink, CohortLearningLinkIndex>(index => index.CohortId == cohortId, Collection).ListAsync(cancellationToken))
+                .DistinctBy(link => link.TargetId, StringComparer.Ordinal)
+                .ToArray();
 
     /// <summary>
     /// Finds the link of a course or path.
@@ -83,8 +93,8 @@ public sealed class CohortLearningSync
     /// <param name="targetId">The content item id.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The link, or <see langword="null"/> when no cohort is applied to it.</returns>
-    public Task<CohortLearningLink> FindLinkAsync(string targetId, CancellationToken cancellationToken = default)
-        => _session.Query<CohortLearningLink, CohortLearningLinkIndex>(index => index.TargetId == targetId, Collection).FirstOrDefaultAsync(cancellationToken);
+    public async Task<CohortLearningLink> FindLinkAsync(string targetId, CancellationToken cancellationToken = default)
+        => (await ListTargetLinksAsync(targetId, cancellationToken)).FirstOrDefault();
 
     /// <summary>
     /// Applies the cohorts of a published course or path: the members of a newly linked cohort are enrolled, and the
@@ -118,39 +128,65 @@ public sealed class CohortLearningSync
             }
         }
 
-        var link = await FindLinkAsync(targetId, cancellationToken);
-        var applied = link?.CohortIds ?? [];
-        var added = wanted.Except(applied, StringComparer.Ordinal).ToArray();
-        var removed = applied.Except(wanted, StringComparer.Ordinal).ToArray();
+        string[] added;
+        string[] removed;
 
-        if ((added.Length > 0 || removed.Length > 0) && !await MayLinkAsync(actor ?? part?.LinkedBy))
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockKey(targetId), _lockTimeout, _lockExpiration);
+
+        if (!locked)
         {
-            // Linking a cohort enrolls all its members: someone who may not manage enrollments changes nothing.
-            _logger.LogWarning("The cohorts of a course or path were changed by someone who may not manage enrollments; the change was not applied.");
+            _logger.LogWarning("The cohorts of a course or path could not be locked; they are applied on the next publish.");
 
             return;
         }
 
-        if (wanted.Count == 0)
+        await using (locker)
         {
-            if (link is not null)
+            // Two publishes close together may each have saved a link before this lock existed: keep the first, read
+            // what all of them applied, and remove the others.
+            var links = await ListTargetLinksAsync(targetId, cancellationToken);
+            var link = links.FirstOrDefault();
+            var applied = links.SelectMany(candidate => candidate.CohortIds ?? []).Distinct(StringComparer.Ordinal).ToList();
+
+            foreach (var extra in links.Skip(1))
             {
-                _session.Delete(link, Collection);
+                _session.Delete(extra, Collection);
             }
-        }
-        else
-        {
-            link ??= new CohortLearningLink { TargetId = targetId };
-            link.PartName = target.PartName;
-            link.DisplayText = item.DisplayText;
-            link.CohortIds = wanted;
-            link.ModifiedUtc = _clock.UtcNow;
 
-            await _session.SaveAsync(link, false, Collection, cancellationToken);
-        }
+            added = [.. wanted.Except(applied, StringComparer.Ordinal)];
+            removed = [.. applied.Except(wanted, StringComparer.Ordinal)];
 
-        // The link is saved first: enrolling commits the session, and a person who left meanwhile is then judged on it.
-        await _session.SaveChangesAsync(cancellationToken);
+            if ((added.Length > 0 || removed.Length > 0) && !await MayLinkAsync(actor ?? part?.LinkedBy))
+            {
+                // Linking a cohort enrolls all its members: someone who may not manage enrollments changes nothing.
+                _logger.LogWarning("The cohorts of a course or path were changed by someone who may not manage enrollments; the change was not applied.");
+
+                wanted = applied;
+                added = [];
+                removed = [];
+            }
+
+            if (wanted.Count == 0)
+            {
+                if (link is not null)
+                {
+                    _session.Delete(link, Collection);
+                }
+            }
+            else
+            {
+                link ??= new CohortLearningLink { TargetId = targetId };
+                link.PartName = target.PartName;
+                link.DisplayText = item.DisplayText;
+                link.CohortIds = wanted;
+                link.ModifiedUtc = _clock.UtcNow;
+
+                await _session.SaveAsync(link, false, Collection, cancellationToken);
+            }
+
+            // The link is saved first: enrolling commits the session, and a person who left meanwhile is then judged on it.
+            await _session.SaveChangesAsync(cancellationToken);
+        }
 
         foreach (var cohortId in added)
         {
@@ -177,12 +213,28 @@ public sealed class CohortLearningSync
     /// <returns>A task.</returns>
     public async Task ForgetAsync(string targetId, CancellationToken cancellationToken = default)
     {
-        var link = await FindLinkAsync(targetId, cancellationToken);
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockKey(targetId), _lockTimeout, _lockExpiration);
 
-        if (link is not null)
+        if (!locked)
         {
-            _session.Delete(link, Collection);
-            await _session.SaveChangesAsync(cancellationToken);
+            _logger.LogWarning("The cohorts of a deleted course or path could not be locked; they were not forgotten.");
+
+            return;
+        }
+
+        await using (locker)
+        {
+            var links = await ListTargetLinksAsync(targetId, cancellationToken);
+
+            foreach (var link in links)
+            {
+                _session.Delete(link, Collection);
+            }
+
+            if (links.Count > 0)
+            {
+                await _session.SaveChangesAsync(cancellationToken);
+            }
         }
     }
 
@@ -238,6 +290,14 @@ public sealed class CohortLearningSync
         }
     }
 
+    private async Task<IReadOnlyList<CohortLearningLink>> ListTargetLinksAsync(string targetId, CancellationToken cancellationToken)
+        => string.IsNullOrEmpty(targetId)
+            ? []
+            : (await _session.Query<CohortLearningLink, CohortLearningLinkIndex>(index => index.TargetId == targetId, Collection).ListAsync(cancellationToken))
+                .DistinctBy(link => link.Id)
+                .OrderBy(link => link.Id)
+                .ToArray();
+
     // No person (a recipe, setup, a background job with no one behind it) is the site itself.
     private async Task<bool> MayLinkAsync(string userId)
     {
@@ -253,6 +313,9 @@ public sealed class CohortLearningSync
 
     private ICohortLearningTarget FindTarget(string partName)
         => _targets.FirstOrDefault(target => string.Equals(target.PartName, partName, StringComparison.Ordinal));
+
+    private static string LockKey(string targetId)
+        => $"LearningCohortLink:{targetId}";
 
     private async Task JoinAsync(ICohortLearningTarget target, string targetId, string cohortId, string userId, string actor, CancellationToken cancellationToken)
     {

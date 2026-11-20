@@ -10,6 +10,11 @@ namespace CrestApps.OrchardCore.Learning.Cohorts;
 public sealed class CohortLearningLink
 {
     /// <summary>
+    /// Gets or sets the document id.
+    /// </summary>
+    public long Id { get; set; }
+
+    /// <summary>
     /// Gets or sets the content item id of the course or path.
     /// </summary>
     public string TargetId { get; set; }
