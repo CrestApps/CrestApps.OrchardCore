@@ -14,6 +14,20 @@ public interface ILearningPathService
     Task<LearningPathStartResult> StartAsync(LearningPathStartRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Takes a person off a path that a source started, such as a cohort the person left: their progress is removed and
+    /// the enrollments the path made for them lose its grant (one left with no other grant is withdrawn). A completed
+    /// path, or one another source started, stays.
+    /// </summary>
+    /// <param name="pathId">The path.</param>
+    /// <param name="userId">The person.</param>
+    /// <param name="source">The source that must have started it.</param>
+    /// <param name="actor">Who takes the person off.</param>
+    /// <param name="reason">Why.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns><see langword="true"/> when the person was taken off the path.</returns>
+    Task<bool> StopAsync(string pathId, string userId, string source, string actor, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Works out a person's progress on a path again from their enrollments: opens the next stage, or completes it.
     /// </summary>
     Task<LearningPathProgress> EvaluateAsync(string pathId, string userId, CancellationToken cancellationToken = default);

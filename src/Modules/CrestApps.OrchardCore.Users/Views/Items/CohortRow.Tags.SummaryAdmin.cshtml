@@ -1,0 +1,4 @@
+@using CrestApps.OrchardCore.Users.Cohorts
+@model ShapeViewModel<CohortRow>
+
+<span class="badge ta-badge fw-normal" title="@T["People in the cohort"]"><i class="fa-solid fa-users text-secondary me-1" aria-hidden="true"></i>@T.Plural(Model.Value.MemberCount, "1 person", "{0} people")</span>

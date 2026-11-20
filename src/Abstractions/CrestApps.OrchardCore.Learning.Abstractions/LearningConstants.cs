@@ -57,6 +57,12 @@ public static class LearningConstants
         public const string SelfEnrollment = "CrestApps.OrchardCore.Learning.SelfEnrollment";
 
         /// <summary>
+        /// Enrollment by cohort: a course or a learning path linked to cohorts enrolls the people who join them and
+        /// ends the enrollments it made for the people who leave.
+        /// </summary>
+        public const string Cohorts = "CrestApps.OrchardCore.Learning.Cohorts";
+
+        /// <summary>
         /// A tree of course categories from an Orchard Core taxonomy: a category field on courses, category browsing in
         /// the course catalog and a category filter in the admin list of courses.
         /// </summary>
@@ -190,6 +196,11 @@ public static class LearningConstants
         /// A workflow enrolled the learner.
         /// </summary>
         public const string Workflow = "Workflow";
+
+        /// <summary>
+        /// The learner is in a cohort the course or learning path is linked to.
+        /// </summary>
+        public const string Cohort = "Cohort";
     }
 
     /// <summary>

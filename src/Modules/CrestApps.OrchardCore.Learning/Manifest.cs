@@ -43,6 +43,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = LearningConstants.Features.Cohorts,
+    Name = "Enrollment by Cohort",
+    Description = "Links a course, or a learning path, to cohorts: the people in them are enrolled, people who join later are enrolled, and people who leave lose only the enrollment the cohort gave them.",
+    Category = "Learning",
+    Dependencies =
+    [
+        LearningConstants.Features.Learning,
+        UsersConstants.Feature.Cohorts,
+    ]
+)]
+
+[assembly: Feature(
     Id = LearningConstants.Features.SelfEnrollment,
     Name = "Self Enrollment",
     Description = "Lets a signed-in learner enroll in a course on its page, at once, with the course's enrollment key, or pending approval, as the course allows.",

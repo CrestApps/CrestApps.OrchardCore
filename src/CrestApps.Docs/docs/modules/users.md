@@ -82,6 +82,7 @@ An audience has a technical name that never changes, a name, a description, a jo
 | `SkillHolder` | Skills | People who hold the skills today, themselves or through their staff record |
 | `CertificationHolder` | Skills | People with a valid record of the certifications |
 | `CourseLearner` | Learning | People enrolled in the courses, active or completed |
+| `CohortMember` | Users (Cohorts) | People in any of the cohorts |
 
 Code reads audiences through `IUserAudienceService` (`CrestApps.OrchardCore.Users.Abstractions`), registered by the feature with `services.AddUserAudiences()`:
 
@@ -106,6 +107,39 @@ The `UserAudiences` recipe step creates or updates defined audiences by name, an
         { "source": "Team", "values": ["<team id>"] },
         { "source": "StaffHireDate", "number": 30 }
       ]
+    }
+  ]
+}
+```
+
+## Cohorts
+
+The **Cohorts** feature (`CrestApps.OrchardCore.Users.Cohorts`, depends on User Audiences) keeps cohorts: named groups of people an administrator keeps by hand, such as "2026 new hires", beside the audiences, whose rules decide who is in them. **Access Control > Cohorts** creates, renames and deletes them, lists their people, adds people with the user picker or many at once (user names or e-mail addresses, one per line), and removes them. Its permission is `ManageCohorts`.
+
+Teams are not cohorts: a team is a part of the organization (a tree with a kind, a time zone and an address) whose members other modules supply, while a cohort is a flat list of any users, staff or not.
+
+Code reads and changes cohorts through `ICohortService` (`CrestApps.OrchardCore.Users.Abstractions`), registered by the feature with `services.AddCohorts()`:
+
+- `PageAsync`, `ListAsync`, `FindByIdAsync` and `FindByNameAsync` read cohorts; names are unique without regard to case.
+- `CreateAsync`, `UpdateAsync` and `DeleteAsync` return the reasons a change is refused. A cohort something uses (an `ICohortUsage`, registered with `services.AddCohortUsage<T>()`) cannot be deleted.
+- `PageMembersAsync`, `CountMembersAsync`, `ListMemberIdsAsync`, `ListForUserAsync` and `IsMemberAsync` read members.
+- `AddMembersAsync` and `RemoveMembersAsync` return the people who actually joined or left, and tell each `ICohortMembershipObserver` (registered with `services.AddCohortMembershipObserver<T>()`) about only them, after the change is flushed. A deleted user leaves every cohort.
+
+Cohorts and their members are documents of the `Cohorts` collection, one per cohort and one per member, with `CohortIndex` and `CohortMemberIndex`, so a cohort of thousands is paged from its index.
+
+The feature registers the `CohortMember` audience rule (**Cohort member**), so every feature that targets audiences (required learning, layer rules, user pickers) can target cohorts. Learning links courses and learning paths to cohorts directly; see [enrollment by cohort](./learning#enrollment-by-cohort).
+
+The `UserCohorts` recipe step creates or updates cohorts, matched by id and then by name, and adds the people it names by user name or e-mail; people already in a cohort stay. The **Cohorts** deployment step exports every cohort with its people by user name:
+
+```json
+{
+  "name": "UserCohorts",
+  "Cohorts": [
+    {
+      "Id": "new-hires-2026",
+      "Name": "2026 new hires",
+      "Description": "Everyone who started this year",
+      "Members": ["ana", "ben@example.com"]
     }
   ]
 }

@@ -56,6 +56,19 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Name = "Cohorts",
+    Category = "Users",
+    Description = "Lets administrators keep cohorts, named groups of people added by hand, such as this year's new hires, that other features target: a Cohort member audience rule, and enrollment by cohort in Learning.",
+    Id = UsersConstants.Feature.Cohorts,
+    Dependencies =
+    [
+        OrchardCoreFeatureIds.Users,
+        UsersConstants.Feature.Audiences,
+        UsersConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
     Name = "My Account",
     Category = "Users",
     Description = "The \"my account\" area on the site (/account): a home page, a menu and a page frame that other modules add their pages to, such as orders or tickets.",

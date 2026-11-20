@@ -128,6 +128,46 @@ public sealed class DefaultLearningPathService : ILearningPathService
     }
 
     /// <inheritdoc/>
+    public async Task<bool> StopAsync(string pathId, string userId, string source, string actor, string reason, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(pathId) || string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(source))
+        {
+            return false;
+        }
+
+        string progressId;
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockKey(pathId, userId), _lockTimeout, _lockExpiration);
+
+        if (!locked)
+        {
+            _logger.LogWarning("The progress on a learning path could not be locked; the person was not taken off the path.");
+
+            return false;
+        }
+
+        await using (locker)
+        {
+            var progress = await FindFreshAsync(pathId, userId, cancellationToken);
+
+            // Only a path the source started, and that is not done, is undone: a completed path is part of the
+            // person's record, and a path required learning or a person started is theirs to stop.
+            if (progress is null || progress.State != LearningPathState.InProgress || !string.Equals(progress.Source, source, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            progressId = progress.ItemId;
+            await _progress.DeleteAsync(progress, cancellationToken);
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+
+        // The path's own grants go; an enrollment another source also grants, or one the person completed, stays.
+        await _services.GetRequiredService<IEnrollmentService>().RevokeGrantAsync(ProgramsConstants.PathSource, progressId, actor, reason, cancellationToken);
+
+        return true;
+    }
+
+    /// <inheritdoc/>
     public async Task<LearningPathProgress> EvaluateAsync(string pathId, string userId, CancellationToken cancellationToken = default)
     {
         var path = await LoadPathAsync(pathId);

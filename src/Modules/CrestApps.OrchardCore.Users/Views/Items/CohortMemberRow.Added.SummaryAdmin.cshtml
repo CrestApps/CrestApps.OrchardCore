@@ -1,0 +1,4 @@
+@using CrestApps.OrchardCore.Users.Cohorts
+@model ShapeViewModel<CohortMemberRow>
+
+<span class="badge ta-badge fw-normal" title="@T["Added to the cohort"]"><i class="fa-solid fa-calendar-plus text-secondary me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: Model.Value.AddedUtc, Format: "g"))</span>

@@ -1,0 +1,4 @@
+@using CrestApps.OrchardCore.Users.Cohorts
+@model ShapeViewModel<CohortMemberRow>
+
+<a asp-controller="Cohorts" asp-action="RemoveMember" asp-route-id="@Model.Value.CohortId" asp-route-userId="@Model.Value.UserId" class="btn btn-danger btn-sm" data-title="@T["Remove"]" data-message="@T["Remove this person from the cohort? Features that target the cohort stop including them."]" data-url-af="RemoveUrl UnsafeUrl">@T["Remove"]</a>
