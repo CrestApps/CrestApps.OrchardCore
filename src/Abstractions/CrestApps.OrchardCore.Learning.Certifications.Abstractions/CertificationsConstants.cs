@@ -116,6 +116,12 @@ public static class CertificationsConstants
         /// Learning certification paths.
         /// </summary>
         public const string Certifications = "CrestApps.OrchardCore.Learning.Certifications";
+
+        /// <summary>
+        /// Competencies: a course or a learning path grants Skills skills at a level on completion, and learners see
+        /// the competencies they hold.
+        /// </summary>
+        public const string Competencies = "CrestApps.OrchardCore.Learning.Competencies";
     }
 
     /// <summary>
