@@ -133,6 +133,8 @@ Some Orchard Core features list or read content without asking `ViewContent` for
 
 Turn on **Secure Media** (the **Learning setup** recipe does). A file attached to a lesson through a media field is stored under `mediafields/{type}/{contentItemId}/`, and each request for it asks `ViewContent` on the lesson, so a person who is not enrolled gets 404.
 
+Learners see each file of a course item under its original name: the text the author gave it, else the name it had when uploaded (the attached media editor keeps it in the field's `AttachedFileNames`), else the stored name without a leading GUID (`LearningFileNames.GetDisplayName`). The `MediaField-LearningFiles` template does this for the media fields of every type with `CourseItemPart`, in every display but Summary (`CourseItemFileShapes`).
+
 Secure Media protects the rest of the media library too: files outside lesson folders then need **View media content in the root folder** or a folder's own permission. The **Learning public media** recipe gives the root folder to everyone. Never give **View media content in all folders** to the Anonymous or Authenticated role: a role that holds it passes Secure Media before the folder check runs, which opens every lesson file. The recipe removes it from both roles.
 
 ## Learner pages
@@ -229,6 +231,30 @@ The daily upkeep reads `OrchardCore:CrestApps:Learning:Upkeep`:
 ```
 
 Zero turns a notice off. The upkeep runs every hour, expires enrollments whose access ended, and raises each notice once per enrollment.
+
+### Media limits
+
+Orchard Core Media takes files of up to 30 MB by default and no OpenDocument spreadsheets or caption files, which is too little for training videos and handouts. Learning raises Media's limits after Media reads its own configuration (`LearningMediaOptions`, an `IPostConfigureOptions<MediaOptions>`), from `OrchardCore:CrestApps:Learning:Media`:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Learning": {
+        "Media": {
+          "MaxFileSize": 2147483648,
+          "AdditionalFileExtensions": [ ".ods", ".odp", ".odg", ".odt", ".rtf", ".txt", ".pps", ".ppsx", ".vsdx", ".vtt", ".srt" ]
+        }
+      }
+    }
+  }
+}
+```
+
+- `MaxFileSize` (bytes, 2 GB by default) becomes Media's `MaxFileSize` when it is larger; Media's own limit is kept when it is larger, and `0` leaves Media's limit alone. It is the tenant's media limit, for the media library too, not only lesson files.
+- `AdditionalFileExtensions` are added to Media's allowed extensions (the list above when it is not set). Programs, scripts, web pages, server pages, SVG and macro-enabled Office files are never added.
+
+Media uploads are sent in chunks of `MaxUploadChunkSize` (100 MB by default), and Media raises Kestrel's request limit for its own upload endpoint. Behind IIS (Azure App Service on Windows), IIS refuses a request over `requestLimits maxAllowedContentLength` (30,000,000 bytes by default) before the site sees it: raise it above the chunk size, or set `OrchardCore:Media:MaxUploadChunkSize` below it. Orchard Core logs a warning at startup when the two disagree. A reverse proxy in front of the site (nginx `client_max_body_size`, for one) needs the same.
 
 ## Extending Learning
 

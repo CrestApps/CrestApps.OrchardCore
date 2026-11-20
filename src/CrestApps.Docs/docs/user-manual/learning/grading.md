@@ -31,6 +31,12 @@ You cannot grade your own attempt.
 
 Both are kept in the attempt's score history and the Audit Trail. If the course was already completed and the change lowers the result, the enrollment stays completed and shows **Needs review**: a training manager opens it, decides what follows and clears the review with a note.
 
+## Sign off coursework with nothing handed in
+
+For practical work a mentor watches, set a coursework lesson's **Learners hand in** to **Nothing: a grader signs it off**, and keep it completed when graded. Learners then hand nothing in. To sign a learner off, open the coursework's **Submissions**, choose the learner under **Sign off a learner** and select **Sign off**; grade the work on the page that opens. A coursework lesson that takes work can also count as done when the learner hands it in, and still be graded afterwards.
+
+Coursework takes up to 20 files a hand-in unless your administrator changes it.
+
 ## Gradebook and grade scales
 
 **Learning > Grade scales** maps a percentage to a grade, such as A to F or Pass and Fail. The **Gradebook** of a course shows every learner and the result of each graded item.

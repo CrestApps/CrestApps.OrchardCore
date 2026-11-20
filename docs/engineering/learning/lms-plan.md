@@ -1363,6 +1363,30 @@ Found on real production packages: Articulate Rise and Storyline 360 run Articul
 
 **Not done.** No DNS or TLS was set up (local only). The Rise and Storyline packages reported no score (they have no scored quiz). All packages of a tenant share the content host's origin (documented).
 
+### Moodle migration: media, coursework and small activities (remaining work items 11 to 13, branch `ma/lms-activities-c0c0d6`)
+
+**Built.**
+
+- **Media (item 11).** `LearningMediaOptions` (`CrestApps:Learning:Media`) post-configures Orchard Core's `MediaOptions`: `MaxFileSize` rises to 2 GB unless Media's is larger (`0` leaves it), and `.ods`, `.odp`, `.odg`, `.odt`, `.rtf`, `.txt`, `.pps`, `.ppsx`, `.vsdx`, `.vtt` and `.srt` are added; programs, scripts, web and server pages, SVG and macro Office files are never added. It is the tenant's media limit, not a Learning-only one: Media has one limit per tenant and the attached media editor uploads through Media's endpoint, so a second upload path would duplicate Media. The IIS `maxAllowedContentLength` against `MaxUploadChunkSize` and proxy limits are documented. Learners see original file names: `CourseItemFileShapes` adds the `MediaField__LearningFiles` alternate to media fields of course items, and `LearningFileNames.GetDisplayName` takes the media text, else `AttachedFileNames`, else the stored name without a leading GUID. Video captions (`.vtt`) can now be uploaded, which Media refused before.
+- **Coursework (item 12).** `CourseworkSubmissionType.SignOff`: learners hand nothing in (`SignOffOnly`), and a grader opens a learner from the Submissions page (`StartSignOffAsync`: an empty current submission marked `SignOff`, reporting nothing until graded; same grader rule, never one's own work). The Coursework kind no longer sets `GradableCompletesWhenGraded`, so graded coursework may complete on hand-in; Graded stays the default, and a grade given after the course completed reaches it and flags a changed outcome for review (the round 8 test still passes). `CourseworkOptions` (`CrestApps:Learning:Coursework`: 20 files and 50 MB by default) bound the editor, and `CourseworkRequestLimitsAttribute` raises the hand-in request's body and multipart limits to the largest hand-in instead of the fixed 520 MB.
+- **Small activity types (item 13).** Building blocks checked first: Orchard Core Forms posts to workflows and keeps no answer per person, totals or completion; Assessments questions are scored bank items; Timeline gives comments on records but no learner posting on course items yet; nothing in the solution is a glossary, a typing exercise or a user database. Decisions:
+
+  | Moodle activity (count) | Decision |
+  | --- | --- |
+  | Feedback (3) | Built: **Learning Surveys** (`Learning.Surveys` with `.Abstractions` and `.Core`), the Feedback survey item. |
+  | Choice (5) | Built: the Choice item of Learning Surveys, a survey of one question (`SurveyPartSettings.SingleQuestion`). One engine for both. |
+  | IMS content package (1) | Built in Learning Packages: a manifest with no SCORM marks is an `IMS Content Package`, launched without the run-time API (pages served as they are, no frame page), completing when viewed. |
+  | Glossary (2) | Replaced at migration by a page lesson. |
+  | Forum (15, mostly course announcements) | Dropped at migration for now. Follow-up: a discussion course item on Timeline, with a Timeline access provider for course items. |
+  | MooTyper (17) | Dropped at migration; a link lesson or a learning package stands in. Follow-up only if typing scores must be kept. |
+  | Database (1) | Dropped at migration; coursework or a page lesson stands in. |
+
+  Learning Surveys: questions (single choice, multiple choice, rating 1 to 5, written), required questions, anonymous answers, change of answers, a close date (local time in the editor), totals for learners `Never`/`AfterAnswer`/`AfterClose`/`Always`; `SurveyResponse` records in `LearningSurveyResponses`, one per learner and survey, checked on the server (`SurveyRules`), under a lock, reporting `Submitted` to progress; a totals page for Manage courses or the course's staff (named written answers unless anonymous); personal data export and erasure.
+
+**Tests.** Unit, written first and run red: `LearningMediaTests` (21 of 23 failing), `CourseworkSignOffTests` (8 of 10), `ImsContentPackageTests` (4 of 5), `SurveyResponseServiceTests` (14 of 17); `GradeAfterCompletionTests.TheCourseworkKind_CompletesWhenGraded_ByDefault` no longer asserts `GradableCompletesWhenGraded`. Integration: `LearningActivitiesTests` (media options, original file names in the player, the sign-off pages, an IMS package launched and completed, a survey answered with its totals, a choice showing its totals), written with the code and not run red.
+
+**Not built.** A recipe and deployment step, a data source and workflow events for survey responses; a per-learner response list beyond named written answers; Learning-only media limits (they are the tenant's Media limits); forum, MooTyper and database items.
+
 ### Phase 9: AI (branch `ma/learning-phase-9`, stacked on `ma/learning-phase-8`)
 
 **Built.**
