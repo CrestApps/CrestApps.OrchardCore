@@ -12,7 +12,7 @@ An enrollment is one person taking one course. It keeps their progress, why they
 | --- | --- |
 | **Menu** | Learning > Enrollments; Reports > Operations > Course completion, Inactive learners; Reports > Compliance & Audit > Learner transcript |
 | **Permission** | View enrollments; Manage enrollments to change them; View learning reports; Export learner records to export. Instructors, assistants and graders named on a course (with Manage own courses) see **Learning > Enrollments** for their own courses, and instructors and assistants can **Enroll a learner** in them. |
-| **Feature** | Learning; Reports for the reports; Audit Trail to record each change |
+| **Feature** | Learning; Reports for the reports; Audit Trail to record each change; Enrollment by Cohort to enroll cohorts |
 
 <AskYourAdmin />
 
@@ -25,6 +25,23 @@ An enrollment is one person taking one course. It keeps their progress, why they
 5. Select **Enroll**.
 
 Enrolling someone who is already enrolled in the course changes nothing.
+
+## Enroll a cohort
+
+With the **Enrollment by Cohort** feature on, a course can enroll everyone in some [cohorts](../administration/users.md#cohorts) and keep them enrolled as the cohorts change. A learning path can too.
+
+1. Edit the course (or the learning path) and find the **Cohorts** card. You need **Manage enrollments** to see it.
+2. In **Enroll the people in**, choose one or more cohorts.
+3. Publish. Everyone in those cohorts is enrolled, and **Linked now** lists the cohorts with how many people are in each.
+
+From then on:
+
+- someone added to a linked cohort is enrolled;
+- someone removed from it loses the enrollment the cohort gave them. If you also enrolled them by hand, bought a seat for them or another cohort enrolls them, they stay enrolled;
+- a completed enrollment never changes, and someone who already completed the course isn't enrolled again;
+- removing a cohort from the card and publishing ends the enrollments it gave, the same way.
+
+On a learning path, a person removed from every linked cohort is taken off the path, unless they started it themselves or required learning started it. In **Learning > Enrollments**, the enrollment's grants show **Cohort** as the source.
 
 ## Find enrollments
 

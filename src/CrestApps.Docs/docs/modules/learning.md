@@ -19,6 +19,7 @@ The admin screens and learner pages are described in the User Manual: [Courses](
 | Learning | `CrestApps.OrchardCore.Learning` | Contents, Lists, Title, Html, Autoroute, Media, Content Fields, Roles, CrestApps Users, CrestApps Resources |
 | Learner Pages | `CrestApps.OrchardCore.Learning.LearnerPages` | Learning |
 | Self Enrollment | `CrestApps.OrchardCore.Learning.SelfEnrollment` | Learner Pages |
+| Enrollment by Cohort | `CrestApps.OrchardCore.Learning.Cohorts` | Learning, Cohorts (Users) |
 
 It works with other features when they are on:
 
@@ -134,6 +135,25 @@ Some Orchard Core features list or read content without asking `ViewContent` for
 Turn on **Secure Media** (the **Learning setup** recipe does). A file attached to a lesson through a media field is stored under `mediafields/{type}/{contentItemId}/`, and each request for it asks `ViewContent` on the lesson, so a person who is not enrolled gets 404.
 
 Secure Media protects the rest of the media library too: files outside lesson folders then need **View media content in the root folder** or a folder's own permission. The **Learning public media** recipe gives the root folder to everyone. Never give **View media content in all folders** to the Anonymous or Authenticated role: a role that holds it passes Secure Media before the folder check runs, which opens every lesson file. The recipe removes it from both roles.
+
+## Enrollment by cohort
+
+With **Enrollment by Cohort** on, the editor of a course, and of a learning path when Learning Programs is on, has a **Cohorts** card for people with **Manage enrollments**. The cohorts chosen are kept on the item in a `LearningCohortsPart` (`CohortIds`), so recipes and deployments carry them with the course; the type does not need the part.
+
+When the item is published, a deferred task (after the request, in its own scope, because enrolling commits) compares the cohorts with the ones it applied before, kept in a `CohortLearningLink` document of the `Learning` collection with a `CohortLearningLinkIndex` row per cohort:
+
+- the members of a newly linked cohort are enrolled;
+- the members of an unlinked cohort lose what it gave them;
+- when someone joins or leaves a linked cohort, `ICohortMembershipObserver` does the same for that person, also in a deferred task.
+
+Each kind of item is enrolled through an `ICohortLearningTarget`, named by the part that marks it and registered with `services.AddCohortLearningTarget<T>()`:
+
+| Target | Part | Joining | Leaving |
+| --- | --- | --- | --- |
+| Course (Learning) | `CoursePart` | Enrolls with a grant of source `Cohort` and a source id made of the cohort, course and user ids (`CohortEnrollmentGrants.SourceId`), one grant per cohort. Someone who completed the course and has no open enrollment is not enrolled again. | Revokes that grant only. An enrollment left with no grant is withdrawn; one another source still grants stays open, and a completed one never changes. |
+| Learning path (Programs) | `LearningPathPart` | Starts the person with source `Cohort`; a person already on the path keeps their progress. | When the person is in no other linked cohort, `ILearningPathService.StopAsync` removes progress the sync started and revokes the path's course grants. A path the person, required learning or anyone else started, and a completed one, stay. |
+
+A cohort that a course or path is linked to cannot be deleted (`ICohortUsage`). Deleting the course forgets its link without touching enrollments. To target cohorts with required learning instead, use an audience with the `CohortMember` rule.
 
 ## Learner pages
 

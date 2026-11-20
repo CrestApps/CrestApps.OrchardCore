@@ -65,6 +65,22 @@ public static class LearningServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers something a cohort can be linked to so its people are enrolled, such as a course or a learning path.
+    /// </summary>
+    /// <typeparam name="TTarget">The target.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddCohortLearningTarget<TTarget>(this IServiceCollection services)
+        where TTarget : class, ICohortLearningTarget
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICohortLearningTarget, TTarget>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers a release rule.
     /// </summary>
     /// <typeparam name="TRule">The rule.</typeparam>

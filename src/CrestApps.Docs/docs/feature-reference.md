@@ -285,6 +285,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Learning` | Learning | [Learning](./modules/learning) |
 | `CrestApps.OrchardCore.Learning.LearnerPages` | Learner Pages | [Learning](./modules/learning#learner-pages) |
 | `CrestApps.OrchardCore.Learning.SelfEnrollment` | Self Enrollment | [Learning](./modules/learning#learner-pages) |
+| `CrestApps.OrchardCore.Learning.Cohorts` | Enrollment by Cohort | [Learning](./modules/learning#enrollment-by-cohort) |
 | `CrestApps.OrchardCore.Learning.Assessments` | Learning Assessments | [Learning Assessments](./modules/learning-assessments) |
 | `CrestApps.OrchardCore.Learning.Assessments.Gradebook` | Learning Gradebook | [Learning Assessments](./modules/learning-assessments) |
 | `CrestApps.OrchardCore.Learning.Assessments.QtiImport` | Learning QTI Import | [Learning Assessments](./modules/learning-assessments#qti-import) |
@@ -399,6 +400,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Users.DisplayName` | User Display Name | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.Avatars` | User Avatar | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.Audiences` | User Audiences | [Users](./modules/users#user-audiences) |
+| `CrestApps.OrchardCore.Users.Cohorts` | Cohorts | [Users](./modules/users#cohorts) |
 
 ## Multi-Tenancy
 
