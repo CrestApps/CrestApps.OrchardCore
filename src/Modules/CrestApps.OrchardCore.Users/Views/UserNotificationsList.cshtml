@@ -63,7 +63,7 @@ else
     </nav>
 }
 
-@if (page.CanOpenProfile)
-{
-    <p class="small text-muted">@T["To choose how each kind of notification reaches you, open Profile from the user menu."]</p>
-}
+<p class="small text-muted">
+    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+    <a href="@Url.RouteUrl(UsersConstants.Notifications.PreferencesRouteName)">@T["Choose how each kind of notification reaches you"]</a>
+</p>

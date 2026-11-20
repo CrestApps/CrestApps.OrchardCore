@@ -77,6 +77,12 @@ public static class UsersConstants
         /// The route name of the form that marks all the user's notifications read.
         /// </summary>
         public const string MarkAllReadRouteName = "UserNotificationsMarkAllRead";
+
+        /// <summary>
+        /// The route name of the page where a signed-in user chooses how each kind of notification reaches them, at
+        /// <c>/notifications/preferences</c>: the Notifications module's own preferences, without the admin.
+        /// </summary>
+        public const string PreferencesRouteName = "UserNotificationPreferences";
     }
 
     /// <summary>
