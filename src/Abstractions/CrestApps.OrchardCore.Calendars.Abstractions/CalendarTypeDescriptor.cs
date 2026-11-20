@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Calendars.Models;
 using OrchardCore.Localization;
 
@@ -32,11 +33,13 @@ public sealed class CalendarTypeDescriptor
     /// <summary>
     /// Gets or sets the name shown for the type.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; set; }
 
     /// <summary>
     /// Gets or sets what calendars of the type are for.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource Description { get; set; }
 
     /// <summary>

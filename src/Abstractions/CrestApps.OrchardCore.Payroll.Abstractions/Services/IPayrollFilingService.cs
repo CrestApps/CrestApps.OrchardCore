@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Payroll.Models;
 using OrchardCore.Localization;
@@ -72,6 +73,7 @@ public interface IPayrollFilingForm
     string Name { get; }
 
     /// <summary>Gets what people see.</summary>
+    [JsonIgnore]
     LocalizationSource DisplayName { get; }
 
     /// <summary>Gets the jurisdiction an employer must be registered in for the form.</summary>

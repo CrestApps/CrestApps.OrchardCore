@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Calendars.Core.ICalendar;
 using CrestApps.OrchardCore.Calendars.Models;
 using OrchardCore.Localization;
@@ -20,6 +21,7 @@ public interface ICalendarProvider
     /// <summary>
     /// Gets the name shown for the provider.
     /// </summary>
+    [JsonIgnore]
     LocalizationSource DisplayName { get; }
 
     /// <summary>

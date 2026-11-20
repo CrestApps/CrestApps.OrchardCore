@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Taxation.Models;
 using OrchardCore.Localization;
 
@@ -30,11 +31,13 @@ public sealed class IncomeTaxRuleSource
     /// <summary>
     /// Gets or sets what people see.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; set; }
 
     /// <summary>
     /// Gets or sets what the kind of rule is for, with examples.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource Description { get; set; }
 
     /// <summary>

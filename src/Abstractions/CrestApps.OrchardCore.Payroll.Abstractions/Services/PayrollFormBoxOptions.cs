@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Payroll.Services;
@@ -18,4 +19,4 @@ public sealed class PayrollFormBoxOptions
 /// </summary>
 /// <param name="Name">The stored name, such as a form and its box.</param>
 /// <param name="DisplayName">What people see.</param>
-public sealed record PayrollFormBox(string Name, LocalizationSource DisplayName);
+public sealed record PayrollFormBox(string Name, [property: JsonIgnore] LocalizationSource DisplayName);

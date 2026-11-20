@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Xml;
 using CrestApps.OrchardCore.Payroll.Core.UnitedStates;
 using CrestApps.OrchardCore.Payroll.Models;
@@ -135,6 +136,7 @@ public sealed class FormT4 : IPayrollFilingForm
     public string Name => FormName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
@@ -316,6 +318,7 @@ public sealed class FormRl1 : IPayrollFilingForm
     public string Name => FormName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />

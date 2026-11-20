@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
@@ -29,9 +30,11 @@ public sealed class WorkOrderServiceLevelScope : IServiceLevelScopeProvider
     public string Name => WorkOrdersConstants.ServiceLevelScope;
 
     /// <inheritdoc/>
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc/>
+    [JsonIgnore]
     public LocalizationSource Description { get; } = LocalizationSource.Create<WorkOrderServiceLevelScope>("How fast work orders are responded to and resolved on site, at each priority, with the statuses that pause the clock.");
 
     /// <inheritdoc/>

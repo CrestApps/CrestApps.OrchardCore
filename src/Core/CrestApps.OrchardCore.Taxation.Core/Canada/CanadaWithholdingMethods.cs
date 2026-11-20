@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Taxation.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
@@ -242,6 +243,7 @@ public sealed class CanadaFederalWithholdingMethod : IIncomeTaxWithholdingMethod
     public string Name => CanadaIncomeTax.FederalMethod;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
@@ -343,6 +345,7 @@ public sealed class CanadaProvincialWithholdingMethod : IIncomeTaxWithholdingMet
     public string Name => CanadaIncomeTax.ProvincialMethod;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
@@ -454,6 +457,7 @@ public sealed class QuebecWithholdingMethod : IIncomeTaxWithholdingMethod
     public string Name => CanadaIncomeTax.QuebecMethod;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />

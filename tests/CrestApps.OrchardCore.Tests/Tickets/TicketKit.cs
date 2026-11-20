@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.BusinessHours.Core;
@@ -360,6 +361,7 @@ internal sealed class TicketKit : IAsyncDisposable
     {
         public string Name => "Tickets";
 
+        [JsonIgnore]
         public LocalizationSource DisplayName { get; } = LocalizationSource.Create<TicketsScope>("Tickets");
 
         public Task<IReadOnlyList<ServiceLevelOption>> GetMetricsAsync(CancellationToken cancellationToken = default)

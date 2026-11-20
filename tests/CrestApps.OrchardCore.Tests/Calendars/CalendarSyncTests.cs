@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core.External;
 using CrestApps.OrchardCore.Calendars.Core.ICalendar;
@@ -474,6 +475,7 @@ public sealed class CalendarSyncTests
 
         public string Name => ProviderName;
 
+        [JsonIgnore]
         public LocalizationSource DisplayName { get; } = new("Fake");
 
         public Task<IReadOnlyList<ICalendarEventData>> PullAsync(Calendar calendar, CalendarSubscription subscription, CancellationToken cancellationToken = default)

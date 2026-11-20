@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Calendars.Models;
 using OrchardCore.Localization;
 
@@ -29,6 +30,7 @@ public sealed class CalendarEventTypeDescriptor
     /// <summary>
     /// Gets the name shown for the event type.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; }
 
     /// <summary>

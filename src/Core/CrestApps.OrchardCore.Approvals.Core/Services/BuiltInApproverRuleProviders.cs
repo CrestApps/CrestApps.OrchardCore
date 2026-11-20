@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Approvals.Models;
 using CrestApps.OrchardCore.Approvals.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -45,6 +46,7 @@ public sealed class PermissionApproverRuleProvider : IApproverRuleProvider
         => ApproverRuleKinds.Permission;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; } = LocalizationSource.Create<PermissionApproverRuleProvider>("Anyone with the permission");
 
     /// <inheritdoc />
@@ -150,6 +152,7 @@ public sealed class RoleApproverRuleProvider : IApproverRuleProvider
         => ApproverRuleKinds.Role;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; } = LocalizationSource.Create<RoleApproverRuleProvider>("Anyone in the role");
 
     /// <inheritdoc />
@@ -179,6 +182,7 @@ public sealed class UsersApproverRuleProvider : IApproverRuleProvider
         => ApproverRuleKinds.Users;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; } = LocalizationSource.Create<UsersApproverRuleProvider>("Named users");
 
     /// <inheritdoc />
