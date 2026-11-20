@@ -109,6 +109,28 @@ public sealed class AssessmentAttempt : CatalogItem
     public DateTime? QuizClosesUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the review options copied from the quiz when the attempt started, or <see langword="null"/> to follow
+    /// <see cref="ReviewPolicy"/>.
+    /// </summary>
+    public QuizReviewOptions ReviewOptions { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many questions a page shows, copied from the quiz when the attempt started; 0 for every question
+    /// on one page (one a page when the navigation is sequential).
+    /// </summary>
+    public int QuestionsPerPage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the page the learner is on, from zero. A sequential quiz takes answers on this page only.
+    /// </summary>
+    public int CurrentPage { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the learner gets feedback, copied from the quiz when the attempt started.
+    /// </summary>
+    public QuizFeedbackMode FeedbackMode { get; set; }
+
+    /// <summary>
     /// Gets or sets the user id of the last grader.
     /// </summary>
     public string GradedBy { get; set; }

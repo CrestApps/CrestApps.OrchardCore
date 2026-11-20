@@ -64,6 +64,6 @@ public sealed class ExplainMyQuizResultTool : LearningAIToolBase
 
         var policy = services.GetRequiredService<AttemptReviewPolicy>();
 
-        return Json(QuizResultExplainer.Describe(chosen, policy.CanReview(chosen), AttemptReviewPolicy.CanSeeScore(chosen)));
+        return Json(QuizResultExplainer.Describe(chosen, policy.CanReview(chosen), policy.CanSeeScore(chosen)));
     }
 }

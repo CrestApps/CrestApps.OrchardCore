@@ -67,6 +67,16 @@ public sealed class AttemptItem
     public int MaxWords { get; set; }
 
     /// <summary>
+    /// Gets or sets whether several choices may be given, such as for a survey question.
+    /// </summary>
+    public bool Multiple { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the learner checked the answer with immediate feedback, in UTC. A checked answer cannot change.
+    /// </summary>
+    public DateTime? CheckedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the answer key. It is never sent to the learner before the review policy allows.
     /// </summary>
     public AttemptKey Key { get; set; } = new();
@@ -146,7 +156,8 @@ public sealed class AttemptChoice
 public sealed class AttemptKey
 {
     /// <summary>
-    /// Gets or sets the ids of the correct options, or of the items in their right order.
+    /// Gets or sets the ids of the correct options, of the items in their right order, or of the right choice of each
+    /// blank.
     /// </summary>
     public IList<string> ChoiceIds { get; set; } = [];
 
@@ -187,7 +198,8 @@ public sealed class AttemptKey
 public sealed class AttemptResponse
 {
     /// <summary>
-    /// Gets or sets the chosen option ids, or the item ids in the order given.
+    /// Gets or sets the chosen option ids, the item ids in the order given, or the choice id put in each blank (empty for
+    /// none).
     /// </summary>
     public IList<string> ChoiceIds { get; set; } = [];
 

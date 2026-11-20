@@ -29,6 +29,28 @@ public interface IAssessmentAttemptService
     Task<AttemptResult> SaveResponseAsync(string attemptId, string userId, int index, AttemptResponse response, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Saves and checks the answer of one item, for a quiz with immediate feedback: the item is scored now and its answer
+    /// cannot change afterwards.
+    /// </summary>
+    /// <param name="attemptId">The attempt.</param>
+    /// <param name="userId">The learner, who must own the attempt.</param>
+    /// <param name="index">The item position.</param>
+    /// <param name="response">The answer.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<AttemptResult> CheckAsync(string attemptId, string userId, int index, AttemptResponse response, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Moves the learner to a page of an attempt in progress. A sequential quiz moves only to the next page.
+    /// </summary>
+    /// <param name="attemptId">The attempt.</param>
+    /// <param name="userId">The learner, who must own the attempt.</param>
+    /// <param name="page">The page, from zero.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<AttemptResult> GoToPageAsync(string attemptId, string userId, int page, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Submits an attempt. A second submit changes nothing.
     /// </summary>
     /// <param name="attemptId">The attempt.</param>
@@ -237,6 +259,9 @@ public static class AttemptErrors
 
     /// <summary>The item cannot be answered now, such as going back in a sequential quiz.</summary>
     public const string ItemLocked = "ItemLocked";
+
+    /// <summary>The quiz does not give immediate feedback, so an answer cannot be checked.</summary>
+    public const string CheckNotAllowed = "CheckNotAllowed";
 
     /// <summary>A reason is required.</summary>
     public const string ReasonRequired = "ReasonRequired";

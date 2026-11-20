@@ -72,4 +72,21 @@ public sealed class QuizPart : ContentPart
     /// Gets or sets when a learner may see the answers and feedback.
     /// </summary>
     public ReviewPolicy ReviewPolicy { get; set; } = ReviewPolicy.AfterGraded;
+
+    /// <summary>
+    /// Gets or sets what a learner sees at each moment of the review, or <see langword="null"/> to follow
+    /// <see cref="ReviewPolicy"/>.
+    /// </summary>
+    public QuizReviewOptions ReviewOptions { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many questions a page shows, or 0 for every question on one page (one question a page when the
+    /// navigation is sequential).
+    /// </summary>
+    public int QuestionsPerPage { get; set; }
+
+    /// <summary>
+    /// Gets or sets when a learner gets feedback on an answer.
+    /// </summary>
+    public QuizFeedbackMode FeedbackMode { get; set; }
 }
