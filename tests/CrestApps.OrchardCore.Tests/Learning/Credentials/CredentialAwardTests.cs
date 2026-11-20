@@ -316,7 +316,7 @@ public sealed class CredentialAwardTests
 
         // Assert
         Assert.Equal(CredentialAwardErrors.RecipientNotFound, ghost.ErrorCode);
-        Assert.Equal(CredentialAwardErrors.RecipientHasNoEmail, noMail.ErrorCode);
+        Assert.Equal(CredentialAwardErrors.RecipientHasNoAddress, noMail.ErrorCode);
         Assert.Equal(CredentialAwardErrors.DefinitionNotFound, notPublished.ErrorCode);
         Assert.Equal(CredentialAwardErrors.InvalidRequest, invalid.ErrorCode);
         Assert.Empty(await h.AwardsAsync("nomail"));

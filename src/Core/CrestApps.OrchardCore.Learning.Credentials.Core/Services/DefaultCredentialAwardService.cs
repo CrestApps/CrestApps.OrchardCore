@@ -102,7 +102,7 @@ public sealed class DefaultCredentialAwardService : ICredentialAwardService
 
         if (string.IsNullOrWhiteSpace(recipient.Email))
         {
-            return CredentialAwardResult.Fail(CredentialAwardErrors.RecipientHasNoEmail);
+            return CredentialAwardResult.Fail(CredentialAwardErrors.RecipientHasNoAddress);
         }
 
         var issuer = await _issuerContext.GetAsync();

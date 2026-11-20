@@ -436,7 +436,7 @@ public sealed class CredentialAwardsAdminController : Controller
         {
             CredentialAwardErrors.DefinitionNotFound => S["The credential is not published."],
             CredentialAwardErrors.RecipientNotFound => S["The person is not a user of the site."],
-            CredentialAwardErrors.RecipientHasNoEmail => S["The person has no e-mail address. A credential names its recipient by a hash of their e-mail address."],
+            CredentialAwardErrors.RecipientHasNoAddress => S["The person has no e-mail address. A credential names its recipient by a hash of their e-mail address."],
             CredentialAwardErrors.NoIssuerAddress => S["The site's address is unknown. Set the base URL in the site's settings."],
             CredentialAwardErrors.Busy => S["Another credential is being awarded. Try again."],
             CredentialAwardErrors.AlreadyRevoked => S["The credential is already revoked."],

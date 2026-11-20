@@ -1,3 +1,4 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Learning.Credentials.Core.Services;
 using CrestApps.OrchardCore.Learning.Credentials.Services;
 using Microsoft.Extensions.Logging;
@@ -60,7 +61,7 @@ public sealed class CredentialRuleTrigger
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            _logger.LogError(exception, "Finding the credentials a {Kind} rule on '{TargetId}' awards failed.", kind, targetId);
+            _logger.LogError(exception, "Finding the credentials a {Kind} rule on '{TargetId}' awards failed.", kind.SanitizeLogValue(), targetId.SanitizeLogValue());
         }
     }
 }

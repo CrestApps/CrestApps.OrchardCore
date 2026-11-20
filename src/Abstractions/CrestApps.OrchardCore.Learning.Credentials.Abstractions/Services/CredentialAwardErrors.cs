@@ -21,9 +21,10 @@ public static class CredentialAwardErrors
     public const string RecipientNotFound = "RecipientNotFound";
 
     /// <summary>
-    /// The recipient has no e-mail address, which the credential names (hashed).
+    /// The recipient has no address the credential can name: a credential names its recipient by a hash of their e-mail
+    /// address.
     /// </summary>
-    public const string RecipientHasNoEmail = "RecipientHasNoEmail";
+    public const string RecipientHasNoAddress = "RecipientHasNoAddress";
 
     /// <summary>
     /// The site address is unknown, so the credential's addresses cannot be made. Set the site's base URL.
