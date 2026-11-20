@@ -71,7 +71,7 @@ internal sealed class LearningCohortsDisplayDriver : ContentDisplayDriver
             }
 
             model.Pending = !model.CohortIds.Order(StringComparer.Ordinal).SequenceEqual((link?.CohortIds ?? []).Order(StringComparer.Ordinal));
-        }).Location("Content:20");
+        }).Location("Parts:after");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentItem contentItem, UpdateEditorContext context)
