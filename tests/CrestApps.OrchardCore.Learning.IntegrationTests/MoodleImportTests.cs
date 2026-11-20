@@ -321,6 +321,69 @@ public sealed class MoodleImportTests
     }
 
     [Fact]
+    public async Task Round11L2_AnUnknownCompletionRole_IsFlagged_SeveralRolesAreFlagged_AndTheEditorKeepsTheRole()
+    {
+        // Arrange: completion when a manager or a teacher marks it; manager is no course staff role.
+        var courseId = Random.Shared.Next(100_000, 900_000);
+        var title = "Role completion " + courseId;
+        var backup = new MoodleBackupBuilder(courseId, title, "RC-" + courseId)
+            .Section(1, 0, null)
+            .Section(2, 1, "Only section")
+            .Enrolment("manual")
+            .RoleCriterion(1, "manager")
+            .RoleCriterion(3, "editingteacher")
+            .Page(2, 3, "Read me", "<p>Text.</p>")
+            .BuildZip();
+
+        // Act
+        var entry = await ImportAsync(backup);
+        var course = await FindCourseAsync(title);
+
+        using var admin = await _fixture.CreateClientAsync("admin");
+        var editor = await admin.GetStringAsync($"Admin/Contents/ContentItems/{course.ContentItemId}/Edit", TestContext.Current.CancellationToken);
+
+        // Assert
+        var messages = entry.GetOrCreate<ImportFileProcessStatsPart>().ErrorMessages.Values;
+        Assert.Contains(messages, message => message.Contains("manager", StringComparison.Ordinal) && message.Contains("no course staff role", StringComparison.Ordinal));
+        Assert.Contains(messages, message => message.Contains("several roles", StringComparison.Ordinal));
+        var approval = Assert.Single(course.Get<CoursePart>(nameof(CoursePart)).CompletionCriteria, rule => rule.Name == LearningRuleNames.StaffApproval);
+        Assert.Equal("manager", approval.Get("Role"));
+        Assert.Matches("<option[^>]*selected[^>]*value=\"manager\"|<option[^>]*value=\"manager\"[^>]*selected", editor);
+    }
+
+    [Fact]
+    public async Task Round11S1_AnImporterWhoMayNotManageEnrollments_LinksNoCohort_AndIsToldTheSameAsForAMissingCohort()
+    {
+        // Arrange: a cohort the site has and one it does not; the instructor (Manage own courses only) imports.
+        var courseId = Random.Shared.Next(100_000, 900_000);
+        var title = "Cohort by instructor " + courseId;
+        var cohortName = "Staff crew " + courseId;
+        var missingName = "Absent crew " + courseId;
+        await _fixture.InTenantAsync(async services =>
+            (await services.GetRequiredService<CrestApps.OrchardCore.Users.ICohortService>().CreateAsync(cohortName, null)).Cohort.CohortId);
+        var backup = new MoodleBackupBuilder(courseId, title, "CI-" + courseId)
+            .Section(1, 0, null)
+            .Section(2, 1, "Only section")
+            .Enrolment("manual")
+            .Cohort(31, cohortName)
+            .Cohort(32, missingName)
+            .Page(2, 3, "Read me", "<p>Text.</p>")
+            .BuildZip();
+
+        // Act
+        var entry = await ImportAsync(backup, "instructor1");
+        var course = await FindCourseAsync(title);
+
+        // Assert
+        var messages = entry.GetOrCreate<ImportFileProcessStatsPart>().ErrorMessages.Values.ToArray();
+        var known = Assert.Single(messages, message => message.Contains(cohortName, StringComparison.Ordinal));
+        var missing = Assert.Single(messages, message => message.Contains(missingName, StringComparison.Ordinal));
+        Assert.Equal(missing.Replace(missingName, "X", StringComparison.Ordinal), known.Replace(cohortName, "X", StringComparison.Ordinal));
+        Assert.NotNull(course);
+        Assert.Empty(course.TryGet<LearningCohortsPart>(out var cohorts) ? cohorts.CohortIds : []);
+    }
+
+    [Fact]
     public async Task ACourseWithoutCompletionCriteria_NeverCompletes()
     {
         // Arrange

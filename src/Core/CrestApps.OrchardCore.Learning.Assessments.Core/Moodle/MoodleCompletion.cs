@@ -128,6 +128,14 @@ public static class MoodleCompletion
             var role => role,
         };
 
+    /// <summary>
+    /// Tells whether a role is one of the course staff roles people can be added in.
+    /// </summary>
+    /// <param name="role">The role.</param>
+    /// <returns><see langword="true"/> for instructor, assistant, grader or observer.</returns>
+    public static bool IsCourseStaffRole(string role)
+        => role is LearningConstants.CourseStaffRoles.Instructor or LearningConstants.CourseStaffRoles.Assistant or LearningConstants.CourseStaffRoles.Grader or LearningConstants.CourseStaffRoles.Observer;
+
     private static decimal Percent(decimal value, decimal max)
         => Math.Clamp(Math.Round(value / max * 100, 2), 0, 100);
 

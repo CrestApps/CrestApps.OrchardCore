@@ -185,17 +185,26 @@ internal static class MoodleCourseRows
             }
         }
 
-        // Completion by a role becomes approval by the course staff in the matching role; a role the course staff does not
-        // have needs people added in it.
-        foreach (var role in course.CompletionCriteria.Where(criterion => criterion.Type == MoodleCompletionCriterion.Role).Select(criterion => MoodleCompletion.StaffRole(criterion.RoleShortName)).Distinct(StringComparer.Ordinal))
+        // Completion by a role becomes approval by the course staff in the matching role. Only the first role is imported;
+        // a role no course staff role matches is kept, and nobody can approve until the course editor says who does.
+        var roles = course.CompletionCriteria.Where(criterion => criterion.Type == MoodleCompletionCriterion.Role).Select(criterion => MoodleCompletion.StaffRole(criterion.RoleShortName)).Distinct(StringComparer.Ordinal).ToList();
+
+        if (roles.Count > 1)
         {
+            Attention(S["{0}: the course completes in Moodle when any of several roles marks it ({1}); only the first, {2}, is imported, so check who approves in the course editor.", title, string.Join(", ", roles.Select(role => role ?? "?")), roles[0] ?? "?"]);
+        }
+
+        if (roles.Count > 0)
+        {
+            var role = roles[0];
+
             if (role is null)
             {
                 Attention(S["{0}: the course completes in Moodle when a role marks it; any member of the course staff may approve the completion here.", title]);
             }
-            else if (role is not (LearningConstants.CourseStaffRoles.Instructor or LearningConstants.CourseStaffRoles.Assistant or LearningConstants.CourseStaffRoles.Grader or LearningConstants.CourseStaffRoles.Observer))
+            else if (!MoodleCompletion.IsCourseStaffRole(role))
             {
-                Attention(S["{0}: the course completes in Moodle when a {1} marks it; only course staff in the role {1} may approve it here, so add people in that role.", title, role]);
+                Attention(S["{0}: the course completes in Moodle when the role {1} marks it, which no course staff role matches; nobody can approve the completion until you choose who approves in the course editor.", title, role]);
             }
         }
 

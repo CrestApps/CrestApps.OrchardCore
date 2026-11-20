@@ -81,6 +81,12 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
                 new SelectListItem(S["Graders of the course"], LearningConstants.CourseStaffRoles.Grader, model.ApprovalRole == LearningConstants.CourseStaffRoles.Grader),
                 new SelectListItem(S["Observers of the course"], LearningConstants.CourseStaffRoles.Observer, model.ApprovalRole == LearningConstants.CourseStaffRoles.Observer),
             ];
+
+            // A role no course staff role matches (from a Moodle import) stays chosen, so saving the course keeps it.
+            if (!string.IsNullOrEmpty(model.ApprovalRole) && !model.ApprovalRoleOptions.Any(option => option.Value == model.ApprovalRole))
+            {
+                model.ApprovalRoleOptions.Add(new SelectListItem(S["Course staff in the role {0} (no course staff role has this name)", model.ApprovalRole], model.ApprovalRole, true));
+            }
             model.FinalItemId = part.CompletionCriteria.FirstOrDefault(rule => rule.Name == LearningRuleNames.ItemPassed)?.Get("ItemId");
             model.PrerequisiteCourseIds = part.Prerequisites
                 .Where(prerequisite => prerequisite.Kind == CompletedCoursePrerequisiteEvaluator.CourseKind)
