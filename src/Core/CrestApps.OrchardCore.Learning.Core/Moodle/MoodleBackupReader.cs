@@ -253,6 +253,10 @@ public static class MoodleBackupReader
                         HasPassword = !string.IsNullOrEmpty(Value(enrol, "password")),
                         EnrolPeriodSeconds = Long(Value(enrol, "enrolperiod")),
                         AllowsNewEnrolments = Value(enrol, "enrol") != "self" || Value(enrol, "customint6") != "0",
+                        Name = Value(enrol, "name"),
+                        CohortId = Value(enrol, "enrol") == "cohort" ? Value(enrol, "customint1") : null,
+                        CohortIdNumber = Value(enrol, "cohortidnumber"),
+                        CohortName = Value(enrol, "cohortname"),
                     });
                 }
             }

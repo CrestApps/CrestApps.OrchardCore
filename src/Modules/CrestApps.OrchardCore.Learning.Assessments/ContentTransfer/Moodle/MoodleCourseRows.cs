@@ -109,7 +109,7 @@ internal static class MoodleCourseRows
     /// <param name="hasKind">Tells whether a course item kind is registered, that is whether its feature is on; every
     /// kind when <see langword="null"/>.</param>
     /// <returns>The rows.</returns>
-    public static IReadOnlyList<string[]> Write(MoodleBackup backup, string token, QuestionTypeOptions questionTypes, IStringLocalizer S, Func<string, bool> hasKind = null)
+    public static IReadOnlyList<string[]> Write(MoodleBackup backup, string token, QuestionTypeOptions questionTypes, IStringLocalizer S, Func<string, bool> hasKind = null, IReadOnlyCollection<(string Id, string Name)> cohorts = null)
     {
         ArgumentNullException.ThrowIfNull(backup);
         ArgumentNullException.ThrowIfNull(questionTypes);
@@ -158,11 +158,19 @@ internal static class MoodleCourseRows
             }
         }
 
-        var cohorts = course.Enrolments.Count(enrolment => enrolment.Enabled && enrolment.Method == "cohort");
-
-        if (cohorts > 0)
+        // Cohort sync becomes the course's cohort sync, with the site's cohort of the same id number or name.
+        foreach (var cohortSync in course.Enrolments.Where(enrolment => enrolment.Enabled && enrolment.Method == "cohort"))
         {
-            NotImported(S["{0}: Moodle enrols learners by cohort sync ({1}), which the site does not have yet; enroll them another way.", title, cohorts]);
+            var cohortName = cohortSync.CohortName ?? cohortSync.Name ?? cohortSync.CohortIdNumber ?? cohortSync.CohortId ?? "?";
+
+            if (cohorts is null)
+            {
+                NotImported(S["{0}: Moodle enrols learners by the cohort \"{1}\"; turn on Cohorts and Enrollment by Cohort and import the backup again.", title, cohortName]);
+            }
+            else if (MoodleCohorts.Match(cohortSync, cohorts) is null)
+            {
+                NotImported(S["{0}: Moodle enrols learners by the cohort \"{1}\", which the site has no cohort for (by id number or name); add it under Access Control > Cohorts and import the backup again.", title, cohortName]);
+            }
         }
 
         foreach (var kind in course.CompletionCriteria.Select(criterion => criterion.Type).Distinct())

@@ -264,6 +264,18 @@ public sealed class MoodleEnrolment
 
     /// <summary>Gets or sets whether the method takes new enrolments (a self enrolment's <c>customint6</c>).</summary>
     public bool AllowsNewEnrolments { get; set; } = true;
+
+    /// <summary>Gets or sets the name the enrolment instance was given, or <see langword="null"/>.</summary>
+    public string Name { get; set; }
+
+    /// <summary>Gets or sets the Moodle id of the cohort of a cohort sync (<c>customint1</c>).</summary>
+    public string CohortId { get; set; }
+
+    /// <summary>Gets or sets the id number of the cohort of a cohort sync, when the backup carries it.</summary>
+    public string CohortIdNumber { get; set; }
+
+    /// <summary>Gets or sets the name of the cohort of a cohort sync, when the backup carries it.</summary>
+    public string CohortName { get; set; }
 }
 
 /// <summary>

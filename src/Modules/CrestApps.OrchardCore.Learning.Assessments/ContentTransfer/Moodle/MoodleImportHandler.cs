@@ -18,8 +18,10 @@ using CrestApps.OrchardCore.Learning.Coursework.Models;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Packages.Core.Services;
 using CrestApps.OrchardCore.Learning.Packages.Models;
+using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.Surveys;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -222,6 +224,8 @@ internal sealed class MoodleImportHandler : IContentImportHandler
             ApplyCompletion(part, moodle);
         });
 
+        await ApplyCohortsAsync(course, moodle);
+
         if (summary is not null)
         {
             course.Alter<HtmlBodyPart>(part => part.Html = summary);
@@ -296,6 +300,28 @@ internal sealed class MoodleImportHandler : IContentImportHandler
         }
 
         course.Alter<CourseOutlinePart>(part => part.Sections = sections);
+    }
+
+    // Moodle's cohort sync becomes the course's cohort sync (Enrollment by Cohort), with the site's cohort of the same
+    // id number or name; a cohort the site does not have was reported when the backup was read.
+    private async Task ApplyCohortsAsync(ContentItem course, MoodleCourse moodle)
+    {
+        var syncs = moodle.Enrolments.Where(enrolment => enrolment.Enabled && enrolment.Method == "cohort").ToList();
+
+        if (syncs.Count == 0 || _services.GetService<ICohortService>() is not { } cohorts || !_services.GetServices<ICohortLearningTarget>().Any())
+        {
+            return;
+        }
+
+        var site = (await cohorts.ListAsync(10_000)).Select(cohort => (cohort.CohortId, cohort.Name)).ToList();
+        var matched = syncs.Select(sync => MoodleCohorts.Match(sync, site)).Where(id => id is not null).ToList();
+
+        if (matched.Count == 0)
+        {
+            return;
+        }
+
+        course.Alter<LearningCohortsPart>(part => part.CohortIds = [.. (part.CohortIds ?? []).Concat(matched).Distinct(StringComparer.Ordinal)]);
     }
 
     private static void ApplyEnrolment(CoursePart part, MoodleCourse moodle)

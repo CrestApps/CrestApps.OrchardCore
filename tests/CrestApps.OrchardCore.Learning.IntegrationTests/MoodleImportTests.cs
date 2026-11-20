@@ -292,6 +292,35 @@ public sealed class MoodleImportTests
     }
 
     [Fact]
+    public async Task CohortSync_BecomesTheCourseCohortSync_AndACohortTheSiteDoesNotHaveIsReported()
+    {
+        // Arrange
+        var courseId = Random.Shared.Next(100_000, 900_000);
+        var title = "Cohort sync " + courseId;
+        var cohortName = "Moodle crew " + courseId;
+        var cohortId = await _fixture.InTenantAsync(async services =>
+            (await services.GetRequiredService<CrestApps.OrchardCore.Users.ICohortService>().CreateAsync(cohortName, null)).Cohort.CohortId);
+        var backup = new MoodleBackupBuilder(courseId, title, "CS-" + courseId)
+            .Section(1, 0, null)
+            .Section(2, 1, "Only section")
+            .Enrolment("manual")
+            .Cohort(31, cohortName)
+            .Cohort(32, "Missing crew " + courseId)
+            .Page(2, 3, "Read me", "<p>Text.</p>")
+            .BuildZip();
+
+        // Act
+        var entry = await ImportAsync(backup);
+        var course = await FindCourseAsync(title);
+
+        // Assert
+        var stats = entry.GetOrCreate<ImportFileProcessStatsPart>();
+        var message = Assert.Single(stats.ErrorMessages).Value;
+        Assert.Contains("Missing crew " + courseId, message, StringComparison.Ordinal);
+        Assert.Equal([cohortId], course.Get<LearningCohortsPart>(nameof(LearningCohortsPart)).CohortIds);
+    }
+
+    [Fact]
     public async Task ACourseWithoutCompletionCriteria_NeverCompletes()
     {
         // Arrange

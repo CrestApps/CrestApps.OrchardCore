@@ -120,6 +120,17 @@ public sealed class MoodleBackupBuilder
         return this;
     }
 
+    /// <summary>
+    /// Adds a cohort sync enrolment: the Moodle cohort's id in <c>customint1</c>, and its name and id number as some
+    /// backups carry them.
+    /// </summary>
+    public MoodleBackupBuilder Cohort(int cohortId, string cohortName, string cohortIdNumber = null, string instanceName = null)
+    {
+        _enrols.Add(new Enrol("cohort", true, null, 0) { CohortId = cohortId, CohortName = cohortName, CohortIdNumber = cohortIdNumber, InstanceName = instanceName });
+
+        return this;
+    }
+
     public MoodleBackupBuilder ActivityCriterion(int cmid, string moduleName)
     {
         _criteria.Add(new Criterion(4, cmid, moduleName, null, null, null));
@@ -624,7 +635,13 @@ public sealed class MoodleBackupBuilder
 
         foreach (var enrol in _enrols)
         {
-            builder.Append($"    <enrol id=\"{id++}\"><enrol>{enrol.Method}</enrol><status>{(enrol.Enabled ? 0 : 1)}</status><name>{Null}</name>");
+            builder.Append($"    <enrol id=\"{id++}\"><enrol>{enrol.Method}</enrol><status>{(enrol.Enabled ? 0 : 1)}</status><name>{(enrol.InstanceName is null ? Null : X(enrol.InstanceName))}</name>");
+
+            if (enrol.CohortId is { } cohortId)
+            {
+                builder.Append($"<customint1>{cohortId}</customint1><cohortname>{X(enrol.CohortName)}</cohortname><cohortidnumber>{(enrol.CohortIdNumber is null ? Null : X(enrol.CohortIdNumber))}</cohortidnumber>");
+            }
+
             builder.Append($"<enrolperiod>{enrol.EnrolPeriodDays * 86400}</enrolperiod><enrolstartdate>0</enrolstartdate><enrolenddate>0</enrolenddate>");
             builder.Append($"<password>{(enrol.Password is null ? Null : X(enrol.Password))}</password><roleid>5</roleid><customint6>1</customint6><user_enrolments></user_enrolments></enrol>\n");
         }
@@ -874,7 +891,16 @@ public sealed class MoodleBackupBuilder
 
     private sealed record SectionEntry(int Id, int Number, string Name, string Summary, bool Visible);
 
-    private sealed record Enrol(string Method, bool Enabled, string Password, int EnrolPeriodDays);
+    private sealed record Enrol(string Method, bool Enabled, string Password, int EnrolPeriodDays)
+    {
+        public int? CohortId { get; init; }
+
+        public string CohortName { get; init; }
+
+        public string CohortIdNumber { get; init; }
+
+        public string InstanceName { get; init; }
+    }
 
     private sealed record Criterion(int Type, int? Cmid, string Module, decimal? GradePass, int? Role, string RoleShortName);
 
