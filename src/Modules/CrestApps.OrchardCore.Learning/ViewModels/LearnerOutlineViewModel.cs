@@ -36,4 +36,15 @@ public class LearnerOutlineViewModel
     /// left out, because the player shows it with the items in the content column.
     /// </summary>
     public bool Navigation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of each course item kind, as learners read it. The course page shows each item's kind,
+    /// estimated time and completion condition.
+    /// </summary>
+    public IDictionary<string, string> KindNames { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets whether the viewer is a learner whose progress is shown, so conditions read "To do" or "Done".
+    /// </summary>
+    public bool Tracked { get; set; }
 }

@@ -76,7 +76,8 @@
                             <span> &middot; <i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["About {0} min", estimated]</span>
                         }
                     </div>
-                    <h1 class="h3 mb-0">@current.Item.DisplayText</h1>
+                    <h1 class="h3 mb-2">@current.Item.DisplayText</h1>
+                    <partial name="_ItemCondition" model="(current, Model.CurrentProgress, Model.TracksProgress || enrollment is { Status: EnrollmentStatus.Completed })" />
                 </header>
 
                 @if (Model.CurrentShape is not null)
@@ -136,7 +137,7 @@
                         }
                         else if (mode == CompletionModes.MinimumTime)
                         {
-                            <p class="small text-muted my-3">@T["This lesson completes after you spend {0} minutes on it. Time on this page counts while it is open.", current.Part.MinimumMinutes ?? 0]</p>
+                            <p class="small text-muted my-3">@T.Plural(current.Part.MinimumMinutes ?? 0, "This lesson completes after you spend 1 minute on it. Time on this page counts while it is open.", "This lesson completes after you spend {0} minutes on it. Time on this page counts while it is open.")</p>
                         }
                     }
 

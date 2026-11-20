@@ -82,13 +82,27 @@
                         {
                             @entry.Item.DisplayText
                         }
-                        @if (!entry.Required)
+                        @if (!entry.Required && Model.Navigation)
                         {
                             <span class="badge text-bg-light border ms-1">@T["Optional"]</span>
                         }
                         @if (entry.Part?.FreePreview == true && !Model.CanOpen)
                         {
                             <span class="badge text-bg-info ms-1">@T["Free preview"]</span>
+                        }
+                        @if (!Model.Navigation)
+                        {
+                            <span class="d-flex flex-wrap align-items-center gap-2 small text-body-secondary mt-1" data-learning-item-meta>
+                                @if (Model.KindNames.TryGetValue(entry.Part?.Kind ?? string.Empty, out var kindName))
+                                {
+                                    <span>@kindName</span>
+                                }
+                                @if (entry.Part?.EstimatedMinutes is { } minutes)
+                                {
+                                    <span><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["About {0} min", minutes]</span>
+                                }
+                                <partial name="_ItemCondition" model="(entry, Model.Progress?.Find(itemId), Model.Tracked)" />
+                            </span>
                         }
                         @if (isLocked)
                         {

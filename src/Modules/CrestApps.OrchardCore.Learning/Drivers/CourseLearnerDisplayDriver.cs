@@ -77,6 +77,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
         model.SignedIn = user?.Identity?.IsAuthenticated == true;
         model.CanSelfEnroll = _selfEnrollment.Any() && part.EnrollmentMode != EnrollmentMode.Closed;
         model.KindIcons = _kindOptions.Kinds.ToDictionary(kind => kind.Name, kind => kind.Icon, StringComparer.OrdinalIgnoreCase);
+        model.KindNames = _pageService.KindNames();
         model.Outline = await _courseStructure.GetOutlineAsync(part.ContentItem);
         model.Schedule = CourseSchedules.Of(part, _clock.UtcNow);
 

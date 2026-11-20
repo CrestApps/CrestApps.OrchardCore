@@ -30,6 +30,8 @@ A course your organization enrolls you in says so and has no button. A lesson ma
 
 Select **Start the course** or **Continue** on the course page, or open the course from **My learning**. The player shows the course outline beside the lesson on a desktop and under it on a phone. Above the lesson, a line says what kind of lesson it is, its section, where it is in the course (*3 of 8*) and about how long it takes. **Previous** and **Next** move through the lessons. Text between lessons shows with the lesson it belongs to, never in the outline. Select **Collapse all** above the outline to fold its sections, as in Moodle's course index; the section you are in stays open. A lesson that is not open yet says when it opens, or which lesson to finish first, with a button to go to it.
 
+Each lesson says what completes it, under its title in the player and beside it in the course page's outline, as Moodle's completion conditions do: *To do: Mark it as done*, *To do: Watch 80% of the video*, *To do: Pass with 70%*, *To do: Confirm the statement*. It turns into *Done: ...* once you meet it, and *Not passed: ...* after a result below the pass mark. Optional lessons say **Optional**. The outline also shows each lesson's kind and about how long it takes.
+
 - A page counts when you open it, or when you select **Mark as done**, as the course says.
 - A video counts when you have watched enough of it.
 - An acknowledgement counts when you tick the statement and select **Confirm**.

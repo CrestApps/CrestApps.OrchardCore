@@ -31,6 +31,8 @@ public class CourseLearnerViewModel
 
     public IDictionary<string, string> KindIcons { get; set; } = new Dictionary<string, string>();
 
+    public IDictionary<string, string> KindNames { get; set; } = new Dictionary<string, string>();
+
     /// <summary>
     /// Gets or sets where the course is between its start and end dates.
     /// </summary>

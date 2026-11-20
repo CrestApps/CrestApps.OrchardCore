@@ -37,6 +37,16 @@
 				textContent: root.dataset.completedText
 			}));
 		}
+		document.querySelectorAll(".learning-item-header [data-learning-condition-state=\"todo\"]").forEach((badge) => {
+			badge.classList.remove("text-bg-light", "border");
+			badge.classList.add("text-bg-success");
+			badge.dataset.learningConditionState = "done";
+			badge.textContent = badge.dataset.doneText ?? badge.textContent;
+			badge.prepend(Object.assign(document.createElement("i"), {
+				className: "fa-solid fa-check me-1",
+				ariaHidden: "true"
+			}));
+		});
 		showProgress(result);
 	}
 	function showProgress(result) {
