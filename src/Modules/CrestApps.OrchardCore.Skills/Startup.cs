@@ -1,8 +1,10 @@
+using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Skills.BackgroundTasks;
 using CrestApps.OrchardCore.Skills.Core;
+using CrestApps.OrchardCore.Skills.ContentTransfer;
 using CrestApps.OrchardCore.Skills.Core.Indexes;
 using CrestApps.OrchardCore.Skills.Drivers;
 using CrestApps.OrchardCore.Skills.IssuedCertificates.Drivers;
@@ -147,5 +149,18 @@ public sealed class SkillsReportsStartup : StartupBase
     {
         services.AddReport<SkillHoldersReport>();
         services.AddDisplayDriver<ReportFilter, SkillCategoryReportFilterDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Lets skills and competency frameworks be imported from a file through ContentTransfer.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.ContentTransfer")]
+public sealed class SkillsContentTransferStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentTransferImportTarget<SkillsImportTarget>();
     }
 }

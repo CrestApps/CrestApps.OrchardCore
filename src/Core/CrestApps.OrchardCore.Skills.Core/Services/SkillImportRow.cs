@@ -32,28 +32,6 @@ public sealed class SkillImportRow
 }
 
 /// <summary>
-/// The skills read from an import file, and the rows that could not be read.
-/// </summary>
-public sealed class SkillCsvParseResult
-{
-    /// <summary>
-    /// Gets or sets the format the file was read as: <see cref="SkillCsvImport.MoodleFormat"/> or
-    /// <see cref="SkillCsvImport.PlainFormat"/>.
-    /// </summary>
-    public string Format { get; set; }
-
-    /// <summary>
-    /// Gets the skills read.
-    /// </summary>
-    public List<SkillImportRow> Rows { get; } = [];
-
-    /// <summary>
-    /// Gets why rows, or the whole file, could not be read.
-    /// </summary>
-    public List<string> Errors { get; } = [];
-}
-
-/// <summary>
 /// What an import did.
 /// </summary>
 public sealed class SkillImportResult
@@ -74,7 +52,7 @@ public sealed class SkillImportResult
     public int Unchanged { get; set; }
 
     /// <summary>
-    /// Gets why rows were left out.
+    /// Gets the rows that were left out, by line, with why.
     /// </summary>
-    public List<string> Skipped { get; } = [];
+    public Dictionary<int, string> Failures { get; } = [];
 }

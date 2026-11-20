@@ -1,11 +1,10 @@
 using System.Net;
 using System.Text.RegularExpressions;
-using CrestApps.OrchardCore.Tabular;
 
 namespace CrestApps.OrchardCore.Skills.Core.Services;
 
 /// <summary>
-/// Reads skills from a CSV file, in one of two formats:
+/// Reads the rows of a skills file one at a time, in one of two layouts:
 /// <list type="bullet">
 /// <item>a Moodle competency framework export (the file Moodle's "Export competency framework" writes, known by its
 /// <c>isframework</c> column): the framework row names the category, and every competency under it becomes a skill
@@ -13,126 +12,120 @@ namespace CrestApps.OrchardCore.Skills.Core.Services;
 /// <item>a plain file with a <c>Name</c> column and optional <c>Category</c>, <c>Description</c> and <c>Enabled</c>
 /// columns, in any case.</item>
 /// </list>
+/// The reader keeps the framework of a Moodle export from one row to the next in <see cref="Framework"/>.
 /// </summary>
-public static partial class SkillCsvImport
+public sealed partial class SkillImportRowReader
 {
     /// <summary>
-    /// A Moodle competency framework export.
+    /// The longest name or category a skill can have.
     /// </summary>
-    public const string MoodleFormat = "Moodle";
+    public const int MaxLength = 255;
 
     /// <summary>
-    /// A plain file with Name, Category, Description and Enabled columns.
+    /// Gets or sets the framework of a Moodle export, from its framework row, which the competencies under it go into.
     /// </summary>
-    public const string PlainFormat = "Plain";
-
-    private const int MaxLength = 255;
+    public string Framework { get; set; }
 
     /// <summary>
-    /// Reads the skills of a CSV text.
+    /// Gets whether a file's columns are those of a Moodle competency framework export.
     /// </summary>
-    /// <param name="text">The CSV text.</param>
-    /// <returns>The skills read, and why rows could not be read.</returns>
-    public static SkillCsvParseResult Parse(string text)
+    /// <param name="columns">The column names.</param>
+    /// <returns><see langword="true"/> when they are.</returns>
+    public static bool IsMoodleExport(IEnumerable<string> columns)
     {
-        var (headers, rows) = CsvReader.Parse(text);
-        var result = new SkillCsvParseResult();
+        var names = new HashSet<string>(columns ?? [], StringComparer.OrdinalIgnoreCase);
 
-        if (Has(headers, "isframework") && Has(headers, "shortname"))
-        {
-            result.Format = MoodleFormat;
-            ReadMoodle(rows, result);
-
-            return result;
-        }
-
-        result.Format = PlainFormat;
-
-        if (!Has(headers, "Name"))
-        {
-            result.Errors.Add("The file has no Name column. Use a Moodle competency framework export, or a file with Name, Category, Description and Enabled columns.");
-
-            return result;
-        }
-
-        foreach (var row in rows)
-        {
-            var name = Clean(row["Name"]);
-
-            if (name is null)
-            {
-                result.Errors.Add($"Line {row.Number} has no name.");
-
-                continue;
-            }
-
-            if (!TryReadEnabled(row["Enabled"], out var enabled))
-            {
-                result.Errors.Add($"Line {row.Number}: '{row["Enabled"]}' is not yes or no in the Enabled column.");
-
-                continue;
-            }
-
-            Add(result, row.Number, name, Clean(row["Category"]), Clean(row["Description"]), enabled);
-        }
-
-        return result;
+        return names.Contains("isframework") && names.Contains("shortname");
     }
 
-    private static void ReadMoodle(IReadOnlyList<CsvRow> rows, SkillCsvParseResult result)
+    /// <summary>
+    /// Reads one row.
+    /// </summary>
+    /// <param name="line">The row's number, for the messages.</param>
+    /// <param name="cells">The cells by column name, in any case.</param>
+    /// <returns>A skill, a Moodle framework row, or why the row cannot be read.</returns>
+    public SkillImportRowResult Read(int line, IReadOnlyDictionary<string, string> cells)
     {
-        string framework = null;
+        ArgumentNullException.ThrowIfNull(cells);
 
-        foreach (var row in rows)
+        string Cell(string column)
+            => cells.TryGetValue(column, out var value) ? Clean(value) : null;
+
+        if (IsMoodleExport(cells.Keys))
         {
-            if (IsTrue(row["isframework"]))
+            if (IsTrue(Cell("isframework")))
             {
-                framework = Clean(row["shortname"]) ?? Clean(row["idnumber"]);
+                Framework = Cell("shortname") ?? Cell("idnumber");
 
-                continue;
+                return Framework is null
+                    ? SkillImportRowResult.Failure($"Line {line}: the framework has neither a short name nor an ID number.")
+                    : Framework.Length > MaxLength
+                        ? SkillImportRowResult.Failure($"Line {line}: the framework name is longer than {MaxLength} characters.")
+                        : SkillImportRowResult.FrameworkRow(Framework);
             }
 
-            if (framework is null)
+            if (Framework is null)
             {
-                result.Errors.Add($"Line {row.Number} comes before the framework row.");
-
-                continue;
+                return SkillImportRowResult.Failure($"Line {line} comes before the framework row.");
             }
 
-            var name = Clean(row["shortname"]) ?? Clean(row["idnumber"]);
+            var name = Cell("shortname") ?? Cell("idnumber");
 
             if (name is null)
             {
-                result.Errors.Add($"Line {row.Number} has neither a short name nor an ID number.");
-
-                continue;
+                return SkillImportRowResult.Failure($"Line {line} has neither a short name nor an ID number.");
             }
 
             // Moodle's plain text (2) and Markdown (4) formats are kept; HTML (1) and the Moodle auto-format (0) may
             // hold tags.
-            var description = row["descriptionformat"]?.Trim() is "2" or "4"
-                ? Clean(row["description"])
-                : ToPlainText(row["description"]);
+            var description = Cell("descriptionformat") is "2" or "4"
+                ? Cell("description")
+                : ToPlainText(Cell("description"));
 
-            Add(result, row.Number, name, framework, description, null);
+            return Skill(line, name, Framework, description, null);
         }
 
-        if (framework is null && result.Errors.Count == 0)
+        var plainName = Cell("Name");
+
+        if (plainName is null)
         {
-            result.Errors.Add("The file has no framework row (isframework = 1).");
+            return SkillImportRowResult.Failure($"Line {line} has no name.");
         }
+
+        if (!TryReadEnabled(Cell("Enabled"), out var enabled))
+        {
+            return SkillImportRowResult.Failure($"Line {line}: '{Cell("Enabled")}' is not yes or no in the Enabled column.");
+        }
+
+        return Skill(line, plainName, Cell("Category"), Cell("Description"), enabled);
     }
 
-    private static void Add(SkillCsvParseResult result, int line, string name, string category, string description, bool? enabled)
+    /// <summary>
+    /// Turns HTML into plain text: the tags removed, the entities decoded and the spaces collapsed.
+    /// </summary>
+    /// <param name="html">The HTML.</param>
+    /// <returns>The text, or <see langword="null"/> when there is none.</returns>
+    public static string ToPlainText(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return null;
+        }
+
+        var text = WebUtility.HtmlDecode(Tags().Replace(html, " "));
+        var plain = Spaces().Replace(text, " ").Trim();
+
+        return plain.Length == 0 ? null : plain;
+    }
+
+    private static SkillImportRowResult Skill(int line, string name, string category, string description, bool? enabled)
     {
         if (name.Length > MaxLength || category?.Length > MaxLength)
         {
-            result.Errors.Add($"Line {line}: a name or a category is longer than {MaxLength} characters.");
-
-            return;
+            return SkillImportRowResult.Failure($"Line {line}: a name or a category is longer than {MaxLength} characters.");
         }
 
-        result.Rows.Add(new SkillImportRow
+        return SkillImportRowResult.ForSkill(new SkillImportRow
         {
             Line = line,
             Name = name,
@@ -142,53 +135,29 @@ public static partial class SkillCsvImport
         });
     }
 
-    /// <summary>
-    /// Turns HTML into plain text: the tags removed, the entities decoded and the spaces collapsed.
-    /// </summary>
-    /// <param name="html">The HTML.</param>
-    /// <returns>The text.</returns>
-    public static string ToPlainText(string html)
-    {
-        if (string.IsNullOrWhiteSpace(html))
-        {
-            return null;
-        }
-
-        var text = WebUtility.HtmlDecode(Tags().Replace(html, " "));
-
-        var plain = Spaces().Replace(text, " ").Trim();
-
-        return plain.Length == 0 ? null : plain;
-    }
-
-    private static bool Has(IReadOnlyList<string> headers, string column)
-        => headers.Any(header => string.Equals(header, column, StringComparison.OrdinalIgnoreCase));
-
     private static string Clean(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static bool IsTrue(string value)
-        => value?.Trim() is "1" || string.Equals(value?.Trim(), "true", StringComparison.OrdinalIgnoreCase);
+        => value is "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
 
     private static bool TryReadEnabled(string value, out bool? enabled)
     {
         enabled = null;
 
-        var text = value?.Trim();
-
-        if (string.IsNullOrEmpty(text))
+        if (string.IsNullOrEmpty(value))
         {
             return true;
         }
 
-        if (text is "1" || text.Equals("yes", StringComparison.OrdinalIgnoreCase) || text.Equals("true", StringComparison.OrdinalIgnoreCase) || text.Equals("y", StringComparison.OrdinalIgnoreCase))
+        if (value is "1" || value.Equals("yes", StringComparison.OrdinalIgnoreCase) || value.Equals("true", StringComparison.OrdinalIgnoreCase) || value.Equals("y", StringComparison.OrdinalIgnoreCase))
         {
             enabled = true;
 
             return true;
         }
 
-        if (text is "0" || text.Equals("no", StringComparison.OrdinalIgnoreCase) || text.Equals("false", StringComparison.OrdinalIgnoreCase) || text.Equals("n", StringComparison.OrdinalIgnoreCase))
+        if (value is "0" || value.Equals("no", StringComparison.OrdinalIgnoreCase) || value.Equals("false", StringComparison.OrdinalIgnoreCase) || value.Equals("n", StringComparison.OrdinalIgnoreCase))
         {
             enabled = false;
 
@@ -203,4 +172,35 @@ public static partial class SkillCsvImport
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex Spaces();
+}
+
+/// <summary>
+/// What a row of a skills file holds.
+/// </summary>
+public sealed class SkillImportRowResult
+{
+    private SkillImportRowResult()
+    {
+    }
+
+    /// <summary>
+    /// Gets the skill, or <see langword="null"/> when the row holds none.
+    /// </summary>
+    public SkillImportRow Skill { get; private init; }
+
+    /// <summary>
+    /// Gets the framework a Moodle framework row names, or <see langword="null"/>.
+    /// </summary>
+    public string Framework { get; private init; }
+
+    /// <summary>
+    /// Gets why the row cannot be read, or <see langword="null"/>.
+    /// </summary>
+    public string Error { get; private init; }
+
+    internal static SkillImportRowResult ForSkill(SkillImportRow skill) => new() { Skill = skill };
+
+    internal static SkillImportRowResult FrameworkRow(string framework) => new() { Framework = framework };
+
+    internal static SkillImportRowResult Failure(string error) => new() { Error = error };
 }

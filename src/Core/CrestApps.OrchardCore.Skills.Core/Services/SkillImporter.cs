@@ -27,7 +27,7 @@ public sealed class SkillImporter
     /// </summary>
     /// <param name="rows">The rows read from the file.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
-    /// <returns>What was added, changed, unchanged and left out.</returns>
+    /// <returns>What was added, changed and unchanged, and the rows left out by line.</returns>
     public async Task<SkillImportResult> ImportAsync(IEnumerable<SkillImportRow> rows, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(rows);
@@ -48,7 +48,7 @@ public sealed class SkillImporter
 
             if (seen.TryGetValue(name, out var earlier))
             {
-                result.Skipped.Add($"Line {row.Line}: '{name}' is already on line {earlier.Line} of the file.");
+                result.Failures[row.Line] = $"'{name}' is already on line {earlier.Line} of the file.";
 
                 continue;
             }
@@ -76,7 +76,7 @@ public sealed class SkillImporter
 
             if (!string.IsNullOrEmpty(existing.Category) && !string.IsNullOrEmpty(row.Category) && !string.Equals(existing.Category, row.Category, StringComparison.OrdinalIgnoreCase))
             {
-                result.Skipped.Add($"Line {row.Line}: a skill named '{existing.Name}' is already in '{existing.Category}'.");
+                result.Failures[row.Line] = $"A skill named '{existing.Name}' is already in '{existing.Category}'.";
 
                 continue;
             }
@@ -111,7 +111,7 @@ public sealed class SkillImporter
 
         if (!validation.Succeeded)
         {
-            result.Skipped.Add($"Line {row.Line}: {string.Join(" ", validation.Errors.Select(error => error.ErrorMessage))}");
+            result.Failures[row.Line] = string.Join(" ", validation.Errors.Select(error => error.ErrorMessage));
 
             return false;
         }
