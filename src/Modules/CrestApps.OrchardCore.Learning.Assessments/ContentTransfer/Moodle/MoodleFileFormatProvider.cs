@@ -1,13 +1,9 @@
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.FileStorage;
 using CrestApps.OrchardCore.Learning.Core.Moodle;
-using CrestApps.OrchardCore.Learning.Services;
-using CrestApps.OrchardCore.Users;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.FileStorage;
 using OrchardCore.ContentManagement.Metadata.Models;
 
@@ -122,26 +118,7 @@ internal sealed class MoodleFileFormatProvider : IContentTransferFileFormatProvi
 
         var token = _workspaces.Add(new MoodleWorkspace(folder, result.Backup));
 
-        return new MoodleImportReader(token, _workspaces, MoodleCourseRows.Write(result.Backup, token, _questionTypes, S, kind => _kinds.Find(kind) is not null, SiteCohorts(result.Backup)));
-    }
-
-    // The site's cohorts, for a backup with cohort sync, while Cohorts and Enrollment by Cohort are on; null otherwise.
-    // ContentTransfer reads a file synchronously, in the tenant's scope, so they are read synchronously too.
-    private static List<(string Id, string Name)> SiteCohorts(MoodleBackup backup)
-    {
-        var services = ShellScope.Services;
-
-        if (services?.GetService<ICohortService>() is not { } cohorts || !services.GetServices<ICohortLearningTarget>().Any())
-        {
-            return null;
-        }
-
-        if (!backup.Course.Enrolments.Any(enrolment => enrolment.Enabled && enrolment.Method == "cohort"))
-        {
-            return [];
-        }
-
-        return [.. cohorts.ListAsync(10_000).GetAwaiter().GetResult().Select(cohort => (cohort.CohortId, cohort.Name))];
+        return new MoodleImportReader(token, _workspaces, MoodleCourseRows.Write(result.Backup, token, _questionTypes, S, kind => _kinds.Find(kind) is not null));
     }
 
     /// <inheritdoc />

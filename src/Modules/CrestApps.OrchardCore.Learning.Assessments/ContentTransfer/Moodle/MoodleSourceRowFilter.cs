@@ -1,9 +1,13 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Learning.Core.Indexes;
+using CrestApps.OrchardCore.Learning.Core.Moodle;
+using CrestApps.OrchardCore.Learning.Services;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -29,6 +33,7 @@ internal sealed class MoodleSourceRowFilter : IContentImportRowFilter
     private readonly IAuthorizationService _authorizationService;
     private readonly IEnumerable<IContentTransferFileFormatProvider> _formats;
     private readonly IServiceProvider _services;
+    private readonly MoodleWorkspaces _workspaces;
 
     private ContentTransferEntry _entry;
     private ClaimsPrincipal _importer;
@@ -39,14 +44,20 @@ internal sealed class MoodleSourceRowFilter : IContentImportRowFilter
         IContentManager contentManager,
         IAuthorizationService authorizationService,
         IEnumerable<IContentTransferFileFormatProvider> formats,
-        IServiceProvider services)
+        IServiceProvider services,
+        MoodleWorkspaces workspaces,
+        IStringLocalizer<MoodleSourceRowFilter> stringLocalizer)
     {
         _session = session;
         _contentManager = contentManager;
         _authorizationService = authorizationService;
         _formats = formats;
         _services = services;
+        _workspaces = workspaces;
+        S = stringLocalizer;
     }
+
+    internal readonly IStringLocalizer S;
 
     /// <inheritdoc />
     public Task<bool> InitializeAsync(ContentImportRowFilterInitContext context)
@@ -98,8 +109,40 @@ internal sealed class MoodleSourceRowFilter : IContentImportRowFilter
     }
 
     /// <inheritdoc />
-    public Task<bool> ShouldSkipRowAsync(ContentImportRowFilterContext context)
-        => Task.FromResult(false);
+    public async Task<bool> ShouldSkipRowAsync(ContentImportRowFilterContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        // A cohort sync row: never imported as an item. The course row links the cohorts the site has; a cohort it does
+        // not have, or cohorts turned off, is reported here.
+        if (context.Columns is null || !context.Columns.Contains(MoodleColumns.Source) || !context.Columns.Contains(MoodleColumns.Workspace) ||
+            _workspaces.Find(context.Row[MoodleColumns.Workspace]?.ToString()) is not { } workspace ||
+            MoodleCourseRows.FindCohortSync(workspace.Backup, context.Row[MoodleColumns.Source]?.ToString()) is not { } cohortSync)
+        {
+            return false;
+        }
+
+        var backup = workspace.Backup;
+        var title = string.IsNullOrWhiteSpace(backup.Course.FullName) ? backup.Course.ShortName : backup.Course.FullName;
+        var name = MoodleCourseRows.CohortName(cohortSync);
+
+        if (_services.GetService<ICohortService>() is not { } cohorts || !_services.GetServices<ICohortLearningTarget>().Any())
+        {
+            context.SkipReason = S["{0}: Moodle enrols learners by the cohort \"{1}\"; turn on Cohorts and Enrollment by Cohort and import the backup again.", title, name];
+        }
+        else if (MoodleCohorts.Match(cohortSync, (await cohorts.ListAsync(10_000)).Select(cohort => (cohort.CohortId, cohort.Name))) is null)
+        {
+            context.SkipReason = S["{0}: Moodle enrols learners by the cohort \"{1}\", which the site has no cohort for (by id number or name); add it under Access Control > Cohorts and import the backup again.", title, name];
+        }
+
+        if (context.SkipReason is not null)
+        {
+            context.SkipCategory = S["Not imported from Moodle"];
+            context.SkipReasonCode = "MoodleCohortNotFound";
+        }
+
+        return true;
+    }
 
     // The person who queued the import: the background import runs without a request.
     private async Task<ClaimsPrincipal> ImporterAsync()

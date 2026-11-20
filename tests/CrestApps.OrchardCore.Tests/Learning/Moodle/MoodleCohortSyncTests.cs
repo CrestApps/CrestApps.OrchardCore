@@ -46,7 +46,7 @@ public sealed class MoodleCohortSyncTests
     }
 
     [Fact]
-    public void TheRows_ReportOnlyACohortTheSiteDoesNotHave_OrCohortsTurnedOff()
+    public void EachCohortSync_IsARowOfItsOwn_ThatFindsItsEnrolmentAgain()
     {
         // Arrange
         var backup = new MoodleBackup
@@ -59,6 +59,7 @@ public sealed class MoodleCohortSyncTests
                 Enrolments =
                 [
                     new MoodleEnrolment { Method = "cohort", Enabled = true, CohortId = "1", CohortName = "Field crew" },
+                    new MoodleEnrolment { Method = "cohort", Enabled = false, CohortId = "9", CohortName = "Off" },
                     new MoodleEnrolment { Method = "cohort", Enabled = true, CohortId = "2", CohortName = "Night shift" },
                 ],
             },
@@ -68,13 +69,13 @@ public sealed class MoodleCohortSyncTests
         localizer.Setup(value => value[It.IsAny<string>(), It.IsAny<object[]>()]).Returns((string name, object[] arguments) => new LocalizedString(name, string.Format(System.Globalization.CultureInfo.InvariantCulture, name, arguments)));
 
         // Act
-        var rows = MoodleCourseRows.Write(backup, "token", new QuestionTypeOptions(), localizer.Object, cohorts: [("c1", "Field crew")]);
-        var off = MoodleCourseRows.Write(backup, "token", new QuestionTypeOptions(), localizer.Object, cohorts: null);
+        var rows = MoodleCourseRows.Write(backup, "token", new QuestionTypeOptions(), localizer.Object);
 
-        // Assert
-        var errors = rows.Select(row => row[5]).Where(error => !string.IsNullOrEmpty(error)).ToList();
-        var message = Assert.Single(errors);
-        Assert.Contains("Night shift", message, StringComparison.Ordinal);
-        Assert.Equal(2, off.Count(row => row[5]?.Contains("cohort", StringComparison.OrdinalIgnoreCase) == true));
+        // Assert: the course row, then one row per enabled cohort sync, and no failed row.
+        var sources = rows.Select(row => row[3]).ToList();
+        Assert.Equal([backup.CourseSource, backup.CourseSource + ":cohort:0", backup.CourseSource + ":cohort:1"], sources);
+        Assert.All(rows, row => Assert.True(string.IsNullOrEmpty(row[5])));
+        Assert.Equal("Night shift", MoodleCourseRows.FindCohortSync(backup, sources[2]).CohortName);
+        Assert.Null(MoodleCourseRows.FindCohortSync(backup, backup.CourseSource));
     }
 }

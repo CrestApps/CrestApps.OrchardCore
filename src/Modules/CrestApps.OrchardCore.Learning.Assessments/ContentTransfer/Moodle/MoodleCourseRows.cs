@@ -109,7 +109,7 @@ internal static class MoodleCourseRows
     /// <param name="hasKind">Tells whether a course item kind is registered, that is whether its feature is on; every
     /// kind when <see langword="null"/>.</param>
     /// <returns>The rows.</returns>
-    public static IReadOnlyList<string[]> Write(MoodleBackup backup, string token, QuestionTypeOptions questionTypes, IStringLocalizer S, Func<string, bool> hasKind = null, IReadOnlyCollection<(string Id, string Name)> cohorts = null)
+    public static IReadOnlyList<string[]> Write(MoodleBackup backup, string token, QuestionTypeOptions questionTypes, IStringLocalizer S, Func<string, bool> hasKind = null)
     {
         ArgumentNullException.ThrowIfNull(backup);
         ArgumentNullException.ThrowIfNull(questionTypes);
@@ -158,19 +158,13 @@ internal static class MoodleCourseRows
             }
         }
 
-        // Cohort sync becomes the course's cohort sync, with the site's cohort of the same id number or name.
+        // Cohort sync becomes the course's cohort sync. Each one is a row of its own, which the row filter checks against
+        // the site's cohorts: it is skipped when the site has the cohort, and reported when it does not.
+        var cohortIndex = 0;
+
         foreach (var cohortSync in course.Enrolments.Where(enrolment => enrolment.Enabled && enrolment.Method == "cohort"))
         {
-            var cohortName = cohortSync.CohortName ?? cohortSync.Name ?? cohortSync.CohortIdNumber ?? cohortSync.CohortId ?? "?";
-
-            if (cohorts is null)
-            {
-                NotImported(S["{0}: Moodle enrols learners by the cohort \"{1}\"; turn on Cohorts and Enrollment by Cohort and import the backup again.", title, cohortName]);
-            }
-            else if (MoodleCohorts.Match(cohortSync, cohorts) is null)
-            {
-                NotImported(S["{0}: Moodle enrols learners by the cohort \"{1}\", which the site has no cohort for (by id number or name); add it under Access Control > Cohorts and import the backup again.", title, cohortName]);
-            }
+            rows.Add(Row(LearningConstants.ContentTypes.Course, title, CohortSource(backup, cohortIndex++), token));
         }
 
         foreach (var kind in course.CompletionCriteria.Select(criterion => criterion.Type).Distinct())
@@ -335,6 +329,36 @@ internal static class MoodleCourseRows
 
         return rows;
     }
+
+    /// <summary>
+    /// Gets the source of the row of a course's cohort sync, by its place among the course's enabled cohort syncs.
+    /// </summary>
+    public static string CohortSource(MoodleBackup backup, int index)
+        => backup.CourseSource + CohortMarker + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Finds the cohort sync of a cohort row's source, or <see langword="null"/> when the source is not one.
+    /// </summary>
+    public static MoodleEnrolment FindCohortSync(MoodleBackup backup, string source)
+    {
+        var prefix = backup.CourseSource + CohortMarker;
+
+        if (string.IsNullOrEmpty(source) || !source.StartsWith(prefix, StringComparison.Ordinal) ||
+            !int.TryParse(source.AsSpan(prefix.Length), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var index))
+        {
+            return null;
+        }
+
+        return backup.Course.Enrolments.Where(enrolment => enrolment.Enabled && enrolment.Method == "cohort").ElementAtOrDefault(index);
+    }
+
+    /// <summary>
+    /// Gets the name a cohort sync is reported by.
+    /// </summary>
+    public static string CohortName(MoodleEnrolment cohortSync)
+        => cohortSync.CohortName ?? cohortSync.Name ?? cohortSync.CohortIdNumber ?? cohortSync.CohortId ?? "?";
+
+    private const string CohortMarker = ":cohort:";
 
     /// <summary>
     /// Writes the one row of a file that is not a readable Moodle course backup.

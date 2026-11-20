@@ -167,6 +167,14 @@ internal sealed class MoodleImportHandler : IContentImportHandler
 
         var backup = workspace.Backup;
 
+        if (MoodleCourseRows.FindCohortSync(backup, source) is { } cohortSync)
+        {
+            // The row filter skips a cohort sync row; one that reaches here is never an item of its own.
+            context.Fail(S["The cohort \"{0}\" is linked to the course by its row; it is not imported on its own.", MoodleCourseRows.CohortName(cohortSync)], S["Not imported from Moodle"]);
+
+            return;
+        }
+
         if (source == backup.CourseSource)
         {
             await ImportCourseAsync(context, backup);
