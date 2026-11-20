@@ -2,6 +2,8 @@
 sidebar_label: Learning Classes
 title: Learning Classes
 description: "The class course item of Learning: dated sessions in Scheduling, registration of enrolled learners with a waitlist and offers, a roster to mark attendance, and attendance that completes the class."
+user_manual:
+  - user-manual/learning/classes
 ---
 
 **Learning Classes** (`CrestApps.OrchardCore.Learning.Classes`, with `Learning.Classes.Abstractions` and `Learning.Classes.Core`) adds the **Class** course item to [Learning](./learning): "attend a class". A class has dated sessions, and an enrolled learner registers for one of them. The sessions, their places, the waitlist and its offers belong to [Scheduling](./scheduling); Learning keeps no seat counts, holds or waitlist of its own.
@@ -27,7 +29,7 @@ The class editor validates a capacity of at least one, minimum minutes of at lea
 
 ## Sessions
 
-A session is a Scheduling `SchedulingSession` with the source `Learning.Class` (`ClassesConstants.SessionSource`) and the class item's content item id as its source id. It has one or more meetings, its own capacity, a location or a meeting link, an optional registration window (it opens at once and closes when the first meeting starts when they are empty), what happens when it is full, and how many hours an offered place is held. One registration covers every meeting. When the first resource has a calendar, the session is one calendar event on it with its attendees, so reminders, invitations and room conflicts come from [Calendars](./calendars). Whatever the resources, each meeting of a session also shows on the own (personal) calendar of every learner with a confirmed or attended place, through the `LearningClassSessions` calendar event source (`ICalendarEventSource`): read-only events of the type `LearningClassSession`, read from the registrations rather than copied into events.
+A session is a Scheduling `SchedulingSession` (see [Dated sessions](./scheduling#dated-sessions), with `ISchedulingSessionService`) with the source `Learning.Class` (`ClassesConstants.SessionSource`) and the class item's content item id as its source id. It has one or more meetings, its own capacity, a location or a meeting link, an optional registration window (it opens at once and closes when the first meeting starts when they are empty), what happens when it is full, and how many hours an offered place is held. One registration covers every meeting. When the first resource has a calendar, the session is one calendar event on it with its attendees, so reminders, invitations and room conflicts come from [Calendars](./calendars). Whatever the resources, each meeting of a session also shows on the own (personal) calendar of every learner with a confirmed or attended place, through the `LearningClassSessions` calendar event source (`ICalendarEventSource`): read-only events of the type `LearningClassSession`, read from the registrations rather than copied into events.
 
 The **Sessions** page of a class (`/Admin/learning/classes/{classItemId}/sessions`) lists its sessions with their dates in the user's time zone, the places taken of the capacity, how many people wait and the status. **Add session** opens the session editor, filled from the class's defaults; its meetings are a date, a start and an end in local time, converted to UTC with `ILocalClock`, and **Add a meeting** adds a row. **Roster** opens the roster, and **Cancel the session** asks for a reason, then cancels every registration and empties the waitlist. With the Orchard Core **Notifications** feature on, each learner who had a place gets a **Class session cancelled** notification (`ClassesConstants.SessionCancelledNotificationType`) with the reason, through the notification center and the delivery methods they chose; a place a learner gives up, or one an ending enrollment gives up, belongs to a session that is still on, so nobody is told then.
 
@@ -73,5 +75,5 @@ The instructors and assistants on the staff of a class's course manage the sessi
 ## Not in this version
 
 - **Course offerings** (`CourseOffering`, a dated run of a course with its own staff and enrollment window) are not built yet.
-- **Time Tracker** entries for attendance come in a later slice.
+- Attendance is not written to the **Time Tracker**: it is kept on the session's Scheduling registrations.
 - Nothing creates online meeting links; paste one on the class or the session.

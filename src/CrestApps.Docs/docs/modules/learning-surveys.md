@@ -2,6 +2,8 @@
 sidebar_label: Learning Surveys
 title: Learning Surveys
 description: "The feedback survey and choice course items of Learning: rating, choice and written questions, anonymous answers, a close date, totals for learners and staff, and the response records."
+user_manual:
+  - user-manual/learning/surveys
 ---
 
 **Learning Surveys** (`CrestApps.OrchardCore.Learning.Surveys`, with `Learning.Surveys.Abstractions` and `Learning.Surveys.Core`) adds two course items to [Learning](./learning): the **Feedback survey** and the **Choice**. They replace Moodle's Feedback and Choice activities when a Moodle course is moved.

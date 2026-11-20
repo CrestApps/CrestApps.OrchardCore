@@ -34,7 +34,7 @@ It works with other features when they are on:
 | Audit Trail | Changes people make to enrollments by hand, with their reason, and every export of learner records. |
 | Webhooks | `learning.enrollment.created` and `learning.course.completed`. |
 | Staff | The Instructor capability, a **Learning** section on the staff profile and **My learning** on a staff member's page. |
-| Commerce | **My learning** in the storefront account menu. |
+| Users (My Account) | **My learning** and **My transcript** in the account menu of the Users **My Account** area (`/account`, feature `CrestApps.OrchardCore.Users.Account`, registered by Learner Pages through `LearningAccountMenu`). No store is needed: without the account area, the learner pages stand alone. |
 | Personal Data | Export and erasure of a person's enrollments and progress. Learning records belong to user accounts, so a request that knows only an e-mail address (such as erasing a customer added by hand on the **Customers** page) reaches the records of the account with that address. |
 | Recipes, Deployment | The `LearningEnrollments` recipe step and deployment step, with their schemas. |
 
@@ -58,9 +58,9 @@ Lessons are contained in their course through Orchard's List part, so **New** on
 
 ### Course part
 
-`Code`, `Summary`, `Level`, `EstimatedMinutes`, `NeverCompletes` (a course without completion criteria: it never completes, while the progress is kept), `EnrollmentMode` (`Closed`, `Open`, `Key`, `Approval`), the enrollment key (stored as a salted hash outside the content item, in `LearningSecretStore`, never shown again; five wrong keys for one course within 15 minutes lock that person out of it for 15 minutes), `AccessDays` (how long an enrollment gives access; empty for no end), `PassMark`, `GradeCategories` (gradebook categories with a weight and a number of lowest scores to drop; see [Learning Assessments](./learning-assessments#gradebook)), `Prerequisites` (other courses to complete first), `CompletionCriteria` and `Staff` (a user and a role: `Instructor`, `Assistant`, `Grader` or `Observer`).
+`Code`, `Summary`, `Level`, `EstimatedMinutes`, `NeverCompletes` (a course without completion criteria: it never completes, while the progress is kept), `EnrollmentMode` (`Closed`, `Open`, `Key`, `Approval`), the enrollment key (stored as a salted hash outside the content item, in `LearningSecretStore`, never shown again; five wrong keys for one course within 15 minutes lock that person out of it for 15 minutes), `AccessDays` (how long a self enrollment gives access, counted from the day the learner enrolls; empty for no end; other enrollments, such as those made by staff or by an order, keep the access end their source gives, if any), `PassMark`, `GradeCategories` (gradebook categories with a weight and a number of lowest scores to drop; see [Learning Assessments](./learning-assessments#gradebook)), `Prerequisites` (other courses to complete first), `CompletionCriteria` and `Staff` (a user and a role: `Instructor`, `Assistant`, `Grader` or `Observer`).
 
-The admin's course pickers (the prerequisites, the courses of a learning path set, the courses of a Learning workflow event and the course of a learning product's grant row) use the `ItemSelector` component with the course search `/Admin/learning/course-picker/search?query=&exceptId=` (route `LearningCourseSearch`, `CoursePickerController`, backed by `CourseLookup.SearchCoursesAsync`): the latest version of each course whose title contains the text, 50 at most, titles only. It needs **Manage own courses**, **View enrollments** or **View learning reports**. The editors render only the chosen courses, so a site with hundreds of courses never lists them all.
+The admin's course pickers (the prerequisites, the courses of a learning path set, the courses of a Learning workflow event and the course of a learning product's grant row) use the `ItemSelector` component with the course search `/Admin/learning/course-picker/search?query=&exceptId=` (route `LearningCourseSearch`, `CoursePickerController`, backed by `CourseLookup.SearchCoursesAsync`): the latest version of each course whose title contains the text, 50 at most, titles only. It needs **Manage the courses you teach**, **View enrollments** or **View learning reports**. The editors render only the chosen courses, so a site with hundreds of courses never lists them all.
 
 ### Course item part
 
@@ -93,7 +93,7 @@ Each has its own index table (`EnrollmentIndex`, `EnrollmentGrantIndex`, `Enroll
 
 An item is complete when its completion mode is met. The course is complete when every required item is complete and every completion criterion passes: `MinimumGrade`, `MinimumTime`, `ItemPassed` and `StaffApproval`. A course marked `NeverCompletes` never completes. Another module adds a criterion with `AddCourseCompletionCriterion<T>()`.
 
-`StaffApproval` takes an optional `Role` value, a course staff role (the course editor's **Who approves**). With a role, only the course's staff in that role may approve (`CompletionApprovers.MayApprove`); the progress service refuses anyone else with `NotApprover`, and the enrollment page offers **Approve the completion** only to them. Without a role, anyone who manages the enrollment may approve, as before.
+`StaffApproval` takes an optional `Role` value, a course staff role (the course editor's **Who approves**). With a role, only the course's staff in that role may approve (`CompletionApprovers.MayApprove`); the progress service refuses anyone else with `NotApprover`, and the enrollment page offers **Approve the completion** only to them. Without a role, anyone who manages the enrollment may approve, as before. With or without a role, the approver needs **Manage enrollments** on the enrollment (`EnrollmentsController` checks it before `MayApprove`), which `LearningRecordAuthorizationHandler` gives course staff only to Instructors and Assistants holding **Manage the courses you teach**: a Grader or Observer named as the approving role approves only when a role also grants **Manage enrollments**.
 
 **Release rules** decide when an item opens: `ItemCompleted` (after another item), `Date`, `DaysAfterEnrollment` and `People`. Add one with `AddCourseItemReleaseRule<T>()`. The course setting **Learners take the items in order** (`CoursePart.ItemsInOrder`) is checked by `CourseReleaseEvaluator` before the rules: an item waits for every required, non-inline item before it in the outline, so every path that asks the evaluator (the player, the progress service, package launch and runtime, surveys, coursework and quiz start) refuses it alike. A decision that waits for another item names it in `ReleaseDecision.BlockingItemId` (and `CourseItemAccess.BlockingItemId`), which the player and the course page use to show *Complete "…" first* and a button to that item; `ItemCompleted` sets it too.
 
@@ -128,7 +128,7 @@ Two authorization handlers keep lessons from people who should not see them:
 - The **content access handler** answers Orchard's `ViewContent` for course items: allowed for course staff, people who manage courses, free previews, and learners with an active or completed enrollment whose item is released; refused for everyone else. Because the display route, the content API, GraphQL, the content data source and Secure Media all ask `ViewContent`, they all follow it.
 - The **record handler** answers for enrollments and progress: a learner sees their own, a manager sees everyone's, a course's staff see their course's.
 
-A course's Instructors and Assistants who hold **Manage own courses** may edit, publish and preview that course and its lessons.
+A course's Instructors and Assistants who hold **Manage the courses you teach** may edit, publish and preview that course and its lessons.
 
 ### Pages that do not ask for each item
 
@@ -197,7 +197,7 @@ A course may have a start date and an end date (`CoursePart.StartsUtc` and `Ends
 
 - **Before the start**, learners see the course and may enroll, but `ICourseAccessService` refuses its items: `NotReleased` with the `CourseNotStarted` refusal ("The course has not started yet.") and the start date as `AvailableFromUtc`. Staff and free previews are not affected, and the player locks every item until the start.
 - **After the end**, nothing is locked. This follows Moodle, where the end date mostly moves a course out of "in progress" on the dashboard and does not close it: an open enrollment in an ended course is listed under **Past courses** on My learning, with **Continue**, and the catalog and the course page say **Ended on**. Self enrollment stays open; close it with the enrollment mode.
-- The **access length after enrollment** (`AccessDays`, the enrollment's access end) keeps ending each learner's access, whatever the dates.
+- The **access length after enrollment** (`AccessDays`) sets the access end of a self enrollment (`DefaultSelfEnrollmentService`), and that access end keeps ending the learner's access, whatever the dates. Other enrollments end when their own access end says.
 
 The dates show on the course page, in the course summary display and in the catalog, through the `DateTime` shape, never as UTC.
 
@@ -224,7 +224,7 @@ With **Learner Pages** on, `/learning/catalog` (route `LearningCatalog`, for peo
 | Permission | Administrator | Default |
 | --- | --- | --- |
 | Manage courses | Yes | |
-| Manage own courses (as course staff) | Yes | |
+| Manage the courses you teach (as course staff) | Yes | |
 | Manage enrollments | Yes | |
 | View enrollments | Yes | |
 | View learner records | Yes | |
@@ -320,7 +320,7 @@ Orchard Core Media takes files of up to 30 MB by default and no OpenDocument spr
 - `MaxFileSize` is in bytes (2 GB above).
 - `AllowedFileExtensions` replaces Media's list, so keep the default extensions you still want next to the ones you add (OpenDocument and other office files, plain text, and the `.vtt` and `.srt` caption files above). Never add programs, scripts, web or server pages, or macro-enabled Office files.
 
-Media uploads are sent in chunks of `MaxUploadChunkSize` (100 MB by default), and Media raises Kestrel's request limit for its own upload endpoint. Behind IIS (Azure App Service on Windows), IIS refuses a request over `requestLimits maxAllowedContentLength` (30,000,000 bytes by default) before the site sees it: raise it above the chunk size, or set `OrchardCore:Media:MaxUploadChunkSize` below it. Orchard Core logs a warning at startup when the two disagree. A reverse proxy in front of the site (nginx `client_max_body_size`, for one) needs the same.
+Media uploads are sent in chunks of `MaxUploadChunkSize` (100 MB by default), and Media raises Kestrel's request limit for its own upload endpoint. Behind IIS (Azure App Service on Windows), IIS refuses a request over `requestLimits maxAllowedContentLength` (30,000,000 bytes by default) before the site sees it: raise it above the chunk size, or set `OrchardCore:OrchardCore_Media:MaxUploadChunkSize` below it. Orchard Core logs a warning at startup when the two disagree. A reverse proxy in front of the site (nginx `client_max_body_size`, for one) needs the same.
 
 ## Extending Learning
 

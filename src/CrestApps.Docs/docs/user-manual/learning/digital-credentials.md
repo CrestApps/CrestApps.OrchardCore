@@ -48,7 +48,7 @@ Some revocations happen by themselves: when a certificate is revoked, the creden
 
 ## For learners: My credentials
 
-Learners open **My credentials** from the account menu or the user menu. For each credential they can:
+Learners open **My credentials** from the account menu or the user menu. The link shows only when the **Learner Pages** feature is on. For each credential they can:
 
 - **Download (JSON)** or **Download signed (JWT)**, to keep it or add it to a wallet.
 - Copy the **Share link**, the credential's verification page.

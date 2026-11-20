@@ -5,7 +5,8 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Users.Audiences;
 
 /// <summary>
-/// Adds User Audiences under Access Control.
+/// Adds User Audiences under Content, beside Teams and Cohorts: audiences pick the people other modules target, and grant
+/// no permission, so they are not access control.
 /// </summary>
 public sealed class UserAudiencesAdminMenu : AdminNavigationProvider
 {
@@ -23,7 +24,7 @@ public sealed class UserAudiencesAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Access Control"], NavigationConstants.AdminMenuAccessControlPosition, accessControl => accessControl
+            .Add(S["Content"], content => content
                 .Add(S["User Audiences"], S["User Audiences"].PrefixPosition(), audiences => audiences
                     .AddClass("user-audiences")
                     .Id("userAudiences")

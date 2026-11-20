@@ -5,6 +5,7 @@ description: "The shared skill catalog: skills held at a 1 to 5 proficiency with
 user_manual:
   - user-manual/workforce/skills-and-certifications
   - user-manual/learning/competencies
+  - user-manual/learning/certifications
 ---
 
 The **Skills** module keeps one skill catalog for the site. Contact Center routing and workforce scheduling read the same skills, so a person's skills are set once. It adds:
@@ -130,7 +131,7 @@ The **Skills and certifications** deployment step exports every skill and certif
 
 ## Import skills from a file
 
-With [Content Transfer](./content-transfer) on, skills and competency frameworks are a ContentTransfer import target (`SkillsImportTarget`, named `Skills.Skill`, checked by **Manage skills**; see [Import targets that are not content types](./content-transfer#import-targets-that-are-not-content-types)). They share its background run, progress, pause and resume, and file of failed rows. The **Import** button on **Content > Skills** opens the import (`/Admin/import/contents/Skills.Skill`); it shows only when ContentTransfer is on. The columns are `Name`, `Category`, `Description` and `Enabled`. `SkillImportRowReader` (Skills.Core) reads each row and `SkillImporter` saves it:
+With [Content Transfer](./content-transfer) on, skills and competency frameworks are a ContentTransfer import target (`SkillsImportTarget`, named `Skills.Skill`, checked by **Manage skills and certifications** (`ManageSkills`); see [Import targets that are not content types](./content-transfer#import-targets-that-are-not-content-types)). They share its background run, progress, pause and resume, and file of failed rows. The **Import** button on **Content > Skills** opens the import (`/Admin/import/contents/Skills.Skill`); it shows only when ContentTransfer is on. The columns are `Name`, `Category`, `Description` and `Enabled`. `SkillImportRowReader` (Skills.Core) reads each row and `SkillImporter` saves it:
 
 - A **Moodle competency framework export** (Moodle's *Export competency framework*, known by its `isframework` column): the framework row's short name is the category, and each competency becomes a skill named by its short name (or ID number), its description made plain text. Nested competencies (`parentidnumber`) are imported flat.
 - A **plain file** with a `Name` column and optional `Category`, `Description` and `Enabled` columns, in any case.

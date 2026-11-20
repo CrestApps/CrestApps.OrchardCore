@@ -137,7 +137,7 @@ internal sealed class MoodleSourceRowFilter : IContentImportRowFilter
         {
             // One message whether the cohort exists or the importer may not link it: the report never tells which
             // cohorts the site has to someone who may not manage enrollments.
-            context.SkipReason = S["{0}: Moodle enrols learners by the cohort \"{1}\"; it is not linked to the course. A cohort is linked only when the site has a cohort of the same id number or name (Access Control > Cohorts) and the person importing may manage enrollments; then import the backup again.", title, name];
+            context.SkipReason = S["{0}: Moodle enrols learners by the cohort \"{1}\"; it is not linked to the course. A cohort is linked only when the site has a cohort of the same id number or name (Content > Cohorts) and the person importing may manage enrollments; then import the backup again.", title, name];
         }
 
         if (context.SkipReason is not null)

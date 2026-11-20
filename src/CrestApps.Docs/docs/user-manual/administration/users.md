@@ -97,7 +97,7 @@ To give someone a picture, edit the user and use the **Avatar** box to pick or u
 
 ## Audiences
 
-An audience is a group of people chosen by rules, such as "everyone in the Field team hired more than 30 days ago". Other features target an audience, so the people in it change as your teams, staff records and roles change. Turn on the **User Audiences** feature, then open **Access Control > User Audiences**.
+An audience is a group of people chosen by rules, such as "everyone in the Field team hired more than 30 days ago". Other features target an audience, so the people in it change as your teams, staff records and roles change. Turn on the **User Audiences** feature, then open **Content > User Audiences**.
 
 The list shows the audiences you define and the ones features define (marked **Defined by a feature**, which you can't edit). Click **People** on any of them to see who is in it today.
 
@@ -115,7 +115,7 @@ The rules you can pick depend on the features that are on: **In a role**, **Memb
 
 ## Cohorts
 
-A cohort is a named group of people you keep by hand, such as "2026 new hires" or "Warehouse supervisors". Where an audience follows rules, a cohort holds exactly the people you add, so use it for a group no rule describes. Turn on the **Cohorts** feature, then open **Access Control > Cohorts**.
+A cohort is a named group of people you keep by hand, such as "2026 new hires" or "Warehouse supervisors". Where an audience follows rules, a cohort holds exactly the people you add, so use it for a group no rule describes. Turn on the **Cohorts** feature, then open **Content > Cohorts**.
 
 1. Click **Add cohort**, give it a **Name** (each cohort has its own) and, if you like, a **Description**, and click **Save**.
 2. On the cohort's people page, add people:

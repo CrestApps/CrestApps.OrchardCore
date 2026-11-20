@@ -2,6 +2,8 @@
 sidebar_label: Learning Record Store
 title: Learning Record Store
 description: "The xAPI 1.0.3 Learning Record Store of Learning: statements, documents, activities, agents and about, for OpenID applications and launch tokens, never the sign-in cookie."
+user_manual:
+  - user-manual/learning/learning-statements
 ---
 
 **Learning Record Store** (`CrestApps.OrchardCore.Learning.Xapi`, with `Learning.Xapi.Abstractions` and `Learning.Xapi.Core`) adds an xAPI Learning Record Store (LRS) to [Learning](./learning). It implements xAPI 1.0.3. It accepts requests with the version header `1.0` or `1.0.0` to `1.0.3`, answers with `X-Experience-API-Version: 1.0.3`, and refuses `2.0.0` (IEEE 9274.1.1-2023) with 400: the rules that differ in xAPI 2.0 are not implemented.

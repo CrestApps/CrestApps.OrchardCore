@@ -2,6 +2,8 @@
 sidebar_label: External Tools (LTI)
 title: Learning External Tools (LTI 1.3)
 description: "LTI 1.3 tools in courses with the site as the platform: tool registration, launches, Deep Linking 2.0, Names and Role Provisioning Services 2.0 and Assignment and Grade Services 2.0, on Orchard Core OpenID and Secrets."
+user_manual:
+  - user-manual/learning/external-tools
 ---
 
 **Learning External Tools** (`CrestApps.OrchardCore.Learning.Lti`, with `Learning.Lti.Abstractions` and `Learning.Lti.Core`) lets courses of [Learning](./learning) use LTI tools, with the site as the LTI platform. It implements LTI 1.3 Core, Deep Linking 2.0, Names and Role Provisioning Services 2.0 and Assignment and Grade Services 2.0. It makes no certification or conformance claim (see [Conformance](#conformance)).

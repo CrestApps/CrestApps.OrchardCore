@@ -11,7 +11,7 @@ A course is a page on your site with lessons in it. Each lesson is a page, a vid
 | | |
 | --- | --- |
 | **Menu** | Learning > Courses |
-| **Permission** | Manage courses; Manage own courses for a course's instructors and assistants |
+| **Permission** | Manage courses; Manage the courses you teach for a course's instructors and assistants |
 | **Feature** | Learning; Secure Media to protect lesson files |
 
 <AskYourAdmin />
@@ -28,7 +28,7 @@ A course is a page on your site with lessons in it. Each lesson is a page, a vid
    - **Approval**: people ask, and a training manager approves or rejects them.
 5. On the **Dates** card, set when the course **Starts** and **Ends**, in your time zone, or leave them empty. Before the start, learners see the course and may enroll, but cannot open its lessons; the course page tells them when it starts. The end date does not close the course, as in Moodle: learners keep their access, and the course is shown as ended and listed under **Past courses** on **My learning** instead of in progress.
 6. Set **Access length (days)** to end a self enrollment's access that many days after enrolling, or leave it empty for no end. Choose the **Prerequisite courses** people must have completed first: type part of a course's title to find it.
-7. Under **Completion and grade**, set the rules a learner must meet besides completing every required item: a **Minimum course grade (%)**, a **Minimum time (minutes)**, a **Final assessment to pass**, or that a member of the course staff approves each completion.
+7. Under **Completion and grade**, set the **Pass mark (%)** of the course grade, then the rules a learner must meet besides completing every required item: a **Minimum course grade (%)**, a **Minimum time (minutes)**, a **Final assessment to pass**, or that a member of the course staff approves each completion.
 8. With **Course Categories** on, choose the course's **Category**. Categories come from the **Course categories** taxonomy under **Content > Taxonomies**, where you build the tree of categories and sub-categories. The list of courses filters by category with its **Course categories** filter.
 9. Select **Publish**.
 
@@ -60,6 +60,12 @@ Learners see a lock and *Complete "Lesson name" first* beside each lesson that i
 
 The setting is a shortcut for an **After completing** rule on every lesson. Use the lesson's own **When it opens** rules for anything else, such as one lesson that waits for a score on another. Both apply together.
 
+## Grade categories
+
+The course grade is the weighted mean of the graded lessons. To group them, such as homework and exams, add rows to the **Grade categories** card: a **Category** name, its **Weight** and how many of its lowest scores to **Drop lowest**. A category's score is the weighted mean of its lessons after the lowest are dropped, and the course grade is the weighted mean of the categories. Choose each graded lesson's **Grade category** on its **Course item** card. A graded lesson without a category counts as a category of its own, weighted by its lesson weight. Rows without a name are left out.
+
+Leave **Pass mark (%)** empty for a course without a grade.
+
 ## Order the outline
 
 Save the course first, then add lessons with its list. On the **Outline** card, enter a **New section** title, then give each lesson a **Section** and a **Position in the section**. Untick **Required for completion** for a lesson that does not count toward completing the course. Lessons that are in the course but **Not in the outline** are listed so you can place them. Clear a section title to remove it; its lessons leave the outline but stay in the course. Learners see only published lessons.
@@ -68,13 +74,13 @@ Save the course first, then add lessons with its list. On the **Outline** card, 
 
 On the **Course staff** card, choose people for each role:
 
-- **Instructors** and **Assistants** edit and publish this course and its lessons, when they also have **Manage own courses**, and see its learners' records.
-- **Graders** mark work and approve completions.
-- **Observers** see the course and its learners' progress without changing anything.
+- **Instructors** and **Assistants** edit and publish this course and its lessons, when they also have **Manage the courses you teach**, and see its learners' records.
+- **Graders** mark work. They approve completions only when they also have **Manage enrollments**.
+- **Observers** see the course and its learners' progress without changing anything. Like graders, they approve completions only when they also have **Manage enrollments**.
 
 ## Lesson files
 
-Learners see each file under the name it had when you uploaded it. How large a file can be, and which file types are taken, is set by your administrator for the whole media library (30 MB and the usual Office, PDF, picture, audio and video files unless they raise it for training videos, OpenDocument files such as `.ods` spreadsheets, or caption files). Files attached to a lesson are shown only to people who may open the lesson; someone who is not enrolled who opens the address of the file gets *Not found*. Your administrator turns this on with the **Learning setup** recipe and, if the rest of the media library must stay public, also runs **Learning public media**.
+Learners see each file under the name it had when you uploaded it. How large a file can be, and which file types are taken, is set by your administrator for the whole media library (30 MB and the usual Office, PDF, picture, audio and video files unless they raise it for training videos, OpenDocument spreadsheets, or caption files). Files attached to a lesson are shown only to people who may open the lesson; someone who is not enrolled who opens the address of the file gets *Not found*. Your administrator turns this on with the **Learning setup** recipe and, if the rest of the media library must stay public, also runs **Learning public media**.
 
 ## The catalog
 
@@ -86,9 +92,9 @@ Add a **Text** item to a course for text, pictures or a video that learners read
 
 ## Who approves completion, and courses that never complete
 
-Under **Completion and grade**, after ticking that a member of the course staff approves each completion, choose **Who approves**: anyone who manages the enrollments, or only the course's instructors, assistants, graders or observers. Tick **No completion criteria: the course never completes** for a course people read without finishing it; their progress is still shown.
+Under **Completion and grade**, after ticking that a member of the course staff approves each completion, choose **Who approves**: anyone who manages the enrollments, or only the course's instructors, assistants, graders or observers. Approving always needs **Manage enrollments** for the course. Instructors and assistants have it for their own course when they have **Manage the courses you teach**; a grader or an observer approves only when a role also gives them **Manage enrollments**. Tick **No completion criteria: the course never completes** for a course people read without finishing it; their progress is still shown.
 
 ## Open an item only to some people
 
-On a lesson's **Who can open it** card, choose **People** or an **Audience** (from **Users > Audiences**, for example everyone of a team or with a profile value). Only those people, and the course staff, open the item; others see that it is open only to some learners.
+On a lesson's **Who can open it** card, choose **People** or an **Audience** (from **Content > User Audiences**, for example everyone of a team or with a profile value). Only those people, and the course staff, open the item; others see that it is open only to some learners.
 

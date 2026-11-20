@@ -10,19 +10,24 @@ Sell a course in your store like any other product. A person who buys it is enro
 
 | | |
 | --- | --- |
-| Turn on | **Learning Commerce** in **Configuration > Features**. It turns on Products, Orders and Account Members if they are off. |
-| Who | Store managers set prices; account admins hand out seats. |
+| **Menu** | Content, the course's **Product** section; Course seats in the account menu on the storefront |
+| **Permission** | Manage courses to put a price on a course; an admin of a business account hands out its seats |
+| **Feature** | Learning Commerce (turns on Products, Orders and Account Members) |
+
+<AskYourAdmin />
 
 ## Put a price on a course
 
 1. Open the course in **Content** and go to the **Product** section that Learning Commerce added.
 2. Enter the price, and the SKU if you use one. A course you leave without a price is simply not for sale: it shows no price and no **Add to cart**. A learning path is sold the same way, from the **Product** section of the path.
-3. Under **What buying it grants**, leave every row unticked to enroll the buyer in this course. To grant something else, tick a row and choose:
-   - **Enrollment** and a course (type part of its title to find it), to enroll the buyer in another course as well, such as a bundle.
+3. Under **What buying it grants**, leave every row unticked to enroll the buyer in this course (or start them on this learning path), with access that never ends. To grant something else, tick **Use** on each row you want and choose:
+   - **Enrollment** and a course (type part of its title to find it, or keep **This item**), to enroll the buyer in that course.
    - **Learning path**, to start the buyer on a path.
-   - **Seats for an account** and the number of seats per unit, to sell seats instead of a place for the buyer.
-4. Enter **Access (days)** for access that ends, such as 365 for a year. Leave it empty for access with no end.
+   - **Seats for an account** and the number of **Seats per unit**, to sell seats instead of a place for the buyer.
+4. On each ticked row, enter **Access (days)** for access that ends, such as 365 for a year, or leave it empty for access with no end. Each row has its own access length.
 5. Click **Publish**.
+
+Only ticked rows are saved; an unticked row is dropped when you publish, whatever you entered in it. As soon as one row is ticked, the ticked rows are all that buying grants: the buyer is no longer enrolled in this course unless a ticked row says so. For a bundle that includes this course, tick a row for **This item** as well as a row for each other course.
 
 The course now shows its price and **Add to cart** on the storefront. A visitor who is not signed in is asked to sign in before they can buy it, because the course goes to their account.
 

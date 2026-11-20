@@ -17,7 +17,7 @@ internal sealed class UserAudiencesRecipeStepSchema : IRecipeStep
         var rule = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("source", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The rule source, such as Role, Team, StaffHireDate, StaffEmploymentType, SkillHolder, CertificationHolder or CourseLearner.")),
+                ("source", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The rule source, such as Role, Team, StaffHireDate, StaffEmploymentType, SkillHolder, CertificationHolder, CourseLearner or CohortMember.")),
                 ("values", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The values chosen, such as role names or team ids; a person matches any of them.")),
                 ("number", new JsonSchemaBuilder().Type(SchemaValueType.Integer, SchemaValueType.Null).Description("A number the source asks for, such as days since hire.")))
             .Required("source");

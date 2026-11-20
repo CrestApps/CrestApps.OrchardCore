@@ -10,9 +10,9 @@ Learners take courses on your site, on a phone or a desktop.
 
 | | |
 | --- | --- |
-| **Menu** | My courses in the user menu; My learning and the other learner pages in Your account when the store is on |
+| **Menu** | My courses in the user menu; My learning and the other learner pages in Your account when the My Account feature is on |
 | **Permission** | Access learning (every signed-in person by default) |
-| **Feature** | Learner Pages; Self Enrollment for the Enroll button |
+| **Feature** | Learner Pages; Self Enrollment for the Enroll button; My Account for the Your account area |
 
 <AskYourAdmin />
 
@@ -40,7 +40,7 @@ Each lesson says what completes it, under its title in the player and beside it 
 
 ## Find a course
 
-The **Course catalog** (`/learning/catalog`, linked from **My learning**) lists the published courses by title. Search the titles, or choose a category on the left to see its courses and those of its sub-categories. Each course shows its code, its categories, its dates and its summary; select it to open its page and enroll.
+The **Course catalog**, linked from **My learning**, lists the published courses by title. Search the titles, or choose a category on the left to see its courses and those of its sub-categories. Each course shows its code, its categories, its dates and its summary; select it to open its page and enroll.
 
 ## My learning and the transcript
 
@@ -48,4 +48,4 @@ The **Course catalog** (`/learning/catalog`, linked from **My learning**) lists 
 
 **My learning** lists the courses you are taking, with your progress and due dates. A course that has not started yet says when it starts. A course whose end date has passed moves to **Past courses**: it stays open, so you can still finish it. **My transcript** lists every course you completed, as it was when you completed it, with the date and grade.
 
-When the store's **Your account** area is on, these pages open inside it, with its menu on the left: **My learning**, **My transcript**, **My required learning**, **My certifications**, **My education credits** and **My credentials**. If you are a member of a business account, **Account members** lists its members; an admin of the account also sees **Course seats**, to give the seats the account bought.
+When the **Your account** area is on (the Users **My Account** feature, which the store, tickets and other features also turn on; no store is needed), these pages open inside it, with its menu on the left: **My learning**, **My transcript**, **My required learning**, **My certifications**, **My education credits** and **My credentials**. If you are a member of a business account, **Account members** lists its members; an admin of the account also sees **Course seats**, to give the seats the account bought.
