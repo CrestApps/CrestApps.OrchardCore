@@ -59,7 +59,7 @@ public sealed class SkillImporter
 
             if (existing is null)
             {
-                var skill = await _skillManager.NewAsync();
+                var skill = await _skillManager.NewAsync(cancellationToken: cancellationToken);
 
                 skill.Name = name;
                 skill.Category = row.Category;
@@ -107,7 +107,7 @@ public sealed class SkillImporter
 
     private async Task<bool> SaveAsync(Skill skill, bool isNew, SkillImportRow row, SkillImportResult result, CancellationToken cancellationToken)
     {
-        var validation = await _skillManager.ValidateAsync(skill);
+        var validation = await _skillManager.ValidateAsync(skill, cancellationToken: cancellationToken);
 
         if (!validation.Succeeded)
         {
@@ -118,11 +118,11 @@ public sealed class SkillImporter
 
         if (isNew)
         {
-            await _skillManager.CreateAsync(skill);
+            await _skillManager.CreateAsync(skill, cancellationToken: cancellationToken);
         }
         else
         {
-            await _skillManager.UpdateAsync(skill);
+            await _skillManager.UpdateAsync(skill, cancellationToken: cancellationToken);
         }
 
         return true;
