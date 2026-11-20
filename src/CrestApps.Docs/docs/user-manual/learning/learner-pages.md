@@ -36,10 +36,14 @@ Select **Start the course** or **Continue** on the course page, or open the cour
 
 **Course progress** shows how far you are. When every required lesson is done, the course is completed and the page says when you completed it. You can still review it.
 
+## Find a course
+
+The **Course catalog** (`/learning/catalog`, linked from **My learning**) lists the published courses by title. Search the titles, or choose a category on the left to see its courses and those of its sub-categories. Each course shows its code, its categories, its dates and its summary; select it to open its page and enroll.
+
 ## My learning and the transcript
 
 **My courses**, in the menu under your name at the top of every page, lists the courses you are taking. Select a course to open it where you left off, or **My courses** (or **See all**, when you take more than five) to open **My learning**.
 
-**My learning** lists the courses you are taking, with your progress and due dates. **My transcript** lists every course you completed, as it was when you completed it, with the date and grade.
+**My learning** lists the courses you are taking, with your progress and due dates. A course that has not started yet says when it starts. A course whose end date has passed moves to **Past courses**: it stays open, so you can still finish it. **My transcript** lists every course you completed, as it was when you completed it, with the date and grade.
 
 When the store's **Your account** area is on, these pages open inside it, with its menu on the left: **My learning**, **My transcript**, **My required learning**, **My certifications**, **My education credits** and **My credentials**. If you are a member of a business account, **Account members** lists its members; an admin of the account also sees **Course seats**, to give the seats the account bought.

@@ -13,6 +13,7 @@ description: "Question banks, quizzes in courses, attempts kept on the server, g
 | Learning Assessments | `CrestApps.OrchardCore.Learning.Assessments` | Question banks, the nine question types, the Quiz course item, attempts, the player, grading, overrides and access codes. |
 | Learning Gradebook | `CrestApps.OrchardCore.Learning.Assessments.Gradebook` | Grade scales and the gradebook of each course. |
 | Learning QTI Import | `CrestApps.OrchardCore.Learning.Assessments.QtiImport` | Imports QTI 3.0 and QTI 2.1 assessment items as questions through Content Transfer (see [QTI import](#qti-import)). |
+| Learning Moodle Import | `CrestApps.OrchardCore.Learning.Assessments.MoodleImport` | Imports Moodle course backups as courses through Content Transfer (see [Moodle import](#moodle-import)). |
 
 ## Content types
 
@@ -175,6 +176,50 @@ Not kept: `fixed` choices in a shuffled list, `minChoices`, expected lengths and
 ### Conformance
 
 The import reads the QTI 3.0 and QTI 2.1 assessment item information models as described above. Conformance suite / certification: not run (needs an external account). 1EdTech's QTI certification of an importing platform is run by a 1EdTech member with access to its conformance program: the member registers the product, imports 1EdTech's certification packages and submits the results for review. The tests in this repository use packages written for them from the specifications' text and examples.
+
+## Moodle import
+
+The **Learning Moodle Import** feature (`CrestApps.OrchardCore.Learning.Assessments.MoodleImport`, depends on Learning Assessments, Learning SCORM Packages, Course Categories, Content Transfer and Media) imports Moodle course backups (`.mbz`) as courses. Like the QTI import it is a [Content Transfer](./content-transfer) file format (`MoodleFileFormatProvider`), import only, offered on the import page of the **Course** type: one backup is one course, with the same background import, progress, failed rows and permissions as a spreadsheet. Its rows may be of the Course, Learning package, Quiz, File lesson, Link lesson and Page lesson types (`MoodleRowTypeProvider`); the person needs to be allowed to import each.
+
+### Reading the backup
+
+`MoodleBackupReader` (`Learning.Core`) reads both kinds of `.mbz`: the zip archive and the gzip-compressed tar archive Moodle 2.6 and later write. The archive is extracted by the safe archive rules of learning packages (`PackageArchiveExtractor.ExtractAsync`, and `ExtractTarGzAsync` with the same checks for tar: every path through `PackagePath`, links, devices and other special entries refused, duplicates refused, entries and bytes counted as read), within `MoodleImportOptions` (configuration section `CrestApps:Learning:MoodleImport`: `MaxEntries` 100,000, `MaxExpandedBytes` 5 GB and `MaxXmlCharacters` 100 million, because a backup keeps the extracted files of its SCORM packages). Every XML file is read with DTDs prohibited, no resolver and that size limit, and the directories the backup names must stay inside it. Read: `moodle_backup.xml` (a course backup only), `course/course.xml`, `course/enrolments.xml`, `course/completion.xml`, `gradebook.xml`, `sections/section_*/section.xml`, `activities/<type>_<id>/` (`module.xml`, `<type>.xml`, `inforef.xml`, `grades.xml`), `questions.xml` (Moodle 4 question bank entries with the latest ready version of each, or Moodle 3 questions) and `files.xml`, whose files are under `files/` by content hash. An enrolment password is never read, only whether there is one.
+
+The extracted backup stays in a temporary folder while the import's reader is open (`MoodleWorkspaces`); every row carries a random token for it, and the handlers act only on rows of a file the Moodle format read. A file that is not a readable course backup is one failed row with the reason.
+
+### Rows and mapping
+
+The course is the first row, then each activity in section order as the item that fits it (`MoodleCourseRows`); `MoodleImportHandler` imports them:
+
+| Moodle | Becomes |
+| --- | --- |
+| Course | Title, summary (plain text in `CoursePart.Summary`, sanitized HTML in the body), code (the id number, or the short name when it differs from the title), start and end dates, its category (found by name in the course categories, added when missing: a backup keeps only the category's own name), enrolment and completion (below). |
+| Sections | Outline sections `moodle-<section id>` in order, with their summaries and the text of their labels; sections and items of the course's own are kept. |
+| `scorm` (stored in the backup) | A learning package through `LearningPackageImporter`, with the checks of an upload; a refusal is a failed row with the reason the upload page gives (`PackageImportErrorText`). |
+| `quiz` | A quiz: time limit, attempts, grading method, navigation, open and close dates, pass mark (grade to pass over the most points). Fixed questions in slot order; random slots become draw rules from the bank of their category, which gets every question of the category. |
+| Questions | `MoodleQuestionMapper` (`Learning.Assessments.Core`) maps them onto the QTI import's question model, and they are imported through its question rows and column handlers into a bank per Moodle question category (titled after the course and the category, found again by its questions). Multiple choice becomes single or multiple choice (partial credit for several right answers); true/false, short answer (the answers worth the full mark, case), numerical (answer and tolerance), essay (grader information as guidance) and matching keep their kind; drag into text and gap select become fill in the blanks, typed, without their unused choices. |
+| `resource` | A file lesson; the files go to the media library under `mediafields/FileLesson/<item id>/`, shown by their own names, within the media library's allowed extensions and largest size. |
+| `url` | A link lesson (http and https only). |
+| `page` | A page lesson. |
+| `label` | No item: its text joins its section's summary. |
+
+**Enrolment:** self enrolment with a key becomes the key mode, and the key is never imported (a failed row says to set one, and the course editor asks for it); self enrolment without a key is open; manual enrolment only is closed; Moodle's `apply` plugin is approval; a self enrolment duration is the access length.
+
+**Completion:** the activities of the course completion criteria are required in the outline and the others optional (without activity criteria, every activity with completion tracking is required). A course grade to pass becomes the **Minimum grade** rule, as a percentage of the course's most points; manual completion by a role becomes **Staff approval**. Per item (`MoodleCompletion`): a SCORM package with a required score passes at that score, one with a passing grade at the grade to pass, and otherwise completes on the status it reports; manual completion is marked done; a quiz with a passing grade is passed, with a grade graded, otherwise submitted; files, links and pages are viewed.
+
+Each item joins the course (`ContainedPart`) and its place in its section, after the items that come before it in Moodle.
+
+### What is reported
+
+Each is a failed row naming the course and the activity, in the category **Not imported from Moodle** or **Needs attention after the Moodle import**: activity types the site has no item for (assignment, forum, choice, feedback, glossary, database, IMS content package, MooTyper...), SCORM packages kept outside the backup or refused, questions of other types (description, embedded answers, calculated, drag and drop onto an image...), questions whose text shows a picture, answers with pictures, matching questions with distractors, short answers with a wildcard, questions the backup lacks; cohort sync, guest access and other enrolment methods, completion on a date, a duration, unenrolment, self completion or other courses, and "any condition" completion; and what to finish by hand: the enrollment key, a quiz password, hidden courses and activities, a SCORM new window or attempt limit, label pictures.
+
+### Importing again
+
+`MoodleSourceRowFilter` gives a row the id of the course or item an earlier import made (`LearningSourceIndex`, of the row's type, editable by the person who queued the import), so the import updates it. Activities added since join their section in their place. Questions are matched by their source identifier (`QuestionSourceIndex`). A SCORM package is imported again each time, and its earlier file stays in the protected store.
+
+### Not built
+
+The web-services path (`core_course_get_contents`); pictures and media inside summaries, labels and questions; course images; users, enrolments and attempts; cohorts, competencies, groups and access restrictions; question categories no quiz uses.
 
 ## Recipe and deployment steps
 

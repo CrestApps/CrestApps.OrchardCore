@@ -1363,6 +1363,26 @@ Found on real production packages: Articulate Rise and Storyline 360 run Articul
 
 **Not done.** No DNS or TLS was set up (local only). The Rise and Storyline packages reported no score (they have no scored quiz). All packages of a tenant share the content host's origin (documented).
 
+### Moodle migration: importer, course categories and course dates (branch `ma/lms-package-content-host`)
+
+Items 2-4 of section 3 of `remaining-work.md`, to move the production Moodle site's 449 courses.
+
+**Built.**
+
+- **Course dates** (`cac60cf24`): `CoursePart.StartsUtc`/`EndsUtc`, entered in the person's time zone. Before the start the access service refuses items (`CourseNotStarted`); the end date locks nothing, because in Moodle it only takes a course out of "in progress" (256 of the 449 courses have one, many in 2018), so an ended course is listed under Past courses on My learning. The access length after enrollment works beside both.
+- **Course categories** (`adc810c5f`): the Course Categories feature on Orchard Core Taxonomies (field, taxonomy, admin list filter through Taxonomies Contents List Filters), keeping a field or a "Course categories" taxonomy a site made by hand; the course catalog `/learning/catalog` with category browsing (sub-categories included) and a title search.
+- **Moodle import** (`795033cc2` reader with tar.gz in the safe archive rules, `bbea3df19` source identifiers and `PackageImportErrorText`, `35bdce5b1` mapping): a ContentTransfer format on the Course type, as the QTI import (slice 6) is on question types, using its three extension points (import-only per-type format, row content types, `Fail`) and its question rows and column handlers.
+
+**Differences from the plan, and why.**
+
+- The importer lives in the Learning Assessments module (feature Learning Moodle Import) because it reuses the QTI import's question rows and handlers there; it reaches packages through `Learning.Packages.Core` and carries the Packages module as a dependency.
+- One row per course and per activity, the course first: each activity's item fails or imports on its own row, which is the failed-row report the task asked for, and joins its course in the same import. A backup is extracted once per read of the file into a workspace the rows name by a random token.
+- A backup keeps only its category's name, not the path, so courses go into the category of that name (added at the top when missing). Building the tree first keeps Moodle's tree.
+- Self enrolment with a key becomes the key mode with no key (a failed row flags it; the course editor requires one).
+- Not built: the web-services path, pictures and media in summaries, labels and questions (item 15), users and attempts, cohorts (item 5), restrictions.
+
+**Tests.** Unit: CourseDatesTests and LearningRefusalTextTests (red 8 of 11, green), CourseCategoriesTests (red 9 of 9, green), MoodleBackupReaderTests (red 10 of 10, green), MoodleQuestionMapperTests (red 15 of 15, green). Integration: CourseCategoriesAndDatesTests (red 4 of 4, green), MoodleImportTests (red 3 of 3, green). The backups are synthetic (`MoodleBackupBuilder`); no customer backup or package is in the repository.
+
 ### Phase 9: AI (branch `ma/learning-phase-9`, stacked on `ma/learning-phase-8`)
 
 **Built.**

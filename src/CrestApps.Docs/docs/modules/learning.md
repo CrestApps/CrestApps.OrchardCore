@@ -19,6 +19,7 @@ The admin screens and learner pages are described in the User Manual: [Courses](
 | Learning | `CrestApps.OrchardCore.Learning` | Contents, Lists, Title, Html, Autoroute, Media, Content Fields, Roles, CrestApps Users, CrestApps Resources |
 | Learner Pages | `CrestApps.OrchardCore.Learning.LearnerPages` | Learning |
 | Self Enrollment | `CrestApps.OrchardCore.Learning.SelfEnrollment` | Learner Pages |
+| Course Categories | `CrestApps.OrchardCore.Learning.CourseCategories` | Learning, Taxonomies, Taxonomies Contents List Filters |
 
 It works with other features when they are on:
 
@@ -152,6 +153,34 @@ With the storefront account (the Users module's **My Account** feature) on, My l
 The course page itself is the course's content page, with the outline and an **Enroll** or **Continue** button. The player tracks time and video watching with the `learning-player` script and refuses progress for an enrollment that is not the signed-in person's (404).
 
 The **catalog** is Orchard Core search: the **Learning course catalog** recipe creates a Lucene index named `courses` of published courses, searchable by everyone at `/search/courses`.
+
+## Course dates
+
+A course may have a start date and an end date (`CoursePart.StartsUtc` and `EndsUtc`), entered on the course editor's **Dates** card in the person's time zone (`ILocalClock`, `ToUtcLenientAsync`) and kept in UTC. `CourseSchedules.Of(part, utcNow)` says whether a course is `NotStarted`, `Open` or `Ended`.
+
+- **Before the start**, learners see the course and may enroll, but `ICourseAccessService` refuses its items: `NotReleased` with the `CourseNotStarted` refusal ("The course has not started yet.") and the start date as `AvailableFromUtc`. Staff and free previews are not affected, and the player locks every item until the start.
+- **After the end**, nothing is locked. This follows Moodle, where the end date mostly moves a course out of "in progress" on the dashboard and does not close it: an open enrollment in an ended course is listed under **Past courses** on My learning, with **Continue**, and the catalog and the course page say **Ended on**. Self enrollment stays open; close it with the enrollment mode.
+- The **access length after enrollment** (`AccessDays`, the enrollment's access end) keeps ending each learner's access, whatever the dates.
+
+The dates show on the course page, in the course summary display and in the catalog, through the `DateTime` shape, never as UTC.
+
+## Course categories
+
+The **Course Categories** feature gives courses a category tree from Orchard Core **Taxonomies**, the building block that owns categorizing content:
+
+- Its migration adds a **Category** taxonomy field to the Course type's own part, creates the **Course categories** taxonomy (term type `CourseCategory`, alias and path `course-categories`) once the migration is committed, and adds the taxonomy to the **Taxonomy filters** setting of the admin content list (the Taxonomies Contents List Filters feature), so the list of courses filters by category.
+- A site that already has a taxonomy field on the Course type's own part keeps it (the one named `Category` first) with its taxonomy; a site that already has a taxonomy titled **Course categories**, such as one made by hand, gets the new field pointed at it instead of a second taxonomy (`CourseCategorySetup`). A field named `Category` of another kind makes the new field `CourseCategory`.
+- `CourseCategoryService` (`Learning.Core`) reads the field and the tree (`TaxonomyTermTree`), finds a category by name or by path from the top and adds what is missing (publishing the taxonomy), and reads and sets a course's categories. Without a taxonomy field on courses there are no categories; nothing else needs the feature.
+
+No new records: the taxonomy, its terms and the field move with the `Content` and `ContentDefinition` steps, and the filter setting with the site settings deployment step of Taxonomies.
+
+### Course catalog
+
+With **Learner Pages** on, `/learning/catalog` (route `LearningCatalog`, for people with **View content**) lists the published courses by title, 24 to a page, with a title search (`q`) and, when courses have categories, a category tree to browse (`category`): a category lists its own courses and those of the categories under it (`CourseCategoryTerms.WithDescendants`, `TaxonomyIndex`). Each course shows its code, categories, dates and summary. My learning links to it. Full-text search stays on the **Learning course catalog** recipe's search index.
+
+## Imported courses
+
+`CoursePart.SourceIdentifier` and `CourseItemPart.SourceIdentifier` keep where a course or a course item was imported from, such as `moodle:1a2b3c4d5e6f:course:12` and `...:cm:345`, and `LearningSourceIndex` (migration step 5) finds the latest version by it, so an importer updates what an earlier import made. The [Moodle import](./learning-assessments#moodle-import) uses them.
 
 ## Permissions
 

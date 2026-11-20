@@ -118,7 +118,7 @@ There is also the learning path "30 Day Learning Plan" (`4m7gmtf72s7by2097cge1s2
 Build, in this order. Items 1-6 cover almost every course; the rest is the long tail.
 
 1. ~~**SCORM compatibility.**~~ Done: section 1 above (`ma/lms-package-content-host`); affects 371 courses.
-2. **A Moodle importer.** A ContentTransfer format, like the QTI import, that reads a Moodle course backup (`.mbz`: `moodle_backup.xml`, `course/`, `sections/`, `activities/`, `files/`) and creates:
+2. ~~**A Moodle importer.**~~ Done on `ma/lms-package-content-host`: Learning Moodle Import (`795033cc2` reader, `bbea3df19` source index, `35bdce5b1` mapping; docs in the docs commit). The web-services path is not built. A ContentTransfer format, like the QTI import, that reads a Moodle course backup (`.mbz`: `moodle_backup.xml`, `course/`, `sections/`, `activities/`, `files/`) and creates:
    - the course in its category;
    - the sections as outline groups;
    - the SCORM packages;
@@ -128,8 +128,8 @@ Build, in this order. Items 1-6 cover almost every course; the rest is the long 
    - enrolment methods.
 
    It must report unsupported items per course. A web-services path (`core_course_get_contents`) is an alternative when backups aren't available.
-3. **Course categories (449 courses).** A category tree on courses (Taxonomies), with category browsing and filters in the catalog and the admin lists.
-4. **Course start and end dates (449).** A course opens or closes on dates, in addition to the access length after enrolment.
+3. ~~**Course categories (449 courses).**~~ Done: Course Categories feature and the course catalog (`adc810c5f`). A category tree on courses (Taxonomies), with category browsing and filters in the catalog and the admin lists.
+4. ~~**Course start and end dates (449).**~~ Done (`cac60cf24`): no access before the start; the end date does not lock (Moodle's meaning), it moves the course to Past courses. A course opens or closes on dates, in addition to the access length after enrolment.
 5. **Cohorts (300 courses; the learning plans are assigned to cohorts).** Named, hand-managed groups of people in Users, beside the rule-based audiences. Enrol in a course or a learning path by cohort, with cohort sync: joining adds the person, leaving removes them.
 6. **Inline text and media in a course (1,234 labels in 195 courses).** A "Text" course item or outline block that keeps HTML, images and video embeds, and isn't tracked for completion.
 7. **Quizzes (152 quiz courses):**
