@@ -26,6 +26,10 @@ public sealed class DefaultUserAudienceService : IUserAudienceService
     private readonly Dictionary<string, IReadOnlyCollection<string>> _resolved = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(string Name, string UserId), bool> _membership = [];
 
+    // The definitions this service saved or deleted: the cached immutable document does not show them until the
+    // session commits, so the reads that follow a change in the same request or run use this copy instead.
+    private UserAudiencesDocument _changed;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -50,7 +54,7 @@ public sealed class DefaultUserAudienceService : IUserAudienceService
     /// <inheritdoc/>
     public async Task<IReadOnlyList<UserAudienceSummary>> ListAsync(CancellationToken cancellationToken = default)
     {
-        var document = await _documents.GetOrCreateImmutableAsync();
+        var document = await GetDocumentAsync();
 
         return _providers
             .Select(provider => new UserAudienceSummary(provider.Name, provider.Name, IsDefined: false))
@@ -67,7 +71,7 @@ public sealed class DefaultUserAudienceService : IUserAudienceService
             return null;
         }
 
-        return (await _documents.GetOrCreateImmutableAsync()).Find(name.Trim());
+        return (await GetDocumentAsync()).Find(name.Trim());
     }
 
     /// <inheritdoc/>
@@ -110,6 +114,7 @@ public sealed class DefaultUserAudienceService : IUserAudienceService
         document.Audiences.RemoveAll(audience => string.Equals(audience.Name, definition.Name, StringComparison.OrdinalIgnoreCase));
         document.Audiences.Add(definition);
         await _documents.UpdateAsync(document);
+        Changed(document);
 
         return errors;
     }
@@ -125,6 +130,7 @@ public sealed class DefaultUserAudienceService : IUserAudienceService
         }
 
         await _documents.UpdateAsync(document);
+        Changed(document);
 
         return true;
     }
@@ -281,6 +287,18 @@ public sealed class DefaultUserAudienceService : IUserAudienceService
         }
 
         return members ?? [];
+    }
+
+    private async Task<UserAudiencesDocument> GetDocumentAsync()
+        => _changed ?? await _documents.GetOrCreateImmutableAsync();
+
+    private void Changed(UserAudiencesDocument document)
+    {
+        _changed = document;
+
+        // A changed definition changes who is in it: what was resolved before the change is dropped.
+        _resolved.Clear();
+        _membership.Clear();
     }
 
     private IUserAudienceProvider FindProvider(string name)

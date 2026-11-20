@@ -27,6 +27,11 @@ public sealed class RequiredLearningPagesTests
     {
         // Arrange: an audience of the learners of the fixture course, and a rule that names the spare learner.
         var name = "required-" + Guid.NewGuid().ToString("n")[..6];
+
+        // The audiences are read once first, as on a running site: the document is cached from then on, and an audience
+        // saved later must still be found in the scope that saved it.
+        await _fixture.InTenantAsync(services => services.GetRequiredService<IUserAudienceService>().ListAsync());
+
         var (members, run, state) = await _fixture.InTenantAsync(async services =>
         {
             var audiences = services.GetRequiredService<IUserAudienceService>();
