@@ -23,7 +23,7 @@ using OrchardCore.Title.Models;
 namespace CrestApps.OrchardCore.Learning.IntegrationTests;
 
 /// <summary>
-/// Remaining work section 3, items 11 to 13, on a running site: the media limits and original file names, the
+/// Remaining work section 3, items 11 to 13, on a running site: Media's own limits and original file names, the
 /// coursework sign-off, the IMS content package, and the feedback survey and choice.
 /// </summary>
 [Collection(LearningSiteCollection.Name)]
@@ -37,15 +37,14 @@ public sealed class LearningActivitiesTests
     }
 
     [Fact]
-    public async Task Media_TakesLargeFiles_OpenDocumentSpreadsheets_AndCaptions()
+    public async Task Media_KeepsItsOwnLimits_WithLearningOn()
     {
         // Act
         var options = await _fixture.InTenantAsync(services => Task.FromResult(services.GetRequiredService<IOptions<MediaOptions>>().Value));
 
-        // Assert
-        Assert.True(options.MaxFileSize >= LearningMediaOptions.DefaultMaxFileSize, $"MaxFileSize is {options.MaxFileSize}.");
-        Assert.Contains(".ods", options.AllowedFileExtensions);
-        Assert.Contains(".vtt", options.AllowedFileExtensions);
+        // Assert: review round 11, R3. Media's limits are Media's configuration; Learning adds no file type and no size.
+        Assert.True(options.MaxFileSize < 1_000_000_000, $"MaxFileSize is {options.MaxFileSize}.");
+        Assert.DoesNotContain(".ods", options.AllowedFileExtensions);
         Assert.DoesNotContain(".exe", options.AllowedFileExtensions);
     }
 

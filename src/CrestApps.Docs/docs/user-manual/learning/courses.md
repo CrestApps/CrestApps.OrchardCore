@@ -65,7 +65,7 @@ On the **Course staff** card, choose people for each role:
 
 ## Lesson files
 
-Learners see each file under the name it had when you uploaded it. Files can be up to 2 GB, which covers training videos, and OpenDocument files (such as `.ods` spreadsheets), rich text, plain text and caption files are taken besides the usual Office and PDF files; your administrator can change both. Files attached to a lesson are shown only to people who may open the lesson; someone who is not enrolled who opens the address of the file gets *Not found*. Your administrator turns this on with the **Learning setup** recipe and, if the rest of the media library must stay public, also runs **Learning public media**.
+Learners see each file under the name it had when you uploaded it. How large a file can be, and which file types are taken, is set by your administrator for the whole media library (30 MB and the usual Office, PDF, picture, audio and video files unless they raise it for training videos, OpenDocument files such as `.ods` spreadsheets, or caption files). Files attached to a lesson are shown only to people who may open the lesson; someone who is not enrolled who opens the address of the file gets *Not found*. Your administrator turns this on with the **Learning setup** recipe and, if the rest of the media library must stay public, also runs **Learning public media**.
 
 ## The catalog
 

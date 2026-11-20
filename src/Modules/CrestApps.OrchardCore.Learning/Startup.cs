@@ -86,8 +86,6 @@ public sealed class Startup : StartupBase
         services.AddNumberSequence();
         services.AddLearningCore();
         services.Configure<LearningUpkeepOptions>(_configuration.GetSection("CrestApps:Learning:Upkeep"));
-        services.Configure<LearningMediaOptions>(_configuration.GetSection("CrestApps:Learning:Media"));
-        services.AddTransient<IPostConfigureOptions<global::OrchardCore.Media.MediaOptions>, LearningMediaOptionsSetup>();
         services.AddScoped<CourseEditorOptions>();
         services.AddUserAudienceRuleSource<CourseLearnerAudienceRuleSource>();
         services.AddScoped<EnrollmentListService>();

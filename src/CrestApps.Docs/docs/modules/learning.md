@@ -294,25 +294,27 @@ Zero turns a notice off. The upkeep runs every hour, expires enrollments whose a
 
 ### Media limits
 
-Orchard Core Media takes files of up to 30 MB by default and no OpenDocument spreadsheets or caption files, which is too little for training videos and handouts. Learning raises Media's limits after Media reads its own configuration (`LearningMediaOptions`, an `IPostConfigureOptions<MediaOptions>`), from `OrchardCore:CrestApps:Learning:Media`:
+Orchard Core Media takes files of up to 30 MB by default and no OpenDocument spreadsheets or caption files, which is too little for training videos and handouts. Learning does not change Media's limits: they belong to Orchard Core Media, are the same for every upload of the tenant (the media library included), and are set in Media's own configuration section, `OrchardCore:OrchardCore_Media`. A site that keeps large lesson files raises them there:
 
 ```json
 {
   "OrchardCore": {
-    "CrestApps": {
-      "Learning": {
-        "Media": {
-          "MaxFileSize": 2147483648,
-          "AdditionalFileExtensions": [ ".ods", ".odp", ".odg", ".odt", ".rtf", ".txt", ".pps", ".ppsx", ".vsdx", ".vtt", ".srt" ]
-        }
-      }
+    "OrchardCore_Media": {
+      "MaxFileSize": 2147483648,
+      "AllowedFileExtensions": [
+        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".ico",
+        ".pdf", ".doc", ".docx", ".ppt", ".pptx", ".pps", ".ppsx", ".odt", ".xls", ".xlsx", ".psd", ".ods", ".odp", ".odg", ".rtf", ".txt", ".vsdx",
+        ".mp3", ".m4a", ".ogg", ".wav",
+        ".mp4", ".m4v", ".mov", ".wmv", ".avi", ".mpg", ".ogv", ".3gp", ".webm",
+        ".vtt", ".srt"
+      ]
     }
   }
 }
 ```
 
-- `MaxFileSize` (bytes, 2 GB by default) becomes Media's `MaxFileSize` when it is larger; Media's own limit is kept when it is larger, and `0` leaves Media's limit alone. It is the tenant's media limit, for the media library too, not only lesson files.
-- `AdditionalFileExtensions` are added to Media's allowed extensions (the list above when it is not set). Programs, scripts, web pages, server pages, SVG and macro-enabled Office files are never added.
+- `MaxFileSize` is in bytes (2 GB above).
+- `AllowedFileExtensions` replaces Media's list, so keep the default extensions you still want next to the ones you add (OpenDocument and other office files, plain text, and the `.vtt` and `.srt` caption files above). Never add programs, scripts, web or server pages, or macro-enabled Office files.
 
 Media uploads are sent in chunks of `MaxUploadChunkSize` (100 MB by default), and Media raises Kestrel's request limit for its own upload endpoint. Behind IIS (Azure App Service on Windows), IIS refuses a request over `requestLimits maxAllowedContentLength` (30,000,000 bytes by default) before the site sees it: raise it above the chunk size, or set `OrchardCore:Media:MaxUploadChunkSize` below it. Orchard Core logs a warning at startup when the two disagree. A reverse proxy in front of the site (nginx `client_max_body_size`, for one) needs the same.
 

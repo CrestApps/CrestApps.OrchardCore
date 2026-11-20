@@ -1,95 +1,39 @@
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Services;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Media;
 
 namespace CrestApps.OrchardCore.Tests.Learning;
 
 /// <summary>
-/// Remaining work section 3, item 11: lesson files and videos over Orchard Core Media's 30 MB default, OpenDocument
-/// and other office files, and the original file name shown to learners instead of the stored name.
+/// Remaining work section 3, item 11: the original file name shown to learners instead of the stored name, and Orchard
+/// Core Media's limits left to Media's own configuration (review round 11, R3).
 /// </summary>
 public sealed class LearningMediaTests
 {
     [Fact]
-    public void LearningLimit_RaisesTheMediaUploadLimit_AboveThirtyMegabytes()
+    public void Round11R3_EnablingLearning_LeavesMediaOptionsAsConfigured()
     {
-        // Arrange
-        var media = new MediaOptions { MaxFileSize = 30_000_000, AllowedFileExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) };
+        // Arrange: Orchard Core Media configured by the site, then Learning's services added.
+        var services = new ServiceCollection();
+        services.AddOptions();
+        services.Configure<MediaOptions>(options =>
+        {
+            options.MaxFileSize = 30_000_000;
+            options.AllowedFileExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".pdf" };
+        });
+
+        new CrestApps.OrchardCore.Learning.Startup(new TestShellConfiguration(new ConfigurationBuilder().Build())).ConfigureServices(services);
 
         // Act
-        Configure(media, new LearningMediaOptions());
-
-        // Assert
-        Assert.Equal(LearningMediaOptions.DefaultMaxFileSize, media.MaxFileSize);
-        Assert.True(media.MaxFileSize > 1_000_000_000);
-    }
-
-    [Fact]
-    public void LargerMediaLimit_IsKept()
-    {
-        // Arrange
-        var media = new MediaOptions { MaxFileSize = 5_000_000_000, AllowedFileExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) };
-
-        // Act
-        Configure(media, new LearningMediaOptions { MaxFileSize = 200_000_000 });
-
-        // Assert
-        Assert.Equal(5_000_000_000, media.MaxFileSize);
-    }
-
-    [Fact]
-    public void ZeroLimit_LeavesTheMediaLimitAlone()
-    {
-        // Arrange
-        var media = new MediaOptions { MaxFileSize = 30_000_000, AllowedFileExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) };
-
-        // Act
-        Configure(media, new LearningMediaOptions { MaxFileSize = 0 });
+        var media = services.BuildServiceProvider().GetRequiredService<IOptions<MediaOptions>>().Value;
 
         // Assert
         Assert.Equal(30_000_000, media.MaxFileSize);
-    }
-
-    [Theory]
-    [InlineData(".ods")]
-    [InlineData(".odp")]
-    [InlineData(".odg")]
-    [InlineData(".rtf")]
-    [InlineData(".txt")]
-    [InlineData(".vtt")]
-    [InlineData(".srt")]
-    public void OfficeAndCaptionFiles_AreAllowed(string extension)
-    {
-        // Arrange
-        var media = new MediaOptions { AllowedFileExtensions = new HashSet<string>([".pdf"], StringComparer.OrdinalIgnoreCase) };
-
-        // Act
-        Configure(media, new LearningMediaOptions());
-
-        // Assert
-        Assert.Contains(extension, media.AllowedFileExtensions);
-        Assert.Contains(".pdf", media.AllowedFileExtensions);
-    }
-
-    [Theory]
-    [InlineData(".js")]
-    [InlineData(".exe")]
-    [InlineData(".aspx")]
-    [InlineData(".svg")]
-    [InlineData(".html")]
-    [InlineData(".xlsm")]
-    public void ExecutableOrScriptFiles_AreNeverAdded(string extension)
-    {
-        // Arrange
-        var media = new MediaOptions { AllowedFileExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) };
-
-        // Act
-        Configure(media, new LearningMediaOptions { AdditionalFileExtensions = [".ods", extension] });
-
-        // Assert
-        Assert.Contains(".ods", media.AllowedFileExtensions);
-        Assert.DoesNotContain(extension, media.AllowedFileExtensions);
+        Assert.Equal([".pdf"], media.AllowedFileExtensions);
     }
 
     [Theory]
@@ -109,6 +53,25 @@ public sealed class LearningMediaTests
         Assert.Equal(expected, name);
     }
 
-    private static void Configure(MediaOptions media, LearningMediaOptions learning)
-        => new LearningMediaOptionsSetup(Options.Create(learning)).PostConfigure(Options.DefaultName, media);
+    private sealed class TestShellConfiguration : IShellConfiguration
+    {
+        private readonly IConfiguration _configuration;
+
+        public TestShellConfiguration(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
+        public string this[string key]
+        {
+            get => _configuration[key];
+            set => _configuration[key] = value;
+        }
+
+        public IEnumerable<IConfigurationSection> GetChildren() => _configuration.GetChildren();
+
+        public Microsoft.Extensions.Primitives.IChangeToken GetReloadToken() => _configuration.GetReloadToken();
+
+        public IConfigurationSection GetSection(string key) => _configuration.GetSection(key);
+    }
 }

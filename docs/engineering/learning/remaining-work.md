@@ -151,7 +151,7 @@ Build, in this order. Items 1-6 cover almost every course; the rest is the long 
    - hidden items or courses that don't block a learning path from completing (the 30 Day plan holds 4 hidden courses).
 10. ~~**SCORM settings:**~~ Done on `ma/lms-package-content-host` (`d83b847fc`): open in a new window (a window page of the site, through the content-host bridge when a host is set), attempt limits (then review only), grading method across attempts (highest, average, first, last). New window (18), attempt limits (9), grading method (10).
 11. ~~**Media:**~~ Done on `ma/lms-activities-c0c0d6` (plan section 19, "Moodle migration: media, coursework and small activities"):
-    - files over 30 MB: Learning raises Orchard Core Media's `MaxFileSize` to 2 GB (`CrestApps:Learning:Media:MaxFileSize`); the IIS and proxy request limits are documented;
+    - files over 30 MB: set in Orchard Core Media's own configuration (`OrchardCore_Media:MaxFileSize`, documented on the Learning page; Learning no longer changes Media's options, review round 11 R3); the IIS and proxy request limits are documented;
     - `.ods`, `.odp`, `.odg`, `.odt`, `.rtf`, `.txt`, `.pps`, `.ppsx`, `.vsdx`, `.vtt` and `.srt` are allowed (configurable; programs, scripts and macro files never);
     - learners see the original file name (`MediaField-LearningFiles`).
 12. ~~**Assignments:**~~ Done on `ma/lms-activities-c0c0d6`:
