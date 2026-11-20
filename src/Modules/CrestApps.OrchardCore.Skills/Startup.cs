@@ -155,7 +155,7 @@ public sealed class SkillsReportsStartup : StartupBase
 /// <summary>
 /// Lets skills and competency frameworks be imported from a file through ContentTransfer.
 /// </summary>
-[RequireFeatures("CrestApps.OrchardCore.ContentTransfer")]
+[RequireFeatures(ContentTransferConstants.Feature.ModuleId)]
 public sealed class SkillsContentTransferStartup : StartupBase
 {
     /// <inheritdoc />

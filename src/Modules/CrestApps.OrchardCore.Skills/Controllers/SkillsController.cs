@@ -72,7 +72,7 @@ public sealed class SkillsController : Controller
 
         // Skills are imported from a file by ContentTransfer, when it is on.
         var importUrl = HttpContext.RequestServices.GetServices<IContentTransferRecordImporter>().Any(importer => importer.Name == SkillsImportTarget.TargetName)
-            ? Url.RouteUrl(new { area = "CrestApps.OrchardCore.ContentTransfer", controller = "Admin", action = "Import", contentTypeId = SkillsImportTarget.TargetName })
+            ? Url.RouteUrl(new { area = ContentTransferConstants.Feature.ModuleId, controller = "Admin", action = "Import", contentTypeId = SkillsImportTarget.TargetName })
             : null;
 
         return View(new SkillsListViewModel

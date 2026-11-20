@@ -930,10 +930,10 @@ internal sealed class ProjectImportTarget : IContentTransferRecordImporter
 }
 ```
 
-Register it in a startup that requires the ContentTransfer feature, and reference only `CrestApps.OrchardCore.ContentTransfer.Abstractions`:
+Register it in a startup that requires the ContentTransfer feature. Reference `CrestApps.OrchardCore.ContentTransfer.Core`, which brings the abstractions and the feature id constant:
 
 ```csharp
-[RequireFeatures("CrestApps.OrchardCore.ContentTransfer")]
+[RequireFeatures(ContentTransferConstants.Feature.ModuleId)]
 public sealed class ContentTransferStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
