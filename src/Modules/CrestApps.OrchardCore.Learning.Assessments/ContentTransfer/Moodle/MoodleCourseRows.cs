@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Moodle;
 using CrestApps.OrchardCore.Learning.Core.Moodle;
+using CrestApps.OrchardCore.Learning.Coursework;
 using CrestApps.OrchardCore.Learning.Packages;
+using CrestApps.OrchardCore.Learning.Surveys;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.ContentTransfer.Moodle;
@@ -35,7 +37,8 @@ public static class MoodleColumns
 /// <summary>
 /// Writes a Moodle backup as rows: the course first, then each activity in the order of its section, as the item that
 /// fits it, or as a failed row saying why it is not imported; a failed row for each question of a quiz that is not
-/// imported and for each setting the site does not keep. Labels write no row: their text joins their section's summary.
+/// imported and for each setting the site does not keep. A label is a Text item; an assignment, a feedback, a choice and
+/// an IMS content package are imported when the feature of their item is on.
 /// </summary>
 internal static class MoodleCourseRows
 {
@@ -45,10 +48,32 @@ internal static class MoodleCourseRows
     public static readonly IReadOnlyDictionary<string, string> ItemTypes = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["scorm"] = PackagesConstants.ContentTypes.Package,
+        ["imscp"] = PackagesConstants.ContentTypes.Package,
         ["quiz"] = AssessmentsConstants.ContentTypes.Quiz,
         ["resource"] = LearningConstants.ContentTypes.FileLesson,
         ["url"] = LearningConstants.ContentTypes.LinkLesson,
         ["page"] = LearningConstants.ContentTypes.PageLesson,
+        ["label"] = LearningConstants.ContentTypes.TextBlock,
+        ["assign"] = CourseworkConstants.ContentTypes.Coursework,
+        ["feedback"] = SurveysConstants.ContentTypes.FeedbackSurvey,
+        ["choice"] = SurveysConstants.ContentTypes.Choice,
+    };
+
+    /// <summary>
+    /// The course item kind of each module's item, which is registered only while the feature of the item is on.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> ItemKinds = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["scorm"] = PackagesConstants.PackageKind,
+        ["imscp"] = PackagesConstants.PackageKind,
+        ["quiz"] = AssessmentsConstants.QuizKind,
+        ["resource"] = LearningConstants.CourseItemKinds.File,
+        ["url"] = LearningConstants.CourseItemKinds.Link,
+        ["page"] = LearningConstants.CourseItemKinds.Page,
+        ["label"] = LearningConstants.CourseItemKinds.Text,
+        ["assign"] = CourseworkConstants.CourseworkKind,
+        ["feedback"] = SurveysConstants.SurveyKind,
+        ["choice"] = SurveysConstants.SurveyKind,
     };
 
     /// <summary>
@@ -81,12 +106,16 @@ internal static class MoodleCourseRows
     /// <param name="token">The token of the extracted backup.</param>
     /// <param name="questionTypes">The question types, to tell which questions are imported.</param>
     /// <param name="S">The localizer of the reasons.</param>
+    /// <param name="hasKind">Tells whether a course item kind is registered, that is whether its feature is on; every
+    /// kind when <see langword="null"/>.</param>
     /// <returns>The rows.</returns>
-    public static IReadOnlyList<string[]> Write(MoodleBackup backup, string token, QuestionTypeOptions questionTypes, IStringLocalizer S)
+    public static IReadOnlyList<string[]> Write(MoodleBackup backup, string token, QuestionTypeOptions questionTypes, IStringLocalizer S, Func<string, bool> hasKind = null)
     {
         ArgumentNullException.ThrowIfNull(backup);
         ArgumentNullException.ThrowIfNull(questionTypes);
         ArgumentNullException.ThrowIfNull(S);
+
+        hasKind ??= _ => true;
 
         var course = backup.Course;
         var title = string.IsNullOrWhiteSpace(course.FullName) ? course.ShortName : course.FullName;
@@ -154,6 +183,20 @@ internal static class MoodleCourseRows
             }
         }
 
+        // Completion by a role becomes approval by the course staff in the matching role; a role the course staff does not
+        // have needs people added in it.
+        foreach (var role in course.CompletionCriteria.Where(criterion => criterion.Type == MoodleCompletionCriterion.Role).Select(criterion => MoodleCompletion.StaffRole(criterion.RoleShortName)).Distinct(StringComparer.Ordinal))
+        {
+            if (role is null)
+            {
+                Attention(S["{0}: the course completes in Moodle when a role marks it; any member of the course staff may approve the completion here.", title]);
+            }
+            else if (role is not (LearningConstants.CourseStaffRoles.Instructor or LearningConstants.CourseStaffRoles.Assistant or LearningConstants.CourseStaffRoles.Grader or LearningConstants.CourseStaffRoles.Observer))
+            {
+                Attention(S["{0}: the course completes in Moodle when a {1} marks it; only course staff in the role {1} may approve it here, so add people in that role.", title, role]);
+            }
+        }
+
         if (course.CompletionAny && course.CompletionCriteria.Select(criterion => criterion.Type).Distinct().Count() > 1)
         {
             Attention(S["{0}: Moodle completes the course when any one of its conditions is met; here every condition must be met.", title]);
@@ -171,19 +214,16 @@ internal static class MoodleCourseRows
             var name = string.IsNullOrWhiteSpace(activity.Name) ? activity.ModuleId : activity.Name.Trim();
             var kind = Kind(activity.ModuleName, S);
 
-            if (activity.ModuleName == "label")
+            if (!ItemTypes.TryGetValue(activity.ModuleName, out var contentType))
             {
-                if (HasMedia(activity.Get("intro")))
-                {
-                    Attention(S["{0}: the label \"{1}\" shows pictures or media, which are not imported; its text joined its section's summary.", title, name]);
-                }
+                NotImported(S["{0}: the {1} \"{2}\" (activity {3}) was not imported: the site has no {1} activity yet.", title, kind, name, activity.ModuleId]);
 
                 continue;
             }
 
-            if (!ItemTypes.TryGetValue(activity.ModuleName, out var contentType))
+            if (!hasKind(ItemKinds[activity.ModuleName]))
             {
-                NotImported(S["{0}: the {1} \"{2}\" (activity {3}) was not imported: the site has no {1} activity yet.", title, kind, name, activity.ModuleId]);
+                NotImported(S["{0}: the {1} \"{2}\" (activity {3}) was not imported: turn on the feature of its item ({4}) and import the backup again.", title, kind, name, activity.ModuleId, FeatureName(activity.ModuleName, S)]);
 
                 continue;
             }
@@ -205,14 +245,30 @@ internal static class MoodleCourseRows
                         continue;
                     }
 
-                    if (activity.Get("popup") == "1")
+                    break;
+
+                case "imscp":
+                    if (ImsFiles(backup, activity).Count == 0)
                     {
-                        Attention(S["{0}: the SCORM package \"{1}\" opens in a new window in Moodle; here it opens in the page.", title, name]);
+                        NotImported(S["{0}: the IMS content package \"{1}\" (activity {2}) was not imported: the backup has no file for it.", title, name, activity.ModuleId]);
+
+                        continue;
                     }
 
-                    if (int.TryParse(activity.Get("maxattempt"), out var attempts) && attempts > 0)
+                    break;
+
+                case "assign":
+                    if (MoodleAssignments.Read(activity).UsesScale)
                     {
-                        Attention(S["{0}: the SCORM package \"{1}\" allows {2} attempts in Moodle; the site does not limit package attempts yet.", title, name, attempts]);
+                        Attention(S["{0}: the assignment \"{1}\" is graded on a scale in Moodle; here it is graded out of 100 points.", title, name]);
+                    }
+
+                    break;
+
+                case "feedback":
+                    foreach (var skipped in MoodleSurveys.FromFeedback(activity).Skipped.Distinct(StringComparer.Ordinal))
+                    {
+                        Attention(S["{0}: the feedback \"{1}\" has a {2} item, which is not imported.", title, name, skipped]);
                     }
 
                     break;
@@ -256,7 +312,14 @@ internal static class MoodleCourseRows
 
             if (!activity.Visible)
             {
-                Attention(S["{0}: the {1} \"{2}\" is hidden in Moodle. Unpublish it if it should stay hidden.", title, kind, name]);
+                Attention(S["{0}: the {1} \"{2}\" is hidden in Moodle. It is imported as optional, so it holds back no completion; unpublish it if it should stay hidden.", title, kind, name]);
+            }
+
+            var restriction = MoodleRestrictions.Read(activity.Availability);
+
+            if (restriction.Unsupported.Count > 0)
+            {
+                Attention(S["{0}: the {1} \"{2}\" is restricted in Moodle by {3}, which is not imported; restrict it here to an audience if it must stay restricted.", title, kind, name, string.Join(", ", restriction.Unsupported.Distinct(StringComparer.Ordinal))]);
             }
 
             rows.Add(Row(contentType, name, backup.ActivitySource(activity.ModuleId), token));
@@ -293,6 +356,18 @@ internal static class MoodleCourseRows
     /// </summary>
     public static MoodleFile PackageFile(MoodleBackup backup, MoodleActivity activity)
         => activity.Files.FirstOrDefault(file => file.Component == "mod_scorm" && file.FileArea == "package" && backup.GetContentPath(file) is not null);
+
+    /// <summary>
+    /// Gets the files of an IMS content package: the package as it was uploaded, or else the files Moodle extracted.
+    /// </summary>
+    public static IReadOnlyList<MoodleFile> ImsFiles(MoodleBackup backup, MoodleActivity activity)
+    {
+        var uploaded = activity.Files.Where(file => file.Component == "mod_imscp" && file.FileArea == "backup" && backup.GetContentPath(file) is not null).ToList();
+
+        return uploaded.Count > 0
+            ? [uploaded.OrderByDescending(file => file.ItemId, StringComparer.Ordinal).First()]
+            : [.. activity.Files.Where(file => file.Component == "mod_imscp" && file.FileArea == "content" && backup.GetContentPath(file) is not null)];
+    }
 
     /// <summary>
     /// Gets the files of a resource, the main file first.
@@ -415,11 +490,14 @@ internal static class MoodleCourseRows
             _ => module,
         };
 
-    private static bool HasMedia(string html)
-        => !string.IsNullOrEmpty(html) && (html.Contains("@@PLUGINFILE@@", StringComparison.Ordinal) ||
-            html.Contains("<img", StringComparison.OrdinalIgnoreCase) ||
-            html.Contains("<video", StringComparison.OrdinalIgnoreCase) ||
-            html.Contains("<iframe", StringComparison.OrdinalIgnoreCase));
+    private static string FeatureName(string module, IStringLocalizer S)
+        => module switch
+        {
+            "assign" => S["Learning Coursework"],
+            "feedback" or "choice" => S["Learning Surveys"],
+            "scorm" or "imscp" => S["Learning SCORM Packages"],
+            _ => module,
+        };
 
     private static string[] Row(string contentType, string title, string source, string token)
     {

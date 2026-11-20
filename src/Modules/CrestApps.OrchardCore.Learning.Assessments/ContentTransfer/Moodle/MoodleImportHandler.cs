@@ -1,5 +1,6 @@
 using System.Data;
 using System.Globalization;
+using System.IO.Compression;
 using System.Text;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContentTransfer;
@@ -13,9 +14,13 @@ using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Core.Moodle;
 using CrestApps.OrchardCore.Learning.Core.Services;
+using CrestApps.OrchardCore.Learning.Coursework.Models;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Packages.Core.Services;
 using CrestApps.OrchardCore.Learning.Packages.Models;
+using CrestApps.OrchardCore.Learning.Surveys;
+using CrestApps.OrchardCore.Learning.Surveys.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -30,16 +35,19 @@ using OrchardCore.Lists.Models;
 using OrchardCore.Media;
 using OrchardCore.Modules;
 using OrchardCore.Title.Models;
+using OrchardCore.Users;
 using YesSql;
 using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.ContentTransfer.Moodle;
 
 /// <summary>
-/// Imports the rows the Moodle reader wrote: the course (its summary, dates, category, enrolment, completion and its
-/// sections as outline groups, with the items imported before placed in them) and each activity as its item (a SCORM
-/// package through the package importer, a quiz with its questions through the question columns of the QTI import, a
-/// file in the media library, a link, a page), placed in its section of the course. A row with a reason fails with it.
+/// Imports the rows the Moodle reader wrote: the course (its summary with its pictures, its picture, dates, category,
+/// enrolment, completion and its sections as outline groups, with the items imported before placed in them) and each
+/// activity as its item (a SCORM or IMS content package through the package importer, a quiz with its questions through
+/// the question columns of the QTI import, a file in the media library, a link, a page, a label as text, an assignment
+/// as coursework, a feedback or a choice as a survey), with its restrictions and the pictures of its text, placed in its
+/// section of the course. A hidden activity is optional. A row with a reason fails with it.
 /// Only rows of a file the Moodle format read are touched: the Moodle columns of any other file are ignored.
 /// </summary>
 internal sealed class MoodleImportHandler : IContentImportHandler
@@ -50,6 +58,8 @@ internal sealed class MoodleImportHandler : IContentImportHandler
     public const string SectionPrefix = "moodle-";
 
     private const int SummaryLength = 500;
+
+    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg", ".gif", ".webp" };
 
     private readonly IContentManager _contentManager;
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -174,15 +184,21 @@ internal sealed class MoodleImportHandler : IContentImportHandler
         var imported = activity.ModuleName switch
         {
             "scorm" => await ImportPackageAsync(context, backup, activity),
+            "imscp" => await ImportImsPackageAsync(context, backup, activity),
             "resource" => await ImportFileAsync(context, backup, activity),
-            "url" => ImportLink(context, backup, activity),
-            "page" => ImportPage(context, backup, activity),
+            "url" => await ImportLinkAsync(context, backup, activity),
+            "page" => await ImportPageAsync(context, backup, activity),
+            "label" => await ImportLabelAsync(context, backup, activity),
             "quiz" => await ImportQuizAsync(context, backup, activity),
+            "assign" => await ImportAssignmentAsync(context, backup, activity),
+            "feedback" => await ImportSurveyAsync(context, backup, activity, MoodleSurveys.FromFeedback(activity), withBody: true),
+            "choice" => await ImportSurveyAsync(context, backup, activity, MoodleSurveys.FromChoice(activity), withBody: false),
             _ => Fail(context, S["The {0} activity is not imported.", activity.ModuleName]),
         };
 
         if (imported)
         {
+            await ApplyRestrictionsAsync(context.ContentItem, activity);
             await AttachAsync(context.ContentItem, backup, activity);
         }
     }
@@ -191,7 +207,7 @@ internal sealed class MoodleImportHandler : IContentImportHandler
     {
         var course = context.ContentItem;
         var moodle = backup.Course;
-        var summary = Html(moodle.Summary);
+        var summary = Html(moodle.Summary, Urls(await ImportMediaAsync(course, backup, CourseFiles(backup, "summary"))));
 
         course.Alter<CoursePart>(part =>
         {
@@ -209,6 +225,26 @@ internal sealed class MoodleImportHandler : IContentImportHandler
         if (summary is not null)
         {
             course.Alter<HtmlBodyPart>(part => part.Html = summary);
+        }
+
+        // The course's picture (its overview file) is the cover the catalog and the course page show.
+        var cover = (await ImportMediaAsync(course, backup, CourseFiles(backup, "overviewfiles").Where(file => ImageExtensions.Contains(Path.GetExtension(file.FileName ?? string.Empty))).Take(1))).FirstOrDefault();
+
+        if (cover.Path is not null)
+        {
+            var content = (JsonObject)course.Content;
+
+            if (content[LearningConstants.ContentTypes.Course] is not JsonObject coursePart)
+            {
+                coursePart = [];
+                content[LearningConstants.ContentTypes.Course] = coursePart;
+            }
+
+            coursePart["Cover"] = new JsonObject
+            {
+                ["Paths"] = new JsonArray(cover.Path),
+                ["MediaTexts"] = new JsonArray(string.Empty),
+            };
         }
 
         if (!string.IsNullOrWhiteSpace(moodle.CategoryName) && await _categories.FindOrAddAsync([moodle.CategoryName]) is { } categoryId)
@@ -238,7 +274,7 @@ internal sealed class MoodleImportHandler : IContentImportHandler
             {
                 if (children.TryGetValue(backup.ActivitySource(moduleId), out var itemId) && backup.FindActivity(moduleId) is { } activity)
                 {
-                    section.Items.Add(new CourseOutlineItem { ContentItemId = itemId, Required = MoodleCompletion.IsRequired(backup, activity) });
+                    section.Items.Add(new CourseOutlineItem { ContentItemId = itemId, Required = IsRequired(backup, activity) });
                 }
             }
 
@@ -288,13 +324,23 @@ internal sealed class MoodleImportHandler : IContentImportHandler
             criteria.Add(rule);
         }
 
-        // Manual completion by a role becomes approval by the course staff.
-        if (moodle.CompletionCriteria.Any(criterion => criterion.Type == MoodleCompletionCriterion.Role))
+        // Manual completion by a role becomes approval by the course staff in the matching role.
+        if (moodle.CompletionCriteria.FirstOrDefault(criterion => criterion.Type == MoodleCompletionCriterion.Role) is { } role)
         {
-            criteria.Add(new LearningRuleSettings { Name = LearningRuleNames.StaffApproval });
+            var approval = new LearningRuleSettings { Name = LearningRuleNames.StaffApproval };
+
+            if (MoodleCompletion.StaffRole(role.RoleShortName) is { } staffRole)
+            {
+                approval.Values["Role"] = staffRole;
+            }
+
+            criteria.Add(approval);
         }
 
         part.CompletionCriteria = criteria;
+
+        // A Moodle course without completion criteria never completes.
+        part.NeverCompletes = moodle.CompletionCriteria.Count == 0;
     }
 
     private async Task<bool> ImportPackageAsync(ContentImportContext context, MoodleBackup backup, MoodleActivity activity)
@@ -323,13 +369,86 @@ internal sealed class MoodleImportHandler : IContentImportHandler
         }
 
         var item = context.ContentItem;
-        item.Alter<LearningPackagePart>(part => result.ApplyTo(part, file.FileName, context.Entry?.Owner, _clock.UtcNow));
+        item.Alter<LearningPackagePart>(part =>
+        {
+            result.ApplyTo(part, file.FileName, context.Entry?.Owner, _clock.UtcNow);
+            part.OpenInNewWindow = MoodleScormSettings.OpensInNewWindow(activity);
+            part.MaxAttempts = MoodleScormSettings.MaxAttempts(activity);
+            part.GradingMethod = MoodleScormSettings.Grading(activity);
+        });
 
         var (mode, passMark) = MoodleCompletion.ForScorm(activity);
         ApplyItem(item, backup, activity, mode, passMark);
-        ApplyBody(item, activity.Get("intro"));
+        await ApplyBodyAsync(item, backup, activity, activity.Get("intro"));
 
         return true;
+    }
+
+    // An IMS content package: the package as it was uploaded, or a package made of the files Moodle extracted. It plays
+    // without the run-time API and completes when the learner opens it.
+    private async Task<bool> ImportImsPackageAsync(ContentImportContext context, MoodleBackup backup, MoodleActivity activity)
+    {
+        var files = MoodleCourseRows.ImsFiles(backup, activity);
+
+        if (files.Count == 0)
+        {
+            return Fail(context, S["The backup has no file for the IMS content package \"{0}\".", activity.Name]);
+        }
+
+        var importer = _services.GetRequiredService<LearningPackageImporter>();
+        var fileName = files.Count == 1 && files[0].FileArea == "backup" ? files[0].FileName : SafeFileName(activity.Name) + ".zip";
+        PackageImportResult result;
+
+        if (!fileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            fileName += ".zip";
+        }
+
+        await using (var stream = await ImsPackageStreamAsync(backup, files))
+        {
+            result = await importer.ImportAsync(fileName, stream);
+        }
+
+        if (!result.Succeeded)
+        {
+            var reason = _services.GetRequiredService<PackageImportErrorText>().Get(result);
+
+            return Fail(context, S["The IMS content package \"{0}\" was not imported: {1}", activity.Name, reason.Value]);
+        }
+
+        var item = context.ContentItem;
+        item.Alter<LearningPackagePart>(part => result.ApplyTo(part, fileName, context.Entry?.Owner, _clock.UtcNow));
+
+        ApplyItem(item, backup, activity, PackageImportResult.CompletionModeFor(result.Manifest?.Standard) ?? MoodleCompletion.ForViewed(activity), null);
+        await ApplyBodyAsync(item, backup, activity, activity.Get("intro"));
+
+        return true;
+    }
+
+    private static async Task<Stream> ImsPackageStreamAsync(MoodleBackup backup, IReadOnlyList<MoodleFile> files)
+    {
+        if (files.Count == 1 && files[0].FileArea == "backup")
+        {
+            return new FileStream(backup.GetContentPath(files[0]), FileMode.Open, FileAccess.Read, FileShare.Read);
+        }
+
+        var zip = new MemoryStream();
+
+        using (var archive = new ZipArchive(zip, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var file in files)
+            {
+                var entry = archive.CreateEntry(MoodleFiles.PathOf(file).TrimStart('/'));
+
+                await using var target = entry.Open();
+                await using var source = new FileStream(backup.GetContentPath(file), FileMode.Open, FileAccess.Read, FileShare.Read);
+                await source.CopyToAsync(target);
+            }
+        }
+
+        zip.Position = 0;
+
+        return zip;
     }
 
     private async Task<bool> ImportFileAsync(ContentImportContext context, MoodleBackup backup, MoodleActivity activity)
@@ -391,12 +510,12 @@ internal sealed class MoodleImportHandler : IContentImportHandler
         };
 
         ApplyItem(item, backup, activity, MoodleCompletion.ForViewed(activity), null);
-        ApplyBody(item, activity.Get("intro"));
+        await ApplyBodyAsync(item, backup, activity, activity.Get("intro"));
 
         return true;
     }
 
-    private bool ImportLink(ContentImportContext context, MoodleBackup backup, MoodleActivity activity)
+    private async Task<bool> ImportLinkAsync(ContentImportContext context, MoodleBackup backup, MoodleActivity activity)
     {
         var address = activity.Get("externalurl")?.Trim();
 
@@ -413,17 +532,106 @@ internal sealed class MoodleImportHandler : IContentImportHandler
         var item = context.ContentItem;
 
         ApplyItem(item, backup, activity, MoodleCompletion.ForViewed(activity), null);
-        ApplyBody(item, activity.Get("intro"));
+        await ApplyBodyAsync(item, backup, activity, activity.Get("intro"));
 
         return true;
     }
 
-    private bool ImportPage(ContentImportContext context, MoodleBackup backup, MoodleActivity activity)
+    private async Task<bool> ImportPageAsync(ContentImportContext context, MoodleBackup backup, MoodleActivity activity)
     {
         var item = context.ContentItem;
 
         ApplyItem(item, backup, activity, MoodleCompletion.ForViewed(activity), null);
-        ApplyBody(item, activity.Get("content") ?? activity.Get("intro"));
+        await ApplyBodyAsync(item, backup, activity, activity.Get("content") ?? activity.Get("intro"));
+
+        return true;
+    }
+
+    // A label is text shown in place in the outline and the player, with its pictures in the media library.
+    private async Task<bool> ImportLabelAsync(ContentImportContext context, MoodleBackup backup, MoodleActivity activity)
+    {
+        var item = context.ContentItem;
+
+        ApplyItem(item, backup, activity, null, null);
+        await ApplyBodyAsync(item, backup, activity, activity.Get("intro"));
+
+        return true;
+    }
+
+    // An assignment is coursework: its due date, points, what learners hand in (nothing for a grade-only sign-off), the
+    // file limits and resubmission; it completes on hand-in when Moodle does, else when graded.
+    private async Task<bool> ImportAssignmentAsync(ContentImportContext context, MoodleBackup backup, MoodleActivity activity)
+    {
+        var assignment = MoodleAssignments.Read(activity);
+        var item = context.ContentItem;
+
+        item.Alter<CourseworkPart>(part =>
+        {
+            part.DueUtc = assignment.DueUtc;
+            part.MaxPoints = assignment.MaxPoints;
+            part.SubmissionType = assignment switch
+            {
+                { AcceptsText: true, AcceptsFiles: true } => CourseworkSubmissionType.TextAndFiles,
+                { AcceptsFiles: true } => CourseworkSubmissionType.Files,
+                { AcceptsText: true } => CourseworkSubmissionType.Text,
+                _ => CourseworkSubmissionType.SignOff,
+            };
+            part.MaxFiles = assignment.MaxFiles ?? part.MaxFiles;
+            part.MaxFileSizeMb = assignment.MaxFileSizeMb ?? part.MaxFileSizeMb;
+            part.AllowResubmission = assignment.AllowResubmission;
+        });
+
+        ApplyItem(item, backup, activity, assignment.CompletesOnSubmit ? CompletionModes.Submitted : CompletionModes.Graded, null);
+        item.Alter<CourseItemPart>(part => part.Gradable = true);
+        await ApplyBodyAsync(item, backup, activity, activity.Get("intro"));
+
+        return true;
+    }
+
+    // A feedback or a choice is a survey of the Learning Surveys module; it completes when the learner answers.
+    private async Task<bool> ImportSurveyAsync(ContentImportContext context, MoodleBackup backup, MoodleActivity activity, MoodleSurvey survey, bool withBody)
+    {
+        if (survey.Questions.Count == 0 || survey.Questions.Any(question => question.Kind != MoodleSurveyQuestionKind.Text && question.Options.Count == 0))
+        {
+            return Fail(context, S["\"{0}\" has no question the site can keep.", activity.Name]);
+        }
+
+        var item = context.ContentItem;
+
+        item.Alter<SurveyPart>(part =>
+        {
+            part.Questions = [.. survey.Questions.Take(SurveysConstants.MaxQuestions).Select((question, index) => new SurveyQuestion
+            {
+                // Stable ids, so importing the backup again keeps the answers given.
+                Id = "moodle-" + (index + 1).ToString(CultureInfo.InvariantCulture),
+                Text = Shorten(question.Text, 500),
+                Type = question.Kind switch
+                {
+                    MoodleSurveyQuestionKind.MultipleChoice => SurveyQuestionType.MultipleChoice,
+                    MoodleSurveyQuestionKind.Text => SurveyQuestionType.Text,
+                    _ => SurveyQuestionType.SingleChoice,
+                },
+                Options = [.. question.Options.Take(SurveysConstants.MaxOptions).Select(option => Shorten(option, 200))],
+                Required = question.Required,
+            })];
+            part.Anonymous = survey.Anonymous;
+            part.AllowChangeAnswer = survey.AllowChangeAnswer;
+            part.CloseUtc = survey.CloseUtc;
+            part.ResultsVisibility = survey.Results switch
+            {
+                MoodleSurveyResults.AfterAnswer => SurveyResultsVisibility.AfterAnswer,
+                MoodleSurveyResults.AfterClose => SurveyResultsVisibility.AfterClose,
+                MoodleSurveyResults.Always => SurveyResultsVisibility.Always,
+                _ => SurveyResultsVisibility.Never,
+            };
+        });
+
+        ApplyItem(item, backup, activity, CompletionModes.Submitted, null);
+
+        if (withBody)
+        {
+            await ApplyBodyAsync(item, backup, activity, activity.Get("intro"));
+        }
 
         return true;
     }
@@ -500,11 +708,18 @@ internal sealed class MoodleImportHandler : IContentImportHandler
             part.OpensUtc = Time(activity.Get("timeopen"));
             part.ClosesUtc = Time(activity.Get("timeclose"));
             part.PassMark = MoodleCompletion.QuizPassMark(activity);
+            part.QuestionsPerPage = MoodleQuizSettings.QuestionsPerPage(activity);
+            part.FeedbackMode = MoodleQuizSettings.FeedbackMode(activity);
+
+            if (MoodleQuizSettings.HasReviewOptions(activity))
+            {
+                part.ReviewOptions = MoodleQuizSettings.ReviewOptions(activity);
+            }
         });
 
         var mode = MoodleCompletion.ForQuiz(activity);
         ApplyItem(item, backup, activity, mode, null);
-        ApplyBody(item, activity.Get("intro"));
+        await ApplyBodyAsync(item, backup, activity, activity.Get("intro"));
 
         return true;
     }
@@ -709,7 +924,7 @@ internal sealed class MoodleImportHandler : IContentImportHandler
             }
         }
 
-        target.Items.Insert(position, new CourseOutlineItem { ContentItemId = item.ContentItemId, Required = MoodleCompletion.IsRequired(backup, activity) });
+        target.Items.Insert(position, new CourseOutlineItem { ContentItemId = item.ContentItemId, Required = IsRequired(backup, activity) });
         course.Alter<CourseOutlinePart>(part => part.Sections = sections);
         await _contentManager.UpdateAsync(course);
     }
@@ -747,53 +962,146 @@ internal sealed class MoodleImportHandler : IContentImportHandler
         });
     }
 
-    private void ApplyBody(ContentItem item, string html)
+    // The text of an activity, with the pictures and files of its text areas copied to the media library under the item.
+    private async Task ApplyBodyAsync(ContentItem item, MoodleBackup backup, MoodleActivity activity, string html)
     {
-        if (Html(html) is { } body)
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return;
+        }
+
+        var files = html.Contains(MoodleFiles.PluginFile, StringComparison.Ordinal)
+            ? await ImportMediaAsync(item, backup, activity.Files.Where(file => file.FileArea is "intro" or "content" && file.Component == "mod_" + activity.ModuleName))
+            : [];
+
+        if (Html(html, Urls(files)) is { } body)
         {
             item.Alter<HtmlBodyPart>(part => part.Html = body);
         }
     }
 
-    // Moodle HTML, sanitized, without the pictures and media of the backup's files, which are not imported yet.
-    private string Html(string html)
+    // Moodle HTML, its pictures and files pointed at the media library (those not imported left out), sanitized as
+    // Orchard's HTML body is.
+    private string Html(string html, IReadOnlyDictionary<string, string> urls)
     {
         if (string.IsNullOrWhiteSpace(html))
         {
             return null;
         }
 
-        var withoutFiles = System.Text.RegularExpressions.Regex.Replace(html, "<(img|video|audio|source|iframe|object|embed)\\b[^>]*@@PLUGINFILE@@[^>]*>", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        var sanitized = _htmlSanitizer.Sanitize(withoutFiles);
+        var sanitized = _htmlSanitizer.Sanitize(MoodleFiles.Rewrite(html, urls));
 
-        return string.IsNullOrWhiteSpace(MoodleQuestionMapper.Plain(sanitized)) ? null : sanitized;
+        return string.IsNullOrWhiteSpace(MoodleQuestionMapper.Plain(sanitized)) && !sanitized.Contains("<img", StringComparison.OrdinalIgnoreCase) ? null : sanitized;
     }
+
+    // Copies files of the backup to the media library, in the folder of the item, as the media fields keep theirs. A file
+    // of a kind or size the media library does not take is left out.
+    private async Task<List<(MoodleFile File, string Path, string Url)>> ImportMediaAsync(ContentItem item, MoodleBackup backup, IEnumerable<MoodleFile> files)
+    {
+        var imported = new List<(MoodleFile File, string Path, string Url)>();
+        var paths = new List<string>();
+        var folder = $"mediafields/{item.ContentType}/{item.ContentItemId}";
+
+        foreach (var file in files)
+        {
+            var content = backup.GetContentPath(file);
+            var extension = Path.GetExtension(file.FileName ?? string.Empty);
+
+            if (content is null ||
+                !_mediaOptions.AllowedFileExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase) ||
+                (_mediaOptions.MaxFileSize > 0 && new FileInfo(content).Length > _mediaOptions.MaxFileSize))
+            {
+                continue;
+            }
+
+            var path = folder + "/" + UniqueName(SafeFileName(file.FileName), paths);
+
+            await using (var stream = new FileStream(content, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                await _mediaFileStore.CreateFileFromStreamAsync(path, stream, overwrite: true);
+            }
+
+            paths.Add(path);
+            imported.Add((file, path, _mediaFileStore.MapPathToPublicUrl(path)));
+        }
+
+        return imported;
+    }
+
+    private static Dictionary<string, string> Urls(IEnumerable<(MoodleFile File, string Path, string Url)> files)
+    {
+        var urls = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var (file, _, url) in files)
+        {
+            urls.TryAdd(MoodleFiles.PathOf(file), url);
+        }
+
+        return urls;
+    }
+
+    // The course's own files of an area: its summary's pictures, its picture.
+    private static IEnumerable<MoodleFile> CourseFiles(MoodleBackup backup, string fileArea)
+        => backup.Files.Values.Where(file =>
+            file.Component == "course" &&
+            file.FileArea == fileArea &&
+            (string.IsNullOrEmpty(backup.Course?.ContextId) || file.ContextId == backup.Course.ContextId));
+
+    // The restrictions of an activity the site keeps: open to the people named by e-mail address or user name (the
+    // site's users with them), and an opening date. The rules the import set before are replaced.
+    private async Task ApplyRestrictionsAsync(ContentItem item, MoodleActivity activity)
+    {
+        var restriction = MoodleRestrictions.Read(activity.Availability);
+        var userIds = new List<string>();
+
+        if (restriction.People.Count > 0 && _services.GetService<UserManager<IUser>>() is { } users)
+        {
+            foreach (var (field, value) in restriction.People)
+            {
+                var user = field == "email" ? await users.FindByEmailAsync(value) : await users.FindByNameAsync(value);
+
+                if (user is not null && await users.GetUserIdAsync(user) is { Length: > 0 } userId && !userIds.Contains(userId, StringComparer.Ordinal))
+                {
+                    userIds.Add(userId);
+                }
+            }
+        }
+
+        item.Alter<CourseItemPart>(part =>
+        {
+            var rules = part.ReleaseRules.Where(rule => rule.Name is not (LearningRuleNames.People or LearningRuleNames.Date)).ToList();
+
+            if (restriction.People.Count > 0)
+            {
+                var people = new LearningRuleSettings { Name = LearningRuleNames.People };
+                people.Values["UserIds"] = string.Join(",", userIds);
+                rules.Add(people);
+            }
+
+            if (restriction.OpensUtc is { } opens)
+            {
+                var date = new LearningRuleSettings { Name = LearningRuleNames.Date };
+                date.Values["FromUtc"] = DateTime.SpecifyKind(opens, DateTimeKind.Utc).ToString("O", CultureInfo.InvariantCulture);
+                rules.Add(date);
+            }
+
+            part.ReleaseRules = rules;
+        });
+    }
+
+    // An activity counts toward completion as Moodle says, unless it is hidden (it then holds back nothing) or a label
+    // (text, which is never tracked).
+    private static bool IsRequired(MoodleBackup backup, MoodleActivity activity)
+        => activity.Visible && activity.ModuleName != "label" && MoodleCompletion.IsRequired(backup, activity);
 
     private string SectionTitle(MoodleSection section)
         => !string.IsNullOrWhiteSpace(section.Name)
             ? section.Name.Trim()
             : section.Number == 0 ? S["General"] : S["Topic {0}", section.Number];
 
-    // The section's summary and the text of its labels, in order, as plain text.
+    // The section's summary, as plain text. Its labels are Text items of their own.
     private static string SectionSummary(MoodleBackup backup, MoodleSection section)
-    {
-        var parts = new List<string>();
-
-        if (MoodleQuestionMapper.Plain(section.Summary) is { Length: > 0 } summary)
-        {
-            parts.Add(summary);
-        }
-
-        foreach (var moduleId in section.Sequence)
-        {
-            if (backup.FindActivity(moduleId) is { ModuleName: "label" } label && MoodleQuestionMapper.Plain(label.Get("intro")) is { Length: > 0 } text)
-            {
-                parts.Add(text);
-            }
-        }
-
-        return parts.Count == 0 ? null : string.Join(Environment.NewLine + Environment.NewLine, parts);
-    }
+        => MoodleQuestionMapper.Plain(section.Summary) is { Length: > 0 } summary ? summary : null;
 
     private bool Fail(ContentImportContext context, string error)
     {

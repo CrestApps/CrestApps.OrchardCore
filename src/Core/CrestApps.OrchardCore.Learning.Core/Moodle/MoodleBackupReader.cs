@@ -220,6 +220,7 @@ public static class MoodleBackupReader
             var course = new MoodleCourse
             {
                 Id = root.Attribute("id")?.Value ?? Value(information, "original_course_id"),
+                ContextId = root.Attribute("contextid")?.Value ?? Value(information, "original_course_contextid"),
                 FullName = Value(root, "fullname") ?? Value(information, "original_course_fullname"),
                 ShortName = Value(root, "shortname") ?? Value(information, "original_course_shortname"),
                 IdNumber = Value(root, "idnumber"),
@@ -270,6 +271,7 @@ public static class MoodleBackupReader
                         Type = (int)Long(Value(criterion, "criteriatype")),
                         ModuleId = Value(criterion, "moduleinstance"),
                         GradePass = Decimal(Value(criterion, "gradepass")),
+                        RoleShortName = Value(criterion, "roleshortname"),
                     });
                 }
 
@@ -324,6 +326,7 @@ public static class MoodleBackupReader
                     Component = Value(file, "component"),
                     FileArea = Value(file, "filearea"),
                     FilePath = Value(file, "filepath"),
+                    ItemId = Value(file, "itemid"),
                     FileName = name,
                     FileSize = Long(Value(file, "filesize")),
                     MimeType = Value(file, "mimetype"),
@@ -516,6 +519,7 @@ public static class MoodleBackupReader
                     activity.CompletionView = Value(module, "completionview") == "1";
                     activity.CompletionUseGrade = Value(module, "completiongradeitemnumber") is not null;
                     activity.CompletionPassGrade = Value(module, "completionpassgrade") == "1";
+                    activity.Availability = Value(module, "availability");
                 }
 
                 var settingsPath = Combine(directory, moduleName + ".xml");
@@ -540,6 +544,29 @@ public static class MoodleBackupReader
                         }
 
                         activity.Name = Value(settings, "name") ?? activity.Name;
+
+                        // Repeated records under a container: a feedback's <items><item>, a choice's <options><option>,
+                        // an assignment's <plugin_configs><plugin_config>. Each record keeps its own simple values.
+                        foreach (var container in settings.Elements().Where(child => child.HasElements && child.Name.LocalName != "question_instances"))
+                        {
+                            foreach (var record in container.Elements().Where(child => child.HasElements))
+                            {
+                                var values = new Dictionary<string, string>(StringComparer.Ordinal);
+
+                                foreach (var value in record.Elements().Where(child => !child.HasElements && child.Value != NullValue))
+                                {
+                                    values[value.Name.LocalName] = value.Value;
+                                }
+
+                                if (!activity.Records.TryGetValue(record.Name.LocalName, out var list))
+                                {
+                                    list = [];
+                                    activity.Records[record.Name.LocalName] = list;
+                                }
+
+                                list.Add(values);
+                            }
+                        }
 
                         if (moduleName == "quiz")
                         {

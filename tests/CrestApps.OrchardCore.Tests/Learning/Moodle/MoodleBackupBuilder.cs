@@ -122,28 +122,28 @@ public sealed class MoodleBackupBuilder
 
     public MoodleBackupBuilder ActivityCriterion(int cmid, string moduleName)
     {
-        _criteria.Add(new Criterion(4, cmid, moduleName, null, null));
+        _criteria.Add(new Criterion(4, cmid, moduleName, null, null, null));
 
         return this;
     }
 
     public MoodleBackupBuilder GradeCriterion(decimal gradePass)
     {
-        _criteria.Add(new Criterion(6, null, null, gradePass, null));
+        _criteria.Add(new Criterion(6, null, null, gradePass, null, null));
 
         return this;
     }
 
-    public MoodleBackupBuilder RoleCriterion(int roleId)
+    public MoodleBackupBuilder RoleCriterion(int roleId, string roleShortName = "manager")
     {
-        _criteria.Add(new Criterion(7, null, null, null, roleId));
+        _criteria.Add(new Criterion(7, null, null, null, roleId, roleShortName));
 
         return this;
     }
 
     public MoodleBackupBuilder DateCriterion()
     {
-        _criteria.Add(new Criterion(2, null, null, null, null));
+        _criteria.Add(new Criterion(2, null, null, null, null, null));
 
         return this;
     }
@@ -151,22 +151,173 @@ public sealed class MoodleBackupBuilder
     /// <summary>
     /// Adds a file the backup holds under <c>files/</c>, with its row in <c>files.xml</c>.
     /// </summary>
-    public int File(int contextId, string component, string fileArea, string fileName, byte[] content, string mimeType = "application/octet-stream")
+    public int File(int contextId, string component, string fileArea, string fileName, byte[] content, string mimeType = "application/octet-stream", int itemId = 0, string filePath = "/")
     {
         var id = _nextFileId++;
 #pragma warning disable CA5350 // Moodle names the files of a backup by the SHA-1 hash of their content.
         var hash = Convert.ToHexStringLower(SHA1.HashData(content));
 #pragma warning restore CA5350
-        _files.Add(new StoredFile(id, hash, contextId, component, fileArea, fileName, content, mimeType));
+        _files.Add(new StoredFile(id, hash, contextId, component, fileArea, fileName, content, mimeType, itemId, filePath));
 
         return id;
     }
 
-    public MoodleBackupBuilder Label(int sectionId, int cmid, string html, bool visible = true)
-        => Add(new Activity(cmid, "label", sectionId, StripTags(html), visible)
+    public MoodleBackupBuilder Label(int sectionId, int cmid, string html, bool visible = true, string pictureName = null, byte[] picture = null)
+    {
+        var activity = new Activity(cmid, "label", sectionId, StripTags(html), visible)
         {
             Fields = { ["intro"] = html, ["introformat"] = "1" },
-        });
+        };
+
+        activity.ContextId = _nextContextId++;
+
+        if (picture is not null)
+        {
+            activity.FileIds.Add(File(activity.ContextId, "mod_label", "intro", pictureName, picture, "image/png"));
+        }
+
+        return Add(activity);
+    }
+
+    /// <summary>
+    /// Adds the course's picture (its overview file) and a picture its summary shows.
+    /// </summary>
+    public MoodleBackupBuilder CourseImage(string fileName, byte[] content)
+    {
+        File(25, "course", "overviewfiles", fileName, content, "image/png");
+
+        return this;
+    }
+
+    public MoodleBackupBuilder SummaryImage(string fileName, byte[] content)
+    {
+        File(25, "course", "summary", fileName, content, "image/png");
+
+        return this;
+    }
+
+    /// <summary>
+    /// Restricts an activity with Moodle's availability JSON.
+    /// </summary>
+    public MoodleBackupBuilder Restrict(int cmid, string availability)
+    {
+        _activities.First(activity => activity.Cmid == cmid).Availability = availability;
+
+        return this;
+    }
+
+    public MoodleBackupBuilder Assign(int sectionId, int cmid, string name, decimal grade = 10, DateTime? dueUtc = null, bool text = true, bool files = true, int maxFiles = 3, bool completionSubmit = true)
+    {
+        var activity = new Activity(cmid, "assign", sectionId, name)
+        {
+            Completion = 2,
+            GradeMax = grade > 0 ? grade : null,
+            Fields =
+            {
+                ["intro"] = "<p>Hand in your plan.</p>",
+                ["duedate"] = Unix(dueUtc),
+                ["grade"] = grade.ToString(CultureInfo.InvariantCulture),
+                ["attemptreopenmethod"] = "none",
+                ["completionsubmit"] = completionSubmit ? "1" : "0",
+            },
+        };
+
+        activity.Records.Add(("plugin_configs", "plugin_config", new() { ["plugin"] = "onlinetext", ["subtype"] = "assignsubmission", ["name"] = "enabled", ["value"] = text ? "1" : "0" }));
+        activity.Records.Add(("plugin_configs", "plugin_config", new() { ["plugin"] = "file", ["subtype"] = "assignsubmission", ["name"] = "enabled", ["value"] = files ? "1" : "0" }));
+        activity.Records.Add(("plugin_configs", "plugin_config", new() { ["plugin"] = "file", ["subtype"] = "assignsubmission", ["name"] = "maxfilesubmissions", ["value"] = maxFiles.ToString(CultureInfo.InvariantCulture) }));
+
+        return Add(activity);
+    }
+
+    public MoodleBackupBuilder Feedback(int sectionId, int cmid, string name, params (string Type, string Name, string Presentation, bool Required)[] items)
+    {
+        var activity = new Activity(cmid, "feedback", sectionId, name)
+        {
+            Completion = 2,
+            Fields = { ["intro"] = "<p>Tell us what you think.</p>", ["anonymous"] = "2", ["multiple_submit"] = "0", ["timeclose"] = "0" },
+        };
+
+        foreach (var item in items)
+        {
+            activity.Records.Add(("items", "item", new() { ["typ"] = item.Type, ["name"] = item.Name, ["presentation"] = item.Presentation, ["required"] = item.Required ? "1" : "0" }));
+        }
+
+        return Add(activity);
+    }
+
+    public MoodleBackupBuilder Choice(int sectionId, int cmid, string name, string question, params string[] options)
+    {
+        var activity = new Activity(cmid, "choice", sectionId, name)
+        {
+            Completion = 2,
+            Fields = { ["intro"] = question, ["allowmultiple"] = "0", ["allowupdate"] = "1", ["showresults"] = "1", ["publish"] = "1", ["timeclose"] = "0" },
+        };
+
+        foreach (var option in options)
+        {
+            activity.Records.Add(("options", "option", new() { ["text"] = option, ["maxanswers"] = "0" }));
+        }
+
+        return Add(activity);
+    }
+
+    public MoodleBackupBuilder Imscp(int sectionId, int cmid, string name, byte[] package)
+    {
+        var activity = new Activity(cmid, "imscp", sectionId, name)
+        {
+            Completion = 2,
+            CompletionView = true,
+            Fields = { ["intro"] = "<p>Read the handbook.</p>", ["revision"] = "1" },
+        };
+
+        activity.ContextId = _nextContextId++;
+        activity.FileIds.Add(File(activity.ContextId, "mod_imscp", "backup", "handbook.zip", package, "application/zip", itemId: 1));
+
+        return Add(activity);
+    }
+
+    /// <summary>
+    /// Gets a minimal IMS content package: a manifest without SCORM resources and two pages.
+    /// </summary>
+    public static byte[] ImsPackage(string title = "Synthetic handbook")
+    {
+        using var output = new MemoryStream();
+
+        using (var zip = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            Write(zip, "imsmanifest.xml", $"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <manifest identifier="moodle.imscp" version="1.1" xmlns="http://www.imsglobal.org/xsd/imscp_v1p1">
+                  <metadata><schema>IMS Content</schema><schemaversion>1.1.4</schemaversion></metadata>
+                  <organizations default="TOC1">
+                    <organization identifier="TOC1">
+                      <title>{SecurityElement.Escape(title)}</title>
+                      <item identifier="I0" identifierref="R0"><title>Start here</title></item>
+                    </organization>
+                  </organizations>
+                  <resources>
+                    <resource identifier="R0" type="webcontent" href="index.html"><file href="index.html"/></resource>
+                  </resources>
+                </manifest>
+                """);
+            Write(zip, "index.html", "<!doctype html><html><head><title>Handbook</title></head><body><p>Synthetic handbook.</p></body></html>");
+        }
+
+        return output.ToArray();
+
+        static void Write(ZipArchive zip, string name, string text)
+        {
+            var entry = zip.CreateEntry(name);
+            using var stream = entry.Open();
+            stream.Write(Encoding.UTF8.GetBytes(text));
+        }
+    }
+
+    /// <summary>
+    /// Gets a tiny PNG picture.
+    /// </summary>
+    public static byte[] Png()
+        => Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
 
     public MoodleBackupBuilder Page(int sectionId, int cmid, string name, string content, int completion = 2, bool completionView = true)
         => Add(new Activity(cmid, "page", sectionId, name)
@@ -217,6 +368,7 @@ public sealed class MoodleBackupBuilder
                 ["maxgrade"] = "100",
                 ["grademethod"] = "1",
                 ["maxattempt"] = maxAttempt.ToString(CultureInfo.InvariantCulture),
+                ["whatgrade"] = "0",
                 ["popup"] = popup ? "1" : "0",
                 ["completionstatusrequired"] = statusRequired.ToString(CultureInfo.InvariantCulture),
                 ["completionscorerequired"] = scoreRequired?.ToString(CultureInfo.InvariantCulture) ?? Null,
@@ -264,6 +416,42 @@ public sealed class MoodleBackupBuilder
         activity.ContextId = _nextContextId++;
 
         return Add(activity);
+    }
+
+    public MoodleBackupBuilder Hide(int cmid)
+    {
+        var index = _activities.FindIndex(activity => activity.Cmid == cmid);
+        var old = _activities[index];
+        var hidden = new Activity(old.Cmid, old.ModuleName, old.SectionId, old.Name, visible: false)
+        {
+            ContextId = old.ContextId,
+            Completion = old.Completion,
+            CompletionView = old.CompletionView,
+            CompletionUseGrade = old.CompletionUseGrade,
+            CompletionPassGrade = old.CompletionPassGrade,
+            GradeMax = old.GradeMax,
+            GradePass = old.GradePass,
+            Availability = old.Availability,
+        };
+
+        foreach (var (key, value) in old.Fields)
+        {
+            hidden.Fields[key] = value;
+        }
+
+        hidden.FileIds.AddRange(old.FileIds);
+        hidden.Slots.AddRange(old.Slots);
+        hidden.Records.AddRange(old.Records);
+        _activities[index] = hidden;
+
+        return this;
+    }
+
+    public MoodleBackupBuilder Setting(int cmid, string name, string value)
+    {
+        _activities.First(activity => activity.Cmid == cmid).Fields[name] = value;
+
+        return this;
     }
 
     public MoodleBackupBuilder Other(int sectionId, int cmid, string moduleName, string name)
@@ -456,7 +644,7 @@ public sealed class MoodleBackupBuilder
             builder.Append($"  <course_completion_criteria id=\"{id++}\"><course>{CourseId}</course><criteriatype>{criterion.Type}</criteriatype>");
             builder.Append($"<module>{criterion.Module ?? Null}</module><moduleinstance>{criterion.Cmid?.ToString(CultureInfo.InvariantCulture) ?? Null}</moduleinstance>");
             builder.Append($"<courseinstanceshortname>{Null}</courseinstanceshortname><enrolperiod>0</enrolperiod><timeend>0</timeend>");
-            builder.Append($"<gradepass>{criterion.GradePass?.ToString("0.00000", CultureInfo.InvariantCulture) ?? Null}</gradepass><role>{criterion.Role?.ToString(CultureInfo.InvariantCulture) ?? Null}</role><roleshortname>{(criterion.Role is null ? Null : "manager")}</roleshortname>");
+            builder.Append($"<gradepass>{criterion.GradePass?.ToString("0.00000", CultureInfo.InvariantCulture) ?? Null}</gradepass><role>{criterion.Role?.ToString(CultureInfo.InvariantCulture) ?? Null}</role><roleshortname>{(criterion.Role is null ? Null : X(criterion.RoleShortName))}</roleshortname>");
             builder.Append("<course_completion_crit_completions></course_completion_crit_completions></course_completion_criteria>\n");
         }
 
@@ -522,7 +710,7 @@ public sealed class MoodleBackupBuilder
               <completionpassgrade>{(activity.CompletionPassGrade ? 1 : 0)}</completionpassgrade>
               <completionview>{(activity.CompletionView ? 1 : 0)}</completionview>
               <completionexpected>0</completionexpected>
-              <availability>{Null}</availability>
+              <availability>{(activity.Availability is null ? Null : X(activity.Availability))}</availability>
             </module>
             """;
     }
@@ -536,6 +724,26 @@ public sealed class MoodleBackupBuilder
         foreach (var (key, value) in activity.Fields)
         {
             builder.Append($"    <{key}>{X(value)}</{key}>\n");
+        }
+
+        foreach (var container in activity.Records.GroupBy(record => record.Container))
+        {
+            builder.Append($"    <{container.Key}>\n");
+            var recordId = 1;
+
+            foreach (var (_, element, values) in container)
+            {
+                builder.Append($"      <{element} id=\"{recordId++}\">");
+
+                foreach (var (key, value) in values)
+                {
+                    builder.Append($"<{key}>{X(value)}</{key}>");
+                }
+
+                builder.Append($"</{element}>\n");
+            }
+
+            builder.Append($"    </{container.Key}>\n");
         }
 
         if (activity.ModuleName == "quiz")
@@ -644,7 +852,7 @@ public sealed class MoodleBackupBuilder
 
         foreach (var file in _files)
         {
-            builder.Append($"  <file id=\"{file.Id}\"><contenthash>{file.Hash}</contenthash><contextid>{file.ContextId}</contextid><component>{file.Component}</component><filearea>{file.FileArea}</filearea><itemid>0</itemid><filepath>/</filepath><filename>{X(file.FileName)}</filename><userid>2</userid><filesize>{file.Content.Length}</filesize><mimetype>{file.MimeType}</mimetype><status>0</status><source>{X(file.FileName)}</source><sortorder>0</sortorder></file>\n");
+            builder.Append($"  <file id=\"{file.Id}\"><contenthash>{file.Hash}</contenthash><contextid>{file.ContextId}</contextid><component>{file.Component}</component><filearea>{file.FileArea}</filearea><itemid>{file.ItemId}</itemid><filepath>{X(file.FilePath)}</filepath><filename>{X(file.FileName)}</filename><userid>2</userid><filesize>{file.Content.Length}</filesize><mimetype>{file.MimeType}</mimetype><status>0</status><source>{X(file.FileName)}</source><sortorder>0</sortorder></file>\n");
         }
 
         builder.Append("</files>\n");
@@ -668,11 +876,11 @@ public sealed class MoodleBackupBuilder
 
     private sealed record Enrol(string Method, bool Enabled, string Password, int EnrolPeriodDays);
 
-    private sealed record Criterion(int Type, int? Cmid, string Module, decimal? GradePass, int? Role);
+    private sealed record Criterion(int Type, int? Cmid, string Module, decimal? GradePass, int? Role, string RoleShortName);
 
     private sealed record QuestionCategory(int Id, string Name, IReadOnlyList<Question> Questions);
 
-    private sealed record StoredFile(int Id, string Hash, int ContextId, string Component, string FileArea, string FileName, byte[] Content, string MimeType);
+    private sealed record StoredFile(int Id, string Hash, int ContextId, string Component, string FileArea, string FileName, byte[] Content, string MimeType, int ItemId, string FilePath);
 
     private sealed class Activity
     {
@@ -714,6 +922,10 @@ public sealed class MoodleBackupBuilder
         public List<int> FileIds { get; } = [];
 
         public List<QuizSlot> Slots { get; } = [];
+
+        public string Availability { get; set; }
+
+        public List<(string Container, string Element, Dictionary<string, string> Values)> Records { get; } = [];
     }
 }
 
@@ -841,6 +1053,56 @@ public sealed class Question
 /// </summary>
 public static class MoodleBackupSamples
 {
+    /// <summary>
+    /// A course with every activity and setting the import maps since the merged gaps: a label with a picture, an
+    /// assignment, a feedback, a choice, an IMS package, a quiz with pages, immediate feedback, review options and the
+    /// new question types, a SCORM package in a new window with attempts and grading, a page open only to one person,
+    /// a hidden page, completion by role, the course's picture, and a glossary it still does not import.
+    /// </summary>
+    public static MoodleBackupBuilder EveryActivity(int courseId, string fullName)
+    {
+        var builder = new MoodleBackupBuilder(courseId, fullName, "EA-" + courseId)
+        {
+            Summary = "<p>Course with a picture <img src=\"@@PLUGINFILE@@/summary.png\" alt=\"summary\"></p>",
+        };
+
+        return builder
+            .Section(300, 0, null)
+            .Section(301, 1, "Everything")
+            .Enrolment("manual")
+            .RoleCriterion(3, "editingteacher")
+            .CourseImage("cover.png", MoodleBackupBuilder.Png())
+            .SummaryImage("summary.png", MoodleBackupBuilder.Png())
+            .Label(301, 401, "<p>Read this first <img src=\"@@PLUGINFILE@@/exit.png\" alt=\"exit\"></p>", pictureName: "exit.png", picture: MoodleBackupBuilder.Png())
+            .Assign(301, 402, "Safety plan", grade: 20, dueUtc: new DateTime(2025, 3, 1, 17, 0, 0, DateTimeKind.Utc), maxFiles: 5)
+            .Feedback(301, 403, "Course feedback",
+                ("multichoice", "How did you hear of it?", "r>>>>>Friend|Web", true),
+                ("textarea", "What would you change?", "30|5", false),
+                ("captcha", "Captcha", string.Empty, true))
+            .Choice(301, 404, "Meeting day", "<p>Which day suits you?</p>", "Monday", "Friday")
+            .Imscp(301, 405, "Handbook", MoodleBackupBuilder.ImsPackage())
+            .Quiz(301, 406, "Checks", [new QuizSlot(20501), new QuizSlot(20502), new QuizSlot(20503), new QuizSlot(20504)], gradePass: null, passGrade: false)
+            .Setting(406, "questionsperpage", "2")
+            .Setting(406, "preferredbehaviour", "immediatefeedback")
+            .Setting(406, "reviewattempt", "69904")
+            .Setting(406, "reviewmarks", "69904")
+            .Setting(406, "reviewrightanswer", "16")
+            .Scorm(301, 407, "Window package", "window.zip", MoodleBackupBuilder.ScormPackage("Window package"), scoreRequired: 80, popup: true, maxAttempt: 2)
+            .Setting(407, "whatgrade", "1")
+            .Page(301, 408, "For Ana only", "<p>Private notes.</p>")
+            .Restrict(408, "{\"op\":\"&\",\"c\":[{\"type\":\"profile\",\"sf\":\"email\",\"op\":\"isequalto\",\"v\":\"admin@example.com\"}],\"showc\":[true]}")
+            .Page(301, 409, "Hidden notes", "<p>Hidden.</p>", completion: 2)
+            .Hide(409)
+            .Other(301, 410, "glossary", "Terms")
+            .Questions(
+                50,
+                "Default for EA",
+                new Question(10501, "multichoice", "Survey 10501", "<p>How confident are you?</p>") { Single = true, Answers = [("Very", 0, string.Empty), ("Not much", 0, string.Empty)], BankEntryId = 20501 },
+                new Question(10502, "ddwtos", "Drag 10502", "<p>A fire needs fuel, [[1]] and [[2]].</p>") { Answers = [("heat", 0, string.Empty), ("oxygen", 0, string.Empty), ("water", 0, string.Empty)], BankEntryId = 20502 },
+                new Question(10503, "gapselect", "Select 10503", "<p>Exits are [[1]].</p>") { Answers = [("green", 0, string.Empty), ("red", 0, string.Empty)], BankEntryId = 20503 },
+                new Question(10504, "description", "Description 10504", "<p>Read the next questions carefully.</p>") { BankEntryId = 20504, DefaultMark = 0 });
+    }
+
     /// <summary>
     /// A course with a section of every activity the importer maps, and a forum it does not.
     /// </summary>

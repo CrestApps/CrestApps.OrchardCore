@@ -54,7 +54,7 @@ public sealed class MoodleImportTests
         // Assert: the report. The forum is not imported and the self enrolment key is flagged, as failed rows.
         var stats = entry.GetOrCreate<ImportFileProcessStatsPart>();
         Assert.Equal(ContentTransferEntryStatus.CompletedWithErrors, entry.Status);
-        Assert.True(stats.ImportedCount == 6, $"Imported {stats.ImportedCount}: " + string.Join(" | ", stats.ErrorMessages.Values));
+        Assert.True(stats.ImportedCount == 7, $"Imported {stats.ImportedCount}: " + string.Join(" | ", stats.ErrorMessages.Values));
         Assert.Equal(2, stats.ErrorMessages.Count);
         Assert.Contains(stats.ErrorMessages.Values, message => message.Contains("forum", StringComparison.OrdinalIgnoreCase) && message.Contains("Discussion", StringComparison.Ordinal));
         Assert.Contains(stats.ErrorMessages.Values, message => message.Contains("enrollment key", StringComparison.OrdinalIgnoreCase));
@@ -83,12 +83,12 @@ public sealed class MoodleImportTests
         });
         Assert.Equal(["30 Day Learning Plan"], category);
 
-        // The outline: the label joined the section summary; the items are in the activities' order, the activities of
-        // the completion criteria required and the others optional.
+        // The outline: the label is a Text item; the items are in the activities' order, the activities of the
+        // completion criteria required and the others (and the text) optional.
         var section = Assert.Single(course.Get<CourseOutlinePart>(nameof(CourseOutlinePart)).Sections);
         Assert.Equal("Basics", section.Title);
         Assert.Contains("Start here.", section.Summary, StringComparison.Ordinal);
-        Assert.Contains("Welcome to the course.", section.Summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("Welcome to the course.", section.Summary, StringComparison.Ordinal);
 
         var items = await _fixture.InTenantAsync(async services =>
         {
@@ -96,20 +96,23 @@ public sealed class MoodleImportTests
 
             return (await contentManager.GetAsync(section.Items.Select(item => item.ContentItemId), VersionOptions.Latest)).ToDictionary(item => item.ContentItemId);
         });
-        var ordered = section.Items.Select(item => items[item.ContentItemId]).ToList();
+        var all = section.Items.Select(item => items[item.ContentItemId]).ToList();
+        Assert.Equal(LearningConstants.ContentTypes.TextBlock, all[0].ContentType);
+        Assert.Contains("Welcome to the course.", all[0].Content.HtmlBodyPart.Html.ToString(), StringComparison.Ordinal);
+        var ordered = all.Skip(1).ToList();
         Assert.Equal(
             [PackagesConstants.ContentTypes.Package, LearningConstants.ContentTypes.FileLesson, LearningConstants.ContentTypes.LinkLesson, AssessmentsConstants.ContentTypes.Quiz, LearningConstants.ContentTypes.PageLesson],
             ordered.Select(item => item.ContentType));
-        Assert.Equal([true, false, false, true, false], section.Items.Select(item => item.Required));
-        Assert.All(ordered, item => Assert.Equal(course.ContentItemId, item.Get<ContainedPart>(nameof(ContainedPart))?.ListContentItemId));
-        Assert.All(ordered, item => Assert.StartsWith(part.SourceIdentifier + ":cm:", item.Get<CourseItemPart>(nameof(CourseItemPart)).SourceIdentifier, StringComparison.Ordinal));
+        Assert.Equal([false, true, false, false, true, false], section.Items.Select(item => item.Required));
+        Assert.All(all, item => Assert.Equal(course.ContentItemId, item.Get<ContainedPart>(nameof(ContainedPart))?.ListContentItemId));
+        Assert.All(all, item => Assert.StartsWith(part.SourceIdentifier + ":cm:", item.Get<CourseItemPart>(nameof(CourseItemPart)).SourceIdentifier, StringComparison.Ordinal));
 
-        // The SCORM package, imported through the package importer, completes on a score of 90.
+        // The SCORM package, imported through the package importer, completes on a score of 90, whatever it reports.
         var package = ordered[0];
         Assert.Equal("Fire safety package", package.DisplayText);
         Assert.Equal(PackagesConstants.Standards.Scorm12, package.Get<LearningPackagePart>(nameof(LearningPackagePart)).Standard);
         Assert.False(string.IsNullOrEmpty(package.Get<LearningPackagePart>(nameof(LearningPackagePart)).PackageFileId));
-        Assert.Equal(CompletionModes.Passed, package.Get<CourseItemPart>(nameof(CourseItemPart)).CompletionMode);
+        Assert.Equal(CompletionModes.MinimumScore, package.Get<CourseItemPart>(nameof(CourseItemPart)).CompletionMode);
         Assert.Equal(90, package.Get<CourseItemPart>(nameof(CourseItemPart)).PassMark);
 
         // The file, in the media library under the lesson, shown by its own name.
@@ -163,7 +166,7 @@ public sealed class MoodleImportTests
         var againItems = again.Get<CourseOutlinePart>(nameof(CourseOutlinePart)).Sections.SelectMany(section => section.Items).Select(item => item.ContentItemId).ToList();
 
         // Assert
-        Assert.Equal(6, second.GetOrCreate<ImportFileProcessStatsPart>().ImportedCount);
+        Assert.Equal(7, second.GetOrCreate<ImportFileProcessStatsPart>().ImportedCount);
         Assert.Equal(first.ContentItemId, again.ContentItemId);
         Assert.Equal(firstItems, againItems);
         Assert.Equal(firstQuestions, await QuestionIdsAsync(againItems));
@@ -171,7 +174,142 @@ public sealed class MoodleImportTests
         var children = await _fixture.InTenantAsync(async services => await services.GetRequiredService<ISession>()
             .Query<ContentItem, ContainedPartIndex>(index => index.ListContentItemId == first.ContentItemId)
             .ListAsync());
-        Assert.Equal(5, children.Where(child => child.Latest).Select(child => child.ContentItemId).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(6, children.Where(child => child.Latest).Select(child => child.ContentItemId).Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public async Task EveryNewlyMappedActivity_IsImported_AndOnlyTheGlossaryAndTheCaptchaAreReported()
+    {
+        // Arrange
+        var courseId = Random.Shared.Next(100_000, 900_000);
+        var title = "Every activity " + courseId;
+        var backup = MoodleBackupSamples.EveryActivity(courseId, title).BuildZip();
+
+        // Act
+        var entry = await ImportAsync(backup);
+        var course = await FindCourseAsync(title);
+
+        // Assert: the report. The glossary has no equivalent; the captcha of the feedback and the hidden page are flagged.
+        var stats = entry.GetOrCreate<ImportFileProcessStatsPart>();
+        var messages = string.Join(" | ", stats.ErrorMessages.Values);
+        Assert.True(stats.ImportedCount == 10, $"Imported {stats.ImportedCount}: " + messages);
+        Assert.Contains(stats.ErrorMessages.Values, message => message.Contains("glossary", StringComparison.OrdinalIgnoreCase) && message.Contains("Terms", StringComparison.Ordinal));
+        Assert.Contains(stats.ErrorMessages.Values, message => message.Contains("captcha", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(stats.ErrorMessages.Values, message => message.Contains("Hidden notes", StringComparison.Ordinal));
+        Assert.DoesNotContain(stats.ErrorMessages.Values, message => message.Contains("assignment", StringComparison.OrdinalIgnoreCase) || message.Contains("new window", StringComparison.OrdinalIgnoreCase) || message.Contains("attempts", StringComparison.OrdinalIgnoreCase));
+
+        // The course: its picture and the picture of its summary in the media library, completion by the instructors.
+        var part = course.Get<CoursePart>(nameof(CoursePart));
+        var cover = ((JsonObject)course.Content)[LearningConstants.ContentTypes.Course]?["Cover"]?["Paths"]?[0]?.GetValue<string>();
+        Assert.False(string.IsNullOrEmpty(cover));
+        Assert.NotNull(await _fixture.InTenantAsync(services => services.GetRequiredService<IMediaFileStore>().GetFileInfoAsync(cover)));
+        var summary = course.Content.HtmlBodyPart.Html.ToString();
+        Assert.DoesNotContain("@@PLUGINFILE@@", summary, StringComparison.Ordinal);
+        Assert.Contains("<img", summary, StringComparison.Ordinal);
+        var catalog = await (await _fixture.CreateClientAsync()).GetStringAsync("learning/catalog?q=" + courseId, TestContext.Current.CancellationToken);
+        Assert.Contains("data-course-cover", catalog, StringComparison.Ordinal);
+        var approval = Assert.Single(part.CompletionCriteria, rule => rule.Name == LearningRuleNames.StaffApproval);
+        Assert.Equal(LearningConstants.CourseStaffRoles.Instructor, approval.Get("Role"));
+        Assert.False(part.NeverCompletes);
+
+        var section = Assert.Single(course.Get<CourseOutlinePart>(nameof(CourseOutlinePart)).Sections);
+        var items = await _fixture.InTenantAsync(async services =>
+            (await services.GetRequiredService<IContentManager>().GetAsync(section.Items.Select(item => item.ContentItemId), VersionOptions.Latest)).ToDictionary(item => item.ContentItemId));
+        var ordered = section.Items.Select(item => items[item.ContentItemId]).ToList();
+        Assert.Equal(
+        [
+            LearningConstants.ContentTypes.TextBlock,
+            CrestApps.OrchardCore.Learning.Coursework.CourseworkConstants.ContentTypes.Coursework,
+            CrestApps.OrchardCore.Learning.Surveys.SurveysConstants.ContentTypes.FeedbackSurvey,
+            CrestApps.OrchardCore.Learning.Surveys.SurveysConstants.ContentTypes.Choice,
+            PackagesConstants.ContentTypes.Package,
+            AssessmentsConstants.ContentTypes.Quiz,
+            PackagesConstants.ContentTypes.Package,
+            LearningConstants.ContentTypes.PageLesson,
+            LearningConstants.ContentTypes.PageLesson,
+        ], ordered.Select(item => item.ContentType));
+
+        // The label, with its picture in the media library.
+        var text = ordered[0].Content.HtmlBodyPart.Html.ToString();
+        Assert.Contains("Read this first", text, StringComparison.Ordinal);
+        Assert.Contains("<img", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("@@PLUGINFILE@@", text, StringComparison.Ordinal);
+        Assert.False(section.Items[0].Required);
+
+        // The assignment as coursework.
+        var coursework = ordered[1].Get<CrestApps.OrchardCore.Learning.Coursework.Models.CourseworkPart>("CourseworkPart");
+        Assert.Equal(new DateTime(2025, 3, 1, 17, 0, 0, DateTimeKind.Utc), coursework.DueUtc);
+        Assert.Equal(20, coursework.MaxPoints);
+        Assert.Equal(CrestApps.OrchardCore.Learning.Coursework.Models.CourseworkSubmissionType.TextAndFiles, coursework.SubmissionType);
+        Assert.Equal(5, coursework.MaxFiles);
+        Assert.Equal(CompletionModes.Submitted, ordered[1].Get<CourseItemPart>(nameof(CourseItemPart)).CompletionMode);
+
+        // The feedback and the choice as surveys.
+        var feedback = ordered[2].Get<CrestApps.OrchardCore.Learning.Surveys.Models.SurveyPart>("SurveyPart");
+        Assert.Equal(["How did you hear of it?", "What would you change?"], feedback.Questions.Select(question => question.Text));
+        Assert.Equal(["Friend", "Web"], feedback.Questions[0].Options);
+        Assert.True(feedback.Questions[0].Required);
+        var choice = ordered[3].Get<CrestApps.OrchardCore.Learning.Surveys.Models.SurveyPart>("SurveyPart");
+        Assert.Equal(["Monday", "Friday"], Assert.Single(choice.Questions).Options);
+        Assert.Equal(CrestApps.OrchardCore.Learning.Surveys.Models.SurveyResultsVisibility.AfterAnswer, choice.ResultsVisibility);
+
+        // The IMS package, which completes when the learner opens it.
+        var ims = ordered[4];
+        Assert.Equal(PackagesConstants.Standards.ImsContentPackage, ims.Get<LearningPackagePart>(nameof(LearningPackagePart)).Standard);
+        Assert.Equal(CompletionModes.Viewed, ims.Get<CourseItemPart>(nameof(CourseItemPart)).CompletionMode);
+
+        // The quiz: two questions a page, immediate feedback, review options, and the new question types.
+        var quiz = ordered[5].Get<QuizPart>(nameof(QuizPart));
+        Assert.Equal(2, quiz.QuestionsPerPage);
+        Assert.Equal(QuizFeedbackMode.Immediate, quiz.FeedbackMode);
+        Assert.NotNull(quiz.ReviewOptions);
+        Assert.Equal(ReviewShows.Score, quiz.ReviewOptions.During);
+        Assert.Equal(ReviewShows.Score | ReviewShows.RightAnswers, quiz.ReviewOptions.AfterClose);
+        var questions = await _fixture.InTenantAsync(async services =>
+            (await services.GetRequiredService<IContentManager>().GetAsync(quiz.QuestionIds, VersionOptions.Latest)).ToDictionary(question => question.ContentItemId));
+        Assert.Equal(
+            [AssessmentsConstants.ContentTypes.SurveyQuestion, AssessmentsConstants.ContentTypes.DragIntoTextQuestion, AssessmentsConstants.ContentTypes.GapSelectQuestion, AssessmentsConstants.ContentTypes.DescriptionQuestion],
+            quiz.QuestionIds.Select(id => questions[id].ContentType));
+
+        // The SCORM package: a new window, two attempts, the average of them, and a score of at least 80.
+        var scorm = ordered[6].Get<LearningPackagePart>(nameof(LearningPackagePart));
+        Assert.True(scorm.OpenInNewWindow);
+        Assert.Equal(2, scorm.MaxAttempts);
+        Assert.Equal(GradingMethod.Average, scorm.GradingMethod);
+        Assert.Equal(CompletionModes.MinimumScore, ordered[6].Get<CourseItemPart>(nameof(CourseItemPart)).CompletionMode);
+        Assert.Equal(80, ordered[6].Get<CourseItemPart>(nameof(CourseItemPart)).PassMark);
+
+        // The page open only to the person with that e-mail address, and the hidden page, which is optional.
+        var adminId = await _fixture.InTenantAsync(async services =>
+        {
+            var users = services.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>>();
+
+            return await users.GetUserIdAsync(await users.FindByNameAsync("admin"));
+        });
+        var people = Assert.Single(ordered[7].Get<CourseItemPart>(nameof(CourseItemPart)).ReleaseRules, rule => rule.Name == LearningRuleNames.People);
+        Assert.Equal(adminId, people.Get("UserIds"));
+        Assert.False(section.Items[8].Required);
+    }
+
+    [Fact]
+    public async Task ACourseWithoutCompletionCriteria_NeverCompletes()
+    {
+        // Arrange
+        var courseId = Random.Shared.Next(100_000, 900_000);
+        var title = "No criteria " + courseId;
+        var backup = new MoodleBackupBuilder(courseId, title, "NC-" + courseId)
+            .Section(1, 0, null)
+            .Section(2, 1, "Only section")
+            .Enrolment("manual")
+            .Page(2, 3, "Read me", "<p>Text.</p>")
+            .BuildZip();
+
+        // Act
+        await ImportAsync(backup);
+        var course = await FindCourseAsync(title);
+
+        // Assert
+        Assert.True(course.Get<CoursePart>(nameof(CoursePart)).NeverCompletes);
     }
 
     [Fact]
@@ -237,6 +375,10 @@ public sealed class MoodleImportTests
                     LearningConstants.ContentTypes.LinkLesson,
                     PackagesConstants.ContentTypes.Package,
                     AssessmentsConstants.ContentTypes.Quiz,
+                    LearningConstants.ContentTypes.TextBlock,
+                    CrestApps.OrchardCore.Learning.Coursework.CourseworkConstants.ContentTypes.Coursework,
+                    CrestApps.OrchardCore.Learning.Surveys.SurveysConstants.ContentTypes.FeedbackSurvey,
+                    CrestApps.OrchardCore.Learning.Surveys.SurveysConstants.ContentTypes.Choice,
                 ],
             });
 

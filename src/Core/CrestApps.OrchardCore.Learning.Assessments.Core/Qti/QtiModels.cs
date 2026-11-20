@@ -230,6 +230,9 @@ public sealed class QtiQuestion
     /// <summary>Gets or sets the choices no blank takes, of a drag into text or gapselect question.</summary>
     public IList<string> Distractors { get; set; } = [];
 
+    /// <summary>Gets or sets whether the learner may choose several options of a survey question.</summary>
+    public bool Multiple { get; set; }
+
     /// <summary>Gets or sets the guidance graders see, from a rubric block for scorers.</summary>
     public string GraderGuidance { get; set; }
 }

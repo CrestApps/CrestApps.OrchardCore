@@ -40,8 +40,8 @@ public sealed class MoodleImportOptions
 
 /// <summary>
 /// Reads a Moodle course backup (<c>.mbz</c>) for ContentTransfer: one row for the course, one for each activity the
-/// site has an item for (a SCORM package, a quiz, a file, a link, a page) and one failed row for each thing it does not
-/// import. The course is imported from the import page of the Course type and the file is never written.
+/// site has an item for (a SCORM or IMS content package, a quiz, a file, a link, a page, a label as text, an
+/// assignment as coursework, a feedback or a choice as a survey) and one failed row for each thing it does not import. The course is imported from the import page of the Course type and the file is never written.
 /// </summary>
 internal sealed class MoodleFileFormatProvider : IContentTransferFileFormatProvider
 {
@@ -49,6 +49,7 @@ internal sealed class MoodleFileFormatProvider : IContentTransferFileFormatProvi
     private readonly MoodleWorkspaces _workspaces;
     private readonly MoodleImportOptions _options;
     private readonly QuestionTypeOptions _questionTypes;
+    private readonly CourseItemKindOptions _kinds;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -58,6 +59,7 @@ internal sealed class MoodleFileFormatProvider : IContentTransferFileFormatProvi
         MoodleWorkspaces workspaces,
         IOptions<MoodleImportOptions> options,
         IOptions<QuestionTypeOptions> questionTypes,
+        IOptions<CourseItemKindOptions> kinds,
         ILogger<MoodleFileFormatProvider> logger,
         IStringLocalizer<MoodleFileFormatProvider> stringLocalizer)
     {
@@ -65,6 +67,7 @@ internal sealed class MoodleFileFormatProvider : IContentTransferFileFormatProvi
         _workspaces = workspaces;
         _options = options.Value;
         _questionTypes = questionTypes.Value;
+        _kinds = kinds.Value;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -115,7 +118,7 @@ internal sealed class MoodleFileFormatProvider : IContentTransferFileFormatProvi
 
         var token = _workspaces.Add(new MoodleWorkspace(folder, result.Backup));
 
-        return new MoodleImportReader(token, _workspaces, MoodleCourseRows.Write(result.Backup, token, _questionTypes, S));
+        return new MoodleImportReader(token, _workspaces, MoodleCourseRows.Write(result.Backup, token, _questionTypes, S, kind => _kinds.Find(kind) is not null));
     }
 
     /// <inheritdoc />
@@ -125,7 +128,7 @@ internal sealed class MoodleFileFormatProvider : IContentTransferFileFormatProvi
     /// <inheritdoc />
     public string DescribeImport(ContentTypeDefinition contentType)
         => contentType is not null && CanImport(contentType.Name)
-            ? S["A Moodle course backup (.mbz, as a zip or a tar.gz archive): the course with its category, dates, enrolment and completion, its sections, and an item for each SCORM package, quiz (with its questions in a question bank), file, link and page. Labels join their section's summary. Every activity, question or setting that is not imported is reported as a failed row, and importing the same course again updates it."]
+            ? S["A Moodle course backup (.mbz, as a zip or a tar.gz archive): the course with its category, dates, picture, enrolment and completion, its sections, and an item for each SCORM or IMS content package, quiz (with its questions in a question bank), file, link, page, label (as text), assignment (as coursework), feedback and choice (as surveys), with their restrictions and pictures. Every activity, question or setting that is not imported is reported as a failed row, and importing the same course again updates it."]
             : null;
 }
 

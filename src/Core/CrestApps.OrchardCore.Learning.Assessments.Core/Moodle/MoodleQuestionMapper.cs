@@ -41,8 +41,9 @@ public sealed record MoodleQuestionMapping(QtiItem Item, string Refusal, string 
 /// <summary>
 /// Maps a Moodle question onto the question model the QTI import writes question rows from (<see cref="QtiQuestion"/>),
 /// so a Moodle question is imported by the same question columns and handlers as a QTI item. Multiple choice becomes
-/// single or multiple choice, true/false, short answer, numerical, essay and matching their own types, and drag into
-/// text and gap select become fill in the blanks (typed, without their unused choices). The question text stays HTML;
+/// single or multiple choice (a survey question when no answer is worth points, so every answer counts), true/false,
+/// short answer, numerical, essay and matching their own types, drag into text and gap select their own types with the
+/// choices no blank uses as distractors, and a description a description worth nothing. The question text stays HTML;
 /// choices, answers and blanks become plain text.
 /// </summary>
 public static partial class MoodleQuestionMapper
@@ -87,7 +88,9 @@ public static partial class MoodleQuestionMapper
             "numerical" => Numerical(question, mapped),
             "essay" => Essay(question, mapped),
             "match" => Matching(question, mapped),
-            "ddwtos" or "gapselect" => Blanks(question, mapped),
+            "ddwtos" => Blanks(question, mapped, AssessmentsConstants.QuestionTypes.DragIntoText),
+            "gapselect" => Blanks(question, mapped, AssessmentsConstants.QuestionTypes.GapSelect),
+            "description" => Description(mapped),
             _ => (MoodleQuestionRefusals.UnsupportedType, question.Type),
         };
 
@@ -111,9 +114,19 @@ public static partial class MoodleQuestionMapper
         var single = question.Option("single") != "0";
         var best = question.Answers.Select(answer => answer.Fraction).DefaultIfEmpty(0).Max();
 
-        if (best <= 0)
+        if (question.Answers.Count == 0)
         {
             return (MoodleQuestionRefusals.NoRightAnswer, null);
+        }
+
+        // No answer worth points: Moodle's way of asking an opinion. Every answer is accepted.
+        if (best <= 0)
+        {
+            mapped.QuestionType = AssessmentsConstants.QuestionTypes.Survey;
+            mapped.Multiple = !single;
+            mapped.Options = [.. question.Answers.Select(answer => new QtiOption { Identifier = answer.Id, Text = Plain(answer.Text) })];
+
+            return default;
         }
 
         mapped.QuestionType = single ? AssessmentsConstants.QuestionTypes.SingleChoice : AssessmentsConstants.QuestionTypes.MultipleChoice;
@@ -228,9 +241,18 @@ public static partial class MoodleQuestionMapper
         return default;
     }
 
+    // A description has nothing to answer and is worth no points; its text is the prompt.
+    private static (string Code, string Detail) Description(QtiQuestion mapped)
+    {
+        mapped.QuestionType = AssessmentsConstants.QuestionTypes.Description;
+        mapped.Points = 0;
+
+        return default;
+    }
+
     // Drag into text and gap select put [[n]] in the text, n the place of the right choice among the answers. The blank
-    // becomes the right choice's text, so the learner types it; the choices no blank uses are left out.
-    private static (string Code, string Detail) Blanks(MoodleQuestion question, QtiQuestion mapped)
+    // becomes the right choice's text, and the choices no blank uses are the distractors offered with the right ones.
+    private static (string Code, string Detail) Blanks(MoodleQuestion question, QtiQuestion mapped, string questionType)
     {
         if (question.Answers.Any(answer => HasMedia(answer.Text)))
         {
@@ -268,9 +290,13 @@ public static partial class MoodleQuestionMapper
             return (MoodleQuestionRefusals.NoRightAnswer, null);
         }
 
-        mapped.QuestionType = AssessmentsConstants.QuestionTypes.FillInBlanks;
+        var used = BlankPattern().Matches(Plain(question.Text)).Select(match => int.Parse(match.Groups["n"].Value, CultureInfo.InvariantCulture) - 1).ToHashSet();
+
+        mapped.QuestionType = questionType;
         mapped.Prompt = null;
         mapped.BlankText = text;
+        mapped.Shuffle = question.Option("shuffleanswers") == "1";
+        mapped.Distractors = [.. choices.Where((choice, index) => !used.Contains(index) && !string.IsNullOrEmpty(choice) && !choices.Where((_, other) => used.Contains(other)).Contains(choice, StringComparer.Ordinal)).Distinct(StringComparer.Ordinal)];
 
         return default;
     }

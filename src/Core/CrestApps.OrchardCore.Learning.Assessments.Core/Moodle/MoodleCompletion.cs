@@ -30,9 +30,10 @@ public static class MoodleCompletion
     }
 
     /// <summary>
-    /// Maps the completion of a SCORM activity: a required score becomes Passed at that score (as a percentage of the
-    /// activity's most points), a passing grade Passed at the grade to pass, manual completion Marked done, and anything
-    /// else (viewed, a status of completed or passed) the status the package reports.
+    /// Maps the completion of a SCORM activity: a required score becomes Minimum score at that score (as a percentage of
+    /// the activity's most points: Moodle's "viewed, graded and a score of at least N"), a passing grade Passed at the
+    /// grade to pass, manual completion Marked done, and anything else (viewed, a status of completed or passed) the
+    /// status the package reports.
     /// </summary>
     /// <param name="activity">The activity.</param>
     /// <returns>The completion mode and, for Passed, the pass mark.</returns>
@@ -56,7 +57,7 @@ public static class MoodleCompletion
 
             if (Number(activity.Get("completionscorerequired")) is { } score and > 0)
             {
-                return (CompletionModes.Passed, Percent(score, maxGrade));
+                return (CompletionModes.MinimumScore, Percent(score, maxGrade));
             }
 
             if (activity.CompletionPassGrade && activity.GradePass is > 0)
@@ -111,6 +112,21 @@ public static class MoodleCompletion
 
         return activity.Completion == 1 ? CompletionModes.MarkedDone : CompletionModes.Viewed;
     }
+
+    /// <summary>
+    /// Maps the role of a Moodle completion by role onto a course staff role: a teacher is an instructor, a non-editing
+    /// teacher an assistant, and any other role keeps its short name.
+    /// </summary>
+    /// <param name="roleShortName">The role's short name.</param>
+    /// <returns>The course staff role, or <see langword="null"/>.</returns>
+    public static string StaffRole(string roleShortName)
+        => roleShortName?.Trim() switch
+        {
+            null or "" => null,
+            "editingteacher" => LearningConstants.CourseStaffRoles.Instructor,
+            "teacher" => LearningConstants.CourseStaffRoles.Assistant,
+            var role => role,
+        };
 
     private static decimal Percent(decimal value, decimal max)
         => Math.Clamp(Math.Round(value / max * 100, 2), 0, 100);

@@ -196,6 +196,9 @@ public sealed class MoodleCourse
     /// <summary>Gets or sets the Moodle course id.</summary>
     public string Id { get; set; }
 
+    /// <summary>Gets or sets the context id of the course, which its own files (its picture, its summary's pictures) belong to.</summary>
+    public string ContextId { get; set; }
+
     /// <summary>Gets or sets the full name.</summary>
     public string FullName { get; set; }
 
@@ -300,6 +303,9 @@ public sealed class MoodleCompletionCriterion
 
     /// <summary>Gets or sets the grade to pass of a grade criterion, in course grade points.</summary>
     public decimal? GradePass { get; set; }
+
+    /// <summary>Gets or sets the short name of the role of a role criterion, such as <c>editingteacher</c>.</summary>
+    public string RoleShortName { get; set; }
 }
 
 /// <summary>
@@ -376,6 +382,23 @@ public sealed class MoodleActivity
     /// <summary>Gets or sets the slots of a quiz, in order.</summary>
     public IList<MoodleQuizSlot> Slots { get; set; } = [];
 
+    /// <summary>Gets or sets the restrictions of the activity, as Moodle's availability JSON, or <see langword="null"/>.</summary>
+    public string Availability { get; set; }
+
+    /// <summary>
+    /// Gets or sets the repeated records of the module's settings, by element name, such as the <c>item</c> records of a
+    /// feedback, the <c>option</c> records of a choice or the <c>plugin_config</c> records of an assignment.
+    /// </summary>
+    public IDictionary<string, IList<IDictionary<string, string>>> Records { get; set; } = new Dictionary<string, IList<IDictionary<string, string>>>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets the records of an element name, in order.
+    /// </summary>
+    /// <param name="element">The element name, such as <c>item</c>.</param>
+    /// <returns>The records, each its values by element name.</returns>
+    public IList<IDictionary<string, string>> RecordsOf(string element)
+        => Records.TryGetValue(element, out var records) ? records : [];
+
     /// <summary>
     /// Gets a setting, or <see langword="null"/> when the activity does not have it.
     /// </summary>
@@ -431,6 +454,9 @@ public sealed class MoodleFile
 
     /// <summary>Gets or sets its folder within the area.</summary>
     public string FilePath { get; set; }
+
+    /// <summary>Gets or sets the item it belongs to within the area, such as a section id.</summary>
+    public string ItemId { get; set; }
 
     /// <summary>Gets or sets its name.</summary>
     public string FileName { get; set; }

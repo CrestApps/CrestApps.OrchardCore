@@ -140,24 +140,56 @@ public sealed class MoodleQuestionMapperTests
     }
 
     [Theory]
-    [InlineData("ddwtos")]
-    [InlineData("gapselect")]
-    public void DragIntoTextAndGapSelect_BecomeFillInTheBlanks(string type)
+    [InlineData("ddwtos", AssessmentsConstants.QuestionTypes.DragIntoText)]
+    [InlineData("gapselect", AssessmentsConstants.QuestionTypes.GapSelect)]
+    public void DragIntoTextAndGapSelect_KeepTheirChoices_WithTheUnusedOnesAsDistractors(string type, string questionType)
     {
         // Arrange
         var question = Question(type, "<p>A fire needs fuel, [[1]] and [[2]].</p>", answers: [Answer("heat", 0), Answer("oxygen", 0), Answer("water", 0)]);
+        question.Options["shuffleanswers"] = "1";
 
         // Act
         var mapping = MoodleQuestionMapper.Map(question, "id", "file");
 
         // Assert
         Assert.Null(mapping.Refusal);
-        Assert.Equal(AssessmentsConstants.QuestionTypes.FillInBlanks, mapping.Item.Question.QuestionType);
+        Assert.Equal(questionType, mapping.Item.Question.QuestionType);
         Assert.Equal("A fire needs fuel, [[heat]] and [[oxygen]].", mapping.Item.Question.BlankText);
+        Assert.Equal(["water"], mapping.Item.Question.Distractors);
+        Assert.True(mapping.Item.Question.Shuffle);
+    }
+
+    [Fact]
+    public void AMultipleChoiceWithNoRightAnswer_BecomesASurveyQuestion_WhereEveryAnswerCounts()
+    {
+        // Arrange
+        var question = Question("multichoice", "<p>How confident are you?</p>", answers: [Answer("Very", 0), Answer("Not much", 0)]);
+        question.Options["single"] = "1";
+
+        // Act
+        var mapping = MoodleQuestionMapper.Map(question, "id", "file");
+
+        // Assert
+        Assert.Null(mapping.Refusal);
+        Assert.Equal(AssessmentsConstants.QuestionTypes.Survey, mapping.Item.Question.QuestionType);
+        Assert.Equal(["Very", "Not much"], mapping.Item.Question.Options.Select(option => option.Text));
+        Assert.False(mapping.Item.Question.PartialCredit);
+    }
+
+    [Fact]
+    public void ADescription_BecomesADescriptionWorthNothing()
+    {
+        // Act
+        var mapping = MoodleQuestionMapper.Map(Question("description", "<p>Read the next questions carefully.</p>"), "id", "file");
+
+        // Assert
+        Assert.Null(mapping.Refusal);
+        Assert.Equal(AssessmentsConstants.QuestionTypes.Description, mapping.Item.Question.QuestionType);
+        Assert.Equal(0, mapping.Item.Question.Points);
+        Assert.Equal("<p>Read the next questions carefully.</p>", mapping.Item.Question.Prompt);
     }
 
     [Theory]
-    [InlineData("description")]
     [InlineData("multianswer")]
     [InlineData("calculated")]
     [InlineData("ddimageortext")]

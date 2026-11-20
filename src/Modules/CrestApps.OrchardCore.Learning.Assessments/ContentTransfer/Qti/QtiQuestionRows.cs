@@ -60,6 +60,8 @@ public static class QtiQuestionRows
         "ChoiceBlanksQuestionPart_Text",
         "ChoiceBlanksQuestionPart_Distractors",
         "ChoiceBlanksQuestionPart_ShuffleChoices",
+        "SurveyQuestionPart_Options",
+        "SurveyQuestionPart_Multiple",
         QtiColumns.Error,
         QtiColumns.Media,
     ];
@@ -167,6 +169,11 @@ public static class QtiQuestionRows
                     row["ChoiceBlanksQuestionPart_Text"] = question.BlankText;
                     row["ChoiceBlanksQuestionPart_Distractors"] = QuestionCells.Join(question.Distractors.Select(word => QuestionCells.EscapeValue(word)));
                     row["ChoiceBlanksQuestionPart_ShuffleChoices"] = YesNo(question.Shuffle);
+                    break;
+
+                case AssessmentsConstants.QuestionTypes.Survey:
+                    row["SurveyQuestionPart_Options"] = QuestionCells.Join(question.Options.Select(option => QuestionCells.EscapeValue(option.Text)));
+                    row["SurveyQuestionPart_Multiple"] = YesNo(question.Multiple);
                     break;
             }
 

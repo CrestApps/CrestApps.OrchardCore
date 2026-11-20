@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Learning.Core.Indexes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Contents;
@@ -127,9 +128,20 @@ internal sealed class MoodleSourceRowFilter : IContentImportRowFilter
 /// </summary>
 internal sealed class MoodleRowTypeProvider : IContentImportRowTypeProvider
 {
+    private readonly CourseItemKindOptions _kinds;
+
+    public MoodleRowTypeProvider(IOptions<CourseItemKindOptions> kinds)
+    {
+        _kinds = kinds.Value;
+    }
+
     /// <inheritdoc />
     public IEnumerable<string> GetRowContentTypes(ContentTypeDefinition contentType)
         => contentType?.Name == LearningConstants.ContentTypes.Course
-            ? MoodleCourseRows.ItemTypes.Values.Prepend(LearningConstants.ContentTypes.Course).Distinct(StringComparer.Ordinal)
+            ? MoodleCourseRows.ItemTypes
+                .Where(type => _kinds.Find(MoodleCourseRows.ItemKinds[type.Key]) is not null)
+                .Select(type => type.Value)
+                .Prepend(LearningConstants.ContentTypes.Course)
+                .Distinct(StringComparer.Ordinal)
             : [];
 }
