@@ -48,6 +48,7 @@
 			}));
 		});
 		showProgress(result);
+		if (result.courseCompleted) document.querySelector("[data-learning-course-done]")?.classList.remove("d-none");
 	}
 	function showProgress(result) {
 		const progress = document.querySelector("[data-learning-progress]");

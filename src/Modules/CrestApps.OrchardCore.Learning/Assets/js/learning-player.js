@@ -54,6 +54,10 @@ function showCompleted(root, result) {
     });
 
     showProgress(result);
+
+    if (result.courseCompleted) {
+        document.querySelector('[data-learning-course-done]')?.classList.remove('d-none');
+    }
 }
 
 // The bar and "3 of 7 complete · 43%" beside it.

@@ -76,6 +76,7 @@ public sealed class LearnerPagesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddNavigationProvider<CredentialsAccountMenu>();
+        services.AddScoped<ICourseCompletionLinkProvider, CredentialCompletionLinkProvider>();
         services.AddDisplayDriver<UserMenu, CredentialsUserMenuDisplayDriver>();
     }
 }

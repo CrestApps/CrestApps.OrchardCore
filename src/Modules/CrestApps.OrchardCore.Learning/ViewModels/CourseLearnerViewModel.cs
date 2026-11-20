@@ -34,6 +34,11 @@ public class CourseLearnerViewModel
     public IDictionary<string, string> KindNames { get; set; } = new Dictionary<string, string>();
 
     /// <summary>
+    /// Gets or sets the links of the course completion panel, for a completed enrollment.
+    /// </summary>
+    public IReadOnlyList<CourseCompletionLink> CompletionLinks { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets where the course is between its start and end dates.
     /// </summary>
     public CourseSchedule Schedule { get; set; }

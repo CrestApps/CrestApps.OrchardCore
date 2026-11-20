@@ -108,6 +108,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
 
             // The same decision as the player's, so the course page shows which items are still locked.
             model.LockedItems = await _pageService.GetLocksAsync(part.ContentItem, model.Outline, model.Enrollment, model.Progress);
+            model.CompletionLinks = await _pageService.GetCompletionLinksAsync(model.Enrollment);
         }
     }
 }

@@ -36,7 +36,7 @@ Each lesson says what completes it, under its title in the player and beside it 
 - A video counts when you have watched enough of it.
 - An acknowledgement counts when you tick the statement and select **Confirm**.
 
-**Course progress** shows how far you are, as *3 of 7 complete · 43%* under the bar, and each section of the outline shows how many of its required lessons you completed. When every required lesson is done, the course is completed and the page says when you completed it. You can still review it.
+**Course progress** shows how far you are, as *3 of 7 complete · 43%* under the bar, and each section of the outline shows how many of its required lessons you completed. When every required lesson is done, the course is completed and the player shows **You completed this course**: the date, your grade, links to what the completion earned (a certificate or a digital credential, when your site issues them) and to **My transcript**. If the course completes while a lesson is open (for example when a video reaches its share), a message under the lesson leads to it. The course page shows the same panel, and **Finish** on the last lesson opens it again. You can still review the course.
 
 ## Find a course
 

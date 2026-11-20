@@ -74,11 +74,7 @@
         }
         else if (enrollment.Status == EnrollmentStatus.Completed)
         {
-            <p>
-                <i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@T["You completed this course on"]
-                @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(enrollment.CompletedUtc ?? enrollment.CreatedUtc, DateTimeKind.Utc), Format: "d")).
-            </p>
-            <a class="btn btn-outline-primary" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId })">@T["Review the course"]</a>
+            <partial name="_CourseCompletedPanel" model="(enrollment, Model.CompletionLinks, Model.CourseId, false)" />
         }
         else
         {

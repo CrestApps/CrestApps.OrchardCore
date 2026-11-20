@@ -128,6 +128,40 @@ public sealed class LearnerController : Controller
     }
 
     /// <summary>
+    /// Shows the course completion panel in the player, for a learner who completed the course.
+    /// </summary>
+    /// <param name="courseId">The course.</param>
+    /// <param name="updateModelAccessor">The model updater of the request.</param>
+    /// <returns>The player with the panel, or the player when the course is not completed.</returns>
+    [HttpGet("learning/courses/{courseId}/completed", Name = "LearningCourseCompleted")]
+    public async Task<IActionResult> Completed(string courseId, [FromServices] IUpdateModelAccessor updateModelAccessor)
+    {
+        if (User.Identity?.IsAuthenticated != true)
+        {
+            return Challenge();
+        }
+
+        var model = await _pageService.BuildPlayerAsync(User, courseId, null, updateModelAccessor.ModelUpdater);
+
+        if (model is null)
+        {
+            return NotFound();
+        }
+
+        if (model.Enrollment is not { Status: EnrollmentStatus.Completed })
+        {
+            return RedirectToRoute("LearningPlayer", new { courseId });
+        }
+
+        model.ShowCompletion = true;
+        model.Current = null;
+        model.CurrentShape = null;
+        model.CompletionLinks = await _pageService.GetCompletionLinksAsync(model.Enrollment);
+
+        return View("Play", model);
+    }
+
+    /// <summary>
     /// Enrolls the signed-in learner in a course, as the course allows.
     /// </summary>
     /// <param name="courseId">The course.</param>
@@ -281,7 +315,8 @@ public sealed class LearnerController : Controller
         }
         else if (update.CourseCompleted)
         {
-            await _notifier.SuccessAsync(H["You completed the course."]);
+            // The step that completes the course leads to the completion panel.
+            return RedirectToRoute("LearningCourseCompleted", new { courseId = enrollment.CourseId });
         }
 
         return RedirectToRoute("LearningPlayer", new { courseId = enrollment.CourseId, itemId });

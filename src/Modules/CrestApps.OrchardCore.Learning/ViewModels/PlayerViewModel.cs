@@ -64,4 +64,14 @@ public class PlayerViewModel
     /// Gets or sets how many of the items that count toward completion the learner completed.
     /// </summary>
     public int CompletedCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the player shows the course completion panel instead of an item.
+    /// </summary>
+    public bool ShowCompletion { get; set; }
+
+    /// <summary>
+    /// Gets or sets the links of the course completion panel, such as the certificate the completion earned.
+    /// </summary>
+    public IReadOnlyList<CourseCompletionLink> CompletionLinks { get; set; } = [];
 }

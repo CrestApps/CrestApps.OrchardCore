@@ -28,7 +28,17 @@
             <div class="card">
                 <div class="card-body">
                     <h2 class="h6 mb-2">@course.DisplayText</h2>
-                    @if (enrollment is not null && enrollment.Status != EnrollmentStatus.Pending)
+                    @if (enrollment is { Status: EnrollmentStatus.Completed })
+                    {
+                        <p class="small mb-0 text-success" data-learning-course-completed>
+                            <i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["Completed on"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(enrollment.CompletedUtc ?? enrollment.CreatedUtc, DateTimeKind.Utc), Format: "d"))
+                            @if (!Model.ShowCompletion)
+                            {
+                                <a class="ms-1" href="@Url.RouteUrl("LearningCourseCompleted", new { courseId })">@T["See your completion"]</a>
+                            }
+                        </p>
+                    }
+                    else if (enrollment is not null && enrollment.Status != EnrollmentStatus.Pending)
                     {
                         <partial name="_LearnerProgress" model="(enrollment.ProgressPercent, Model.CompletedCount, Model.RequiredCount, progressLabel)" />
                     }
@@ -47,7 +57,11 @@
         </aside>
 
         <main class="col-lg-8 order-lg-2 order-1" id="learning-item">
-            @if (current is null)
+            @if (Model.ShowCompletion)
+            {
+                <partial name="_CourseCompletedPanel" model="(enrollment, Model.CompletionLinks, courseId, true)" />
+            }
+            else if (current is null)
             {
                 <p>@T["This course has no lessons yet."]</p>
             }
@@ -150,6 +164,10 @@
                         }
                     }
                     <p class="small text-success my-3 d-none" data-learning-completed role="status"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["You completed this item."]</p>
+                    <div class="alert alert-success d-flex flex-wrap align-items-center justify-content-between gap-2 d-none" data-learning-course-done role="status">
+                        <span><i class="fa-solid fa-trophy me-1" aria-hidden="true"></i>@T["You completed the course."]</span>
+                        <a class="btn btn-success btn-sm" href="@Url.RouteUrl("LearningCourseCompleted", new { courseId })">@T["See your completion"]</a>
+                    </div>
                 }
                 else
                 {
@@ -201,6 +219,10 @@
                     @if (Model.NextItemId is not null)
                     {
                         <a class="btn btn-primary" href="@Url.RouteUrl("LearningPlayer", new { courseId, itemId = Model.NextItemId })">@T["Next"]<i class="fa-solid fa-arrow-right ms-1" aria-hidden="true"></i></a>
+                    }
+                    else if (enrollment is { Status: EnrollmentStatus.Completed })
+                    {
+                        <a class="btn btn-success" href="@Url.RouteUrl("LearningCourseCompleted", new { courseId })">@T["Finish"]<i class="fa-solid fa-flag-checkered ms-1" aria-hidden="true"></i></a>
                     }
                 </nav>
             }

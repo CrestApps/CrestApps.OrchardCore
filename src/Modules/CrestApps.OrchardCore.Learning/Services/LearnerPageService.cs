@@ -30,6 +30,7 @@ public sealed class LearnerPageService
     private readonly IContentManager _contentManager;
     private readonly CourseItemKindOptions _kindOptions;
     private readonly IStringLocalizerFactory _localizerFactory;
+    private readonly IEnumerable<ICourseCompletionLinkProvider> _completionLinks;
     private readonly IClock _clock;
 
     /// <summary>
@@ -44,6 +45,7 @@ public sealed class LearnerPageService
     /// <param name="contentManager">The content manager.</param>
     /// <param name="kindOptions">The course item kinds.</param>
     /// <param name="localizerFactory">The string localizer factory.</param>
+    /// <param name="completionLinks">The providers of links on the course completion panel.</param>
     /// <param name="clock">The clock.</param>
     public LearnerPageService(
         ICourseStructureService courseStructure,
@@ -55,6 +57,7 @@ public sealed class LearnerPageService
         IContentManager contentManager,
         IOptions<CourseItemKindOptions> kindOptions,
         IStringLocalizerFactory localizerFactory,
+        IEnumerable<ICourseCompletionLinkProvider> completionLinks,
         IClock clock)
     {
         _courseStructure = courseStructure;
@@ -66,6 +69,7 @@ public sealed class LearnerPageService
         _contentManager = contentManager;
         _kindOptions = kindOptions.Value;
         _localizerFactory = localizerFactory;
+        _completionLinks = completionLinks;
         _clock = clock;
     }
 
@@ -283,6 +287,28 @@ public sealed class LearnerPageService
             .Where(enrollment => enrollment.Status == EnrollmentStatus.Completed && enrollment.Completion is not null)
             .OrderByDescending(enrollment => enrollment.CompletedUtc)
             .ToArray();
+    }
+
+    /// <summary>
+    /// Gets the links of the course completion panel for a completed enrollment, such as the certificate it earned.
+    /// </summary>
+    /// <param name="enrollment">The learner's completed enrollment.</param>
+    /// <returns>The links, in their order.</returns>
+    public async Task<IReadOnlyList<CourseCompletionLink>> GetCompletionLinksAsync(Enrollment enrollment)
+    {
+        if (enrollment is not { Status: EnrollmentStatus.Completed })
+        {
+            return [];
+        }
+
+        var links = new List<CourseCompletionLink>();
+
+        foreach (var provider in _completionLinks)
+        {
+            links.AddRange(await provider.GetLinksAsync(enrollment));
+        }
+
+        return links.Where(link => !string.IsNullOrEmpty(link?.Url) && !string.IsNullOrEmpty(link.Text)).OrderBy(link => link.Position).ToList();
     }
 
     /// <summary>
