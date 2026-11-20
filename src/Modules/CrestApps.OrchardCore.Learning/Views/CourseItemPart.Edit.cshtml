@@ -3,21 +3,30 @@
 <div class="card mb-3">
     <div class="card-header">@T["Course item: {0}", Model.KindDisplayName]</div>
     <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="CompletionMode">
-            <label asp-for="CompletionMode" class="ocat-label">@T["Completed"]</label>
-            <div class="ocat-end">
-                <select asp-for="CompletionMode" asp-items="Model.CompletionModeOptions" class="form-select"></select>
-                <span asp-validation-for="CompletionMode"></span>
+        @if (Model.Inline)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset"><span class="hint">@T["Text shows in place in the course outline and in the player, before the next item. It is never completed, graded or required."]</span></div>
             </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="MinimumMinutes">
-            <label asp-for="MinimumMinutes" class="ocat-label">@T["Minimum time (minutes)"]</label>
-            <div class="ocat-end">
-                <input asp-for="MinimumMinutes" type="number" min="1" class="form-control" />
-                <span asp-validation-for="MinimumMinutes"></span>
-                <span class="hint">@T["For an item completed after a minimum time."]</span>
+        }
+        else
+        {
+            <div class="ocat-wrapper" asp-validation-class-for="CompletionMode">
+                <label asp-for="CompletionMode" class="ocat-label">@T["Completed"]</label>
+                <div class="ocat-end">
+                    <select asp-for="CompletionMode" asp-items="Model.CompletionModeOptions" class="form-select"></select>
+                    <span asp-validation-for="CompletionMode"></span>
+                </div>
             </div>
-        </div>
+            <div class="ocat-wrapper" asp-validation-class-for="MinimumMinutes">
+                <label asp-for="MinimumMinutes" class="ocat-label">@T["Minimum time (minutes)"]</label>
+                <div class="ocat-end">
+                    <input asp-for="MinimumMinutes" type="number" min="1" class="form-control" />
+                    <span asp-validation-for="MinimumMinutes"></span>
+                    <span class="hint">@T["For an item completed after a minimum time."]</span>
+                </div>
+            </div>
+        }
         <div class="ocat-wrapper" asp-validation-class-for="EstimatedMinutes">
             <label asp-for="EstimatedMinutes" class="ocat-label">@T["Estimated time (minutes)"]</label>
             <div class="ocat-end"><input asp-for="EstimatedMinutes" type="number" min="1" class="form-control" /></div>
@@ -34,64 +43,67 @@
     </div>
 </div>
 
-<div class="card mb-3">
-    <div class="card-header">@T["Grade"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input asp-for="Gradable" type="checkbox" class="form-check-input" />
-                    <label asp-for="Gradable" class="form-check-label">@T["Counts toward the course grade"]</label>
+@if (!Model.Inline)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Grade"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="Gradable" type="checkbox" class="form-check-input" />
+                        <label asp-for="Gradable" class="form-check-label">@T["Counts toward the course grade"]</label>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Weight">
-            <label asp-for="Weight" class="ocat-label">@T["Weight"]</label>
-            <div class="ocat-end">
-                <input asp-for="Weight" type="number" min="0" step="0.01" class="form-control" />
-                <span asp-validation-for="Weight"></span>
-            </div>
-        </div>
-        @if (Model.GradeCategoryOptions.Count > 0)
-        {
-            <div class="ocat-wrapper" id="@Html.IdFor(m => m.GradeCategoryId)-wrapper" hidden="@(!Model.Gradable)">
-                <label asp-for="GradeCategoryId" class="ocat-label">@T["Grade category"]</label>
+            <div class="ocat-wrapper" asp-validation-class-for="Weight">
+                <label asp-for="Weight" class="ocat-label">@T["Weight"]</label>
                 <div class="ocat-end">
-                    <select asp-for="GradeCategoryId" asp-items="Model.GradeCategoryOptions" class="form-select"></select>
-                    <span class="hint">@T["The category of the course this item counts in. An item without a category counts as a category of its own, weighted by its item weight."]</span>
+                    <input asp-for="Weight" type="number" min="0" step="0.01" class="form-control" />
+                    <span asp-validation-for="Weight"></span>
                 </div>
             </div>
-            <script at="Foot">
-                (function () {
-                    const gradable = document.getElementById('@Html.IdFor(m => m.Gradable)');
-                    const wrapper = document.getElementById('@Html.IdFor(m => m.GradeCategoryId)-wrapper');
+            @if (Model.GradeCategoryOptions.Count > 0)
+            {
+                <div class="ocat-wrapper" id="@Html.IdFor(m => m.GradeCategoryId)-wrapper" hidden="@(!Model.Gradable)">
+                    <label asp-for="GradeCategoryId" class="ocat-label">@T["Grade category"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="GradeCategoryId" asp-items="Model.GradeCategoryOptions" class="form-select"></select>
+                        <span class="hint">@T["The category of the course this item counts in. An item without a category counts as a category of its own, weighted by its item weight."]</span>
+                    </div>
+                </div>
+                <script at="Foot">
+                    (function () {
+                        const gradable = document.getElementById('@Html.IdFor(m => m.Gradable)');
+                        const wrapper = document.getElementById('@Html.IdFor(m => m.GradeCategoryId)-wrapper');
 
-                    if (gradable && wrapper) {
-                        gradable.addEventListener('change', function () {
-                            wrapper.hidden = !gradable.checked;
-                        });
-                    }
-                })();
-            </script>
-        }
-        <div class="ocat-wrapper" asp-validation-class-for="PassMark">
-            <label asp-for="PassMark" class="ocat-label">@T["Pass mark (%)"]</label>
-            <div class="ocat-end">
-                <input asp-for="PassMark" type="number" min="0" max="100" step="0.01" class="form-control" />
-                <span asp-validation-for="PassMark"></span>
+                        if (gradable && wrapper) {
+                            gradable.addEventListener('change', function () {
+                                wrapper.hidden = !gradable.checked;
+                            });
+                        }
+                    })();
+                </script>
+            }
+            <div class="ocat-wrapper" asp-validation-class-for="PassMark">
+                <label asp-for="PassMark" class="ocat-label">@T["Pass mark (%)"]</label>
+                <div class="ocat-end">
+                    <input asp-for="PassMark" type="number" min="0" max="100" step="0.01" class="form-control" />
+                    <span asp-validation-for="PassMark"></span>
+                </div>
             </div>
-        </div>
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input asp-for="AllowSelfReported" type="checkbox" class="form-check-input" />
-                    <label asp-for="AllowSelfReported" class="form-check-label">@T["Let a result reported by the browser count toward a certification"]</label>
-                    <span class="hint dashed">@T["Off by default. A learning package reports its own result in the browser, where a learner can change it."]</span>
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="AllowSelfReported" type="checkbox" class="form-check-input" />
+                        <label asp-for="AllowSelfReported" class="form-check-label">@T["Let a result reported by the browser count toward a certification"]</label>
+                        <span class="hint dashed">@T["Off by default. A learning package reports its own result in the browser, where a learner can change it."]</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 <div class="card mb-3">
     <div class="card-header">@T["When it opens"]</div>

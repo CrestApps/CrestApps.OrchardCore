@@ -65,6 +65,11 @@ public static class LearningRefusals
     public const string NotInOutline = "NotInOutline";
 
     /// <summary>
+    /// This item is shown in place and takes no progress.
+    /// </summary>
+    public const string NotTracked = "NotTracked";
+
+    /// <summary>
     /// Complete the earlier item first.
     /// </summary>
     public const string CompleteEarlierItem = "CompleteEarlierItem";

@@ -36,4 +36,6 @@ public class PlayerViewModel
     public IDictionary<string, string> LockedItems { get; set; } = new Dictionary<string, string>();
 
     public IDictionary<string, string> KindIcons { get; set; } = new Dictionary<string, string>();
+
+    public IList<CourseOutlineEntry> TextBefore { get; set; } = [];
 }

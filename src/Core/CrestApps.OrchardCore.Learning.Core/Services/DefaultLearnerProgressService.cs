@@ -529,6 +529,12 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
             return new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.ItemNotFound };
         }
 
+        // Text shown in place in the outline and the player is not a step of the course: it takes no progress.
+        if (entry.Inline)
+        {
+            return new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.NotTracked };
+        }
+
         var progress = await _progressStore.FindFreshByEnrollmentAsync(enrollment.ItemId, cancellationToken);
         var isNewProgress = progress is null;
 

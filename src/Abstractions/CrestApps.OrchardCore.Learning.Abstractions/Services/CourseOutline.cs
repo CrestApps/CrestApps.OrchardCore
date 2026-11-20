@@ -21,7 +21,7 @@ public sealed class CourseOutline
     /// <summary>
     /// Gets the entries that count toward completion.
     /// </summary>
-    public IEnumerable<CourseOutlineEntry> RequiredEntries => Entries.Where(entry => entry.Required);
+    public IEnumerable<CourseOutlineEntry> RequiredEntries => Entries.Where(entry => entry.Required && !entry.Inline);
 
     /// <summary>
     /// Finds the entry of a course item.

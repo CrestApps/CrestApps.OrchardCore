@@ -120,8 +120,10 @@ public sealed class LearnerPageService
             }
         }
 
+        // The player steps through the items learners open; text shown in place is not a step of its own.
+        var steps = outline.Entries.Where(entry => !entry.Inline).ToList();
         var current = string.IsNullOrEmpty(itemId)
-            ? outline.Entries.FirstOrDefault(entry => progress.Find(entry.Item.ContentItemId)?.State != CourseItemState.Completed && !model.LockedItems.ContainsKey(entry.Item.ContentItemId)) ?? outline.Entries[0]
+            ? steps.FirstOrDefault(entry => progress.Find(entry.Item.ContentItemId)?.State != CourseItemState.Completed && !model.LockedItems.ContainsKey(entry.Item.ContentItemId)) ?? steps.FirstOrDefault() ?? outline.Entries[0]
             : outline.Find(itemId);
 
         if (current is null)
@@ -129,19 +131,30 @@ public sealed class LearnerPageService
             return null;
         }
 
-        var index = outline.Entries.IndexOf(current);
+        var index = steps.IndexOf(current);
 
         model.Current = current;
         model.CurrentProgress = progress.Find(current.Item.ContentItemId);
-        model.PreviousItemId = index > 0 ? outline.Entries[index - 1].Item.ContentItemId : null;
-        model.NextItemId = index < outline.Entries.Count - 1 ? outline.Entries[index + 1].Item.ContentItemId : null;
+        model.PreviousItemId = index > 0 ? steps[index - 1].Item.ContentItemId : null;
+        model.NextItemId = index >= 0 && index < steps.Count - 1 ? steps[index + 1].Item.ContentItemId : null;
+
+        // The text just before the item in its section shows above it, as on the course page.
+        var position = outline.Entries.IndexOf(current);
+
+        for (var before = position - 1; before >= 0 && outline.Entries[before].Inline && outline.Entries[before].Section == current.Section; before--)
+        {
+            if (!model.LockedItems.ContainsKey(outline.Entries[before].Item.ContentItemId))
+            {
+                model.TextBefore.Insert(0, outline.Entries[before]);
+            }
+        }
 
         var access = await _courseAccess.GetItemAccessAsync(user, current.Item);
 
         model.Access = access.Reason;
         model.LockedReason = access.LockedReason;
         model.AvailableFromUtc = access.AvailableFromUtc;
-        model.TracksProgress = access.Reason == CourseItemAccessReason.Enrolled && enrollment is { Status: EnrollmentStatus.Active } && enrollment.UserId == userId;
+        model.TracksProgress = !current.Inline && access.Reason == CourseItemAccessReason.Enrolled && enrollment is { Status: EnrollmentStatus.Active } && enrollment.UserId == userId;
 
         if (access.Allowed)
         {

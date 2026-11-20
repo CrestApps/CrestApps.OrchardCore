@@ -230,7 +230,7 @@ internal sealed class LearnerLearningReader
             var outline = await _courseStructure.GetOutlineAsync(course);
             var progress = await _progress.GetAsync(enrollment.ItemId, cancellationToken);
 
-            foreach (var entry in outline.Entries)
+            foreach (var entry in outline.Entries.Where(entry => !entry.Inline))
             {
                 if (progress?.Find(entry.Item.ContentItemId)?.State == CourseItemState.Completed)
                 {

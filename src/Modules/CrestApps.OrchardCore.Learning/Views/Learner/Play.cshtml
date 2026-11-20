@@ -30,7 +30,7 @@
             }
             @if (Model.Outline.Entries.Count > 0)
             {
-                <partial name="_LearnerOutline" model="(Model.Outline, Model.Progress, Model.KindIcons, itemId, Model.Access is CourseItemAccessReason.Staff || enrollment is { Status: EnrollmentStatus.Active or EnrollmentStatus.Completed })" />
+                <partial name="_LearnerOutline" model="(Model.Outline, Model.Progress, Model.KindIcons, itemId, Model.Access is CourseItemAccessReason.Staff || enrollment is { Status: EnrollmentStatus.Active or EnrollmentStatus.Completed }, Model.LockedItems)" />
             }
         </aside>
 
@@ -54,6 +54,14 @@
                              data-completed-text="@T["Completed"]">
                             @Html.AntiForgeryToken()
                         </div>
+                    }
+
+                    @foreach (var text in Model.TextBefore)
+                    {
+                        if (text.Item.TryGet<OrchardCore.Html.Models.HtmlBodyPart>(out var textBody) && !string.IsNullOrWhiteSpace(textBody.Html))
+                        {
+                            <div class="learning-text mb-3" data-learning-inline="@text.Item.ContentItemId">@Html.Raw(textBody.Html)</div>
+                        }
                     }
 
                     <div class="learning-item-content">

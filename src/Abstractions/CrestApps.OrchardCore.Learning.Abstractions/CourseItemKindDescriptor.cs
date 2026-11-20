@@ -65,6 +65,13 @@ public sealed class CourseItemKindDescriptor
     public string Icon { get; set; } = "fa-solid fa-file-lines";
 
     /// <summary>
+    /// Gets or sets whether items of this kind are shown in place, in the outline and in the player, instead of being
+    /// opened on their own. Such an item is never required, never tracked for completion and never counted in the
+    /// progress.
+    /// </summary>
+    public bool Inline { get; set; }
+
+    /// <summary>
     /// Gets the default completion mode.
     /// </summary>
     public string DefaultCompletionMode => CompletionModes.Count > 0 ? CompletionModes[0] : Models.CompletionModes.Viewed;

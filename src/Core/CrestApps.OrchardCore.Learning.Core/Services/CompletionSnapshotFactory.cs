@@ -38,7 +38,8 @@ public static class CompletionSnapshotFactory
             Reason = reason,
         };
 
-        foreach (var entry in outline.Entries)
+        // Text shown in place is not a step of the course, so the record leaves it out.
+        foreach (var entry in outline.Entries.Where(entry => !entry.Inline))
         {
             var itemProgress = progress?.Find(entry.Item.ContentItemId);
 

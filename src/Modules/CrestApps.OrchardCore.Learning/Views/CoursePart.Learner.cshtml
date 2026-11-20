@@ -98,6 +98,6 @@
 {
     <section class="learning-outline my-4" aria-label="@T["Course outline"]">
         <h2 class="h5">@T["Course outline"]</h2>
-        <partial name="_LearnerOutline" model="(Model.Outline, Model.Progress, Model.KindIcons, (string)null, enrollment is not null || Model.IsStaff)" />
+        <partial name="_LearnerOutline" model="(Model.Outline, Model.Progress, Model.KindIcons, (string)null, enrollment is not null || Model.IsStaff, (IDictionary<string, string>)null)" />
     </section>
 }

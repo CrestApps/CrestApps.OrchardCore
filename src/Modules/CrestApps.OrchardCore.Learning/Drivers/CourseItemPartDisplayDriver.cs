@@ -53,6 +53,7 @@ internal sealed class CourseItemPartDisplayDriver : ContentPartDisplayDriver<Cou
 
             model.KindDisplayName = kind?.DisplayName?.Value ?? settings.Kind ?? part.Kind;
             model.ProducesGrade = kind?.ProducesGrade ?? false;
+            model.Inline = kind?.Inline == true;
             model.CompletionMode = mode;
             model.MinimumMinutes = part.MinimumMinutes;
             model.EstimatedMinutes = part.EstimatedMinutes;
@@ -103,7 +104,14 @@ internal sealed class CourseItemPartDisplayDriver : ContentPartDisplayDriver<Cou
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (kind is not null && !kind.Supports(model.CompletionMode))
+        // Text shown in place is never completed, graded or required.
+        if (kind?.Inline == true)
+        {
+            model.CompletionMode = null;
+            model.Gradable = false;
+            model.MinimumMinutes = null;
+        }
+        else if (kind is not null && !kind.Supports(model.CompletionMode))
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.CompletionMode), S["Choose how the item is completed."]);
         }

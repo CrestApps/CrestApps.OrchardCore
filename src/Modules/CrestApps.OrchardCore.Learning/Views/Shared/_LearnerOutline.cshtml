@@ -1,8 +1,12 @@
-@model (CourseOutline Outline, EnrollmentProgress Progress, IDictionary<string, string> KindIcons, string CurrentItemId, bool CanOpen)
+@model (CourseOutline Outline, EnrollmentProgress Progress, IDictionary<string, string> KindIcons, string CurrentItemId, bool CanOpen, IDictionary<string, string> LockedItems)
 
 @{
     var courseId = Model.Outline.Course.ContentItemId;
 }
+
+<style>
+    .list-group-numbered > .learning-inline-text::before { content: none; counter-increment: none; }
+</style>
 
 @foreach (var group in Model.Outline.Entries.GroupBy(entry => entry.Section))
 {
@@ -20,6 +24,27 @@
                 var icon = Model.KindIcons.TryGetValue(entry.Part?.Kind ?? string.Empty, out var kindIcon) ? kindIcon : "fa-solid fa-file-lines";
                 var isCurrent = itemId == Model.CurrentItemId;
                 var canOpen = Model.CanOpen || entry.Part?.FreePreview == true;
+
+                if (entry.Inline)
+                {
+                    // Text shown in place: its HTML was sanitized when it was saved, as Orchard's HTML body does. Without
+                    // the release decision (the course page), text with release rules waits for the player.
+                    var locked = Model.LockedItems?.ContainsKey(itemId) ?? entry.Part?.ReleaseRules?.Count > 0;
+                    var html = entry.Item.TryGet<OrchardCore.Html.Models.HtmlBodyPart>(out var body) ? body.Html : null;
+
+                    <li class="list-group-item learning-inline-text" data-learning-item="@itemId" data-learning-inline>
+                        @if (canOpen && !locked && !string.IsNullOrWhiteSpace(html))
+                        {
+                            <div class="learning-text">@Html.Raw(html)</div>
+                        }
+                        else if (canOpen && locked)
+                        {
+                            <span class="text-muted small"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["This text is not available to you yet."]</span>
+                        }
+                    </li>
+
+                    continue;
+                }
 
                 <li class="list-group-item d-flex align-items-center gap-2@(isCurrent ? " active" : string.Empty)" data-learning-item="@itemId" aria-current="@(isCurrent ? "step" : null)">
                     <i class="@icon" aria-hidden="true"></i>

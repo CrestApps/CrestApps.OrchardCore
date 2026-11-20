@@ -123,6 +123,11 @@ public static class LearningConstants
         /// A policy the learner confirms they have read and understood.
         /// </summary>
         public const string Acknowledgement = "Acknowledgement";
+
+        /// <summary>
+        /// A block of text, pictures and video shown in place in a course.
+        /// </summary>
+        public const string TextBlock = "TextBlock";
     }
 
     /// <summary>
@@ -216,6 +221,12 @@ public static class LearningConstants
         /// A statement the learner confirms.
         /// </summary>
         public const string Acknowledgement = "Acknowledgement";
+
+        /// <summary>
+        /// Text, pictures and video shown in place in the outline and the player, never tracked for completion (a
+        /// Moodle label).
+        /// </summary>
+        public const string Text = "Text";
     }
 
     /// <summary>

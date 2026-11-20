@@ -10,6 +10,9 @@ public class CourseItemPartViewModel
 {
     public string CompletionMode { get; set; }
 
+    [BindNever]
+    public bool Inline { get; set; }
+
     public int? MinimumMinutes { get; set; }
 
     public int? EstimatedMinutes { get; set; }

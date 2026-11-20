@@ -27,4 +27,10 @@ public sealed class CourseOutlineEntry
     /// Gets or sets whether the item counts toward completion.
     /// </summary>
     public bool Required { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the item is shown in place, in the outline and in the player, because its kind is inline. An
+    /// inline item is never required and takes no progress.
+    /// </summary>
+    public bool Inline { get; set; }
 }

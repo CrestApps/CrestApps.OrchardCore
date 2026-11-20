@@ -121,6 +121,15 @@ public static class LearningCoreServiceCollectionExtensions
             kind.CompletionModes.Add(CompletionModes.Acknowledged);
         });
 
+        services.AddCourseItemKind(LearningConstants.CourseItemKinds.Text, kind =>
+        {
+            kind.DisplayName = LocalizationSource.Create("Text", typeof(LearningCoreServiceCollectionExtensions));
+            kind.LearnerName = LocalizationSource.Create("Text", typeof(LearningCoreServiceCollectionExtensions));
+            kind.ContentType = LearningConstants.ContentTypes.TextBlock;
+            kind.Icon = "fa-solid fa-align-left";
+            kind.Inline = true;
+        });
+
         return services;
     }
 }

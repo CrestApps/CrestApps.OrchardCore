@@ -12,6 +12,7 @@ internal sealed class InMemoryCourses : ICourseStructureService
 {
     private readonly Dictionary<string, ContentItem> _items = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _courseOfItem = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _inline = new(StringComparer.Ordinal);
 
     public ContentItem AddCourse(string id, Action<CoursePart> configure = null, string title = null)
     {
@@ -32,7 +33,7 @@ internal sealed class InMemoryCourses : ICourseStructureService
         return course;
     }
 
-    public ContentItem AddItem(string courseId, string id, string kind = LearningConstants.CourseItemKinds.Page, string completionMode = CompletionModes.Viewed, bool required = true, Action<CourseItemPart> configure = null, string sectionId = "s1")
+    public ContentItem AddItem(string courseId, string id, string kind = LearningConstants.CourseItemKinds.Page, string completionMode = CompletionModes.Viewed, bool required = true, Action<CourseItemPart> configure = null, string sectionId = "s1", bool inline = false)
     {
         var item = new ContentItem
         {
@@ -53,6 +54,11 @@ internal sealed class InMemoryCourses : ICourseStructureService
 
         _items[id] = item;
         _courseOfItem[id] = courseId;
+
+        if (inline)
+        {
+            _inline.Add(id);
+        }
 
         if (sectionId is null)
         {
@@ -114,7 +120,7 @@ internal sealed class InMemoryCourses : ICourseStructureService
             {
                 if (_items.TryGetValue(entry.ContentItemId, out var item))
                 {
-                    outline.Entries.Add(new CourseOutlineEntry { Section = section, Item = item, Part = item.Get<CourseItemPart>(nameof(CourseItemPart)), Required = entry.Required });
+                    outline.Entries.Add(new CourseOutlineEntry { Section = section, Item = item, Part = item.Get<CourseItemPart>(nameof(CourseItemPart)), Required = entry.Required && !_inline.Contains(entry.ContentItemId), Inline = _inline.Contains(entry.ContentItemId) });
                 }
             }
         }

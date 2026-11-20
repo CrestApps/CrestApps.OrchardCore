@@ -68,7 +68,7 @@ internal sealed class LearningMigrations : DataMigration
         await LearningIndexSchema.CreateSecretIndexAsync(SchemaBuilder);
         await LearningSourceIndexProvider.CreateTableAsync(SchemaBuilder);
 
-        return 5;
+        return 6;
     }
 
     /// <summary>
@@ -136,6 +136,18 @@ internal sealed class LearningMigrations : DataMigration
         await LearningSourceIndexProvider.CreateTableAsync(SchemaBuilder);
 
         return 5;
+    }
+
+    /// <summary>
+    /// Adds the Text course item: text, pictures and video shown in place in the outline and the player.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await DefineTextBlockAsync();
+        await _courseListSynchronizer.SynchronizeAsync();
+
+        return 6;
     }
 
     private async Task DefinePartsAsync()
@@ -285,7 +297,12 @@ internal sealed class LearningMigrations : DataMigration
                     }))));
 
         await DefineLessonAsync(LearningConstants.ContentTypes.Acknowledgement, "Acknowledgement", LearningConstants.CourseItemKinds.Acknowledgement, CompletionModes.Acknowledged, () => Task.CompletedTask, withAcknowledgementPart: true);
+        await DefineTextBlockAsync();
     }
+
+    // Text has no completion mode: it is shown in place and never tracked.
+    private Task DefineTextBlockAsync()
+        => DefineLessonAsync(LearningConstants.ContentTypes.TextBlock, "Text", LearningConstants.CourseItemKinds.Text, null, () => Task.CompletedTask);
 
     private async Task DefineLessonAsync(string typeName, string displayName, string kind, string completionMode, Func<Task> defineFields, bool withVideoPart = false, bool withAcknowledgementPart = false)
     {

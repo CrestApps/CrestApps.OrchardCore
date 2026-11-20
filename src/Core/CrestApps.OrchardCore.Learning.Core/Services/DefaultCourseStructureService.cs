@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Learning.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.Lists.Models;
 using YesSql;
@@ -17,6 +18,7 @@ public sealed class DefaultCourseStructureService : ICourseStructureService
 {
     private readonly IContentManager _contentManager;
     private readonly ISession _session;
+    private readonly CourseItemKindOptions _kinds;
     private readonly Dictionary<string, CourseOutline> _outlines = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ContentItem> _courses = new(StringComparer.Ordinal);
 
@@ -25,12 +27,15 @@ public sealed class DefaultCourseStructureService : ICourseStructureService
     /// </summary>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="session">The YesSql session.</param>
+    /// <param name="kinds">The course item kinds, which tell the items shown in place.</param>
     public DefaultCourseStructureService(
         IContentManager contentManager,
-        ISession session)
+        ISession session,
+        IOptions<CourseItemKindOptions> kinds)
     {
         _contentManager = contentManager;
         _session = session;
+        _kinds = kinds.Value;
     }
 
     /// <inheritdoc />
@@ -103,12 +108,18 @@ public sealed class DefaultCourseStructureService : ICourseStructureService
                         continue;
                     }
 
+                    var part = item.Get<CourseItemPart>(nameof(CourseItemPart));
+
+                    // An item shown in place, such as text, is never required, whatever the outline says.
+                    var inline = _kinds.Find(part?.Kind)?.Inline == true;
+
                     outline.Entries.Add(new CourseOutlineEntry
                     {
                         Section = section,
                         Item = item,
-                        Part = item.Get<CourseItemPart>(nameof(CourseItemPart)),
-                        Required = entry.Required,
+                        Part = part,
+                        Required = entry.Required && !inline,
+                        Inline = inline,
                     });
                 }
             }
