@@ -33,6 +33,10 @@ public sealed class CertificationEnrollmentObserver : IEnrollmentObserver
     /// <inheritdoc/>
     public Task CompletedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
         => CertificationTriggers.EvaluateAsync(_services.GetRequiredService<ICertificationPathService>(), enrollment.CourseId, enrollment.UserId, _logger, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task ReviewClearedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => enrollment?.Status == EnrollmentStatus.Completed ? CompletedAsync(enrollment, cancellationToken) : Task.CompletedTask;
 }
 
 /// <summary>

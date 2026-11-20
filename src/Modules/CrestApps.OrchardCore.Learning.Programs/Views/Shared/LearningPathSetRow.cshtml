@@ -1,7 +1,12 @@
 @model LearningPathSetRowModel
 
-<style asp-name="bootstrap-select"></style>
-<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+@{
+    // The picker starts with the set's chosen courses and searches the rest on the server.
+    var chosenJson = System.Text.Json.JsonSerializer.Serialize(Model.Set.CourseIds
+        .Where(id => Model.CourseTitles.ContainsKey(id))
+        .Select(id => new { value = id, text = Model.CourseTitles[id] }));
+    var coursesId = System.Text.RegularExpressions.Regex.Replace($"{Model.Prefix}_{Model.Index}_CourseIds", "[^A-Za-z0-9_]", "_");
+}
 
 <div class="card mb-2" data-path-set>
     <div class="card-body py-2">
@@ -26,12 +31,7 @@
                 </div>
             </div>
             <div class="col">
-                <select name="@(Model.Prefix)[@Model.Index].CourseIds" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" data-selected-text-format="count > 2" title="@T["Choose courses"]" aria-label="@T["Courses"]" data-path-courses>
-                    @foreach (var course in Model.Courses)
-                    {
-                        <option value="@course.Value" selected="@Model.Set.CourseIds.Contains(course.Value)">@course.Text</option>
-                    }
-                </select>
+                @await Component.InvokeAsync("ItemSelector", new { id = coursesId, inputName = $"{Model.Prefix}[{Model.Index}].CourseIds", endpoint = Url.RouteUrl("LearningCourseSearch"), initialItemsJson = chosenJson, multiple = true, buttonText = T["Choose courses"].Value, searchPlaceholder = T["Search courses by title"].Value, emptyResultsText = T["No course has this title."].Value, smallButton = false })
             </div>
             <div class="col-auto">
                 <button type="button" class="btn btn-sm btn-outline-danger" data-path-remove title="@T["Remove the set"]" aria-label="@T["Remove the set"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>

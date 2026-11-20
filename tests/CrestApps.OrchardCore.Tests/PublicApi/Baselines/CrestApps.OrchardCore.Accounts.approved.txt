@@ -190,7 +190,7 @@ namespace CrestApps.OrchardCore.Accounts.Navigation
 {
     public sealed class AccountMembersAccountMenu : OrchardCore.Navigation.NamedNavigationProvider
     {
-        public AccountMembersAccountMenu(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Accounts.Navigation.AccountMembersAccountMenu> stringLocalizer) { }
+        public AccountMembersAccountMenu(CrestApps.OrchardCore.Accounts.Services.IAccountMemberService accountMemberService, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Accounts.Navigation.AccountMembersAccountMenu> stringLocalizer) { }
         protected override System.Threading.Tasks.ValueTask BuildAsync(OrchardCore.Navigation.NavigationBuilder builder) { }
     }
 }

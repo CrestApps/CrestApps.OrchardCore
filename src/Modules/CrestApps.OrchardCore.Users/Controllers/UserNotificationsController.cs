@@ -1,16 +1,25 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Users.Services;
 using CrestApps.OrchardCore.Users.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Descriptor.Models;
 using OrchardCore.Navigation;
 using OrchardCore.Notifications;
 using OrchardCore.Notifications.Models;
+using OrchardCore.Users;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Users.Controllers;
 
@@ -21,7 +30,9 @@ namespace CrestApps.OrchardCore.Users.Controllers;
 /// with the module's own notification shape (the <c>Header</c> display type the navbar uses, whose link opens it through
 /// the module's open endpoint, marking it read), and marks all read with the manager. It needs the module's
 /// <see cref="NotificationPermissions.ManageNotifications"/> permission, which signed-in users have by default, and is
-/// not found while the Notifications feature is off.
+/// not found while the Notifications feature is off. Its preferences page edits the Notifications module's own
+/// preferences of the user (the methods they receive, and the methods on for each registered type), which the module
+/// otherwise shows only on the admin profile.
 /// </summary>
 [Authorize]
 public sealed class UserNotificationsController : Controller
@@ -34,6 +45,11 @@ public sealed class UserNotificationsController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly ShellDescriptor _shellDescriptor;
     private readonly PagerOptions _pagerOptions;
+    private readonly UserManager<IUser> _userManager;
+    private readonly IStringLocalizerFactory _localizerFactory;
+    private readonly INotifier _notifier;
+
+    internal readonly IHtmlLocalizer H;
 
     public UserNotificationsController(
         IAuthorizationService authorizationService,
@@ -41,7 +57,11 @@ public sealed class UserNotificationsController : Controller
         IDisplayManager<Notification> notificationDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         ShellDescriptor shellDescriptor,
-        IOptions<PagerOptions> pagerOptions)
+        IOptions<PagerOptions> pagerOptions,
+        UserManager<IUser> userManager,
+        IStringLocalizerFactory localizerFactory,
+        INotifier notifier,
+        IHtmlLocalizer<UserNotificationsController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
         _services = services;
@@ -49,6 +69,10 @@ public sealed class UserNotificationsController : Controller
         _updateModelAccessor = updateModelAccessor;
         _shellDescriptor = shellDescriptor;
         _pagerOptions = pagerOptions.Value;
+        _userManager = userManager;
+        _localizerFactory = localizerFactory;
+        _notifier = notifier;
+        H = htmlLocalizer;
     }
 
     /// <summary>
@@ -136,4 +160,113 @@ public sealed class UserNotificationsController : Controller
 
         return RedirectToRoute(UsersConstants.Notifications.RouteName);
     }
+
+    /// <summary>
+    /// Shows how each kind of notification reaches the user.
+    /// </summary>
+    /// <returns>The page.</returns>
+    [HttpGet("notifications/preferences", Name = UsersConstants.Notifications.PreferencesRouteName)]
+    public async Task<IActionResult> Preferences()
+    {
+        if (await FindPreferencesUserAsync() is not { } user)
+        {
+            return RefusePreferences();
+        }
+
+        var (methods, types) = PreferencesChoices();
+        var choices = UserNotificationPreferencesForm.Read(user.GetOrCreate<UserNotificationPreferencesPart>(), methods.Select(method => method.Method), types);
+        var model = new UserNotificationPreferencesViewModel
+        {
+            InAccount = _shellDescriptor.Features.Any(feature => feature.Id == UsersConstants.Feature.Account),
+        };
+
+        foreach (var method in methods)
+        {
+            model.Methods.Add(new UserNotificationMethodOption
+            {
+                Method = method.Method,
+                Name = method.Name.Value,
+                Enabled = choices.EnabledMethods.Contains(method.Method, StringComparer.OrdinalIgnoreCase),
+            });
+        }
+
+        foreach (var type in types)
+        {
+            var option = new UserNotificationTypeOption
+            {
+                Name = type.Name,
+                DisplayName = _localizerFactory.Localize(type.DisplayName).Value,
+                Description = type.Description is null ? null : _localizerFactory.Localize(type.Description).Value,
+            };
+
+            option.EnabledMethods.UnionWith(choices.TypeMethods[type.Name]);
+            model.Types.Add(option);
+        }
+
+        // By name, as the Notifications module's own editor lists them.
+        var sorted = model.Types.OrderBy(type => type.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToList();
+        model.Types.Clear();
+
+        foreach (var type in sorted)
+        {
+            model.Types.Add(type);
+        }
+
+        return View(model);
+    }
+
+    /// <summary>
+    /// Saves how each kind of notification reaches the user.
+    /// </summary>
+    /// <param name="input">The methods the user receives, and the methods on for each type.</param>
+    /// <returns>Back to the page.</returns>
+    [HttpPost("notifications/preferences")]
+    [ValidateAntiForgeryToken]
+    [ActionName(nameof(Preferences))]
+    public async Task<IActionResult> PreferencesPost(UserNotificationPreferencesInput input)
+    {
+        if (await FindPreferencesUserAsync() is not { } user)
+        {
+            return RefusePreferences();
+        }
+
+        var (methods, types) = PreferencesChoices();
+        var part = user.GetOrCreate<UserNotificationPreferencesPart>();
+
+        UserNotificationPreferencesForm.Apply(part, methods.Select(method => method.Method), types, input?.EnabledMethods, input?.TypeMethods);
+        user.Put(part);
+
+        var result = await _userManager.UpdateAsync(user);
+
+        if (result.Succeeded)
+        {
+            await _notifier.SuccessAsync(H["Your notification preferences are saved."]);
+        }
+        else
+        {
+            await _notifier.ErrorAsync(H["Your notification preferences could not be saved. Try again."]);
+        }
+
+        return RedirectToRoute(UsersConstants.Notifications.PreferencesRouteName);
+    }
+
+    // The signed-in user, when Notifications is on and they may manage their notifications; otherwise null.
+    private async Task<User> FindPreferencesUserAsync()
+    {
+        if (_services.GetService<INotificationManager>() is null ||
+            !await _authorizationService.AuthorizeAsync(User, NotificationPermissions.ManageNotifications))
+        {
+            return null;
+        }
+
+        return await _userManager.GetUserAsync(User) as User;
+    }
+
+    private IActionResult RefusePreferences()
+        => _services.GetService<INotificationManager>() is null ? NotFound() : Forbid();
+
+    private (IReadOnlyList<INotificationMethodProvider> Methods, IReadOnlyList<NotificationTypeDescriptor> Types) PreferencesChoices()
+        => (
+            _services.GetServices<INotificationMethodProvider>().OrderBy(provider => provider.Name.Value, StringComparer.CurrentCultureIgnoreCase).ToList(),
+            _services.GetRequiredService<IOptions<NotificationTypeOptions>>().Value.Types.Values.ToList());
 }

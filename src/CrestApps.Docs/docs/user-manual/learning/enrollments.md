@@ -61,7 +61,7 @@ The person's enrollments are also on their user page and, for staff, on the **Le
 
 At the bottom of an enrollment:
 
-- **Approve** or **Reject** a request to join a course that needs approval. Rejecting needs a reason.
+- **Approve** or **Reject** a request to join a course that needs approval. Rejecting needs a reason. The course's instructors and assistants get a notification when someone asks to join; for a course without them, the people who may manage every enrollment, and the administrators, get it.
 - **Mark complete** on a lesson completes it for the learner, with a reason, such as training done on paper.
 - **Approve the completion** of a course that needs a staff member to approve it.
 - **Change the status, with a reason**: suspend, make active again, mark completed or withdraw.
@@ -73,9 +73,11 @@ Each change is kept in the history and, with Audit Trail on, in the Audit Trail.
 
 If a quiz result a completed enrollment rests on is voided or lowered later, the enrollment stays completed and shows **Needs review**. Filter the list by **Needs review**, open the enrollment, decide what follows (such as booking a retake) and **Clear the review** with a note. The course's instructors get a notification when a review is needed.
 
+Clearing the review checks the completion again: if the course awards a digital credential or education credits, or counts toward a learning path or a certification, the learner gets what the completion earns, once. Something they already got before the review is not given twice.
+
 ## Reminders
 
-Learners get a notice when they are enrolled (also when you approve their request), when you decline their request, a few days before a course is due, and when it is overdue. Each learner can switch each notice off, or also get it by e-mail or text message, in their notification preferences.
+Learners get a notice when they are enrolled (also when you approve their request), when you decline their request, a few days before a course is due, and when it is overdue. Each learner can switch each notice off, or also get it by e-mail or text message, in their notification preferences: **Choose how each kind of notification reaches you** at the bottom of their **Notifications** page, without the admin.
 
 Learners read their notices on your site, without the admin: the bell at the top of the page shows the unread ones, and **Notifications** in the menu under their name lists them all. Selecting a notice opens what it is about, such as the course, and marks it read.
 

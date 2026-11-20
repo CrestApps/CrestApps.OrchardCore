@@ -27,7 +27,7 @@ A course is a page on your site with lessons in it. Each lesson is a page, a vid
    - **Key**: people enter the **Enrollment key** you set. The key is stored only as a hash, so keep a copy to share; type a new key to replace it.
    - **Approval**: people ask, and a training manager approves or rejects them.
 5. On the **Dates** card, set when the course **Starts** and **Ends**, in your time zone, or leave them empty. Before the start, learners see the course and may enroll, but cannot open its lessons; the course page tells them when it starts. The end date does not close the course, as in Moodle: learners keep their access, and the course is shown as ended and listed under **Past courses** on **My learning** instead of in progress.
-6. Set **Access length (days)** to end a self enrollment's access that many days after enrolling, or leave it empty for no end. Choose the **Prerequisite courses** people must have completed first.
+6. Set **Access length (days)** to end a self enrollment's access that many days after enrolling, or leave it empty for no end. Choose the **Prerequisite courses** people must have completed first: type part of a course's title to find it.
 7. Under **Completion and grade**, set the rules a learner must meet besides completing every required item: a **Minimum course grade (%)**, a **Minimum time (minutes)**, a **Final assessment to pass**, or that a member of the course staff approves each completion.
 8. With **Course Categories** on, choose the course's **Category**. Categories come from the **Course categories** taxonomy under **Content > Taxonomies**, where you build the tree of categories and sub-categories. The list of courses filters by category with its **Course categories** filter.
 9. Select **Publish**.

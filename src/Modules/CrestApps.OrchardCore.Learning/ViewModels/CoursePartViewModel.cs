@@ -64,11 +64,20 @@ public class CoursePartViewModel
     [BindNever]
     public IList<SelectListItem> ItemOptions { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the chosen prerequisite courses, as the <c>[{ value, text }]</c> JSON the course picker starts with.
+    /// </summary>
     [BindNever]
-    public IList<SelectListItem> ApprovalRoleOptions { get; set; } = [];
+    public string PrerequisiteCoursesJson { get; set; } = "[]";
+
+    /// <summary>
+    /// Gets or sets the course being edited, which its prerequisite picker leaves out.
+    /// </summary>
+    [BindNever]
+    public string CourseId { get; set; }
 
     [BindNever]
-    public IList<SelectListItem> CourseOptions { get; set; } = [];
+    public IList<SelectListItem> ApprovalRoleOptions { get; set; } = [];
 
     [BindNever]
     public IList<SelectListItem> EnrollmentModeOptions { get; set; } = [];

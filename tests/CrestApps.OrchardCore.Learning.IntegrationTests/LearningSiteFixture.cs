@@ -21,6 +21,7 @@ using OrchardCore.Environment.Shell;
 using OrchardCore.Html.Models;
 using OrchardCore.Lists.Models;
 using OrchardCore.Media;
+using OrchardCore.Notifications;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Setup.Services;
@@ -152,7 +153,8 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.Configuration["OrchardCore:OrchardCore_Documents:CheckConcurrency"] = bool.FalseString;
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
-        builder.Services.AddOrchardCms();
+        // A delivery method of the tests' own, so notification preferences have a method to choose (no e-mail is set up).
+        builder.Services.AddOrchardCms().ConfigureServices(services => services.AddScoped<INotificationMethodProvider, TestNotificationMethodProvider>());
         builder.Services.Configure<ShellOptions>(options => options.ShellsApplicationDataPath = _applicationDataPath);
 
         _application = builder.Build();

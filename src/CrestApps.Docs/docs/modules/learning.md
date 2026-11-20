@@ -30,7 +30,7 @@ It works with other features when they are on:
 | Workflows | Eight events and six tasks (see below). |
 | Data Pipelines | The `Learning` data source and the **Enroll learners** destination step. |
 | Reports | The Course completion, Learner transcript and Inactive learners reports. |
-| Notifications | Enrolled (also when a request is approved), Enrollment request declined, Course due soon, Course overdue and Completion needs review notices, each a registered notification type a person can switch off or send by e-mail or text message. Learners who don't use the admin read them on the site: the bell of the Notifications module in the site's navbar, and the **Notifications** page (`/notifications`, in the user menu) of the [Users](./users#site-notifications) module. Each notice links to its record with a `~/` URL. |
+| Notifications | Enrolled (also when a request is approved), Enrollment request declined, Course due soon, Course overdue, Completion needs review and Enrollment request to approve notices, each a registered notification type a person can switch off or send by e-mail or text message, also on the site's notification preferences page (`/notifications/preferences`) of the [Users](./users#site-notifications) module. A request to enroll (`LearningConstants.NotificationTypes.EnrollmentRequested`) goes to the course's instructors and assistants, or, for a course without them, to the users of the roles that grant **Manage enrollments** and of the Administrator role. Learners who don't use the admin read them on the site: the bell of the Notifications module in the site's navbar, and the **Notifications** page (`/notifications`, in the user menu) of the [Users](./users#site-notifications) module. Each notice links to its record with a `~/` URL. |
 | Audit Trail | Changes people make to enrollments by hand, with their reason, and every export of learner records. |
 | Webhooks | `learning.enrollment.created` and `learning.course.completed`. |
 | Staff | The Instructor capability, a **Learning** section on the staff profile and **My learning** on a staff member's page. |
@@ -56,6 +56,8 @@ Lessons are contained in their course through Orchard's List part, so **New** on
 ### Course part
 
 `Code`, `Summary`, `Level`, `EstimatedMinutes`, `EnrollmentMode` (`Closed`, `Open`, `Key`, `Approval`), the enrollment key (stored as a salted hash outside the content item, in `LearningSecretStore`, never shown again; five wrong keys for one course within 15 minutes lock that person out of it for 15 minutes), `AccessDays` (how long an enrollment gives access; empty for no end), `PassMark`, `GradeCategories` (gradebook categories with a weight and a number of lowest scores to drop; see [Learning Assessments](./learning-assessments#gradebook)), `Prerequisites` (other courses to complete first), `CompletionCriteria` and `Staff` (a user and a role: `Instructor`, `Assistant`, `Grader` or `Observer`).
+
+The admin's course pickers (the prerequisites, the courses of a learning path set, the courses of a Learning workflow event and the course of a learning product's grant row) use the `ItemSelector` component with the course search `/Admin/learning/course-picker/search?query=&exceptId=` (route `LearningCourseSearch`, `CoursePickerController`, backed by `CourseLookup.SearchCoursesAsync`): the latest version of each course whose title contains the text, 50 at most, titles only. It needs **Manage own courses**, **View enrollments** or **View learning reports**. The editors render only the chosen courses, so a site with hundreds of courses never lists them all.
 
 ### Course item part
 
@@ -93,6 +95,8 @@ An item is complete when its completion mode is met. The course is complete when
 ### Reviews after completion
 
 A completed enrollment is a record and does not change. When a result it rests on changes afterwards, such as a final exam attempt voided for cheating or regraded below the pass mark, `RecordResultAsync` keeps the enrollment completed and sets `Enrollment.Review` (the item, the old and new score, when), once while the review is open. Observers hear `ReviewNeededAsync` after the commit, the course's instructors get a *Completion needs review* notification, and the enrollment list filters by **Needs review**. A person who manages the enrollment clears the review with a note of what they decided (`IEnrollmentService.ClearReviewAsync`). A certification module revokes a certificate from this review; nothing is un-completed on its own.
+
+Clearing a review raises `IEnrollmentObserver.ReviewClearedAsync` once, after the commit. What is issued on a completion checks it again there, since a completion under review supported nothing when it happened: the course credential (`CredentialEnrollmentObserver`), the course education credits (`EducationCreditEnrollmentObserver`), learning paths (`ProgramsEnrollmentObserver`) and certification paths (`CertificationEnrollmentObserver`). Each check is idempotent, so a completion awarded before it was flagged is not awarded again; an observer you add for something issued on a completion must be too.
 
 ### Writes, locks and commits
 

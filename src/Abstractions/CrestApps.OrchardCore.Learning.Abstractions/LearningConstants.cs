@@ -296,5 +296,10 @@ public static class LearningConstants
         /// A completed enrollment in a course the person teaches needs review.
         /// </summary>
         public const string ReviewNeeded = "LearningReviewNeeded";
+
+        /// <summary>
+        /// Someone asked to enroll in a course that needs approval, which the person may approve.
+        /// </summary>
+        public const string EnrollmentRequested = "LearningEnrollmentRequested";
     }
 }

@@ -26,7 +26,7 @@ public sealed class LearningEventActivityDisplayDriver<TActivity> : ActivityDisp
     {
         model.CourseIds = activity.CourseIds.ToArray();
         model.IncludeWorkflowChanges = activity.IncludeWorkflowChanges;
-        model.CourseOptions = await _editorOptions.GetCourseOptionsAsync(null, model.CourseIds);
+        model.CoursesJson = await _editorOptions.GetChosenCoursesJsonAsync(model.CourseIds);
     }
 
     /// <inheritdoc />

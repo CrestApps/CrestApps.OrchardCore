@@ -66,6 +66,14 @@ public sealed class Startup : StartupBase
 [RequireFeatures(ProgramsConstants.Features.Paths)]
 public sealed class LearningPathsStartup : StartupBase
 {
+    /// <summary>
+    /// Registers the learning path products migration after Learning Commerce's own migration. Orchard Core runs the
+    /// migrations of a feature in the order they were registered and stops at the first one whose Create returns 0 for
+    /// the rest of the activation, so the migration that may wait for the Learning Path type must come last, or Learning
+    /// Commerce's tables are not made until the site restarts.
+    /// </summary>
+    public override int Order => 100;
+
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {

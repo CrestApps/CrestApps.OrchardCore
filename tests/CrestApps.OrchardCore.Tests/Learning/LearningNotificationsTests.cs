@@ -43,6 +43,7 @@ public sealed class LearningNotificationsTests
                 LearningConstants.NotificationTypes.DueSoon,
                 LearningConstants.NotificationTypes.Overdue,
                 LearningConstants.NotificationTypes.ReviewNeeded,
+                LearningConstants.NotificationTypes.EnrollmentRequested,
             ]
         },
         { typeof(AssessmentsNotificationsStartup), [AssessmentsConstants.NotificationTypes.Graded] },
@@ -62,6 +63,7 @@ public sealed class LearningNotificationsTests
                 ClassesConstants.NotificationTypes.Registered,
                 ClassesConstants.NotificationTypes.PlaceOffered,
                 ClassesConstants.SessionCancelledNotificationType,
+                ClassesConstants.NotificationTypes.SessionMoved,
             ]
         },
         { typeof(global::CrestApps.OrchardCore.Learning.Commerce.NotificationsStartup), [LearningCommerceConstants.SeatGivenNotificationType] },
@@ -112,7 +114,7 @@ public sealed class LearningNotificationsTests
     {
         // Arrange
         var (sender, sent) = Sender();
-        var observer = new LearningNotificationObserver(Courses("Fire safety"), sender, new PassThroughStringLocalizer<LearningNotificationObserver>());
+        var observer = NotificationObserver(Courses("Fire safety"), sender);
 
         // Act
         await observer.EnrolledAsync(new Enrollment { ItemId = "e1", UserId = "ana", CourseId = "c1", Status = EnrollmentStatus.Active }, TestContext.Current.CancellationToken);
@@ -139,7 +141,7 @@ public sealed class LearningNotificationsTests
     {
         // Arrange
         var (sender, sent) = Sender();
-        var observer = new LearningNotificationObserver(Courses("Fire safety"), sender, new PassThroughStringLocalizer<LearningNotificationObserver>());
+        var observer = NotificationObserver(Courses("Fire safety"), sender);
         var declined = new Enrollment { ItemId = "e1", UserId = "ana", CourseId = "c1", Status = EnrollmentStatus.Withdrawn };
         var withdrawn = new Enrollment { ItemId = "e2", UserId = "ana", CourseId = "c1", Status = EnrollmentStatus.Withdrawn };
 
@@ -259,6 +261,82 @@ public sealed class LearningNotificationsTests
         Assert.Equal("ap1", message.ReferenceId);
         Assert.Equal("~/learning/courses/c1/play/class1", message.Url);
     }
+
+    [Fact]
+    public async Task AnEnrollmentRequest_TellsTheInstructorsAndAssistantsOfTheCourse_WithALinkToTheEnrollment()
+    {
+        // Arrange: a course with an instructor, an assistant and a grader, who cannot approve.
+        var (sender, sent) = Sender();
+        var course = new ContentItem { ContentItemId = "c1", DisplayText = "Fire safety" };
+        course.Alter<CoursePart>(nameof(CoursePart), part => part.Staff =
+        [
+            new CourseStaffMember { UserId = "tom", Role = LearningConstants.CourseStaffRoles.Instructor },
+            new CourseStaffMember { UserId = "amy", Role = LearningConstants.CourseStaffRoles.Assistant },
+            new CourseStaffMember { UserId = "gus", Role = LearningConstants.CourseStaffRoles.Grader },
+        ]);
+        var courses = new Mock<ICourseStructureService>();
+        courses.Setup(service => service.GetCourseAsync("c1")).ReturnsAsync(course);
+        var observer = NotificationObserver(courses.Object, sender);
+
+        // Act
+        await observer.RequestedAsync(new Enrollment { ItemId = "e1", UserId = "ana", CourseId = "c1", Status = EnrollmentStatus.Pending }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["amy", "tom"], sent.Select(item => item.UserId).Order(StringComparer.Ordinal));
+        Assert.All(sent, item =>
+        {
+            Assert.Equal(LearningConstants.NotificationTypes.EnrollmentRequested, item.Message.Type);
+            Assert.Equal("e1", item.Message.ReferenceId);
+            Assert.Equal("~/Admin/learning/enrollments/e1", item.Message.Url);
+            Assert.Contains("Fire safety", item.Message.Subject);
+        });
+    }
+
+    [Fact]
+    public async Task AnEnrollmentRequest_InACourseWithoutStaff_TellsNobody_WhenNoRoleMayApprove()
+    {
+        // Arrange: no course staff, and no role store to find the people who may manage enrollments.
+        var (sender, sent) = Sender();
+        var observer = NotificationObserver(Courses("Fire safety"), sender);
+
+        // Act
+        await observer.RequestedAsync(new Enrollment { ItemId = "e1", UserId = "ana", CourseId = "c1", Status = EnrollmentStatus.Pending }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(sent);
+    }
+
+    [Fact]
+    public async Task AMovedClassSession_TellsEachLearnerWithAPlace_AndLinksToTheClass_ButNotOtherAppointments()
+    {
+        // Arrange
+        var (sender, sent) = Sender();
+        var observer = ClassObserver(sender);
+        var place = new Appointment
+        {
+            ItemId = "ap1",
+            UserId = "ana",
+            SessionId = "session1",
+            Source = ClassesConstants.RegistrationSource,
+            SourceId = ClassesConstants.RegistrationSourceId("e1", "class1"),
+        };
+        var booking = new Appointment { ItemId = "ap2", UserId = "bob", SessionId = "session1", Source = "Bookings" };
+
+        // Act
+        await observer.OnChangedAsync(new AppointmentChange { Kind = AppointmentChangeKind.Rescheduled, Appointment = place, Actor = "trainer" }, TestContext.Current.CancellationToken);
+        await observer.OnChangedAsync(new AppointmentChange { Kind = AppointmentChangeKind.Rescheduled, Appointment = booking, Actor = "trainer" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        var (userId, message) = Assert.Single(sent);
+        Assert.Equal("ana", userId);
+        Assert.Equal(ClassesConstants.NotificationTypes.SessionMoved, message.Type);
+        Assert.Equal("ap1", message.ReferenceId);
+        Assert.Equal("~/learning/courses/c1/play/class1", message.Url);
+        Assert.Contains("Evening class", message.Subject);
+    }
+
+    private static LearningNotificationObserver NotificationObserver(ICourseStructureService courses, ILearningNotificationSender sender)
+        => new(courses, sender, new EnrollmentApprovers(new ServiceCollection().BuildServiceProvider()), new PassThroughStringLocalizer<LearningNotificationObserver>());
 
     private static ClassNotificationObserver ClassObserver(ILearningNotificationSender sender)
     {

@@ -8,25 +8,44 @@ namespace CrestApps.OrchardCore.Learning.Notifications;
 
 /// <summary>
 /// Tells learners, through Orchard Core notifications, that they are enrolled (also when a request is approved), that a
-/// request was declined, that a course is due soon and that it is overdue, and tells instructors a completion needs
-/// review. Each notice is a registered notification type, so a learner or the site can switch it off; it is sent after
+/// request was declined, that a course is due soon and that it is overdue, tells instructors a completion needs review,
+/// and tells the people who may approve it that someone asked to enroll. Each notice is a registered notification type, so a learner or the site can switch it off; it is sent after
 /// the change is committed.
 /// </summary>
 internal sealed class LearningNotificationObserver : IEnrollmentObserver
 {
     private readonly ICourseStructureService _courseStructure;
     private readonly ILearningNotificationSender _sender;
+    private readonly EnrollmentApprovers _approvers;
 
     internal readonly IStringLocalizer S;
 
     public LearningNotificationObserver(
         ICourseStructureService courseStructure,
         ILearningNotificationSender sender,
+        EnrollmentApprovers approvers,
         IStringLocalizer<LearningNotificationObserver> stringLocalizer)
     {
         _courseStructure = courseStructure;
         _sender = sender;
+        _approvers = approvers;
         S = stringLocalizer;
+    }
+
+    public async Task RequestedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+    {
+        var course = await _courseStructure.GetCourseAsync(enrollment.CourseId);
+        var title = course?.DisplayText ?? S["a course"].Value;
+
+        foreach (var approver in await _approvers.ListAsync(course))
+        {
+            if (string.Equals(approver, enrollment.UserId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            Send(enrollment, LearningConstants.NotificationTypes.EnrollmentRequested, S["A request to enroll in {0} waits for approval", title], S["Someone asked to enroll in the course {0}. Open the enrollment to approve or decline it.", title], approver, $"~/Admin/learning/enrollments/{enrollment.ItemId}");
+        }
     }
 
     public async Task EnrolledAsync(Enrollment enrollment, CancellationToken cancellationToken = default)

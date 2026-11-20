@@ -107,7 +107,7 @@
         <div class="ocat-wrapper">
             <label asp-for="PrerequisiteCourseIds" class="ocat-label">@T["Prerequisite courses"]</label>
             <div class="ocat-end">
-                <select asp-for="PrerequisiteCourseIds" asp-items="Model.CourseOptions" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" data-selected-text-format="count > 3" title="@T["No prerequisites"]" data-live-search-placeholder="@T["Search courses"]"></select>
+                @await Component.InvokeAsync("ItemSelector", new { id = Html.IdFor(m => m.PrerequisiteCourseIds).ToString(), inputName = Html.NameFor(m => m.PrerequisiteCourseIds).ToString(), endpoint = Url.RouteUrl("LearningCourseSearch", new { exceptId = Model.CourseId }), initialItemsJson = Model.PrerequisiteCoursesJson, multiple = true, buttonText = T["No prerequisites"].Value, searchPlaceholder = T["Search courses by title"].Value, emptyResultsText = T["No course has this title."].Value, smallButton = false })
                 <span class="hint">@T["Courses a learner must have completed before enrolling."]</span>
             </div>
         </div>

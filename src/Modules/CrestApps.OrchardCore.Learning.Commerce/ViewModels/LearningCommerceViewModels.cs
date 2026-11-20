@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Learning.Commerce.Models;
 using CrestApps.OrchardCore.Learning.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Learning.Commerce.ViewModels;
 
@@ -12,8 +11,11 @@ public class LearningProductPartViewModel
 
     public bool EnrollsWithoutKeyOrApproval { get; set; }
 
+    /// <summary>
+    /// Gets or sets the titles of the courses the rows grant, by id, which their course pickers start with.
+    /// </summary>
     [BindNever]
-    public IList<SelectListItem> Courses { get; set; } = [];
+    public IDictionary<string, string> CourseTitles { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
 }
 
 public class LearningProductGrantRow

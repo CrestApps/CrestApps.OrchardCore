@@ -423,6 +423,9 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
             enrollment.ModifiedUtc = _clock.UtcNow;
             await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
 
+            // What is issued on a completion catches up on one that supported nothing while it was under review.
+            notifications.Add(() => NotifyAsync(observer => observer.ReviewClearedAsync(enrollment, cancellationToken)));
+
             return new EnrollmentResult { Enrollment = enrollment, Changed = true };
         }, cancellationToken);
     }

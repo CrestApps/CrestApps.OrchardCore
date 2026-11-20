@@ -27,7 +27,16 @@ public sealed class EducationCreditEnrollmentObserver : IEnrollmentObserver
     }
 
     /// <inheritdoc/>
-    public async Task CompletedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+    public Task CompletedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => AwardAsync(enrollment, cancellationToken);
+
+    /// <inheritdoc/>
+    /// <remarks>Credits are posted once per source, credit type and person, so credits awarded before the review are not
+    /// posted again.</remarks>
+    public Task ReviewClearedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => AwardAsync(enrollment, cancellationToken);
+
+    private async Task AwardAsync(Enrollment enrollment, CancellationToken cancellationToken)
     {
         if (!CompletionEvidence.SupportsIssuing(enrollment))
         {

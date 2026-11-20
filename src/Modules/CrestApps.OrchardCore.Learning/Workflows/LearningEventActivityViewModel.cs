@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Learning.Workflows;
 
@@ -12,6 +11,9 @@ public class LearningEventActivityViewModel
 
     public bool IncludeWorkflowChanges { get; set; }
 
+    /// <summary>
+    /// Gets or sets the chosen courses, as the <c>[{ value, text }]</c> JSON the course picker starts with.
+    /// </summary>
     [BindNever]
-    public IList<SelectListItem> CourseOptions { get; set; } = [];
+    public string CoursesJson { get; set; } = "[]";
 }

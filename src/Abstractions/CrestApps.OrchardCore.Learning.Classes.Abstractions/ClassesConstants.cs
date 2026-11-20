@@ -45,6 +45,11 @@ public static class ClassesConstants
         /// A place freed up in a full session the learner waits for: it is held for them, or free to take.
         /// </summary>
         public const string PlaceOffered = "LearningClassPlaceOffered";
+
+        /// <summary>
+        /// Staff moved a class session the learner has a place in to other times.
+        /// </summary>
+        public const string SessionMoved = "LearningClassSessionMoved";
     }
 
     /// <summary>

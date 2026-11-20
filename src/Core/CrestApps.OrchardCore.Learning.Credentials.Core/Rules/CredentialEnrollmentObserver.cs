@@ -22,6 +22,15 @@ public sealed class CredentialEnrollmentObserver : IEnrollmentObserver
 
     /// <inheritdoc/>
     public Task CompletedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => TriggerAsync(enrollment, cancellationToken);
+
+    /// <inheritdoc/>
+    /// <remarks>The award service keeps one award per rule and source, so a completion awarded before its review is not
+    /// awarded again.</remarks>
+    public Task ReviewClearedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => TriggerAsync(enrollment, cancellationToken);
+
+    private Task TriggerAsync(Enrollment enrollment, CancellationToken cancellationToken)
     {
         if (!CompletionEvidence.SupportsIssuing(enrollment))
         {
