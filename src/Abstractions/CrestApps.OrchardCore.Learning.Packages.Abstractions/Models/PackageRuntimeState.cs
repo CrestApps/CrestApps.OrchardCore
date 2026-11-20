@@ -78,4 +78,25 @@ public sealed class PackageRuntimeState : CatalogItem
 
     /// <summary>Gets or sets when a session last finished, in UTC.</summary>
     public DateTime? LastFinishedUtc { get; set; }
+
+    /// <summary>Gets or sets the result of each attempt, for a package with attempt settings, oldest first.</summary>
+    public IList<PackageAttemptScore> AttemptScores { get; set; } = [];
+}
+
+/// <summary>
+/// The result of one attempt on a learning package.
+/// </summary>
+public sealed class PackageAttemptScore
+{
+    /// <summary>Gets or sets the number of the attempt, from 1.</summary>
+    public int Number { get; set; }
+
+    /// <summary>Gets or sets the score, as a percentage, or <see langword="null"/> without one.</summary>
+    public decimal? Score { get; set; }
+
+    /// <summary>Gets or sets whether the attempt passed, failed, or neither.</summary>
+    public bool? Passed { get; set; }
+
+    /// <summary>Gets or sets whether the package reported the attempt complete.</summary>
+    public bool Completed { get; set; }
 }

@@ -28,3 +28,33 @@ export function isFrameMessage(event, frameWindow, session) {
 
     return !!data && data.protocol === session.protocol && data.launchId === session.launchId;
 }
+
+// The protocol of the message a package window posts to the page that opened it when its session finished.
+const windowProtocol = 'crestapps-package-window';
+
+/**
+ * Builds the message a package window posts to the page that opened it when the session finished.
+ * @param {string} itemId The package item.
+ * @returns {{ protocol: string, type: string, itemId: string }} The message.
+ */
+export function windowFinishedMessage(itemId) {
+    return { protocol: windowProtocol, type: 'finished', itemId };
+}
+
+/**
+ * Tells whether a message event says that the package window this page opened finished its session.
+ * @param {MessageEvent} event The message event.
+ * @param {Window|null} openedWindow The window this page opened.
+ * @param {string} origin The page's own origin, which the window shares.
+ * @param {string} itemId The package item.
+ * @returns {boolean} true when the page takes the message.
+ */
+export function isWindowFinishedMessage(event, openedWindow, origin, itemId) {
+    if (!openedWindow || event.source !== openedWindow || event.origin !== origin) {
+        return false;
+    }
+
+    const data = event.data;
+
+    return !!data && data.protocol === windowProtocol && data.type === 'finished' && data.itemId === itemId;
+}

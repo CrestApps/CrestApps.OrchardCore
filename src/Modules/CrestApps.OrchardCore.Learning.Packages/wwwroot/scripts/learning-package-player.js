@@ -24,6 +24,32 @@
 		const data = event.data;
 		return !!data && data.protocol === session.protocol && data.launchId === session.launchId;
 	}
+	var windowProtocol = "crestapps-package-window";
+	/**
+	* Builds the message a package window posts to the page that opened it when the session finished.
+	* @param {string} itemId The package item.
+	* @returns {{ protocol: string, type: string, itemId: string }} The message.
+	*/
+	function windowFinishedMessage(itemId) {
+		return {
+			protocol: windowProtocol,
+			type: "finished",
+			itemId
+		};
+	}
+	/**
+	* Tells whether a message event says that the package window this page opened finished its session.
+	* @param {MessageEvent} event The message event.
+	* @param {Window|null} openedWindow The window this page opened.
+	* @param {string} origin The page's own origin, which the window shares.
+	* @param {string} itemId The package item.
+	* @returns {boolean} true when the page takes the message.
+	*/
+	function isWindowFinishedMessage(event, openedWindow, origin, itemId) {
+		if (!openedWindow || event.source !== openedWindow || event.origin !== origin) return false;
+		const data = event.data;
+		return !!data && data.protocol === windowProtocol && data.type === "finished" && data.itemId === itemId;
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Learning.Packages/Assets/js/package-runtime-queue.js
 	var defaultAttempts = 5;
@@ -95,10 +121,39 @@
 			status.classList.toggle("d-none", !text);
 		}
 	}
+	function startWindowOpener(root, button) {
+		const itemId = root.dataset.packageItemId;
+		let opened = null;
+		let timer = null;
+		window.addEventListener("message", (event) => {
+			if (isWindowFinishedMessage(event, opened, window.location.origin, itemId)) window.location.reload();
+		});
+		button.addEventListener("click", () => {
+			opened = window.open(root.dataset.packageWindowUrl, "crestapps-package-" + itemId);
+			if (!opened) {
+				setStatus(root, root.dataset.errorText);
+				return;
+			}
+			setStatus(root, root.dataset.windowText);
+			window.clearInterval(timer);
+			timer = window.setInterval(() => {
+				if (opened.closed) {
+					window.clearInterval(timer);
+					setStatus(root, root.dataset.packageWindowClosedText);
+					window.location.reload();
+				}
+			}, 1e3);
+		});
+	}
 	function start(root) {
 		const button = root.querySelector("[data-package-launch]");
 		const host = root.querySelector("[data-package-frame-host]");
 		if (!button || !host) return;
+		if (root.dataset.packageWindowUrl) {
+			startWindowOpener(root, button);
+			return;
+		}
+		const inWindow = root.dataset.packageInWindow === "true";
 		let session = null;
 		const post = async (current, payload, keepalive) => {
 			const body = form(root, {
@@ -153,7 +208,10 @@
 					window.clearInterval(session.timer);
 					if (result?.accepted) {
 						setStatus(root, root.dataset.finishedText);
-						window.setTimeout(() => window.location.reload(), 800);
+						if (inWindow && window.opener && !window.opener.closed) {
+							window.opener.postMessage(windowFinishedMessage(root.dataset.packageItemId), window.location.origin);
+							window.setTimeout(() => window.close(), 800);
+						} else window.setTimeout(() => window.location.reload(), 800);
 					}
 					break;
 				}
@@ -196,7 +254,7 @@
 				frame.name = frameName;
 				frame.title = root.dataset.frameTitle;
 				frame.className = "learning-package-frame w-100 border rounded bg-white";
-				frame.style.minHeight = "70vh";
+				frame.style.minHeight = inWindow ? "85vh" : "70vh";
 				frame.setAttribute("sandbox", result.frameSandbox || strictSandbox);
 				frame.setAttribute("allow", "fullscreen; autoplay");
 				frame.setAttribute("allowfullscreen", "");
@@ -211,6 +269,7 @@
 				button.disabled = false;
 			}
 		});
+		if (inWindow) button.click();
 	}
 	function startCmi5(root) {
 		const host = root.querySelector("[data-package-frame-host]");

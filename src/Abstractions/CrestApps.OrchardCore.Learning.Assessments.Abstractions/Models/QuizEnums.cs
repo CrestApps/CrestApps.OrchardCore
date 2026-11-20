@@ -1,24 +1,6 @@
 namespace CrestApps.OrchardCore.Learning.Assessments.Models;
 
 /// <summary>
-/// Which attempt sets the quiz score.
-/// </summary>
-public enum GradingMethod
-{
-    /// <summary>The best attempt.</summary>
-    Highest,
-
-    /// <summary>The last graded attempt.</summary>
-    Latest,
-
-    /// <summary>The mean of the graded attempts.</summary>
-    Average,
-
-    /// <summary>The first graded attempt.</summary>
-    First,
-}
-
-/// <summary>
 /// When a learner may see the right answers and the feedback.
 /// </summary>
 public enum ReviewPolicy

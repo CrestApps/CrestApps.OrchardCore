@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Learning.Models;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Models;

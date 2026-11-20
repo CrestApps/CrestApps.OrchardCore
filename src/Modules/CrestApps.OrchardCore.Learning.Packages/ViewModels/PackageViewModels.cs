@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 namespace CrestApps.OrchardCore.Learning.Packages.ViewModels;
 
 /// <summary>
-/// The package part in the content editor: what the last import found. Nothing in it is edited by hand.
+/// The package part in the content editor: what the last import found, which is not edited by hand, and how learners
+/// run it (a window of its own, attempts, the grading method).
 /// </summary>
 public class LearningPackagePartViewModel
 {
@@ -24,6 +25,15 @@ public class LearningPackagePartViewModel
     /// <summary>Gets or sets the part.</summary>
     [BindNever]
     public LearningPackagePart Part { get; set; }
+
+    /// <summary>Gets or sets whether the package opens in a window of its own.</summary>
+    public bool OpenInNewWindow { get; set; }
+
+    /// <summary>Gets or sets how many attempts a learner has, or empty for no limit.</summary>
+    public int? MaxAttempts { get; set; }
+
+    /// <summary>Gets or sets which attempts set the score: a grading method name, or empty for the attempt in progress.</summary>
+    public string GradingMethod { get; set; }
 }
 
 /// <summary>
@@ -96,4 +106,16 @@ public class PackagePanelViewModel
 
     /// <summary>Gets whether the next launch resumes a suspended session.</summary>
     public bool Resumes => Summary?.Resumes == true;
+
+    /// <summary>Gets or sets whether the panel is the window the package opens in.</summary>
+    public bool InWindow { get; set; }
+
+    /// <summary>Gets or sets how many attempts the package allows, or <see langword="null"/> without a limit.</summary>
+    public int? AttemptsAllowed { get; set; }
+
+    /// <summary>Gets or sets how many attempts the learner started.</summary>
+    public int AttemptsUsed { get; set; }
+
+    /// <summary>Gets or sets whether the learner used every attempt, so a launch only reviews the package.</summary>
+    public bool AttemptsUsedUp { get; set; }
 }

@@ -115,6 +115,7 @@ public sealed class PackageRuntimeService
         var target = resolved;
         var enrollment = resolved.Enrollment;
         var review = resolved.Review;
+        var attemptsUsedUp = false;
         var now = _clock.UtcNow;
         var part = target.Part;
         var launch = new PackageLaunch(IdGenerator.GenerateId(), enrollment.ItemId, target.Item.ContentItemId, part.PackageFileId, userId)
@@ -132,9 +133,9 @@ public sealed class PackageRuntimeService
             // enrollment is still busy the launch is refused, so the result is not lost.
             if (state is { ResultNotRecorded: true } && !review)
             {
-                var pending = PackagesConstants.Standards.IsScorm2004(state.Standard)
+                var pending = PackageAttempts.Apply(state, part, PackagesConstants.Standards.IsScorm2004(state.Standard)
                     ? PackageResultMapper.Map(state.Cmi2004 ?? new Scorm2004Cmi(), launch.PackageItemId, state.Attempts)
-                    : PackageResultMapper.Map(state.Cmi ?? new Scorm12Cmi(), launch.PackageItemId, state.Sessions);
+                    : PackageResultMapper.Map(state.Cmi ?? new Scorm12Cmi(), launch.PackageItemId, state.Sessions));
                 var update = await _progress.RecordWithRetryAsync(enrollment, pending, cancellationToken);
 
                 if (update?.RefusedReason == LearningRefusals.Busy)
@@ -175,6 +176,24 @@ public sealed class PackageRuntimeService
             state.Standard = standard;
 
             var firstSession = state.Sessions == 0 || switched;
+
+            // A package with attempt settings: a finished attempt is followed by a new one, until the learner has used
+            // them all; then the launch only reviews, and nothing it sends is kept.
+            if (!review && PackageAttempts.Tracks(part) && PackageAttempts.StartsNewAttempt(isNew ? null : state, scorm2004))
+            {
+                if (!firstSession && PackageAttempts.UsedUp(part, state))
+                {
+                    review = true;
+                    attemptsUsedUp = true;
+                }
+                else if (!scorm2004)
+                {
+                    // SCORM 2004 starts the attempt itself when the session does not resume; SCORM 1.2 starts afresh here.
+                    state.Cmi = new Scorm12Cmi();
+                    state.Attempts++;
+                    firstSession = true;
+                }
+            }
 
             if (scorm2004)
             {
@@ -223,6 +242,7 @@ public sealed class PackageRuntimeService
             Part = part,
             State = launched,
             Review = review,
+            AttemptsUsedUp = attemptsUsedUp,
         };
     }
 
@@ -389,12 +409,20 @@ public sealed class PackageRuntimeService
                 Scorm12Rules.ApplyMasteryScore(cmi);
             }
 
+            CourseItemResult itemResult = null;
+
             if (request.Commit || request.Finish)
             {
                 state.LastCommitUtc = now;
 
                 // This result replaces one that was not recorded; it is recorded below.
                 state.ResultNotRecorded = false;
+
+                // The attempt's result joins the state before it is saved; with a grading method the item's score
+                // comes from every attempt.
+                itemResult = PackageAttempts.Apply(state, PackagePart(await _contentSource.GetPublishedAsync(launch.PackageItemId)), scorm2004
+                    ? PackageResultMapper.Map(cmi2004, launch.PackageItemId, state.Attempts)
+                    : PackageResultMapper.Map(cmi, launch.PackageItemId, state.Sessions));
             }
 
             // Every runtime call loads and writes the whole state, and every package page embeds it: a change that would
@@ -412,12 +440,8 @@ public sealed class PackageRuntimeService
             // and the item's release rules apply there too, and the result is marked self-reported. Learning commits the
             // session (the state saved above with it), so the state is not touched after this; the runtime lock is held
             // first and the enrollment lock inside it, the order every Learning record write takes.
-            if (request.Commit || request.Finish)
+            if (itemResult is not null)
             {
-                var itemResult = scorm2004
-                    ? PackageResultMapper.Map(cmi2004, launch.PackageItemId, state.Attempts)
-                    : PackageResultMapper.Map(cmi, launch.PackageItemId, state.Sessions);
-
                 result.Progress = await _progress.RecordWithRetryAsync(enrollment, itemResult, cancellationToken);
 
                 // The enrollment stayed busy, so Learning committed nothing and the state is still the session's: it keeps

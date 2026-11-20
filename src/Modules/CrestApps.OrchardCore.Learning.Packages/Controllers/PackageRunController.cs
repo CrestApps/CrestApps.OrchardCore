@@ -1,12 +1,15 @@
 using System.Security.Claims;
 using System.Text.Json;
 using CrestApps.OrchardCore.Learning.Packages.Core.Services;
+using CrestApps.OrchardCore.Learning.Packages.Models;
 using CrestApps.OrchardCore.Learning.Packages.Services;
+using CrestApps.OrchardCore.Learning.Packages.ViewModels;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Learning.Packages.Controllers;
 
@@ -171,6 +174,47 @@ public sealed class PackageRunController : Controller
     }
 
     /// <summary>
+    /// Shows the window a package opens in when it opens in a window of its own: the package panel, which launches the
+    /// package as the player does (through the package content host when the site has one), with the frame filling the
+    /// window. The launch itself checks the learner's enrollment and the item's release rules.
+    /// </summary>
+    /// <param name="itemId">The package item.</param>
+    /// <param name="contentManager">The content manager.</param>
+    /// <param name="panelBuilder">Builds the package panel.</param>
+    /// <returns>The window page.</returns>
+    [HttpGet("learning/packages/{itemId}/window", Name = "LearningPackageWindow")]
+    public async Task<IActionResult> Window(string itemId, [FromServices] IContentManager contentManager, [FromServices] PackagePanelBuilder panelBuilder)
+    {
+        if (string.IsNullOrEmpty(User.FindFirstValue(ClaimTypes.NameIdentifier)))
+        {
+            return Challenge();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, LearningPermissions.AccessLearning))
+        {
+            return Forbid();
+        }
+
+        var item = await contentManager.GetAsync(itemId, VersionOptions.Published);
+
+        if (item is null || !item.TryGet<LearningPackagePart>(out var part) || part.Cmi5 is not null)
+        {
+            return NotFound();
+        }
+
+        var model = new PackagePanelViewModel { InWindow = true };
+
+        await panelBuilder.FillAsync(model, part, User);
+
+        if (!model.Enrolled)
+        {
+            return NotFound();
+        }
+
+        return View(model);
+    }
+
+    /// <summary>
     /// Launches a package for the signed-in learner.
     /// </summary>
     /// <param name="itemId">The package item.</param>
@@ -237,6 +281,7 @@ public sealed class PackageRunController : Controller
             frameSandbox = contentOrigin is null ? PackageContentHost.StrictFrameSandbox : PackageContentHost.ContentHostFrameSandbox,
             runtimeUrl = Url.RouteUrl("LearningPackageRuntime", new { enrollmentId = result.Launch.EnrollmentId, itemId = result.Launch.PackageItemId }),
             review = result.Review,
+            attemptsUsedUp = result.AttemptsUsedUp,
         });
     }
 

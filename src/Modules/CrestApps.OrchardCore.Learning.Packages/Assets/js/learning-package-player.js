@@ -7,7 +7,7 @@
 // What the content set is sent to the server, which checks every value again, when the content commits or finishes
 // (Terminate in SCORM 2004), every half minute, and when the page is left.
 
-import { isFrameMessage } from './package-frame-messages.js';
+import { isFrameMessage, isWindowFinishedMessage, windowFinishedMessage } from './package-frame-messages.js';
 import { createRuntimeQueue } from './package-runtime-queue.js';
 
 // The message protocol of the SCORM 1.2 frame script; a SCORM 2004 launch names its own (crestapps-scorm2004).
@@ -37,6 +37,40 @@ function setStatus(root, text) {
     }
 }
 
+// A package that opens in a window of its own: the button opens the window page, which runs the package as this page
+// would. This page shows the progress the server has once the window says its session finished, or closes.
+function startWindowOpener(root, button) {
+    const itemId = root.dataset.packageItemId;
+    let opened = null;
+    let timer = null;
+
+    window.addEventListener('message', event => {
+        if (isWindowFinishedMessage(event, opened, window.location.origin, itemId)) {
+            window.location.reload();
+        }
+    });
+
+    button.addEventListener('click', () => {
+        opened = window.open(root.dataset.packageWindowUrl, 'crestapps-package-' + itemId);
+
+        if (!opened) {
+            setStatus(root, root.dataset.errorText);
+
+            return;
+        }
+
+        setStatus(root, root.dataset.windowText);
+        window.clearInterval(timer);
+        timer = window.setInterval(() => {
+            if (opened.closed) {
+                window.clearInterval(timer);
+                setStatus(root, root.dataset.packageWindowClosedText);
+                window.location.reload();
+            }
+        }, 1000);
+    });
+}
+
 function start(root) {
     const button = root.querySelector('[data-package-launch]');
     const host = root.querySelector('[data-package-frame-host]');
@@ -44,6 +78,14 @@ function start(root) {
     if (!button || !host) {
         return;
     }
+
+    if (root.dataset.packageWindowUrl) {
+        startWindowOpener(root, button);
+
+        return;
+    }
+
+    const inWindow = root.dataset.packageInWindow === 'true';
 
     let session = null;
 
@@ -129,8 +171,14 @@ function start(root) {
                 if (result?.accepted) {
                     setStatus(root, root.dataset.finishedText);
 
-                    // The page shows the status, score and progress the server now has.
-                    window.setTimeout(() => window.location.reload(), 800);
+                    if (inWindow && window.opener && !window.opener.closed) {
+                        // The page that opened this window shows the progress; the window closes.
+                        window.opener.postMessage(windowFinishedMessage(root.dataset.packageItemId), window.location.origin);
+                        window.setTimeout(() => window.close(), 800);
+                    } else {
+                        // The page shows the status, score and progress the server now has.
+                        window.setTimeout(() => window.location.reload(), 800);
+                    }
                 }
 
                 break;
@@ -190,7 +238,7 @@ function start(root) {
             frame.name = frameName;
             frame.title = root.dataset.frameTitle;
             frame.className = 'learning-package-frame w-100 border rounded bg-white';
-            frame.style.minHeight = '70vh';
+            frame.style.minHeight = inWindow ? '85vh' : '70vh';
             frame.setAttribute('sandbox', result.frameSandbox || strictSandbox);
             frame.setAttribute('allow', 'fullscreen; autoplay');
             frame.setAttribute('allowfullscreen', '');
@@ -206,6 +254,11 @@ function start(root) {
             button.disabled = false;
         }
     });
+
+    // The window a package opens in launches it at once.
+    if (inWindow) {
+        button.click();
+    }
 }
 
 // A cmi5 course: each AU has its own Launch button. A file of the package opens in the sandboxed frame; an https AU,

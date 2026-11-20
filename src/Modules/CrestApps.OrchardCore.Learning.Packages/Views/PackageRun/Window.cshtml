@@ -1,0 +1,14 @@
+@model PackagePanelViewModel
+
+<div class="container-fluid my-3 learning-package-window">
+    <div class="product-breadcrumb">
+        <breadcrumb name="LearningPackageWindow" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(Model.Part.Title ?? Model.Part.ContentItem.DisplayText))">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            <breadcrumb-item id="LearningMyLearning" url="@Url.RouteUrl("LearningMyLearning")">@T["My learning"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
+
+    <h1 class="h4">@Model.Part.ContentItem.DisplayText</h1>
+
+    <partial name="_PackagePanel" model="Model" />
+</div>

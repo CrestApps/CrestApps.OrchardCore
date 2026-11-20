@@ -155,3 +155,42 @@
         }
     </div>
 </div>
+
+@if (part?.Cmi5 is null)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["How learners run it"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="OpenInNewWindow" type="checkbox" class="form-check-input" />
+                        <label asp-for="OpenInNewWindow" class="form-check-label">@T["Open in a new window"]</label>
+                        <span class="hint dashed">@T["The package runs in a window of its own, through the package content host when the site has one. The course page shows the learner's progress when the window closes."]</span>
+                    </div>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="MaxAttempts">
+                <label asp-for="MaxAttempts" class="ocat-label">@T["Attempts allowed"]</label>
+                <div class="ocat-end">
+                    <input asp-for="MaxAttempts" type="number" min="1" class="form-control" />
+                    <span asp-validation-for="MaxAttempts"></span>
+                    <span class="hint">@T["Leave empty for no limit. With a limit or a grading method, launching after a finished attempt (completed, passed or failed) starts a new one; once the attempts are used, the package opens only to review."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="GradingMethod">
+                <label asp-for="GradingMethod" class="ocat-label">@T["Score from"]</label>
+                <div class="ocat-end">
+                    <select asp-for="GradingMethod" class="form-select">
+                        <option value="">@T["The attempt in progress (one attempt that resumes)"]</option>
+                        <option value="Highest">@T["The best attempt"]</option>
+                        <option value="Average">@T["The average of the attempts"]</option>
+                        <option value="First">@T["The first attempt"]</option>
+                        <option value="Latest">@T["The last attempt"]</option>
+                    </select>
+                    <span asp-validation-for="GradingMethod"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+}

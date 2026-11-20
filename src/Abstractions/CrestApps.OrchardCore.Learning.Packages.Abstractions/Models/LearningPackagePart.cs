@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Learning.Models;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Learning.Packages.Models;
@@ -131,4 +132,23 @@ public sealed class LearningPackagePart : ContentPart
     /// Gets or sets the user id of the person who imported it.
     /// </summary>
     public string ImportedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the package opens in a window of its own instead of in the page. The window is a page of the
+    /// site that runs the package as the page does, through the package content host when the site has one.
+    /// </summary>
+    public bool OpenInNewWindow { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many attempts a learner has, or <see langword="null"/> for no limit. Once they are used up, a
+    /// launch only reviews the package. With a limit or a grading method, a launch after a finished attempt starts a new
+    /// one.
+    /// </summary>
+    public int? MaxAttempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets which attempts set the item's score, or <see langword="null"/> for the score of the attempt in
+    /// progress, as a package without attempt settings keeps one attempt that resumes.
+    /// </summary>
+    public GradingMethod? GradingMethod { get; set; }
 }

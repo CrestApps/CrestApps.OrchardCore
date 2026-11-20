@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Learning.Models;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 
@@ -20,17 +21,6 @@ public static class QuizGradeCalculator
             .OrderBy(attempt => attempt.SubmittedUtc ?? attempt.StartedUtc)
             .ToList();
 
-        if (graded.Count == 0)
-        {
-            return null;
-        }
-
-        return method switch
-        {
-            GradingMethod.Latest => graded[^1].Percent,
-            GradingMethod.First => graded[0].Percent,
-            GradingMethod.Average => Math.Round(graded.Average(attempt => attempt.Percent.Value), 2, MidpointRounding.AwayFromZero),
-            _ => graded.Max(attempt => attempt.Percent),
-        };
+        return AttemptScores.Combine([.. graded.Select(attempt => attempt.Percent.Value)], method);
     }
 }

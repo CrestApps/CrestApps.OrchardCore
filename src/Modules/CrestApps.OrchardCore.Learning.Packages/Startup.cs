@@ -50,6 +50,7 @@ public sealed class Startup : StartupBase
         services.AddPersonalDataContributor<PackagesPersonalDataContributor>();
 
         services.AddScoped<PackageContentHostProvider>();
+        services.AddScoped<PackagePanelBuilder>();
         services.AddSiteDisplayDriver<LearningPackageContentHostSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(LearningPackageContentHostSettingsDisplayDriver.GroupId, LearningPackagesPermissions.ManageLearningPackageSettings);
         services.AddNavigationProvider<PackagesAdminMenu>();

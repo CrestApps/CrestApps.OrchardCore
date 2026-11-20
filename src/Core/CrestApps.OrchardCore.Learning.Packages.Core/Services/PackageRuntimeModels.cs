@@ -91,6 +91,9 @@ public sealed class PackageLaunchResult
     /// <summary>Gets or sets whether the launch is a review of a completed enrollment, whose data is not kept.</summary>
     public bool Review { get; set; }
 
+    /// <summary>Gets or sets whether the launch is a review because the learner used every attempt the package allows.</summary>
+    public bool AttemptsUsedUp { get; set; }
+
     /// <summary>Gets whether the package was launched.</summary>
     public bool Succeeded => Error is null;
 
