@@ -183,6 +183,46 @@ internal sealed class FillInBlanksQuestionPartImportHandler : QuestionColumnsImp
 }
 
 /// <summary>
+/// The options of a survey question, separated by |, and whether several may be chosen.
+/// </summary>
+internal sealed class SurveyQuestionPartImportHandler : QuestionColumnsImportHandler<SurveyQuestionPart>
+{
+    public SurveyQuestionPartImportHandler(IStringLocalizer<SurveyQuestionPartImportHandler> S)
+    {
+        Columns =
+        [
+            new("Options", S["The options separated by |, such as: Agree|Neutral|Disagree. Every answer is accepted. Write \\| for a | in an option."], (part, value) => part.Options = QuestionCells.Split(value).Select(text => new ChoiceOption
+            {
+                Id = UniqueId.GenerateId(),
+                Text = text,
+            }).ToList(), part => QuestionCells.Join(part.Options.Select(option => QuestionCells.EscapeValue(option.Text)))),
+            new("Multiple", S["Whether the learner may choose several options: yes or no."], (part, value) => part.Multiple = Boolean(value), part => part.Multiple ? "yes" : "no"),
+        ];
+    }
+
+    protected override IReadOnlyList<QuestionColumn<SurveyQuestionPart>> Columns { get; }
+}
+
+/// <summary>
+/// The text of a drag into text or gapselect question, with each blank written as <c>[[word]]</c>, and the distractors
+/// separated by |.
+/// </summary>
+internal sealed class ChoiceBlanksQuestionPartImportHandler : QuestionColumnsImportHandler<ChoiceBlanksQuestionPart>
+{
+    public ChoiceBlanksQuestionPartImportHandler(IStringLocalizer<ChoiceBlanksQuestionPartImportHandler> S)
+    {
+        Columns =
+        [
+            new("Text", S["The text with the right word of each blank written as [[word]], such as: Fire needs [[heat]] and [[fuel]]."], (part, value) => part.Text = value, part => part.Text),
+            new("Distractors", S["Wrong words offered with the right ones, separated by |, such as: water|sand."], (part, value) => part.Distractors = List(value), part => Join(part.Distractors)),
+            new("ShuffleChoices", S["Whether the words are shown in a random order: yes or no."], (part, value) => part.ShuffleChoices = Boolean(value), part => part.ShuffleChoices ? "yes" : "no"),
+        ];
+    }
+
+    protected override IReadOnlyList<QuestionColumn<ChoiceBlanksQuestionPart>> Columns { get; }
+}
+
+/// <summary>
 /// The word limits and grader guidance of an essay question.
 /// </summary>
 internal sealed class EssayQuestionPartImportHandler : QuestionColumnsImportHandler<EssayQuestionPart>

@@ -35,6 +35,16 @@ public sealed class QuestionTypeDescriptor
     /// Gets or sets whether a grader marks it.
     /// </summary>
     public bool ManuallyGraded { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a question of the type has nothing to answer and is worth no points, such as a description.
+    /// </summary>
+    public bool Informational { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a question of the type may be worth zero points, so it is ungraded.
+    /// </summary>
+    public bool MayBeUngraded { get; set; }
 }
 
 /// <summary>
