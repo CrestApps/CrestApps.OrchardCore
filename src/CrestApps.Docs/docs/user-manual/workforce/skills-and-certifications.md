@@ -32,6 +32,8 @@ Open **Content > Skills** and choose **Add skill**.
 
 Deleting a skill takes it away from everyone who held it.
 
+To add many skills at once, such as the competency frameworks of a Moodle site, click **Import** on **Content > Skills**. See [Competencies](../learning/competencies.md).
+
 ## Give a person their skills
 
 Open the person under **Access Control > Users**, edit them, and find the **Skills** section. Choose a level for each skill they hold, from **1 - Trainee** to **5 - Expert**, or **Doesn't hold it**, and save. Only people who can assign skills see the section.

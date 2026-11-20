@@ -4,6 +4,7 @@ title: Skills
 description: "The shared skill catalog: skills held at a 1 to 5 proficiency with effective dates, certifications that expire, certificates, the daily expiry check, the contracts other modules build on, and how Contact Center shares the catalog."
 user_manual:
   - user-manual/workforce/skills-and-certifications
+  - user-manual/learning/competencies
 ---
 
 The **Skills** module keeps one skill catalog for the site. Contact Center routing and workforce scheduling read the same skills, so a person's skills are set once. It adds:
@@ -126,6 +127,19 @@ The `Skills` step imports certifications and skills (by id, or by name when the 
 ```
 
 The **Skills and certifications** deployment step exports every skill and certification, and optionally the assignments and certificates.
+
+## Import skills from a CSV file
+
+**Content > Skills > Import** (`/Admin/skills/import`, Manage skills) reads a CSV file of up to 5 MB with `SkillCsvImport.Parse` (Skills.Core) and saves it with `SkillImporter`:
+
+- A **Moodle competency framework export** (Moodle's *Export competency framework*, known by its `isframework` column): the framework row's short name is the category, and each competency becomes a skill named by its short name (or ID number), its description made plain text. Nested competencies (`parentidnumber`) are imported flat.
+- A **plain file** with a `Name` column and optional `Category`, `Description` and `Enabled` columns, in any case.
+
+Skills are matched by name in any case. A new name adds a skill; a known one in the same category, or with none, is updated (an empty cell keeps the value); a known one in another category, and a name repeated in the file, are left out with the line and the reason. Importing a file again counts its skills as unchanged. Learning shows skills as competencies and categories as competency frameworks; see [Learning Certifications](./learning-certifications#competencies).
+
+## Reports
+
+With Reports on, the **Skill holders** report (`skills-skill-holders`, View skills) shows who holds each enabled skill today: holders and average level per skill, and one row per person and skill with the level, the effective dates and who gave it, up to 5,000 rows. The **Category (framework)** filter (`SkillsReportFilters.Category`) narrows it to one category; the date range counts the skills given or changed in it.
 
 ## Permissions
 

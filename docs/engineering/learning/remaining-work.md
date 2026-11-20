@@ -168,7 +168,7 @@ Build, in this order. Items 1-6 cover almost every course; the rest is the long 
     - database.
 
     For each, decide to build it, replace it, or drop it at migration.
-14. **Competencies.** 17 frameworks with about 457 competencies, mapped onto Skills (skills with proficiency levels). Learning-plan templates become learning paths or programs whose completion grants the competency (a skill assignment).
+14. ~~**Competencies.**~~ Done on `ma/lms-competencies-ff9926` (not pushed): the Learning Competencies feature. A competency is a Skills skill and a framework its category; the Competencies part on a course or a learning path grants skills at a level on completion when `CompletionEvidence` supports issuing; My competencies in Your account; the Skills **Skill holders** report with a framework filter; **Content > Skills > Import** reads Moodle competency framework CSV exports. Not done: course recipes still name skills by id, and Moodle's nested competencies import flat.
 15. **Course images, and images inside summaries and labels.** Import them into the media library.
 
 ## 4. Smaller follow-ups
