@@ -121,6 +121,7 @@ public sealed class LearningActivitiesTests
         Assert.Equal(HttpStatusCode.Redirect, signOff.StatusCode);
         Assert.Contains("coursework/submissions/", gradingUrl);
         Assert.Contains("A sign-off", grading);
+        Assert.DoesNotContain("Return for resubmission", grading);
         Assert.Contains("your instructor signs this off", player);
         Assert.DoesNotContain("name=\"files\"", player);
     }
@@ -167,6 +168,8 @@ public sealed class LearningActivitiesTests
             (await services.GetRequiredService<ILearnerProgressService>().GetAsync(await EnrollmentIdAsync(courseId)))?.Find(itemId));
 
         // Assert
+        Assert.Contains("This package does not track your progress", player);
+        Assert.DoesNotContain("The package reports your progress itself", player);
         Assert.True(launched["launched"]!.GetValue<bool>(), launched["message"]?.GetValue<string>());
         Assert.Contains("pages/intro.html", launchUrl);
         Assert.Contains("Forklift handbook intro", page);

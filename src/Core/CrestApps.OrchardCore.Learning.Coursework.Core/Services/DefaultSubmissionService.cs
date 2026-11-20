@@ -281,7 +281,16 @@ internal sealed class DefaultSubmissionService : ISubmissionService
 
             if (current is not null)
             {
-                return new SubmissionResult { Submission = await _store.FindFreshAsync(current.ItemId, cancellationToken) ?? current };
+                current = await _store.FindFreshAsync(current.ItemId, cancellationToken) ?? current;
+
+                // A returned sign-off cannot come back from the learner, so it is closed and a new attempt is opened.
+                if (current.Status != SubmissionStatus.Returned)
+                {
+                    return new SubmissionResult { Submission = current };
+                }
+
+                current.Current = false;
+                await _store.UpdateAsync(current, cancellationToken);
             }
 
             // Nothing is reported to the learner's progress: the item counts once it is graded.

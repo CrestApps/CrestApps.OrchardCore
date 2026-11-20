@@ -72,6 +72,27 @@ public sealed class CourseworkSignOffTests
     }
 
     [Fact]
+    public async Task SignOff_ReturnedByAGrader_OpensANewAttemptToGrade()
+    {
+        // Arrange: found in the browser pass. A returned sign-off can never be handed in again by the learner, so the
+        // next sign-off must not reopen the returned record, which cannot be graded.
+        await using var h = await CreateAsync(CourseworkSubmissionType.SignOff);
+        var ana = await h.EnrollAsync("ana", Course);
+        var first = await StartAsync(h, ana.ItemId, "grader");
+        await h.ReturnAsync(first.Submission.ItemId, "grader");
+
+        // Act
+        var again = await StartAsync(h, ana.ItemId, "grader");
+        var graded = await h.GradeAsync(again.Submission.ItemId, "grader", points: 80);
+
+        // Assert
+        Assert.True(again.Succeeded, again.Error);
+        Assert.NotEqual(first.Submission.ItemId, again.Submission.ItemId);
+        Assert.Equal(2, again.Submission.Attempt);
+        Assert.True(graded.Succeeded, graded.Error);
+    }
+
+    [Fact]
     public async Task SignOff_OnCourseworkThatTakesHandIns_IsRefused()
     {
         // Arrange

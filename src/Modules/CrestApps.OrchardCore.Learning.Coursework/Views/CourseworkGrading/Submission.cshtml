@@ -19,7 +19,7 @@
     @Html.ValidationSummary()
 
     <div class="card text-bg-theme mb-3">
-        <div class="card-header">@T["Handed in"]</div>
+        <div class="card-header">@(submission.SignOff ? T["Sign-off"] : T["Handed in"])</div>
         <div class="card-body">
             <p class="mb-2">
                 @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(submission.SubmittedUtc, DateTimeKind.Utc), Format: "g"))
@@ -199,7 +199,10 @@
         @if (Model.CanGrade)
         {
             <button class="btn btn-primary" type="submit">@(regrade ? T["Grade again"] : T["Grade"])</button>
-            <button class="btn btn-secondary action-bar-secondary" type="submit" formaction="@Url.RouteUrl("LearningCourseworkReturn", new { id = submission.ItemId })">@T["Return for resubmission"]</button>
+            @if (!submission.SignOff)
+            {
+                <button class="btn btn-secondary action-bar-secondary" type="submit" formaction="@Url.RouteUrl("LearningCourseworkReturn", new { id = submission.ItemId })">@T["Return for resubmission"]</button>
+            }
         }
         <a class="btn btn-secondary cancel" role="button" href="@Url.RouteUrl("LearningCourseworkSubmissions", new { courseworkId = submission.CourseworkId })">@T["Back"]</a>
     </div>
