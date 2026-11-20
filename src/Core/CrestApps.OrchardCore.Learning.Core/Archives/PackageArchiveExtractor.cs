@@ -85,7 +85,19 @@ public static class PackageArchiveExtractor
     /// <param name="limits">The limits.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>What was extracted, or why the archive was refused.</returns>
-    public static async Task<PackageArchiveResult> ExtractAsync(Stream archive, string targetDirectory, PackageArchiveLimits limits, CancellationToken cancellationToken = default)
+    public static Task<PackageArchiveResult> ExtractAsync(Stream archive, string targetDirectory, PackageArchiveLimits limits, CancellationToken cancellationToken = default)
+        => Task.FromResult(Extract(archive, targetDirectory, limits, cancellationToken));
+
+    /// <summary>
+    /// Extracts a zip archive, as <see cref="ExtractAsync"/> does, for a caller that reads synchronously (a
+    /// ContentTransfer file reader).
+    /// </summary>
+    /// <param name="archive">The archive, readable and seekable.</param>
+    /// <param name="targetDirectory">The empty folder to extract into.</param>
+    /// <param name="limits">The limits.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>What was extracted, or why the archive was refused.</returns>
+    public static PackageArchiveResult Extract(Stream archive, string targetDirectory, PackageArchiveLimits limits, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(archive);
         ArgumentException.ThrowIfNullOrEmpty(targetDirectory);
@@ -138,11 +150,11 @@ public static class PackageArchiveExtractor
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
 
-                    await using var source = entry.Open();
-                    await using var target = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                    using var source = entry.Open();
+                    using var target = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
                     int read;
 
-                    while ((read = await source.ReadAsync(buffer, cancellationToken)) > 0)
+                    while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
                     {
                         written += read;
 
@@ -152,7 +164,8 @@ public static class PackageArchiveExtractor
                             return PackageArchiveResult.Fail(PackageArchiveErrors.TooLarge, entry.FullName);
                         }
 
-                        await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        target.Write(buffer, 0, read);
                     }
                 }
                 catch (InvalidDataException)
@@ -185,7 +198,7 @@ public static class PackageArchiveExtractor
     /// <param name="limits">The limits.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>What was extracted, or why the archive was refused.</returns>
-    public static async Task<PackageArchiveResult> ExtractTarGzAsync(Stream archive, string targetDirectory, PackageArchiveLimits limits, CancellationToken cancellationToken = default)
+    public static PackageArchiveResult ExtractTarGz(Stream archive, string targetDirectory, PackageArchiveLimits limits, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(archive);
         ArgumentException.ThrowIfNullOrEmpty(targetDirectory);
@@ -202,10 +215,10 @@ public static class PackageArchiveExtractor
 
         try
         {
-            await using var gzip = new GZipStream(archive, CompressionMode.Decompress, leaveOpen: true);
-            await using var tar = new TarReader(gzip, leaveOpen: true);
+            using var gzip = new GZipStream(archive, CompressionMode.Decompress, leaveOpen: true);
+            using var tar = new TarReader(gzip, leaveOpen: true);
 
-            while (await tar.GetNextEntryAsync(copyData: false, cancellationToken) is { } entry)
+            while (tar.GetNextEntry(copyData: false) is { } entry)
             {
                 current = entry.Name;
 
@@ -257,13 +270,13 @@ public static class PackageArchiveExtractor
 
                 Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
 
-                await using (var target = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                using (var target = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 {
                     if (entry.DataStream is { } source)
                     {
                         int read;
 
-                        while ((read = await source.ReadAsync(buffer, cancellationToken)) > 0)
+                        while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
                         {
                             written += read;
 
@@ -273,7 +286,8 @@ public static class PackageArchiveExtractor
                                 return PackageArchiveResult.Fail(PackageArchiveErrors.TooLarge, entry.Name);
                             }
 
-                            await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                            cancellationToken.ThrowIfCancellationRequested();
+                            target.Write(buffer, 0, read);
                         }
                     }
                 }

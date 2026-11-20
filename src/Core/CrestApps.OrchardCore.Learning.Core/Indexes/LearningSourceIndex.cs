@@ -42,6 +42,8 @@ public sealed class LearningSourceIndexProvider : IndexProvider<ContentItem>
     /// <inheritdoc />
     public override void Describe(DescribeContext<ContentItem> context)
         => context.For<LearningSourceIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .When(item => item.Latest && SourceOf(item) is not null)
             .Map(item => new LearningSourceIndex
             {

@@ -96,9 +96,8 @@ internal sealed class MoodleFileFormatProvider : IContentTransferFileFormatProvi
 
         try
         {
-            // ContentTransfer reads a file synchronously; the import runs in a background task, without a
-            // synchronization context.
-            result = MoodleBackupReader.ExtractAndReadAsync(stream, folder, _options.ToLimits()).GetAwaiter().GetResult();
+            // ContentTransfer reads a file synchronously, so the backup is extracted and read synchronously.
+            result = MoodleBackupReader.ExtractAndRead(stream, folder, _options.ToLimits());
         }
         catch
         {

@@ -32,7 +32,19 @@ public static class MoodleBackupReader
     /// <param name="limits">The limits.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The backup, or why it was refused.</returns>
-    public static async Task<MoodleBackupReadResult> ExtractAndReadAsync(Stream archive, string folder, MoodleBackupLimits limits, CancellationToken cancellationToken = default)
+    public static Task<MoodleBackupReadResult> ExtractAndReadAsync(Stream archive, string folder, MoodleBackupLimits limits, CancellationToken cancellationToken = default)
+        => Task.FromResult(ExtractAndRead(archive, folder, limits, cancellationToken));
+
+    /// <summary>
+    /// Extracts a backup into an empty folder and reads it, synchronously, as a ContentTransfer file reader reads. On a
+    /// refusal the caller deletes the folder; nothing outside it was written.
+    /// </summary>
+    /// <param name="archive">The backup, readable and seekable.</param>
+    /// <param name="folder">The empty folder to extract into.</param>
+    /// <param name="limits">The limits.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The backup, or why it was refused.</returns>
+    public static MoodleBackupReadResult ExtractAndRead(Stream archive, string folder, MoodleBackupLimits limits, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(archive);
         ArgumentException.ThrowIfNullOrEmpty(folder);
@@ -49,11 +61,11 @@ public static class MoodleBackupReader
         switch (Detect(archive))
         {
             case ArchiveKind.Zip:
-                extracted = await PackageArchiveExtractor.ExtractAsync(archive, folder, archiveLimits, cancellationToken);
+                extracted = PackageArchiveExtractor.Extract(archive, folder, archiveLimits, cancellationToken);
                 break;
 
             case ArchiveKind.TarGz:
-                extracted = await PackageArchiveExtractor.ExtractTarGzAsync(archive, folder, archiveLimits, cancellationToken);
+                extracted = PackageArchiveExtractor.ExtractTarGz(archive, folder, archiveLimits, cancellationToken);
                 break;
 
             default:
@@ -669,6 +681,7 @@ public static class MoodleBackupReader
             }
             catch (JsonException)
             {
+                // A filter Moodle did not write is read as no category: the random slot is then not imported.
             }
 
             return (null, false);
