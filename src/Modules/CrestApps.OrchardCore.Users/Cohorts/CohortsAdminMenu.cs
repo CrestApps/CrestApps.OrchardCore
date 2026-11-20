@@ -5,7 +5,8 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Users.Cohorts;
 
 /// <summary>
-/// Adds Cohorts under Access Control, beside User Audiences.
+/// Adds Cohorts under Content, beside Teams and User Audiences: cohorts are groups of people that several modules use,
+/// not access control (they grant no permission).
 /// </summary>
 public sealed class CohortsAdminMenu : AdminNavigationProvider
 {
@@ -23,7 +24,7 @@ public sealed class CohortsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Access Control"], NavigationConstants.AdminMenuAccessControlPosition, accessControl => accessControl
+            .Add(S["Content"], content => content
                 .Add(S["Cohorts"], S["Cohorts"].PrefixPosition(), cohorts => cohorts
                     .AddClass("cohorts")
                     .Id("cohorts")
