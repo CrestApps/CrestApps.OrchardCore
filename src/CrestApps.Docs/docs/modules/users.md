@@ -113,7 +113,7 @@ The `UserAudiences` recipe step creates or updates defined audiences by name, an
 
 ## My account
 
-The **My Account** feature (`CrestApps.OrchardCore.Users.Account`, turned on by the modules that need it, such as Commerce and Tickets) is the site's "my account" area: `/account` (route `CommerceAccount`, signed-in users only), a **My account** link in Orchard Core's user menu, and the `commerce-account` navigation menu that modules add their pages to with a `NamedNavigationProvider` (`UsersConstants.Account.MenuName`). Each page renders the `CommerceAccountPage` shape (`UsersConstants.Account.PageShape`), which frames it with the `CommerceAccountNavigation` menu; the home page shows a tile per page (`AccountOverview` shape). The names come from when the area belonged to Commerce and are kept, so themes and modules that use them keep working.
+The **My Account** feature (`CrestApps.OrchardCore.Users.Account`, turned on by the modules that need it, such as Commerce and Tickets) is the site's "my account" area: `/account` (route `CommerceAccount`, signed-in users only), a **My account** link in Orchard Core's user menu, and the `commerce-account` navigation menu that modules add their pages to with a `NamedNavigationProvider` (`UsersConstants.Account.MenuName`). Each page renders the `CommerceAccountPage` shape (`UsersConstants.Account.PageShape`), which frames it with the `CommerceAccountNavigation` menu; the home page shows a tile per page (`AccountOverview` shape). Both list the items in order of their positions (`AccountMenuItems.Arrange`, with Orchard Core's `FlatPositionComparer`), since Orchard Core's navigation manager leaves a named menu in the order its providers were registered. The names come from when the area belonged to Commerce and are kept, so themes and modules that use them keep working.
 
 ## Site notifications
 
@@ -126,7 +126,9 @@ The page is not a second inbox: it uses the Notifications module's own pieces.
 - Each notification's link is the module's open endpoint (`/Notifications/Open/{id}`), which marks it read and goes to its URL.
 - **Mark all as read** calls `INotificationManager.MarkAsReadAsync` for the user's unread notifications, which also refreshes the navbar's count.
 
-The unread count and the newest unread notifications are the module's own bell in the navbar, on the site's pages too when the theme renders the `Navbar` shape. Users choose how each notification type reaches them in their profile, the module's notification preferences.
+The unread count and the newest unread notifications are the module's own bell in the navbar, on the site's pages too when the theme renders the `Navbar` shape.
+
+The **Notification preferences** page (`/notifications/preferences`, route `UserNotificationPreferences`, `UsersConstants.Notifications.PreferencesRouteName`), linked from the Notifications page, lets a user choose how notifications reach them without the admin. It edits the Notifications module's own `UserNotificationPreferencesPart`, the one the module's profile editor edits, with its rules (`UserNotificationPreferencesForm`): the methods the user receives at all (a method turned off is in `Optout` and off for every type), and the methods on for each registered notification type, of which `NotificationTypePreferences` keeps only the choices that differ from the type's defaults. Notifications always reach the notification center; with no delivery method (e-mail, SMS) on, the page says there is nothing to choose. It needs **Manage notifications** like the Notifications page, and is framed as an account page with My Account on.
 
 ## User Display Name
 

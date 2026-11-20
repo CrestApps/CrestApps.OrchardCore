@@ -26,7 +26,7 @@ A course is a page on your site with lessons in it. Each lesson is a page, a vid
    - **Open**: anyone signed in enrolls at once.
    - **Key**: people enter the **Enrollment key** you set. The key is stored only as a hash, so keep a copy to share; type a new key to replace it.
    - **Approval**: people ask, and a training manager approves or rejects them.
-5. Set **Access length (days)** to end a self enrollment's access that many days after enrolling, or leave it empty for no end. Choose the **Prerequisite courses** people must have completed first.
+5. Set **Access length (days)** to end a self enrollment's access that many days after enrolling, or leave it empty for no end. Choose the **Prerequisite courses** people must have completed first: type part of a course's title to find it.
 6. Under **Completion and grade**, set the rules a learner must meet besides completing every required item: a **Minimum course grade (%)**, a **Minimum time (minutes)**, a **Final assessment to pass**, or that a member of the course staff approves each completion.
 7. Select **Publish**.
 

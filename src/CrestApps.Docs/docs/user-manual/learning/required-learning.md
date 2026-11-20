@@ -16,7 +16,7 @@ A **learning path** puts courses in order: people finish one stage before the ne
 ## Create a learning path
 
 1. Open **Content > New > Learning Path** and give it a title.
-2. Under **Course sets**, add a set for each group of courses. For each set, choose the courses and how many must be completed: **Every course**, **Any one course** or **At least** a number.
+2. Under **Course sets**, add a set for each group of courses. For each set, choose the courses (type part of a title to find one) and how many must be completed: **Every course**, **Any one course** or **At least** a number.
 3. Choose how each set joins the one before it: **Then** opens it once everything before is done; **And** and **Or** keep it open alongside the set before. Click **Add a set** for more, or the bin to remove one.
 4. Tick **People can start the path themselves** to show a **Start this path** button on the path's page.
 5. Click **Publish**.

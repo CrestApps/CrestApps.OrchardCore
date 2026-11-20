@@ -171,19 +171,21 @@ Build, in this order. Items 1-6 cover almost every course; the rest is the long 
 14. **Competencies.** 17 frameworks with about 457 competencies, mapped onto Skills (skills with proficiency levels). Learning-plan templates become learning paths or programs whose completion grants the competency (a skill assignment).
 15. **Course images, and images inside summaries and labels.** Import them into the media library.
 
-## 4. Smaller follow-ups
+## 4. Smaller follow-ups (done on `ma/lms-followups-133fef`, not pushed, except the AI and Reports items)
 
-- **Learning Commerce migration on a fresh site.** Enabling Learning Commerce in one bulk enable with its dependencies (Orders, Commerce, My Account) logged "Updating feature" but left `LearningCommerceMigrations` and `LearningPathProductMigrations` unrun until a restart, so the seats tables were missing. Reproduce with a new site from the Online Store recipe and one POST to `/Admin/Features` enabling the Learning features.
-- **Account menu order.** The storefront account menu does not follow the items' positions (Payment methods and Account members come before Overview); it predates this work.
+Done in `d08a6cdb3` (migration), `9a47deb0e` (menu order), `cf1d900c7` (approver and moved-session notices), `483f18013` (preferences on the site), `432ba824b` (review catch-up) and `71fa4a82c` (course pickers, also the learning product grant rows); the duplicates are listed in plan section 19, "Smaller follow-ups". Details there.
+
+- ~~**Learning Commerce migration on a fresh site.**~~ Root cause: a feature's migrations stop at the first `Create` that returns 0, and the path products migration came first. Enabling Learning Commerce in one bulk enable with its dependencies (Orders, Commerce, My Account) logged "Updating feature" but left `LearningCommerceMigrations` and `LearningPathProductMigrations` unrun until a restart, so the seats tables were missing. Reproduce with a new site from the Online Store recipe and one POST to `/Admin/Features` enabling the Learning features.
+- ~~**Account menu order.**~~ The storefront account menu does not follow the items' positions (Payment methods and Account members come before Overview); it predates this work.
 
 - **Notifications:**
-  - learners without the admin can't change their notification preferences (the Notifications module's editor is only on the admin profile);
-  - no notice to approvers when someone requests enrollment;
-  - no notice when a class session is moved.
-- **Review catch-up:** clearing an enrollment review doesn't re-run the course or path credential and credit observers. Recorded in plan section 19, round 10 item 3.
+  - ~~learners without the admin can't change their notification preferences~~ (`/notifications/preferences`) (the Notifications module's editor is only on the admin profile);
+  - ~~no notice to approvers when someone requests enrollment;~~
+  - ~~no notice when a class session is moved.~~
+- ~~**Review catch-up:**~~ (`IEnrollmentObserver.ReviewClearedAsync`; competency observers built later must handle it too) clearing an enrollment review doesn't re-run the course or path credential and credit observers. Recorded in plan section 19, round 10 item 3.
 - **AI:** index-side course filtering needs an extension point in CrestApps.Core's `DataSourceRetrieval`; the post-search filter stays meanwhile.
 - **Reports:** the Reports building block's `ReportIndexPages` hits the SQLite Double/Int64 read error on the attempts, answers and submissions data sets. Another session works on that paging code.
-- **Duplicates with main,** reported at the merge and not refactored:
+- **Duplicates with main,** reported at the merge and not refactored (listed in plan section 19, with the permission-holders lookup the follow-ups added):
   - protected files vs Attachments;
   - enrollment approvals vs Approvals;
   - certificate numbers vs `INumberSeries`;

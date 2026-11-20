@@ -1332,7 +1332,7 @@ Every finding was fixed test first on this branch (or is explained), one commit 
 | 3 No catch-up after a cleared review | Checked: the course-level case has the same gap as the path case; recorded below. | `77206d1c9` |
 | 4 Erasure after H4 | Still revokes: `CredentialAwardEraser` revokes directly and H4 did not change it. Proven by `CredentialDataTests.Erase_RevokesEachAward_KeepsItsSlot_AndRemovesThePersonalData` (unit) and `LearningCredentialsDataTests.PersonalData_ExportsTheCredentials_AndErasureRevokesThem` (integration), both passing after H4. | no change |
 
-**Not built.** Catching up on issuing after an enrollment review is cleared. `IEnrollmentService.ClearReviewAsync` only records who cleared the review and why; it notifies no observer. The course credential (`CredentialEnrollmentObserver`) and course education credits (`EducationCreditEnrollmentObserver`) run once, from `IEnrollmentObserver.CompletedAsync`, and skip a completion that does not support issuing at that moment (`CompletionEvidence.SupportsIssuing`: failed, under review, or resting on a browser result). So both cases have the gap: a learning path completed through a course under review earns no path credential or path credits once the review is cleared (`CredentialLearningPathObserver` and `LearningPathCreditsObserver` run when the path completes), and a course completion that did not support issuing when it happened (for example a failed completion that a later regrade turns into a pass, which opens a review) earns no course credential or credits when the review is cleared. A completion that was already awarded keeps its award through a review unless staff revoke it from the review card. Catching up needs a "review cleared" observer call (or a re-check of the issuing rules when a review is cleared) in Learning, used by Credentials, Certifications and Programs.
+**Built later** (`432ba824b`, see "Smaller follow-ups" below). **Was not built:** catching up on issuing after an enrollment review is cleared. `IEnrollmentService.ClearReviewAsync` only records who cleared the review and why; it notifies no observer. The course credential (`CredentialEnrollmentObserver`) and course education credits (`EducationCreditEnrollmentObserver`) run once, from `IEnrollmentObserver.CompletedAsync`, and skip a completion that does not support issuing at that moment (`CompletionEvidence.SupportsIssuing`: failed, under review, or resting on a browser result). So both cases have the gap: a learning path completed through a course under review earns no path credential or path credits once the review is cleared (`CredentialLearningPathObserver` and `LearningPathCreditsObserver` run when the path completes), and a course completion that did not support issuing when it happened (for example a failed completion that a later regrade turns into a pass, which opens a review) earns no course credential or credits when the review is cleared. A completion that was already awarded keeps its award through a review unless staff revoke it from the review card. Catching up needs a "review cleared" observer call (or a re-check of the issuing rules when a review is cleared) in Learning, used by Credentials, Certifications and Programs.
 
 ### Phase 8: browser pass 2026-11-18 (branch `ma/learning-phase-8`)
 
@@ -1415,3 +1415,29 @@ Found on real production packages: Articulate Rise and Storyline 360 run Articul
 | Bug | Fix | Commit |
 | --- | --- | --- |
 | GET/POST route guard | `AuthoringController.Index` says `HttpGet`; every routed Learning action now declares its HTTP method. | `226722b36` |
+
+### Smaller follow-ups (branch `ma/lms-followups-133fef`, on `ma/lms-package-content-host`)
+
+Section 4 of `remaining-work.md`. Each item test first; the AI index-side filter (needs CrestApps.Core) and the Reports SQLite paging (another session) are not here.
+
+| Item | Fix | Commit |
+| --- | --- | --- |
+| Learning Commerce migration on a fresh site | Root cause: Orchard Core's `DataMigrationManager` stops a feature's migrations for the rest of an activation at the first `Create` that returns 0. `LearningPathProductMigrations` returns 0 while the Learning Path type is missing and belongs to Learning Commerce too; when the startup order put it first, `LearningCommerceMigrations` was never called (no table, no record, no error) until a restart. `LearningPathsStartup.Order` puts it last, and it runs the Programs migrations first, so paths are for sale in the same activation. `LearningFeatureActivationTests` (Online store, every Learning feature in one enable) failed 2 of 3 runs before. | `d08a6cdb3` |
+| Account menu order | `INavigationManager.BuildMenuAsync` never sorts a named menu (the Navigation shape does, and account pages don't render it). `AccountMenuItems.Arrange` sorts by position with `FlatPositionComparer`, in the account menu and the overview. | `9a47deb0e` |
+| Notices to approvers and about moved sessions | `LearningEnrollmentRequested` (course instructors and assistants, else the roles that grant Manage enrollments and the administrators) and `LearningClassSessionMoved` (each learner with a place; no time in the text). | `cf1d900c7` |
+| Notification preferences without the admin | `/notifications/preferences` in Users edits the Notifications module's `UserNotificationPreferencesPart` with its rules; linked from the Notifications page. | `483f18013` |
+| Catch-up after a cleared review | `IEnrollmentObserver.ReviewClearedAsync`, raised once after the commit; the course credential, course credits, learning paths and certification paths check the completion again, idempotently. No competency (skill) observer exists on this branch; the competencies work should handle it. | `432ba824b` |
+| Course pickers | Prerequisites, path sets, workflow events and learning product grant rows use `ItemSelector` with `/Admin/learning/course-picker/search` (`CoursePickerController`, `CourseLookup.SearchCoursesAsync`); only chosen courses are rendered. Lint `learning-course-pickers-search-the-server`. | `71fa4a82c` |
+
+**Duplicate concepts, recorded, not refactored** (Mike has not approved the refactors). Each Learning piece on the left does what the building block on the right, which main added or already had, does:
+
+| Learning | Building block |
+| --- | --- |
+| Protected files | Attachments |
+| Enrollment approvals | Approvals |
+| Who holds a permission (`EnrollmentApprovers`, added with the follow-ups for the enrollment request notice: the users of the roles that grant Manage enrollments, and the administrators) | Approvals' `PermissionApproverRuleProvider`, which does the same lookup; a Users-owned helper would serve both |
+| Certificate numbers | `INumberSeries` |
+| `TimeOffLedgerCopy` | `IResumableStep` |
+| The invitation e-mail | `ITemplatedEmailSender` |
+| Audience rules | `ConditionRule` |
+| Certificate templates | Business Documents |
