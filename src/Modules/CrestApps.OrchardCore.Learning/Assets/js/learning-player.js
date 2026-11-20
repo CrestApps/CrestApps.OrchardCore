@@ -1,8 +1,8 @@
 // The course player reports what the learner does; the server decides what is completed.
-// It records the time on the open item (a call when the item opens, then one every half minute while the page is
-// visible) and, for a video lesson, how much of the video has been watched.
+// It records the time on the open item (a call when the item opens, one every half minute while the page is visible,
+// and one when the learner leaves it) and, for a video lesson, how much of the video has been watched.
 
-import { progressText } from './learning-player-helpers.js';
+import { createActiveTimer, progressText } from './learning-player-helpers.js';
 
 const heartbeatSeconds = 30;
 const viewedReportSeconds = 10;
@@ -175,14 +175,31 @@ function trackVideo(root) {
 }
 
 function trackTime(root) {
-    let last = Date.now();
+    const timer = createActiveTimer(Date.now());
 
     const beat = async () => {
-        const now = Date.now();
-        const seconds = Math.round((now - last) / 1000);
+        const seconds = timer.take(Date.now());
 
-        last = now;
         showCompleted(root, await post(root, root.dataset.heartbeatUrl, { seconds: String(seconds) }));
+    };
+
+    // When the learner leaves the item (another item, another tab, closing the page), the seconds since the last call
+    // are sent at once: most items take less than the half minute between calls, and their time was lost.
+    const leave = () => {
+        const seconds = timer.hide(Date.now());
+
+        if (seconds <= 0) {
+            return;
+        }
+
+        const body = new FormData();
+
+        body.append('seconds', String(seconds));
+        body.append('__RequestVerificationToken', token(root));
+
+        if (!navigator.sendBeacon?.(root.dataset.heartbeatUrl, body)) {
+            fetch(root.dataset.heartbeatUrl, { method: 'POST', body, credentials: 'same-origin', keepalive: true });
+        }
     };
 
     // The first call records that the item was opened, which completes an item completed by viewing it. When the
@@ -203,10 +220,17 @@ function trackTime(root) {
     setInterval(() => {
         if (document.visibilityState === 'visible') {
             beat();
-        } else {
-            last = Date.now();
         }
     }, heartbeatSeconds * 1000);
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            leave();
+        } else {
+            timer.show(Date.now());
+        }
+    });
+    window.addEventListener('pagehide', leave);
 }
 
 document.querySelectorAll('[data-learning-toggle-sections]').forEach(toggleSections);

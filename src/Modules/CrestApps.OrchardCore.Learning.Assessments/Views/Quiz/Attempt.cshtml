@@ -106,4 +106,15 @@
     </div>
 </div>
 
+@if (!string.IsNullOrEmpty(attempt.EnrollmentId))
+{
+    @* The time on the attempt counts toward the learner's time on the quiz, as on any course item. *@
+    <div data-learning-player hidden
+         data-heartbeat-url="@Url.RouteUrl("LearningHeartbeat", new { enrollmentId = attempt.EnrollmentId, itemId = attempt.QuizId })"
+         data-item-id="@attempt.QuizId">
+        @Html.AntiForgeryToken()
+    </div>
+    <script asp-src="~/CrestApps.OrchardCore.Learning/scripts/learning-player.min.js" debug-src="~/CrestApps.OrchardCore.Learning/scripts/learning-player.js" at="Foot"></script>
+}
+
 <script asp-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-player.min.js" debug-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-player.js" at="Foot"></script>

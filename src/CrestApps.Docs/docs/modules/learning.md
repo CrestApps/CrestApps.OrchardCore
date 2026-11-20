@@ -89,7 +89,7 @@ Each has its own index table (`EnrollmentIndex`, `EnrollmentGrantIndex`, `Enroll
 
 ## Progress and completion
 
-`ILearnerProgressService` records what a learner does: opening an item, time spent (a heartbeat from the player, at most 60 seconds a call), the share of a video watched, marking an item done and confirming an acknowledgement. A staff member with the right to manage enrollments can complete an item by hand with a reason.
+`ILearnerProgressService` records what a learner does: opening an item, time spent (a heartbeat from the player when the item opens, every half minute while the page is visible, and once more with `navigator.sendBeacon` when the learner leaves the item or hides the page, so a visit shorter than the half minute counts; the quiz attempt page sends it for the quiz; at most 60 seconds a call, and never more than the time since the enrollment's last access), the share of a video watched, marking an item done and confirming an acknowledgement. A staff member with the right to manage enrollments can complete an item by hand with a reason.
 
 An item is complete when its completion mode is met. The course is complete when every required item is complete and every completion criterion passes: `MinimumGrade`, `MinimumTime`, `ItemPassed` and `StaffApproval`. A course marked `NeverCompletes` never completes. Another module adds a criterion with `AddCourseCompletionCriterion<T>()`.
 

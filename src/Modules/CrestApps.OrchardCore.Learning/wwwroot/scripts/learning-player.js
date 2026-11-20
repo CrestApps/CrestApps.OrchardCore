@@ -7,6 +7,27 @@
 	function progressText(template, completed, required, percent) {
 		return template.replace("{0}", String(completed)).replace("{1}", String(required)).replace("{2}", String(percent));
 	}
+	function createActiveTimer(startedAt) {
+		let last = startedAt;
+		let visible = true;
+		const take = (at) => {
+			const seconds = visible ? Math.max(0, Math.round((at - last) / 1e3)) : 0;
+			last = at;
+			return seconds;
+		};
+		return {
+			take,
+			hide(at) {
+				const seconds = take(at);
+				visible = false;
+				return seconds;
+			},
+			show(at) {
+				visible = true;
+				last = at;
+			}
+		};
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Learning/Assets/js/learning-player.js
 	var heartbeatSeconds = 30;
@@ -117,12 +138,23 @@
 		video.addEventListener("ended", () => report(true));
 	}
 	function trackTime(root) {
-		let last = Date.now();
+		const timer = createActiveTimer(Date.now());
 		const beat = async () => {
-			const now = Date.now();
-			const seconds = Math.round((now - last) / 1e3);
-			last = now;
+			const seconds = timer.take(Date.now());
 			showCompleted(root, await post(root, root.dataset.heartbeatUrl, { seconds: String(seconds) }));
+		};
+		const leave = () => {
+			const seconds = timer.hide(Date.now());
+			if (seconds <= 0) return;
+			const body = new FormData();
+			body.append("seconds", String(seconds));
+			body.append("__RequestVerificationToken", token(root));
+			if (!navigator.sendBeacon?.(root.dataset.heartbeatUrl, body)) fetch(root.dataset.heartbeatUrl, {
+				method: "POST",
+				body,
+				credentials: "same-origin",
+				keepalive: true
+			});
 		};
 		const open = (attempt) => post(root, root.dataset.heartbeatUrl, { seconds: "0" }).then((result) => {
 			if (result?.retry && attempt < 3) {
@@ -134,8 +166,12 @@
 		open(1);
 		setInterval(() => {
 			if (document.visibilityState === "visible") beat();
-			else last = Date.now();
 		}, heartbeatSeconds * 1e3);
+		document.addEventListener("visibilitychange", () => {
+			if (document.visibilityState === "hidden") leave();
+			else timer.show(Date.now());
+		});
+		window.addEventListener("pagehide", leave);
 	}
 	document.querySelectorAll("[data-learning-toggle-sections]").forEach(toggleSections);
 	document.querySelectorAll("[data-learning-player]").forEach((root) => {

@@ -129,6 +129,7 @@ public sealed class LearnerPagesStartup : StartupBase
     {
         services.AddScoped<LearnerPageService>();
         services.AddScoped<CourseItemConditionText>();
+        services.AddScoped<LearningTimeText>();
         services.AddScoped<CourseCatalogService>();
         services.AddContentPart<CoursePart>()
             .UseDisplayDriver<CourseLearnerDisplayDriver>();
