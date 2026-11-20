@@ -54,6 +54,44 @@ public sealed class QuestionColumnHandlersTests
     }
 
     [Fact]
+    public async Task AChoiceBlanksRow_ImportsItsTextAndDistractors_AndExportsThemBack()
+    {
+        // Arrange
+        var handler = new ChoiceBlanksQuestionPartImportHandler(new Localizer<ChoiceBlanksQuestionPartImportHandler>());
+        var (question, table, row) = Row(AssessmentsConstants.ContentTypes.DragIntoTextQuestion, ("ChoiceBlanksQuestionPart_Text", "Fire needs [[heat]] and [[fuel]]."), ("ChoiceBlanksQuestionPart_Distractors", "water|sand"), ("ChoiceBlanksQuestionPart_ShuffleChoices", "no"));
+
+        // Act
+        await handler.ImportAsync(Context<ChoiceBlanksQuestionPart>(question, table, row));
+        var export = await Export<ChoiceBlanksQuestionPart>(handler, question, table);
+
+        // Assert
+        var part = question.Get<ChoiceBlanksQuestionPart>(nameof(ChoiceBlanksQuestionPart));
+        Assert.Equal("Fire needs [[heat]] and [[fuel]].", part.Text);
+        Assert.Equal(["water", "sand"], part.Distractors);
+        Assert.False(part.ShuffleChoices);
+        Assert.Equal("water|sand", export["ChoiceBlanksQuestionPart_Distractors"]);
+    }
+
+    [Fact]
+    public async Task ASurveyRow_ImportsItsOptions()
+    {
+        // Arrange
+        var handler = new SurveyQuestionPartImportHandler(new Localizer<SurveyQuestionPartImportHandler>());
+        var (question, table, row) = Row(AssessmentsConstants.ContentTypes.SurveyQuestion, ("SurveyQuestionPart_Options", "Agree|Neutral|Disagree"), ("SurveyQuestionPart_Multiple", "yes"));
+
+        // Act
+        await handler.ImportAsync(Context<SurveyQuestionPart>(question, table, row));
+        var export = await Export<SurveyQuestionPart>(handler, question, table);
+
+        // Assert
+        var part = question.Get<SurveyQuestionPart>(nameof(SurveyQuestionPart));
+        Assert.Equal(["Agree", "Neutral", "Disagree"], part.Options.Select(option => option.Text));
+        Assert.Equal(3, part.Options.Select(option => option.Id).Distinct().Count());
+        Assert.True(part.Multiple);
+        Assert.Equal("Agree|Neutral|Disagree", export["SurveyQuestionPart_Options"]);
+    }
+
+    [Fact]
     public async Task AFillInTheBlanksRow_ImportsItsText()
     {
         // Arrange

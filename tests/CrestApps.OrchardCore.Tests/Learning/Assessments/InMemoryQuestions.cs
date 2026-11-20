@@ -33,6 +33,14 @@ internal sealed class InMemoryQuestions : IAssessmentContentSource
     public ContentItem AddEssay(string id, decimal points = 5)
         => New(id, AssessmentsConstants.ContentTypes.EssayQuestion, null, null, points);
 
+    public ContentItem AddQuestion(string id, string contentType, decimal points = 1, Action<ContentItem> configure = null)
+    {
+        var question = New(id, contentType, null, null, points);
+        configure?.Invoke(question);
+
+        return question;
+    }
+
     public void Remove(string id)
         => _questions.Remove(id);
 

@@ -139,7 +139,6 @@ public sealed class QtiReaderTests
     [InlineData("customInteraction")]
     [InlineData("mediaInteraction")]
     [InlineData("hottextInteraction")]
-    [InlineData("gapMatchInteraction")]
     public void AnUnsupportedInteraction21_IsRefused_NamingTheInteraction(string interaction)
     {
         // Arrange
@@ -161,7 +160,6 @@ public sealed class QtiReaderTests
     [InlineData("qti-portable-custom-interaction", "portableCustomInteraction")]
     [InlineData("qti-graphic-gap-match-interaction", "graphicGapMatchInteraction")]
     [InlineData("qti-end-attempt-interaction", "endAttemptInteraction")]
-    [InlineData("qti-inline-choice-interaction", "inlineChoiceInteraction")]
     public void AnUnsupportedInteraction30_IsRefused_NamingTheInteraction(string element, string name)
     {
         // Arrange

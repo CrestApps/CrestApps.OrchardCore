@@ -66,7 +66,11 @@
                 <dl class="row small mb-2">
                     <dt class="col-sm-3">@T["Answer"]</dt>
                     <dd class="col-sm-9">
-                        @if (response is null)
+                        @if (item.QuestionType == AssessmentsConstants.QuestionTypes.Description)
+                        {
+                            <em>@T["Nothing to answer"]</em>
+                        }
+                        else if (response is null)
                         {
                             <em>@T["No answer"]</em>
                         }
@@ -76,7 +80,7 @@
                         }
                         else if (response.ChoiceIds.Count > 0)
                         {
-                            @string.Join(" · ", response.ChoiceIds.Select(id => item.Choices.FirstOrDefault(choice => choice.Id == id)?.Text ?? id))
+                            @string.Join(" · ", response.ChoiceIds.Select(id => string.IsNullOrEmpty(id) ? "—" : item.Choices.FirstOrDefault(choice => choice.Id == id)?.Text ?? id))
                         }
                         else if (response.Pairs.Count > 0)
                         {
@@ -91,7 +95,7 @@
                             @string.Join(" · ", response.Texts)
                         }
                     </dd>
-                    @if (item.QuestionType != AssessmentsConstants.QuestionTypes.Essay)
+                    @if (item.QuestionType is not (AssessmentsConstants.QuestionTypes.Essay or AssessmentsConstants.QuestionTypes.Description or AssessmentsConstants.QuestionTypes.Survey))
                     {
                         <dt class="col-sm-3">@T["Key"]</dt>
                         <dd class="col-sm-9">

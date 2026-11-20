@@ -1,5 +1,8 @@
 // The quiz player saves each answer as the learner gives it and shows the time left. The server keeps the deadline:
-// when the time is up it submits the attempt itself, and refuses answers that arrive late.
+// when the time is up it submits the attempt itself, and refuses answers that arrive late. A question checked with
+// immediate feedback is locked, so the player saves nothing for it.
+
+import { initBlanks } from './quiz-player-blanks.js';
 
 const saveDelay = 600;
 
@@ -53,7 +56,7 @@ function watch(form) {
     form.addEventListener('input', event => {
         const fieldset = event.target.closest('[data-question]');
 
-        if (!fieldset) {
+        if (!fieldset || fieldset.hasAttribute('data-locked')) {
             return;
         }
 
@@ -109,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (form) {
         watch(form);
+        initBlanks(form);
     }
 
     const timer = document.querySelector('[data-learning-timer]');

@@ -24,6 +24,8 @@ internal static class QtiItemParser
         "matchInteraction",
         "associateInteraction",
         "orderInteraction",
+        "gapMatchInteraction",
+        "inlineChoiceInteraction",
     };
 
     // The elements of an inline response processing this import understands: the rules the standard templates use,
@@ -147,7 +149,18 @@ internal static class QtiItemParser
 
         if (interactions.Count == 0)
         {
-            throw new RefusedException(QtiRefusals.NoInteraction);
+            // An item with only content and nothing to answer is a description between questions, worth no points.
+            if (!body.Nodes().Any(node => node is XElement || node is XText text && !string.IsNullOrWhiteSpace(text.Value)))
+            {
+                throw new RefusedException(QtiRefusals.NoInteraction);
+            }
+
+            return new QtiQuestion
+            {
+                QuestionType = AssessmentsConstants.QuestionTypes.Description,
+                Prompt = NullIfEmpty(Html(body.Nodes(), context)),
+                Points = 0,
+            };
         }
 
         var declarations = item.Elements("responseDeclaration").Select(ResponseDeclaration.Read).Where(declaration => declaration.Identifier is not null)
@@ -178,7 +191,7 @@ internal static class QtiItemParser
 
         var kinds = interactions.Select(interaction => interaction.Name.LocalName).Distinct(StringComparer.Ordinal).ToList();
 
-        if (kinds.Count > 1 || (kinds[0] != "textEntryInteraction" && interactions.Count > 1))
+        if (kinds.Count > 1 || (kinds[0] is not ("textEntryInteraction" or "inlineChoiceInteraction") && interactions.Count > 1))
         {
             throw new RefusedException(QtiRefusals.SeveralInteractions);
         }
@@ -212,9 +225,17 @@ internal static class QtiItemParser
             case "orderInteraction":
                 ReadOrder(interactions[0], declarations, scoring, question);
                 break;
+
+            case "gapMatchInteraction":
+                ReadGapMatch(interactions[0], declarations, scoring, question);
+                break;
+
+            case "inlineChoiceInteraction":
+                ReadInlineChoices(body, interactions, declarations, scoring, question, context);
+                break;
         }
 
-        if (question.QuestionType != AssessmentsConstants.QuestionTypes.FillInBlanks)
+        if (question.QuestionType is not (AssessmentsConstants.QuestionTypes.FillInBlanks or AssessmentsConstants.QuestionTypes.GapSelect))
         {
             question.Prompt = Html(body.Nodes(), context);
         }
@@ -494,6 +515,98 @@ internal static class QtiItemParser
         question.QuestionType = AssessmentsConstants.QuestionTypes.Ordering;
         question.Points = 1;
         ReplaceWithPrompt(interaction);
+    }
+
+    // A gap match is a drag into text question: the blocks of the interaction that hold the gaps become the text, each gap
+    // written as the word that fills it, and the words no gap takes become the distractors.
+    private static void ReadGapMatch(XElement interaction, Dictionary<string, ResponseDeclaration> declarations, Scoring scoring, QtiQuestion question)
+    {
+        var declaration = Declaration(interaction, declarations);
+        scoring.Require(declaration);
+        CheckMapping(declaration, scoring);
+
+        var words = interaction.Elements("gapText").Select(choice => (Id: Attribute(choice, "identifier"), Text: PlainText(choice))).ToList();
+        var gaps = interaction.Descendants("gap").ToList();
+        var pairs = declaration.Pairs(scoring);
+        var used = new HashSet<string>(StringComparer.Ordinal);
+
+        if (gaps.Count == 0)
+        {
+            throw new RefusedException(QtiRefusals.NoInteraction);
+        }
+
+        foreach (var gap in gaps)
+        {
+            var gapId = Attribute(gap, "identifier");
+            var matches = pairs.Where(pair => pair.Second == gapId).ToList();
+
+            if (matches.Count != 1 || words.FirstOrDefault(word => word.Id == matches[0].First) is not { Id: not null } word)
+            {
+                throw new RefusedException(QtiRefusals.UnsupportedStructure, "gap filled by no word or by several");
+            }
+
+            CheckBlankWord(word.Text);
+            used.Add(word.Id);
+            gap.ReplaceWith(new XText("[[" + word.Text + "]]"));
+        }
+
+        var blocks = interaction.Elements().Where(element => element.Name.LocalName is not ("gapText" or "prompt")).ToList();
+        question.BlankText = string.Join(' ', blocks.Select(PlainText).Where(text => text.Length > 0));
+        question.Distractors = words.Where(word => !used.Contains(word.Id)).Select(word => word.Text).Where(text => text.Length > 0).Distinct(StringComparer.Ordinal).ToList();
+        question.QuestionType = AssessmentsConstants.QuestionTypes.DragIntoText;
+        question.Shuffle = string.Equals(Attribute(interaction, "shuffle"), "true", StringComparison.OrdinalIgnoreCase);
+        question.Points = scoring.Kind == ScoringKind.MapResponse ? declaration.MappedTotal(pairs.Select(pair => pair.First + " " + pair.Second).ToHashSet(StringComparer.Ordinal)) : 1;
+
+        blocks.ForEach(block => block.Remove());
+        ReplaceWithPrompt(interaction);
+    }
+
+    // Inline choices are a gapselect question: the blocks that hold them become the text, each written as its right
+    // choice, the other blocks the prompt, and the wrong choices of every list become the distractors.
+    private static void ReadInlineChoices(XElement body, List<XElement> interactions, Dictionary<string, ResponseDeclaration> declarations, Scoring scoring, QtiQuestion question, ItemContext context)
+    {
+        var blocks = interactions.Select(interaction => BodyChild(body, interaction)).Distinct().ToList();
+        var distractors = new List<string>();
+        decimal points = 0;
+
+        foreach (var interaction in interactions)
+        {
+            var declaration = Declaration(interaction, declarations);
+            scoring.Require(declaration);
+            CheckMapping(declaration, scoring);
+
+            var correct = declaration.Correct(scoring);
+            var choices = interaction.Elements("inlineChoice").Select(choice => (Id: Attribute(choice, "identifier"), Text: PlainText(choice))).ToList();
+            var right = choices.Where(choice => correct.Contains(choice.Id)).ToList();
+
+            if (right.Count != 1)
+            {
+                throw new RefusedException(right.Count == 0 ? QtiRefusals.NoCorrectResponse : QtiRefusals.UnsupportedScoring, "several right choices in one list");
+            }
+
+            CheckBlankWord(right[0].Text);
+            distractors.AddRange(choices.Where(choice => !correct.Contains(choice.Id)).Select(choice => choice.Text));
+            question.Shuffle |= string.Equals(Attribute(interaction, "shuffle"), "true", StringComparison.OrdinalIgnoreCase);
+            points += scoring.Kind == ScoringKind.MapResponse && declaration.Mapping.Count > 0 ? declaration.MappedMaximum() : 1;
+            interaction.ReplaceWith(new XText("[[" + right[0].Text + "]]"));
+        }
+
+        question.QuestionType = AssessmentsConstants.QuestionTypes.GapSelect;
+        question.BlankText = string.Join(' ', blocks.Select(PlainText).Where(text => text.Length > 0));
+        question.Distractors = distractors.Where(text => text.Length > 0).Distinct(StringComparer.Ordinal).ToList();
+        question.Points = points;
+
+        blocks.ForEach(block => block.Remove());
+        question.Prompt = Html(body.Nodes(), context);
+    }
+
+    // A word that fills a blank is written as [[word]], so it cannot hold the brackets.
+    private static void CheckBlankWord(string word)
+    {
+        if (string.IsNullOrEmpty(word) || word.IndexOfAny(['[', ']']) >= 0)
+        {
+            throw new RefusedException(QtiRefusals.UnsupportedAnswer, word);
+        }
     }
 
     private static ResponseDeclaration Declaration(XElement interaction, Dictionary<string, ResponseDeclaration> declarations)

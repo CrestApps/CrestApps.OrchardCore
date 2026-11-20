@@ -215,6 +215,11 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
                 MaxScore = items.Sum(item => item.Points),
                 PassMark = part.PassMark ?? itemPart?.PassMark,
                 ReviewPolicy = part.ReviewPolicy,
+                ReviewOptions = part.ReviewOptions is { } options
+                    ? new QuizReviewOptions { During = options.During, ImmediatelyAfter = options.ImmediatelyAfter, LaterWhileOpen = options.LaterWhileOpen, AfterClose = options.AfterClose }
+                    : null,
+                QuestionsPerPage = Math.Max(part.QuestionsPerPage, 0),
+                FeedbackMode = part.FeedbackMode,
                 QuizClosesUtc = closes,
                 HonorStatement = string.IsNullOrWhiteSpace(part.HonorStatement) ? null : part.HonorStatement,
             };
@@ -256,14 +261,95 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
 
     private async Task<AttemptResult> SaveResponseCoreAsync(AssessmentAttempt attempt, int index, AttemptResponse response, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
+        var refused = await CheckAnswerableAsync(attempt, index, notifications, cancellationToken);
+
+        if (refused is not null)
+        {
+            return refused;
+        }
+
+        response ??= new AttemptResponse();
+        response.AnsweredUtc = _clock.UtcNow;
+        attempt.Items[index].Response = response;
+
+        await _attemptStore.UpdateAsync(attempt, cancellationToken);
+
+        return new AttemptResult { Attempt = attempt };
+    }
+
+    /// <inheritdoc />
+    public Task<AttemptResult> CheckAsync(string attemptId, string userId, int index, AttemptResponse response, CancellationToken cancellationToken = default)
+        => WriteOwnAsync(attemptId, userId, async (attempt, notifications) =>
+        {
+            if (attempt.IsOpen && attempt.FeedbackMode != QuizFeedbackMode.Immediate)
+            {
+                return new AttemptResult { Attempt = attempt, ErrorCode = AttemptErrors.CheckNotAllowed };
+            }
+
+            var refused = await CheckAnswerableAsync(attempt, index, notifications, cancellationToken);
+
+            if (refused is not null)
+            {
+                return refused;
+            }
+
+            // The answer is scored now and locked: the learner sees the feedback the review options allow during the
+            // attempt, and can no longer change it.
+            var now = _clock.UtcNow;
+            var item = attempt.Items[index];
+
+            response ??= new AttemptResponse();
+            response.AnsweredUtc = now;
+            item.Response = response;
+            item.AutoScore = Scorer(item.QuestionType)?.Score(item);
+            item.CheckedUtc = now;
+
+            await _attemptStore.UpdateAsync(attempt, cancellationToken);
+
+            return new AttemptResult { Attempt = attempt };
+        }, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<AttemptResult> GoToPageAsync(string attemptId, string userId, int page, CancellationToken cancellationToken = default)
+        => WriteOwnAsync(attemptId, userId, async (attempt, notifications) =>
+        {
+            if (!attempt.IsOpen)
+            {
+                return new AttemptResult { Attempt = attempt, ErrorCode = AttemptErrors.NotInProgress };
+            }
+
+            var sequential = await IsSequentialAsync(attempt);
+
+            if (page < 0 || page >= AttemptPaging.PageCount(attempt, sequential))
+            {
+                return new AttemptResult { Attempt = attempt, ErrorCode = AttemptErrors.NotFound };
+            }
+
+            // A sequential quiz moves on only, one page at a time: no reading ahead and no going back.
+            if (!AttemptNavigation.CanGoTo(attempt, page, sequential))
+            {
+                return new AttemptResult { Attempt = attempt, ErrorCode = AttemptErrors.ItemLocked };
+            }
+
+            if (attempt.CurrentPage != page)
+            {
+                attempt.CurrentPage = page;
+                await _attemptStore.UpdateAsync(attempt, cancellationToken);
+            }
+
+            return new AttemptResult { Attempt = attempt };
+        }, cancellationToken);
+
+    // Returns why an item cannot take an answer now, or null when it can: the attempt is open and in time, and the item
+    // takes an answer under the quiz's navigation (not checked, not a description, on the page of a sequential quiz).
+    private async Task<AttemptResult> CheckAnswerableAsync(AssessmentAttempt attempt, int index, IList<Func<Task>> notifications, CancellationToken cancellationToken)
+    {
         if (!attempt.IsOpen)
         {
             return new AttemptResult { Attempt = attempt, ErrorCode = AttemptErrors.NotInProgress };
         }
 
-        var now = _clock.UtcNow;
-
-        if (attempt.DeadlineUtc is { } deadline && now > deadline + _grace)
+        if (attempt.DeadlineUtc is { } deadline && _clock.UtcNow > deadline + _grace)
         {
             await SubmitCoreAsync(attempt, autoSubmitted: true, notifications, cancellationToken);
 
@@ -275,23 +361,16 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
             return new AttemptResult { Attempt = attempt, ErrorCode = AttemptErrors.NotFound };
         }
 
-        var quiz = await _contentSource.GetItemAsync(attempt.QuizId);
-
-        // One question at a time: only the next unanswered question takes an answer; no answering ahead or going back.
-        if (quiz?.Get<QuizPart>(nameof(QuizPart))?.Navigation == QuizNavigation.Sequential
-            && !AttemptNavigation.CanAnswer(attempt, index))
+        if (!AttemptNavigation.CanAnswer(attempt, index, await IsSequentialAsync(attempt)))
         {
             return new AttemptResult { Attempt = attempt, ErrorCode = AttemptErrors.ItemLocked };
         }
 
-        response ??= new AttemptResponse();
-        response.AnsweredUtc = now;
-        attempt.Items[index].Response = response;
-
-        await _attemptStore.UpdateAsync(attempt, cancellationToken);
-
-        return new AttemptResult { Attempt = attempt };
+        return null;
     }
+
+    private async Task<bool> IsSequentialAsync(AssessmentAttempt attempt)
+        => (await _contentSource.GetItemAsync(attempt.QuizId))?.Get<QuizPart>(nameof(QuizPart))?.Navigation == QuizNavigation.Sequential;
 
     /// <inheritdoc />
     public Task<AttemptResult> SubmitAsync(string attemptId, string userId, CancellationToken cancellationToken = default)

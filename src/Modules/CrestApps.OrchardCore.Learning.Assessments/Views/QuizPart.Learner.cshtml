@@ -1,4 +1,5 @@
 @model QuizPanelViewModel
+@inject CrestApps.OrchardCore.Learning.Assessments.Core.Services.AttemptReviewPolicy AttemptReview
 
 @{
     var quiz = Model.Quiz;
@@ -87,7 +88,7 @@
                                 case AttemptStatus.NeedsGrading:
                                     <span class="badge text-bg-warning">@T["Waiting for a grader"]</span>
                                     break;
-                                case AttemptStatus.Graded when attempt.ReviewPolicy != ReviewPolicy.Hidden:
+                                case AttemptStatus.Graded when AttemptReview.CanSeeScore(attempt):
                                     <span class="badge @(attempt.Passed == true ? "text-bg-success" : "text-bg-secondary")">@(attempt.Percent?.ToString("0.##"))%</span>
                                     break;
                                 case AttemptStatus.Voided:

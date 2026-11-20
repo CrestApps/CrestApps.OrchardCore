@@ -15,7 +15,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class LearningAssessmentsCoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the stores, the scorers of the nine question types, the attempt service and the deadline queue.
+    /// Registers the stores, the scorers of the thirteen question types, the attempt service and the deadline queue.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <returns>The service collection.</returns>
@@ -63,16 +63,22 @@ public static class LearningAssessmentsCoreServiceCollectionExtensions
         AddQuestionType<OrderingScorer>(services, AssessmentsConstants.QuestionTypes.Ordering, AssessmentsConstants.ContentTypes.OrderingQuestion, LocalizationSource.Create("Ordering", typeof(LearningAssessmentsCoreServiceCollectionExtensions)));
         AddQuestionType<FillInBlanksScorer>(services, AssessmentsConstants.QuestionTypes.FillInBlanks, AssessmentsConstants.ContentTypes.FillInBlanksQuestion, LocalizationSource.Create("Fill in the blanks", typeof(LearningAssessmentsCoreServiceCollectionExtensions)));
         AddQuestionType<EssayScorer>(services, AssessmentsConstants.QuestionTypes.Essay, AssessmentsConstants.ContentTypes.EssayQuestion, LocalizationSource.Create("Essay", typeof(LearningAssessmentsCoreServiceCollectionExtensions)), manuallyGraded: true);
+        AddQuestionType<SurveyScorer>(services, AssessmentsConstants.QuestionTypes.Survey, AssessmentsConstants.ContentTypes.SurveyQuestion, LocalizationSource.Create("Survey", typeof(LearningAssessmentsCoreServiceCollectionExtensions)), mayBeUngraded: true);
+        AddQuestionType<DragIntoTextScorer>(services, AssessmentsConstants.QuestionTypes.DragIntoText, AssessmentsConstants.ContentTypes.DragIntoTextQuestion, LocalizationSource.Create("Drag into text", typeof(LearningAssessmentsCoreServiceCollectionExtensions)));
+        AddQuestionType<GapSelectScorer>(services, AssessmentsConstants.QuestionTypes.GapSelect, AssessmentsConstants.ContentTypes.GapSelectQuestion, LocalizationSource.Create("Select missing words", typeof(LearningAssessmentsCoreServiceCollectionExtensions)));
+        AddQuestionType<DescriptionScorer>(services, AssessmentsConstants.QuestionTypes.Description, AssessmentsConstants.ContentTypes.DescriptionQuestion, LocalizationSource.Create("Description", typeof(LearningAssessmentsCoreServiceCollectionExtensions)), mayBeUngraded: true, informational: true);
 
         return services;
     }
 
-    private static void AddQuestionType<TScorer>(IServiceCollection services, string name, string contentType, LocalizationSource displayName, bool manuallyGraded = false)
+    private static void AddQuestionType<TScorer>(IServiceCollection services, string name, string contentType, LocalizationSource displayName, bool manuallyGraded = false, bool mayBeUngraded = false, bool informational = false)
         where TScorer : class, IQuestionScorer
         => services.AddQuestionType<TScorer>(name, type =>
         {
             type.ContentType = contentType;
             type.DisplayName = displayName;
             type.ManuallyGraded = manuallyGraded;
+            type.MayBeUngraded = mayBeUngraded;
+            type.Informational = informational;
         });
 }

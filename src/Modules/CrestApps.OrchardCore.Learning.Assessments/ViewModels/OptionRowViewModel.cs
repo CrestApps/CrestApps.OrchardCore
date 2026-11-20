@@ -74,3 +74,34 @@ public class SimpleQuestionViewModel
     /// <summary>Gets or sets the guidance for graders.</summary>
     public string GraderGuidance { get; set; }
 }
+
+/// <summary>
+/// The editor of a survey question.
+/// </summary>
+public class SurveyQuestionViewModel
+{
+    /// <summary>Gets or sets the options.</summary>
+    public IList<OptionRowViewModel> Options { get; set; } = [];
+
+    /// <summary>Gets or sets whether several options may be chosen.</summary>
+    public bool Multiple { get; set; }
+}
+
+/// <summary>
+/// The editor of a drag into text or select missing words question.
+/// </summary>
+public class ChoiceBlanksQuestionViewModel
+{
+    /// <summary>Gets or sets the text with its blanks.</summary>
+    public string Text { get; set; }
+
+    /// <summary>Gets or sets the distractors, one a line.</summary>
+    public string Distractors { get; set; }
+
+    /// <summary>Gets or sets whether the words are shuffled.</summary>
+    public bool ShuffleChoices { get; set; }
+
+    /// <summary>Gets or sets whether the learner drags the words, rather than picks them in lists.</summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public bool DragIntoText { get; set; }
+}

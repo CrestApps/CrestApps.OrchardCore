@@ -63,9 +63,9 @@
     @if (Model.CanReview)
     {
         <h2 class="h5">@T["Review"]</h2>
-        @foreach (var item in attempt.Items)
+        @foreach (var question in Model.Questions)
         {
-            <partial name="_AttemptQuestion" model="(item, true)" />
+            <partial name="_AttemptQuestion" model="question" />
         }
     }
 

@@ -3,8 +3,7 @@
 
 @{
     var attempt = Model.Attempt;
-    var lastItem = Model.Items.LastOrDefault();
-    var nextIndex = Model.Sequential && lastItem is not null && lastItem.Index < attempt.Items.Count - 1 ? lastItem.Index + 1 : (int?)null;
+    var lastPage = Model.Page >= Model.PageCount - 1;
 }
 
 <div class="container my-4 learning-attempt" style="max-width: 860px;">
@@ -29,20 +28,49 @@
     <form method="post" action="@Url.RouteUrl("LearningAttemptSubmit", new { attemptId = attempt.ItemId })" data-learning-attempt data-answer-url="@Url.RouteUrl("LearningAttemptAnswer", new { attemptId = attempt.ItemId, index = 0 })" novalidate>
         @Html.AntiForgeryToken()
 
-        @foreach (var item in Model.Items)
+        @if (Model.PageCount > 1)
         {
-            <partial name="_AttemptQuestion" model="(item, false)" />
+            <p class="text-secondary small">@T["Page {0} of {1}", Model.Page + 1, Model.PageCount]</p>
+        }
+
+        @foreach (var question in Model.Questions)
+        {
+            <partial name="_AttemptQuestion" model="question" />
         }
 
         <div class="d-flex flex-wrap gap-2 align-items-center">
-            @if (nextIndex is { } next)
+            @if (Model.Sequential && !lastPage)
             {
-                <button type="submit" name="next" value="@next" class="btn btn-primary">@T["Save and continue"]</button>
-                <span class="hint">@T["You cannot come back to a question once you continue."]</span>
+                <button type="submit" name="next" value="@(Model.Page + 1)" class="btn btn-primary">@T["Save and continue"]</button>
+                <span class="hint">@T["You cannot come back to these questions once you continue."]</span>
             }
             else
             {
-                <button type="submit" class="btn btn-success" data-learning-submit data-confirm-text="@T["Submit your answers? You cannot change them afterwards."]">@T["Submit"]</button>
+                @if (!Model.Sequential && Model.PageCount > 1)
+                {
+                    @if (Model.Page > 0)
+                    {
+                        <button type="submit" name="next" value="@(Model.Page - 1)" class="btn btn-outline-secondary">@T["Previous page"]</button>
+                    }
+                    <nav aria-label="@T["Pages"]">
+                        <ul class="pagination pagination-sm mb-0">
+                            @for (var p = 0; p < Model.PageCount; p++)
+                            {
+                                <li class="page-item @(p == Model.Page ? "active" : null)">
+                                    <button type="submit" name="next" value="@p" class="page-link" aria-current="@(p == Model.Page ? "page" : null)">@(p + 1)</button>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                    @if (!lastPage)
+                    {
+                        <button type="submit" name="next" value="@(Model.Page + 1)" class="btn btn-primary">@T["Next page"]</button>
+                    }
+                }
+                @if (lastPage)
+                {
+                    <button type="submit" class="btn btn-success" data-learning-submit data-confirm-text="@T["Submit your answers? You cannot change them afterwards."]">@T["Submit"]</button>
+                }
                 <span class="hint">@T["Your answers are saved as you go."]</span>
             }
         </div>

@@ -55,8 +55,23 @@ public class QuizPartViewModel
     /// <summary>Gets or sets the honor statement.</summary>
     public string HonorStatement { get; set; }
 
-    /// <summary>Gets or sets the review policy.</summary>
-    public ReviewPolicy ReviewPolicy { get; set; }
+    /// <summary>
+    /// Gets or sets what learners see after an attempt: a <see cref="ReviewPolicy"/> name, or <see cref="CustomReview"/>
+    /// for the review options per moment.
+    /// </summary>
+    public string ReviewMode { get; set; }
+
+    /// <summary>Gets or sets what learners see at each moment, used when the review mode is custom.</summary>
+    public IList<ReviewMomentViewModel> ReviewMoments { get; set; } = [];
+
+    /// <summary>Gets or sets how many questions a page shows; 0 for every question on one page.</summary>
+    public int QuestionsPerPage { get; set; }
+
+    /// <summary>Gets or sets when learners get feedback on an answer.</summary>
+    public QuizFeedbackMode FeedbackMode { get; set; }
+
+    /// <summary>The review mode of the options per moment.</summary>
+    public const string CustomReview = "Custom";
 
     /// <summary>Gets or sets the chosen questions, as the <c>[{ value, text }]</c> the question picker starts with.</summary>
     [BindNever]
@@ -65,6 +80,27 @@ public class QuizPartViewModel
     /// <summary>Gets or sets the banks to choose from.</summary>
     [BindNever]
     public IList<SelectListItem> BankOptions { get; set; } = [];
+}
+
+/// <summary>
+/// What learners see at one moment of the review.
+/// </summary>
+public class ReviewMomentViewModel
+{
+    /// <summary>Gets or sets the moment.</summary>
+    public ReviewMoment Moment { get; set; }
+
+    /// <summary>Gets or sets whether the score shows.</summary>
+    public bool Score { get; set; }
+
+    /// <summary>Gets or sets whether the right answers show.</summary>
+    public bool RightAnswers { get; set; }
+
+    /// <summary>Gets or sets whether the feedback of the answers shows.</summary>
+    public bool Feedback { get; set; }
+
+    /// <summary>Gets or sets whether the general feedback shows.</summary>
+    public bool GeneralFeedback { get; set; }
 }
 
 /// <summary>

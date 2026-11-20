@@ -131,6 +131,26 @@ public static class AssessmentsConstants
         /// An essay a grader marks.
         /// </summary>
         public const string EssayQuestion = "EssayQuestion";
+
+        /// <summary>
+        /// A question every answer is accepted in, such as an opinion; ungraded at zero points.
+        /// </summary>
+        public const string SurveyQuestion = "SurveyQuestion";
+
+        /// <summary>
+        /// A text whose blanks the learner fills by dragging words from a list that holds distractors.
+        /// </summary>
+        public const string DragIntoTextQuestion = "DragIntoTextQuestion";
+
+        /// <summary>
+        /// A text whose blanks are drop-down lists of words that hold distractors.
+        /// </summary>
+        public const string GapSelectQuestion = "GapSelectQuestion";
+
+        /// <summary>
+        /// A block of text between questions, with nothing to answer.
+        /// </summary>
+        public const string DescriptionQuestion = "DescriptionQuestion";
     }
 
     /// <summary>
@@ -164,6 +184,18 @@ public static class AssessmentsConstants
 
         /// <summary>An essay a grader marks.</summary>
         public const string Essay = "Essay";
+
+        /// <summary>Every answer accepted; ungraded at zero points.</summary>
+        public const string Survey = "Survey";
+
+        /// <summary>Words dragged into the blanks of a text.</summary>
+        public const string DragIntoText = "DragIntoText";
+
+        /// <summary>Drop-down blanks in a text.</summary>
+        public const string GapSelect = "GapSelect";
+
+        /// <summary>A text between questions, with nothing to answer.</summary>
+        public const string Description = "Description";
     }
 
     /// <summary>

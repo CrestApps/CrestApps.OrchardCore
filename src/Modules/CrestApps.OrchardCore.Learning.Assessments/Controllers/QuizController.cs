@@ -92,13 +92,15 @@ public sealed class QuizController : Controller
     }
 
     /// <summary>
-    /// Shows an attempt: the questions while it is in progress, then the result and the review the policy allows.
+    /// Shows an attempt: a page of questions while it is in progress, then the result and the review the quiz's review
+    /// options allow.
     /// </summary>
     /// <param name="attemptId">The attempt.</param>
-    /// <param name="q">Ignored for a quiz answered one question at a time, which shows the next unanswered question.</param>
+    /// <param name="page">The page of a free quiz, from zero. A sequential quiz shows the page the learner is on, so a
+    /// page in the address never reads ahead or goes back.</param>
     /// <returns>The page.</returns>
     [HttpGet("learning/attempts/{attemptId}", Name = "LearningAttempt")]
-    public async Task<IActionResult> Attempt(string attemptId, int? q)
+    public async Task<IActionResult> Attempt(string attemptId, int? page)
     {
         var attempt = await FindOwnAsync(attemptId);
 
@@ -112,25 +114,80 @@ public sealed class QuizController : Controller
             attempt = (await _attemptService.SubmitAtDeadlineAsync(attempt.ItemId)).Attempt ?? attempt;
         }
 
-        var quiz = await _contentSource.GetItemAsync(attempt.QuizId);
-        var sequential = quiz?.Get<QuizPart>(nameof(QuizPart))?.Navigation == QuizNavigation.Sequential;
+        var sequential = await IsSequentialAsync(attempt);
         var model = new AttemptPageViewModel
         {
             Attempt = attempt,
             CanReview = _reviewPolicy.CanReview(attempt),
-            CanSeeScore = AttemptReviewPolicy.CanSeeScore(attempt),
+            CanSeeScore = _reviewPolicy.CanSeeScore(attempt),
             Sequential = sequential,
             CourseId = attempt.CourseId,
-            Items = attempt.Items,
         };
 
-        if (attempt.IsOpen && sequential)
+        IEnumerable<AttemptItem> shown = attempt.Items;
+
+        if (attempt.IsOpen)
         {
-            // One question at a time means the next unanswered question only: a larger q does not read ahead.
-            model.Items = [attempt.Items[AttemptNavigation.CurrentIndex(attempt)]];
+            model.PageCount = AttemptPaging.PageCount(attempt, sequential);
+            model.Page = Math.Clamp(sequential ? attempt.CurrentPage : page ?? attempt.CurrentPage, 0, model.PageCount - 1);
+            shown = AttemptPaging.ItemsOn(attempt, model.Page, sequential);
         }
 
+        var numbers = Numbers(attempt);
+        model.Questions = shown.Select(item =>
+        {
+            var shows = _reviewPolicy.ShowsFor(attempt, item);
+            var answerable = attempt.IsOpen && AttemptNavigation.CanAnswer(attempt, item.Index, sequential);
+
+            return new AttemptQuestionViewModel
+            {
+                Item = item,
+                Number = numbers.GetValueOrDefault(item.Index),
+                Shows = shows,
+                ReadOnly = !answerable,
+                CanCheck = answerable && attempt.FeedbackMode == QuizFeedbackMode.Immediate,
+                CheckUrl = Url.RouteUrl("LearningAttemptCheck", new { attemptId = attempt.ItemId, index = item.Index }),
+            };
+        }).ToList();
+
         return View(attempt.IsOpen ? "Attempt" : "Result", model);
+    }
+
+    /// <summary>
+    /// Saves the answers posted and checks one question, for a quiz with immediate feedback: it is scored now and its
+    /// answer cannot change afterwards.
+    /// </summary>
+    /// <param name="attemptId">The attempt.</param>
+    /// <param name="index">The question to check.</param>
+    /// <returns>The page of the question.</returns>
+    [HttpPost("learning/attempts/{attemptId}/check/{index:int}", Name = "LearningAttemptCheck")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Check(string attemptId, int index)
+    {
+        var attempt = await FindOwnAsync(attemptId);
+
+        if (attempt is null || index < 0 || index >= attempt.Items.Count)
+        {
+            return NotFound();
+        }
+
+        if (await SaveAnswersAsync(attempt, except: index))
+        {
+            return RedirectToRoute("LearningAttempt", new { attemptId });
+        }
+
+        var result = await _attemptService.CheckAsync(attempt.ItemId, attempt.UserId, index, AttemptFormReader.Read(Request.Form, attempt.Items[index]));
+
+        if (result.ErrorCode == AttemptErrors.DeadlinePassed)
+        {
+            await _notifier.WarningAsync(H["The time was up. Your attempt was submitted with the answers saved before the deadline."]);
+
+            return RedirectToRoute("LearningAttempt", new { attemptId });
+        }
+
+        var sequential = await IsSequentialAsync(attempt);
+
+        return RedirectToRoute("LearningAttempt", new { attemptId, page = sequential ? (int?)null : AttemptPaging.PageOf(attempt, index, sequential) });
     }
 
     /// <summary>
@@ -161,11 +218,11 @@ public sealed class QuizController : Controller
     }
 
     /// <summary>
-    /// Saves the answers posted and, unless the learner only moves to the next question, submits the attempt.
+    /// Saves the answers posted and, unless the learner only moves to another page, submits the attempt.
     /// </summary>
     /// <param name="attemptId">The attempt.</param>
-    /// <param name="next">The next question, for a quiz answered one question at a time.</param>
-    /// <returns>The result page, or the next question.</returns>
+    /// <param name="next">The page to move to, from zero; a sequential quiz moves to the next page only.</param>
+    /// <returns>The result page, or the page moved to.</returns>
     [HttpPost("learning/attempts/{attemptId}/submit", Name = "LearningAttemptSubmit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Submit(string attemptId, int? next)
@@ -177,7 +234,29 @@ public sealed class QuizController : Controller
             return NotFound();
         }
 
-        foreach (var item in attempt.Items.Where(item => AttemptFormReader.HasAnswer(Request.Form, item)).ToList())
+        if (await SaveAnswersAsync(attempt, except: null))
+        {
+            return RedirectToRoute("LearningAttempt", new { attemptId });
+        }
+
+        if (next is { } page)
+        {
+            var moved = await _attemptService.GoToPageAsync(attempt.ItemId, attempt.UserId, page);
+            var sequential = await IsSequentialAsync(attempt);
+
+            return RedirectToRoute("LearningAttempt", new { attemptId, page = moved.Succeeded && !sequential ? page : (int?)null });
+        }
+
+        await _attemptService.SubmitAsync(attempt.ItemId, attempt.UserId);
+
+        return RedirectToRoute("LearningAttempt", new { attemptId });
+    }
+
+    // Saves every answer the form holds; a question that takes no answer now (checked, or on another page of a
+    // sequential quiz) is refused by the service and keeps its answer. Returns true when the time was up.
+    private async Task<bool> SaveAnswersAsync(AssessmentAttempt attempt, int? except)
+    {
+        foreach (var item in attempt.Items.Where(item => item.Index != except && AttemptFormReader.HasAnswer(Request.Form, item)).ToList())
         {
             var saved = await _attemptService.SaveResponseAsync(attempt.ItemId, attempt.UserId, item.Index, AttemptFormReader.Read(Request.Form, item));
 
@@ -185,18 +264,28 @@ public sealed class QuizController : Controller
             {
                 await _notifier.WarningAsync(H["The time was up. Your attempt was submitted with the answers saved before the deadline."]);
 
-                return RedirectToRoute("LearningAttempt", new { attemptId });
+                return true;
             }
         }
 
-        if (next is { } index && index < attempt.Items.Count)
+        return false;
+    }
+
+    private async Task<bool> IsSequentialAsync(AssessmentAttempt attempt)
+        => (await _contentSource.GetItemAsync(attempt.QuizId))?.Get<QuizPart>(nameof(QuizPart))?.Navigation == QuizNavigation.Sequential;
+
+    // The numbers shown: descriptions are not numbered, so the questions count on without them.
+    private static Dictionary<int, int?> Numbers(AssessmentAttempt attempt)
+    {
+        var numbers = new Dictionary<int, int?>();
+        var number = 0;
+
+        foreach (var item in attempt.Items)
         {
-            return RedirectToRoute("LearningAttempt", new { attemptId, q = index });
+            numbers[item.Index] = item.QuestionType == AssessmentsConstants.QuestionTypes.Description ? null : ++number;
         }
 
-        await _attemptService.SubmitAsync(attempt.ItemId, attempt.UserId);
-
-        return RedirectToRoute("LearningAttempt", new { attemptId });
+        return numbers;
     }
 
     private async Task<AssessmentAttempt> FindOwnAsync(string attemptId)

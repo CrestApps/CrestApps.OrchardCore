@@ -8,6 +8,7 @@
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <script asp-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-draw-rules.min.js" debug-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-draw-rules.js" depends-on="bootstrap-select" at="Foot"></script>
+<script asp-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-question-order.min.js" debug-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-question-order.js" depends-on="bootstrap-select" at="Foot"></script>
 
 <div class="card text-bg-theme mb-3">
     <div class="card-header">@T["Questions"]</div>
@@ -17,7 +18,25 @@
             <div class="ocat-end">
                 @await Component.InvokeAsync("ItemSelector", new { id = Html.IdFor(m => m.QuestionIds).ToString(), inputName = Html.NameFor(m => m.QuestionIds).ToString(), endpoint = Url.RouteUrl("LearningQuestionSearch"), initialItemsJson = Model.InitialQuestionsJson, multiple = true, buttonText = T["Choose questions"].Value, searchPlaceholder = T["Search questions by title"].Value, emptyResultsText = T["No published question has this title."].Value, smallButton = false })
                 <span asp-validation-for="QuestionIds"></span>
-                <span class="hint">@T["Published questions, searched by title. The chosen ones keep their order; new ones go after them."]</span>
+                <span class="hint">@T["Published questions, searched by title. New ones go after the others; set the order below."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" data-question-order data-select="@Html.IdFor(m => m.QuestionIds)">
+            <span class="ocat-label">@T["Order"]</span>
+            <div class="ocat-end">
+                <ol class="list-group mb-1" data-question-order-list aria-live="polite"></ol>
+                <p class="text-muted small mb-0" data-question-order-empty>@T["No question chosen yet."]</p>
+                <template data-question-order-template>
+                    <li class="list-group-item d-flex justify-content-between align-items-center gap-2 py-1">
+                        <span data-question-order-title></span>
+                        <span class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary" data-question-order-up title="@T["Move up"]" aria-label="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" data-question-order-down title="@T["Move down"]" aria-label="@T["Move down"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
+                        </span>
+                    </li>
+                </template>
+                <span class="hint">@T["Every attempt asks the questions in this order, unless they are shuffled."]</span>
             </div>
         </div>
 
@@ -156,6 +175,22 @@
             </div>
         </div>
         <div class="ocat-wrapper">
+            <label asp-for="QuestionsPerPage" class="ocat-label">@T["Questions per page"]</label>
+            <div class="ocat-end ocat-end-sm">
+                <input asp-for="QuestionsPerPage" type="number" min="0" max="100" class="form-control" />
+                <span class="hint">@T["0 shows every question on one page (one a page with the one after another navigation)."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="FeedbackMode" class="ocat-label">@T["Feedback"]</label>
+            <div class="ocat-end">
+                <select asp-for="FeedbackMode" class="form-select">
+                    <option value="Deferred">@T["After the attempt is submitted"]</option>
+                    <option value="Immediate">@T["Immediately: learners check each answer, which then cannot change"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
             <label asp-for="Opens" class="ocat-label">@T["Opens"]</label>
             <div class="ocat-end">
                 <input asp-for="Opens" type="datetime-local" class="form-control" />
@@ -197,15 +232,78 @@
             </div>
         </div>
         <div class="ocat-wrapper">
-            <label asp-for="ReviewPolicy" class="ocat-label">@T["After an attempt, learners see"]</label>
+            <label asp-for="ReviewMode" class="ocat-label">@T["After an attempt, learners see"]</label>
             <div class="ocat-end">
-                <select asp-for="ReviewPolicy" class="form-select">
+                <select asp-for="ReviewMode" class="form-select">
                     <option value="AfterGraded">@T["Their answers, the right answers and the feedback, once graded"]</option>
                     <option value="AfterClose">@T["Their answers and the right answers once the quiz closes"]</option>
                     <option value="ScoreOnly">@T["Their score only"]</option>
                     <option value="Hidden">@T["Nothing"]</option>
+                    <option value="@QuizPartViewModel.CustomReview">@T["What the table below allows at each moment"]</option>
                 </select>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Review options"]</div>
+    <div class="card-body">
+        <span class="hint d-block mb-2">@T["Used when \"What the table below allows at each moment\" is chosen above. During the attempt applies to questions checked with immediate feedback; after the submit, a review opens once the attempt is graded."]</span>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Learners see"]</th>
+                        @for (var m = 0; m < Model.ReviewMoments.Count; m++)
+                        {
+                            var moment = Model.ReviewMoments[m].Moment;
+                            <th scope="col" class="text-center">
+                                @(moment switch
+                                {
+                                    ReviewMoment.During => T["During the attempt"],
+                                    ReviewMoment.ImmediatelyAfter => T["Right after the attempt"],
+                                    ReviewMoment.LaterWhileOpen => T["Later, while the quiz is open"],
+                                    _ => T["After the quiz closes"],
+                                })
+                                <input type="hidden" asp-for="ReviewMoments[m].Moment" />
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var rows = new (string Field, Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString Label)[]
+                        {
+                            (nameof(ReviewMomentViewModel.Score), T["The score"]),
+                            (nameof(ReviewMomentViewModel.RightAnswers), T["The right answers"]),
+                            (nameof(ReviewMomentViewModel.Feedback), T["The feedback of their answers"]),
+                            (nameof(ReviewMomentViewModel.GeneralFeedback), T["The general feedback"]),
+                        };
+                    }
+                    @foreach (var (field, label) in rows)
+                    {
+                        <tr>
+                            <th scope="row" class="fw-normal">@label</th>
+                            @for (var m = 0; m < Model.ReviewMoments.Count; m++)
+                            {
+                                var row = Model.ReviewMoments[m];
+                                var name = Html.NameFor(x => x.ReviewMoments[m]).ToString() + "." + field;
+                                var isChecked = field switch
+                                {
+                                    nameof(ReviewMomentViewModel.Score) => row.Score,
+                                    nameof(ReviewMomentViewModel.RightAnswers) => row.RightAnswers,
+                                    nameof(ReviewMomentViewModel.Feedback) => row.Feedback,
+                                    _ => row.GeneralFeedback,
+                                };
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input" name="@name" value="true" checked="@isChecked" aria-label="@label" />
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

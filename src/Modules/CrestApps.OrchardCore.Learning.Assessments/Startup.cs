@@ -86,6 +86,10 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<FillInBlanksQuestionPartDisplayDriver>();
         services.AddContentPart<EssayQuestionPart>()
             .UseDisplayDriver<EssayQuestionPartDisplayDriver>();
+        services.AddContentPart<SurveyQuestionPart>()
+            .UseDisplayDriver<SurveyQuestionPartDisplayDriver>();
+        services.AddContentPart<ChoiceBlanksQuestionPart>()
+            .UseDisplayDriver<ChoiceBlanksQuestionPartDisplayDriver>();
         services.AddContentPart<QuizPart>()
             .UseDisplayDriver<QuizPartDisplayDriver>()
             .UseDisplayDriver<QuizPartLearnerDisplayDriver>()
@@ -276,6 +280,8 @@ public sealed class AssessmentsContentTransferStartup : StartupBase
         services.AddContentPartImportHandler<MatchingQuestionPart, MatchingQuestionPartImportHandler>();
         services.AddContentPartImportHandler<OrderingQuestionPart, OrderingQuestionPartImportHandler>();
         services.AddContentPartImportHandler<FillInBlanksQuestionPart, FillInBlanksQuestionPartImportHandler>();
+        services.AddContentPartImportHandler<SurveyQuestionPart, SurveyQuestionPartImportHandler>();
+        services.AddContentPartImportHandler<ChoiceBlanksQuestionPart, ChoiceBlanksQuestionPartImportHandler>();
 
         // One import creates questions of every kind, each row naming its type.
         services.AddSingleton<IContentImportRowTypeProvider, QuestionRowTypeProvider>();

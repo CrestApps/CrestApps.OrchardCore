@@ -37,6 +37,61 @@ public enum ReviewPolicy
 }
 
 /// <summary>
+/// When a learner gets feedback on an answer.
+/// </summary>
+public enum QuizFeedbackMode
+{
+    /// <summary>After the attempt is submitted, as the review options allow.</summary>
+    Deferred,
+
+    /// <summary>Per question during the attempt: the learner checks an answer, which then cannot change.</summary>
+    Immediate,
+}
+
+/// <summary>
+/// What a learner sees of an attempt at a moment of the review.
+/// </summary>
+[Flags]
+public enum ReviewShows
+{
+    /// <summary>Nothing.</summary>
+    None = 0,
+
+    /// <summary>The scores of the attempt and of each question.</summary>
+    Score = 1,
+
+    /// <summary>The right answers.</summary>
+    RightAnswers = 2,
+
+    /// <summary>The feedback of the answers chosen and the comments of the grader.</summary>
+    Feedback = 4,
+
+    /// <summary>The general feedback of each question.</summary>
+    GeneralFeedback = 8,
+
+    /// <summary>Everything.</summary>
+    All = Score | RightAnswers | Feedback | GeneralFeedback,
+}
+
+/// <summary>
+/// The moments of the review, as Moodle names them.
+/// </summary>
+public enum ReviewMoment
+{
+    /// <summary>During the attempt, for questions checked with immediate feedback.</summary>
+    During,
+
+    /// <summary>Within two minutes of the submit.</summary>
+    ImmediatelyAfter,
+
+    /// <summary>Later, while the quiz is still open.</summary>
+    LaterWhileOpen,
+
+    /// <summary>After the quiz closes.</summary>
+    AfterClose,
+}
+
+/// <summary>
 /// How a learner moves through the questions.
 /// </summary>
 public enum QuizNavigation

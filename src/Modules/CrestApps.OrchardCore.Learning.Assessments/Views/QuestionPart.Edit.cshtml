@@ -1,7 +1,7 @@
 @model QuestionPartViewModel
 
 <div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Question"]</div>
+    <div class="card-header">@(Model.Informational ? T["Description"] : T["Question"])</div>
     <div class="card-body">
         @if (!string.IsNullOrEmpty(Model.SourceIdentifier))
         {
@@ -15,21 +15,32 @@
         }
 
         <div class="ocat-wrapper" asp-validation-class-for="Prompt">
-            <label asp-for="Prompt" class="ocat-label">@T["Question"]</label>
+            <label asp-for="Prompt" class="ocat-label">@(Model.Informational ? T["Text"] : T["Question"])</label>
             <div class="ocat-end">
                 <textarea asp-for="Prompt" class="form-control" rows="4"></textarea>
                 <span asp-validation-for="Prompt"></span>
-                <span class="hint">@T["What the learner reads. Simple formatting (bold, lists, links) is kept."]</span>
+                <span class="hint">@(Model.Informational ? T["Shown between the questions of a quiz, with nothing to answer and no points. Simple formatting (bold, lists, links) is kept."] : T["What the learner reads. Simple formatting (bold, lists, links) is kept."])</span>
             </div>
         </div>
 
-        <div class="ocat-wrapper" asp-validation-class-for="Points">
-            <label asp-for="Points" class="ocat-label">@T["Points"]</label>
-            <div class="ocat-end ocat-end-sm">
-                <input asp-for="Points" type="number" min="0.01" step="0.01" class="form-control" />
-                <span asp-validation-for="Points"></span>
+        @if (Model.Informational)
+        {
+            <input type="hidden" asp-for="Points" value="0" />
+        }
+        else
+        {
+            <div class="ocat-wrapper" asp-validation-class-for="Points">
+                <label asp-for="Points" class="ocat-label">@T["Points"]</label>
+                <div class="ocat-end ocat-end-sm">
+                    <input asp-for="Points" type="number" min="@(Model.MayBeUngraded ? "0" : "0.01")" step="0.01" class="form-control" />
+                    <span asp-validation-for="Points"></span>
+                    @if (Model.MayBeUngraded)
+                    {
+                        <span class="hint">@T["0 leaves the question ungraded."]</span>
+                    }
+                </div>
             </div>
-        </div>
+        }
 
         <div class="ocat-wrapper">
             <label asp-for="Difficulty" class="ocat-label">@T["Difficulty"]</label>

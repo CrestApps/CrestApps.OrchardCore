@@ -24,6 +24,14 @@ public class QuestionPartViewModel
     [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
     public string SourceIdentifier { get; set; }
 
+    /// <summary>Gets or sets whether the question has nothing to answer and no points, such as a description.</summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public bool Informational { get; set; }
+
+    /// <summary>Gets or sets whether the question may be worth zero points, so ungraded.</summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public bool MayBeUngraded { get; set; }
+
     /// <summary>Gets or sets the file the question was imported from; shown, never posted.</summary>
     [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
     public string SourceFile { get; set; }

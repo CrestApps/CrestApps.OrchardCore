@@ -61,7 +61,23 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
             model.Closes = part.ClosesUtc is { } closes ? (await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(closes, DateTimeKind.Utc)))).DateTime : null;
             model.HasAccessCode = await _secretStore.HasAsync(AssessmentsConstants.QuizAccessCodeSecret, part.ContentItem.ContentItemId);
             model.HonorStatement = part.HonorStatement;
-            model.ReviewPolicy = part.ReviewPolicy;
+            model.ReviewMode = part.ReviewOptions is null ? part.ReviewPolicy.ToString() : QuizPartViewModel.CustomReview;
+            var options = part.ReviewOptions ?? QuizReviewOptions.FromPolicy(part.ReviewPolicy);
+            model.ReviewMoments = Enum.GetValues<ReviewMoment>().Select(moment =>
+            {
+                var shows = options.For(moment);
+
+                return new ReviewMomentViewModel
+                {
+                    Moment = moment,
+                    Score = shows.HasFlag(ReviewShows.Score),
+                    RightAnswers = shows.HasFlag(ReviewShows.RightAnswers),
+                    Feedback = shows.HasFlag(ReviewShows.Feedback),
+                    GeneralFeedback = shows.HasFlag(ReviewShows.GeneralFeedback),
+                };
+            }).ToList();
+            model.QuestionsPerPage = part.QuestionsPerPage;
+            model.FeedbackMode = part.FeedbackMode;
 
             // The fixed questions are searched on the server; only the chosen ones are rendered, in the quiz's order.
             var chosen = part.QuestionIds.Count == 0
@@ -97,7 +113,36 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
         part.OpensUtc = model.Opens is { } opens ? await _localClock.ToUtcLenientAsync(DateTime.SpecifyKind(opens, DateTimeKind.Unspecified)) : null;
         part.ClosesUtc = model.Closes is { } closes ? await _localClock.ToUtcLenientAsync(DateTime.SpecifyKind(closes, DateTimeKind.Unspecified)) : null;
         part.HonorStatement = string.IsNullOrWhiteSpace(model.HonorStatement) ? null : model.HonorStatement.Trim();
-        part.ReviewPolicy = model.ReviewPolicy;
+        part.QuestionsPerPage = Math.Clamp(model.QuestionsPerPage, 0, 100);
+        part.FeedbackMode = model.FeedbackMode;
+
+        if (string.Equals(model.ReviewMode, QuizPartViewModel.CustomReview, StringComparison.Ordinal))
+        {
+            ReviewShows Shows(ReviewMoment moment)
+            {
+                var row = model.ReviewMoments?.FirstOrDefault(entry => entry?.Moment == moment);
+
+                return row is null
+                    ? ReviewShows.None
+                    : (row.Score ? ReviewShows.Score : ReviewShows.None)
+                        | (row.RightAnswers ? ReviewShows.RightAnswers : ReviewShows.None)
+                        | (row.Feedback ? ReviewShows.Feedback : ReviewShows.None)
+                        | (row.GeneralFeedback ? ReviewShows.GeneralFeedback : ReviewShows.None);
+            }
+
+            part.ReviewOptions = new QuizReviewOptions
+            {
+                During = Shows(ReviewMoment.During),
+                ImmediatelyAfter = Shows(ReviewMoment.ImmediatelyAfter),
+                LaterWhileOpen = Shows(ReviewMoment.LaterWhileOpen),
+                AfterClose = Shows(ReviewMoment.AfterClose),
+            };
+        }
+        else
+        {
+            part.ReviewPolicy = Enum.TryParse<ReviewPolicy>(model.ReviewMode, out var policy) ? policy : ReviewPolicy.AfterGraded;
+            part.ReviewOptions = null;
+        }
 
         // The code is kept in its own record, out of the content item; it changes only when the rest of the form is valid.
         if (context.Updater.ModelState.IsValid)
