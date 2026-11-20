@@ -37,7 +37,7 @@ Projects: `CrestApps.OrchardCore.Workforce.Abstractions` (models and contracts),
 | `ActivityCode` | What a worker does during a segment of a shift: name, short code, kind, color, and whether it is paid, counts as work and counts toward coverage. The usual nine codes are seeded by the module's migration. |
 | `ShiftData` and `ShiftSegment` | What Workforce keeps on a published Shift event, in its `Properties`: the worker, team, schedule, template, a stable shift key, the published version, and the segments (activity, kind, start and end in UTC). |
 
-Every Workforce record is a YesSql document in the `Workforce` collection, with `ActivityCodeIndex`; workers are staff members in the `Staff` collection (see [Upgrading from Workforce workers](./staff.md#upgrading-from-workforce-workers)). Teams are in the `Teams` collection; a site that kept them in the `Workforce` collection has them moved by the Workforce migration (see [Upgrading from Workforce teams](./teams.md#upgrading-from-workforce-teams)).
+Every Workforce record is a YesSql document in the `Workforce` collection, with `ActivityCodeIndex`, except the time-off ledger, which has a collection of its own (see [Time off](#time-off)); workers are staff members in the `Staff` collection (see [Upgrading from Workforce workers](./staff.md#upgrading-from-workforce-workers)). Teams are in the `Teams` collection; a site that kept them in the `Workforce` collection has them moved by the Workforce migration (see [Upgrading from Workforce teams](./teams.md#upgrading-from-workforce-teams)).
 
 ## Workers and user accounts
 
@@ -123,7 +123,7 @@ The **Workforce Time Off** feature (`CrestApps.OrchardCore.Workforce.TimeOff`) r
 | --- | --- |
 | `TimeOffType` | A kind of time off: name, description, color, `Unit` (`Hours`, `Days`), `HoursPerDay`, whether it is paid, needs a balance, allows part of a day, needs a reason, counts against allotments and is visible to workers, and a pay code. |
 | `TimeOffPolicy` | How workers earn one type: `AccrualMethod` (`None`, `PerPeriod`, `PerHourWorked`, `AnnualLumpSum`), `Frequency` (`Weekly`, `Biweekly`, `SemiMonthly`, `Monthly`) and `AnchorDate`, `Rate`, `TenureTiers` (from months of service, rate), `WaitingPeriodDays`, `MaxBalance`, `CarryoverMax`, the reset month and day, `NegativeBalanceLimit` and `Assignments` (a team or a worker, with effective dates). |
-| `TimeOffLedgerEntry` | One change to a worker's balance under a policy, only ever added: `Kind` (`Opening`, `Accrual`, `Taken`, `Reversal`, `Adjustment`, `Carryover`, `Expiry`, `Payout`, `Grant`), a signed `Amount`, `EffectiveDate`, `ExpiresOn` (a grant's last day), `SourceRef`, `IdempotencyKey`, the actor and a note. |
+| `TimeOffLedgerEntry` | One change to a worker's balance under a policy, only ever added. It is kept in the shared quantity ledger (`IQuantityLedger<TimeOffLedger>`, registered with `AddQuantityLedger<TimeOffLedger>` in the `WorkforceTimeOffLedger` collection, `WorkforceConstants.TimeOffLedgerCollectionName`, whose index tables `TimeOffIndexSchema` creates with `QuantityLedgerIndexSchema`): the worker is the ledger account and the policy the bucket. Its fields: `Kind` (`Opening`, `Accrual`, `Taken`, `Reversal`, `Adjustment`, `Carryover`, `Expiry`, `Payout`, `Grant`), a signed `Amount`, `EffectiveDate`, `ExpiresOn` (a grant's last day), `SourceRef`, `IdempotencyKey`, the actor and a note. |
 | `TimeOffRequest` | A request: worker, team, type, policy, first and last day, optional start and end time for part of one day, time zone, `Days` (date, amount, minutes), `Amount`, `Status` (`Pending`, `Waitlisted`, `Approved`, `Declined`, `Canceled`, `Withdrawn`), reason, decision note, who decided and when, `AutoApproved`, who submitted and when (which orders the waitlist), the calendar event and `FlaggedShiftEventIds`. |
 | `TimeOffAllotment` | How many people of a team and its sub-teams may be off: `WeekdaySlots` (Sunday first), `Dates` that override them, `TypeIds`, `AutoApprove` and `WhenFull` (`Waitlist`, `Pending`). |
 | `BlackoutPeriod` | Dates no time off can be requested for: a team with its sub-teams (or every team), first and last day, `TypeIds` and a message. |
@@ -151,6 +151,17 @@ A team's `TimeOffShiftHandling` (`Flag`, `Remove`, or `null` for its parent's) s
 **Pending requests on the calendar.** `PendingTimeOffEventSource` is an `ICalendarEventSource` named `WorkforceTimeOffRequests`. For the team calendars asked for by id, it returns the open requests as tentative, free, non-editable `TimeOff` occurrences.
 
 **Background task.** *Time off accrual* runs every hour at a quarter past and calls `RunAsync` for the site's today.
+
+### Upgrading the time-off ledger
+
+Earlier releases kept time-off ledger entries in the `Workforce` collection. The ledger now lives in the shared quantity ledger, in the `WorkforceTimeOffLedger` collection. Nothing needs to be done by hand:
+
+- At each start of the tenant, after the migrations, `TimeOffLedgerCopy` (run by `TimeOffLedgerCopyTenantEvents` in a deferred task) copies the old entries to the new collection, keeping their ids, 500 at a time.
+- It runs under a distributed lock (`Workforce:TimeOffLedgerCopy`), so only one node of a farm copies; the others skip that start. A copy that runs long stops before its lock expires, and the next start goes on.
+- The copy is additive: the original entries stay in the `Workforce` collection, so a node of the earlier release keeps reading them during a rolling upgrade. An entry whose id or idempotency key is already in the new ledger is skipped, so nothing is counted twice, and entries an older node writes later are picked up at the next start.
+- The first copy that reads to the end records that it is complete (`TimeOffLedgerCopyState`). Until then, accrual waits (`IsCompleteAsync`), so it never posts accruals again into a ledger that is still missing its history. A site that never had old entries accrues at once.
+
+After the upgrade, watch the log for *The time-off ledger copy is complete* before relying on accruals. If the copy fails, it logs an error and runs again at the next start.
 
 ### Time off in payroll
 

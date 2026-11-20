@@ -51,7 +51,7 @@ When a Moodle course is moved, its **Feedback** activities become feedback surve
 | Feedback | Feedback survey. |
 | Choice | Choice. |
 | IMS content package | A learning package: it imports like a SCORM package and plays without tracking; it counts as done when the learner opens it. |
-| Glossary | A page lesson with the terms and their meanings. |
+| Glossary | Not moved. The import reports it as a failed row; add the terms as a page lesson by hand. |
 | Forum | Not moved. Discussions stay outside the course for now. |
 | MooTyper (typing practice) | Not moved. Use a link lesson to a typing practice site, or a learning package. |
 | Database | Not moved. Use coursework for what learners hand in, or a page lesson for what they read. |

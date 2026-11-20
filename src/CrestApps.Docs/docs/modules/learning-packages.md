@@ -29,7 +29,11 @@ Its completion mode is one of:
 | --- | --- |
 | **When the package reports it complete** (`PackageReported`, the default) | SCORM 1.2: `cmi.core.lesson_status` is `completed` or `passed`. SCORM 2004: `cmi.completion_status`, as evaluated against the completion threshold, is `completed`. |
 | **Passed** | The package passes the learner (`passed`; in SCORM 2004 `cmi.success_status`, as evaluated against the scaled passing score); `failed` fails the item. Without a status, the item's pass mark is compared with the score. |
-| **Marked done** | The learner marks the item done in the player; the package's status does not complete it. |
+| **When the score reaches the pass mark, whatever the package reports** (`MinimumScore`) | The item's score reaches its pass mark, whatever the package reports about passing or completion (Moodle's "a score of at least N"). See [How learners run it](#how-learners-run-it). |
+| **Marked done** (`MarkedDone`) | The learner marks the item done in the player; the package's status does not complete it. |
+| **When the learner opens it** (`Viewed`) | The learner opens the item in the player. The import page sets it for an IMS content package, which has no run-time API to report anything. |
+
+The kind registers these five modes in `AddLearningPackagesCore()` (`LearningPackagesCoreServiceCollectionExtensions`).
 
 `LearningPackagePart` holds only what an import found; nothing in it is edited by hand:
 

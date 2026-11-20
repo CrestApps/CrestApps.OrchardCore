@@ -10,8 +10,11 @@ A **learning path** puts courses in order: people finish one stage before the ne
 
 | | |
 | --- | --- |
-| Turn on | **Learning Paths**, **Required Learning** and, for managers, **Team Learning** in **Configuration > Features**. |
-| Who | Learning administrators create paths and rules; managers see their team. |
+| **Menu** | Content > New > Learning Path; Learning > Required Learning; Learning > Team Learning |
+| **Permission** | Manage required learning; Exempt people from required learning to exempt someone; See the required learning of the people who report to you for managers |
+| **Feature** | Learning Paths; Required Learning; Team Learning for managers |
+
+<AskYourAdmin />
 
 ## Create a learning path
 
@@ -21,7 +24,7 @@ A **learning path** puts courses in order: people finish one stage before the ne
 4. Tick **People can start the path themselves** to show a **Start this path** button on the path's page.
 5. Click **Publish**.
 
-People on a path are enrolled in the courses of the stage that is open to them; when they complete it, the next stage's courses are added to **My courses**. To see who is on a path, open the content item's actions and choose **People**, or go to `/Admin/learning/paths/<id>/people`; you can also start someone there by user name.
+People on a path are enrolled in the courses of the stage that is open to them; when they complete it, the next stage's courses are added to **My courses**. To see who is on a path, open the path's actions in the content list and choose **People**; you can also start someone there by user name.
 
 ## Require learning
 
@@ -48,7 +51,7 @@ When a person already has the learning, open the rule's **People**, choose **Exe
 
 ## What learners see
 
-**My required learning** (`/learning/required`) lists what is required of the person with its due date and state, and the learning paths they are on with the stage they are at. Reminders and overdue notices arrive as notifications.
+**My required learning**, in the **Your account** menu, lists what is required of the person with its due date and state, and the learning paths they are on with the stage they are at. Reminders and overdue notices arrive as notifications.
 
 ## See your team
 

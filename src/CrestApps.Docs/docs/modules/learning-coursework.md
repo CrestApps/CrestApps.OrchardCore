@@ -2,6 +2,8 @@
 sidebar_label: Learning Coursework
 title: Learning Coursework
 description: "The coursework course item of Learning: work learners hand in as text or files, rubrics, grading with feedback and regrades, and the grade counted in the course grade."
+user_manual:
+  - user-manual/learning/coursework
 ---
 
 **Learning Coursework** (`CrestApps.OrchardCore.Learning.Coursework`, with `Learning.Coursework.Abstractions` and `Learning.Coursework.Core`) adds the **Coursework** course item to [Learning](./learning): work a learner hands in, as typed text, files or both, which a grader scores against a rubric or out of a number of points. The grade counts in the course grade like a quiz score, and the work waits in the same **Grading** list as quiz attempts.
@@ -125,7 +127,7 @@ The events carry `SubmissionId`, `UserId`, `CourseworkId`, `CourseId`, `Enrollme
 ## Data, recipes and personal data
 
 - **Data source.** The **Learning coursework** data source (`LearningCoursework`, for Data Pipelines and the Report Builder) has a **Submissions** data set: one row per hand-in with the learner's user id, the course, the coursework, the attempt, the state, whether it was late, when it came, the number of files, the grade, the grade before the late penalty, the penalty, the days late, the grader and the number of regrades. It holds no text, files, feedback or e-mail addresses, and needs **View learning reports**. The learner, grader, course and coursework ids reference the Users data set and the Course and Coursework content items, so a report joins them to show names and titles.
-- **Recipe and deployment.** Submissions are learner records with the `LearningSubmissions` recipe and deployment step (section 10.1 of the plan). The deployment step is opt-in, can be limited to one coursework item, reads 500 submissions a page, names people by user name and needs **Export learner records**; the export is told to the learner record export observers. The step carries the file names and ids but not the files themselves, which stay in the protected store of the site they were handed in on. Coursework items and rubrics are content and move with the content steps.
+- **Recipe and deployment.** Submissions are learner records with the `LearningSubmissions` recipe and deployment step. The deployment step is opt-in, can be limited to one coursework item, reads 500 submissions a page, names people by user name and needs **Export learner records**; the export is told to the learner record export observers. The step carries the file names and ids but not the files themselves, which stay in the protected store of the site they were handed in on. Coursework items and rubrics are content and move with the content steps.
 - **Personal data.** The export lists a person's submissions with their text, file names, grade and feedback. Erasure deletes their files from the protected store and, as for quiz attempts, deletes every submission that is not evidence of a completed enrollment (Learning deletes those enrollments, so nothing is left in the grading list). A submission of a completed enrollment keeps its state, dates and grade, because the course grade of the enrollment rests on them, with its text, file list and every feedback and reason cleared; the erasure result says how many were kept this way.
 
 ## Permissions

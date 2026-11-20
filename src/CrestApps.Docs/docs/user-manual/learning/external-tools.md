@@ -16,7 +16,7 @@ An external tool is a learning application on another site, such as a simulator 
 
 <AskYourAdmin />
 
-Your administrator sets up the OpenID server once so tools can sign in to send scores: the token endpoint with the client credentials flow, and token validation for this site.
+Your administrator sets up the site's sign-in server once, so that tools can sign in on their own to send scores back. The [Technical Manual](../../modules/learning-lti.md) has the settings.
 
 ## Register a tool
 
