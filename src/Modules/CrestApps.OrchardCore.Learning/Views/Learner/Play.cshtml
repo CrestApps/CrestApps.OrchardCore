@@ -30,7 +30,7 @@
             }
             @if (Model.Outline.Entries.Count > 0)
             {
-                <partial name="_LearnerOutline" model="(Model.Outline, Model.Progress, Model.KindIcons, itemId, Model.Access is CourseItemAccessReason.Staff || enrollment is { Status: EnrollmentStatus.Active or EnrollmentStatus.Completed }, Model.LockedItems)" />
+                <partial name="_LearnerOutline" model="new LearnerOutlineViewModel { Outline = Model.Outline, Progress = Model.Progress, KindIcons = Model.KindIcons, CurrentItemId = itemId, CanOpen = Model.Access is CourseItemAccessReason.Staff || enrollment is { Status: EnrollmentStatus.Active or EnrollmentStatus.Completed }, LockedItems = Model.LockedItems }" />
             }
         </aside>
 
@@ -112,7 +112,17 @@
                         @switch (Model.Access)
                         {
                             case CourseItemAccessReason.NotReleased:
-                                <p class="mb-0">@(RefusalText.Get(Model.LockedReason)?.Value ?? T["This item is not available yet."].Value)</p>
+                                var blocking = Model.BlockingItemId is null ? null : Model.Outline.Find(Model.BlockingItemId);
+
+                                if (blocking is not null)
+                                {
+                                    <p class="mb-2" data-learning-locked-item><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["This item opens once you complete \"{0}\".", blocking.Item.DisplayText]</p>
+                                    <a class="btn btn-primary btn-sm" href="@Url.RouteUrl("LearningPlayer", new { courseId, itemId = blocking.Item.ContentItemId })" data-learning-blocking-item>@T["Go to \"{0}\"", blocking.Item.DisplayText]</a>
+                                }
+                                else
+                                {
+                                    <p class="mb-0"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@(RefusalText.Get(Model.LockedReason)?.Value ?? T["This item is not available yet."].Value)</p>
+                                }
                                 @if (Model.AvailableFromUtc is { } availableFrom)
                                 {
                                     <p class="mb-0">@T["It opens on"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(availableFrom, DateTimeKind.Utc), Format: "g")).</p>

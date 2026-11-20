@@ -200,6 +200,7 @@ public sealed class DefaultCourseAccessService : ICourseAccessService
             access.Reason = CourseItemAccessReason.NotReleased;
             access.LockedReason = release.Reason;
             access.AvailableFromUtc = release.AvailableFromUtc;
+            access.BlockingItemId = release.BlockingItemId;
 
             return access;
         }

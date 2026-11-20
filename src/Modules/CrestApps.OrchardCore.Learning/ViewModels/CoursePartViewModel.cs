@@ -41,6 +41,8 @@ public class CoursePartViewModel
 
     public bool NeverCompletes { get; set; }
 
+    public bool ItemsInOrder { get; set; }
+
     public string FinalItemId { get; set; }
 
     public string[] PrerequisiteCourseIds { get; set; } = [];

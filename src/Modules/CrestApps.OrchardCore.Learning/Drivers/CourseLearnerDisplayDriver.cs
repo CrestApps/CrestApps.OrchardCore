@@ -27,6 +27,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
     private readonly IEnumerable<SelfEnrollmentMarker> _selfEnrollment;
     private readonly CourseItemKindOptions _kindOptions;
     private readonly CourseCategoryService _categories;
+    private readonly LearnerPageService _pageService;
     private readonly IClock _clock;
 
     public CourseLearnerDisplayDriver(
@@ -38,6 +39,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
         IEnumerable<SelfEnrollmentMarker> selfEnrollment,
         IOptions<CourseItemKindOptions> kindOptions,
         CourseCategoryService categories,
+        LearnerPageService pageService,
         IClock clock)
     {
         _httpContextAccessor = httpContextAccessor;
@@ -48,6 +50,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
         _selfEnrollment = selfEnrollment;
         _kindOptions = kindOptions.Value;
         _categories = categories;
+        _pageService = pageService;
         _clock = clock;
     }
 
@@ -101,6 +104,9 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
         if (model.Enrollment is not null)
         {
             model.Progress = await _progressService.GetAsync(model.Enrollment.ItemId);
+
+            // The same decision as the player's, so the course page shows which items are still locked.
+            model.LockedItems = await _pageService.GetLocksAsync(part.ContentItem, model.Outline, model.Enrollment, model.Progress);
         }
     }
 }

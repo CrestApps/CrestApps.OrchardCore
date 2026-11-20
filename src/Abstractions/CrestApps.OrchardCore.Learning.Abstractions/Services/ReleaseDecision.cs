@@ -26,6 +26,11 @@ public sealed class ReleaseDecision
     public string Reason { get; init; }
 
     /// <summary>
+    /// Gets the content item id of the course item the learner must complete first, when that is what the rule waits for.
+    /// </summary>
+    public string BlockingItemId { get; init; }
+
+    /// <summary>
     /// Creates a decision that the rule is not met.
     /// </summary>
     /// <param name="reason">What the learner must do first.</param>
@@ -33,4 +38,13 @@ public sealed class ReleaseDecision
     /// <returns>The decision.</returns>
     public static ReleaseDecision Locked(string reason, DateTime? availableFromUtc = null)
         => new() { IsReleased = false, Reason = reason, AvailableFromUtc = availableFromUtc };
+
+    /// <summary>
+    /// Creates a decision that the rule waits for another course item.
+    /// </summary>
+    /// <param name="reason">What the learner must do first.</param>
+    /// <param name="blockingItemId">The content item id of the course item to complete first.</param>
+    /// <returns>The decision.</returns>
+    public static ReleaseDecision WaitsFor(string reason, string blockingItemId)
+        => new() { IsReleased = false, Reason = reason, BlockingItemId = blockingItemId };
 }

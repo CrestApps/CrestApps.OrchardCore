@@ -27,13 +27,15 @@ public class PlayerViewModel
 
     public DateTime? AvailableFromUtc { get; set; }
 
+    public string BlockingItemId { get; set; }
+
     public string PreviousItemId { get; set; }
 
     public string NextItemId { get; set; }
 
     public bool TracksProgress { get; set; }
 
-    public IDictionary<string, string> LockedItems { get; set; } = new Dictionary<string, string>();
+    public IDictionary<string, ReleaseDecision> LockedItems { get; set; } = new Dictionary<string, ReleaseDecision>();
 
     public IDictionary<string, string> KindIcons { get; set; } = new Dictionary<string, string>();
 

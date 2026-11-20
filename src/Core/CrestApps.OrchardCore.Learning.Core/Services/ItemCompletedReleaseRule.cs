@@ -28,7 +28,7 @@ public sealed class ItemCompletedReleaseRule : ICourseItemReleaseRule
 
         if (progress is null || progress.State != CourseItemState.Completed)
         {
-            return Task.FromResult(ReleaseDecision.Locked(LearningRefusals.CompleteEarlierItem));
+            return Task.FromResult(ReleaseDecision.WaitsFor(LearningRefusals.CompleteEarlierItem, itemId));
         }
 
         var minimum = context.Settings.Get("MinimumScore");
@@ -37,7 +37,7 @@ public sealed class ItemCompletedReleaseRule : ICourseItemReleaseRule
         {
             if (!decimal.TryParse(minimum, NumberStyles.Number, CultureInfo.InvariantCulture, out var minimumScore) || progress.Score is null || progress.Score < minimumScore)
             {
-                return Task.FromResult(ReleaseDecision.Locked(LearningRefusals.ReachEarlierScore));
+                return Task.FromResult(ReleaseDecision.WaitsFor(LearningRefusals.ReachEarlierScore, itemId));
             }
         }
 

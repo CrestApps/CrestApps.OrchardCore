@@ -7,7 +7,8 @@ namespace CrestApps.OrchardCore.Learning.Core.Services;
 
 /// <summary>
 /// Decides whether a course item is open to a learner: the course must have started (for a learner who has not completed
-/// it), and every rule of its section and every rule of the item must be met. A rule whose name no registered rule
+/// it), with "Learners take the items in order" every required item before it must be complete, and every rule of its
+/// section and every rule of the item must be met. A rule whose name no registered rule
 /// answers keeps the item locked. Every path that opens an item or records progress on it (the player, the progress
 /// service, package runtime, surveys, coursework, classes) asks it, so none of them opens an item before the start.
 /// </summary>
@@ -45,15 +46,22 @@ public sealed class CourseReleaseEvaluator
         ArgumentNullException.ThrowIfNull(entry);
 
         var now = _clock.UtcNow;
+        var course = enrollment is not null && enrollment.Status != EnrollmentStatus.Completed && !string.IsNullOrEmpty(enrollment.CourseId)
+            ? await _courseStructure.GetCourseAsync(enrollment.CourseId)
+            : null;
+        var coursePart = course?.Get<CoursePart>(nameof(CoursePart));
 
         // Before the course starts, an enrolled learner sees it but opens none of its items; a learner who completed it
         // may review it.
-        if (enrollment is not null && enrollment.Status != EnrollmentStatus.Completed && !string.IsNullOrEmpty(enrollment.CourseId) &&
-            await _courseStructure.GetCourseAsync(enrollment.CourseId) is { } course &&
-            course.Get<CoursePart>(nameof(CoursePart)) is { } coursePart &&
-            CourseSchedules.Of(coursePart, now) == CourseSchedule.NotStarted)
+        if (coursePart is not null && CourseSchedules.Of(coursePart, now) == CourseSchedule.NotStarted)
         {
             return ReleaseDecision.Locked(LearningRefusals.CourseNotStarted, coursePart.StartsUtc);
+        }
+
+        // With "Learners take the items in order", an item waits for every required item before it in the outline.
+        if (coursePart?.ItemsInOrder == true && await FirstUnfinishedBeforeAsync(course, entry, progress) is { } blocking)
+        {
+            return ReleaseDecision.WaitsFor(LearningRefusals.CompleteEarlierItem, blocking);
         }
 
         var settings = (entry.Section?.ReleaseRules ?? []).Concat(entry.Part?.ReleaseRules ?? []);
@@ -88,5 +96,27 @@ public sealed class CourseReleaseEvaluator
         }
 
         return ReleaseDecision.Released;
+    }
+
+    private async Task<string> FirstUnfinishedBeforeAsync(ContentItem course, CourseOutlineEntry entry, EnrollmentProgress progress)
+    {
+        var outline = await _courseStructure.GetOutlineAsync(course);
+        var itemId = entry.Item?.ContentItemId;
+
+        foreach (var earlier in outline.Entries)
+        {
+            if (string.Equals(earlier.Item.ContentItemId, itemId, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            if (earlier.Required && !earlier.Inline && progress?.Find(earlier.Item.ContentItemId)?.State != CourseItemState.Completed)
+            {
+                return earlier.Item.ContentItemId;
+            }
+        }
+
+        // An entry that is not in the outline is not decided here.
+        return null;
     }
 }

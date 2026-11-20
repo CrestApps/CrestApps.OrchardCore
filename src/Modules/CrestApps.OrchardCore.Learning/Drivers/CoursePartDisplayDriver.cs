@@ -73,6 +73,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
             model.RequireStaffApproval = part.CompletionCriteria.Any(rule => rule.Name == LearningRuleNames.StaffApproval);
             model.ApprovalRole = CompletionApprovers.RoleOf(part);
             model.NeverCompletes = part.NeverCompletes;
+            model.ItemsInOrder = part.ItemsInOrder;
             model.ApprovalRoleOptions =
             [
                 new SelectListItem(S["Anyone who manages the enrollments"], string.Empty, string.IsNullOrEmpty(model.ApprovalRole)),
@@ -235,6 +236,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         }
 
         part.NeverCompletes = model.NeverCompletes;
+        part.ItemsInOrder = model.ItemsInOrder;
 
         if (!string.IsNullOrEmpty(model.FinalItemId))
         {

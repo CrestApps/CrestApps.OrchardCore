@@ -84,6 +84,13 @@ public sealed class CoursePart : ContentPart
     public bool NeverCompletes { get; set; }
 
     /// <summary>
+    /// Gets or sets whether learners take the items in order: each item opens only once every required item before it,
+    /// in outline order, is complete. Optional items never block. It is the shortcut for an "After completing" release
+    /// rule on every item.
+    /// </summary>
+    public bool ItemsInOrder { get; set; }
+
+    /// <summary>
     /// Gets or sets the staff of the course.
     /// </summary>
     public IList<CourseStaffMember> Staff { get; set; } = [];

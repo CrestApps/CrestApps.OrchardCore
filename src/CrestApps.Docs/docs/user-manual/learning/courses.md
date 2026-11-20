@@ -51,6 +51,15 @@ On the **Course item** card of a lesson:
 - **Counts toward the course grade** with a **Weight** and **Pass mark (%)** for a graded item.
 - **When it opens** holds the lesson back: **Opens on** a date, **Opens days after enrollment**, or **After completing** another lesson, optionally **With a score of at least (%)**.
 
+
+## Take the lessons in order
+
+By default, learners open the lessons in any order. To make them follow the outline, tick **Learners take the items in order** on the course's **Order of the items** card. Then each required lesson opens only once every required lesson before it in the outline is complete. Optional lessons never hold a learner back, and open once the lessons before them are complete.
+
+Learners see a lock and *Complete "Lesson name" first* beside each lesson that is still locked, in the player and on the course page. **Next** still moves to the next lesson; a locked lesson explains what to finish and has a button to go to it.
+
+The setting is a shortcut for an **After completing** rule on every lesson. Use the lesson's own **When it opens** rules for anything else, such as one lesson that waits for a score on another. Both apply together.
+
 ## Order the outline
 
 Save the course first, then add lessons with its list. On the **Outline** card, enter a **New section** title, then give each lesson a **Section** and a **Position in the section**. Untick **Required for completion** for a lesson that does not count toward completing the course. Lessons that are in the course but **Not in the outline** are listed so you can place them. Clear a section title to remove it; its lessons leave the outline but stay in the course. Learners see only published lessons.

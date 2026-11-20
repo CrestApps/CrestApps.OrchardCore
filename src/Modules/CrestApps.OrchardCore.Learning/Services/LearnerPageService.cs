@@ -97,28 +97,7 @@ public sealed class LearnerPageService
             KindIcons = KindIcons(),
         };
 
-        var notStarted = CourseSchedules.Of(course.Get<CoursePart>(nameof(CoursePart)), _clock.UtcNow) == CourseSchedule.NotStarted;
-
-        if (enrollment is { Status: EnrollmentStatus.Active } && notStarted)
-        {
-            // Before the course starts, every item waits for its start date.
-            foreach (var entry in outline.Entries)
-            {
-                model.LockedItems[entry.Item.ContentItemId] = LearningRefusals.CourseNotStarted;
-            }
-        }
-        else if (enrollment is { Status: EnrollmentStatus.Active })
-        {
-            foreach (var entry in outline.Entries)
-            {
-                var release = await _releaseEvaluator.EvaluateAsync(entry, enrollment, progress);
-
-                if (!release.IsReleased)
-                {
-                    model.LockedItems[entry.Item.ContentItemId] = release.Reason;
-                }
-            }
-        }
+        model.LockedItems = await GetLocksAsync(course, outline, enrollment, progress);
 
         // The player steps through the items learners open; text shown in place is not a step of its own.
         var steps = outline.Entries.Where(entry => !entry.Inline).ToList();
@@ -154,6 +133,7 @@ public sealed class LearnerPageService
         model.Access = access.Reason;
         model.LockedReason = access.LockedReason;
         model.AvailableFromUtc = access.AvailableFromUtc;
+        model.BlockingItemId = access.BlockingItemId;
         model.TracksProgress = !current.Inline && access.Reason == CourseItemAccessReason.Enrolled && enrollment is { Status: EnrollmentStatus.Active } && enrollment.UserId == userId;
 
         if (access.Allowed)
@@ -162,6 +142,49 @@ public sealed class LearnerPageService
         }
 
         return model;
+    }
+
+    /// <summary>
+    /// Decides, for each item of the outline, whether it is locked to a learner with an active enrollment, and why.
+    /// </summary>
+    /// <param name="course">The course.</param>
+    /// <param name="outline">The outline of the course.</param>
+    /// <param name="enrollment">The learner's enrollment, or <see langword="null"/>.</param>
+    /// <param name="progress">The progress of the enrollment.</param>
+    /// <returns>The locked items, by content item id, with the decision that keeps each locked.</returns>
+    public async Task<IDictionary<string, ReleaseDecision>> GetLocksAsync(ContentItem course, CourseOutline outline, Enrollment enrollment, EnrollmentProgress progress)
+    {
+        var locks = new Dictionary<string, ReleaseDecision>(StringComparer.Ordinal);
+
+        if (enrollment is not { Status: EnrollmentStatus.Active })
+        {
+            return locks;
+        }
+
+        var coursePart = course.Get<CoursePart>(nameof(CoursePart));
+
+        if (CourseSchedules.Of(coursePart, _clock.UtcNow) == CourseSchedule.NotStarted)
+        {
+            // Before the course starts, every item waits for its start date.
+            foreach (var entry in outline.Entries)
+            {
+                locks[entry.Item.ContentItemId] = ReleaseDecision.Locked(LearningRefusals.CourseNotStarted, coursePart?.StartsUtc);
+            }
+
+            return locks;
+        }
+
+        foreach (var entry in outline.Entries)
+        {
+            var release = await _releaseEvaluator.EvaluateAsync(entry, enrollment, progress);
+
+            if (!release.IsReleased)
+            {
+                locks[entry.Item.ContentItemId] = release;
+            }
+        }
+
+        return locks;
     }
 
     /// <summary>

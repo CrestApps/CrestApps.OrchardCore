@@ -64,6 +64,21 @@
 </div>
 
 <div class="card mb-3">
+    <div class="card-header">@T["Order of the items"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="ItemsInOrder" type="checkbox" class="form-check-input" />
+                    <label asp-for="ItemsInOrder" class="form-check-label">@T["Learners take the items in order"]</label>
+                    <span class="hint dashed">@T["Each required item opens once every required item before it in the outline is complete. Optional items never hold learners back. Without it, learners open the items in any order, and an item's own \"After completing\" release rule still applies."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
     <div class="card-header">@T["Enrollment"]</div>
     <div class="card-body">
         <div class="ocat-wrapper" asp-validation-class-for="EnrollmentMode">

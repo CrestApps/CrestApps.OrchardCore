@@ -24,6 +24,11 @@ public class CourseLearnerViewModel
 
     public CourseOutline Outline { get; set; }
 
+    /// <summary>
+    /// Gets or sets the items locked to the enrolled learner, or <see langword="null"/> when the visitor is not enrolled.
+    /// </summary>
+    public IDictionary<string, ReleaseDecision> LockedItems { get; set; }
+
     public IDictionary<string, string> KindIcons { get; set; } = new Dictionary<string, string>();
 
     /// <summary>

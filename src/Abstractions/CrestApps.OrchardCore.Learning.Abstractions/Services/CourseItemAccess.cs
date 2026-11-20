@@ -36,4 +36,10 @@ public sealed class CourseItemAccess
     /// Gets or sets when the item opens, in UTC, when that is known.
     /// </summary>
     public DateTime? AvailableFromUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the content item id of the course item the learner must complete first, when that is what keeps the
+    /// item locked.
+    /// </summary>
+    public string BlockingItemId { get; set; }
 }
