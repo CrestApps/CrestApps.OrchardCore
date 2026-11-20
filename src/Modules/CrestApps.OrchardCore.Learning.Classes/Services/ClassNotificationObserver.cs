@@ -9,7 +9,8 @@ namespace CrestApps.OrchardCore.Learning.Classes.Services;
 /// <summary>
 /// Tells a learner, through the Notifications module, when someone else gave them a place in a class session, and when a
 /// place freed up in a full session they wait for. A learner who registers or accepts an offer themselves is not told.
-/// A cancelled session is told by its own observer. Each notice links to the class in the course player.
+/// Each learner with a place is told when staff move the session to other times. A cancelled session is told by its own
+/// observer. Each notice links to the class in the course player.
 /// </summary>
 internal sealed class ClassNotificationObserver : IAppointmentObserver
 {
@@ -49,6 +50,22 @@ internal sealed class ClassNotificationObserver : IAppointmentObserver
             await SendAsync(appointment.UserId, appointment.SourceId, appointment.ItemId, ClassesConstants.NotificationTypes.Registered,
                 S["You have a place in {0}", title],
                 S["You were given a place in the session of {0}. Open the class to see when and where it meets.", title],
+                cancellationToken);
+
+            return;
+        }
+
+        if (change.Kind == AppointmentChangeKind.Rescheduled &&
+            change.Appointment is { Source: ClassesConstants.RegistrationSource } moved &&
+            !string.IsNullOrEmpty(moved.UserId))
+        {
+            // The notice names no time: it may be read in another time zone than the staff member's who moved it, and
+            // the class page shows the meetings in the reader's own.
+            var title = await SessionTitleAsync(moved.SessionId, cancellationToken);
+
+            await SendAsync(moved.UserId, moved.SourceId, moved.ItemId, ClassesConstants.NotificationTypes.SessionMoved,
+                S["Your session of {0} has moved", title],
+                S["The session of {0} you have a place in now meets at other times. Open the class to see when it meets.", title],
                 cancellationToken);
 
             return;
