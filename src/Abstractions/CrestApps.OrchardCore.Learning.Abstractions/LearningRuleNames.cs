@@ -22,6 +22,12 @@ public static class LearningRuleNames
     public const string DaysAfterEnrollment = "DaysAfterEnrollment";
 
     /// <summary>
+    /// Release rule: open only to named people or to the members of an audience. Values: <c>UserIds</c>, user ids
+    /// separated by commas, and <c>Audience</c>, the name of a user audience.
+    /// </summary>
+    public const string People = "People";
+
+    /// <summary>
     /// Completion criterion: a minimum course grade. Values: <c>Grade</c>, a percentage.
     /// </summary>
     public const string MinimumGrade = "MinimumGrade";

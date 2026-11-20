@@ -1,8 +1,11 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.ViewModels;
+using CrestApps.OrchardCore.Users;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -25,6 +28,7 @@ internal sealed class CourseItemPartDisplayDriver : ContentPartDisplayDriver<Cou
     private readonly CourseEditorOptions _editorOptions;
     private readonly CourseItemKindOptions _kindOptions;
     private readonly ILocalClock _localClock;
+    private readonly IServiceProvider _services;
 
     internal readonly IStringLocalizer S;
 
@@ -32,11 +36,13 @@ internal sealed class CourseItemPartDisplayDriver : ContentPartDisplayDriver<Cou
         CourseEditorOptions editorOptions,
         IOptions<CourseItemKindOptions> kindOptions,
         ILocalClock localClock,
+        IServiceProvider services,
         IStringLocalizer<CourseItemPartDisplayDriver> stringLocalizer)
     {
         _editorOptions = editorOptions;
         _kindOptions = kindOptions.Value;
         _localClock = localClock;
+        _services = services;
         S = stringLocalizer;
     }
 
@@ -65,6 +71,22 @@ internal sealed class CourseItemPartDisplayDriver : ContentPartDisplayDriver<Cou
             model.AfterItemId = after?.Get("ItemId");
             model.AfterMinimumScore = decimal.TryParse(after?.Get("MinimumScore"), NumberStyles.Number, CultureInfo.InvariantCulture, out var score) ? score : null;
             model.OpensDaysAfterEnrollment = int.TryParse(days, NumberStyles.Integer, CultureInfo.InvariantCulture, out var opensDays) ? opensDays : null;
+
+            var people = part.ReleaseRules.FirstOrDefault(rule => rule.Name == LearningRuleNames.People);
+
+            model.RestrictedUserIds = [.. PeopleReleaseRule.UserIds(people)];
+            model.RestrictedAudience = people?.Get("Audience");
+
+            // The audiences of the Users module, when its User Audiences feature is on.
+            if (_services.GetService<IUserAudienceService>() is { } audiences)
+            {
+                model.AudienceOptions.Add(new SelectListItem(S["No audience"], string.Empty, string.IsNullOrEmpty(model.RestrictedAudience)));
+
+                foreach (var audience in await audiences.ListAsync())
+                {
+                    model.AudienceOptions.Add(new SelectListItem(audience.DisplayName ?? audience.Name, audience.Name, audience.Name == model.RestrictedAudience));
+                }
+            }
 
             if (from is not null && DateTime.TryParse(from, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var fromUtc))
             {
@@ -152,8 +174,26 @@ internal sealed class CourseItemPartDisplayDriver : ContentPartDisplayDriver<Cou
         part.AllowSelfReported = model.AllowSelfReported;
 
         var rules = part.ReleaseRules
-            .Where(rule => rule.Name is not (LearningRuleNames.ItemCompleted or LearningRuleNames.Date or LearningRuleNames.DaysAfterEnrollment))
+            .Where(rule => rule.Name is not (LearningRuleNames.ItemCompleted or LearningRuleNames.Date or LearningRuleNames.DaysAfterEnrollment or LearningRuleNames.People))
             .ToList();
+        var restrictedUsers = (model.RestrictedUserIds ?? []).Where(id => !string.IsNullOrWhiteSpace(id)).Select(id => id.Trim()).Distinct(StringComparer.Ordinal).ToArray();
+
+        if (restrictedUsers.Length > 0 || !string.IsNullOrWhiteSpace(model.RestrictedAudience))
+        {
+            var rule = new LearningRuleSettings { Name = LearningRuleNames.People };
+
+            if (restrictedUsers.Length > 0)
+            {
+                rule.Values["UserIds"] = string.Join(",", restrictedUsers);
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.RestrictedAudience))
+            {
+                rule.Values["Audience"] = model.RestrictedAudience.Trim();
+            }
+
+            rules.Add(rule);
+        }
 
         if (!string.IsNullOrEmpty(model.AfterItemId) && model.AfterItemId != part.ContentItem.ContentItemId)
         {

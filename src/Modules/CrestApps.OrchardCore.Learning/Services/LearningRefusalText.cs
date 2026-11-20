@@ -41,6 +41,7 @@ public sealed class LearningRefusalText
             LearningRefusals.NotInOutline => S["This item is not part of the course outline."],
             LearningRefusals.NotTracked => S["This text is shown in place and takes no progress."],
             LearningRefusals.NotApprover => S["Only course staff in the role the course names may approve its completion."],
+            LearningRefusals.Restricted => S["This item is open only to some learners."],
             LearningRefusals.CompleteEarlierItem => S["Complete the earlier item first."],
             LearningRefusals.ReachEarlierScore => S["Reach the required score on the earlier item first."],
             LearningRefusals.NotMarkedDone => S["This item is not completed by marking it done."],

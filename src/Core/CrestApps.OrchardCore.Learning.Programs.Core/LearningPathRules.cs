@@ -108,4 +108,34 @@ public static class LearningPathRules
     /// </summary>
     public static IReadOnlyList<string> CourseIdsThrough(LearningPathPart path, int stageIndex)
         => Stages(path).Take(stageIndex + 1).SelectMany(stage => stage).SelectMany(set => set.CourseIds).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+
+    /// <summary>
+    /// Gets a copy of a path without the courses that are not available, such as hidden (unpublished) ones.
+    /// </summary>
+    /// <param name="path">The path.</param>
+    /// <param name="available">The ids of the available courses.</param>
+    /// <returns>The path learners can complete.</returns>
+    public static LearningPathPart WithAvailableCourses(LearningPathPart path, IReadOnlySet<string> available)
+    {
+        ArgumentNullException.ThrowIfNull(available);
+
+        if (path is null)
+        {
+            return null;
+        }
+
+        return new LearningPathPart
+        {
+            AllowSelfStart = path.AllowSelfStart,
+            Sets = [.. (path.Sets ?? []).Select(set => new LearningPathCourseSet
+            {
+                Id = set.Id,
+                Title = set.Title,
+                Connector = set.Connector,
+                Join = set.Join,
+                MinimumCount = set.MinimumCount,
+                CourseIds = [.. (set.CourseIds ?? []).Where(id => !string.IsNullOrEmpty(id) && available.Contains(id))],
+            })],
+        };
+    }
 }

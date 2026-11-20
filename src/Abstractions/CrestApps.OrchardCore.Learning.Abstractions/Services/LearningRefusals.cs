@@ -75,6 +75,11 @@ public static class LearningRefusals
     public const string NotApprover = "NotApprover";
 
     /// <summary>
+    /// This item is open only to some learners.
+    /// </summary>
+    public const string Restricted = "Restricted";
+
+    /// <summary>
     /// Complete the earlier item first.
     /// </summary>
     public const string CompleteEarlierItem = "CompleteEarlierItem";

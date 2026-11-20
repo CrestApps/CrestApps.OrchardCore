@@ -131,3 +131,28 @@
         </div>
     </div>
 </div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Who can open it"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset"><span class="hint">@T["Leave both empty to open the item to every learner of the course. Otherwise it opens only to the people chosen and to the members of the audience; course staff always open it."]</span></div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["People"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.RestrictedUserIds).ToString(), selectedValues = Model.RestrictedUserIds, valueType = "userId", multiple = true, buttonText = T["Choose people"].Value, searchPlaceholder = T["Search users"].Value })
+            </div>
+        </div>
+        @if (Model.AudienceOptions.Count > 0)
+        {
+            <div class="ocat-wrapper">
+                <label asp-for="RestrictedAudience" class="ocat-label">@T["Audience"]</label>
+                <div class="ocat-end">
+                    <select asp-for="RestrictedAudience" asp-items="Model.AudienceOptions" class="form-select"></select>
+                    <span class="hint">@T["A group of people from Users > Audiences, for example everyone of a team or with a profile value."]</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>

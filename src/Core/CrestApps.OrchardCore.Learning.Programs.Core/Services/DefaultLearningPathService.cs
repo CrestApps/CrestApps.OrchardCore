@@ -305,7 +305,25 @@ public sealed class DefaultLearningPathService : ILearningPathService
 
         var item = await _contentManager.GetAsync(pathId, VersionOptions.Published);
 
-        return item is not null && item.TryGet<LearningPathPart>(out var part) ? part : null;
+        if (item is null || !item.TryGet<LearningPathPart>(out var part))
+        {
+            return null;
+        }
+
+        // A hidden (unpublished) or deleted course cannot be taken, so it never holds the path back: the path is read
+        // without it, as Moodle skips hidden courses of a learning plan.
+        var courses = _services.GetRequiredService<ICourseStructureService>();
+        var available = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var courseId in LearningPathRules.CourseIds(part))
+        {
+            if (await courses.GetCourseAsync(courseId) is not null)
+            {
+                available.Add(courseId);
+            }
+        }
+
+        return LearningPathRules.WithAvailableCourses(part, available);
     }
 
     private async Task<LearningPathProgress> FindFreshAsync(string pathId, string userId, CancellationToken cancellationToken)

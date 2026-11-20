@@ -59,6 +59,7 @@ public static class LearningCoreServiceCollectionExtensions
         services.AddCourseItemReleaseRule<ItemCompletedReleaseRule>();
         services.AddCourseItemReleaseRule<DateReleaseRule>();
         services.AddCourseItemReleaseRule<DaysAfterEnrollmentReleaseRule>();
+        services.AddCourseItemReleaseRule<PeopleReleaseRule>();
         services.AddCourseCompletionCriterion<MinimumGradeCriterion>();
         services.AddCourseCompletionCriterion<MinimumTimeCriterion>();
         services.AddCourseCompletionCriterion<ItemPassedCriterion>();

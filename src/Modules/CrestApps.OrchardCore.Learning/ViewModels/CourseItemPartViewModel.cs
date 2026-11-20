@@ -37,6 +37,13 @@ public class CourseItemPartViewModel
 
     public int? OpensDaysAfterEnrollment { get; set; }
 
+    public string[] RestrictedUserIds { get; set; } = [];
+
+    public string RestrictedAudience { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> AudienceOptions { get; set; } = [];
+
     [BindNever]
     public string KindDisplayName { get; set; }
 

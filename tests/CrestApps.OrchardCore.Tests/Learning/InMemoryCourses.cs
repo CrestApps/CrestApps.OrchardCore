@@ -105,7 +105,7 @@ internal sealed class InMemoryCourses : ICourseStructureService
         => _items[id];
 
     public Task<ContentItem> GetCourseAsync(string courseId)
-        => Task.FromResult(courseId is not null && _items.TryGetValue(courseId, out var item) && item.Has<CoursePart>() ? item : null);
+        => Task.FromResult(courseId is not null && _items.TryGetValue(courseId, out var item) && item.Has<CoursePart>() && item.Published ? item : null);
 
     public string GetCourseId(ContentItem item)
         => item is not null && _courseOfItem.TryGetValue(item.ContentItemId, out var courseId) ? courseId : null;
