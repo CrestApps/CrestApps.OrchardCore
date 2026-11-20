@@ -57,6 +57,9 @@ public static class QtiQuestionRows
         "FillInBlanksQuestionPart_Text",
         "FillInBlanksQuestionPart_CaseSensitive",
         "EssayQuestionPart_GraderGuidance",
+        "ChoiceBlanksQuestionPart_Text",
+        "ChoiceBlanksQuestionPart_Distractors",
+        "ChoiceBlanksQuestionPart_ShuffleChoices",
         QtiColumns.Error,
         QtiColumns.Media,
     ];
@@ -101,9 +104,13 @@ public static class QtiQuestionRows
 
             var question = item.Question;
             row[ContentTransferColumns.ContentType] = contentType;
-            row["QuestionPart_Prompt"] = question.Prompt ?? (question.QuestionType == AssessmentsConstants.QuestionTypes.FillInBlanks
-                ? $"<p>{System.Net.WebUtility.HtmlEncode(S["Fill in the blanks."])}</p>"
-                : $"<p>{System.Net.WebUtility.HtmlEncode(item.Title ?? item.Identifier)}</p>");
+            row["QuestionPart_Prompt"] = question.Prompt ?? question.QuestionType switch
+            {
+                AssessmentsConstants.QuestionTypes.FillInBlanks => $"<p>{System.Net.WebUtility.HtmlEncode(S["Fill in the blanks."])}</p>",
+                AssessmentsConstants.QuestionTypes.GapSelect => $"<p>{System.Net.WebUtility.HtmlEncode(S["Choose the missing words."])}</p>",
+                AssessmentsConstants.QuestionTypes.DragIntoText => $"<p>{System.Net.WebUtility.HtmlEncode(S["Drag the missing words into the text."])}</p>",
+                _ => $"<p>{System.Net.WebUtility.HtmlEncode(item.Title ?? item.Identifier)}</p>",
+            };
             row["QuestionPart_Points"] = question.Points.ToString(CultureInfo.InvariantCulture);
             row["QuestionPart_GeneralFeedback"] = question.GeneralFeedback;
             row["QuestionPart_SourceIdentifier"] = item.Identifier;
@@ -154,6 +161,12 @@ public static class QtiQuestionRows
 
                 case AssessmentsConstants.QuestionTypes.Essay:
                     row["EssayQuestionPart_GraderGuidance"] = question.GraderGuidance;
+                    break;
+
+                case AssessmentsConstants.QuestionTypes.DragIntoText or AssessmentsConstants.QuestionTypes.GapSelect:
+                    row["ChoiceBlanksQuestionPart_Text"] = question.BlankText;
+                    row["ChoiceBlanksQuestionPart_Distractors"] = QuestionCells.Join(question.Distractors.Select(word => QuestionCells.EscapeValue(word)));
+                    row["ChoiceBlanksQuestionPart_ShuffleChoices"] = YesNo(question.Shuffle);
                     break;
             }
 

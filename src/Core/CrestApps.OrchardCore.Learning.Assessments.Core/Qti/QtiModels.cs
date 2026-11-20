@@ -227,6 +227,9 @@ public sealed class QtiQuestion
     /// <summary>Gets or sets the text of a fill in the blanks question, each blank written as <c>[[answer|other answer]]</c>.</summary>
     public string BlankText { get; set; }
 
+    /// <summary>Gets or sets the choices no blank takes, of a drag into text or gapselect question.</summary>
+    public IList<string> Distractors { get; set; } = [];
+
     /// <summary>Gets or sets the guidance graders see, from a rubric block for scorers.</summary>
     public string GraderGuidance { get; set; }
 }
