@@ -20,7 +20,7 @@
     Func<object, IHtmlContent> content = @<text>
     @if (Model.Frameworks.Count == 0)
     {
-        <p class="text-muted">@T["You hold no competencies yet. Completing a course or a learning path that grants competencies adds them here."]</p>
+        @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-solid fa-medal", Title: T["You hold no competencies yet."], Hint: T["Completing a course or a learning path that grants competencies adds them here."]))
     }
     else
     {

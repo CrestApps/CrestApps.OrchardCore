@@ -11,7 +11,9 @@
     Func<object, IHtmlContent> content = @<text>
     @if (Model.Balances.Count == 0)
     {
-        <p class="text-muted">@T["You have no education credits yet. Completing a course that awards credits, or external learning that is accepted, adds them here."]</p>
+        <div class="mb-4">
+            @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-solid fa-award", Title: T["You have no education credits yet."], Hint: T["Completing a course that awards credits, or external learning that is accepted, adds them here."]))
+        </div>
     }
     else
     {

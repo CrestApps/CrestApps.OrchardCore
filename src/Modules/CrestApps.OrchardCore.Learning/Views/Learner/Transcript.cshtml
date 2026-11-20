@@ -9,12 +9,13 @@
 
     @if (Model.Count == 0)
     {
-        <p>@T["You have not completed a course yet."]</p>
+        @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-solid fa-graduation-cap", Title: T["You have not completed a course yet."], Hint: T["Each course you complete appears here, with the date, the grade and the time you spent."], Actions: new Microsoft.AspNetCore.Html.HtmlString($"<a class=\"btn btn-outline-primary btn-sm\" href=\"{Url.RouteUrl("LearningMyLearning")}\">{System.Net.WebUtility.HtmlEncode(T["My learning"].Value)}</a>")))
     }
     else
     {
+        <div class="card">
         <div class="table-responsive">
-            <table class="table align-middle">
+            <table class="table align-middle mb-0">
                 <thead>
                     <tr>
                         <th scope="col">@T["Course"]</th>
@@ -44,6 +45,7 @@
                     }
                 </tbody>
             </table>
+        </div>
         </div>
     }
     </text>;

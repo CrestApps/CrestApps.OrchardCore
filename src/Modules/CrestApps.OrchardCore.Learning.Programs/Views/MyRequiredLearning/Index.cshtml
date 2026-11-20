@@ -9,7 +9,11 @@
     // Inside the storefront account the page is framed by the account menu; without it, it stands alone.
     var accountUrl = Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName);
     Func<object, IHtmlContent> content = @<text>
-    @if (Model.Required.Count == 0)
+    @if (Model.Required.Count == 0 && Model.Paths.Count == 0)
+    {
+        @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-solid fa-list-check", Title: T["Nothing is required of you."], Hint: T["Courses, learning paths and certifications your organization asks you to complete appear here, with their due dates."]))
+    }
+    else if (Model.Required.Count == 0)
     {
         <p class="text-muted">@T["Nothing is required of you."]</p>
     }
@@ -72,14 +76,9 @@
         </div>
     }
 
-    <h2 class="h4 mb-3">@T["My learning paths"]</h2>
-
-    @if (Model.Paths.Count == 0)
+    @if (Model.Paths.Count > 0)
     {
-        <p class="text-muted">@T["You are not on a learning path."]</p>
-    }
-    else
-    {
+        <h2 class="h4 mb-3">@T["My learning paths"]</h2>
         <div class="list-group">
             @foreach (var path in Model.Paths)
             {

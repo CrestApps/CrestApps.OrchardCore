@@ -13,7 +13,7 @@
 
     @if (Model.Entries.Count == 0)
     {
-        <p class="text-muted">@T["You have no credentials yet. Completing a course or a learning path that awards one adds it here."]</p>
+        @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-solid fa-id-badge", Title: T["You have no credentials yet."], Hint: T["Completing a course or a learning path that awards one adds it here."]))
     }
 
     <div class="row g-3">

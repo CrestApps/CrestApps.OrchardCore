@@ -6,13 +6,18 @@
     var accountUrl = Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName);
     Func<object, IHtmlContent> actions = @<text><a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningCatalog")">@T["Course catalog"]</a> <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningTranscript")">@T["My transcript"]</a></text>;
     Func<object, IHtmlContent> content = @<text>
-    <h2 class="h5">@T["In progress"]</h2>
-    @if (Model.Current.Count == 0)
+    @if (Model.Current.Count == 0 && Model.Past.Count == 0 && Model.Completed.Count == 0 && Model.Other.Count == 0)
     {
+        @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-solid fa-book-open", Title: T["You are not enrolled in any course yet."], Hint: T["Courses you enroll in, or that your organization enrolls you in, appear here with your progress."], Actions: new HtmlString($"<a class=\"btn btn-primary btn-sm\" href=\"{Url.RouteUrl("LearningCatalog")}\">{System.Net.WebUtility.HtmlEncode(T["Browse the course catalog"].Value)}</a>")))
+    }
+    else if (Model.Current.Count == 0)
+    {
+        <h2 class="h5">@T["In progress"]</h2>
         <p class="text-muted">@T["You are not enrolled in any course right now."]</p>
     }
     else
     {
+        <h2 class="h5">@T["In progress"]</h2>
         <div class="row row-cols-1 row-cols-md-2 g-3 mb-4">
             @foreach (var row in Model.Current)
             {

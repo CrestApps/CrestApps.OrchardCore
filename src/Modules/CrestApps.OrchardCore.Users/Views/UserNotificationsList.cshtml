@@ -35,7 +35,7 @@
 
 @if (page.Notifications.Count == 0)
 {
-    <p class="text-muted">@(page.UnreadOnly ? T["You have no unread notifications."] : T["You have no notifications."])</p>
+    @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-regular fa-bell", Title: page.UnreadOnly ? T["You have no unread notifications."] : T["You have no notifications."], Hint: T["Messages about your orders, courses and account appear here."]))
 }
 else
 {
