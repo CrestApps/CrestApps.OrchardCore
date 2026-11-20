@@ -71,7 +71,7 @@ public sealed class UserNotificationPreferencesFormTests
 
     private static NotificationTypeDescriptor Type(string name, params string[] disabled)
     {
-        var type = new NotificationTypeDescriptor(name, LocalizationSource.Create<UserNotificationPreferencesFormTests>(name));
+        var type = new NotificationTypeDescriptor(name, LocalizationSource.Create<UserNotificationPreferencesFormTests>("Test notification type"));
 
         foreach (var method in disabled)
         {
