@@ -163,12 +163,16 @@
                     </div>
                 </form>
             }
-            @if (Model.NeedsStaffApproval)
+            @if (Model.NeedsStaffApproval && Model.CanApproveCompletion)
             {
                 <form asp-action="ApproveCompletion" asp-route-id="@enrollment.ItemId" method="post">
                     <button type="submit" class="btn btn-outline-success">@T["Approve the completion"]</button>
                     <span class="hint">@T["The course needs a member of its staff to approve each completion."]</span>
                 </form>
+            }
+            else if (Model.NeedsStaffApproval)
+            {
+                <p class="hint mb-0" data-approval-role="@Model.ApprovalRole">@T["The course waits for a completion approval, which only its staff in the role {0} may give.", Model.ApprovalRole]</p>
             }
         </div>
     </div>

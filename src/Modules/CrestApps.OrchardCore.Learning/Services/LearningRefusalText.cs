@@ -40,6 +40,7 @@ public sealed class LearningRefusalText
             LearningRefusals.CourseNotStarted => S["The course has not started yet."],
             LearningRefusals.NotInOutline => S["This item is not part of the course outline."],
             LearningRefusals.NotTracked => S["This text is shown in place and takes no progress."],
+            LearningRefusals.NotApprover => S["Only course staff in the role the course names may approve its completion."],
             LearningRefusals.CompleteEarlierItem => S["Complete the earlier item first."],
             LearningRefusals.ReachEarlierScore => S["Reach the required score on the earlier item first."],
             LearningRefusals.NotMarkedDone => S["This item is not completed by marking it done."],

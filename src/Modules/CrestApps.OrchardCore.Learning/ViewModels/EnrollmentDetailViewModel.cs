@@ -26,5 +26,9 @@ public class EnrollmentDetailViewModel
 
     public bool NeedsStaffApproval { get; set; }
 
+    public bool CanApproveCompletion { get; set; }
+
+    public string ApprovalRole { get; set; }
+
     public List<EnrollmentReviewAction> ReviewActions { get; set; } = [];
 }

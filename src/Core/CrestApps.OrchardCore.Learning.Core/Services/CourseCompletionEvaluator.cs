@@ -33,6 +33,12 @@ public sealed class CourseCompletionEvaluator
     {
         ArgumentNullException.ThrowIfNull(outline);
 
+        // A course without completion criteria never completes; the learner's progress is still kept.
+        if (outline.Course?.Get<CoursePart>(nameof(CoursePart))?.NeverCompletes == true)
+        {
+            return false;
+        }
+
         var required = outline.RequiredEntries.ToArray();
 
         if (required.Length == 0 && (outline.Course?.Get<CoursePart>(nameof(CoursePart))?.CompletionCriteria?.Count ?? 0) == 0)

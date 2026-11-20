@@ -204,6 +204,7 @@ internal sealed class CourseItemPartDisplayDriver : ContentPartDisplayDriver<Cou
             CompletionModes.Passed => S["When the learner passes"],
             CompletionModes.Attended => S["When the learner attends"],
             CompletionModes.PackageReported => S["When the package reports it complete"],
+            CompletionModes.MinimumScore => S["When the score reaches the pass mark, whatever the package reports"],
             _ => mode,
         };
 }

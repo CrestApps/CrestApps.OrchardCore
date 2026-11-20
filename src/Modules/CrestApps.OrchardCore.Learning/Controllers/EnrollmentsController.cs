@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.ViewModels;
@@ -282,6 +283,12 @@ public sealed class EnrollmentsController : Controller
             && course.TryGet<CoursePart>(out var part)
             && part.CompletionCriteria.Any(rule => rule.Name == LearningRuleNames.StaffApproval)
             && !enrollment.Properties.ContainsKey(LearningRuleNames.StaffApprovalProperty);
+
+        if (model.NeedsStaffApproval && course.TryGet<CoursePart>(out var approvalPart))
+        {
+            model.ApprovalRole = CompletionApprovers.RoleOf(approvalPart);
+            model.CanApproveCompletion = model.CanManage && CompletionApprovers.MayApprove(approvalPart, CurrentUserId());
+        }
 
         if (enrollment.NeedsReview && model.CanManage)
         {

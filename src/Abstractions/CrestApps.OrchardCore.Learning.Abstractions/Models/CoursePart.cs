@@ -78,6 +78,12 @@ public sealed class CoursePart : ContentPart
     public IList<LearningRuleSettings> CompletionCriteria { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets whether the course has no completion criteria: it never completes, while the learner's progress is
+    /// still kept (a Moodle course without completion criteria).
+    /// </summary>
+    public bool NeverCompletes { get; set; }
+
+    /// <summary>
     /// Gets or sets the staff of the course.
     /// </summary>
     public IList<CourseStaffMember> Staff { get; set; } = [];

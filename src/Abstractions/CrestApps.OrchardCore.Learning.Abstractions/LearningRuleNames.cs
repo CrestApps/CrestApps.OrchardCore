@@ -37,7 +37,8 @@ public static class LearningRuleNames
     public const string ItemPassed = "ItemPassed";
 
     /// <summary>
-    /// Completion criterion: a member of the course staff approved the completion.
+    /// Completion criterion: a member of the course staff approved the completion. Values: <c>Role</c>, optional, the
+    /// course staff role whose members alone may approve, such as <c>Instructor</c>.
     /// </summary>
     public const string StaffApproval = "StaffApproval";
 

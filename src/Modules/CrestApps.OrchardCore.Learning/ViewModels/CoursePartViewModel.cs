@@ -37,6 +37,10 @@ public class CoursePartViewModel
 
     public bool RequireStaffApproval { get; set; }
 
+    public string ApprovalRole { get; set; }
+
+    public bool NeverCompletes { get; set; }
+
     public string FinalItemId { get; set; }
 
     public string[] PrerequisiteCourseIds { get; set; } = [];
@@ -59,6 +63,9 @@ public class CoursePartViewModel
 
     [BindNever]
     public IList<SelectListItem> ItemOptions { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> ApprovalRoleOptions { get; set; } = [];
 
     [BindNever]
     public IList<SelectListItem> CourseOptions { get; set; } = [];

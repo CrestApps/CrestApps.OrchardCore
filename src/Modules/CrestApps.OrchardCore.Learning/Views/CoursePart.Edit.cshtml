@@ -157,6 +157,22 @@
                 </div>
             </div>
         </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ApprovalRole" class="ocat-label">@T["Who approves"]</label>
+            <div class="ocat-end">
+                <select asp-for="ApprovalRole" asp-items="Model.ApprovalRoleOptions" class="form-select"></select>
+                <span class="hint">@T["With a role, only the course staff in that role may approve a completion."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="NeverCompletes" type="checkbox" class="form-check-input" />
+                    <label asp-for="NeverCompletes" class="form-check-label">@T["No completion criteria: the course never completes"]</label>
+                    <span class="hint dashed">@T["Learners still see their progress, but the course never moves to their transcript."]</span>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

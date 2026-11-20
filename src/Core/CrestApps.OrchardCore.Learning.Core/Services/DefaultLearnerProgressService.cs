@@ -444,6 +444,12 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
             return new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.CourseUnavailable };
         }
 
+        // A course that names a role takes the approval only from its staff in that role (Moodle's completion by role).
+        if (!CompletionApprovers.MayApprove(course.Get<CoursePart>(nameof(CoursePart)), actor))
+        {
+            return new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.NotApprover };
+        }
+
         var now = _clock.UtcNow;
         var outline = await _courseStructure.GetOutlineAsync(course);
         var progress = await _progressStore.FindFreshByEnrollmentAsync(enrollment.ItemId, cancellationToken) ?? new EnrollmentProgress { EnrollmentId = enrollment.ItemId };
@@ -795,6 +801,15 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
             case CompletionModes.Attended:
                 if (result is { Attended: true })
+                {
+                    item.State = CourseItemState.Completed;
+                }
+
+                break;
+
+            case CompletionModes.MinimumScore:
+                // Moodle's "viewed, graded and a score of at least N": the score decides, not the package's own pass.
+                if (item.Score is { } score && part?.PassMark is { } minimum && score >= minimum)
                 {
                     item.State = CourseItemState.Completed;
                 }

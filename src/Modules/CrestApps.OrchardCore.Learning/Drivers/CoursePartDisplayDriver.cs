@@ -71,6 +71,16 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
             model.MinimumGrade = ReadDecimal(part, LearningRuleNames.MinimumGrade, "Grade");
             model.MinimumMinutes = (int?)ReadDecimal(part, LearningRuleNames.MinimumTime, "Minutes");
             model.RequireStaffApproval = part.CompletionCriteria.Any(rule => rule.Name == LearningRuleNames.StaffApproval);
+            model.ApprovalRole = CompletionApprovers.RoleOf(part);
+            model.NeverCompletes = part.NeverCompletes;
+            model.ApprovalRoleOptions =
+            [
+                new SelectListItem(S["Anyone who manages the enrollments"], string.Empty, string.IsNullOrEmpty(model.ApprovalRole)),
+                new SelectListItem(S["Instructors of the course"], LearningConstants.CourseStaffRoles.Instructor, model.ApprovalRole == LearningConstants.CourseStaffRoles.Instructor),
+                new SelectListItem(S["Assistants of the course"], LearningConstants.CourseStaffRoles.Assistant, model.ApprovalRole == LearningConstants.CourseStaffRoles.Assistant),
+                new SelectListItem(S["Graders of the course"], LearningConstants.CourseStaffRoles.Grader, model.ApprovalRole == LearningConstants.CourseStaffRoles.Grader),
+                new SelectListItem(S["Observers of the course"], LearningConstants.CourseStaffRoles.Observer, model.ApprovalRole == LearningConstants.CourseStaffRoles.Observer),
+            ];
             model.FinalItemId = part.CompletionCriteria.FirstOrDefault(rule => rule.Name == LearningRuleNames.ItemPassed)?.Get("ItemId");
             model.PrerequisiteCourseIds = part.Prerequisites
                 .Where(prerequisite => prerequisite.Kind == CompletedCoursePrerequisiteEvaluator.CourseKind)
@@ -207,8 +217,17 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
 
         if (model.RequireStaffApproval)
         {
-            criteria.Add(new LearningRuleSettings { Name = LearningRuleNames.StaffApproval });
+            var approval = new LearningRuleSettings { Name = LearningRuleNames.StaffApproval };
+
+            if (!string.IsNullOrWhiteSpace(model.ApprovalRole))
+            {
+                approval.Values["Role"] = model.ApprovalRole.Trim();
+            }
+
+            criteria.Add(approval);
         }
+
+        part.NeverCompletes = model.NeverCompletes;
 
         if (!string.IsNullOrEmpty(model.FinalItemId))
         {

@@ -40,6 +40,7 @@ public static class LearningPackagesCoreServiceCollectionExtensions
             // Reported by the package first: the browser reports it, so the result is marked self-reported.
             kind.CompletionModes.Add(CompletionModes.PackageReported);
             kind.CompletionModes.Add(CompletionModes.Passed);
+            kind.CompletionModes.Add(CompletionModes.MinimumScore);
             kind.CompletionModes.Add(CompletionModes.MarkedDone);
 
             // An IMS content package has no run-time API to report anything: it completes when the learner opens it.

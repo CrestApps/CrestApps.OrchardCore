@@ -54,4 +54,10 @@ public static class CompletionModes
     /// Completed when a learning package reports it, marked self-reported.
     /// </summary>
     public const string PackageReported = "PackageReported";
+
+    /// <summary>
+    /// Completed when the learner's score reaches the item's pass mark, whatever the item reports about passing (Moodle's
+    /// "viewed, graded and a score of at least N").
+    /// </summary>
+    public const string MinimumScore = "MinimumScore";
 }

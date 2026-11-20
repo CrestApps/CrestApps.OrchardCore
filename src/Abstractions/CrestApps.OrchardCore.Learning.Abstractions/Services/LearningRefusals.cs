@@ -70,6 +70,11 @@ public static class LearningRefusals
     public const string NotTracked = "NotTracked";
 
     /// <summary>
+    /// Only course staff in the role the course names may approve its completion.
+    /// </summary>
+    public const string NotApprover = "NotApprover";
+
+    /// <summary>
     /// Complete the earlier item first.
     /// </summary>
     public const string CompleteEarlierItem = "CompleteEarlierItem";
