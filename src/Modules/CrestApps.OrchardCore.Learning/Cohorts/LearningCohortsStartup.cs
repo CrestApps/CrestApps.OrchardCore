@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Learning.Migrations;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data;
@@ -21,6 +22,7 @@ public sealed class LearningCohortsStartup : StartupBase
         services.AddDataMigration<LearningCohortsMigrations>()
             .AddIndexProvider<CohortLearningLinkIndexProvider>();
         services.AddScoped<CohortLearningSync>();
+        services.AddSingleton<IBackgroundTask, LearningCohortCatchUpBackgroundTask>();
         services.AddCohortMembershipObserver<LearningCohortMembershipObserver>();
         services.AddCohortUsage<LearningCohortUsage>();
         services.AddScoped<IContentHandler, LearningCohortsContentHandler>();

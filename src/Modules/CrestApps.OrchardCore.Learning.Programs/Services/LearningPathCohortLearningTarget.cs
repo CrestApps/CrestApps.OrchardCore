@@ -51,6 +51,26 @@ internal sealed class LearningPathCohortLearningTarget : ICohortLearningTarget
 
         await _paths.StopAsync(targetId, userId, LearningConstants.EnrollmentSources.Cohort, actor, "No longer in a cohort linked to the learning path", cancellationToken);
     }
+
+    public async Task<IReadOnlyCollection<string>> ListJoinedUserIdsAsync(string targetId, string cohortId, CancellationToken cancellationToken = default)
+    {
+        const int PageSize = 200;
+        var joined = new HashSet<string>(StringComparer.Ordinal);
+
+        for (var skip = 0; ; skip += PageSize)
+        {
+            var (count, items) = await _paths.PageAsync(targetId, null, skip, PageSize, cancellationToken);
+
+            joined.UnionWith(items
+                .Where(progress => progress.Source == LearningConstants.EnrollmentSources.Cohort && string.Equals(progress.SourceId, cohortId, StringComparison.Ordinal))
+                .Select(progress => progress.UserId));
+
+            if (items.Count == 0 || skip + PageSize >= count)
+            {
+                return joined;
+            }
+        }
+    }
 }
 
 /// <summary>

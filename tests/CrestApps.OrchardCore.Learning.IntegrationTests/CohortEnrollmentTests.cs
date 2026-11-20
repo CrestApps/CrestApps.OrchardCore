@@ -240,6 +240,44 @@ public sealed class CohortEnrollmentTests
         Assert.Equal(EnrollmentStatus.Withdrawn, (await LatestAsync(ana, courseId)).Status);
     }
 
+    [Fact]
+    public async Task Round11L1_TheCatchUp_EnrollsAMemberTheSyncMissed_AndEndsTheGrantOfSomeoneNoLongerInTheCohort()
+    {
+        // Arrange: ana is in the linked cohort but lost her cohort grant (a missed join); ben holds a cohort grant but
+        // is not in the cohort (a missed leave).
+        var (ana, ben, _) = await UsersAsync();
+        var cohortId = await CohortAsync(ana);
+        var courseId = await CourseAsync(cohortId);
+
+        await _fixture.InTenantAsync(async services =>
+        {
+            var enrollments = services.GetRequiredService<IEnrollmentService>();
+
+            await enrollments.RevokeGrantAsync(LearningConstants.EnrollmentSources.Cohort, CohortEnrollmentGrants.SourceId(cohortId, courseId, ana), "test", "Missed");
+
+            var result = await enrollments.EnrollAsync(new EnrollmentRequest
+            {
+                UserId = ben,
+                CourseId = courseId,
+                Source = LearningConstants.EnrollmentSources.Cohort,
+                SourceId = CohortEnrollmentGrants.SourceId(cohortId, courseId, ben),
+                Actor = "test",
+            });
+
+            Assert.True(result.Succeeded, result.ErrorCode);
+        });
+
+        var anaMissed = await OpenAsync(ana, courseId);
+
+        // Act
+        await _fixture.InTenantAsync(services => services.GetRequiredService<CohortLearningSync>().CatchUpAsync());
+
+        // Assert
+        Assert.Null(anaMissed);
+        Assert.Contains((await OpenAsync(ana, courseId)).Grants, grant => grant.Source == LearningConstants.EnrollmentSources.Cohort);
+        Assert.Equal(EnrollmentStatus.Withdrawn, (await LatestAsync(ben, courseId)).Status);
+    }
+
     private Task<string> AdminIdAsync()
         => _fixture.InTenantAsync(async services =>
         {

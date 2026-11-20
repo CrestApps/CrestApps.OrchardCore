@@ -37,6 +37,17 @@ public interface ICohortLearningTarget
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task.</returns>
     Task LeaveAsync(string targetId, string cohortId, string userId, bool inAnotherLinkedCohort, string actor, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the people the target enrolled in an item through a cohort, so the catch-up enrolls the members it missed and
+    /// ends what the cohort gave people who left it.
+    /// </summary>
+    /// <param name="targetId">The content item id of the course or path.</param>
+    /// <param name="cohortId">The cohort.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The user ids.</returns>
+    Task<IReadOnlyCollection<string>> ListJoinedUserIdsAsync(string targetId, string cohortId, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyCollection<string>>([]);
 }
 
 /// <summary>

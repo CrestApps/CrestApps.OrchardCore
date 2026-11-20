@@ -169,6 +169,8 @@ Each kind of item is enrolled through an `ICohortLearningTarget`, named by the p
 
 Linking a cohort enrolls everyone in it, so a change of the linked cohorts is applied only when the person who published the item, or else the person `LinkedBy` names, holds **Manage enrollments**; a change by anyone else (an instructor saving through the content API, a scheduled publish of their draft) is logged and not applied. A publish without a person (a recipe, setup) is the site's own. The link of an item is read and saved under a distributed lock per item, and a second link left by two publishes close together is merged and removed.
 
+Every hour, the **Learning cohort catch-up** background task (`CohortLearningSync.CatchUpAsync`) repairs what a missed membership change left behind: for each link, in the order of the item ids, it takes each linked cohort's members in pages in the order of their user ids, enrolls a member the target never enrolled, and ends what the cohort gave a person who is no longer in it. A target says whom it enrolled through `ICohortLearningTarget.ListJoinedUserIdsAsync` (the course reads its cohort grants, the path its progress started by the cohort).
+
 A cohort that a course or path is linked to cannot be deleted (`ICohortUsage`). Deleting the course forgets its link without touching enrollments. To target cohorts with required learning instead, use an audience with the `CohortMember` rule.
 
 ## Learner pages

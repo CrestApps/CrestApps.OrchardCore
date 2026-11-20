@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Learning.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Users;
@@ -141,12 +142,14 @@ internal sealed class CourseCohortLearningTarget : ICohortLearningTarget
 {
     private readonly IEnrollmentService _enrollments;
     private readonly IEnrollmentStore _enrollmentStore;
+    private readonly global::YesSql.ISession _session;
     private readonly ILogger _logger;
 
-    public CourseCohortLearningTarget(IEnrollmentService enrollments, IEnrollmentStore enrollmentStore, ILogger<CourseCohortLearningTarget> logger)
+    public CourseCohortLearningTarget(IEnrollmentService enrollments, IEnrollmentStore enrollmentStore, global::YesSql.ISession session, ILogger<CourseCohortLearningTarget> logger)
     {
         _enrollments = enrollments;
         _enrollmentStore = enrollmentStore;
+        _session = session;
         _logger = logger;
     }
 
@@ -184,4 +187,18 @@ internal sealed class CourseCohortLearningTarget : ICohortLearningTarget
             "No longer in a cohort linked to the course",
             cancellationToken);
 
+    public async Task<IReadOnlyCollection<string>> ListJoinedUserIdsAsync(string targetId, string cohortId, CancellationToken cancellationToken = default)
+    {
+        var prefix = CohortEnrollmentGrants.SourceId(cohortId, targetId, string.Empty);
+        var enrollments = await _session.Query<Enrollment, EnrollmentGrantIndex>(
+            index => index.Source == LearningConstants.EnrollmentSources.Cohort && index.SourceId.StartsWith(prefix),
+            LearningConstants.CollectionName).ListAsync(cancellationToken);
+
+        // The grant is checked again on the document: the user id is the last part of the source id.
+        return enrollments
+            .Where(enrollment => enrollment.Grants.Any(grant => grant.Source == LearningConstants.EnrollmentSources.Cohort &&
+                string.Equals(grant.SourceId, CohortEnrollmentGrants.SourceId(cohortId, targetId, enrollment.UserId), StringComparison.Ordinal)))
+            .Select(enrollment => enrollment.UserId)
+            .ToHashSet(StringComparer.Ordinal);
+    }
 }

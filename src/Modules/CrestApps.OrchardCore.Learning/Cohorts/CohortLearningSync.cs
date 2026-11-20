@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.Learning.Cohorts;
 /// cohort does the same for all its members. Each course or path is enrolled through the
 /// <see cref="ICohortLearningTarget"/> of the part that marks it. Linking a cohort enrolls everyone in it, so a change
 /// of the linked cohorts applies only when the person who made it may manage enrollments; the link of an item is read
-/// and saved under a lock per item.
+/// and saved under a lock per item, and a catch-up pass repairs what a missed membership change left behind.
 /// </summary>
 public sealed class CohortLearningSync
 {
@@ -27,6 +27,7 @@ public sealed class CohortLearningSync
     public const string Actor = "CohortSync";
 
     private const string Collection = LearningConstants.CollectionName;
+    private const int PageSize = 100;
 
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
@@ -135,7 +136,7 @@ public sealed class CohortLearningSync
 
         if (!locked)
         {
-            _logger.LogWarning("The cohorts of a course or path could not be locked; they are applied on the next publish.");
+            _logger.LogWarning("The cohorts of a course or path could not be locked; they are applied on the next publish or catch-up.");
 
             return;
         }
@@ -217,7 +218,7 @@ public sealed class CohortLearningSync
 
         if (!locked)
         {
-            _logger.LogWarning("The cohorts of a deleted course or path could not be locked; they were not forgotten.");
+            _logger.LogWarning("The cohorts of a deleted course or path could not be locked; they are forgotten on the next catch-up.");
 
             return;
         }
@@ -290,6 +291,61 @@ public sealed class CohortLearningSync
         }
     }
 
+    /// <summary>
+    /// Repairs what missed membership changes left behind (a member added while a link was being applied, an enrollment
+    /// that was busy): for every link, in the order of the item ids, each linked cohort's members are taken in pages in
+    /// the order of their user ids, and a member the target never enrolled is enrolled; a person the target enrolled
+    /// through the cohort who is no longer in it loses what the cohort gave them.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    public async Task CatchUpAsync(CancellationToken cancellationToken = default)
+    {
+        var links = (await _session.Query<CohortLearningLink>(Collection).ListAsync(cancellationToken))
+            .OrderBy(link => link.TargetId, StringComparer.Ordinal)
+            .ToArray();
+
+        foreach (var link in links)
+        {
+            var target = FindTarget(link.PartName);
+
+            if (target is null)
+            {
+                continue;
+            }
+
+            foreach (var cohortId in (link.CohortIds ?? []).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (await _cohorts.FindByIdAsync(cohortId, cancellationToken) is null)
+                {
+                    continue;
+                }
+
+                var members = (await _cohorts.ListMemberIdsAsync(cohortId, cancellationToken)).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
+                var memberSet = members.ToHashSet(StringComparer.Ordinal);
+                var joined = (await target.ListJoinedUserIdsAsync(link.TargetId, cohortId, cancellationToken)).ToHashSet(StringComparer.Ordinal);
+
+                foreach (var page in members.Chunk(PageSize))
+                {
+                    foreach (var userId in page.Where(userId => !joined.Contains(userId)))
+                    {
+                        await JoinAsync(target, link.TargetId, cohortId, userId, Actor, cancellationToken);
+                    }
+                }
+
+                foreach (var page in joined.Where(userId => !memberSet.Contains(userId)).Order(StringComparer.Ordinal).Chunk(PageSize))
+                {
+                    foreach (var userId in page)
+                    {
+                        await LeaveAsync(target, link.TargetId, cohortId, userId, link.CohortIds, Actor, cancellationToken);
+                    }
+                }
+            }
+        }
+    }
+
     private async Task<IReadOnlyList<CohortLearningLink>> ListTargetLinksAsync(string targetId, CancellationToken cancellationToken)
         => string.IsNullOrEmpty(targetId)
             ? []
@@ -325,7 +381,8 @@ public sealed class CohortLearningSync
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            // One person's refusal (a lock held elsewhere, a course that changed) doesn't stop the others.
+            // One person's refusal (a lock held elsewhere, a course that changed) doesn't stop the others; the catch-up
+            // tries again.
             _logger.LogWarning(exception, "The cohort sync could not enroll a person in a linked course or path.");
         }
     }
