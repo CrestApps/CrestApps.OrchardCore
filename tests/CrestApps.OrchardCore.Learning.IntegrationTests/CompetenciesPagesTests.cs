@@ -130,8 +130,8 @@ public sealed class CompetenciesPagesTests
         Assert.Contains("success", queuedBody);
         Assert.Equal(SkillsTargetName, entry.ContentType);
         Assert.Equal(ContentTransferEntryStatus.CompletedWithErrors, entry.Status);
-        Assert.Equal(3, entry.As<ImportFileProcessStatsPart>().ImportedCount);
-        Assert.Equal([4], entry.As<ImportFileProcessStatsPart>().Errors);
+        Assert.Equal(3, entry.GetOrCreate<ImportFileProcessStatsPart>().ImportedCount);
+        Assert.Equal([4], entry.GetOrCreate<ImportFileProcessStatsPart>().Errors);
         Assert.Contains("No name at all", errors);
         Assert.Contains("neither a short name nor an ID number", errors);
         Assert.Equal("Leadership " + suffix, delegation?.Category);
