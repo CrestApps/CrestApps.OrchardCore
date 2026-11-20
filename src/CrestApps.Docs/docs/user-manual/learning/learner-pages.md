@@ -28,13 +28,13 @@ A course your organization enrolls you in says so and has no button. A lesson ma
 
 ## Take the course
 
-Select **Start the course** or **Continue** on the course page, or open the course from **My learning**. The player shows the course outline beside the lesson on a desktop and above it on a phone. **Previous** and **Next** move through the lessons. A lesson that is not open yet says when it opens.
+Select **Start the course** or **Continue** on the course page, or open the course from **My learning**. The player shows the course outline beside the lesson on a desktop and under it on a phone. Above the lesson, a line says what kind of lesson it is, its section, where it is in the course (*3 of 8*) and about how long it takes. **Previous** and **Next** move through the lessons. Text between lessons shows with the lesson it belongs to, never in the outline. Select **Collapse all** above the outline to fold its sections, as in Moodle's course index; the section you are in stays open. A lesson that is not open yet says when it opens, or which lesson to finish first, with a button to go to it.
 
 - A page counts when you open it, or when you select **Mark as done**, as the course says.
 - A video counts when you have watched enough of it.
 - An acknowledgement counts when you tick the statement and select **Confirm**.
 
-**Course progress** shows how far you are. When every required lesson is done, the course is completed and the page says when you completed it. You can still review it.
+**Course progress** shows how far you are, as *3 of 7 complete · 43%* under the bar, and each section of the outline shows how many of its required lessons you completed. When every required lesson is done, the course is completed and the page says when you completed it. You can still review it.
 
 ## Find a course
 

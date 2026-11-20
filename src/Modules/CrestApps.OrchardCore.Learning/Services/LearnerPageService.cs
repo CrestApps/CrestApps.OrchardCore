@@ -3,11 +3,15 @@ using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.ViewModels;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
 using OrchardCore.ContentManagement.Routing;
 using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.DisplayManagement.Shapes;
+using OrchardCore.DisplayManagement.Zones;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Learning.Services;
@@ -25,6 +29,7 @@ public sealed class LearnerPageService
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IContentManager _contentManager;
     private readonly CourseItemKindOptions _kindOptions;
+    private readonly IStringLocalizerFactory _localizerFactory;
     private readonly IClock _clock;
 
     /// <summary>
@@ -38,6 +43,7 @@ public sealed class LearnerPageService
     /// <param name="contentItemDisplayManager">The content item display manager.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="kindOptions">The course item kinds.</param>
+    /// <param name="localizerFactory">The string localizer factory.</param>
     /// <param name="clock">The clock.</param>
     public LearnerPageService(
         ICourseStructureService courseStructure,
@@ -48,6 +54,7 @@ public sealed class LearnerPageService
         IContentItemDisplayManager contentItemDisplayManager,
         IContentManager contentManager,
         IOptions<CourseItemKindOptions> kindOptions,
+        IStringLocalizerFactory localizerFactory,
         IClock clock)
     {
         _courseStructure = courseStructure;
@@ -58,6 +65,7 @@ public sealed class LearnerPageService
         _contentItemDisplayManager = contentItemDisplayManager;
         _contentManager = contentManager;
         _kindOptions = kindOptions.Value;
+        _localizerFactory = localizerFactory;
         _clock = clock;
     }
 
@@ -82,7 +90,7 @@ public sealed class LearnerPageService
 
         if (outline.Entries.Count == 0)
         {
-            return new PlayerViewModel { Outline = outline, Access = CourseItemAccessReason.NotReleased, KindIcons = KindIcons() };
+            return new PlayerViewModel { Outline = outline, Access = CourseItemAccessReason.NotReleased, KindIcons = KindIcons(), KindNames = KindNames() };
         }
 
         var userId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -95,6 +103,7 @@ public sealed class LearnerPageService
             Enrollment = enrollment,
             Progress = progress,
             KindIcons = KindIcons(),
+            KindNames = KindNames(),
         };
 
         model.LockedItems = await GetLocksAsync(course, outline, enrollment, progress);
@@ -128,6 +137,25 @@ public sealed class LearnerPageService
             }
         }
 
+        // Text that ends a section, after its last item, shows under that item: the outline is navigation, not content.
+        var lastStepOfSection = !outline.Entries.Skip(position + 1).Any(entry => entry.Section == current.Section && !entry.Inline);
+
+        if (lastStepOfSection)
+        {
+            for (var after = position + 1; after < outline.Entries.Count && outline.Entries[after].Inline && outline.Entries[after].Section == current.Section; after++)
+            {
+                if (!model.LockedItems.ContainsKey(outline.Entries[after].Item.ContentItemId))
+                {
+                    model.TextAfter.Add(outline.Entries[after]);
+                }
+            }
+        }
+
+        model.StepNumber = index + 1;
+        model.StepCount = steps.Count;
+        model.RequiredCount = outline.RequiredEntries.Count();
+        model.CompletedCount = outline.RequiredEntries.Count(entry => progress.Find(entry.Item.ContentItemId)?.State == CourseItemState.Completed);
+
         var access = await _courseAccess.GetItemAccessAsync(user, current.Item);
 
         model.Access = access.Reason;
@@ -139,6 +167,12 @@ public sealed class LearnerPageService
         if (access.Allowed)
         {
             model.CurrentShape = await _contentItemDisplayManager.BuildDisplayAsync(current.Item, updater, "Detail");
+
+            // The player shows the item's title once, in its own header with the item's kind and completion condition.
+            if (model.CurrentShape is IZoneHolding zones && zones.Zones["Header"] is Shape header)
+            {
+                header.Remove("TitlePart");
+            }
         }
 
         return model;
@@ -250,6 +284,13 @@ public sealed class LearnerPageService
             .OrderByDescending(enrollment => enrollment.CompletedUtc)
             .ToArray();
     }
+
+    /// <summary>
+    /// Gets the name of each course item kind, as learners read it.
+    /// </summary>
+    /// <returns>The names, by kind.</returns>
+    public Dictionary<string, string> KindNames()
+        => _kindOptions.Kinds.Where(kind => kind.DisplayName is not null).ToDictionary(kind => kind.Name, kind => _localizerFactory.Localize(kind.DisplayName).Value, StringComparer.OrdinalIgnoreCase);
 
     private Dictionary<string, string> KindIcons()
         => _kindOptions.Kinds.ToDictionary(kind => kind.Name, kind => kind.Icon, StringComparer.OrdinalIgnoreCase);

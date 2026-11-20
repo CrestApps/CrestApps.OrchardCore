@@ -30,4 +30,10 @@ public class LearnerOutlineViewModel
     /// when nobody's release rules were evaluated.
     /// </summary>
     public IDictionary<string, ReleaseDecision> LockedItems { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the outline is the player's navigation: its sections collapse, and text shown in place is
+    /// left out, because the player shows it with the items in the content column.
+    /// </summary>
+    public bool Navigation { get; set; }
 }

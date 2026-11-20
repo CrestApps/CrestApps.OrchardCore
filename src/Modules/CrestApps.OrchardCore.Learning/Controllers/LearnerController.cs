@@ -244,6 +244,8 @@ public sealed class LearnerController : Controller
         }
 
         var update = await record(enrollment, itemId);
+        var course = await _courseStructure.GetCourseAsync(enrollment.CourseId);
+        var required = course is null ? new List<CourseOutlineEntry>() : (await _courseStructure.GetOutlineAsync(course)).RequiredEntries.ToList();
 
         return Json(new
         {
@@ -255,6 +257,10 @@ public sealed class LearnerController : Controller
             itemCompleted = update.ItemCompleted,
             courseCompleted = update.CourseCompleted,
             progressPercent = update.Enrollment?.ProgressPercent ?? 0,
+
+            // The player shows "3 of 7 complete" beside the bar.
+            completedItems = required.Count(entry => update.Progress?.Find(entry.Item.ContentItemId)?.State == CourseItemState.Completed),
+            requiredItems = required.Count,
         });
     }
 
