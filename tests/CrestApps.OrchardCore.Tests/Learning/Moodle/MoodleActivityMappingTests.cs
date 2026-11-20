@@ -256,6 +256,6 @@ public sealed class MoodleActivityMappingTests
         return activity;
     }
 
-    private static IDictionary<string, string> Record(params (string Key, string Value)[] values)
+    private static Dictionary<string, string> Record(params (string Key, string Value)[] values)
         => values.ToDictionary(value => value.Key, value => value.Value, StringComparer.Ordinal);
 }
