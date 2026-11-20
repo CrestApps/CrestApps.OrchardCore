@@ -132,7 +132,7 @@ Build, in this order. Items 1-6 cover almost every course; the rest is the long 
 4. **Course start and end dates (449).** A course opens or closes on dates, in addition to the access length after enrolment.
 5. **Cohorts (300 courses; the learning plans are assigned to cohorts).** Named, hand-managed groups of people in Users, beside the rule-based audiences. Enrol in a course or a learning path by cohort, with cohort sync: joining adds the person, leaving removes them.
 6. **Inline text and media in a course (1,234 labels in 195 courses).** A "Text" course item or outline block that keeps HTML, images and video embeds, and isn't tracked for completion.
-7. **Quizzes (152 quiz courses):**
+7. ~~**Quizzes (152 quiz courses):**~~ Done on `ma/lms-quiz-gaps-9bb028`: questions per page, immediate feedback (check and lock), review options per moment (the review policy stays the default), the author's question order (an Order list in the editor), survey, drag into text, select missing words (gapselect) and description question types with QTI (gap match, inline choice, no interaction) and spreadsheet import. The question picker was done in section 2b.
    - several questions per page;
    - immediate feedback per question;
    - Moodle's review options, per moment;
