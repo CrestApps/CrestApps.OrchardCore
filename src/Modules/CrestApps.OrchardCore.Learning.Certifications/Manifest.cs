@@ -22,3 +22,15 @@ using OrchardCore.Modules.Manifest;
         SkillsConstants.Features.IssuedCertificates,
     ]
 )]
+
+[assembly: Feature(
+    Id = CertificationsConstants.Features.Competencies,
+    Name = "Learning Competencies",
+    Description = "Competencies: a course or a learning path grants Skills skills at a level when a learner completes it, and learners see the competencies they hold. A competency framework is a skill category.",
+    Category = "Learning",
+    Dependencies =
+    [
+        LearningConstants.Features.Learning,
+        SkillsConstants.Features.Skills,
+    ]
+)]
