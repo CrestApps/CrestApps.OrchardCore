@@ -193,6 +193,21 @@ public sealed class SurveyResponseServiceTests
     }
 
     [Fact]
+    public async Task Round11C1_Answer_BeforeTheCourseStarts_IsRefused()
+    {
+        // Arrange
+        await using var h = await CreateAsync();
+        await EnrollAsync(h, "ana");
+        h.Courses.Get(Course).Alter<CoursePart>(part => part.StartsUtc = LearningTestHarness.Now.AddDays(3));
+
+        // Act
+        var result = await AnswerAsync(h, "ana", ("q1", ["4"]), ("q2", ["Yes"]));
+
+        // Assert
+        Assert.Equal(SurveyErrors.NotAvailableYet, result.Error);
+    }
+
+    [Fact]
     public void TheSurveyKind_CompletesOnAnswer_OrWhenViewed_AndGivesNoGrade()
     {
         // Arrange

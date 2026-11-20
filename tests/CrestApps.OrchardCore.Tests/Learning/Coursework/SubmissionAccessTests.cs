@@ -84,6 +84,21 @@ public sealed class SubmissionAccessTests
         Assert.True(later.Succeeded, later.Error);
     }
 
+    [Fact]
+    public async Task Round11C1_Submit_BeforeTheCourseStarts_IsRefused()
+    {
+        // Arrange
+        await using var h = await CreateAsync();
+        await h.EnrollAsync("ana", Course);
+        h.Courses.Get(Course).Alter<CoursePart>(part => part.StartsUtc = h.Clock.UtcNow.AddDays(3));
+
+        // Act
+        var early = await h.SubmitAsync("ana", Work, "Answer");
+
+        // Assert
+        Assert.Equal(SubmissionErrors.NotAvailableYet, early.Error);
+    }
+
     private static async Task<CourseworkTestHarness> CreateAsync(Action<CourseItemPart> release = null)
     {
         var h = await CourseworkTestHarness.CreateAsync();

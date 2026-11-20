@@ -1,28 +1,35 @@
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
+using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Learning.Core.Services;
 
 /// <summary>
-/// Decides whether a course item is open to a learner: every rule of its section and every rule of the item must be met.
-/// A rule whose name no registered rule answers keeps the item locked.
+/// Decides whether a course item is open to a learner: the course must have started (for a learner who has not completed
+/// it), and every rule of its section and every rule of the item must be met. A rule whose name no registered rule
+/// answers keeps the item locked. Every path that opens an item or records progress on it (the player, the progress
+/// service, package runtime, surveys, coursework, classes) asks it, so none of them opens an item before the start.
 /// </summary>
 public sealed class CourseReleaseEvaluator
 {
     private readonly IEnumerable<ICourseItemReleaseRule> _rules;
+    private readonly ICourseStructureService _courseStructure;
     private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CourseReleaseEvaluator"/> class.
     /// </summary>
     /// <param name="rules">The registered release rules.</param>
+    /// <param name="courseStructure">The course structure, to read the course's start date.</param>
     /// <param name="clock">The clock.</param>
     public CourseReleaseEvaluator(
         IEnumerable<ICourseItemReleaseRule> rules,
+        ICourseStructureService courseStructure,
         IClock clock)
     {
         _rules = rules;
+        _courseStructure = courseStructure;
         _clock = clock;
     }
 
@@ -36,6 +43,18 @@ public sealed class CourseReleaseEvaluator
     public async Task<ReleaseDecision> EvaluateAsync(CourseOutlineEntry entry, Enrollment enrollment, EnrollmentProgress progress)
     {
         ArgumentNullException.ThrowIfNull(entry);
+
+        var now = _clock.UtcNow;
+
+        // Before the course starts, an enrolled learner sees it but opens none of its items; a learner who completed it
+        // may review it.
+        if (enrollment is not null && enrollment.Status != EnrollmentStatus.Completed && !string.IsNullOrEmpty(enrollment.CourseId) &&
+            await _courseStructure.GetCourseAsync(enrollment.CourseId) is { } course &&
+            course.Get<CoursePart>(nameof(CoursePart)) is { } coursePart &&
+            CourseSchedules.Of(coursePart, now) == CourseSchedule.NotStarted)
+        {
+            return ReleaseDecision.Locked(LearningRefusals.CourseNotStarted, coursePart.StartsUtc);
+        }
 
         var settings = (entry.Section?.ReleaseRules ?? []).Concat(entry.Part?.ReleaseRules ?? []);
 
@@ -59,7 +78,7 @@ public sealed class CourseReleaseEvaluator
                 Enrollment = enrollment,
                 Progress = progress ?? new EnrollmentProgress(),
                 Item = entry.Item,
-                UtcNow = _clock.UtcNow,
+                UtcNow = now,
             });
 
             if (!decision.IsReleased)

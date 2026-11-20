@@ -101,6 +101,16 @@ public sealed class PackageRuntimeServiceTests
     }
 
     [Fact]
+    public async Task Round11C1_Launch_BeforeTheCourseStarts_IsRefused()
+    {
+        await using var h = await PackageTestHarness.CreateAsync();
+        await h.EnrollAsync("ana");
+        h.Courses.Get(PackageTestHarness.Course).Alter<CoursePart>(part => part.StartsUtc = h.Clock.UtcNow.AddDays(3));
+
+        Assert.Equal(PackageRuntimeErrors.NotAvailableYet, (await h.LaunchAsync("ana")).Error);
+    }
+
+    [Fact]
     public async Task Launch_OfAnItemWithoutAPackage_IsRefused()
     {
         await using var h = await PackageTestHarness.CreateAsync();

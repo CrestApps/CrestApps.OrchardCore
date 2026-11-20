@@ -445,6 +445,29 @@ public sealed class LearnerProgressServiceTests
         Assert.Equal(EnrollmentStatus.Completed, only.Status);
     }
 
+    [Fact]
+    public async Task Round11C1_ProgressBeforeTheCourseStarts_IsRefused()
+    {
+        // Arrange: the learner enrolled before the start date, which the course allows.
+        var clock = new LearningTestClock();
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync(clock.Use);
+        await using var __ = harness;
+        courses.AddCourse("course1", part => part.StartsUtc = LearningTestHarness.Now.AddDays(3));
+        courses.AddItem("course1", "intro");
+        var enrollment = await EnrollAsync(harness, "user1", "course1");
+
+        // Act
+        var early = await Progress(harness, (service, e) => service.RecordAccessAsync(e, "intro", 30), enrollment.ItemId);
+        clock.UtcNow = LearningTestHarness.Now.AddDays(4);
+        var later = await Progress(harness, (service, e) => service.RecordAccessAsync(e, "intro", 30), enrollment.ItemId);
+
+        // Assert
+        Assert.Equal(LearningRefusals.CourseNotStarted, early.RefusedReason);
+        Assert.False(early.ItemCompleted);
+        Assert.Null(later.RefusedReason);
+        Assert.True(later.ItemCompleted);
+    }
+
     private static async Task<Enrollment> EnrollAsync(CalendarTestHarness harness, string userId, string courseId)
     {
         var result = await harness.RunAsync(services => services.GetRequiredService<IEnrollmentService>().EnrollAsync(new EnrollmentRequest
