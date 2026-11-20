@@ -58,6 +58,7 @@ public static class ScormManifestParser
         var schemaVersion = Child(Child(root, "metadata"), "schemaversion")?.Value.Trim();
 
         var standard = DetectStandard(root, schemaVersion);
+
         var is2004 = PackagesConstants.Standards.IsScorm2004(standard);
         var sequencingCollection = is2004 ? Child(root, "sequencingCollection") : null;
 
@@ -135,6 +136,21 @@ public static class ScormManifestParser
             }
 
             scos.Add(sco);
+        }
+
+        // A manifest that says nothing of SCORM is an IMS content package: its items are web pages played without the
+        // run-time API, and the first one is launched.
+        if (scos.Count == 0 && !DeclaresScorm(root))
+        {
+            var error = ReadContentPackageItems(organization, resources, bases, scos);
+
+            if (error is not null)
+            {
+                return ScormManifestResult.Fail(error);
+            }
+
+            standard = PackagesConstants.Standards.ImsContentPackage;
+            assets = 0;
         }
 
         if (scos.Count == 0)
@@ -274,6 +290,70 @@ public static class ScormManifestParser
             }
 
             sco.ScaledPassingScore = passing;
+        }
+
+        return null;
+    }
+
+    // SCORM marks its resources with adlcp:scormtype and names ADL in its namespaces or its metadata schema; an IMS
+    // content package does neither.
+    private static bool DeclaresScorm(XElement root)
+    {
+        var schema = Child(Child(root, "metadata"), "schema")?.Value;
+
+        if (schema?.Contains("SCORM", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return true;
+        }
+
+        foreach (var element in root.DescendantsAndSelf())
+        {
+            foreach (var attribute in element.Attributes())
+            {
+                if (string.Equals(attribute.Name.LocalName, "scormtype", StringComparison.OrdinalIgnoreCase) ||
+                    (attribute.IsNamespaceDeclaration && attribute.Value.Contains("adlnet", StringComparison.OrdinalIgnoreCase)))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static string ReadContentPackageItems(XElement organization, Dictionary<string, XElement> resources, string[] bases, List<ScormSco> items)
+    {
+        foreach (var item in Descendants(organization))
+        {
+            var reference = Attribute(item, "identifierref");
+
+            if (string.IsNullOrEmpty(reference) || !resources.TryGetValue(reference, out var resource))
+            {
+                continue;
+            }
+
+            var href = Attribute(resource, "href");
+
+            if (string.IsNullOrWhiteSpace(href))
+            {
+                continue;
+            }
+
+            var error = ResolveLaunch([.. bases, (string)resource.Attribute(_xmlBase)], href.Trim(), Attribute(item, "parameters"), out var path, out var query);
+
+            if (error is not null)
+            {
+                return error;
+            }
+
+            items.Add(new ScormSco
+            {
+                ItemIdentifier = Attribute(item, "identifier"),
+                Title = Child(item, "title")?.Value.Trim(),
+                ResourceIdentifier = reference,
+                Path = path,
+                Query = query,
+            });
         }
 
         return null;

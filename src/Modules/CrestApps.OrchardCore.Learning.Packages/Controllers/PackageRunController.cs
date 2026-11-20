@@ -101,7 +101,10 @@ public sealed class PackageRunController : Controller
 
         // A cmi5 AU talks to the LRS itself: its pages are served as they are, never cached. On the content host the
         // frame page holds the run-time API, so the package's own pages are served as they are too.
-        if (onContentHost || string.Equals(file.Standard, PackagesConstants.Standards.Cmi5, StringComparison.Ordinal))
+        // An IMS content package has no run-time API: its pages are served as they are too.
+        if (onContentHost ||
+            string.Equals(file.Standard, PackagesConstants.Standards.Cmi5, StringComparison.Ordinal) ||
+            PackagesConstants.Standards.HasNoRuntime(file.Standard))
         {
             Response.Headers.CacheControl = "no-store";
 
@@ -198,7 +201,17 @@ public sealed class PackageRunController : Controller
 
         string launchUrl;
 
-        if (contentOrigin is not null)
+        if (PackagesConstants.Standards.HasNoRuntime(result.Part.Standard))
+        {
+            // No API to hold: the launch file is opened directly, on the content host when there is one.
+            launchUrl = contentOrigin + Url.RouteUrl("LearningPackageRun", new { token = result.Token, path = result.Part.LaunchPath });
+
+            if (!string.IsNullOrEmpty(result.Part.LaunchQuery))
+            {
+                launchUrl += "?" + result.Part.LaunchQuery;
+            }
+        }
+        else if (contentOrigin is not null)
         {
             // The frame page on the content host holds the API and loads the launch file.
             launchUrl = contentOrigin + Url.RouteUrl("LearningPackageFrame", new { token = result.Token });

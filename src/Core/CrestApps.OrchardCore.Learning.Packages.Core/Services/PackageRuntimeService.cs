@@ -525,7 +525,8 @@ public sealed class PackageRuntimeService
 
         if (launch is null ||
             string.IsNullOrEmpty(part.LaunchPath) ||
-            string.Equals(part.Standard, PackagesConstants.Standards.Cmi5, StringComparison.Ordinal))
+            string.Equals(part.Standard, PackagesConstants.Standards.Cmi5, StringComparison.Ordinal) ||
+            PackagesConstants.Standards.HasNoRuntime(part.Standard))
         {
             return null;
         }

@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using CrestApps.OrchardCore.FileStorage;
 using CrestApps.OrchardCore.Learning.Core.Archives;
+using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Packages.Core.Cmi5;
 using CrestApps.OrchardCore.Learning.Packages.Core.Scorm;
 using CrestApps.OrchardCore.Learning.Packages.Models;
@@ -179,6 +180,14 @@ public sealed class PackageImportResult
         part.ImportedUtc = importedUtc;
         part.ImportedBy = importedBy;
     }
+
+    /// <summary>
+    /// Gets the completion mode an item of a package standard is set to when it is imported.
+    /// </summary>
+    /// <param name="standard">The standard.</param>
+    /// <returns>The mode, or <see langword="null"/> to keep the item's mode.</returns>
+    public static string CompletionModeFor(string standard)
+        => PackagesConstants.Standards.HasNoRuntime(standard) ? CompletionModes.Viewed : null;
 
     internal static PackageImportResult Fail(string error, string entry = null)
         => new() { Error = error, Entry = entry };
