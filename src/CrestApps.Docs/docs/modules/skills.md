@@ -128,14 +128,14 @@ The `Skills` step imports certifications and skills (by id, or by name when the 
 
 The **Skills and certifications** deployment step exports every skill and certification, and optionally the assignments and certificates.
 
-## Import skills from a CSV file
+## Import skills from a file
 
-**Content > Skills > Import** (`/Admin/skills/import`, Manage skills) reads a CSV file of up to 5 MB with `SkillCsvImport.Parse` (Skills.Core) and saves it with `SkillImporter`:
+With [Content Transfer](./content-transfer) on, skills and competency frameworks are a ContentTransfer import target (`SkillsImportTarget`, named `Skills.Skill`, checked by **Manage skills**; see [Import targets that are not content types](./content-transfer#import-targets-that-are-not-content-types)). They share its background run, progress, pause and resume, and file of failed rows. The **Import** button on **Content > Skills** opens the import (`/Admin/import/contents/Skills.Skill`); it shows only when ContentTransfer is on. The columns are `Name`, `Category`, `Description` and `Enabled`. `SkillImportRowReader` (Skills.Core) reads each row and `SkillImporter` saves it:
 
 - A **Moodle competency framework export** (Moodle's *Export competency framework*, known by its `isframework` column): the framework row's short name is the category, and each competency becomes a skill named by its short name (or ID number), its description made plain text. Nested competencies (`parentidnumber`) are imported flat.
 - A **plain file** with a `Name` column and optional `Category`, `Description` and `Enabled` columns, in any case.
 
-Skills are matched by name in any case. A new name adds a skill; a known one in the same category, or with none, is updated (an empty cell keeps the value); a known one in another category, and a name repeated in the file, are left out with the line and the reason. Importing a file again counts its skills as unchanged. Learning shows skills as competencies and categories as competency frameworks; see [Learning Certifications](./learning-certifications#competencies).
+Skills are matched by name in any case. A new name adds a skill; a known one in the same category, or with none, is updated (an empty cell keeps the value); a known one in another category, and a name repeated in the same batch, fail with the reason, and are listed in the failed-rows file. Importing a file again changes nothing. The framework of a Moodle export is kept on the import between batches, so a resumed import keeps it. Learning shows skills as competencies and categories as competency frameworks; see [Learning Certifications](./learning-certifications#competencies).
 
 ## Reports
 

@@ -49,6 +49,8 @@ Every content type takes part by default. The content type settings `AllowBulkIm
 
 The four permissions that are not per content type are granted to the **Administrator** role by default.
 
+An import into a target that is not a content type, such as skills, is checked by that target's own permission instead (see [Import targets that are not content types](#import-targets-that-are-not-content-types)): `ImportContentFromFile` doesn't grant it.
+
 ## Supported file formats
 
 The base module always supports CSV files (`.csv`).
@@ -883,6 +885,62 @@ public sealed class MyLayoutTransformer : IContentTransferFileReaderTransformer
 
 Register it with `services.AddScoped<IContentTransferFileReaderTransformer, MyLayoutTransformer>()`.
 
+## Import targets that are not content types
+
+A module can let its own records, which are not content items, be imported through ContentTransfer, so they get the same upload, background run, progress, pause and resume, and file of failed rows. The Skills module imports skills and competency frameworks this way.
+
+An **import target** (`IContentTransferImportTarget`, in `ContentTransfer.Abstractions`) has a `Name` the import is filed under (`ContentTransferEntry.ContentType`), a `DisplayName`, its own `AuthorizeAsync` check, and `GetColumnsAsync` for the columns the import page lists and the template holds. Content types are one kind of target: `IContentTransferImportTargetResolver.FindAsync(name)` returns a `ContentTypeImportTarget` for a content type that allows bulk import, with the content import columns and its `ImportContentFromFile_{ContentType}` permission, and its rows go through the content item pipeline (handlers, row filters, file reshapers) as before.
+
+A target that is not a content type implements `IContentTransferRecordImporter`. Its `ImportAsync(ContentTransferImportBatch)` receives the rows of one batch in file order (`ContentTransferImportRow`, read by column name in any case with `Get`, with its row number), validates and saves them to its own store, and fails each row it cannot save with `row.Fail(error, category)`. A failed row is recorded with its reason and kind and listed in the failed-rows file; every other row counts as imported. If `ImportAsync` throws, every row of the batch it didn't fail fails with the message, and the import goes on. The batch is saved with the progress after the call, so a target can keep what it needs from one batch to the next, and across a resume, in `batch.Entry.Properties`.
+
+- The target's name must hold a dot (for example `Skills.Skill`): no content type name can, so a target never shadows a content type. A name without one is ignored.
+- `AuthorizeAsync` is the only check for the target: the import page, the upload, the template, pausing, resuming and the failed-rows file all use it.
+- Row filters and file reshapers apply to content types only.
+- The import page is `/Admin/import/contents/{Name}`, and the **Import** menu of the Bulk Import list offers the targets a person may import. Link to the page from your own admin screen.
+
+```csharp
+internal sealed class ProjectImportTarget : IContentTransferRecordImporter
+{
+    public string Name => "Projects.Project";
+
+    public string DisplayName => "Projects";
+
+    public bool IsContentType => false;
+
+    public Task<bool> AuthorizeAsync(ClaimsPrincipal user, IAuthorizationService authorizationService)
+        => authorizationService.AuthorizeAsync(user, ProjectPermissions.ManageProjects);
+
+    public Task<IReadOnlyCollection<ImportColumn>> GetColumnsAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyCollection<ImportColumn>>([new ImportColumn { Name = "Name", IsRequired = true }]);
+
+    public async Task ImportAsync(ContentTransferImportBatch batch, CancellationToken cancellationToken = default)
+    {
+        foreach (var row in batch.Rows)
+        {
+            if (row.Get("Name") is not { } name)
+            {
+                row.Fail("The row has no name.", "Missing name");
+
+                continue;
+            }
+
+            await _projects.SaveAsync(name, cancellationToken);
+        }
+    }
+}
+```
+
+Register it in a startup that requires the ContentTransfer feature, and reference only `CrestApps.OrchardCore.ContentTransfer.Abstractions`:
+
+```csharp
+[RequireFeatures("CrestApps.OrchardCore.ContentTransfer")]
+public sealed class ContentTransferStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddContentTransferImportTarget<ProjectImportTarget>();
+}
+```
+
 ## Export completion notifications
 
 Implement `IContentTransferNotificationHandler` when you want queued exports to notify users through a different channel.
@@ -909,6 +967,7 @@ services.AddContentFieldImportHandler<RatingField, RatingFieldImportHandler>();
 services.AddScoped<IContentImportRowFilter, ArchivedSkuImportRowFilter>();
 services.AddSingleton<IContentTransferFileFormatProvider, JsonLinesContentTransferFileFormatProvider>();
 services.AddScoped<IContentTransferNotificationHandler, MyContentTransferNotificationHandler>();
+services.AddContentTransferImportTarget<ProjectImportTarget>(); // records that are not content items
 
 // Export-form options (see Contributing export options):
 services.AddScoped<IDisplayDriver<ExportRequest>, ProductExportOptionsDisplayDriver>();

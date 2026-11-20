@@ -13,9 +13,9 @@ A course or a learning path can grant competencies. When a learner completes it,
 
 | | |
 | --- | --- |
-| **Menu** | Content > Skills (the competencies, and **Import**); the **Competencies** card of a course or learning path; Reports > Skill holders; My competencies in Your account |
+| **Menu** | Content > Skills (the competencies, and **Import**, which opens Content > Import); the **Competencies** card of a course or learning path; Reports > Skill holders; My competencies in Your account |
 | **Permission** | Manage skills and certifications to add and import competencies; Edit the course to choose what it grants; View skills and certifications for the report; Access learning for My competencies |
-| **Feature** | Learning Competencies (turns on Skills); Reports for the Skill holders report |
+| **Feature** | Learning Competencies (turns on Skills); Content Transfer for the import; Reports for the Skill holders report |
 
 <AskYourAdmin />
 
@@ -24,12 +24,12 @@ A course or a learning path can grant competencies. When a learner completes it,
 To bring frameworks over from Moodle:
 
 1. In Moodle, open **Site administration > Competencies > Export competency framework**, choose a framework and save the CSV file. Do this once for each framework.
-2. Here, open **Content > Skills** and click **Import**.
-3. Choose the file and click **Import**.
+2. Here, open **Content > Skills** and click **Import**. It opens the **Import Skills and competency frameworks** page of **Content > Import**.
+3. Choose the file and click **Upload**.
 
-The framework becomes the category, and each competency becomes a skill named by its short name, with its description as plain text. The page shows how many skills were added, updated and left out, and why.
+The file is imported in the background, like any other import: follow it on the **Bulk Import** list. The framework becomes the category, and each competency becomes a skill named by its short name, with its description as plain text. When some rows couldn't be imported, download them from the list with the reason beside each. See [Bulk Import and Export](../administration/import-and-export.md).
 
-You can also import your own file. It needs a **Name** column. The **Category**, **Description** and **Enabled** columns are optional.
+You can also import your own file. It needs a **Name** column. The **Category**, **Description** and **Enabled** columns are optional; the page offers a template.
 
 :::tip[Importing again is safe]
 A skill is matched by its name. A file imported a second time changes nothing that already matches. A name that another framework already holds is left out, because two skills can't share a name: rename one of them in Moodle or in the file, and import again.

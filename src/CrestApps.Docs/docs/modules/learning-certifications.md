@@ -89,7 +89,7 @@ The **Learning Competencies** feature (`CrestApps.OrchardCore.Learning.Competenc
 - **My competencies** (`/learning/competencies`, `MyCompetenciesController`, an entry of the storefront account menu framed by it) lists `ISkillAssignmentService.GetEffectiveAsync` for the user today, by category.
 - Register the observer outside the feature with `services.AddLearningCompetenciesCore()`.
 
-The frameworks are loaded with the Skills CSV import (a Moodle competency framework export) or the `Skills` recipe step, and the Skills **Skill holders** report shows who holds which competency; see [Skills](./skills#import-skills-from-a-csv-file).
+The frameworks are loaded with the Skills import through ContentTransfer (a Moodle competency framework export) or the `Skills` recipe step, and the Skills **Skill holders** report shows who holds which competency; see [Skills](./skills#import-skills-from-a-file).
 
 ## Integrations
 
