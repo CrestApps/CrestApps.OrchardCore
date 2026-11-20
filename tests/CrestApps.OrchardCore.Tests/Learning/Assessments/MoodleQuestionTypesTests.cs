@@ -76,23 +76,27 @@ public sealed class MoodleQuestionTypesTests
     }
 
     [Fact]
-    public void ChoiceBlanks_KeepTheWrittenOrderWhenNotShuffled()
+    public void Round11S3_ChoiceBlanksNotShuffled_ListTheWordsInAnOrderThatDoesNotFollowTheBlanks()
     {
-        // Arrange
+        // Arrange: the blanks' words, in blank order, would read off the answers.
         var scorer = new GapSelectScorer();
         var question = Question(AssessmentsConstants.ContentTypes.GapSelectQuestion);
         question.Alter<ChoiceBlanksQuestionPart>(part =>
         {
-            part.Text = "[[red]] and [[blue]]";
+            part.Text = "[[red]] then [[blue]] then [[amber]]";
             part.Distractors = ["green"];
             part.ShuffleChoices = false;
         });
 
         // Act
         var item = Item(scorer, question, points: 1);
+        var again = Item(scorer, question, points: 1);
 
-        // Assert
-        Assert.Equal(["red", "blue", "green"], item.Choices.Select(choice => choice.Text));
+        // Assert: alphabetical, the same every time, and the ids follow that order, not the blanks.
+        Assert.Equal(["amber", "blue", "green", "red"], item.Choices.Select(choice => choice.Text));
+        Assert.Equal(item.Choices.Select(choice => choice.Id), again.Choices.Select(choice => choice.Id));
+        Assert.NotEqual(["c0", "c1", "c2"], item.Key.ChoiceIds);
+        Assert.Equal(["c3", "c1", "c0"], item.Key.ChoiceIds);
     }
 
     [Fact]

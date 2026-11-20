@@ -85,8 +85,9 @@ public sealed class DescriptionScorer : IQuestionScorer
 
 /// <summary>
 /// The snapshot and score shared by drag into text and gapselect questions. The text is split at its <c>[[word]]</c>
-/// blanks; the words of the blanks and the distractors become one list of choices under ids of their own (so the ids
-/// never tell which word is right), and the key holds the choice of each blank. Each blank earns its share.
+/// blanks; the words of the blanks and the distractors become one list of choices, shuffled or in alphabetical order
+/// (never in blank order), under ids that follow that list (so neither the order nor the ids tell which word is right),
+/// and the key holds the choice of each blank. Each blank earns its share.
 /// </summary>
 internal static partial class ChoiceBlanksScoring
 {
@@ -112,10 +113,11 @@ internal static partial class ChoiceBlanksScoring
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
-        if (part.ShuffleChoices)
-        {
-            words = ScoringText.Shuffle(words, random);
-        }
+        // Shuffled, or else in alphabetical order: the words of the blanks in blank order would read off the answers,
+        // and the choice ids follow the order shown, never the blanks.
+        words = part.ShuffleChoices
+            ? ScoringText.Shuffle(words, random)
+            : [.. words.Order(StringComparer.OrdinalIgnoreCase).ThenBy(word => word, StringComparer.Ordinal)];
 
         var choices = words.Select((word, index) => new AttemptChoice { Id = "c" + index.ToString(CultureInfo.InvariantCulture), Text = word }).ToList();
         var ids = choices.ToDictionary(choice => choice.Text, choice => choice.Id, StringComparer.Ordinal);
