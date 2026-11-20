@@ -335,6 +335,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Orders.Api` | Orders API | [Carts and Orders](./modules/carts-and-orders#api) |
 | `CrestApps.OrchardCore.Customers.Api` | Customers API | [Customers](./modules/customers#api) |
 | `CrestApps.OrchardCore.Shipping.Api` | Shipping API | [Shipping](./modules/shipping#api) |
+| `CrestApps.OrchardCore.Fulfillment` | Fulfillment Partners | [Fulfillment Partners](./modules/fulfillment-partners) |
 | `CrestApps.OrchardCore.Inventory.Api` | Inventory API | [Inventory](./modules/inventory#api) |
 | `CrestApps.OrchardCore.Commerce.Webhooks` | Commerce Webhooks | [Commerce Webhooks](./modules/commerce-webhooks) |
 | `CrestApps.OrchardCore.AgenticCommerce` | Agentic Commerce | [Agentic Commerce](./modules/agentic-commerce) |

@@ -21,7 +21,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 /// took it, and pressing its Hang up ended the call on the customer the supervisor was now talking to.
 /// </para>
 /// </remarks>
-public sealed class ContactCenterSoftPhoneTransferEventHandler : IContactCenterEventHandler
+public sealed class ContactCenterSoftPhoneTransferEventHandler : IContactCenterRealTimeEventHandler
 {
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;

@@ -1,0 +1,11 @@
+@model FulfillmentSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="SendAutomatically" type="checkbox" class="form-check-input" />
+            <label asp-for="SendAutomatically" class="form-check-label">@T["Send paid orders automatically"]</label>
+            <span class="hint dashed">@T["Each paid order is sent to the partner that makes its products within a few minutes. When off, send each order from its page under Commerce > Orders."]</span>
+        </div>
+    </div>
+</div>

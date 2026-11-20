@@ -724,6 +724,109 @@ public sealed class ContactCenterOutboxTests
         Assert.Same(requestContext, httpContextAccessor.HttpContext);
     }
 
+    // Agents saw the record of the call they were connected to seconds late: the push was one handler among many, run
+    // after the slower ones registered before it.
+    [Fact]
+    public async Task DispatchAsync_RunsTheRealTimeHandlersBeforeTheOthers()
+    {
+        // Arrange
+        var order = new List<string>();
+        var outboxStore = CreateDispatchableStore();
+        var outbox = CreateOutbox(outboxStore, new Mock<IInteractionEventStore>(),
+        [
+            new ConfigurableTestHandler("Test/Slow/v1", () => Record(order, "slow")),
+            new RealTimeTestHandler("Test/Push/v1", () => Record(order, "push")),
+        ]);
+
+        // Act
+        await outbox.DispatchAsync(new InteractionEvent { ItemId = "e1", EventType = ContactCenterConstants.Events.CallConnected }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["push", "slow"], order);
+    }
+
+    [Fact]
+    public async Task DispatchRealTimeAsync_RunsOnlyTheRealTimeHandlers_WithoutClaimingTheMessage()
+    {
+        // Arrange
+        var order = new List<string>();
+        var outboxStore = new Mock<IContactCenterOutboxStore>();
+        var outbox = CreateOutbox(outboxStore, new Mock<IInteractionEventStore>(),
+        [
+            new ConfigurableTestHandler("Test/Slow/v1", () => Record(order, "slow")),
+            new RealTimeTestHandler("Test/Push/v1", () => Record(order, "push")),
+        ]);
+
+        // Act
+        var completed = await outbox.DispatchRealTimeAsync(new InteractionEvent { ItemId = "e1", EventType = ContactCenterConstants.Events.CallConnected }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["push"], order);
+        Assert.Equal(["Test/Push/v1"], completed);
+        outboxStore.Verify(store => store.UpdateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DispatchRealTimeAsync_WhenAHandlerFails_LeavesItIncompleteForTheFullDispatch()
+    {
+        // Arrange
+        var outbox = CreateOutbox(new Mock<IContactCenterOutboxStore>(), new Mock<IInteractionEventStore>(),
+        [
+            new RealTimeTestHandler("Test/Push/v1", () => throw new InvalidOperationException("hub down")),
+        ]);
+
+        // Act
+        var completed = await outbox.DispatchRealTimeAsync(new InteractionEvent { ItemId = "e1" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(completed);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_SkipsTheHandlersTheRealTimePassAlreadyCompleted()
+    {
+        // Arrange
+        var order = new List<string>();
+        var outboxStore = CreateDispatchableStore();
+        var outbox = CreateOutbox(outboxStore, new Mock<IInteractionEventStore>(),
+        [
+            new ConfigurableTestHandler("Test/Slow/v1", () => Record(order, "slow")),
+            new RealTimeTestHandler("Test/Push/v1", () => Record(order, "push")),
+        ]);
+
+        // Act
+        await outbox.DispatchAsync(
+            new InteractionEvent { ItemId = "e1", EventType = ContactCenterConstants.Events.CallConnected },
+            ["Test/Push/v1"],
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["slow"], order);
+        outboxStore.Verify(s => s.DeleteAsync(It.Is<ContactCenterOutboxMessage>(message => message.EventId == "e1"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private static Mock<IContactCenterOutboxStore> CreateDispatchableStore()
+    {
+        ContactCenterOutboxMessage created = null;
+        var outboxStore = new Mock<IContactCenterOutboxStore>();
+        outboxStore
+            .Setup(store => store.CreateAsync(It.IsAny<ContactCenterOutboxMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<ContactCenterOutboxMessage, CancellationToken>((message, _) => created = message)
+            .Returns(ValueTask.CompletedTask);
+        outboxStore
+            .Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => created);
+
+        return outboxStore;
+    }
+
+    private static Task Record(List<string> order, string name)
+    {
+        order.Add(name);
+
+        return Task.CompletedTask;
+    }
+
     private static ContactCenterOutbox CreateOutbox(
         Mock<IContactCenterOutboxStore> outboxStore,
         Mock<IInteractionEventStore> eventStore,
@@ -790,6 +893,18 @@ public sealed class ContactCenterOutboxTests
     private sealed class SecondTestHandler(Func<Task> action) : IContactCenterEventHandler
     {
         public string HandlerId => "Test/SecondHandler/v1";
+
+        public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.NaturallyIdempotent;
+
+        public Task HandleAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
+        {
+            return action();
+        }
+    }
+
+    private sealed class RealTimeTestHandler(string handlerId, Func<Task> action) : IContactCenterRealTimeEventHandler
+    {
+        public string HandlerId => handlerId;
 
         public ContactCenterHandlerReplaySafety ReplaySafety => ContactCenterHandlerReplaySafety.NaturallyIdempotent;
 

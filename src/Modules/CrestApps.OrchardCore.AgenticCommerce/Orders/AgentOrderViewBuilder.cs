@@ -85,7 +85,8 @@ public sealed class AgentOrderViewBuilder
             {
                 Id = line.LineId,
                 ItemId = _items.GetItemId(line.ContentItemId, line.VariantId, line.Sku),
-                Title = string.IsNullOrEmpty(line.VariantTitle) ? line.Title : $"{line.Title} ({line.VariantTitle})",
+                // An order line's title already names its variant, such as "Tee (White / S)".
+                Title = line.Title,
                 UnitPrice = line.UnitPrice,
                 Quantity = line.Quantity,
                 CurrentQuantity = canceled ? 0 : line.Quantity,

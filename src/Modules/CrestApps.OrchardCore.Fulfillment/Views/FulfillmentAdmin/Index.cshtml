@@ -1,0 +1,38 @@
+@model FulfillmentRequestsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="FulfillmentRequests" title="@T["Fulfillment requests"]" />
+</zone>
+
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="fulfillment-requests-filter" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by order number"]" type="search" autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="FulfillmentRequests" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> No order has been sent to a fulfillment partner yet, or nothing matches the filter."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Order" position="20" title="@T["Order"]" />
+            <admin-list-column name="Partner" position="30" title="@T["Partner"]" width="auto" />
+            <admin-list-column name="Status" position="40" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Changed" position="50" title="@T["Last change"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>
