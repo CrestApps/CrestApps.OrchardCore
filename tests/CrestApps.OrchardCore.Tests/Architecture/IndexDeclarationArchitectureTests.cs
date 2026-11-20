@@ -34,6 +34,7 @@ public sealed partial class IndexDeclarationArchitectureTests
         "CalendarShareIndex",
         "CallSessionLegIndex",
         "CertificationPathTargetIndex",
+        "CohortLearningLinkIndex",
         "ContentAccessRoleIndex",
         "CourseItemProgressIndex",
         "CourseStaffIndex",

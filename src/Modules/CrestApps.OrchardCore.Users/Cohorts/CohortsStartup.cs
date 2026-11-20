@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Users.Core.Cohorts;
+using CrestApps.OrchardCore.Users.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore;
 using OrchardCore.Data;
@@ -72,19 +73,6 @@ public sealed class CohortsRecipesSchemaStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, UserCohortsRecipeStepSchema>();
         services.AddDeploymentStepSchema<UserCohortsDeploymentStepSchema>();
-    }
-}
-
-/// <summary>
-/// Creates the cohort index tables.
-/// </summary>
-internal sealed class CohortsMigrations : DataMigration
-{
-    public async Task<int> CreateAsync()
-    {
-        await CohortsIndexSchema.CreateAsync(SchemaBuilder);
-
-        return 1;
     }
 }
 
