@@ -18,13 +18,13 @@ Learners take courses on your site, on a phone or a desktop.
 
 ## Enroll in a course
 
-Open the course page. It shows the outline and, depending on the course:
+Open the course page. Under its title, the top of the page shows the course's summary, its code, level, length, number of required lessons, categories and dates, its cover picture if it has one, and the one thing to do next. Depending on the course, that is:
 
 - **Enroll**, to start at once;
 - an **Enrollment key** box for the key your trainer gave you;
 - **Ask to enroll**, after which a training manager approves you. Until then the page says your request waits for approval.
 
-A course your organization enrolls you in says so and has no button. A lesson marked **Free preview** can be opened before enrolling.
+A course your organization enrolls you in says so and has no button. A lesson marked **Free preview** can be opened before enrolling. Once you are enrolled, the same place shows your progress and **Continue where you left off**, with the lesson you continue with; once you completed the course, it shows **You completed this course**. The description and the course outline follow. A course that is not for sale shows no price box.
 
 ## Take the course
 
