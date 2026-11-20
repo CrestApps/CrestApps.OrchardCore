@@ -53,7 +53,8 @@ public sealed class PackagePanelBuilder
         {
             model.State = await _runtime.GetStateAsync(enrollment.ItemId, part.ContentItem.ContentItemId);
             model.Summary = PackageStateSummary.Of(model.State);
-            model.Score = model.Summary.Score;
+            // With a grading method the item's score comes from every attempt, not only the last one.
+            model.Score = PackageAttempts.ItemScore(model.State, part) ?? model.Summary.Score;
         }
 
         if (part.MaxAttempts is int max && max > 0)

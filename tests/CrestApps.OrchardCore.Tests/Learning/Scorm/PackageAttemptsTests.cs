@@ -78,6 +78,21 @@ public sealed class PackageAttemptsTests
     }
 
     [Fact]
+    public void TheItemScore_ShownToTheLearner_ComesFromTheAttemptsByTheGradingMethod()
+    {
+        // Arrange: found in the browser, where the panel showed the last attempt's 70 while the item had 55.
+        var state = new PackageRuntimeState { AttemptScores = [new PackageAttemptScore { Number = 1, Score = 40 }, new PackageAttemptScore { Number = 2, Score = 70 }] };
+
+        // Act
+        var average = CrestApps.OrchardCore.Learning.Packages.Core.Services.PackageAttempts.ItemScore(state, new LearningPackagePart { GradingMethod = GradingMethod.Average });
+        var none = CrestApps.OrchardCore.Learning.Packages.Core.Services.PackageAttempts.ItemScore(state, new LearningPackagePart());
+
+        // Assert
+        Assert.Equal(55, average);
+        Assert.Null(none);
+    }
+
+    [Fact]
     public async Task APackageWithoutAttemptSettings_ResumesTheSameAttempt()
     {
         // Arrange

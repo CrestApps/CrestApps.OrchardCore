@@ -56,6 +56,17 @@ public static class PackageAttempts
         => part?.MaxAttempts is int max && max > 0 && (state?.Attempts ?? 0) >= max;
 
     /// <summary>
+    /// Gets the item's score by the grading method, from the attempts kept, for a package with a grading method.
+    /// </summary>
+    /// <param name="state">The learner's state on the package.</param>
+    /// <param name="part">The package.</param>
+    /// <returns>The score, or <see langword="null"/> without a grading method or a scored attempt.</returns>
+    public static decimal? ItemScore(PackageRuntimeState state, LearningPackagePart part)
+        => part?.GradingMethod is { } method && state?.AttemptScores is { Count: > 0 } attempts
+            ? AttemptScores.Combine([.. attempts.OrderBy(attempt => attempt.Number).Where(attempt => attempt.Score is not null).Select(attempt => attempt.Score.Value)], method)
+            : null;
+
+    /// <summary>
     /// Keeps the result of the attempt in progress and, with a grading method, gives the item the score of its attempts.
     /// The item completes or passes when any attempt did.
     /// </summary>
