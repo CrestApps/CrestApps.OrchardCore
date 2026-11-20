@@ -55,6 +55,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.FileStorage.Abstractions\CrestApps.OrchardCore.FileStorage.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Abstractions\CrestApps.OrchardCore.Learning.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Assessments.Abstractions\CrestApps.OrchardCore.Learning.Assessments.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Packages.Abstractions\CrestApps.OrchardCore.Learning.Packages.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.ContentTransfer.Core\CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
@@ -65,7 +66,9 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Assessments.Core\CrestApps.OrchardCore.Learning.Assessments.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Packages.Core\CrestApps.OrchardCore.Learning.Packages.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Learning\CrestApps.OrchardCore.Learning.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Packages\CrestApps.OrchardCore.Learning.Packages.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

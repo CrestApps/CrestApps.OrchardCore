@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer.Moodle;
+using OrchardCore.Environment.Shell.Configuration;
 using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer;
 using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer.Qti;
 using CrestApps.OrchardCore.ContentTransfer;
@@ -298,5 +300,34 @@ public sealed class QtiImportStartup : StartupBase
         services.AddSingleton<IContentTransferFileFormatProvider, QtiItemFileFormatProvider>();
         services.AddScoped<IContentImportHandler, QtiQuestionImportHandler>();
         services.AddScoped<IContentImportHandler, QtiMediaImportHandler>();
+    }
+}
+
+/// <summary>
+/// Reads Moodle course backups as courses with their sections and items through ContentTransfer.
+/// </summary>
+[Feature(AssessmentsConstants.Features.MoodleImport)]
+public sealed class MoodleImportStartup : StartupBase
+{
+    private readonly IShellConfiguration _configuration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MoodleImportStartup"/> class.
+    /// </summary>
+    /// <param name="configuration">The tenant configuration.</param>
+    public MoodleImportStartup(IShellConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<MoodleImportOptions>(_configuration.GetSection("CrestApps:Learning:MoodleImport"));
+        services.AddSingleton<MoodleWorkspaces>();
+        services.AddSingleton<IContentTransferFileFormatProvider, MoodleFileFormatProvider>();
+        services.AddScoped<IContentImportHandler, MoodleImportHandler>();
+        services.AddScoped<IContentImportRowFilter, MoodleSourceRowFilter>();
+        services.AddScoped<IContentImportRowTypeProvider, MoodleRowTypeProvider>();
     }
 }

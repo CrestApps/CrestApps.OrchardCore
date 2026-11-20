@@ -29,4 +29,9 @@
     <None Include="TestAssets/**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The synthetic Moodle backups are shared with the unit tests. -->
+    <Compile Include="../CrestApps.OrchardCore.Tests/Learning/Moodle/MoodleBackupBuilder.cs" Link="Moodle/MoodleBackupBuilder.cs" />
+  </ItemGroup>
+
 </Project>

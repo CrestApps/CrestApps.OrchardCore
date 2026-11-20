@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Learning;
 using CrestApps.OrchardCore.Learning.Assessments;
+using CrestApps.OrchardCore.Learning.Packages;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -41,6 +42,21 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AssessmentsConstants.Features.Assessments,
+        ContentTransferConstants.Feature.ModuleId,
+        OrchardCoreFeatureIds.Media,
+    ]
+)]
+
+[assembly: Feature(
+    Id = AssessmentsConstants.Features.MoodleImport,
+    Name = "Learning Moodle Import",
+    Description = "Imports Moodle course backups (.mbz, zip or tar.gz) through Bulk Import on the Course type: the course in its category with its dates, enrolment and completion, its sections, and an item for each SCORM package, quiz (with its questions), file, link and page. Each activity, question or setting it does not import is reported as a failed row, and importing a course again updates it.",
+    Category = "Learning",
+    Dependencies =
+    [
+        AssessmentsConstants.Features.Assessments,
+        PackagesConstants.Features.Scorm,
+        LearningConstants.Features.CourseCategories,
         ContentTransferConstants.Feature.ModuleId,
         OrchardCoreFeatureIds.Media,
     ]

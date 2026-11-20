@@ -64,6 +64,12 @@ public static class AssessmentsConstants
         /// Imports QTI 3.0 and QTI 2.1 assessment items as questions, as a ContentTransfer file format.
         /// </summary>
         public const string QtiImport = "CrestApps.OrchardCore.Learning.Assessments.QtiImport";
+
+        /// <summary>
+        /// Imports Moodle course backups (.mbz) as courses with their sections, SCORM packages, quizzes and questions,
+        /// files, links and pages, as a ContentTransfer file format.
+        /// </summary>
+        public const string MoodleImport = "CrestApps.OrchardCore.Learning.Assessments.MoodleImport";
     }
 
     /// <summary>
