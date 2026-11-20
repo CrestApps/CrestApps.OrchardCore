@@ -204,6 +204,11 @@ public sealed class AdminController : Controller, IUpdateModel
     [Admin("import/contents/{contentTypeId}", "ImportContentFromFile")]
     public async Task<IActionResult> Import(string contentTypeId)
     {
+        if (await FindRecordImporterAsync(contentTypeId) is { } recordImporter)
+        {
+            return await ImportRecordsAsync(recordImporter);
+        }
+
         var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentTypeId);
 
         if (contentTypeDefinition == null)
@@ -240,6 +245,8 @@ public sealed class AdminController : Controller, IUpdateModel
         var viewModel = new ContentImporterViewModel()
         {
             ContentTypeDefinition = contentTypeDefinition,
+            TargetName = contentTypeDefinition.Name,
+            TargetDisplayName = contentTypeDefinition.DisplayName,
             Content = await _displayManager.BuildEditorAsync(importContent, _updateModelAccessor.ModelUpdater, true, string.Empty, string.Empty),
             Columns = columns.Where(x => x.Type != ImportColumnType.ExportOnly),
             FileFormats = BuildFileFormatSelectList(),
@@ -266,29 +273,45 @@ public sealed class AdminController : Controller, IUpdateModel
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)contentTypeId))
-        {
-            RecordUploadRejected("unauthorized");
+        // A target that is not a content type, such as skills, keeps its own permission.
+        var recordImporter = await FindRecordImporterAsync(contentTypeId);
+        ContentTypeDefinition contentTypeDefinition = null;
 
-            return Unauthorized();
+        if (recordImporter is not null)
+        {
+            if (!await recordImporter.AuthorizeAsync(User, _authorizationService))
+            {
+                RecordUploadRejected("unauthorized");
+
+                return Unauthorized();
+            }
         }
-
-        var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentTypeId);
-
-        if (contentTypeDefinition == null)
+        else
         {
-            RecordUploadRejected("not_found");
+            if (!await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)contentTypeId))
+            {
+                RecordUploadRejected("unauthorized");
 
-            return NotFound();
-        }
+                return Unauthorized();
+            }
 
-        var settings = contentTypeDefinition.GetSettings<ContentTypeTransferSettings>();
+            contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentTypeId);
 
-        if (!settings.AllowBulkImport)
-        {
-            RecordUploadRejected("disabled");
+            if (contentTypeDefinition == null)
+            {
+                RecordUploadRejected("not_found");
 
-            return NotFound();
+                return NotFound();
+            }
+
+            var settings = contentTypeDefinition.GetSettings<ContentTypeTransferSettings>();
+
+            if (!settings.AllowBulkImport)
+            {
+                RecordUploadRejected("disabled");
+
+                return NotFound();
+            }
         }
 
         return await _chunkFileUploadService.ProcessRequestAsync(
@@ -325,7 +348,8 @@ public sealed class AdminController : Controller, IUpdateModel
                 var importContent = new ImportContent()
                 {
                     ContentTypeId = contentTypeId,
-                    ContentTypeName = contentTypeDefinition.Name,
+                    ContentTypeName = recordImporter?.Name ?? contentTypeDefinition.Name,
+                    IsContentType = recordImporter is null,
                 };
 
                 await _displayManager.UpdateEditorAsync(importContent, _updateModelAccessor.ModelUpdater, false, string.Empty, string.Empty);
@@ -338,8 +362,11 @@ public sealed class AdminController : Controller, IUpdateModel
                 }
 
                 // The rows may be of the related types the person may also import, such as questions of other kinds.
-                var rowContentTypes = await GetRowContentTypesAsync(contentTypeDefinition);
-                importContent.Alter<ImportContentOptionsPart>(options => options.RowContentTypes = rowContentTypes);
+                if (contentTypeDefinition is not null)
+                {
+                    var rowContentTypes = await GetRowContentTypesAsync(contentTypeDefinition);
+                    importContent.Alter<ImportContentOptionsPart>(options => options.RowContentTypes = rowContentTypes);
+                }
 
                 var fileName = Guid.NewGuid() + extension;
                 var storedFileName = await _contentTransferFileStore.CreateFileFromStreamAsync(fileName, file.OpenReadStream(), false);
@@ -347,7 +374,7 @@ public sealed class AdminController : Controller, IUpdateModel
                 var entry = new ContentTransferEntry()
                 {
                     EntryId = IdGenerator.GenerateId(),
-                    ContentType = contentTypeId,
+                    ContentType = recordImporter?.Name ?? contentTypeId,
                     Owner = CurrentUserId(),
                     Author = User.Identity.Name,
                     UploadedFileName = file.FileName,
@@ -407,6 +434,11 @@ public sealed class AdminController : Controller, IUpdateModel
         if (string.IsNullOrEmpty(contentTypeId))
         {
             return NotFound();
+        }
+
+        if (await FindRecordImporterAsync(contentTypeId) is { } recordImporter)
+        {
+            return await DownloadRecordTemplateAsync(recordImporter, format);
         }
 
         var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentTypeId);
@@ -876,7 +908,7 @@ public sealed class AdminController : Controller, IUpdateModel
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)entry.ContentType))
+        if (!await CanImportEntryAsync(entry))
         {
             return Forbid();
         }
@@ -922,7 +954,7 @@ public sealed class AdminController : Controller, IUpdateModel
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)entry.ContentType))
+        if (!await CanImportEntryAsync(entry))
         {
             return Forbid();
         }
@@ -1002,7 +1034,7 @@ public sealed class AdminController : Controller, IUpdateModel
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)entry.ContentType))
+        if (!await CanImportEntryAsync(entry))
         {
             return Forbid();
         }
@@ -1059,11 +1091,13 @@ public sealed class AdminController : Controller, IUpdateModel
             }
         }
 
-        // Read as the import read it, so a reshaped file's failed rows are the rows that failed.
-        var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(entry.ContentType);
+        // Read as the import read it, so a reshaped file's failed rows are the rows that failed. Only content types are
+        // reshaped.
+        var isRecordImport = await FindRecordImporterAsync(entry.ContentType) is not null;
+        var contentTypeDefinition = isRecordImport ? null : await _contentDefinitionManager.GetTypeDefinitionAsync(entry.ContentType);
 
         using (var reader = await ContentTransferFileReaders.TransformAsync(
-            HttpContext.RequestServices.GetServices<IContentTransferFileReaderTransformer>(),
+            isRecordImport ? [] : HttpContext.RequestServices.GetServices<IContentTransferFileReaderTransformer>(),
             () =>
             {
                 sourceStream.Position = 0;
@@ -1144,7 +1178,7 @@ public sealed class AdminController : Controller, IUpdateModel
         ];
 
         options.ImportableTypes = direction == ContentTransferDirection.Import
-            ? await GetTransferableContentTypesAsync(ContentTransferDirection.Import)
+            ? await GetImportableTargetsAsync()
             : [];
         options.ExportableTypes = direction == ContentTransferDirection.Export
             ? await GetTransferableContentTypesAsync(ContentTransferDirection.Export)
@@ -1609,6 +1643,91 @@ public sealed class AdminController : Controller, IUpdateModel
         }
 
         return query.OrderBy(x => x.CreatedUtc);
+    }
+
+    private IContentTransferImportTargetResolver TargetResolver
+        => HttpContext.RequestServices.GetRequiredService<IContentTransferImportTargetResolver>();
+
+    private async Task<IContentTransferRecordImporter> FindRecordImporterAsync(string name)
+        => string.IsNullOrEmpty(name) ? null : await TargetResolver.FindAsync(name) as IContentTransferRecordImporter;
+
+    // Each target keeps its own permission: a content type its import permission, any other target its own check.
+    private async Task<bool> CanImportEntryAsync(ContentTransferEntry entry)
+        => await FindRecordImporterAsync(entry.ContentType) is { } recordImporter
+            ? await recordImporter.AuthorizeAsync(User, _authorizationService)
+            : await _authorizationService.AuthorizeAsync(User, ContentTransferPermissions.ImportContentFromFile, (object)entry.ContentType);
+
+    private async Task<IList<SelectListItem>> GetImportableTargetsAsync()
+    {
+        var targets = await GetTransferableContentTypesAsync(ContentTransferDirection.Import);
+
+        foreach (var recordImporter in await TargetResolver.ListRecordImportersAsync(User))
+        {
+            targets.Add(new SelectListItem(recordImporter.DisplayName, recordImporter.Name));
+        }
+
+        return targets
+            .OrderBy(item => item.Text ?? item.Value, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private async Task<IActionResult> ImportRecordsAsync(IContentTransferRecordImporter recordImporter)
+    {
+        if (!await recordImporter.AuthorizeAsync(User, _authorizationService))
+        {
+            return Unauthorized();
+        }
+
+        var importContent = new ImportContent()
+        {
+            ContentTypeId = recordImporter.Name,
+            ContentTypeName = recordImporter.Name,
+            IsContentType = false,
+        };
+
+        var columns = await recordImporter.GetColumnsAsync(HttpContext.RequestAborted);
+
+        return View(nameof(Import), new ContentImporterViewModel()
+        {
+            TargetName = recordImporter.Name,
+            TargetDisplayName = recordImporter.DisplayName,
+            IsContentType = false,
+            Content = await _displayManager.BuildEditorAsync(importContent, _updateModelAccessor.ModelUpdater, true, string.Empty, string.Empty),
+            Columns = columns.Where(column => column.Type != ImportColumnType.ExportOnly),
+            FileFormats = BuildFileFormatSelectList(),
+            ImportFormats = [.. ImportFormats(recordImporter.Name).Select(provider => provider.FileExtension)],
+        });
+    }
+
+    private async Task<IActionResult> DownloadRecordTemplateAsync(IContentTransferRecordImporter recordImporter, string format)
+    {
+        if (!await recordImporter.AuthorizeAsync(User, _authorizationService))
+        {
+            return Unauthorized();
+        }
+
+        var formatProvider = ResolveFileFormatProvider(format);
+
+        if (formatProvider == null)
+        {
+            return BadRequest(S["No file formats are currently enabled for bulk import."]);
+        }
+
+        var columns = await recordImporter.GetColumnsAsync(HttpContext.RequestAborted);
+        var content = new MemoryStream();
+
+        using (var writer = formatProvider.CreateWriter(content, recordImporter.DisplayName))
+        {
+            writer.WriteHeader(columns.Where(column => column.Type != ImportColumnType.ExportOnly).Select(column => column.Name).ToList());
+            writer.Flush();
+        }
+
+        content.Seek(0, SeekOrigin.Begin);
+
+        return new FileStreamResult(content, formatProvider.ContentType)
+        {
+            FileDownloadName = $"{recordImporter.Name}_Template{formatProvider.FileExtension}",
+        };
     }
 
     private Task<ContentTransferEntry> FindImportEntryAsync(string entryId)

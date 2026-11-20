@@ -4,6 +4,7 @@ title: Learning Certifications
 description: "Certification paths for the CrestApps Learning module: a Skills certification earned from courses and assessments, issued with a number and a verification page, renewed in a window as a new cycle, lapsed and revoked."
 user_manual:
   - user-manual/learning/certifications
+  - user-manual/learning/competencies
 ---
 
 **Learning Certifications** (`CrestApps.OrchardCore.Learning.Certifications`, with `Learning.Certifications.Abstractions` and `Learning.Certifications.Core`) lets people earn a [Skills](./skills) certification through [Learning](./learning). It depends on Learning and on **Skills: Issued Certificates**; with [Learning Assessments](./learning-assessments) on, a passed quiz can be a requirement too.
@@ -63,6 +64,7 @@ When a completed enrollment is flagged for review (an attempt voided or regraded
 | --- | --- | --- |
 | People on a path | `/Admin/learning/certification-paths/{pathId}/people` | View enrollments; Manage enrollments to start someone or check again |
 | My certifications | `/learning/certifications` | Signed in; an entry of the storefront account menu, framed by it |
+| My competencies | `/learning/competencies` | Signed in, with the Learning Competencies feature; an entry of the storefront account menu, framed by it |
 | Verification page and certificate PDF | `/certificates/verify/{code}` (Skills) | Public, rate limited |
 
 ## Education credits
@@ -76,6 +78,18 @@ Education credits are kept in the module too. An **education credit type** (`Edu
 - `IEducationCreditService` reads balances, sums and entries, awards credits and handles external learning; `IEducationCreditObserver` hears awards, submissions and reviews (`services.AddEducationCreditObserver<T>()`).
 - The **Record external learning** data pipeline step records the external learning of each row as accepted and posts its credits; rows that fail go to its Rejected output with the reason.
 - The `LearningCreditTypes` recipe and deployment steps move credit types; the workflow events Education Credits Awarded and External Learning Submitted and the task Award Education Credits start or award from workflows; the data source gains the Education credits and External learning data sets; credits and external learning are exported and deleted with a person's personal data.
+
+## Competencies
+
+The **Learning Competencies** feature (`CrestApps.OrchardCore.Learning.Competencies`, in this module) maps competencies onto [Skills](./skills): a competency is a skill and a competency framework is the skill's `Category`, so Skills needed no new record. It depends on Learning and Skills only, not on certification paths.
+
+- The **Competencies** part (`CompetenciesPart`, attachable) lists the skills a content item grants (`SkillIds`) and the level (`Proficiency`, 1 to 5, default 3). Its migration (`CompetenciesMigrations`) puts it on the Course type, and on the Learning Path type when that type exists. Its editor is a card with a selectpicker of the enabled skills grouped by category.
+- `CompetencyEnrollmentObserver` grants a completed course's competencies, and `LearningPathCompetenciesObserver` (Learning Programs, registered by `PathCompetenciesStartup` when this feature is on) a completed path's. Both grant only when the completion supports issuing (`CompletionEvidence.SupportsIssuing`, `ILearningPathService.SupportsIssuingAsync`), the rule credentials and credits follow.
+- `CompetencyGrants.GrantAsync` gives each skill through `ISkillAssignmentService.AssignAsync` as `SkillSubject.User`, from the completion day in the site's time zone. It never lowers a level the learner holds, raises a lower one keeping its start day, restarts one that ended at the higher of the two levels, and lets Skills refuse a disabled or deleted skill. Granting again changes nothing, so a completion delivered twice is harmless. `AssignedBy` is `Learning: <title>` (`CompetencyGrants.Actor`).
+- **My competencies** (`/learning/competencies`, `MyCompetenciesController`, an entry of the storefront account menu framed by it) lists `ISkillAssignmentService.GetEffectiveAsync` for the user today, by category.
+- Register the observer outside the feature with `services.AddLearningCompetenciesCore()`.
+
+The frameworks are loaded with the Skills import through ContentTransfer (a Moodle competency framework export) or the `Skills` recipe step, and the Skills **Skill holders** report shows who holds which competency; see [Skills](./skills#import-skills-from-a-file).
 
 ## Integrations
 

@@ -51,6 +51,20 @@ public static class LearningCertificationsCoreServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers the observer that grants a completed course's competencies (Skills skills) to the learner.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddLearningCompetenciesCore(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddEnrollmentObserver<CompetencyEnrollmentObserver>();
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers the assessment requirement and the observer of passed quizzes.
     /// </summary>
     /// <param name="services">The services.</param>

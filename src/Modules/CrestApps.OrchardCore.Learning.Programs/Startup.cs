@@ -106,6 +106,20 @@ public sealed class PathCreditsStartup : StartupBase
 }
 
 /// <summary>
+/// Grants the competencies of a completed learning path.
+/// </summary>
+[Feature(ProgramsConstants.Features.Paths)]
+[RequireFeatures(CertificationsConstants.Features.Competencies)]
+public sealed class PathCompetenciesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddLearningPathObserver<LearningPathCompetenciesObserver>();
+    }
+}
+
+/// <summary>
 /// Tells learners and managers about required learning and completed paths.
 /// </summary>
 [Feature(ProgramsConstants.Features.RequiredLearning)]

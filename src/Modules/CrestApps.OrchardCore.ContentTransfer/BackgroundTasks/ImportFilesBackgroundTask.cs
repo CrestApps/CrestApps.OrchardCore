@@ -424,9 +424,15 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         }
 
         var runDeadlineUtc = clock.UtcNow + MaxRunDuration;
-        var contentTypeDefinition = await contentDefinitionManager.GetTypeDefinitionAsync(entry.ContentType);
 
-        if (contentTypeDefinition == null)
+        // A target that is not a content type, such as skills, saves its rows itself; a content type is imported by the
+        // content item pipeline below, as before.
+        var recordImporter = await serviceProvider.GetRequiredService<IContentTransferImportTargetResolver>().FindAsync(entry.ContentType) as IContentTransferRecordImporter;
+        var contentTypeDefinition = recordImporter is null
+            ? await contentDefinitionManager.GetTypeDefinitionAsync(entry.ContentType)
+            : null;
+
+        if (contentTypeDefinition == null && recordImporter == null)
         {
             if (logger.IsEnabled(LogLevel.Error))
             {
@@ -527,7 +533,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             };
             var activeRowFilters = new List<IContentImportRowFilter>();
 
-            foreach (var filter in rowFilters)
+            // The row filters and file reshapers work on content types.
+            foreach (var filter in recordImporter is null ? rowFilters : [])
             {
                 if (await filter.InitializeAsync(filterInitContext))
                 {
@@ -544,6 +551,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 contentTypeDefinition,
                 contentManager,
                 contentImportManager,
+                recordImporter,
                 activeRowFilters,
                 session,
                 clock,
@@ -645,6 +653,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         ContentTypeDefinition contentTypeDefinition,
         IContentManager contentManager,
         IContentImportManager contentImportManager,
+        IContentTransferRecordImporter recordImporter,
         List<IContentImportRowFilter> activeRowFilters,
         ISession session,
         IClock clock,
@@ -659,7 +668,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     {
         // Another system's layout, such as a store's product export, is read as the content type's columns.
         using var reader = await ContentTransferFileReaders.TransformAsync(
-            serviceProvider.GetServices<IContentTransferFileReaderTransformer>(),
+            recordImporter is null ? serviceProvider.GetServices<IContentTransferFileReaderTransformer>() : [],
             () =>
             {
                 stream.Position = 0;
@@ -741,6 +750,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         contentTypeDefinition,
                         contentManager,
                         contentImportManager,
+                        recordImporter,
                         progressPart,
                         session,
                         clock,
@@ -850,6 +860,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         contentTypeDefinition,
                         contentManager,
                         contentImportManager,
+                        recordImporter,
                         progressPart,
                         session,
                         clock,
@@ -893,6 +904,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 contentTypeDefinition,
                 contentManager,
                 contentImportManager,
+                recordImporter,
                 progressPart,
                 session,
                 clock,
@@ -925,6 +937,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         ContentTypeDefinition contentTypeDefinition,
         IContentManager contentManager,
         IContentImportManager contentImportManager,
+        IContentTransferRecordImporter recordImporter,
         ImportFileProcessStatsPart progressPart,
         ISession session,
         IClock clock,
@@ -958,6 +971,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 contentTypeDefinition,
                 contentManager,
                 contentImportManager,
+                recordImporter,
                 progressPart,
                 session,
                 clock,
@@ -1022,6 +1036,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         ContentTypeDefinition contentTypeDefinition,
         IContentManager contentManager,
         IContentImportManager contentImportManager,
+        IContentTransferRecordImporter recordImporter,
         ImportFileProcessStatsPart progressPart,
         ISession session,
         IClock clock,
@@ -1035,6 +1050,74 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             return false;
         }
 
+        if (recordImporter is not null)
+        {
+            await ImportRecordBatchAsync(recordImporter, entry, dataTable, newRecords, existingRows, progressPart, monitor, localizer, runTelemetry, cancellationToken);
+        }
+        else
+        {
+            await ImportContentBatchAsync(serviceProvider, entry, dataTable, newRecords, existingRows, contentTypeDefinition, contentManager, contentImportManager, progressPart, monitor, localizer, runTelemetry);
+        }
+
+        // The watchdog cancels a run it gave up on before it releases the lock, so a run that wakes up after another
+        // took over stops here, and its uncommitted batch is rolled back instead of saved over the newer progress.
+        cancellationToken.ThrowIfCancellationRequested();
+
+        entry.ProcessSaveUtc = clock.UtcNow;
+        entry.Put(progressPart);
+
+        await session.SaveAsync(entry, false, collection: null, cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
+
+    private static async Task ImportRecordBatchAsync(
+        IContentTransferRecordImporter recordImporter,
+        ContentTransferEntry entry,
+        DataTable dataTable,
+        Dictionary<int, DataRow> newRecords,
+        Dictionary<string, KeyValuePair<int, DataRow>> existingRows,
+        ImportFileProcessStatsPart progressPart,
+        ImportRunMonitor monitor,
+        IStringLocalizer localizer,
+        ImportRunTelemetry runTelemetry,
+        CancellationToken cancellationToken)
+    {
+        var rows = RecordImportBatch.ToRows(newRecords.Concat(existingRows.Values), dataTable.Columns);
+
+        if (rows.Count == 0)
+        {
+            return;
+        }
+
+        // The importer saves the batch at once, so the batch is watched as its first row.
+        monitor.BeginRow(rows[0].RowIndex);
+
+        try
+        {
+            await RecordImportBatch.ImportAsync(recordImporter, entry, rows, progressPart, localizer, runTelemetry, cancellationToken);
+        }
+        finally
+        {
+            monitor.EndRow();
+        }
+    }
+
+    private static async Task ImportContentBatchAsync(
+        IServiceProvider serviceProvider,
+        ContentTransferEntry entry,
+        DataTable dataTable,
+        Dictionary<int, DataRow> newRecords,
+        Dictionary<string, KeyValuePair<int, DataRow>> existingRows,
+        ContentTypeDefinition contentTypeDefinition,
+        IContentManager contentManager,
+        IContentImportManager contentImportManager,
+        ImportFileProcessStatsPart progressPart,
+        ImportRunMonitor monitor,
+        IStringLocalizer localizer,
+        ImportRunTelemetry runTelemetry)
+    {
         // An import may create items of several related content types, each row naming its own.
         var rowContentTypes = entry.GetOrCreate<ImportContentOptionsPart>().RowContentTypes ?? [];
         var definitions = new Dictionary<string, ContentTypeDefinition>(StringComparer.Ordinal)
@@ -1157,17 +1240,6 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             }
         }
 
-        // The watchdog cancels a run it gave up on before it releases the lock, so a run that wakes up after another
-        // took over stops here, and its uncommitted batch is rolled back instead of saved over the newer progress.
-        cancellationToken.ThrowIfCancellationRequested();
-
-        entry.ProcessSaveUtc = clock.UtcNow;
-        entry.Put(progressPart);
-
-        await session.SaveAsync(entry, false, collection: null, cancellationToken);
-        await session.SaveChangesAsync(cancellationToken);
-
-        return true;
     }
 
     /// <summary>

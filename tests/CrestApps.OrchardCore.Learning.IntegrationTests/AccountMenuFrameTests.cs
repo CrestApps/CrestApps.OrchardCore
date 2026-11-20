@@ -40,7 +40,7 @@ public sealed class AccountMenuFrameTests
         }
 
         // Assert: the Learning, Accounts and Users pages are in the menu, so the walk covered them, and none was unframed.
-        string[] expected = ["/learning", "/learning/transcript", "/learning/credentials", "/learning/certifications", "/learning/credits", "/learning/required", "/notifications", "/account/learning-seats", "/account/members"];
+        string[] expected = ["/learning", "/learning/transcript", "/learning/credentials", "/learning/certifications", "/learning/competencies", "/learning/credits", "/learning/required", "/notifications", "/account/learning-seats", "/account/members"];
 
         Assert.Empty(expected.Except(links));
         Assert.Empty(unframed);

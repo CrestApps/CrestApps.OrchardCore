@@ -1,6 +1,10 @@
+using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.PersonalData.Core;
+using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Skills.BackgroundTasks;
 using CrestApps.OrchardCore.Skills.Core;
+using CrestApps.OrchardCore.Skills.ContentTransfer;
 using CrestApps.OrchardCore.Skills.Core.Indexes;
 using CrestApps.OrchardCore.Skills.Drivers;
 using CrestApps.OrchardCore.Skills.IssuedCertificates.Drivers;
@@ -131,5 +135,32 @@ public sealed class IssuedCertificatesRateLimitsStartup : StartupBase
                 policyName: SkillsConstants.VerificationRateLimitGroup,
                 permitLimit: RequestsPerMinute,
                 window: TimeSpan.FromMinutes(1))));
+    }
+}
+
+/// <summary>
+/// Adds the Skill holders report and its skill category filter.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class SkillsReportsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddReport<SkillHoldersReport>();
+        services.AddDisplayDriver<ReportFilter, SkillCategoryReportFilterDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Lets skills and competency frameworks be imported from a file through ContentTransfer.
+/// </summary>
+[RequireFeatures(ContentTransferConstants.Feature.ModuleId)]
+public sealed class SkillsContentTransferStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentTransferImportTarget<SkillsImportTarget>();
     }
 }

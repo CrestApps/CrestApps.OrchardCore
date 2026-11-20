@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.Skills.ContentTransfer;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Skills.ViewModels;
@@ -6,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -67,9 +70,15 @@ public sealed class SkillsController : Controller
         var pager = new Pager(pagerParameters, pagerOptions.Value);
         var (count, skills) = await _skillManager.SearchAsync(search, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
 
+        // Skills are imported from a file by ContentTransfer, when it is on.
+        var importUrl = HttpContext.RequestServices.GetServices<IContentTransferRecordImporter>().Any(importer => importer.Name == SkillsImportTarget.TargetName)
+            ? Url.RouteUrl(new { area = ContentTransferConstants.Feature.ModuleId, controller = "Admin", action = "Import", contentTypeId = SkillsImportTarget.TargetName })
+            : null;
+
         return View(new SkillsListViewModel
         {
             Search = search,
+            ImportUrl = importUrl,
             List = new AdminListContext<Skill>
             {
                 Source = skills.ToList(),

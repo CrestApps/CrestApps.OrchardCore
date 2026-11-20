@@ -262,6 +262,7 @@ const sidebars = {
                 'user-manual/learning/quizzes',
                 'user-manual/learning/grading',
                 'user-manual/learning/certifications',
+                'user-manual/learning/competencies',
                 'user-manual/learning/required-learning',
                 'user-manual/learning/selling-courses',
                 'user-manual/learning/external-tools',

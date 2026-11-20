@@ -236,3 +236,21 @@ public sealed class WorkflowsSchemaStartup : StartupBase
             .AddWorkflowActivitySchema<AwardEducationCreditsTaskSchema>();
     }
 }
+
+/// <summary>
+/// Registers competencies: the part a course or a learning path grants Skills skills with, the observer that grants a
+/// completed course's, and the learner's My competencies page.
+/// </summary>
+[Feature(CertificationsConstants.Features.Competencies)]
+public sealed class CompetenciesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddLearningCompetenciesCore();
+        services.AddContentPart<CompetenciesPart>()
+            .UseDisplayDriver<CompetenciesPartDisplayDriver>();
+        services.AddDataMigration<CompetenciesMigrations>();
+        services.AddNavigationProvider<CompetenciesAccountMenu>();
+    }
+}

@@ -166,7 +166,7 @@ Build, in this order. Items 1-6 cover almost every course; the rest is the long 
     - forum: **dropped** at migration for now; follow-up: a discussion course item on the Timeline building block, which needs a Timeline access provider for course items;
     - MooTyper typing practice: **dropped** at migration; replaced by a link lesson to a typing site or a learning package. Follow-up only if typing scores must be kept;
     - database: **dropped** at migration; replaced by coursework (what learners hand in) or a page lesson (what they read).
-14. **Competencies.** 17 frameworks with about 457 competencies, mapped onto Skills (skills with proficiency levels). Learning-plan templates become learning paths or programs whose completion grants the competency (a skill assignment).
+14. ~~**Competencies.**~~ Done on `ma/lms-competencies-ff9926` (not pushed): the Learning Competencies feature. A competency is a Skills skill and a framework its category; the Competencies part on a course or a learning path grants skills at a level on completion when `CompletionEvidence` supports issuing; My competencies in Your account; the Skills **Skill holders** report with a framework filter; Moodle competency framework CSV exports import through ContentTransfer (the `Skills.Skill` import target, on the new ContentTransfer import-target abstraction). Not done: course recipes still name skills by id, and Moodle's nested competencies import flat.
 15. **Course images, and images inside summaries and labels.** Import them into the media library.
 
 ## 4. Smaller follow-ups
