@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.BusinessHours.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CheckBusinessHoursTask>
+
+<header><h4><i class="fa-solid fa-business-time" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Check Business Hours"])</h4></header>

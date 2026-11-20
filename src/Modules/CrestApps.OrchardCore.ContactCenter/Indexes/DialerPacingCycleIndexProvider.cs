@@ -22,6 +22,8 @@ public sealed class DialerPacingCycleIndexProvider : IndexProvider<DialerPacingC
     {
         context
             .For<DialerPacingCycleIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(cycle => new DialerPacingCycleIndex
             {
                 ItemId = cycle.ItemId,

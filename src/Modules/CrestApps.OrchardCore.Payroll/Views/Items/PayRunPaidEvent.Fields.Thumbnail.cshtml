@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<PayRunPaidEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i> @T["Pay Run Paid"]</h4>
+<p>@T["Starts when every statement of a processed pay run is paid."]</p>

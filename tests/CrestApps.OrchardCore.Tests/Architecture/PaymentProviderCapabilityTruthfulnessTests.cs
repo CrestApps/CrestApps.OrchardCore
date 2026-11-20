@@ -267,6 +267,12 @@ public sealed class PaymentProviderCapabilityTruthfulnessTests
             return new global::Stripe.StripeClient("sk_test_capabilities");
         }
 
+        // A sealed helper a provider takes (Pay Later's due-date resolver) can't be proxied; it is built from mocks too.
+        if (type.IsClass && type.IsSealed && !type.IsAbstract && type.GetConstructors().Length > 0)
+        {
+            return CreateWithMocks(type);
+        }
+
         var mockType = typeof(Mock<>).MakeGenericType(type);
         var mock = (Mock)Activator.CreateInstance(mockType);
 

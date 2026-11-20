@@ -34,6 +34,7 @@ public sealed class TransactionController : Controller
     private const string _optionsStatus = "Options.Status";
 
     private readonly ITransactionManager _transactionManager;
+    private readonly ITransactionVisibilityService _visibility;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
 
@@ -44,18 +45,21 @@ public sealed class TransactionController : Controller
     /// Initializes a new instance of the <see cref="TransactionController"/> class.
     /// </summary>
     /// <param name="transactionManager">The transaction manager.</param>
+    /// <param name="visibility">The rule of which transactions a user may see: their own and those of the parties they act for.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="notifier">The notifier used to surface confirmation messages.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public TransactionController(
         ITransactionManager transactionManager,
+        ITransactionVisibilityService visibility,
         IAuthorizationService authorizationService,
         INotifier notifier,
         IHtmlLocalizer<TransactionController> htmlLocalizer,
         IStringLocalizer<TransactionController> stringLocalizer)
     {
         _transactionManager = transactionManager;
+        _visibility = visibility;
         _authorizationService = authorizationService;
         _notifier = notifier;
         H = htmlLocalizer;
@@ -90,12 +94,9 @@ public sealed class TransactionController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value);
 
-        var query = new TransactionQuery
-        {
-            OwnerId = userId,
-            OwnerKind = CustomerOwnerKind.Authenticated,
-            Search = options.Search,
-        };
+        // Their own transactions and those owed by the parties they act for, such as their account.
+        var query = await _visibility.CreateQueryAsync(userId);
+        query.Search = options.Search;
 
         options.Status.ApplyTo(query);
 
@@ -275,9 +276,7 @@ public sealed class TransactionController : Controller
 
         var transaction = await _transactionManager.FindByIdAsync(itemId);
 
-        if (transaction is null ||
-            transaction.OwnerKind != CustomerOwnerKind.Authenticated ||
-            !string.Equals(transaction.OwnerId, userId, StringComparison.Ordinal))
+        if (transaction is null || !await _visibility.CanViewAsync(transaction, userId))
         {
             return null;
         }

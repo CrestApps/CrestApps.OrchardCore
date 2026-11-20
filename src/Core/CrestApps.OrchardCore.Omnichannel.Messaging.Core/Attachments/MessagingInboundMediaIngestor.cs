@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
@@ -116,7 +117,7 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
         return true;
     }
 
-    private async Task<MessagingAttachment> TryIngestAsync(OmnichannelMessage message, string source, int index, IReadOnlyList<MessagingFileFormat> formats, CancellationToken cancellationToken)
+    private async Task<MessagingAttachment> TryIngestAsync(OmnichannelMessage message, string source, int index, IReadOnlyList<FileFormat> formats, CancellationToken cancellationToken)
     {
         if (formats.Count == 0)
         {
@@ -191,7 +192,7 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
             // The last segment of the address stands in for a file name: some formats are only known by their extension.
             var fileName = Path.GetFileName(uri.AbsolutePath);
             var declaredType = response.Content.Headers.ContentType?.MediaType;
-            var format = MessagingFileFormats.Detect(bytes, fileName, declaredType, formats);
+            var format = FileFormats.Detect(bytes, fileName, declaredType, formats);
 
             if (format is null)
             {

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Recurring
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<RecurringInvoiceGeneratedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-repeat" aria-hidden="true"></i>
+    @T["Recurring Invoice Generated"]
+</h4>
+<p>@T["Starts when a recurring plan makes an invoice."]</p>

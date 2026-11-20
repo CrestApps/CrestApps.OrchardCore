@@ -241,12 +241,12 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     public bool ShowDialProgressToAgent { get; set; }
 
     /// <summary>
-    /// Gets or sets the default business-hours calendar used to evaluate outbound calls.
+    /// Gets or sets the default Business Hours schedule used to evaluate outbound calls.
     /// </summary>
     public string CallingCalendarId { get; set; }
 
     /// <summary>
-    /// Gets or sets region-specific business-hours calendar overrides keyed by ISO 3166-1 alpha-2 region code.
+    /// Gets or sets region-specific Business Hours schedule overrides keyed by ISO 3166-1 alpha-2 region code.
     /// </summary>
     public IDictionary<string, string> RegionalCallingCalendarIds { get; set; } =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

@@ -1,0 +1,9 @@
+/*
+ * The ticket type's fields on the ticket's Details card and the new ticket form. The admin theme puts an em dash before
+ * every field hint (.hint.dashed::before); a hint under its input reads as a plain hint, as on the other forms, while a
+ * checkbox's hint, written after its label, keeps the dash.
+ */
+.ticket-fields .ocat-end > .hint.dashed::before {
+    content: none;
+}
+/*$vite$:1*/

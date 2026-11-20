@@ -92,7 +92,8 @@ internal sealed class AccountLocationsPartSchemaDefinition : PartSchemaDefinitio
                         .Properties(
                             (nameof(AccountLocation.LocationId), new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The identifier of the location within the account, which orders and other records refer to.")),
                             (nameof(AccountLocation.Name), new JsonSchemaBuilder().Type(SchemaValueType.String, SchemaValueType.Null).Description("The name of the location, such as Head office.")),
-                            (nameof(AccountLocation.Address), Address()))
+                            (nameof(AccountLocation.Address), Address()),
+                            (nameof(AccountLocation.IsBilling), new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the account's invoices and other billing documents are addressed to this location. One location at most; without one, the first location is used.")))
                         .AdditionalProperties(true))))
             .AdditionalProperties(true);
 

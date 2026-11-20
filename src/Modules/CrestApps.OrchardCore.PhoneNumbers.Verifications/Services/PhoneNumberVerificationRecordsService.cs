@@ -275,7 +275,9 @@ public sealed class PhoneNumberVerificationRecordsService
 
         if (!string.IsNullOrWhiteSpace(term))
         {
-            query = query.With<PhoneNumberVerificationPartIndex>(index =>
+            // A text can't seek. Grouped by document, the database reads the matches and sorts them, instead of
+            // walking an index of the order looking for the few records that contain the text.
+            query = query.NoIndexOptimizations().With<PhoneNumberVerificationPartIndex>(index =>
                 index.PhoneNumber.Contains(term) || index.NormalizedPhoneNumber.Contains(term));
         }
 

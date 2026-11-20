@@ -31,10 +31,13 @@ public sealed class DialerDecisionIndexProvider : IndexProvider<InteractionEvent
     {
         context
             .For<DialerDecisionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(interactionEvent => BuildDecision(interactionEvent));
 
         context
             .For<DialerDecisionAgentIndex>()
+            .ExclusiveToDocumentType()
             .Map(interactionEvent => BuildAgents(interactionEvent));
     }
 

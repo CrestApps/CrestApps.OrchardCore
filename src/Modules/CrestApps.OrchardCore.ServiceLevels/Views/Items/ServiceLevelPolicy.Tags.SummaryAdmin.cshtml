@@ -1,0 +1,14 @@
+@model ServiceLevelPolicyRowViewModel
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The kind of work the policy is for"]">
+    <i class="fa-solid fa-layer-group text-secondary me-1" aria-hidden="true"></i>@Model.ScopeDisplayName
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["How many targets the policy sets"]">
+    <i class="fa-solid fa-bullseye text-secondary me-1" aria-hidden="true"></i>@T.Plural(Model.Policy.Targets.Count, "1 target", "{0} targets")
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The targets are counted in business hours or around the clock"]">
+    <i class="fa-solid fa-clock text-secondary me-1" aria-hidden="true"></i>@(string.IsNullOrEmpty(Model.Policy.HoursScheduleId) ? T["Around the clock"] : T["Business hours"])
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["A warning is raised when this share of a target has passed"]">
+    <i class="fa-solid fa-triangle-exclamation text-secondary me-1" aria-hidden="true"></i>@T["Warns at {0}%", Model.Policy.WarningPercent]
+</span>

@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.Core.Models
+
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="BusinessHoursSchedulesEdit" title="@T["Edit '{0}' Business Hours Schedule", Model.DisplayName]">
+        <breadcrumb-item id="BusinessHoursSchedules" action="Index" controller="Schedules" area="CrestApps.OrchardCore.BusinessHours" permission="@BusinessHoursPermissions.ManageBusinessHoursSchedules.Name">@T["Business Hours"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["id"]" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

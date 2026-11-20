@@ -24,4 +24,10 @@ public enum TaxRoundingLevel
     /// Round only the final transaction total.
     /// </summary>
     Transaction,
+
+    /// <summary>
+    /// Round the accumulated amount of each tax and rate (its code, name, rate and compound flag) once, and spread it back
+    /// over the lines largest remainder first: the rule EN 16931 asks invoices to follow, and the default of a new site.
+    /// </summary>
+    Rate,
 }

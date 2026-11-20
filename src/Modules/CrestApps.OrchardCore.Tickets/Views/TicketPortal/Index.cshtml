@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.Tickets.Portal
+@using CrestApps.OrchardCore.Users
+@using Microsoft.AspNetCore.Html
+@model TicketPortalListViewModel
+
+<zone Name="Title">
+    <breadcrumb name="TicketPortal" title="@T["Requests"]">
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(UsersConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@{
+    IHtmlContent actions = Model.CanCreate
+        ? new HtmlString($"<a class=\"btn btn-primary\" href=\"{System.Net.WebUtility.HtmlEncode(Url.RouteUrl("TicketPortalCreate"))}\">{System.Net.WebUtility.HtmlEncode(T["New request"].Value)}</a>")
+        : null;
+}
+
+@await DisplayAsync(await New.CommerceAccountPage(Title: T["Requests"], Actions: actions, Content: await Html.PartialAsync("_TicketPortalList", Model)))

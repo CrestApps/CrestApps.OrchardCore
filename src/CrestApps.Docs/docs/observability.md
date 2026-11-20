@@ -999,12 +999,16 @@ Deferred work (`DeferredWork.Add`, span `crestapps.deferred.<name>` linked to th
 
 ### Logging
 
-Commerce owns EventIds 12000-12999, split by area: checkout 12000-12099, Stripe 12100-12199, subscriptions 12200-12299, orders 12300-12399, marketplace 12400-12499, shipping 12500-12599, taxation 12600-12699, products 12700-12799, bookings and pay later 12800-12899 (others unassigned).
+Commerce owns EventIds 12000-12999, split by area: checkout 12000-12099, Stripe 12100-12199, subscriptions 12200-12299, orders 12300-12399, marketplace 12400-12499, shipping 12500-12599, taxation 12600-12699, products 12700-12799, bookings and pay later 12800-12899, business documents 12900-12999.
 
 | EventId | Class | Level | Message |
 |---|---|---|---|
 | 12000 | `CheckoutLog.ReconciliationSwept` (Checkout module) | Information | The checkout reconciliation sweep checked `{Sessions}` waiting checkouts: `{Completed}` completed, `{Failed}` failed to reconcile, `{Expired}` abandoned ones expired; the oldest had waited `{OldestPendingSeconds}` seconds. (only when there was something to do) |
 | 12200 | `SubscriptionsLog.TenantProvisioned` (Subscriptions.Core) | Information | Provisioning job '`{JobId}`' created its site on attempt `{Attempt}` in `{ElapsedSeconds}` seconds. |
+| 12900 | `BusinessDocumentPdfTelemetry.FontFallbackUsed` (Business Documents) | Warning | No TrueType font could be used for business document PDFs, so they use the built-in Helvetica font. Logged once. |
+| 12901 | `BusinessDocumentPdfTelemetry.LogoNotDrawn` (Business Documents) | Warning | The logo of a business document could not be drawn in its PDF, which is written without it. |
+
+Business document PDFs count `crestapps.business_document.pdf.font_fallbacks` (Counter, `{document}`, meter `CrestApps.OrchardCore.BusinessDocuments`): the PDFs written with the built-in Helvetica font, which shows Latin-1 text only.
 
 New log scopes: `CheckoutSessionId` (reconciliation sweep, per session), `StripeEventId`/`StripeEventType` (webhook), `ProvisioningJobId` (tenant provisioning), `InstallmentPlanId` (installment sweep).
 
@@ -1013,7 +1017,7 @@ New log scopes: `CheckoutSessionId` (reconciliation sweep, per session), `Stripe
 - No existing commerce instrument was renamed (there were none).
 - `DefaultCheckoutEngine` public methods are now thin wrappers over private `*CoreAsync` methods so every return is measured; behavior is unchanged.
 - `TransactionReminderBackgroundTask.RaiseOverdueAsync` now returns the number of transactions that became overdue (was `Task`); `PayLaterRenewalBackgroundTask.RenewAsync` (private) returns whether it created a cycle.
-- Not deferred-work wrapped on purpose: `SequentialFinancialDocumentNumberGenerator` lock release, and the `BookingMigrations`/`PosMigrations` index backfills (migrations).
+- Not deferred-work wrapped on purpose: the number series lock release (`DocumentNumberSequence` releases it when the caller's unit of work is saved, for every series, financial documents included), and the `BookingMigrations`/`PosMigrations` index backfills (migrations).
 
 ## Scheduling, workforce, field service, geo and tenant hierarchy
 
@@ -1050,7 +1054,7 @@ Ids (calendar, event, appointment, visit, work order, worker, timesheet, payroll
 | `crestapps.geo.geocode.requests` | Counter | `{request}` | `result` (`done`, `no_match`, `gone`, `no_target`, `no_provider`, `retry`, `failed`) | Background geocoding requests processed by `DefaultGeocodeQueue`. `retry`: the provider failed and the request waits; `failed`: it failed `MaxAttempts` times and was given up. |
 | `crestapps.dispatch.visit.events` | Counter | `{event}` | `event` (`created`, `assigned`, `unassigned`, `status_changed`, `at_risk`, `other`), `status` (`VisitStatus` after the event) | Visit transitions, recorded where they are raised (`DefaultDispatchService`, `VisitRiskMonitor`). |
 | `crestapps.dispatch.observer.failures` | Counter | `{failure}` | `observer`, `event` | Visit events an `IVisitObserver` failed to handle (logged and swallowed). |
-| `crestapps.workorders.sla.events` | Counter | `{event}` | `event` (`warning`, `breached`), `target` (`response`, `resolution`) | Service level warnings and breaches raised by `SlaMonitor`, each once per target. |
+| `crestapps.workorders.sla.events` | Counter | `{event}` | `event` (`warning`, `breached`), `target` (`response`, `resolution`) | Work order service level warnings and breaches, raised by `WorkOrderServiceLevelObserver` from the shared Service Levels monitor, each once per target. |
 | `crestapps.solver.runs` | Counter | `{run}` | `solver`, `status` (`optimal`, `feasible`, `timed_out`, `infeasible`, `cancelled`, `skipped`, `error`), `size` (`le_10`, `le_100`, `le_1000`, `le_10000`, `le_100000`, `gt_100000`), `result` (`solver`: its own answer was returned; `builtin`: the built-in answer was kept), `outcome` | OR-Tools solves (the solve's duration is not measured: it runs to its time limit). Size is workers × days × templates for shifts and the number of visits for dispatch. The routing solver (guided local search) never proves optimality and runs to its limit, so an answer it found is `feasible` unless OR-Tools reports `RoutingOptimal`. `skipped`: nothing to solve. |
 | `crestapps.tenanthierarchy.child.operation.duration` | Histogram | `s` (long buckets) | `operation` (`create`, `setup`, `update`, `suspend`, `resume`, `reload`, `remove`, `set_features`), `outcome` (`ok`, `failed`, `error`, `cancelled`), `error.type` | One operation a parent tenant ran on a child tenant through `TenantHierarchyBroker`. `failed`: the broker returned a failure (wrong state, setup errors, removal refused). Its count is the operation count. |
 | `crestapps.nlweb.ask.duration` | Histogram | `s` | `mode` (`list`, `summarize`, `generate`, `other`), `outcome` (`answered`, `empty`, `elicitation`, `failed`), `reason` when failed (`invalid_request`, `forbidden`, `not_configured`, `unknown_promise`, `internal_error`, `other`) | One NLWeb question, until its results and text were ready (recorded by an `INLWebAskHandler`). |

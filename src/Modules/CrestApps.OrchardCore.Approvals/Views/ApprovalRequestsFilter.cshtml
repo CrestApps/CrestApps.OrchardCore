@@ -1,0 +1,27 @@
+@{
+    var model = (ApprovalRequestsIndexViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="btn-group filter">
+    <select id="approval-requests-type" name="type" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Approval type"]" data-dropdown-align-right="auto" aria-label="@T["Approval type"]" onchange="this.form.submit()">
+        @foreach (var option in model.TypeOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>
+@if (model.View != ApprovalRequestsIndexViewModel.WaitingView)
+{
+    <div class="btn-group filter">
+        <select id="approval-requests-status" name="status" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]" onchange="this.form.submit()">
+            <option value="Pending" selected="@(model.Status == "Pending")">@T["Waiting for a decision"]</option>
+            <option value="Approved" selected="@(model.Status == "Approved")">@T["Approved"]</option>
+            <option value="Rejected" selected="@(model.Status == "Rejected")">@T["Rejected"]</option>
+            <option value="Canceled" selected="@(model.Status == "Canceled")">@T["Withdrawn"]</option>
+            <option value="All" selected="@(model.Status == "All")">@T["All requests"]</option>
+        </select>
+    </div>
+}

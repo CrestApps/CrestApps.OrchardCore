@@ -1,8 +1,8 @@
 # CrestApps OrchardCore Commerce
 
-The Commerce module registers the shared **Commerce** admin menu and its icon. Commerce-related modules
-(such as Transactions and Taxation) contribute their own screens under this single top-level menu instead of
-each creating their own copy of it.
+The Commerce module registers the shared **Commerce** admin menu and its icon, the storefront account and the other
+pieces commerce modules share, and the store's setup guide. Commerce-related modules (such as Transactions and
+Taxation) contribute their own screens under this single top-level menu instead of each creating their own copy of it.
 
 ## Why this module exists
 
@@ -11,17 +11,26 @@ own, the menu icon appeared only when a specific module happened to provide it, 
 module was disabled. This module owns the top-level node, its identifier, and its icon, so the menu always
 renders consistently whenever any commerce-related feature is enabled.
 
-## Feature
+## Features
 
-- **Commerce** (`CrestApps.OrchardCore.Commerce`) — Registers the Commerce admin menu and icon. The feature
-  is **enabled by dependency only**; it offers no standalone functionality, so it is activated automatically
-  when a module that depends on it is enabled.
+Both features are **enabled by dependency only**: each is activated automatically when a module that depends on it
+is enabled.
+
+- **Commerce Foundation** (`CrestApps.OrchardCore.Commerce.Foundation`) — What billing and the store share: the
+  Commerce admin menu and its icon, the storefront account (Account in the user menu), the commerce admin list helpers, customers'
+  access to the admin pages of their own data, and the export and anonymization of a person's commerce data.
+  Transactions, Taxation, Exchange Rates and Customers depend on it, so a site with Invoicing alone does not turn on
+  the store.
+- **Commerce** (`CrestApps.OrchardCore.Commerce`) — The store layer, on top of Commerce Foundation: the store's setup
+  guide (Commerce > Set up your store), its permission and the roles it adds for a store's staff. The store modules
+  (Products, Carts, Checkout, Orders, Shipping, Inventory and the others that sell) depend on it.
 
 ## Contributing to the Commerce menu
 
 To add screens under the Commerce menu from another module:
 
-1. Add a dependency on the `CrestApps.OrchardCore.Commerce` feature in the module manifest.
+1. Add a dependency on the `CrestApps.OrchardCore.Commerce.Foundation` feature in the module manifest (or on
+   `CrestApps.OrchardCore.Commerce` when the module is part of a store).
 2. In an `AdminNavigationProvider`, add children under the existing `S["Commerce"]` node. Do not set the node
    identifier or icon again; the Commerce module owns them.
 

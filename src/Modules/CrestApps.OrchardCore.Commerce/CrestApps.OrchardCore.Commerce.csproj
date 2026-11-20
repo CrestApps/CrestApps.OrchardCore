@@ -7,9 +7,10 @@
     <Description>
       $(CrestAppsDescription)
 
-      Registers the shared Commerce admin menu and its icon so that every commerce-related module contributes
-      its screens under a single, consistently branded top-level menu. The feature is enabled by dependency
-      only and exposes no standalone functionality on its own.
+      Commerce Foundation registers what billing and the store share: the Commerce admin menu and its icon, the
+      customer account, the commerce admin list helpers, customers' access to their own admin pages, and personal
+      data. Commerce, the store layer on top of it, adds the store's setup guide. Both are enabled by dependency
+      only.
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS Commerce</PackageTags>
   </PropertyGroup>
@@ -39,6 +40,8 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Customers.Abstractions\CrestApps.OrchardCore.Customers.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.PersonalData.Core\CrestApps.OrchardCore.PersonalData.Core.csproj" />
+    <!-- Carries the My Account feature the Commerce feature depends on. -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,17 @@
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="BusinessDocumentTemplatesCreate" title="@T["New document template"]">
+        <breadcrumb-item id="BusinessDocumentTemplates" action="Index" controller="BusinessDocumentTemplates" area="CrestApps.OrchardCore.BusinessDocuments" permission="@BusinessDocumentsPermissions.ManageBusinessDocumentTemplates.Name">@T["Document templates"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

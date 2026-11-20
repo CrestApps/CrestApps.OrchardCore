@@ -19,6 +19,8 @@ public sealed class WebhookDeliveryIndexProvider : IndexProvider<WebhookDelivery
     /// <inheritdoc/>
     public override void Describe(DescribeContext<WebhookDelivery> context)
         => context.For<WebhookDeliveryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(delivery => new WebhookDeliveryIndex
             {
                 ItemId = delivery.ItemId,

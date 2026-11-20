@@ -19,6 +19,8 @@ public sealed class WebhookSubscriptionIndexProvider : IndexProvider<WebhookSubs
     /// <inheritdoc/>
     public override void Describe(DescribeContext<WebhookSubscription> context)
         => context.For<WebhookSubscriptionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(subscription => new WebhookSubscriptionIndex
             {
                 ItemId = subscription.ItemId,

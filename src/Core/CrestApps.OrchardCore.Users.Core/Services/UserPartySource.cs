@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Parties.Services;
 
@@ -53,6 +54,24 @@ public sealed class UserPartySource : IPartySource
         }
 
         return names;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<string, ContactInfo>> GetContactInfoAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
+    {
+        var contacts = new Dictionary<string, ContactInfo>(StringComparer.Ordinal);
+
+        if (ids is null || ids.Count == 0)
+        {
+            return contacts;
+        }
+
+        foreach (var user in await _userSearchService.GetAsync(ids, cancellationToken))
+        {
+            contacts.TryAdd(user.UserId, ContactInfo.From(string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : user.DisplayName, user.Email, null));
+        }
+
+        return contacts;
     }
 
     private static PartyOption ToOption(UserSearchResult user)

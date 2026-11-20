@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Banking.Disbursements.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<DisbursementUnbatchedEvent>
+
+<header><h4><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Disbursement Removed from Batch"])</h4></header>
+<p class="hint">@T["Starts when a disbursement goes back to pending because its open batch was cancelled or reopened. Input: DisbursementId, PayeeName, Amount, Currency, Method, Status, Change, SourceKind, SourceId, BatchId, TraceNumber, FailureCode, FailureReason, IsPrenote and Actor."]</p>

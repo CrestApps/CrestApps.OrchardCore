@@ -20,6 +20,8 @@ public sealed class TimeOffPolicyIndexProvider : IndexProvider<TimeOffPolicy>
     public override void Describe(DescribeContext<TimeOffPolicy> context)
     {
         context.For<TimeOffPolicyIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new TimeOffPolicyIndex
             {
                 ItemId = item.ItemId,

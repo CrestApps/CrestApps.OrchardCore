@@ -28,6 +28,8 @@ public sealed class CallSessionIndexProvider : IndexProvider<CallSession>
     {
         context
             .For<CallSessionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(session =>
             {
                 // Canonicalize the provider identity while mapping so that a legacy document stored with an

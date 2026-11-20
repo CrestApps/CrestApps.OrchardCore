@@ -1,0 +1,56 @@
+@model ServiceLevelTargetsViewModel
+
+@{
+    var columns = Model.Metrics.Count;
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="Cells">
+    <label class="ocat-label">@T["Targets"]</label>
+    <div class="ocat-end">
+        @if (columns == 0)
+        {
+            <div class="alert alert-warning mb-0">@T["The feature this policy is for is not enabled, so its metrics can't be shown. The targets are kept as they are."]</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-1">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Priority"]</th>
+                            @foreach (var metric in Model.Metrics)
+                            {
+                                <th scope="col">@metric.Name</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var row = 0; row < Model.Cells.Count / columns; row++)
+                        {
+                            var priorityKey = Model.Cells[row * columns].Priority;
+                            var priorityName = string.IsNullOrEmpty(priorityKey)
+                                ? T["Any other priority"].Value
+                                : Model.Priorities.FirstOrDefault(priority => priority.Key == priorityKey)?.Name ?? priorityKey;
+
+                            <tr>
+                                <th scope="row" class="fw-normal">@priorityName</th>
+                                @for (var column = 0; column < columns; column++)
+                                {
+                                    var i = (row * columns) + column;
+
+                                    <td>
+                                        <input type="hidden" asp-for="Cells[i].Metric" />
+                                        <input type="hidden" asp-for="Cells[i].Priority" />
+                                        <input asp-for="Cells[i].Minutes" type="number" min="1" step="1" class="form-control form-control-sm" style="max-width: 8rem" aria-label="@T["{0} at {1} priority, in minutes", Model.Metrics[column].Name, priorityName]" />
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        <span asp-validation-for="Cells" class="text-danger"></span>
+        <span class="hint">@T["Minutes allowed, counted in the hours chosen above: 60 is one hour, 480 is eight hours, 1440 is a day. Leave a cell empty for no target. The last row applies to every priority without a row of its own."]</span>
+    </div>
+</div>

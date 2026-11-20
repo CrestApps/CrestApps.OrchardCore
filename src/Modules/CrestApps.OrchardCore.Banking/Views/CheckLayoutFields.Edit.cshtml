@@ -1,0 +1,265 @@
+@model CheckLayoutViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["The layout"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Name">
+            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="Name" class="form-control" maxlength="255" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Description">
+            <label asp-for="Description" class="ocat-label">@T["Notes"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                <span class="hint">@T["Such as the stock and the printer the layout is calibrated for."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Stock">
+            <label asp-for="Stock" class="ocat-label">@T["Paper"]</label>
+            <div class="ocat-end">
+                <select asp-for="Stock" asp-items="Model.StockOptions" class="form-select" data-designer-stock></select>
+                <span class="hint">@T["On blank check paper the layout also prints the payer, the bank and the check line. Pre-printed checks have them already."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Form">
+            <label asp-for="Form" class="ocat-label">@T["Sheet"]</label>
+            <div class="ocat-end">
+                <select asp-for="Form" asp-items="Model.FormOptions" class="form-select"></select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3" data-check-designer
+     data-text-choose="@T["Choose a field on the check to edit it, or drag it to move it. Drag its right edge to change its width; the arrow keys move it a point at a time."]"
+     data-text-off="@T["left off"]"
+     data-text-blank-only="@T["prints on blank paper only"]">
+    <div class="card-header">@T["Check designer"]</div>
+    <div class="card-body">
+        <div class="check-designer-visual mb-3">
+            <div class="check-designer-panel d-flex flex-wrap align-items-center gap-2 mb-2" data-check-panel>
+                <strong data-panel-title></strong>
+                <div class="d-flex d-none flex-wrap align-items-center gap-2" data-panel-controls>
+                    <div class="input-group input-group-sm w-auto">
+                        <span class="input-group-text">@T["Left"]</span>
+                        <input class="form-control check-designer-number" inputmode="decimal" data-panel-prop="x" aria-label="@T["Left"]" />
+                        <span class="input-group-text">@T["Top"]</span>
+                        <input class="form-control check-designer-number" inputmode="decimal" data-panel-prop="y" aria-label="@T["Top"]" />
+                    </div>
+                    <div class="input-group input-group-sm w-auto">
+                        <span class="input-group-text">@T["Width"]</span>
+                        <input class="form-control check-designer-number" inputmode="decimal" data-panel-prop="width" aria-label="@T["Width"]" />
+                        <span class="input-group-text">@T["Size"]</span>
+                        <input class="form-control check-designer-number" inputmode="decimal" data-panel-prop="size" aria-label="@T["Size"]" />
+                    </div>
+                    <div class="form-check form-check-inline mb-0">
+                        <input class="form-check-input" type="checkbox" id="check-designer-hidden" data-panel-prop="hidden" />
+                        <label class="form-check-label" for="check-designer-hidden">@T["Leave off"]</label>
+                    </div>
+                </div>
+            </div>
+            <div class="check-designer-canvas" data-check-canvas>
+                <div class="check-designer-band" title="@T["Kept clear for the check line"]"></div>
+            </div>
+            <span class="hint">@T["The check at its real proportions, with sample values. Measures are in points from the top left corner: 72 points make an inch. A field drawn in red reaches into the band kept clear for the check line. The calibration above moves everything."]</span>
+        </div>
+
+        <details>
+            <summary class="mb-2">@T["Exact positions"]</summary>
+            <span asp-validation-for="Fields" class="text-danger"></span>
+            @for (var i = 0; i < Model.Fields.Count; i++)
+            {
+                var name = Model.Fields[i].Name;
+                var sample = name switch
+                {
+                    CheckFieldNames.Date => new DateOnly(2026, 11, 13).ToString("d"),
+                    CheckFieldNames.Payee => T["Jane Doe"].Value,
+                    CheckFieldNames.PayeeAddress => T["Jane Doe"].Value + "|" + T["22 Oak Road"].Value + "|" + T["Springfield IL 62702"].Value,
+                    CheckFieldNames.Amount => "**1,234.56",
+                    CheckFieldNames.AmountInWords => T["One thousand two hundred thirty-four and 56/100 USD ***"].Value,
+                    CheckFieldNames.Memo => T["Memo: Invoice 1042"].Value,
+                    CheckFieldNames.Number => "1001",
+                    CheckFieldNames.Payer => T["Your business"].Value,
+                    CheckFieldNames.Bank => T["Your bank"].Value,
+                    CheckFieldNames.Signature => T["Authorized signature"].Value,
+                    CheckFieldNames.SecondSignature => T["Second signature"].Value,
+                    _ => name,
+                };
+                var blankOnly = name is CheckFieldNames.Payer or CheckFieldNames.Bank;
+                var signature = name is CheckFieldNames.Signature or CheckFieldNames.SecondSignature;
+                <fieldset class="ocat-wrapper border-bottom pb-2 mb-2"
+                          data-designer-field="@name"
+                          data-designer-label="@Model.Fields[i].Label"
+                          data-designer-sample="@sample"
+                          data-designer-blank-only="@(blankOnly ? "true" : "false")"
+                          data-designer-signature="@(signature ? "true" : "false")">
+                    <legend class="ocat-label fs-6">@Model.Fields[i].Label</legend>
+                    <div class="ocat-end">
+                        <input type="hidden" asp-for="Fields[i].Name" />
+                        <div class="input-group input-group-sm mb-1">
+                            <span class="input-group-text">@T["Left"]</span>
+                            <input asp-for="Fields[i].X" class="form-control" inputmode="decimal" aria-label="@T["Left"]" data-designer-prop="x" />
+                            <span class="input-group-text">@T["Top"]</span>
+                            <input asp-for="Fields[i].Y" class="form-control" inputmode="decimal" aria-label="@T["Top"]" data-designer-prop="y" />
+                        </div>
+                        <div class="input-group input-group-sm mb-1">
+                            <span class="input-group-text">@T["Width"]</span>
+                            <input asp-for="Fields[i].Width" class="form-control" inputmode="decimal" aria-label="@T["Width"]" data-designer-prop="width" />
+                            <span class="input-group-text">@T["Size"]</span>
+                            <input asp-for="Fields[i].FontSize" class="form-control" inputmode="decimal" aria-label="@T["Size"]" data-designer-prop="size" />
+                        </div>
+                        <div class="form-check">
+                            <input asp-for="Fields[i].Hidden" class="form-check-input" data-designer-prop="hidden" />
+                            <label asp-for="Fields[i].Hidden" class="form-check-label">@T["Leave off"]</label>
+                        </div>
+                    </div>
+                </fieldset>
+            }
+        </details>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Payer (blank paper)"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="PayerName">
+            <label asp-for="PayerName" class="ocat-label">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="PayerName" data-designer-payer="PayerName" class="form-control" maxlength="255" />
+            </div>
+        </div>
+        @* The designer reads the payer's address from these fields for its preview. *@
+        <div data-designer-payer-address>
+            @await DisplayAsync(Model.PayerAddressEditor)
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Signatures"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="SignatureFile">
+            <label asp-for="SignatureFile" class="ocat-label">@T["Signature"]</label>
+            <div class="ocat-end">
+                <input asp-for="SignatureFile" class="form-control" type="file" accept="image/png,image/jpeg" />
+                <span asp-validation-for="SignatureFile" class="text-danger"></span>
+                @if (Model.HasSignature)
+                {
+                    <div class="form-check mt-1">
+                        <input asp-for="RemoveSignature" class="form-check-input" />
+                        <label asp-for="RemoveSignature" class="form-check-label">@T["Remove the stored signature"]</label>
+                    </div>
+                }
+                <span class="hint">@(Model.HasSignature ? T["A signature is stored. Upload a PNG or JPEG to replace it."] : T["Optional. A PNG or JPEG printed above the signature line. It is kept encrypted, never in the media library."])</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="SecondSignatureAbove">
+            <label asp-for="SecondSignatureAbove" class="ocat-label">@T["Second signature above"]</label>
+            <div class="ocat-end">
+                <input asp-for="SecondSignatureAbove" class="form-control" inputmode="decimal" data-designer-threshold />
+                <span asp-validation-for="SecondSignatureAbove" class="text-danger"></span>
+                <span class="hint">@T["Checks for more than this amount print a second signature line. Leave it empty for never."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="SecondSignatureFile">
+            <label asp-for="SecondSignatureFile" class="ocat-label">@T["Second signature"]</label>
+            <div class="ocat-end">
+                <input asp-for="SecondSignatureFile" class="form-control" type="file" accept="image/png,image/jpeg" />
+                <span asp-validation-for="SecondSignatureFile" class="text-danger"></span>
+                @if (Model.HasSecondSignature)
+                {
+                    <div class="form-check mt-1">
+                        <input asp-for="RemoveSecondSignature" class="form-check-input" />
+                        <label asp-for="RemoveSecondSignature" class="form-check-label">@T["Remove the stored second signature"]</label>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Check line (MICR)"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="PrintMicr">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="PrintMicr" class="form-check-input" data-designer-micr />
+                    <label asp-for="PrintMicr" class="form-check-label">@T["Print the check line"]</label>
+                    <span class="hint dashed">@T["The routing, account and check numbers at the bottom of the check, in the E-13B font. Banks read it with magnetic toner. Leave it off on pre-printed checks."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="MicrFontFile">
+            <label asp-for="MicrFontFile" class="ocat-label">@T["Check line font"]</label>
+            <div class="ocat-end">
+                <input asp-for="MicrFontFile" class="form-control" type="file" accept=".ttf" />
+                <span asp-validation-for="MicrFontFile" class="text-danger"></span>
+                @if (Model.HasMicrFont)
+                {
+                    <div class="form-check mt-1">
+                        <input asp-for="RemoveMicrFont" class="form-check-input" />
+                        <label asp-for="RemoveMicrFont" class="form-check-label">@T["Remove the stored font"]</label>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-warning small mt-1">@T["No check line font is uploaded. The check line can't print until you upload a TrueType MICR E-13B font you are licensed to use."]</div>
+                }
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="MicrSymbolCharacters">
+            <label asp-for="MicrSymbolCharacters" class="ocat-label">@T["Symbol characters"]</label>
+            <div class="ocat-end">
+                <input asp-for="MicrSymbolCharacters" class="form-control" maxlength="4" />
+                <span asp-validation-for="MicrSymbolCharacters" class="text-danger"></span>
+                <span class="hint">@T["The four characters the font draws the transit, amount, on-us and dash symbols on, in that order. Most fonts use ABCD."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="MicrFontSize">
+            <label asp-for="MicrFontSize" class="ocat-label">@T["Font size"]</label>
+            <div class="ocat-end">
+                <input asp-for="MicrFontSize" class="form-control" inputmode="decimal" />
+                <span asp-validation-for="MicrFontSize" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="UseAuxiliaryOnUs">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="UseAuxiliaryOnUs" class="form-check-input" />
+                    <label asp-for="UseAuxiliaryOnUs" class="form-check-label">@T["Business check format"]</label>
+                    <span class="hint dashed">@T["The check number prints left of the routing number. Off, it prints after the account number, as on personal checks."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Calibration"]</div>
+    <div class="card-body">
+        <p class="hint">@T["Print a check on plain paper and hold it against the stock. Measures are in points: 72 points make an inch."]</p>
+        <div class="ocat-wrapper" asp-validation-class-for="OffsetX">
+            <label asp-for="OffsetX" class="ocat-label">@T["Move right"]</label>
+            <div class="ocat-end">
+                <input asp-for="OffsetX" class="form-control" inputmode="decimal" data-designer-offset="x" />
+                <span asp-validation-for="OffsetX" class="text-danger"></span>
+                <span class="hint">@T["Negative moves left."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="OffsetY">
+            <label asp-for="OffsetY" class="ocat-label">@T["Move down"]</label>
+            <div class="ocat-end">
+                <input asp-for="OffsetY" class="form-control" inputmode="decimal" data-designer-offset="y" />
+                <span asp-validation-for="OffsetY" class="text-danger"></span>
+                <span class="hint">@T["Negative moves up."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style asp-name="check-layout-designer"></style>
+<script asp-name="check-layout-designer" at="Foot"></script>

@@ -63,6 +63,12 @@ public sealed class CheckoutPaymentMethodOption
     public bool HasProcessor { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the method collects nothing now (Pay Later, bank transfer, account
+    /// terms), so the page says the order is placed and paid later rather than paid now.
+    /// </summary>
+    public bool DefersPayment { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the method is preselected.
     /// </summary>
     public bool IsDefault { get; set; }

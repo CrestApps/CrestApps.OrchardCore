@@ -1,0 +1,10 @@
+@model ShapeViewModel<GarnishmentOrder>
+
+@if (Model.Value.Status is GarnishmentStatus.Active or GarnishmentStatus.Suspended)
+{
+    <a asp-action="Release" asp-controller="Garnishments" asp-route-id="@Model.Value.ItemId" class="dropdown-item" data-title="@T["Release"]" data-message="@T["Release the order? Nothing more is withheld; what was withheld stays on the statements."]" data-url-af="RemoveUrl UnsafeUrl">@T["Release"]</a>
+}
+@if (Model.Value.Remittances.Count == 0)
+{
+    <a asp-action="Delete" asp-controller="Garnishments" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete the order? It has withheld nothing yet."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}

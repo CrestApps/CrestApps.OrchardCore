@@ -47,7 +47,7 @@ else
             <div class="fs-5 fw-semibold">@timesheet.TotalHours.ToString("0.##")</div>
             <div class="small text-muted">@T["Hours"]</div>
         </div>
-        @foreach (var (code, hours) in details.Totals.Where(total => total.Code.Kind != PayCodeKind.Regular || details.Totals.Count > 1))
+        @foreach (var (code, hours) in details.Totals.Where(total => total.Code.Kind != PayCodeKinds.Regular || details.Totals.Count > 1))
         {
             <div class="border rounded px-3 py-2 text-center bg-body">
                 <div class="fs-5 fw-semibold">@hours.ToString("0.##")</div>
@@ -75,7 +75,7 @@ else
                 {
                     <div class="small text-muted">@string.Join(" · ", day.Punches.Select(punch => Local(punch.Utc) + " " + PunchName(punch.Kind)))</div>
                 }
-                @foreach (var line in day.Lines.Where(line => line.Source != TimesheetLineSource.Punches || (line.PayCodeId is not null && details.PayCodes.TryGetValue(line.PayCodeId, out var code) && code.Kind != PayCodeKind.Regular)))
+                @foreach (var line in day.Lines.Where(line => line.Source != TimesheetLineSource.Punches || (line.PayCodeId is not null && details.PayCodes.TryGetValue(line.PayCodeId, out var code) && code.Kind != PayCodeKinds.Regular)))
                 {
                     <div class="small">@line.Hours.ToString("0.##") @(line.PayCodeId is not null && details.PayCodes.TryGetValue(line.PayCodeId, out var lineCode) ? lineCode.Name : null)</div>
                 }

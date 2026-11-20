@@ -4,12 +4,12 @@
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
 <div class="ocat-wrapper" asp-validation-class-for="BusinessHoursCalendarId">
-    <label asp-for="BusinessHoursCalendarId" class="ocat-label">@T["Business hours calendar"]</label>
+    <label asp-for="BusinessHoursCalendarId" class="ocat-label">@T["Business hours"]</label>
     <div class="ocat-end">
-        <select asp-for="BusinessHoursCalendarId" asp-items="Model.BusinessHoursCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a calendar"]" title="@T["Always open"]">
+        <select asp-for="BusinessHoursCalendarId" asp-items="Model.BusinessHoursCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select business hours"]" title="@T["Always open"]">
             <option value="">@T["Always open"]</option>
         </select>
         <span asp-validation-for="BusinessHoursCalendarId" class="text-danger"></span>
-        <span class="hint">@T["When the entry point is open. Leave it empty to stay open around the clock."]</span>
+        <span class="hint">@T["When the entry point is open. Leave it empty to stay open around the clock. Hours are kept under Content > Business Hours."]</span>
     </div>
 </div>

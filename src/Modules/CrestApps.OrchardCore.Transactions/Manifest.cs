@@ -19,7 +19,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Commerce",
     Dependencies =
     [
-        CommerceConstants.Features.Area,
+        CommerceConstants.Features.Foundation,
 
         // Registers the display-name provider the transaction list and the ledger commands use to name people.
         UsersConstants.Feature.Area,
@@ -35,6 +35,17 @@ using OrchardCore.Modules.Manifest;
     [
         TransactionsConstants.Features.Area,
         OrchardCoreFeatureIds.Notifications,
+    ]
+)]
+
+[assembly: Feature(
+    Name = "Payment Terms",
+    Id = TransactionsConstants.Features.PaymentTerms,
+    Description = "Keeps the store's payment terms (net days, due on receipt, end of month, a day of the next month, and an early-payment discount) that invoices, account terms and pay-later purchases use to set due dates.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        TransactionsConstants.Features.Area,
     ]
 )]
 

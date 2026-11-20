@@ -1,0 +1,89 @@
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using OrchardCore.Localization;
+
+namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging;
+
+/// <summary>
+/// Reply templates: placeholders are filled in from the record a reply is for, a plain body never changes, a body that
+/// fails to render or a site without Liquid gives the body as written, and other modules register the scopes a
+/// template can be written for.
+/// </summary>
+public sealed class MessageTemplateRendererTests
+{
+    [Fact]
+    public async Task Placeholders_AreFilledInFromTheRecords()
+    {
+        // Arrange
+        var renderer = Renderer();
+        var template = new MessageTemplate { Body = "Hi {{ Contact.DisplayName }}, your request {{ Ticket.Number }} is solved. <3", FillsPlaceholders = true };
+
+        // Act
+        var body = await renderer.RenderAsync(template, new Dictionary<string, object>
+        {
+            ["Contact"] = new { DisplayName = "Sam & Co" },
+            ["Ticket"] = new { Number = "T-1001" },
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("Hi Sam & Co, your request T-1001 is solved. <3", body);
+    }
+
+    [Fact]
+    public async Task APlainBody_ABrokenOne_OrAPlainTextTemplate_GiveTheBodyAsWritten()
+    {
+        // Arrange
+        var renderer = Renderer();
+        var models = new Dictionary<string, object> { ["Contact"] = new { DisplayName = "Sam" } };
+
+        // Act
+        var plain = await renderer.RenderAsync(new MessageTemplate { Body = "Thanks, we're on it.", FillsPlaceholders = true }, models, TestContext.Current.CancellationToken);
+        var broken = await renderer.RenderAsync(new MessageTemplate { Body = "Hi {{ Contact.DisplayName }", FillsPlaceholders = true }, models, TestContext.Current.CancellationToken);
+        // A template written before placeholders existed doesn't have the value, so it stays plain text.
+        var plainText = await renderer.RenderAsync(new MessageTemplate { Body = "Hi {{name}}, your order is ready" }, models, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("Thanks, we're on it.", plain);
+        Assert.Equal("Hi {{ Contact.DisplayName }", broken);
+        Assert.Equal("Hi {{name}}, your order is ready", plainText);
+    }
+
+    [Fact]
+    public void Scopes_AreRegisteredByOtherModules()
+    {
+        // Arrange
+        var services = new ServiceCollection()
+            .AddMessageTemplateScope("Tickets", LocalizationSource.Create<MessageTemplateRendererTests>("Tickets"))
+            .AddMessageTemplateScope("Tickets", LocalizationSource.Create<MessageTemplateRendererTests>("Help desk"));
+
+        // Act
+        var options = services.BuildServiceProvider().GetRequiredService<IOptions<MessageTemplateScopeOptions>>().Value;
+
+        // Assert
+        var scope = Assert.Single(options.Scopes);
+        Assert.Equal("Tickets", scope.Key);
+    }
+
+    [Fact]
+    public async Task ATemplate_ReadsOnlyTheModelsItIsGiven()
+    {
+        // Arrange
+        var renderer = Renderer();
+
+        // Act
+        var body = await renderer.RenderAsync(
+            new MessageTemplate { Body = "[{{ Request.Headers.Cookie }}][{{ User.Identity.Name }}][{{ Contact.DisplayName }}]", FillsPlaceholders = true },
+            new Dictionary<string, object> { ["Contact"] = new { DisplayName = "Sam" } },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("[][][Sam]", body);
+    }
+
+    private static LiquidMessageTemplateRenderer Renderer()
+        => new(LiquidTestClocks.In("Europe/Paris"), RecipeRoundTrip.Localizer<LiquidMessageTemplateRenderer>(), NullLogger<LiquidMessageTemplateRenderer>.Instance);
+}

@@ -1,0 +1,32 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PaymentTerm>
+
+@{
+    var term = Model.Value;
+    var due = term.Kind switch
+    {
+        PaymentTermKind.NetDays => T["{0} days after issue", term.Days],
+        PaymentTermKind.EndOfMonth => term.Days == 0 ? T["End of the month"] : T["End of the month plus {0} days", term.Days],
+        PaymentTermKind.DayOfNextMonth => T["Day {0} of the next month", term.DayOfMonth],
+        _ => T["Due on receipt"],
+    };
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["When it is due"]">
+    <i class="fa-solid fa-calendar-day text-secondary me-1" aria-hidden="true"></i>@due
+</span>
+
+@if (term.DiscountPercent is > 0m && term.DiscountDays is > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Early-payment discount"]">
+        <i class="fa-solid fa-percent text-success me-1" aria-hidden="true"></i>@T["{0}% within {1} days", term.DiscountPercent.Value.ToString("0.##"), term.DiscountDays.Value]
+    </span>
+}
+
+@if (!term.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Turned off"]
+    </span>
+}

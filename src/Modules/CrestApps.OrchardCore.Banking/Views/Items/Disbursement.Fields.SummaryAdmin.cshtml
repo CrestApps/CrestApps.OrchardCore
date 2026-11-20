@@ -1,0 +1,7 @@
+@model ShapeViewModel<Disbursement>
+
+<span class="fw-semibold">@Model.Value.PayeeName</span>
+@if (Model.Value.IsPrenote)
+{
+    <span class="text-secondary ms-1">@T["Test entry"]</span>
+}

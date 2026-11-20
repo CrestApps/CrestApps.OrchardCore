@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Accounts.ViewModels;
 using CrestApps.OrchardCore.Addresses.Core.Editing;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
@@ -21,10 +22,16 @@ internal sealed class AccountLocationsPartDisplayDriver : ContentPartDisplayDriv
     private readonly IAddressEditorService _addressEditor;
     private readonly IShapeFactory _shapeFactory;
 
-    public AccountLocationsPartDisplayDriver(IAddressEditorService addressEditor, IShapeFactory shapeFactory)
+    internal readonly IStringLocalizer S;
+
+    public AccountLocationsPartDisplayDriver(
+        IAddressEditorService addressEditor,
+        IShapeFactory shapeFactory,
+        IStringLocalizer<AccountLocationsPartDisplayDriver> stringLocalizer)
     {
         _addressEditor = addressEditor;
         _shapeFactory = shapeFactory;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Display(AccountLocationsPart part, BuildPartDisplayContext context)
@@ -50,6 +57,7 @@ internal sealed class AccountLocationsPartDisplayDriver : ContentPartDisplayDriv
             {
                 LocationId = location.LocationId,
                 Name = location.Name,
+                IsBilling = location.IsBilling,
                 Address = await _addressEditor.BuildAsync(location.Address, options),
             });
         }
@@ -68,6 +76,7 @@ internal sealed class AccountLocationsPartDisplayDriver : ContentPartDisplayDriv
         var accountName = part.ContentItem.DisplayText?.Trim();
         var locations = new List<AccountLocation>();
         var valid = true;
+        var billingCount = 0;
 
         for (var i = 0; i < rows.Count; i++)
         {
@@ -78,6 +87,18 @@ internal sealed class AccountLocationsPartDisplayDriver : ContentPartDisplayDriv
             if (string.IsNullOrWhiteSpace(row.Name) && !row.Address.HasAnyValue())
             {
                 continue;
+            }
+
+            // An account is billed at one location at most.
+            if (AccountLocationRules.IsExtraBillingLocation(row.IsBilling, billingCount))
+            {
+                context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(AccountLocationsPartViewModel.Locations)}[{i}].{nameof(AccountLocationRowViewModel.IsBilling)}", S["Only one location can be the billing location."]);
+                valid = false;
+            }
+
+            if (row.IsBilling)
+            {
+                billingCount++;
             }
 
             AccountLocationRules.AddressToAccount(row.Address, accountName);
@@ -91,7 +112,7 @@ internal sealed class AccountLocationsPartDisplayDriver : ContentPartDisplayDriv
                 continue;
             }
 
-            locations.Add(AccountLocationRules.CreateLocation(row.LocationId, row.Name, result.Address));
+            locations.Add(AccountLocationRules.CreateLocation(row.LocationId, row.Name, result.Address, row.IsBilling));
         }
 
         if (!valid)

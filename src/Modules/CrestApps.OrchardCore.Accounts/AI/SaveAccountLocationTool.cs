@@ -129,7 +129,7 @@ internal sealed class SaveAccountLocationTool : AccountsAIToolBase
         }
 
         var name = Has(arguments, "name") ? ReadString(arguments, "name") : existing?.Name;
-        var location = AccountLocationRules.CreateLocation(existing?.LocationId, name, address);
+        var location = AccountLocationRules.CreateLocation(existing?.LocationId, name, address, existing?.IsBilling == true);
         List<AccountLocation> updated = existing is null
             ? [.. locations, location]
             : locations.Select(item => item.LocationId == existing.LocationId ? location : item).ToList();

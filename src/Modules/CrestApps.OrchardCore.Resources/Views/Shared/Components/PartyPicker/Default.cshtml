@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.Resources.Endpoints
+@model CrestApps.OrchardCore.Resources.ViewComponents.PartyPickerViewModel
+
+@{
+    var endpoint = Url.Content($"~/{PartySearchEndpoints.Pattern}?kinds={Uri.EscapeDataString(Model.Kinds ?? string.Empty)}");
+}
+
+@await Component.InvokeAsync("ItemSelector", new
+{
+    id = Model.Id,
+    inputName = Model.InputName,
+    endpoint = endpoint,
+    initialItemsJson = Model.InitialItemsJson,
+    multiple = Model.Multiple,
+    enableSearch = true,
+    buttonText = Model.ButtonText ?? (Model.Multiple ? T["Choose people or organizations"].Value : T["Choose a person or an organization"].Value),
+    searchPlaceholder = T["Search by name or e-mail"].Value,
+    emptyResultsText = T["Nobody found."].Value,
+    noSelectionText = T["Nobody chosen."].Value,
+    smallButton = Model.SmallButton,
+    required = Model.Required,
+})

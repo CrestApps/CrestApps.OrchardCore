@@ -1,0 +1,30 @@
+@model IncomeTaxRuleViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["When"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="EffectiveFrom">
+            <label asp-for="EffectiveFrom" class="ocat-label ocat-label-required">@T["From"]</label>
+            <div class="ocat-end">
+                <input asp-for="EffectiveFrom" type="date" class="form-control" style="max-width: 12rem" />
+                <span asp-validation-for="EffectiveFrom" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="EffectiveTo">
+            <label asp-for="EffectiveTo" class="ocat-label">@T["To"]</label>
+            <div class="ocat-end">
+                <input asp-for="EffectiveTo" type="date" class="form-control" style="max-width: 12rem" />
+                <span asp-validation-for="EffectiveTo" class="text-danger"></span>
+                <span class="hint">@T["By pay date. When a rate changes, give this version a last day and add a version from the next day with the same tax code."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Enabled" type="checkbox" class="form-check-input" />
+                    <label asp-for="Enabled" class="form-check-label">@T["In use"]</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

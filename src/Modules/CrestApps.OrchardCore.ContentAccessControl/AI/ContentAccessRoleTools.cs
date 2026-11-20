@@ -37,8 +37,8 @@ internal static class ContentAccessRoleTools
     public static object DescribePart(ContentTypePartDefinition partDefinition, ContentItem published, ContentItem latest, IReadOnlyList<string> roleNames)
     {
         var settings = partDefinition.GetSettings<RolePickerPartSettings>();
-        var publishedRoles = published is null ? null : ContentAccessRestrictions.GetPart(published, partDefinition)?.RoleNames ?? [];
-        var latestRoles = ContentAccessRestrictions.GetPart(latest, partDefinition)?.RoleNames ?? [];
+        var publishedRoles = published is null ? null : ContentAccessRestriction.GetPart(published, partDefinition)?.RoleNames ?? [];
+        var latestRoles = ContentAccessRestriction.GetPart(latest, partDefinition)?.RoleNames ?? [];
         var hasDraft = published is null || published.ContentItemVersionId != latest.ContentItemVersionId;
 
         return new

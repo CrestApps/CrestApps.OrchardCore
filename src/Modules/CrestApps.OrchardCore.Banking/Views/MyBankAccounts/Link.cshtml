@@ -1,0 +1,9 @@
+@model BankAccountLinkViewModel
+
+<zone Name="Title">
+    <breadcrumb name="MyBankAccountsLink" title="@(Model.IsNew ? T["Link your bank"] : T["Link {0}", Model.AccountName])">
+        <breadcrumb-item id="MyBankAccounts" action="Index" controller="MyBankAccounts" area="CrestApps.OrchardCore.Banking" permission="@BankingPermissions.ManageOwnBankAccounts.Name">@T["My bank accounts"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_BankAccountLinkForm" model="Model" />

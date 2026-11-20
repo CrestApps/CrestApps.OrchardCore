@@ -21,6 +21,8 @@ public sealed class DelegatedAccessCodeIndexProvider : IndexProvider<DelegatedAc
     {
         context
             .For<DelegatedAccessCodeIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(document => new DelegatedAccessCodeIndex
             {
                 CodeHash = document.CodeHash,

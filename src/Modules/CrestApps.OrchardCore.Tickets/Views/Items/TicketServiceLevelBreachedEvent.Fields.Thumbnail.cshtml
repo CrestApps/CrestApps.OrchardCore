@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketServiceLevelBreachedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+    @T["Ticket Service Level Breached"]
+</h4>
+<p>@T["Starts when a ticket misses a service-level target."]</p>

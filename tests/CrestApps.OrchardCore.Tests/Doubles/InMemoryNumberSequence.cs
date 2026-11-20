@@ -22,4 +22,16 @@ internal sealed class InMemoryNumberSequence : INumberSequence
 
         return last;
     }
+
+    public Task<long?> GetLastAsync(string series, CancellationToken cancellationToken = default)
+        => Task.FromResult(_last.TryGetValue(series, out var last) ? last : (long?)null);
+
+    public Task SetNextAsync(string series, long next, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(next, 1);
+
+        _last[series] = next - 1;
+
+        return Task.CompletedTask;
+    }
 }

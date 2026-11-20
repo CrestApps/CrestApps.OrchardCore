@@ -1,4 +1,5 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Records;
 
 namespace CrestApps.OrchardCore.TimeTracker.Models;
 
@@ -166,6 +167,14 @@ public sealed class TimeEntry : CatalogItem
     public string SourceRef { get; set; }
 
     /// <summary>
+    /// Gets or sets the record the time counts against, such as the support agreement a ticket worked under when the
+    /// time was logged; empty when it counts against nothing. It is set once, when the entry is created (see
+    /// <see cref="Services.ITimeEntryChargeResolver"/>), so a later change to the source record never moves time already
+    /// logged. Pieces of an entry that is cut around other time keep it.
+    /// </summary>
+    public RecordRef ChargedTo { get; set; }
+
+    /// <summary>
     /// Gets or sets a note.
     /// </summary>
     public string Note { get; set; }
@@ -191,6 +200,17 @@ public sealed class TimeEntry : CatalogItem
     /// Gets or sets the changes made to it since, oldest first.
     /// </summary>
     public List<TimeEntryChange> Changes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the invoice that billed this time to a customer, when one did. Billed time can't be changed or
+    /// removed until the invoice lets it go (it is voided, or the line is taken off or credited).
+    /// </summary>
+    public string BilledInvoiceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the line of <see cref="BilledInvoiceId"/> that bills this time.
+    /// </summary>
+    public string BilledLineId { get; set; }
 
     /// <summary>
     /// Gets whether the person is still in it.
@@ -279,6 +299,28 @@ public sealed class TimeEntryQuery
     /// Gets or sets the end of the range, in UTC.
     /// </summary>
     public DateTime? ToUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets what in the source the entries stand for, such as a ticket, if one.
+    /// </summary>
+    public string SourceRef { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the entries come from, one of <see cref="TimeTrackerConstants.Sources"/>, if one.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets several records the entries stand for, such as the tickets a report reads, or <see langword="null"/>
+    /// for any.
+    /// </summary>
+    public IReadOnlyCollection<string> SourceRefs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the record the entries count against (<see cref="TimeEntry.ChargedTo"/>), or <see langword="null"/>
+    /// for any.
+    /// </summary>
+    public RecordRef? ChargedTo { get; set; }
 }
 
 /// <summary>

@@ -13,6 +13,8 @@ public sealed class TelnyxRecordingIngestJobIndexProvider : IndexProvider<Telnyx
     {
         context
             .For<TelnyxRecordingIngestJobIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(job => new TelnyxRecordingIngestJobIndex
             {
                 RecordingId = job.RecordingId,

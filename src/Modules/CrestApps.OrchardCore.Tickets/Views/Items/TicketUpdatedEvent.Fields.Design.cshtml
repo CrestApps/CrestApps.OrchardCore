@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketUpdatedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-pen" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Ticket Updated"])
+    </h4>
+</header>

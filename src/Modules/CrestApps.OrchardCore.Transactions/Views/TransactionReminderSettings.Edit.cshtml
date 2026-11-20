@@ -46,3 +46,34 @@
         <span class="hint">@T["How many days before a payment falls due the customer is told it is coming due, once per payment. A payment charged automatically to a saved card names the card. Use 0 to send no such reminder."]</span>
     </div>
 </div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Steps">
+    <label asp-for="Steps" class="ocat-label">@T["Reminder steps (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="Steps" class="form-control" autocomplete="off" placeholder="-3, 0, 7, 14, 30" />
+        <span asp-validation-for="Steps"></span>
+        <span class="hint">@T["Optional. The days, counted from the due date, a reminder is sent on: a negative number is before it, 0 is the day itself. For example -3, 0, 7, 14, 30. When set, these steps replace the first reminder delay, interval, maximum and the reminder before the due date above. A missed step is passed over, so a customer never gets several reminders at once."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="SendFromHour">
+    <label asp-for="SendFromHour" class="ocat-label">@T["Send between"]</label>
+    <div class="ocat-limited">
+        <div class="input-group">
+            <input asp-for="SendFromHour" type="number" min="0" max="23" class="form-control" />
+            <span class="input-group-text">@T["and"]</span>
+            <input asp-for="SendUntilHour" type="number" min="1" max="24" class="form-control" />
+            <span class="input-group-text">@T["o'clock"]</span>
+        </div>
+        <span class="hint">@T["The hours of the day, in the site's time zone, scheduled reminders are sent in. Use 0 and 24 to send them at any time."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ChargeRetryDays">
+    <label asp-for="ChargeRetryDays" class="ocat-label">@T["Retry a declined card after (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ChargeRetryDays" class="form-control" autocomplete="off" placeholder="1, 3, 5" />
+        <span asp-validation-for="ChargeRetryDays"></span>
+        <span class="hint">@T["When a balance charged automatically to a saved card is declined, it is charged again after each of these numbers of days, in order. After the last one, the customer is asked to pay it themselves. Leave it empty to ask them at once."]</span>
+    </div>
+</div>

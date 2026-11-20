@@ -21,6 +21,8 @@ internal sealed class ProfileBuilderSessionIndexProvider : IndexProvider<Profile
     {
         context
             .For<ProfileBuilderSessionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(session => new ProfileBuilderSessionIndex
             {
                 ItemId = session.ItemId,

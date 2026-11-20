@@ -1,4 +1,6 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Core;
@@ -178,7 +180,7 @@ public sealed class TimeClockTests
     }
 
     [Fact]
-    public async Task ATimesheet_IsSubmitted_Approved_Locked_AndExportedOnce()
+    public async Task ATimesheet_IsSubmitted_Approved_Locked_AndHandedToPayrollOnce()
     {
         await using var kit = await TimeClockKit.CreateAsync();
         var team = await kit.AddTeamAsync("Front desk");
@@ -220,21 +222,28 @@ public sealed class TimeClockTests
         Assert.Equal([timesheet.ItemId], locked.Select(item => item.ItemId));
         Assert.False(reopened.Succeeded);
 
-        var export = (Func<IServiceProvider, IPayrollExportService>)(services => services.GetRequiredService<IPayrollExportService>());
-        var first = await kit.Harness.RunAsync(services => export(services).RunAsync(CsvPayrollExportProvider.ProviderName, kit.Calendar.ItemId, timesheet.PeriodStart, false, "payroll"));
-        var second = await kit.Harness.RunAsync(services => export(services).RunAsync(CsvPayrollExportProvider.ProviderName, kit.Calendar.ItemId, timesheet.PeriodStart, false, "payroll"));
-        var again = await kit.Harness.RunAsync(services => export(services).RunAsync(CsvPayrollExportProvider.ProviderName, kit.Calendar.ItemId, timesheet.PeriodStart, true, "payroll"));
+        // The export is a data pipeline over the Pay Inputs data set now: what it reads gives the same file as before.
+        var query = new PayInputQuery { PayScheduleId = kit.Calendar.ItemId, PeriodStart = timesheet.PeriodStart, PeriodEnd = timesheet.PeriodStart };
+        var first = await kit.Harness.RunAsync(services => PayInputCsv.ReadAsync(services, query), commit: false);
 
-        Assert.True(first.Succeeded, string.Join(" ", first.Errors));
+        await kit.Harness.RunAsync(services => services.GetRequiredService<IPayInputService>().MarkConsumedAsync(new PayInputConsumption
+        {
+            ConsumerId = "pipeline:run-1",
+            Sources = [.. first.Select(row => new PayInputReference(row.Input.SourceKind, row.Input.SourceId))],
+        }));
+
+        var second = await kit.Harness.RunAsync(services => PayInputCsv.ReadAsync(services, query), commit: false);
+        var again = await kit.Harness.RunAsync(services => PayInputCsv.ReadAsync(services, new PayInputQuery { PayScheduleId = kit.Calendar.ItemId, IncludeConsumed = true }), commit: false);
+
         Assert.Equal(
             "EmployeeId,Name,PeriodStart,PeriodEnd,PayCode,Hours,Rate,Amount\r\n"
             + "E-100,Ana,2026-11-08,2026-11-14,OT,5.00,,\r\n"
             + "E-100,Ana,2026-11-08,2026-11-14,REG,40.00,,\r\n",
-            first.Value.Content);
-        Assert.Equal(2, first.Value.RowCount);
-        Assert.False(second.Succeeded);
-        Assert.True(again.Succeeded);
-        Assert.NotEqual(first.Value.ItemId, again.Value.ItemId);
+            PayInputCsv.Write(first));
+        Assert.All(first, row => Assert.Equal(("Timesheet", timesheet.ItemId), (row.Input.SourceKind, row.Input.SourceId)));
+        Assert.Empty(second);
+        Assert.Equal(first.Count, again.Count);
+        Assert.All(again, row => Assert.True(row.Input.Consumed));
     }
 
     [Fact]
@@ -263,7 +272,7 @@ public sealed class TimeClockTests
     }
 
     [Fact]
-    public async Task ThePayrollFile_UsesTheColumnsSet_RatesAndMultipliers_AndKeepsFormulasOut()
+    public async Task ThePayInputs_GiveTheFileOfTheColumnsSet_WithRatesAndMultipliers()
     {
         await using var kit = await TimeClockKit.CreateAsync();
         var team = await kit.AddTeamAsync("Front desk", policy => policy.WeeklyOvertimeHours = 8);
@@ -280,30 +289,26 @@ public sealed class TimeClockTests
 
         await kit.Harness.RunAsync(async services =>
         {
-            var export = services.GetRequiredService<IPayrollExportService>();
-
-            await export.SaveCsvSettingsAsync(new PayrollCsvSettings
-            {
-                Columns =
-                [
-                    new PayrollCsvColumn { Header = "Badge", Field = PayrollCsvField.EmployeeNumber },
-                    new PayrollCsvColumn { Header = "Who", Field = PayrollCsvField.WorkerName },
-                    new PayrollCsvColumn { Header = "Day", Field = PayrollCsvField.Date },
-                    new PayrollCsvColumn { Header = "Code", Field = PayrollCsvField.PayCode },
-                    new PayrollCsvColumn { Header = "Pay", Field = PayrollCsvField.Amount },
-                ],
-            });
             await services.GetRequiredService<ITimesheetService>().ApproveAsync(timesheet.ItemId, "manager");
             await services.GetRequiredService<ITimesheetService>().LockPeriodAsync(kit.Calendar.ItemId, timesheet.PeriodStart, "payroll");
         });
 
-        var batch = await kit.Harness.RunAsync(services => services.GetRequiredService<IPayrollExportService>().RunAsync(CsvPayrollExportProvider.ProviderName, kit.Calendar.ItemId, timesheet.PeriodStart, false, "payroll"));
+        PayrollCsvColumn[] columns =
+        [
+            new PayrollCsvColumn { Header = "Badge", Field = PayrollCsvField.EmployeeNumber },
+            new PayrollCsvColumn { Header = "Who", Field = PayrollCsvField.WorkerName },
+            new PayrollCsvColumn { Header = "Day", Field = PayrollCsvField.Date },
+            new PayrollCsvColumn { Header = "Code", Field = PayrollCsvField.PayCode },
+            new PayrollCsvColumn { Header = "Pay", Field = PayrollCsvField.Amount },
+        ];
+        var rows = await kit.Harness.RunAsync(services => PayInputCsv.ReadAsync(services, new PayInputQuery { PayScheduleId = kit.Calendar.ItemId }), commit: false);
 
         Assert.Equal(
             "Badge,Who,Day,Code,Pay\r\n"
             + "100,'=Ana,2026-11-09,OT,60.00\r\n"
             + "100,'=Ana,2026-11-09,REG,160.00\r\n",
-            batch.Value.Content);
+            PayInputCsv.Write(rows, columns));
+        Assert.All(rows, row => Assert.Equal(20m, row.Input.Rate));
     }
 
     [Fact]
@@ -447,7 +452,7 @@ public sealed class TimeClockTests
     }
 
     [Fact]
-    public async Task ApprovedPredictabilityPay_IsPaid_AndMarkedExported()
+    public async Task ApprovedPredictabilityPay_IsPaid_MarkedExported_AndGivenBack()
     {
         await using var kit = await TimeClockKit.CreateAsync(services => services.AddWorkforceLaborRulesCore());
         var team = await kit.AddTeamAsync("Front desk");
@@ -472,12 +477,21 @@ public sealed class TimeClockTests
             await services.GetRequiredService<ITimesheetService>().ApproveAsync(timesheet.ItemId, "manager");
             await services.GetRequiredService<ITimesheetService>().LockPeriodAsync(kit.Calendar.ItemId, timesheet.PeriodStart, "payroll");
         });
-        await kit.Harness.RunAsync(services => services.GetRequiredService<IPayrollExportService>().RunAsync(CsvPayrollExportProvider.ProviderName, kit.Calendar.ItemId, timesheet.PeriodStart, false, "payroll"));
+        var consumption = new PayInputConsumption { ConsumerId = "pipeline:run-1", Sources = [new PayInputReference("Timesheet", timesheet.ItemId)] };
+
+        await kit.Harness.RunAsync(services => services.GetRequiredService<IPayInputService>().MarkConsumedAsync(consumption));
 
         var stored = await kit.Harness.RunAsync(services => services.GetRequiredService<PredictabilityPayStore>().FindByIdAsync("pp1").AsTask(), commit: false);
 
+        await kit.Harness.RunAsync(services => services.GetRequiredService<IPayInputService>().ReleaseAsync(consumption));
+
+        var released = await kit.Harness.RunAsync(services => services.GetRequiredService<PredictabilityPayStore>().FindByIdAsync("pp1").AsTask(), commit: false);
+        var open = await kit.Harness.RunAsync(services => PayInputCsv.ReadAsync(services, new PayInputQuery { PayScheduleId = kit.Calendar.ItemId }), commit: false);
+
         Assert.Equal(2m, kit.Hours(timesheet, "PP", _monday.AddDays(2)));
         Assert.Equal(PredictabilityPayStatus.Exported, stored.Status);
+        Assert.Equal(PredictabilityPayStatus.Approved, released.Status);
+        Assert.Contains(open, row => row.Code?.Code == "PP" && row.Input.Hours == 2m);
     }
 
     [Fact]

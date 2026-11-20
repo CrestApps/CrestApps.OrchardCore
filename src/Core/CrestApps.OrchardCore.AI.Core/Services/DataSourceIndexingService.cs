@@ -14,6 +14,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Indexing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing;
@@ -36,6 +37,7 @@ public sealed class DataSourceIndexingService
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IAITextNormalizer _textNormalizer;
     private readonly IEnumerable<IDocumentIndexHandler> _documentIndexHandlers;
+    private readonly IEnumerable<IIndexedDocumentVisibility> _visibilities;
     private readonly IServiceProvider _serviceProvider;
     private readonly IDistributedLock _distributedLock;
 
@@ -68,6 +70,7 @@ public sealed class DataSourceIndexingService
         IAIClientFactory aiClientFactory,
         IAITextNormalizer textNormalizer,
         IEnumerable<IDocumentIndexHandler> documentIndexHandlers,
+        IEnumerable<IIndexedDocumentVisibility> visibilities,
         IServiceProvider serviceProvider,
         IDistributedLock distributedLock,
         IClock clock,
@@ -79,6 +82,7 @@ public sealed class DataSourceIndexingService
         _aiClientFactory = aiClientFactory;
         _textNormalizer = textNormalizer;
         _documentIndexHandlers = documentIndexHandlers;
+        _visibilities = visibilities;
         _serviceProvider = serviceProvider;
         _distributedLock = distributedLock;
         _clock = clock;
@@ -612,6 +616,15 @@ public sealed class DataSourceIndexingService
                 continue;
             }
 
+            // A knowledge base answers anyone allowed to chat with its profiles, so a record not everyone may read, such as
+            // an article restricted to staff roles, is left out, and removed when it was indexed before.
+            if (!await _visibilities.IsForEveryoneAsync(referenceId, cancellationToken))
+            {
+                await DeleteChunksAsync(documentIndexManager, masterProfile, referenceId);
+
+                continue;
+            }
+
             // Normalize content and title, then chunk using token-aware splitter.
 
             var normalizedTitle = _textNormalizer.NormalizeTitle(sourceDoc.Title);
@@ -935,6 +948,15 @@ public sealed class DataSourceIndexingService
                 continue;
             }
 
+            // A knowledge base answers anyone allowed to chat with its profiles, so a record not everyone may read, such as
+            // an article restricted to staff roles, is left out, and removed when it was indexed before.
+            if (!await _visibilities.IsForEveryoneAsync(referenceId, cancellationToken))
+            {
+                await DeleteChunksAsync(documentIndexManager, masterProfile, referenceId);
+
+                continue;
+            }
+
             // Normalize content and title, then chunk using token-aware splitter.
 
             sourceDoc.Title = _textNormalizer.NormalizeTitle(sourceDoc.Title);
@@ -1049,6 +1071,10 @@ public sealed class DataSourceIndexingService
             }
         }
     }
+
+    // The chunks of a record are its reference id with their number; a record has at most a thousand.
+    private static async Task DeleteChunksAsync(IDocumentIndexManager documentIndexManager, IndexProfile masterProfile, string referenceId)
+        => await documentIndexManager.DeleteDocumentsAsync(masterProfile, [.. Enumerable.Range(0, 1000).Select(i => $"{referenceId}_{i}")]);
 
     private static TelemetryScope StartSyncTelemetry(AIDataSource dataSource, IndexProfile masterProfile, string mode)
     {

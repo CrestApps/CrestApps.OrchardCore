@@ -15,6 +15,9 @@
     "it for the others. Other modules read the members to know who acts for an accoun" +
     "t.", Id="CrestApps.OrchardCore.Accounts.Members", Name="Account Members")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Content Management", Dependencies=new string[] {
+        "CrestApps.OrchardCore.Accounts"}, Description="Keeps the e-mail domains an account\'s people write from, such as contoso.com, so " +
+    "other modules file a request from an address on one of them under the account.", Id="CrestApps.OrchardCore.Accounts.EmailDomains", Name="Account E-mail Domains")]
+[assembly: OrchardCore.Modules.Manifest.Feature(Category="Content Management", Dependencies=new string[] {
         "CrestApps.OrchardCore.Resources",
         "OrchardCore.Contents",
         "OrchardCore.ContentTypes",
@@ -50,6 +53,12 @@ namespace CrestApps.OrchardCore.Accounts
     public sealed class DeploymentStartup : OrchardCore.Modules.StartupBase
     {
         public DeploymentStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.EmailDomains")]
+    public sealed class EmailDomainsStartup : OrchardCore.Modules.StartupBase
+    {
+        public EmailDomainsStartup(OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Locations")]
@@ -138,6 +147,13 @@ namespace CrestApps.OrchardCore.Accounts
         public TeamStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Timeline"})]
+    public sealed class TimelineStartup : OrchardCore.Modules.StartupBase
+    {
+        public TimelineStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
 }
 namespace CrestApps.OrchardCore.Accounts.Deployments
 {
@@ -154,12 +170,18 @@ namespace CrestApps.OrchardCore.Accounts.Deployments
 }
 namespace CrestApps.OrchardCore.Accounts.ViewModels
 {
+    public class AccountEmailDomainsPartViewModel
+    {
+        public AccountEmailDomainsPartViewModel() { }
+        public string Domains { get; set; }
+    }
     public class AccountLocationRowViewModel
     {
         public AccountLocationRowViewModel() { }
         public CrestApps.OrchardCore.Addresses.Core.Editing.AddressEditorViewModel Address { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public OrchardCore.DisplayManagement.IShape AddressEditor { get; set; }
+        public bool IsBilling { get; set; }
         public string LocationId { get; set; }
         public string Name { get; set; }
     }

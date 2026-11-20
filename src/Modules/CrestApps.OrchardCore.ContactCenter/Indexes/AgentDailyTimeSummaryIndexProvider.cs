@@ -21,6 +21,8 @@ public sealed class AgentDailyTimeSummaryIndexProvider : IndexProvider<AgentDail
     {
         context
             .For<AgentDailyTimeSummaryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(summary => new AgentDailyTimeSummaryIndex
             {
                 ItemId = summary.ItemId,

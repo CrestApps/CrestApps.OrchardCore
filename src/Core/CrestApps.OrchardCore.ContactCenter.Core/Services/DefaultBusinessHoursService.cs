@@ -1,15 +1,12 @@
-using CrestApps.OrchardCore.BusinessHours;
 using CrestApps.OrchardCore.BusinessHours.Services;
-using CrestApps.OrchardCore.Calendars;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
 /// Provides the default implementation of <see cref="IBusinessHoursService"/> over the shared
-/// <see cref="IOpenHoursService"/>, so a queue, entry point or dialer profile reads its calendar the way every other
-/// module reads business hours.
+/// <see cref="IOpenHoursService"/>, so a queue, entry point or dialer profile reads its Business Hours schedule the way
+/// every other module reads business hours. A calendar id is the id of a Business Hours schedule.
 /// </summary>
 public sealed class DefaultBusinessHoursService : IBusinessHoursService
 {
@@ -59,47 +56,5 @@ public sealed class DefaultBusinessHoursService : IBusinessHoursService
         CancellationToken cancellationToken = default)
     {
         return _openHoursService.IsOpenAsync(calendarId, utcInstant, timeZoneId, cancellationToken);
-    }
-
-    /// <summary>
-    /// Evaluates whether the supplied calendar is open at the given UTC instant.
-    /// </summary>
-    /// <param name="calendar">The calendar to evaluate.</param>
-    /// <param name="utcInstant">The UTC instant to evaluate.</param>
-    /// <returns><see langword="true"/> when the calendar is open; otherwise, <see langword="false"/>.</returns>
-    public static bool IsOpen(BusinessHoursCalendar calendar, DateTime utcInstant)
-    {
-        return IsOpen(calendar, utcInstant, null);
-    }
-
-    /// <summary>
-    /// Evaluates whether the supplied calendar is open at the given UTC instant using an optional time-zone override,
-    /// with the shared <see cref="HoursScheduleEvaluator"/>.
-    /// </summary>
-    /// <param name="calendar">The calendar to evaluate.</param>
-    /// <param name="utcInstant">The UTC instant to evaluate.</param>
-    /// <param name="timeZoneId">The time zone used instead of the calendar time zone when supplied.</param>
-    /// <returns><see langword="true"/> when the calendar is open; otherwise, <see langword="false"/>.</returns>
-    public static bool IsOpen(BusinessHoursCalendar calendar, DateTime utcInstant, string timeZoneId)
-    {
-        ArgumentNullException.ThrowIfNull(calendar);
-
-        return HoursScheduleEvaluator.IsOpen(calendar.ToHoursSchedule(), utcInstant, timeZoneId);
-    }
-
-    /// <summary>
-    /// Gives the stretches the supplied calendar is open between two UTC times, with the shared
-    /// <see cref="HoursScheduleEvaluator"/>.
-    /// </summary>
-    /// <param name="calendar">The calendar to evaluate.</param>
-    /// <param name="fromUtc">The start.</param>
-    /// <param name="toUtc">The end.</param>
-    /// <param name="timeZoneId">The time zone used instead of the calendar time zone when supplied.</param>
-    /// <returns>The open stretches, in order, merged where they touch and clipped to the range.</returns>
-    public static IReadOnlyList<TimeWindow> GetOpenWindows(BusinessHoursCalendar calendar, DateTime fromUtc, DateTime toUtc, string timeZoneId)
-    {
-        ArgumentNullException.ThrowIfNull(calendar);
-
-        return HoursScheduleEvaluator.GetOpenWindows(calendar.ToHoursSchedule(), fromUtc, toUtc, timeZoneId);
     }
 }

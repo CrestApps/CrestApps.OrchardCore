@@ -1,0 +1,38 @@
+@using CrestApps.OrchardCore.Timeline
+@using CrestApps.OrchardCore.Timeline.Models
+@using CrestApps.OrchardCore.Timeline.ViewModels
+
+@{
+    // The composer of a timeline card: one button for each kind of entry the user may add. A module overrides it for its
+    // own records with TimelineComposer__{Kind}.
+    var timeline = (TimelineViewModel)Model.Timeline;
+    var formId = "timeline-" + timeline.Subject.Replace(':', '-');
+    var hasInternal = timeline.Composer.Any(button => button.Visibility == TimelineVisibility.Internal);
+    var hasPublic = timeline.Composer.Any(button => button.Visibility == TimelineVisibility.Public);
+}
+
+<form asp-area="CrestApps.OrchardCore.Timeline" asp-controller="Timeline" asp-action="Add" method="post" class="mb-3" id="@formId" enctype="@(timeline.CanAttach ? "multipart/form-data" : "application/x-www-form-urlencoded")">
+    <input type="hidden" name="subject" value="@timeline.Subject" />
+    <input type="hidden" name="returnUrl" value="@timeline.ReturnUrl" />
+    <label class="form-label visually-hidden" for="@formId-body">@T["Text"]</label>
+    @if (timeline.CanAttach)
+    {
+        <textarea id="@formId-body" name="body" rows="3" class="form-control mb-2" maxlength="@TimelineConstants.MaxBodyLength" placeholder="@T["Write a note"]">@timeline.Draft</textarea>
+        <label class="form-label visually-hidden" for="@formId-files">@T["Files"]</label>
+        @await DisplayAsync(await New.FileDropInput(InputName: "files", InputId: formId + "-files", Compact: true, Target: "form", CssClass: "mb-2"))
+    }
+    else
+    {
+        <textarea id="@formId-body" name="body" rows="3" class="form-control mb-2" maxlength="@TimelineConstants.MaxBodyLength" required placeholder="@T["Write a note"]">@timeline.Draft</textarea>
+    }
+    <div class="d-flex gap-2">
+        @foreach (var button in timeline.Composer)
+        {
+            <button type="submit" name="kind" value="@button.Kind" class="btn btn-sm @(button == timeline.Composer[0] ? "btn-primary" : "btn-outline-primary")">@button.Text</button>
+        }
+    </div>
+    @if (hasInternal && hasPublic)
+    {
+        <span class="hint">@T["A note is seen only by the people who work on the record; a comment is seen by everyone who may read it."]</span>
+    }
+</form>

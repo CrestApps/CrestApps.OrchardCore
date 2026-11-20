@@ -135,6 +135,7 @@ Event type builder (`CalendarEventTypeBuilder`):
 | `NeedsApproval()` | New events are created `Tentative` and someone with **Manage** confirms them. |
 | `RequiresAttendee()` | An event must name at least one attendee, such as the person on call. |
 | `IgnoresCapacity()` | Busy events of the type don't count toward the calendar's capacity. |
+| `MarksAbsence()` | An event of the type marks its people as away (out of office, time off): team assignment doesn't push work to them while it lasts. |
 
 The built-in types:
 

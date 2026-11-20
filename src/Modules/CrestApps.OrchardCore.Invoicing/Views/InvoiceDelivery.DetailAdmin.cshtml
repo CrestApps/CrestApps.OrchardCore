@@ -1,0 +1,45 @@
+@model InvoiceDeliveryViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@{
+    var invoice = Model.Invoice;
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Send and share"]</div>
+    <div class="card-body">
+        @if (invoice.ViewedUtc is { } viewedUtc)
+        {
+            <p class="small text-muted">@T["The customer opened it on {0}.", (await LocalAsync(viewedUtc)).ToString("g")]</p>
+        }
+        else if (invoice.SentUtc is { } sentUtc)
+        {
+            <p class="small text-muted">@T["Sent on {0}; not opened yet.", (await LocalAsync(sentUtc)).ToString("g")]</p>
+        }
+
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            @if (Model.CanSend)
+            {
+                <a asp-action="Send" asp-controller="InvoicesAdmin" asp-route-itemId="@invoice.ItemId" class="btn btn-primary">@T["Send"]</a>
+            }
+            <a asp-action="Document" asp-controller="InvoicesAdmin" asp-route-itemId="@invoice.ItemId" class="btn btn-secondary">@T["Print"]</a>
+            <a asp-action="Pdf" asp-controller="InvoicesAdmin" asp-route-itemId="@invoice.ItemId" class="btn btn-secondary">@T["PDF"]</a>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.ShareUrl))
+        {
+            <label for="invoice-share-link" class="form-label">@T["Share link"]</label>
+            <div class="input-group">
+                <input id="invoice-share-link" type="text" class="form-control" value="@Model.ShareUrl" readonly />
+                <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('invoice-share-link').value); this.textContent = this.dataset.copied;" data-copied="@T["Copied"]">@T["Copy"]</button>
+            </div>
+            <span class="hint">@T["Anyone with this link sees the invoice, and can pay it, without signing in."]</span>
+        }
+    </div>
+</div>

@@ -1,0 +1,27 @@
+@using CrestApps.OrchardCore.Tickets.Portal
+@using CrestApps.OrchardCore.Users
+@model TicketPortalDisplayViewModel
+
+@{
+    var title = T["{0} {1}", Model.Number, Model.Subject];
+}
+
+@if (!Model.IsGuest)
+{
+    <zone Name="Title">
+        <breadcrumb name="TicketPortalDisplay" title="@title">
+            <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(UsersConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+            <breadcrumb-item id="TicketPortal" url="@Url.RouteUrl("TicketPortal")">@T["Requests"]</breadcrumb-item>
+        </breadcrumb>
+    </zone>
+
+    @await DisplayAsync(await New.CommerceAccountPage(Title: title, Content: await Html.PartialAsync("_TicketPortalThread", Model)))
+}
+else
+{
+    @* A guest has no account area: the request on its own. *@
+    <div class="container my-4" style="max-width: 860px;">
+        <h1 class="h3 mb-3">@title</h1>
+        <partial name="_TicketPortalThread" model="Model" />
+    </div>
+}

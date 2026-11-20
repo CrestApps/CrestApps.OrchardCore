@@ -1,0 +1,115 @@
+@model BillableItemViewModel
+
+@{
+    var partyJson = string.IsNullOrEmpty(Model.Party)
+        ? "[]"
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.Party, text = Model.PartyName ?? Model.Party, selected = true } });
+}
+
+@if (Model.IsBilled)
+{
+    <div class="alert alert-info">
+        @T["An invoice bills this charge, so it can't be changed."]
+        <a asp-controller="InvoicesAdmin" asp-action="Detail" asp-route-itemId="@Model.InvoiceId">@T["Open the invoice"]</a>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["The charge"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Party">
+            <label class="ocat-label ocat-label-required">@T["Customer"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("ItemSelector", new
+                {
+                    id = "charge-party",
+                    inputName = Html.NameFor(m => m.Party).ToString(),
+                    endpoint = Model.PartySearchEndpoint,
+                    initialItemsJson = partyJson,
+                    multiple = false,
+                    enableSearch = true,
+                    buttonText = T["Find a customer"].Value,
+                    searchPlaceholder = T["Search users, customers and accounts"].Value,
+                    emptyResultsText = T["No one found."].Value,
+                    noSelectionText = T["No one chosen."].Value,
+                    selectedItemsLabel = T["Customer"].Value,
+                    availableItemsLabel = T["Found"].Value,
+                    smallButton = false,
+                })
+                <span class="hint">@T["Who the charge is billed to: it is offered on their next draft invoice."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="Description">
+            <label asp-for="Description" class="ocat-label ocat-label-required">@T["Description"]</label>
+            <div class="ocat-end">
+                <input asp-for="Description" class="form-control" maxlength="255" />
+                <span class="hint">@T["Printed on the invoice line, such as Travel to the site or Replacement parts."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-limited-wrapper">
+            <label asp-for="Kind" class="ocat-label">@T["Kind"]</label>
+            <div class="ocat-limited">
+                <select asp-for="Kind" class="form-select">
+                    <option value="@DocumentLineKind.Expense">@T["Expense"]</option>
+                    <option value="@DocumentLineKind.Time">@T["Time"]</option>
+                    <option value="@DocumentLineKind.Service">@T["Service"]</option>
+                    <option value="@DocumentLineKind.Item">@T["Item"]</option>
+                    <option value="@DocumentLineKind.Fee">@T["Fee"]</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="ocat-limited-wrapper" asp-validation-class-for="Date">
+            <label asp-for="Date" class="ocat-label">@T["Day"]</label>
+            <div class="ocat-limited">
+                <input asp-for="Date" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+                <span class="hint">@T["When it was incurred. A recurring plan that bills charges takes those up to its run's day."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Price"]</div>
+    <div class="card-body">
+        <div class="ocat-limited-wrapper" asp-validation-class-for="Quantity">
+            <label asp-for="Quantity" class="ocat-label">@T["Quantity"]</label>
+            <div class="ocat-limited">
+                <div class="input-group">
+                    <input asp-for="Quantity" type="number" step="any" min="0" class="form-control" />
+                    <input asp-for="Unit" class="form-control" placeholder="@T["unit, such as hours"]" maxlength="20" />
+                </div>
+            </div>
+        </div>
+        <div class="ocat-limited-wrapper" asp-validation-class-for="UnitCost">
+            <label asp-for="UnitCost" class="ocat-label">@T["Cost each"]</label>
+            <div class="ocat-limited">
+                <input asp-for="UnitCost" type="number" step="any" min="0" class="form-control" />
+                <span class="hint">@T["What it cost you, or the price when there is no markup."]</span>
+            </div>
+        </div>
+        <div class="ocat-limited-wrapper" asp-validation-class-for="MarkupPercent">
+            <label asp-for="MarkupPercent" class="ocat-label">@T["Markup (%)"]</label>
+            <div class="ocat-limited">
+                <input asp-for="MarkupPercent" type="number" step="any" min="0" class="form-control" />
+                <span class="hint">@T["Added to the cost to bill it, such as 10 to pass an expense on at cost plus 10%."]</span>
+            </div>
+        </div>
+        <div class="ocat-limited-wrapper" asp-validation-class-for="Currency">
+            <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+            <div class="ocat-limited">
+                <input asp-for="Currency" class="form-control text-uppercase" maxlength="3" />
+                <span class="hint">@T["Offered only on invoices in this currency."]</span>
+            </div>
+        </div>
+        <div class="ocat-limited-wrapper" asp-validation-class-for="TaxCategoryCode">
+            <label asp-for="TaxCategoryCode" class="ocat-label">@T["Tax category"]</label>
+            <div class="ocat-limited">
+                <input asp-for="TaxCategoryCode" class="form-control" maxlength="50" />
+                <span class="hint">@T["Optional. The tax category code the invoice's tax is worked out with."]</span>
+            </div>
+        </div>
+    </div>
+</div>

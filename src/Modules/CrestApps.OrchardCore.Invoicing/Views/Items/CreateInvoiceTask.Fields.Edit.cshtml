@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+
+@model InvoiceTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="BillTo" class="form-label">@T["Bill to"]</label>
+    <input asp-for="BillTo" class="form-control code" />
+    <span class="hint">@T["The party billed, written Kind:Id, such as Account:123 or User:456."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Currency" class="form-label">@T["Currency"]</label>
+    <input asp-for="Currency" class="form-control code" />
+    <span class="hint">@T["Optional. A currency code such as USD; the bill-to's or the site's default when empty."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Description" class="form-label">@T["Description"]</label>
+    <input asp-for="Description" class="form-control code" />
+    <span class="hint">@T["The name of the invoice's line."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Amount" class="form-label">@T["Amount"]</label>
+    <input asp-for="Amount" class="form-control code" />
+    <span class="hint">@T["The line's amount, with a dot as the decimal separator."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Reference" class="form-label">@T["Reference"]</label>
+    <input asp-for="Reference" class="form-control code" />
+    <span class="hint">@T["Optional. Kept on the invoice, such as an order number."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="OutputName" class="form-label">@T["Output name"]</label>
+    <input asp-for="OutputName" class="form-control code" />
+    <span class="hint">@T["The name the invoice is saved under in the workflow output. Leave empty for Invoice."]</span>
+</div>

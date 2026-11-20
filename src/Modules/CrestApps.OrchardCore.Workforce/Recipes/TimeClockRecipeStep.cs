@@ -1,10 +1,14 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
@@ -13,7 +17,7 @@ namespace CrestApps.OrchardCore.Workforce.Recipes;
 /// <summary>
 /// The WorkforceTimeClock recipe step: pay periods, pay codes (matched by code) and time clock policies, with their
 /// pay periods by name and the teams that use them; time clock kiosks, with their team by name; and the columns of the
-/// payroll CSV file.
+/// payroll CSV file, which becomes a draft data pipeline over the Pay Inputs data set.
 /// </summary>
 /// <remarks>
 /// A kiosk's sign-in token is never carried: an imported kiosk keeps the token it has, and a new kiosk gets one when an
@@ -23,20 +27,20 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
 {
     public const string TimeClockStepName = "WorkforceTimeClock";
 
-    private readonly IPayPeriodCalendarManager _calendarManager;
+    private readonly IPayScheduleManager _calendarManager;
     private readonly IPayCodeManager _payCodeManager;
     private readonly ITimeClockPolicyManager _policyManager;
     private readonly ITeamManager _teamManager;
     private readonly ITimeClockKioskManager _kioskManager;
-    private readonly IPayrollExportService _payrollExportService;
+    private readonly IServiceProvider _services;
 
     public TimeClockRecipeStep(
-        IPayPeriodCalendarManager calendarManager,
+        IPayScheduleManager calendarManager,
         IPayCodeManager payCodeManager,
         ITimeClockPolicyManager policyManager,
         ITeamManager teamManager,
         ITimeClockKioskManager kioskManager,
-        IPayrollExportService payrollExportService)
+        IServiceProvider services)
         : base(TimeClockStepName)
     {
         _calendarManager = calendarManager;
@@ -44,7 +48,7 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
         _policyManager = policyManager;
         _teamManager = teamManager;
         _kioskManager = kioskManager;
-        _payrollExportService = payrollExportService;
+        _services = services;
     }
 
     protected override async Task HandleAsync(RecipeExecutionContext context)
@@ -52,7 +56,7 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
         var import = new RecipeImport(context, TimeClockStepName);
         var calendars = (await _calendarManager.GetAllAsync()).ToList();
 
-        foreach (var (_, incoming) in import.Read<PayPeriodCalendar>("PayPeriods"))
+        foreach (var (_, incoming) in import.Read<PaySchedule>("PayPeriods"))
         {
             if (await import.SaveAsync(_calendarManager, incoming, RecipeImport.Existing(calendars, incoming, item => item.Name), $"pay periods '{incoming.Name}'") is { } saved && !calendars.Contains(saved))
             {
@@ -62,8 +66,11 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
 
         var codes = (await _payCodeManager.GetAllAsync()).ToList();
 
-        foreach (var (_, incoming) in import.Read<PayCode>("PayCodes"))
+        // Pay codes are Pay Setup's now; a shift differential's window goes into Workforce's settings on the code.
+        foreach (var (node, incoming) in import.Read<PayCode>("PayCodes"))
         {
+            ReadWindow(node, incoming);
+
             if (await import.SaveAsync(_payCodeManager, incoming, RecipeImport.Existing(codes, incoming, item => item.Code), $"pay code '{incoming.Code}'") is { } saved && !codes.Contains(saved))
             {
                 codes.Add(saved);
@@ -199,10 +206,24 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
             return;
         }
 
-        var settings = await _payrollExportService.GetCsvSettingsAsync();
+        // The export is a data pipeline now: the columns become its draft, to publish under Tools > Data Pipelines.
+        await ActivatorUtilities.GetServiceOrCreateInstance<PayrollCsvPipelineImporter>(_services).ImportAsync(incoming.Columns.Where(column => !string.IsNullOrWhiteSpace(column.Header)), context.Errors);
+    }
 
-        settings.Columns = incoming.Columns.Where(column => !string.IsNullOrWhiteSpace(column.Header)).ToList();
+    private static void ReadWindow(JsonObject node, PayCode code)
+    {
+        var start = TimeOnly.TryParse(RecipeImport.String(node, "windowStart"), CultureInfo.InvariantCulture, out var from) ? from : (TimeOnly?)null;
+        var end = TimeOnly.TryParse(RecipeImport.String(node, "windowEnd"), CultureInfo.InvariantCulture, out var to) ? to : (TimeOnly?)null;
+        var weekdays = RecipeImport.Strings(node, "weekdays")
+            .Select(day => Enum.TryParse<DayOfWeek>(day, true, out var parsed) ? parsed : (DayOfWeek?)null)
+            .Where(day => day.HasValue)
+            .Select(day => day.Value)
+            .Distinct()
+            .ToList();
 
-        await _payrollExportService.SaveCsvSettingsAsync(settings);
+        if (start.HasValue || end.HasValue || weekdays.Count > 0)
+        {
+            code.Put(new WorkforcePayCodeSettings { WindowStart = start, WindowEnd = end, Weekdays = weekdays });
+        }
     }
 }

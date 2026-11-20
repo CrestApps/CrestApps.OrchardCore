@@ -139,4 +139,16 @@ public sealed class CalendarEventTypeBuilder
 
         return this;
     }
+
+    /// <summary>
+    /// Marks an event of the type as an absence of its people (out of office, time off): work isn't pushed to them
+    /// while it lasts.
+    /// </summary>
+    /// <returns>The builder.</returns>
+    public CalendarEventTypeBuilder MarksAbsence()
+    {
+        Descriptor.MarksAbsence = true;
+
+        return this;
+    }
 }

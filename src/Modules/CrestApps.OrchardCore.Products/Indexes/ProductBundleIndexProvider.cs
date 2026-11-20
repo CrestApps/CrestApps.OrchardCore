@@ -8,7 +8,9 @@ namespace CrestApps.OrchardCore.Products.Indexes;
 internal sealed class ProductBundleIndexProvider : IndexProvider<ContentItem>
 {
     public override void Describe(DescribeContext<ContentItem> context)
-        => context.For<ProductBundleIndex>().Map(CreateIndexes);
+        => context.For<ProductBundleIndex>()
+            .ExclusiveToDocumentType()
+            .Map(CreateIndexes);
 
     internal static IEnumerable<ProductBundleIndex> CreateIndexes(ContentItem contentItem)
     {

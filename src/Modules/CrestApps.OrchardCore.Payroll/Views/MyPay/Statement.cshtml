@@ -1,0 +1,69 @@
+@model PayStatementViewModel
+@using System.Globalization
+@using CrestApps.OrchardCore.Currencies
+
+@{
+    var statement = Model.Statement;
+    string Money(decimal value) => string.IsNullOrEmpty(statement.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.FormatForDisplay(value, statement.Currency) + " " + statement.Currency;
+}
+
+<zone Name="Title">
+    <breadcrumb name="PayrollMyPayStatement" title="@T["Pay of {0}", statement.PayDate.ToString("d", CultureInfo.CurrentCulture)]">
+        <breadcrumb-item id="PayrollMyPay" action="Index" controller="MyPay" area="CrestApps.OrchardCore.Payroll">@T["My pay"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card mb-3">
+    <div class="card-header d-flex">
+        <span class="me-auto">@statement.Snapshot?.EmployerName</span>
+        @if (statement.VoidOf is not null)
+        {
+            <span class="badge text-bg-secondary fw-normal">@T["Reversal"]</span>
+        }
+        else if (statement.Status == PayStatementStatus.Voided)
+        {
+            <span class="badge text-bg-secondary fw-normal">@T["Voided"]</span>
+        }
+    </div>
+    <div class="card-body">
+        <p class="mb-1">@T["Statement {0}", statement.Number]</p>
+        <p class="text-muted mb-0">@T["Period {0} to {1}, paid {2}.", statement.PeriodStart.ToString("d", CultureInfo.CurrentCulture), statement.PeriodEnd.ToString("d", CultureInfo.CurrentCulture), statement.PayDate.ToString("d", CultureInfo.CurrentCulture)]</p>
+        @if (statement.Status == PayStatementStatus.Voided)
+        {
+            <p class="mb-0 mt-2">@T["This statement was cancelled by a reversing statement; your payroll contact pays what is owed in a new one."]</p>
+        }
+    </div>
+</div>
+
+<partial name="PayStatementLines" model="Model" />
+
+@if (statement.Payments.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Your net pay is paid"]</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var payment in statement.Payments)
+            {
+                <li class="list-group-item d-flex">
+                    <span class="me-auto">
+                        @(payment.Method == NetPayMethod.BankAccount ? T["By deposit"] : T["By check"])
+                        @if (!string.IsNullOrEmpty(payment.Reference))
+                        {
+                            <span class="text-muted ms-1">@payment.Reference</span>
+                        }
+                    </span>
+                    <span>@Money(payment.Amount)</span>
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="mb-3">
+    <a class="btn btn-secondary" asp-action="StatementPdf" asp-route-id="@statement.ItemId"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Download the stub"]</a>
+    <button type="button" class="btn btn-secondary d-print-none" data-pay-statement-print><i class="fa-solid fa-print" aria-hidden="true"></i> @T["Print"]</button>
+</div>
+
+<script at="Foot">
+    document.querySelectorAll('[data-pay-statement-print]').forEach(button => button.addEventListener('click', () => window.print()));
+</script>

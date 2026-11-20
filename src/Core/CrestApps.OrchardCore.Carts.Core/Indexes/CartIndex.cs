@@ -26,6 +26,8 @@ public sealed class CartIndexProvider : IndexProvider<Cart>
     public override void Describe(DescribeContext<Cart> context)
     {
         context.For<CartIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(cart => new CartIndex
             {
                 ItemId = cart.ItemId,

@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Addresses.Models;
 
 namespace CrestApps.OrchardCore.Teams.Models;
 
@@ -38,6 +39,12 @@ public sealed class Team : CatalogItem, INameAwareModel, IModifiedUtcAwareModel
     /// Gets or sets the team's IANA time zone, which sets its day boundaries; <see langword="null"/> to use the site's.
     /// </summary>
     public string TimeZoneId { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the team works, such as the address of a site: Workforce's geofence starts from it and
+    /// Payroll reads a work site's tax jurisdictions from it. Optional.
+    /// </summary>
+    public Address Address { get; set; }
 
     /// <summary>
     /// Gets or sets whether the team is in use.

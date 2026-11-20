@@ -13,6 +13,8 @@ public sealed class TelnyxAgentCredentialIndexProvider : IndexProvider<TelnyxAge
     {
         context
             .For<TelnyxAgentCredentialIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(credential => new TelnyxAgentCredentialIndex
             {
                 TenantName = credential.TenantName,

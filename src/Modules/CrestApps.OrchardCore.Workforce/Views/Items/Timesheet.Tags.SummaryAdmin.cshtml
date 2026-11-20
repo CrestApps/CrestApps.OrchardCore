@@ -5,7 +5,7 @@
 }
 @Status(timesheet.Status)
 <span class="badge ta-badge fw-normal">@T["{0} h", timesheet.TotalHours.ToString("0.##")]</span>
-@foreach (var group in timesheet.Lines.Where(line => line.PayCodeId is not null && codes.ContainsKey(line.PayCodeId)).GroupBy(line => codes[line.PayCodeId]).Where(group => group.Key.Kind is not PayCodeKind.Regular).OrderBy(group => group.Key.Kind))
+@foreach (var group in timesheet.Lines.Where(line => line.PayCodeId is not null && codes.ContainsKey(line.PayCodeId)).GroupBy(line => codes[line.PayCodeId]).Where(group => group.Key.Kind is not PayCodeKinds.Regular).OrderBy(group => group.Key.Kind))
 {
     <span class="badge ta-badge fw-normal">@group.Key.Code @group.Sum(line => line.Hours).ToString("0.##")</span>
 }

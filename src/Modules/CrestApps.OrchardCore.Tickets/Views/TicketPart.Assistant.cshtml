@@ -1,0 +1,62 @@
+@model TicketAssistantViewModel
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h6">@T["AI assistant"]</h2>
+        @if (Model.CanSuggest)
+        {
+            <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="SuggestReply" asp-route-id="@Model.TicketId" method="post" id="ticket-suggest-reply" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-secondary mb-1"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> @T["Suggest a reply"]</button>
+            </form>
+        }
+        @if (Model.CanTriage)
+        {
+            <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="Triage" asp-route-id="@Model.TicketId" method="post" class="d-inline no-multisubmit">
+                <button type="submit" class="btn btn-sm btn-outline-secondary mb-1">@T["Triage"]</button>
+            </form>
+        }
+        <div id="ticket-suggest-reply-status" class="small text-muted" role="status"></div>
+        <span class="hint d-block">@T["A suggested reply goes into the reply box for you to check, edit and send; whether it is a public reply or an internal note stays your choice. Triage adds an internal note with a summary and a priority."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    (() => {
+        const form = document.getElementById('ticket-suggest-reply');
+        const status = document.getElementById('ticket-suggest-reply-status');
+        const body = document.getElementById('ticket-reply-body');
+        if (!form || !body) {
+            return;
+        }
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const button = form.querySelector('button');
+            button.disabled = true;
+            status.textContent = @Json.Serialize(T["Writing a reply…"].Value);
+            try {
+                const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+                const result = response.ok ? await response.json() : { error: @Json.Serialize(T["The assistant isn't available right now."].Value) };
+                if (result.text) {
+                    body.value = result.text;
+                    body.dispatchEvent(new Event('input', { bubbles: true }));
+                    // The agent's choice of public reply or internal note stays: the suggestion was written from a
+                    // thread with internal notes. With nothing chosen, it becomes a note.
+                    if (!document.querySelector('input[name="isInternal"]:checked')) {
+                        const note = document.querySelector('input[type="radio"][name="isInternal"][value="true"]');
+                        if (note) {
+                            note.click();
+                        }
+                    }
+                    body.focus();
+                    status.textContent = @Json.Serialize(T["Check the reply, then send it."].Value);
+                } else {
+                    status.textContent = result.error || '';
+                }
+            } catch {
+                status.textContent = @Json.Serialize(T["The assistant isn't available right now."].Value);
+            } finally {
+                button.disabled = false;
+            }
+        });
+    })();
+</script>

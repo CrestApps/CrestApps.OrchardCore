@@ -22,6 +22,8 @@ public sealed class ContactCenterEventMetricDeltaIndexProvider : IndexProvider<C
     {
         context
             .For<ContactCenterEventMetricDeltaIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(delta => new ContactCenterEventMetricDeltaIndex
             {
                 ItemId = delta.ItemId,

@@ -15,6 +15,16 @@ public static class MarketplaceConstants
     public const string StripeConnectPayoutProvider = "StripeConnect";
 
     /// <summary>
+    /// The party kind of a vendor, as the payee of a disbursement.
+    /// </summary>
+    public const string VendorPartyKind = "MarketplaceVendor";
+
+    /// <summary>
+    /// The source kind of a vendor payout's disbursement: the order whose earnings it pays.
+    /// </summary>
+    public const string PayoutSourceKind = "MarketplaceOrder";
+
+    /// <summary>
     /// The YesSql collection that holds vendors, their earnings and payouts.
     /// </summary>
     public const string CollectionName = "Marketplace";

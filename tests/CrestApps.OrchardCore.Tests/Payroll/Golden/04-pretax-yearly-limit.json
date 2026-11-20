@@ -1,0 +1,106 @@
+{
+  "Frequency": "Biweekly",
+  "PeriodStart": "2026-11-01",
+  "PeriodEnd": "2026-11-14",
+  "PayDate": "2026-11-20",
+  "Description": "A 10% retirement deduction not taxed for income tax, with 950 of its 1000 yearly limit taken: it takes 50, and income tax is worked out on 1550.",
+  "Pay": {
+    "PayBasis": "Hourly",
+    "Rates": [
+      {
+        "EffectiveFrom": "2020-01-01",
+        "HourlyRate": 20
+      }
+    ]
+  },
+  "Distribution": [
+    {
+      "Method": "Check",
+      "Split": "Remainder"
+    }
+  ],
+  "Codes": [
+    {
+      "Code": "REG",
+      "Class": "Earning",
+      "Kind": "Regular"
+    },
+    {
+      "Code": "RET",
+      "Class": "Deduction",
+      "Kind": "Contribution",
+      "Settings": {
+        "Calculation": "PercentOfEarnings",
+        "TaxTreatment": {
+          "IncomeTax": "Exempt"
+        },
+        "YearLimits": [
+          {
+            "EffectiveFrom": "2026-01-01",
+            "Amount": 1000
+          }
+        ]
+      }
+    }
+  ],
+  "Inputs": [
+    {
+      "PayCode": "REG",
+      "Hours": 80
+    }
+  ],
+  "Items": [
+    {
+      "PayCode": "RET",
+      "Percent": 10
+    }
+  ],
+  "Accumulators": {
+    "code:RET": {
+      "Year": 950,
+      "Lifetime": 950
+    }
+  },
+  "TaxRules": [
+    {
+      "rule": {
+        "TaxCode": "US-FIT",
+        "Name": "Income tax",
+        "Jurisdiction": "US",
+        "Category": "IncomeTax",
+        "Payer": "Employee",
+        "Method": "Percentage",
+        "EffectiveFrom": "2026-01-01",
+        "Rate": 10
+      }
+    },
+    {
+      "rule": {
+        "TaxCode": "US-SS",
+        "Name": "Social insurance",
+        "Jurisdiction": "US",
+        "Category": "SocialInsurance",
+        "Payer": "Employee",
+        "Method": "Percentage",
+        "EffectiveFrom": "2026-01-01",
+        "Rate": 6.2
+      }
+    }
+  ],
+  "Expected": {
+    "Lines": [
+      "Earning REG 1600.00 for 80h",
+      "Deduction RET 50.00 cut 110.00",
+      "Tax US-FIT Employee 155.00 on 1550.00",
+      "Tax US-SS Employee 99.20 on 1600.00"
+    ],
+    "Gross": 1600.0,
+    "Net": 1295.8,
+    "Payments": [
+      {
+        "Method": "Check",
+        "Amount": 1295.8
+      }
+    ]
+  }
+}

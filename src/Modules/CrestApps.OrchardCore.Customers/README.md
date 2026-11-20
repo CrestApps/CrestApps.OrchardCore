@@ -19,7 +19,7 @@ Enable a feature under **Configuration > Features**, or with the `Feature` step 
 
 Enabling a feature of this module enables the features it depends on:
 
-- [`CrestApps.OrchardCore.Commerce`](../CrestApps.OrchardCore.Commerce/README.md)
+- [`CrestApps.OrchardCore.Commerce.Foundation`](../CrestApps.OrchardCore.Commerce/README.md)
 - `OrchardCore.Users`
 - [`CrestApps.OrchardCore.Addresses`](../CrestApps.OrchardCore.Addresses/README.md)
 - [`CrestApps.OrchardCore.Orders`](../CrestApps.OrchardCore.Orders/README.md)

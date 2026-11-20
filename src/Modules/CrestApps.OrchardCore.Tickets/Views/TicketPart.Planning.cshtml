@@ -1,0 +1,122 @@
+@model TicketPlanningViewModel
+
+@{
+    var part = Model.Part;
+    string Level(TicketLevel? level) => level switch
+    {
+        TicketLevel.High => T["High"].Value,
+        TicketLevel.Medium => T["Medium"].Value,
+        TicketLevel.Low => T["Low"].Value,
+        _ => T["Not set"].Value,
+    };
+    string Billing(TicketBillingType? type) => type switch
+    {
+        TicketBillingType.Billable => T["Billable"].Value,
+        TicketBillingType.NotBillable => T["Not billable"].Value,
+        TicketBillingType.Agreement => T["Covered by the agreement"].Value,
+        TicketBillingType.NoCharge => T["No charge"].Value,
+        _ => T["Not set"].Value,
+    };
+    string Hours(int minutes) => minutes < 60
+        ? T.GetString("{0} min", minutes).Value
+        : T.GetString("{0} h {1:00} min", minutes / 60, minutes % 60).Value;
+    var levels = new[] { TicketLevel.High, TicketLevel.Medium, TicketLevel.Low };
+    var types = new[] { TicketBillingType.Billable, TicketBillingType.Agreement, TicketBillingType.NoCharge, TicketBillingType.NotBillable };
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h6">@T["Planning"]</h2>
+        @if (Model.CanEdit)
+        {
+            <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="TicketPlanning" asp-action="Update" asp-route-id="@Model.TicketId" method="post" class="no-multisubmit">
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label for="ticket-impact" class="form-label small mb-1">@T["Impact"]</label>
+                        <select id="ticket-impact" name="Impact" class="form-select form-select-sm">
+                            <option value="">@T["Not set"]</option>
+                            @foreach (var level in levels)
+                            {
+                                <option value="@level" selected="@(part.Impact == level)">@Level(level)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label for="ticket-urgency" class="form-label small mb-1">@T["Urgency"]</label>
+                        <select id="ticket-urgency" name="Urgency" class="form-select form-select-sm">
+                            <option value="">@T["Not set"]</option>
+                            @foreach (var level in levels)
+                            {
+                                <option value="@level" selected="@(part.Urgency == level)">@Level(level)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                @if (Model.HasPriorityMatrix)
+                {
+                    <p class="hint mb-2">@T["The desk sets the priority from the impact and urgency."]</p>
+                }
+                <div class="mb-2">
+                    <label for="ticket-estimated-start" class="form-label small mb-1">@T["Estimated start"]</label>
+                    <input id="ticket-estimated-start" name="EstimatedStart" type="datetime-local" class="form-control form-control-sm" value="@(Model.EstimatedStart?.ToString("yyyy-MM-ddTHH:mm"))" />
+                </div>
+                <div class="mb-2">
+                    <label for="ticket-estimate" class="form-label small mb-1">@T["Estimated time"]</label>
+                    <input id="ticket-estimate" name="Estimate" class="form-control form-control-sm" placeholder="@T["2h, 45m or 1:30"]" value="@(part.EstimatedMinutes is { } minutes ? (minutes / 60).ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" + (minutes % 60).ToString("00", System.Globalization.CultureInfo.InvariantCulture) : null)" />
+                </div>
+                <div class="mb-2">
+                    <label for="ticket-billing" class="form-label small mb-1">@T["Billing type"]</label>
+                    <select id="ticket-billing" name="BillingType" class="form-select form-select-sm">
+                        <option value="">@T["Not set"]</option>
+                        @foreach (var type in types)
+                        {
+                            <option value="@type" selected="@(part.BillingType == type)">@Billing(type)</option>
+                        }
+                    </select>
+                </div>
+                @if (Model.HasAgreements)
+                {
+                    <div class="mb-2">
+                        <label for="ticket-agreement" class="form-label small mb-1">@T["Agreement"]</label>
+                        <select id="ticket-agreement" name="AgreementId" class="form-select form-select-sm">
+                            <option value="">@T["None"]</option>
+                            @foreach (var agreement in Model.Agreements)
+                            {
+                                <option value="@agreement.AgreementId" selected="@(part.AgreementId == agreement.AgreementId)">@agreement.Number @agreement.Name</option>
+                            }
+                        </select>
+                    </div>
+                }
+                <button type="submit" class="btn btn-sm btn-secondary">@T["Save planning"]</button>
+            </form>
+        }
+        else
+        {
+            <dl class="row small mb-0">
+                <dt class="col-6 fw-normal text-body-secondary">@T["Impact"]</dt>
+                <dd class="col-6 mb-1">@Level(part.Impact)</dd>
+                <dt class="col-6 fw-normal text-body-secondary">@T["Urgency"]</dt>
+                <dd class="col-6 mb-1">@Level(part.Urgency)</dd>
+                <dt class="col-6 fw-normal text-body-secondary">@T["Estimated start"]</dt>
+                <dd class="col-6 mb-1">
+                    @if (part.EstimatedStartUtc is { } start)
+                    {
+                        @await DisplayAsync(await New.DateTime(Utc: start, Format: "g"))
+                    }
+                    else
+                    {
+                        @T["Not set"]
+                    }
+                </dd>
+                <dt class="col-6 fw-normal text-body-secondary">@T["Estimated time"]</dt>
+                <dd class="col-6 mb-1">@(part.EstimatedMinutes is { } minutes ? Hours(minutes) : T["Not set"].Value)</dd>
+                <dt class="col-6 fw-normal text-body-secondary">@T["Billing type"]</dt>
+                <dd class="col-6 mb-1">@Billing(part.BillingType)</dd>
+            </dl>
+        }
+        @if (!string.IsNullOrEmpty(Model.SolvedByName))
+        {
+            <p class="small text-body-secondary mt-2 mb-0">@T["Solved by {0}", Model.SolvedByName]</p>
+        }
+    </div>
+</div>

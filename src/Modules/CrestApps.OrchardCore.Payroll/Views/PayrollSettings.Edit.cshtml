@@ -1,0 +1,87 @@
+@model PayrollSettingsViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Separation of duties"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AllowPreparerToApprove" type="checkbox" class="form-check-input" />
+                    <label asp-for="AllowPreparerToApprove" class="form-check-label">@T["The person who prepared a pay run may approve it"]</label>
+                    <span class="hint dashed">@T["Off by default. Turn it on only for a business where one person runs payroll."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AllowChangingOwnPay" type="checkbox" class="form-check-input" />
+                    <label asp-for="AllowChangingOwnPay" class="form-check-label">@T["People may change their own pay in the admin pages"]</label>
+                    <span class="hint dashed">@T["Off by default: nobody changes their own pay rate, pay items, inputs or garnishments."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="EmployeeReview" type="checkbox" class="form-check-input" />
+                    <label asp-for="EmployeeReview" class="form-check-label">@T["Employees review their coming pay before the run is submitted"]</label>
+                    <span class="hint dashed">@T["Once a run is calculated, each employee with a user is told to look at their pay in My Pay and say it is right or ask about it; the run shows their answers and warns before it is submitted with a question open."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Calculation"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="TaxProvider" class="ocat-label">@T["Tax provider"]</label>
+            <div class="ocat-end">
+                <select asp-for="TaxProvider" asp-items="Model.TaxProviders" class="form-select" style="max-width: 20rem">
+                    <option value="">@T["The only one there is"]</option>
+                </select>
+                <span class="hint">@T["What works out taxes: Taxation's Income Tax rules (the built-in one, with a country pack such as United States or Canada Income Tax), or a module of a tax engine."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="MinimumNetPay">
+            <label asp-for="MinimumNetPay" class="ocat-label">@T["Least net pay"]</label>
+            <div class="ocat-end">
+                <input asp-for="MinimumNetPay" class="form-control" inputmode="decimal" style="max-width: 8rem" placeholder="0" />
+                <span asp-validation-for="MinimumNetPay" class="text-danger"></span>
+                <span class="hint">@T["Deductions taken after tax are cut, the largest priority number first, so net pay is never below it."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="MinimumHourlyWage">
+            <label asp-for="MinimumHourlyWage" class="ocat-label">@T["Minimum wage of tipped people"]</label>
+            <div class="ocat-end">
+                <input asp-for="MinimumHourlyWage" class="form-control" inputmode="decimal" style="max-width: 8rem" />
+                <span asp-validation-for="MinimumHourlyWage" class="text-danger"></span>
+                <span class="hint">@T["The least an hour a person paid a tipped wage must earn with their tips (7.25 under the federal law of the United States, more in many states). Empty for no check."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="MaximumTipCredit">
+            <label asp-for="MaximumTipCredit" class="ocat-label">@T["Most tips count an hour"]</label>
+            <div class="ocat-end">
+                <input asp-for="MaximumTipCredit" class="form-control" inputmode="decimal" style="max-width: 8rem" />
+                <span asp-validation-for="MaximumTipCredit" class="text-danger"></span>
+                <span class="hint">@T["The most an hour of tips counts toward the minimum wage (5.12 federally: 7.25 less a 2.13 cash wage). Empty counts every tip."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["A new employer"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="DefaultCountryPack" class="ocat-label">@T["Country pack"]</label>
+            <div class="ocat-end"><input asp-for="DefaultCountryPack" class="form-control text-uppercase" style="max-width: 8rem" placeholder="US" /></div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="DefaultCurrency" class="ocat-label">@T["Currency"]</label>
+            <div class="ocat-end"><input asp-for="DefaultCurrency" class="form-control text-uppercase" style="max-width: 8rem" maxlength="3" placeholder="USD" /></div>
+        </div>
+    </div>
+</div>

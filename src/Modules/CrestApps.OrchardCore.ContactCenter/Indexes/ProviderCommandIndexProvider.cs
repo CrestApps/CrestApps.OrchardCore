@@ -22,6 +22,8 @@ public sealed class ProviderCommandIndexProvider : IndexProvider<ProviderCommand
     {
         context
             .For<ProviderCommandIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(command => new ProviderCommandIndex
             {
                 ItemId = command.ItemId,

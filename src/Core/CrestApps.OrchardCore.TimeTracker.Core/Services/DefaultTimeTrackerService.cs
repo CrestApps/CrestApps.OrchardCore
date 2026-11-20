@@ -27,6 +27,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
     private readonly ISession _session;
     private readonly IDistributedLock _distributedLock;
     private readonly IEnumerable<ITimeEntryObserver> _observers;
+    private readonly IEnumerable<ITimeEntryChargeResolver> _chargeResolvers;
     private readonly IEnumerable<IExternalTimeClock> _externalClocks;
     private readonly IEnumerable<global::OrchardCore.Modules.ILocalClock> _localClocks;
     private readonly IClock _clock;
@@ -44,6 +45,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         ISession session,
         IDistributedLock distributedLock,
         IEnumerable<ITimeEntryObserver> observers,
+        IEnumerable<ITimeEntryChargeResolver> chargeResolvers,
         IEnumerable<IExternalTimeClock> externalClocks,
         IEnumerable<global::OrchardCore.Modules.ILocalClock> localClocks,
         IClock clock,
@@ -56,6 +58,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         _session = session;
         _distributedLock = distributedLock;
         _observers = observers;
+        _chargeResolvers = chargeResolvers;
         _externalClocks = externalClocks;
         _localClocks = localClocks;
         _clock = clock;
@@ -97,7 +100,8 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         var now = Trim(_clock.UtcNow);
         var open = await OpenEntryAsync(userId, cancellationToken);
 
-        if (open?.StageId == stage.ItemId)
+        // The same stage for something else, such as another ticket, is a new entry.
+        if (open?.StageId == stage.ItemId && string.Equals(open.SourceRef, sourceRef, StringComparison.Ordinal))
         {
             return new TimeTrackerResult { Entry = open };
         }
@@ -121,6 +125,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
             CreatedUtc = now,
         };
 
+        await ChargeAsync(entry, cancellationToken);
         await _entries.CreateAsync(entry, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
 
@@ -207,8 +212,154 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
             entry.Note ??= reason.Trim();
         }
 
+        await ChargeAsync(entry, cancellationToken);
         await _entries.CreateAsync(entry, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
+        await NotifyAsync(TimeEntryChangeKind.Created, entry, null, actor, reason, cancellationToken);
+
+        return new TimeTrackerResult { Entry = entry };
+    }
+
+    /// <inheritdoc/>
+    public async Task<TimeTrackerResult> InsertAsync(TimeEntry entry, string actor, string reason, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (string.IsNullOrEmpty(entry.UserId))
+        {
+            return TimeTrackerResult.Fail(S["Choose whose time it is."]);
+        }
+
+        if (entry.EndUtc is null)
+        {
+            return TimeTrackerResult.Fail(S["An added entry needs its end; to start one now, switch stage."]);
+        }
+
+        if (await ExternalClockAsync(entry.UserId, cancellationToken) is { } keeper)
+        {
+            return TimeTrackerResult.Fail(S["Your time is kept by {0}.", keeper.Name]);
+        }
+
+        await using var locker = await LockAsync(entry.UserId);
+
+        if (locker is null)
+        {
+            return TimeTrackerResult.Fail(S["Someone else is changing this time. Try again."]);
+        }
+
+        var now = _clock.UtcNow;
+
+        entry.ItemId ??= CrestApps.Core.UniqueId.GenerateId();
+        entry.StartUtc = Trim(entry.StartUtc);
+        entry.EndUtc = Trim(entry.EndUtc.Value);
+        entry.Source ??= TimeTrackerConstants.Sources.Manager;
+        entry.CreatedBy ??= actor;
+        entry.CreatedUtc = now;
+
+        var errors = new List<string>();
+
+        if (await FindStageAsync(entry.StageId, cancellationToken) is null)
+        {
+            errors.Add(S["Choose a stage that is in use."]);
+        }
+
+        if (entry.EndUtc <= entry.StartUtc)
+        {
+            errors.Add(S["The entry must end after it starts."]);
+        }
+        else if (entry.EndUtc > now.AddMinutes(1))
+        {
+            errors.Add(S["Time can't be recorded in the future."]);
+        }
+
+        if (errors.Count > 0)
+        {
+            return new TimeTrackerResult { Entry = entry, Errors = errors };
+        }
+
+        var start = entry.StartUtc;
+        var end = entry.EndUtc.Value;
+        var covered = (await _session.Query<TimeEntry, TimeEntryIndex>(index => index.UserId == entry.UserId && index.StartUtc < end && index.EndUtc > start, collection: TimeTrackerConstants.CollectionName)
+            .ListAsync(cancellationToken)).ToList();
+
+        // Time another clock keeps is corrected there, and time of the same source (another record's) is never moved.
+        if (covered.FirstOrDefault(other => other.ManagedBy is not null) is { } kept)
+        {
+            return await KeptElsewhereAsync(kept, cancellationToken);
+        }
+
+        if (covered.FirstOrDefault(other => string.Equals(other.Source, entry.Source, StringComparison.Ordinal)) is { } same)
+        {
+            return TimeTrackerResult.Fail(S["It overlaps other time from {0} to {1}.", await LocalAsync(same.StartUtc), same.IsOpen ? S["now"].Value : await LocalAsync(same.EndUtc.Value)]);
+        }
+
+        var open = TimeTrackerIndexProvider.OpenEnd;
+        var edited = new List<(TimeEntry Entry, string Before)>();
+        var created = new List<TimeEntry>();
+        var deleted = new List<TimeEntry>();
+
+        foreach (var other in covered)
+        {
+            var pieces = Subtract(other.StartUtc, other.EndUtc ?? open, [(start, end)]).ToList();
+
+            if (pieces.Count == 0)
+            {
+                await _entries.DeleteAsync(other, cancellationToken);
+                deleted.Add(other);
+
+                continue;
+            }
+
+            var before = await DescribeAsync(other, cancellationToken);
+
+            other.StartUtc = pieces[0].Start;
+            other.EndUtc = pieces[0].End == open ? null : pieces[0].End;
+            other.Changes.Add(new TimeEntryChange { Utc = now, By = actor, Reason = reason, Before = before });
+            await _entries.UpdateAsync(other, cancellationToken);
+            edited.Add((other, before));
+
+            if (pieces.Count > 1)
+            {
+                var rest = new TimeEntry
+                {
+                    ItemId = CrestApps.Core.UniqueId.GenerateId(),
+                    UserId = other.UserId,
+                    UserName = other.UserName,
+                    StageId = other.StageId,
+                    StartUtc = pieces[1].Start,
+                    EndUtc = pieces[1].End == open ? null : pieces[1].End,
+                    Source = other.Source,
+                    SourceRef = other.SourceRef,
+                    ChargedTo = other.ChargedTo,
+                    Note = other.Note,
+                    CreatedBy = actor,
+                    CreatedUtc = now,
+                };
+
+                await _entries.CreateAsync(rest, cancellationToken);
+                created.Add(rest);
+            }
+        }
+
+        await ChargeAsync(entry, cancellationToken);
+        await _entries.CreateAsync(entry, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
+
+        foreach (var (changed, before) in edited)
+        {
+            await NotifyAsync(TimeEntryChangeKind.Edited, changed, before, actor, reason, cancellationToken);
+        }
+
+        foreach (var removed in deleted)
+        {
+            await NotifyAsync(TimeEntryChangeKind.Deleted, removed, null, actor, reason, cancellationToken);
+        }
+
+        foreach (var rest in created)
+        {
+            await NotifyAsync(TimeEntryChangeKind.Created, rest, null, actor, reason, cancellationToken);
+        }
+
         await NotifyAsync(TimeEntryChangeKind.Created, entry, null, actor, reason, cancellationToken);
 
         return new TimeTrackerResult { Entry = entry };
@@ -242,6 +393,12 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         }
 
         var entry = await FindAsync(entryId, cancellationToken);
+
+        if (!string.IsNullOrEmpty(entry.BilledInvoiceId))
+        {
+            return TimeTrackerResult.Fail(S["This time is billed on an invoice, so it can't be changed. Take it off the invoice first."]);
+        }
+
         var before = await DescribeAsync(entry, cancellationToken);
 
         if (entry.EndUtc is not null && endUtc is null)
@@ -270,6 +427,37 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
     }
 
     /// <inheritdoc/>
+    public async Task<TimeTrackerResult> SetBilledAsync(string entryId, string invoiceId, string lineId, CancellationToken cancellationToken = default)
+    {
+        var entry = string.IsNullOrEmpty(entryId) ? null : await FindAsync(entryId, cancellationToken);
+
+        if (entry is null)
+        {
+            return TimeTrackerResult.Fail(S["The entry doesn't exist."]);
+        }
+
+        if (!string.IsNullOrEmpty(invoiceId))
+        {
+            if (entry.IsOpen)
+            {
+                return TimeTrackerResult.Fail(S["Time still running can't be billed."]);
+            }
+
+            if (!string.IsNullOrEmpty(entry.BilledInvoiceId) && !string.Equals(entry.BilledInvoiceId, invoiceId, StringComparison.Ordinal))
+            {
+                return TimeTrackerResult.Fail(S["This time is billed on another invoice already."]);
+            }
+        }
+
+        entry.BilledInvoiceId = string.IsNullOrEmpty(invoiceId) ? null : invoiceId;
+        entry.BilledLineId = string.IsNullOrEmpty(invoiceId) ? null : lineId;
+
+        await _entries.UpdateAsync(entry, cancellationToken);
+
+        return new TimeTrackerResult { Entry = entry };
+    }
+
+    /// <inheritdoc/>
     public async Task<TimeTrackerResult> DeleteAsync(string entryId, string actor, string reason, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(reason))
@@ -287,6 +475,11 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         if (await KeptElsewhereAsync(entry, cancellationToken) is { } kept)
         {
             return kept;
+        }
+
+        if (!string.IsNullOrEmpty(entry.BilledInvoiceId))
+        {
+            return TimeTrackerResult.Fail(S["This time is billed on an invoice, so it can't be removed. Take it off the invoice first."]);
         }
 
         var before = await DescribeAsync(entry, cancellationToken);
@@ -318,6 +511,30 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         if (!string.IsNullOrEmpty(query.StageId))
         {
             search = search.Where(index => index.StageId == query.StageId);
+        }
+
+        if (!string.IsNullOrEmpty(query.SourceRef))
+        {
+            search = search.Where(index => index.SourceRef == query.SourceRef);
+        }
+
+        if (!string.IsNullOrEmpty(query.Source))
+        {
+            search = search.Where(index => index.Source == query.Source);
+        }
+
+        if (query.SourceRefs is { } sourceRefs)
+        {
+            var refs = sourceRefs.ToArray();
+
+            search = search.Where(index => index.SourceRef.IsIn(refs));
+        }
+
+        if (query.ChargedTo is { } chargedTo)
+        {
+            var charged = chargedTo.ToString();
+
+            search = search.Where(index => index.ChargedTo == charged);
         }
 
         if (query.FromUtc is { } from)
@@ -482,7 +699,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
                     continue;
                 }
 
-                await _entries.CreateAsync(new TimeEntry
+                var synced = new TimeEntry
                 {
                     ItemId = CrestApps.Core.UniqueId.GenerateId(),
                     UserId = sync.UserId,
@@ -492,11 +709,15 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
                     EndUtc = pieceEndUtc,
                     Source = entry.Source ?? sync.Source ?? TimeTrackerConstants.Sources.Api,
                     SourceRef = entry.SourceRef,
+                    ChargedTo = entry.ChargedTo,
                     Note = entry.Note,
                     ManagedBy = sync.ManagedBy,
                     CreatedBy = entry.CreatedBy ?? sync.ManagedBy,
                     CreatedUtc = now,
-                }, cancellationToken);
+                };
+
+                await ChargeAsync(synced, cancellationToken);
+                await _entries.CreateAsync(synced, cancellationToken);
             }
         }
 
@@ -540,6 +761,7 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
                     EndUtc = pieceEnd == open ? null : pieceEnd,
                     Source = other.Source,
                     SourceRef = other.SourceRef,
+                    ChargedTo = other.ChargedTo,
                     Note = other.Note,
                     ManagedBy = other.ManagedBy,
                     CreatedBy = other.CreatedBy,
@@ -586,6 +808,33 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         if (cursor < end)
         {
             yield return (cursor, end);
+        }
+    }
+
+    /// <summary>
+    /// Asks the charge resolvers what a new entry counts against, unless it already says. Called inside the lock and
+    /// before the save that creates the entry, so the charge is the one in force when the time was logged.
+    /// </summary>
+    /// <param name="entry">The entry being created.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    internal async Task ChargeAsync(TimeEntry entry, CancellationToken cancellationToken)
+    {
+        if (!entry.ChargedTo.IsEmpty || string.IsNullOrEmpty(entry.SourceRef))
+        {
+            return;
+        }
+
+        foreach (var resolver in _chargeResolvers)
+        {
+            var chargedTo = await resolver.ResolveAsync(entry, cancellationToken);
+
+            if (!chargedTo.IsEmpty)
+            {
+                entry.ChargedTo = chargedTo;
+
+                return;
+            }
         }
     }
 

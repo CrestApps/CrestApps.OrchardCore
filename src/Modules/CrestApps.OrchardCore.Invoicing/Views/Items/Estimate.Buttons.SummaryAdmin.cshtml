@@ -1,0 +1,7 @@
+@model ShapeViewModel<EstimateRowViewModel>
+
+@if (Model.Value.CanEdit)
+{
+    <a asp-action="Edit" asp-controller="EstimatesAdmin" asp-route-itemId="@Model.Value.Estimate.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+}
+<a asp-action="Detail" asp-controller="EstimatesAdmin" asp-route-itemId="@Model.Value.Estimate.ItemId" class="btn btn-secondary btn-sm">@T["View"]</a>

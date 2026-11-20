@@ -95,6 +95,8 @@ public sealed class FieldCommandReceiptIndexProvider : IndexProvider<FieldComman
     public override void Describe(DescribeContext<FieldCommandReceipt> context)
     {
         context.For<FieldCommandReceiptIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(receipt => new FieldCommandReceiptIndex
             {
                 ItemId = receipt.ItemId,
@@ -123,6 +125,8 @@ public sealed class WorkerLocationConsentIndexProvider : IndexProvider<WorkerLoc
     public override void Describe(DescribeContext<WorkerLocationConsent> context)
     {
         context.For<WorkerLocationConsentIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(consent => new WorkerLocationConsentIndex
             {
                 ItemId = consent.ItemId,
@@ -149,6 +153,8 @@ public sealed class WorkerLocationPingIndexProvider : IndexProvider<WorkerLocati
     public override void Describe(DescribeContext<WorkerLocationPing> context)
     {
         context.For<WorkerLocationPingIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(ping => new WorkerLocationPingIndex
             {
                 ItemId = ping.ItemId,

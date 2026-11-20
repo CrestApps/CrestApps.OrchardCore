@@ -20,64 +20,12 @@ public sealed class TimeClockPolicyIndexProvider : IndexProvider<TimeClockPolicy
     public override void Describe(DescribeContext<TimeClockPolicy> context)
     {
         context.For<TimeClockPolicyIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new TimeClockPolicyIndex
             {
                 ItemId = item.ItemId,
                 Name = item.Name,
-                Enabled = item.Enabled,
-            });
-    }
-}
-
-/// <summary>
-/// Maps PayPeriodCalendar records to <see cref="PayPeriodCalendarIndex"/> rows.
-/// </summary>
-public sealed class PayPeriodCalendarIndexProvider : IndexProvider<PayPeriodCalendar>
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PayPeriodCalendarIndexProvider"/> class.
-    /// </summary>
-    public PayPeriodCalendarIndexProvider()
-    {
-        CollectionName = WorkforceConstants.CollectionName;
-    }
-
-    /// <inheritdoc />
-    public override void Describe(DescribeContext<PayPeriodCalendar> context)
-    {
-        context.For<PayPeriodCalendarIndex>()
-            .Map(item => new PayPeriodCalendarIndex
-            {
-                ItemId = item.ItemId,
-                Name = item.Name,
-                Enabled = item.Enabled,
-            });
-    }
-}
-
-/// <summary>
-/// Maps PayCode records to <see cref="PayCodeIndex"/> rows.
-/// </summary>
-public sealed class PayCodeIndexProvider : IndexProvider<PayCode>
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PayCodeIndexProvider"/> class.
-    /// </summary>
-    public PayCodeIndexProvider()
-    {
-        CollectionName = WorkforceConstants.CollectionName;
-    }
-
-    /// <inheritdoc />
-    public override void Describe(DescribeContext<PayCode> context)
-    {
-        context.For<PayCodeIndex>()
-            .Map(item => new PayCodeIndex
-            {
-                ItemId = item.ItemId,
-                Name = item.Name,
-                Code = item.Code,
-                Kind = item.Kind,
                 Enabled = item.Enabled,
             });
     }
@@ -100,6 +48,8 @@ public sealed class TimeClockKioskIndexProvider : IndexProvider<TimeClockKiosk>
     public override void Describe(DescribeContext<TimeClockKiosk> context)
     {
         context.For<TimeClockKioskIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new TimeClockKioskIndex
             {
                 ItemId = item.ItemId,
@@ -127,6 +77,8 @@ public sealed class TimePunchIndexProvider : IndexProvider<TimePunch>
     public override void Describe(DescribeContext<TimePunch> context)
     {
         context.For<TimePunchIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new TimePunchIndex
             {
                 ItemId = item.ItemId,
@@ -157,6 +109,8 @@ public sealed class TimesheetIndexProvider : IndexProvider<Timesheet>
     public override void Describe(DescribeContext<Timesheet> context)
     {
         context.For<TimesheetIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new TimesheetIndex
             {
                 ItemId = item.ItemId,
@@ -187,6 +141,8 @@ public sealed class AttendanceExceptionIndexProvider : IndexProvider<AttendanceE
     public override void Describe(DescribeContext<AttendanceException> context)
     {
         context.For<AttendanceExceptionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new AttendanceExceptionIndex
             {
                 ItemId = item.ItemId,
@@ -218,6 +174,8 @@ public sealed class PunchCorrectionIndexProvider : IndexProvider<PunchCorrection
     public override void Describe(DescribeContext<PunchCorrection> context)
     {
         context.For<PunchCorrectionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new PunchCorrectionIndex
             {
                 ItemId = item.ItemId,
@@ -246,6 +204,8 @@ public sealed class PayrollExportBatchIndexProvider : IndexProvider<PayrollExpor
     public override void Describe(DescribeContext<PayrollExportBatch> context)
     {
         context.For<PayrollExportBatchIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(item => new PayrollExportBatchIndex
             {
                 ItemId = item.ItemId,
@@ -271,8 +231,6 @@ public static class TimeClockIndexProviders
         return
         [
             new TimeClockPolicyIndexProvider(),
-            new PayPeriodCalendarIndexProvider(),
-            new PayCodeIndexProvider(),
             new TimeClockKioskIndexProvider(),
             new TimePunchIndexProvider(),
             new TimesheetIndexProvider(),

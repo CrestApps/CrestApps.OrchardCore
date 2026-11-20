@@ -1,0 +1,19 @@
+@model ShapeViewModel<Agreement>
+
+@{
+    var status = Model.Value.Status switch
+    {
+        AgreementStatus.Active => T["Active"],
+        AgreementStatus.Paused => T["Paused"],
+        AgreementStatus.Expired => T["Expired"],
+        AgreementStatus.Canceled => T["Canceled"],
+        _ => T["Draft"],
+    };
+    var css = Model.Value.Status == AgreementStatus.Active ? "text-bg-success" : "text-bg-light border";
+}
+
+<span class="badge @css fw-normal">@status</span>
+@if (Model.Value.Hours is { Kind: not AgreementHoursKind.None } hours)
+{
+    <span class="badge ta-badge fw-normal">@(hours.Kind == AgreementHoursKind.Block ? T["{0} hours", hours.Hours] : T["{0} hours a month", hours.Hours])</span>
+}

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Security;
@@ -37,8 +38,11 @@ internal sealed class RolePickerPartDisplayDriver : ContentPartDisplayDriver<Rol
         return Initialize<RolePickerViewModel>(GetEditorShapeType(context), m =>
         {
             var settings = context.TypePartDefinition.GetSettings<RolePickerPartSettings>();
+            var labels = Describe(context.TypePartDefinition, S);
 
-            m.DisplayName = context.TypePartDefinition.DisplayName();
+            m.DisplayName = labels.Label;
+            m.Placeholder = labels.Placeholder;
+            m.Hint = labels.Hint;
             m.Settings = settings;
             m.Roles = part.RoleNames;
 
@@ -77,5 +81,33 @@ internal sealed class RolePickerPartDisplayDriver : ContentPartDisplayDriver<Rol
         part.RoleNames = selectedRoles;
 
         return Edit(part, context);
+    }
+
+    /// <summary>
+    /// Describes the picker on a content type's editor. A picker that restricts who can see the content (Content Access
+    /// Control's <see cref="RolePickerPartContentAccessControlSettings.IsContentRestricted"/>) says so, and with no role
+    /// picked reads "Any role", since then anyone may see it; a name an administrator gave the part still wins for the
+    /// label, and a hint they wrote for the hint. Any other picker keeps the part's name.
+    /// </summary>
+    /// <param name="typePart">The picker on the content type.</param>
+    /// <param name="localizer">The string localizer.</param>
+    /// <returns>The label, the text shown with no role picked, and the hint.</returns>
+    internal static (string Label, string Placeholder, string Hint) Describe(ContentTypePartDefinition typePart, IStringLocalizer localizer)
+    {
+        var settings = typePart.GetSettings<RolePickerPartSettings>();
+        var restricts = typePart.GetSettings<RolePickerPartContentAccessControlSettings>().IsContentRestricted;
+        var ownName = typePart.GetSettings<ContentTypePartSettings>().DisplayName;
+
+        if (!restricts)
+        {
+            var name = typePart.DisplayName();
+
+            return (name, name, settings.Hint);
+        }
+
+        return (
+            string.IsNullOrWhiteSpace(ownName) ? localizer["Which roles can see this content"] : ownName,
+            localizer["Any role"],
+            string.IsNullOrWhiteSpace(settings.Hint) ? localizer["Leave empty so everyone can see it."] : settings.Hint);
     }
 }

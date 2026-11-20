@@ -22,4 +22,16 @@ public interface ICommerceEmailSender
     /// nothing.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     Task<bool> SendAsync(CommerceEmail email, Func<CancellationToken, Task<CommerceEmailContent>> buildAsync, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Builds the email in its culture and sends it, with its copies and attachments, like
+    /// <see cref="SendAsync"/>, and says why it wasn't sent when it wasn't: the site can't send email, the email has no
+    /// recipient, the build gives nothing to send, an attachment can't be opened or has a file name with a path, or the
+    /// email provider's error. A send that fails never throws. The attachments' streams are disposed after the send.
+    /// </summary>
+    /// <param name="email">Who the email goes to, what it's about, and the culture it's written in.</param>
+    /// <param name="buildAsync">Builds the email's content, in the email's culture; returns <see langword="null"/> to send
+    /// nothing.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<CommerceEmailResult> SendWithResultAsync(CommerceEmail email, Func<CancellationToken, Task<CommerceEmailContent>> buildAsync, CancellationToken cancellationToken = default);
 }

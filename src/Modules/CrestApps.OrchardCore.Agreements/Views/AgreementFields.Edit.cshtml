@@ -1,0 +1,88 @@
+@using CrestApps.OrchardCore.Accounts
+@model AgreementViewModel
+
+@{
+    var endpoint = Url.RouteUrl(AccountsConstants.RouteNames.Search);
+    var initialJson = string.IsNullOrEmpty(Model.AccountId)
+        ? "[]"
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.AccountId, text = Model.AccountName ?? Model.AccountId, selected = true } });
+    var statuses = new[]
+    {
+        (AgreementStatus.Draft, T["Draft"].Value),
+        (AgreementStatus.Active, T["Active"].Value),
+        (AgreementStatus.Paused, T["Paused"].Value),
+        (AgreementStatus.Expired, T["Expired"].Value),
+        (AgreementStatus.Canceled, T["Canceled"].Value),
+    };
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        @if (!string.IsNullOrEmpty(Model.Number))
+        {
+            <p class="text-body-secondary mb-3">@T["Agreement {0}", Model.Number]</p>
+        }
+        <div class="row">
+            <div class="col-md-8 mb-3">
+                <label asp-for="Name" class="form-label">@T["Name"]</label>
+                <input asp-for="Name" class="form-control" required />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="Status" class="form-label">@T["Status"]</label>
+                <select asp-for="Status" class="form-select">
+                    @foreach (var (value, text) in statuses)
+                    {
+                        <option value="@value" selected="@(Model.Status == value)">@text</option>
+                    }
+                </select>
+                <span class="hint">@T["Only an active agreement is used for new work."]</span>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">@T["Account"]</label>
+            @await Component.InvokeAsync("ItemSelector", new
+            {
+                id = Html.IdFor(m => m.AccountId).ToString() + "-selector",
+                inputName = Html.NameFor(m => m.AccountId).ToString(),
+                endpoint,
+                initialItemsJson = initialJson,
+                multiple = false,
+                enableSearch = true,
+                buttonText = T["Select an account"].Value,
+                searchPlaceholder = T["Search accounts"].Value,
+                emptyResultsText = T["No accounts found."].Value,
+                noSelectionText = T["No account."].Value,
+                selectedItemsLabel = T["Account"].Value,
+                availableItemsLabel = T["Accounts"].Value,
+                smallButton = false,
+            })
+            <span class="hint">@T["The account the agreement is with."]</span>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label asp-for="StartDate" class="form-label">@T["Starts"]</label>
+                <input asp-for="StartDate" type="date" class="form-control" />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="EndDate" class="form-label">@T["Ends"]</label>
+                <input asp-for="EndDate" type="date" class="form-control" />
+                <span asp-validation-for="EndDate" class="text-danger"></span>
+                <span class="hint">@T["Leave it empty when it runs until it is canceled."]</span>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label asp-for="ExpiringNoticeDays" class="form-label">@T["Notice before the end (days)"]</label>
+                <input asp-for="ExpiringNoticeDays" type="number" min="0" max="365" class="form-control" />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label asp-for="TimeZoneId" class="form-label">@T["Time zone"]</label>
+            <select asp-for="TimeZoneId" asp-items="Model.TimeZones" class="form-select"></select>
+            <span class="hint">@T["The days and months of the agreement are counted in this time zone."]</span>
+        </div>
+        <div class="mb-0">
+            <label asp-for="Notes" class="form-label">@T["Notes"]</label>
+            <textarea asp-for="Notes" rows="3" class="form-control"></textarea>
+        </div>
+    </div>
+</div>

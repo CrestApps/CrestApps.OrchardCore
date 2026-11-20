@@ -1,5 +1,9 @@
 ﻿using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.Core.SourceAccess;
+using CrestApps.OrchardCore.SensitiveData;
+using CrestApps.OrchardCore.SourceAccess;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -33,6 +37,30 @@ public static class ServiceCollectionExtensions
     {
         services.TryAddSingleton<SignedTokenService>();
         services.TryAddScoped<SiteUrlGenerator>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the <see cref="ISensitiveValueProtector"/>, which protects the sensitive values records store, such as
+    /// bank account numbers and tax numbers, with the tenant's data protection keys.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddSensitiveValueProtector(this IServiceCollection services)
+    {
+        services.TryAddSingleton<ISensitiveValueProtector, DataProtectionSensitiveValueProtector>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the <see cref="ISourceAccessService"/>, which applies every <see cref="ISourceAccess"/> to the records a
+    /// building block keeps for other modules' sources.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddSourceAccessService(this IServiceCollection services)
+    {
+        services.TryAddScoped<ISourceAccessService, SourceAccessService>();
 
         return services;
     }

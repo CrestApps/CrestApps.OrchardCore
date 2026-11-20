@@ -68,7 +68,7 @@ internal sealed class GetContentItemAccessRolesTool : ContentAccessControlAITool
             return $"The content type '{latest.ContentType}' of this item no longer exists.";
         }
 
-        var restrictingParts = ContentAccessRestrictions.GetRestrictingParts(definition);
+        var restrictingParts = ContentAccessRestriction.GetRestrictingParts(definition);
         var published = latest.Published ? latest : await contentManager.GetAsync(contentItemId, VersionOptions.Published);
 
         if (restrictingParts.Count == 0)
@@ -85,7 +85,7 @@ internal sealed class GetContentItemAccessRolesTool : ContentAccessControlAITool
         }
 
         var roleNames = ContentAccessRoleTools.GetRoleNames(services);
-        HashSet<string> effective = published is null ? [] :ContentAccessRestrictions.GetRoleNames(published, definition);
+        HashSet<string> effective = published is null ? [] : ContentAccessRestriction.GetRoleNames(definition, published);
 
         return Json(new
         {

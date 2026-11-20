@@ -10,7 +10,11 @@ using CrestApps.OrchardCore.Geo.Core.Services;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Recipes;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.ServiceLevels.Deployments;
+using CrestApps.OrchardCore.ServiceLevels.Recipes;
+using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
+using CrestApps.OrchardCore.Tests.WorkOrders;
 using CrestApps.OrchardCore.WorkOrders;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
@@ -65,10 +69,11 @@ public sealed class FieldServiceRecipeTests
             checklist.Name = "Boiler safety";
             await checklists.CreateAsync(checklist);
 
-            var levels = services.GetRequiredService<WorkOrderSettingManager<ServiceLevelPolicy>>();
+            var levels = services.GetRequiredService<IServiceLevelPolicyManager>();
             var level = await levels.NewAsync();
 
             level.Name = "Standard";
+            level.Scope = WorkOrdersConstants.ServiceLevelScope;
             await levels.CreateAsync(level);
 
             var types = services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>();
@@ -81,15 +86,20 @@ public sealed class FieldServiceRecipeTests
             return workOrderType;
         });
 
+        // Policies travel in their own step, imported before the types that name them.
+        var policiesStep = await ExportAsync(source, services => ActivatorUtilities.CreateInstance<ServiceLevelPoliciesDeploymentSource>(services), new ServiceLevelPoliciesDeploymentStep());
         var step = await ExportAsync(source, services => ActivatorUtilities.CreateInstance<WorkOrdersDeploymentSource>(services), new WorkOrdersDeploymentStep());
-        var errors = await ImportTwiceAsync(target, step, services => ActivatorUtilities.CreateInstance<WorkOrdersRecipeStep>(services));
+        var errors = await ImportTwiceAsync(target, policiesStep, services => ActivatorUtilities.CreateInstance<ServiceLevelPoliciesRecipeStep>(services));
+
+        errors.AddRange(await ImportTwiceAsync(target, step, services => ActivatorUtilities.CreateInstance<WorkOrdersRecipeStep>(services)));
         var (types, levels, checklists) = await target.RunAsync(async services => (
             (await services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>().GetAllAsync()).ToList(),
-            (await services.GetRequiredService<WorkOrderSettingManager<ServiceLevelPolicy>>().GetAllAsync()).ToList(),
+            (await services.GetRequiredService<IServiceLevelPolicyManager>().GetAllAsync()).ToList(),
             (await services.GetRequiredService<WorkOrderSettingManager<ChecklistTemplate>>().GetAllAsync()).ToList()), commit: false);
 
         Assert.Empty(errors);
         Assert.False(step.ContainsKey("Agreements"));
+        Assert.False(step.ContainsKey("ServiceLevels"));
         var imported = Assert.Single(types);
         Assert.Equal(type.ItemId, imported.ItemId);
         Assert.Equal(Assert.Single(levels).ItemId, imported.ServiceLevelPolicyId);
@@ -191,10 +201,10 @@ public sealed class FieldServiceRecipeTests
 
     private static Task<CalendarTestHarness> WorkOrdersAsync()
         => CalendarTestHarness.CreateAsync(
-            services => services.AddWorkOrdersCore(),
-            WorkOrdersIndexSchema.CreateAsync,
-            [new WorkOrderIndexProvider(), new WorkOrderTypeIndexProvider(), new ChecklistTemplateIndexProvider(), new ServiceLevelPolicyIndexProvider(), new WorkOrderSubStatusIndexProvider()],
-            [WorkOrdersConstants.CollectionName]);
+            services => services.AddWorkOrdersWithServiceLevels(),
+            WorkOrderTestStores.CreateSchemaAsync,
+            [.. WorkOrderTestStores.IndexProviders],
+            WorkOrderTestStores.Collections);
 
     private static Task<CalendarTestHarness> AssetsAsync()
         => CalendarTestHarness.CreateAsync(

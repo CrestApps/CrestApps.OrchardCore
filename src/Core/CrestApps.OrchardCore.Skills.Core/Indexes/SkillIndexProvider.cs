@@ -20,6 +20,8 @@ public sealed class SkillIndexProvider : IndexProvider<Skill>
     public override void Describe(DescribeContext<Skill> context)
     {
         context.For<SkillIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(skill => new SkillIndex
             {
                 ItemId = skill.ItemId,

@@ -22,6 +22,8 @@ public sealed class SharedVoicemailIndexProvider : IndexProvider<SharedVoicemail
     {
         context
             .For<SharedVoicemailIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(voicemail => new SharedVoicemailIndex
             {
                 ItemId = voicemail.ItemId,

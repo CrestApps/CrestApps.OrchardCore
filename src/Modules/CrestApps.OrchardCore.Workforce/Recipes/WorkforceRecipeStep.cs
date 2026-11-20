@@ -77,6 +77,15 @@ internal sealed class WorkforceRecipeStep : NamedRecipeStepHandler
         {
             var incoming = Read<WorkforceTeamSettings>(context, node, "Teams") ?? new WorkforceTeamSettings();
 
+            // Recipes written before teams had an address kept it on the Workforce location, as one line.
+            if (team.Address is null
+                && node["Location"]?["Address"] is System.Text.Json.Nodes.JsonValue legacy
+                && legacy.TryGetValue<string>(out var line)
+                && !string.IsNullOrWhiteSpace(line))
+            {
+                team.Address = new global::CrestApps.OrchardCore.Addresses.Models.Address { AddressLine1 = line.Trim() };
+            }
+
             team.AlterWorkforceSettings(settings =>
             {
                 // The calendar belongs to the site; an imported team keeps the one it has here.

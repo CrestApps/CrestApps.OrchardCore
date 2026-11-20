@@ -1,0 +1,79 @@
+@model OrderFulfillmentViewModel
+@inject FulfillmentRequestText Text
+
+@{
+    var canRetry = Model.Requests.Any(entry => entry.Request.Status is FulfillmentRequestStatus.NeedsAttention or FulfillmentRequestStatus.NothingToSend or FulfillmentRequestStatus.Pending);
+    var mayAlreadyBeMade = Model.Requests.Any(entry => FulfillmentRequestText.MayAlreadyBeMade(entry.Request));
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Fulfillment partners"]</div>
+    <div class="card-body">
+        @if (Model.Requests.Count == 0)
+        {
+            <p class="mb-2">@T["This order has not been sent to a fulfillment partner yet."]</p>
+        }
+        else
+        {
+            <ul class="list-unstyled mb-2">
+                @foreach (var entry in Model.Requests)
+                {
+                    var request = entry.Request;
+                    var badge = request.Status switch
+                    {
+                        FulfillmentRequestStatus.Sent => "text-bg-success",
+                        FulfillmentRequestStatus.NothingToSend => "text-bg-secondary",
+                        FulfillmentRequestStatus.NeedsAttention => "text-bg-danger",
+                        FulfillmentRequestStatus.Sending => "text-bg-warning",
+                        _ => "text-bg-info",
+                    };
+
+                    <li class="mb-2">
+                        <span class="badge @badge ta-badge fw-normal">@Text.Status(request.Status)</span>
+                        <span class="ms-1">@entry.DisplayName</span>
+                        <div class="hint">@Text.Reason(request)</div>
+                        @if (!string.IsNullOrEmpty(request.Message))
+                        {
+                            <div class="hint">@T["The partner said: {0}", request.Message]</div>
+                        }
+                        @if (request.Lines.Count > 0)
+                        {
+                            <ul class="small mb-0">
+                                @foreach (var line in request.Lines)
+                                {
+                                    <li>@T["{0} × {1}", line.Quantity, line.Title]</li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (Model.CanSend && (Model.NotSentYet.Count > 0 || canRetry))
+        {
+            <form method="post" asp-action="Send" asp-controller="FulfillmentAdmin" asp-area="@FulfillmentConstants.Features.Fulfillment" class="d-inline no-multisubmit">
+                <input type="hidden" name="orderId" value="@Model.OrderId" />
+                <input type="hidden" name="returnUrl" value="@(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString)" />
+                @if (mayAlreadyBeMade)
+                {
+                    <button type="submit" class="btn btn-primary btn-sm"
+                            data-url-af="RemoveUrl"
+                            data-title="@T["Send again"]"
+                            data-message="@T["A partner may already have this order. Check its dashboard first, or the order may be made twice. Send again?"]"
+                            data-ok-text="@T["Send again"]"
+                            data-ok-class="btn-primary"
+                            data-cancel-text="@T["Cancel"]">
+                        @T["Send again"]
+                    </button>
+                }
+                else
+                {
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        @(Model.Requests.Count == 0 ? T["Send to fulfillment partners"] : T["Send again"])
+                    </button>
+                }
+            </form>
+        }
+    </div>
+</div>

@@ -81,6 +81,7 @@ A unit a model is not billed in shows as a dash.
 | `Api` | The AI completion API endpoints. |
 | `Workflow` | AI workflow tasks. |
 | `A2A` | Tasks received from other agents. |
+| `Tickets` | The help desk's AI assistant: suggested replies and triage. |
 
 **Model and purpose** splits each model by why the request was made. The framework's purposes are listed in
 [CrestApps.Core: AI Usage Metering](https://core.crestapps.com/docs/core/ai-usage-metering#categories-and-purposes);

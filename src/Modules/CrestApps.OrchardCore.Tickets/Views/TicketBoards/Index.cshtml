@@ -1,0 +1,40 @@
+@model TicketBoardsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="TicketBoardsIndex" title="@T["Ticket boards"]" />
+</zone>
+
+<form method="get" class="no-multisubmit" data-list-management data-client-side-search="true">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" class="form-control" placeholder="@T["Search"]" aria-label="@T["Search boards"]" type="search" autofocus autocomplete="off" />
+                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
+                    </div>
+                </div>
+                @if (Model.CanCreate)
+                {
+                    <div class="col-auto">
+                        <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add board"]</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="TicketBoards" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> There are no boards you may open at the moment."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Shared" position="30" title="@T["Shared with"]" width="auto" />
+            <admin-list-column name="Columns" position="40" title="@T["Columns"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<script asp-name="list-management-ui" at="Foot"></script>

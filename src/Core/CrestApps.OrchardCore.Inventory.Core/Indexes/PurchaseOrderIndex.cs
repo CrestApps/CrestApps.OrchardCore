@@ -32,6 +32,8 @@ public sealed class PurchaseOrderIndexProvider : IndexProvider<PurchaseOrder>
     public override void Describe(DescribeContext<PurchaseOrder> context)
     {
         context.For<PurchaseOrderIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(order => new PurchaseOrderIndex
             {
                 ItemId = order.ItemId,

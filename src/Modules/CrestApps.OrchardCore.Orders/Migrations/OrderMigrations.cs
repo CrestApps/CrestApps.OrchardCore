@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -11,6 +13,13 @@ namespace CrestApps.OrchardCore.Orders.Migrations;
 /// </summary>
 internal sealed class OrderMigrations : DataMigration
 {
+    private readonly ResumableSteps _steps;
+
+    public OrderMigrations(ResumableSteps steps)
+    {
+        _steps = steps;
+    }
+
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<OrderIndex>(table => table
@@ -49,7 +58,7 @@ internal sealed class OrderMigrations : DataMigration
 
         await CreateReportIndexAsync();
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -79,6 +88,18 @@ internal sealed class OrderMigrations : DataMigration
         }, collection: OrderConstants.CollectionName);
 
         return 3;
+    }
+
+    /// <summary>
+    /// Moves the notes stored on orders to their timelines, which this feature depends on. The move runs in the background,
+    /// a few batches a minute until none is left, after the Timeline tables created in the same activation have committed.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await _steps.RequestAsync(OrderNotesStep.StepName);
+
+        return 4;
     }
 
     private Task<bool> CreateReportIndexAsync()

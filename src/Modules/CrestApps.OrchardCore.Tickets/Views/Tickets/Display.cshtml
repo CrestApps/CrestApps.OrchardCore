@@ -1,0 +1,333 @@
+@model TicketPageViewModel
+
+@{
+    var part = Model.Part;
+    var ticketId = Model.Ticket.ContentItemId;
+    dynamic display = Model.Display;
+    var canWrite = Model.CanReply || Model.CanNote;
+}
+
+<zone Name="Title"><breadcrumb name="TicketsDisplay" title="@T["{0} {1}", part.Number, Model.Ticket.DisplayText]">
+    <breadcrumb-item id="Tickets" action="Index" controller="Tickets" area="CrestApps.OrchardCore.Tickets">@T["Tickets"]</breadcrumb-item>
+</breadcrumb></zone>
+
+@* Who else has the ticket open, and whether it changed since this page was loaded. *@
+<div id="ticket-presence" class="alert alert-info py-2 small mb-3" hidden role="status"
+     data-url="@Url.Action("Presence", "Tickets", new { area = "CrestApps.OrchardCore.Tickets", id = ticketId })"
+     data-version="@CrestApps.OrchardCore.Tickets.Services.TicketPresenceVersion.Of(Model.Ticket)"
+     data-viewing="@T["Also viewing: {0}", "{0}"]"
+     data-writing="@T["{0} is writing on this ticket.", "{0}"]"
+     data-changed="@T["This ticket changed since you opened it."]"
+     data-reload="@T["Reload"]">
+</div>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col">
+                @if (Model.Status is not null)
+                {
+                    <span class="badge text-bg-primary fw-normal" title="@T["Status"]">@Model.Status.Name</span>
+                }
+                @if (Model.ProtectedItems.Count > 0)
+                {
+                    <a href="#ticket-protected" class="badge text-bg-warning fw-normal text-decoration-none"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Contains protected information"]</a>
+                }
+                @if (Model.Priority is not null)
+                {
+                    <span class="badge ta-badge fw-normal" title="@T["Priority"]">
+                        @if (!string.IsNullOrEmpty(Model.Priority.Color))
+                        {
+                            <i class="fa-solid fa-flag me-1" style="color: @Model.Priority.Color" aria-hidden="true"></i>
+                        }
+                        @Model.Priority.Name
+                    </span>
+                }
+                <span class="text-muted small">@T["Opened"] @await DisplayAsync(await New.DateTime(Utc: Model.Ticket.CreatedUtc, Format: "g"))</span>
+            </div>
+            <div class="col-auto d-flex gap-1">
+                @if (Model.Actions.Count > 0)
+                {
+                    <div class="dropdown">
+                        <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Actions"]</button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            @foreach (var action in Model.Actions)
+                            {
+                                <form asp-action="RunAction" asp-route-id="@ticketId" method="post">
+                                    <input type="hidden" name="actionName" value="@action" />
+                                    <button type="submit" class="dropdown-item">@action</button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                }
+                @if (Model.CanMerge)
+                {
+                    <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#ticket-merge">@T["Merge"]</button>
+                }
+                @if (Model.CanDelete)
+                {
+                    <form asp-action="Delete" asp-route-id="@ticketId" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-danger" data-url-af="RemoveUrl" data-title="@T["Delete"]" data-message="@T["Delete this ticket with its replies, notes and files? This can't be undone."]">@T["Delete"]</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.MergedInto is not null)
+{
+    @if (Model.MergedIntoVisible)
+    {
+        <div class="alert alert-info">@T["This ticket was merged into"] <a asp-action="Display" asp-route-id="@Model.MergedInto.ContentItemId">@(Model.MergedInto.GetOrCreate<TicketPart>().Number) @Model.MergedInto.DisplayText</a>.</div>
+    }
+    else
+    {
+        <div class="alert alert-info">@T["This ticket was merged into a ticket you can't see."]</div>
+    }
+}
+else if (Model.IsReadOnly)
+{
+    <div class="alert alert-secondary">@T["This ticket is closed and can't change. A reply from the requester opens a follow-up ticket."]</div>
+}
+@if (Model.FollowUpOf is not null)
+{
+    @if (Model.FollowUpOfVisible)
+    {
+        <div class="alert alert-light border">@T["Follows up"] <a asp-action="Display" asp-route-id="@Model.FollowUpOf.ContentItemId">@(Model.FollowUpOf.GetOrCreate<TicketPart>().Number) @Model.FollowUpOf.DisplayText</a>.</div>
+    }
+    else
+    {
+        <div class="alert alert-light border">@T["Follows up a ticket you can't see."]</div>
+    }
+}
+
+<div class="row g-3">
+    <div class="col-12 col-lg-8">
+        @* Details: what the ticket's type asks for, always shown. Who may edit changes it here; who may only view reads it. *@
+        <style asp-name="@CrestApps.OrchardCore.Tickets.Services.TicketsResourceConfiguration.FormStyle"></style>
+        <div class="card mb-3 ticket-fields" id="ticket-details">
+            <div class="card-header">@T["Details"]</div>
+            <div class="card-body">
+                @if (Model.Editor is not null)
+                {
+                    <form asp-action="EditPost" asp-route-id="@ticketId" method="post" enctype="multipart/form-data" class="no-multisubmit">
+                        @Html.ValidationSummary()
+                        @* The card has its own Save button; the content editor's would sit on top of it. *@
+                        @{ Model.Editor.Properties.Remove("Actions"); }
+                        @await DisplayAsync(Model.Editor)
+                        <button type="submit" class="btn btn-primary btn-sm">@T["Save"]</button>
+                    </form>
+                }
+                else
+                {
+                    var fields = await DisplayAsync(display.Content);
+                    @fields
+                    @if (Model.EmptyFields.Count > 0)
+                    {
+                        <dl class="row mb-0">
+                            @foreach (var field in Model.EmptyFields)
+                            {
+                                <dt class="col-sm-4 fw-normal text-muted">@field.DisplayName</dt>
+                                <dd class="col-sm-8 text-muted fst-italic">@T["Not set"]</dd>
+                            }
+                        </dl>
+                    }
+                    else if (string.IsNullOrWhiteSpace(fields?.ToString()))
+                    {
+                        <p class="text-muted mb-0">@T["This ticket type asks for nothing more."]</p>
+                    }
+                }
+            </div>
+        </div>
+
+        @if (canWrite)
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <form asp-action="Reply" asp-route-id="@ticketId" method="post" enctype="multipart/form-data" class="no-multisubmit">
+                        @if (Model.CanReply && Model.CanNote)
+                        {
+                            <div class="btn-group mb-2" role="group" aria-label="@T["Who sees it"]">
+                                <input type="radio" class="btn-check" name="isInternal" id="ticket-reply-public" value="false" checked="@(!Model.DraftIsInternal)" autocomplete="off" />
+                                <label class="btn btn-sm btn-outline-primary" for="ticket-reply-public"><i class="fa-solid fa-reply me-1" aria-hidden="true"></i>@T["Reply to the requester"]</label>
+                                <input type="radio" class="btn-check" name="isInternal" id="ticket-reply-note" value="true" checked="@Model.DraftIsInternal" autocomplete="off" />
+                                <label class="btn btn-sm btn-outline-warning" for="ticket-reply-note"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Internal note"]</label>
+                            </div>
+                        }
+                        else
+                        {
+                            <input type="hidden" name="isInternal" value="@(Model.CanReply ? "false" : "true")" />
+                            <p class="small text-muted mb-2">@(Model.CanReply ? T["Your reply goes to the requester."] : T["You add internal notes; the requester doesn't see them."])</p>
+                        }
+                        @if (Model.ReplyTemplates.Count > 0)
+                        {
+                            <input type="hidden" name="replyTemplateId" id="ticket-reply-template-id" />
+                            <div class="mb-2">
+                                <label for="ticket-reply-template" class="visually-hidden">@T["Reply template"]</label>
+                                <select id="ticket-reply-template" class="form-select form-select-sm w-auto" data-ticket-reply-templates>
+                                    <option value="">@T["Insert a reply template"]</option>
+                                    @foreach (var template in Model.ReplyTemplates)
+                                    {
+                                        <option value="@template.Id" data-body="@template.Body" data-status="@template.StatusId">@template.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                        <label for="ticket-reply-body" class="visually-hidden">@T["Message"]</label>
+                        <textarea id="ticket-reply-body" name="body" class="form-control mb-2" rows="5" placeholder="@T["Write a reply or a note"]">@Model.Draft</textarea>
+                        <partial name="_TicketArticleSuggestions" model='("ticket-reply-body", "ticket-reply-body", true, part.Requester.Kind == CrestApps.OrchardCore.Parties.Models.PartyKinds.User ? "signedin" : "public")' />
+                        @if (Model.CanAttach)
+                        {
+                            @* Files dropped or pasted anywhere on the reply are attached, as in the AI chat. *@
+                            <label for="ticket-reply-files" class="visually-hidden">@T["Files"]</label>
+                            @await DisplayAsync(await New.FileDropInput(InputName: "files", InputId: "ticket-reply-files", Compact: true, Target: "form", CssClass: "mb-2"))
+                        }
+                        <div class="row gx-2 gy-2 align-items-center justify-content-end">
+                            @if (Model.CanSetStatus)
+                            {
+                                <div class="col-auto">
+                                    <div class="input-group input-group-sm">
+                                        <label for="ticket-reply-status" class="input-group-text">@T["Then set the status to"]</label>
+                                        <select id="ticket-reply-status" name="setStatusId" class="form-select form-select-sm">
+                                            <option value="">@T["Keep it as it is"]</option>
+                                            @foreach (var status in Model.Statuses)
+                                            {
+                                                <option value="@status.Value" selected="@(status.Value == Model.DraftStatusId)">@status.Text</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            }
+                            <div class="col-auto">
+                                <button type="submit" class="btn btn-primary btn-sm">@T["Send"]</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @* The conversation is what people wrote; every change to the ticket (status, assignee, links...) is in its history. *@
+        @await Component.InvokeAsync("Timeline", new { subject = $"{TicketsConstants.RecordKind}:{ticketId}", title = T["Conversation"].Value, kinds = $"{TicketsConstants.EntryKinds.Reply},{TicketsConstants.EntryKinds.Note}" })
+        @* Every file of the ticket in one place: its replies' and notes' and those of the tickets merged into it. *@
+        @await Component.InvokeAsync("TicketFiles", new { ticket = Model.Ticket })
+        @await Component.InvokeAsync("Timeline", new { subject = $"{TicketsConstants.RecordKind}:{ticketId}", title = T["History"].Value, kinds = TicketsConstants.EntryKinds.Event })
+    </div>
+    <div class="col-12 col-lg-4">
+        <partial name="_TicketProtectedInformation" model="Model" />
+        @await DisplayAsync(display.Sidebar)
+    </div>
+</div>
+
+@if (Model.ReplyTemplates.Count > 0)
+{
+    <script at="Foot">
+        (() => {
+            const picker = document.querySelector('[data-ticket-reply-templates]');
+            const body = document.getElementById('ticket-reply-body');
+            const status = document.getElementById('ticket-reply-status');
+            const used = document.getElementById('ticket-reply-template-id');
+            if (!picker || !body) {
+                return;
+            }
+            picker.addEventListener('change', () => {
+                const option = picker.selectedOptions[0];
+                if (!option || !option.value) {
+                    used.value = '';
+                    return;
+                }
+                body.value = body.value ? body.value + '\n\n' + option.dataset.body : option.dataset.body;
+                used.value = option.value;
+                if (status && option.dataset.status && [...status.options].some(item => item.value === option.dataset.status)) {
+                    status.value = option.dataset.status;
+                }
+                body.focus();
+            });
+        })();
+    </script>
+}
+
+@if (Model.CanMerge)
+{
+    <div class="modal fade" id="ticket-merge" tabindex="-1" aria-labelledby="ticket-merge-title" aria-hidden="true">
+        <div class="modal-dialog">
+            <form asp-action="Merge" asp-route-id="@ticketId" method="post" class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="ticket-merge-title">@T["Merge into another ticket"]</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="ticket-merge-number" class="form-label">@T["Number of the ticket to keep"]</label>
+                    <input id="ticket-merge-number" name="intoNumber" class="form-control" placeholder="T-1001" required autocomplete="off" />
+                    <span class="hint">@T["The requester and the participants of this ticket join that one, both get a note that links them, and this ticket closes."]</span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                    <button type="submit" class="btn btn-primary">@T["Merge"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<script at="Foot">
+    (() => {
+        const box = document.getElementById('ticket-presence');
+        const body = document.getElementById('ticket-reply-body');
+        const token = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (!box || !token) {
+            return;
+        }
+        const text = (template, value) => template.replace('{0}', value);
+        const send = async (leaving) => {
+            const data = new FormData();
+            data.append('__RequestVerificationToken', token.value);
+            data.append('writing', body && body.value.trim().length > 0 ? 'true' : 'false');
+            if (leaving) {
+                data.append('leaving', 'true');
+                navigator.sendBeacon(box.dataset.url, data);
+                return;
+            }
+            try {
+                const response = await fetch(box.dataset.url, { method: 'POST', body: data });
+                if (!response.ok) {
+                    return;
+                }
+                const state = await response.json();
+                const lines = [];
+                const writers = state.viewers.filter(viewer => viewer.writing).map(viewer => viewer.name);
+                const readers = state.viewers.filter(viewer => !viewer.writing).map(viewer => viewer.name);
+                for (const writer of writers) {
+                    lines.push(text(box.dataset.writing, writer));
+                }
+                if (readers.length > 0) {
+                    lines.push(text(box.dataset.viewing, readers.join(', ')));
+                }
+                box.replaceChildren();
+                for (const line of lines) {
+                    const item = document.createElement('div');
+                    item.textContent = line;
+                    box.append(item);
+                }
+                if (state.version !== box.dataset.version) {
+                    const item = document.createElement('div');
+                    item.className = 'fw-semibold';
+                    item.textContent = box.dataset.changed + ' ';
+                    const reload = document.createElement('a');
+                    reload.href = window.location.href;
+                    reload.textContent = box.dataset.reload;
+                    item.append(reload);
+                    box.append(item);
+                }
+                box.hidden = box.childElementCount === 0;
+            } catch {
+                // A missed check-in is retried with the next one.
+            }
+        };
+        send(false);
+        setInterval(() => send(false), 15000);
+        window.addEventListener('pagehide', () => send(true));
+    })();
+</script>

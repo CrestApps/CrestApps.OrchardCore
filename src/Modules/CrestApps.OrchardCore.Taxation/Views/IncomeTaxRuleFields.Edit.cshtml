@@ -1,0 +1,91 @@
+@model IncomeTaxRuleViewModel
+
+@if (Model.DroppedOnSave.Count > 0)
+{
+    <div class="alert alert-warning">@T["This rule holds values its kind of rule doesn't use, which saving removes: {0}. They may have changed the tax until now.", string.Join(", ", Model.DroppedOnSave)]</div>
+}
+<div class="card mb-3">
+    <div class="card-header">@T["The tax"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <span class="ocat-label">@T["Kind of rule"]</span>
+            <div class="ocat-end">
+                <span class="form-control-plaintext fw-semibold">@Model.SourceDisplayName</span>
+                @if (!string.IsNullOrEmpty(Model.SourceDescription))
+                {
+                    <span class="hint">@Model.SourceDescription</span>
+                }
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Name">
+            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <span class="hint">@T["What a pay statement shows, such as State income tax or Canada Pension Plan."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="TaxCode">
+            <label asp-for="TaxCode" class="ocat-label ocat-label-required">@T["Tax code"]</label>
+            <div class="ocat-end">
+                <input asp-for="TaxCode" class="form-control text-uppercase" style="max-width: 14rem" />
+                <span asp-validation-for="TaxCode" class="text-danger"></span>
+                <span class="hint">@T["The same for every dated version of the tax: the year's totals, the wage base and the yearly maximum add up by it."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Jurisdiction">
+            <label asp-for="Jurisdiction" class="ocat-label ocat-label-required">@T["Jurisdiction"]</label>
+            <div class="ocat-end">
+                <input asp-for="Jurisdiction" class="form-control text-uppercase" style="max-width: 10rem" placeholder="US-CA, CA-ON" />
+                <span asp-validation-for="Jurisdiction" class="text-danger"></span>
+                <span class="hint">@T["The tax applies to payers registered there. A jurisdiction below a country (with a dash) applies only to people who live or work there."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="CollectedBy" class="ocat-label">@T["Collected by"]</label>
+            <div class="ocat-end">
+                <input asp-for="CollectedBy" class="form-control text-uppercase" style="max-width: 10rem" placeholder="CA" />
+                <span class="hint">@T["The jurisdiction whose registration covers the tax when it isn't the one above, such as CA for a province's tax the CRA collects; empty for the one above."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ExceptJurisdictions" class="ocat-label">@T["Not for people in"]</label>
+            <div class="ocat-end">
+                <input asp-for="ExceptJurisdictions" class="form-control text-uppercase" style="max-width: 20rem" placeholder="CA-QC" />
+                <span class="hint">@T["Jurisdictions, separated by commas, whose people the tax doesn't apply to, such as CA-QC for the Canada Pension Plan (Quebec has its own)."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="ByPlaceOfWork" type="checkbox" class="form-check-input" />
+                    <label asp-for="ByPlaceOfWork" class="form-check-label">@T["By where the person works"]</label>
+                    <span class="hint dashed">@T["The jurisdiction is matched by where the person works when that is known, never by where they live, as Canada taxes by the province of employment."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Category" class="ocat-label">@T["Income taxed"]</label>
+            <div class="ocat-end">
+                <select asp-for="Category" asp-items="Model.Categories" class="form-select" style="max-width: 20rem"></select>
+                <span class="hint">@T["The tax category whose income is taxed (such as pensionable or insurable earnings); each pay code says whether it counts for it."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="IncomeKinds" class="ocat-label">@T["Kinds of income"]</label>
+            <div class="ocat-end">
+                <select asp-for="IncomeKinds" asp-items="Model.AvailableIncomeKinds" class="form-select" multiple style="max-width: 20rem"></select>
+                <span class="hint">@T["None chosen means employment income (contractor payments for backup withholding)."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Payer" class="ocat-label">@T["Paid by"]</label>
+            <div class="ocat-end">
+                <select asp-for="Payer" class="form-select" style="max-width: 20rem">
+                    <option value="Employee">@T["The earner (withheld from pay)"]</option>
+                    <option value="Employer">@T["The payer (on top of pay)"]</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>

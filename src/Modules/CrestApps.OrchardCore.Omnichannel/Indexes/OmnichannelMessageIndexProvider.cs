@@ -19,6 +19,8 @@ internal sealed class OmnichannelMessageIndexProvider : IndexProvider<Omnichanne
     {
         context
             .For<OmnichannelMessageIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(message => new OmnichannelMessageIndex
             {
                 Channel = message.Channel,

@@ -1,0 +1,26 @@
+@model Invoice
+
+@* The invoice's status, and once issued how much of it is paid. *@
+@{
+    var (statusText, statusClass) = Model.Status switch
+    {
+        InvoiceStatus.Draft => (T["Draft"], "text-bg-secondary"),
+        InvoiceStatus.PendingApproval => (T["Awaiting approval"], "text-bg-info"),
+        InvoiceStatus.Open => (T["Open"], "text-bg-primary"),
+        InvoiceStatus.Uncollectible => (T["Written off"], "text-bg-warning"),
+        InvoiceStatus.Void => (T["Void"], "text-bg-dark"),
+        _ => (T["Unknown"], "text-bg-secondary"),
+    };
+}
+<span class="badge @statusClass">@statusText</span>
+@if (Model.Status is InvoiceStatus.Open or InvoiceStatus.Uncollectible)
+{
+    var (settlementText, settlementClass) = Model.Settlement switch
+    {
+        InvoiceSettlement.Paid => (T["Paid"], "text-bg-success"),
+        InvoiceSettlement.PartiallyPaid => (T["Partly paid"], "text-bg-info"),
+        _ => (T["Unpaid"], "text-bg-light"),
+    };
+
+    <span class="badge @settlementClass">@settlementText</span>
+}

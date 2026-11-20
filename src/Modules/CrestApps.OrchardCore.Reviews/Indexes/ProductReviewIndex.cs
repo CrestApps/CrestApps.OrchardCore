@@ -28,6 +28,8 @@ public sealed class ProductReviewIndexProvider : IndexProvider<ProductReview>
     public override void Describe(DescribeContext<ProductReview> context)
     {
         context.For<ProductReviewIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(review => new ProductReviewIndex
             {
                 ItemId = review.ItemId,

@@ -21,6 +21,8 @@ public sealed class ChildTenantEntryIndexProvider : IndexProvider<ChildTenantEnt
     {
         context
             .For<ChildTenantEntryIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(entry => new ChildTenantEntryIndex
             {
                 EntryId = entry.EntryId,

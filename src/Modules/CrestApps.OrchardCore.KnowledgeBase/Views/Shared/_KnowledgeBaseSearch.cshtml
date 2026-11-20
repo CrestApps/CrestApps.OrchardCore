@@ -1,0 +1,12 @@
+@model KnowledgeBaseSearchViewModel
+
+<form method="get" action="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName)" class="knowledge-base-search mb-4" role="search">
+    <div class="input-group">
+        <input type="search" name="q" value="@Model.Query" class="form-control" placeholder="@(Model.CategoryName is null ? T["Search the articles"] : T["Search {0}", Model.CategoryName])" aria-label="@T["Search the articles"]" />
+        @if (!string.IsNullOrWhiteSpace(Model.CategoryId))
+        {
+            <input type="hidden" name="category" value="@Model.CategoryId" />
+        }
+        <button type="submit" class="btn btn-primary">@T["Search"]</button>
+    </div>
+</form>

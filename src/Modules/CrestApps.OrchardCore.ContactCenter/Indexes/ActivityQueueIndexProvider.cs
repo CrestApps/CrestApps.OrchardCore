@@ -22,6 +22,8 @@ public sealed class ActivityQueueIndexProvider : IndexProvider<ActivityQueue>
     {
         context
             .For<ActivityQueueIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(queue => new ActivityQueueIndex
             {
                 ItemId = queue.ItemId,

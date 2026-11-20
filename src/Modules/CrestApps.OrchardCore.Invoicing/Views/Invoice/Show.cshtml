@@ -1,0 +1,44 @@
+@model InvoiceDocumentPageViewModel
+
+<zone Name="Title">
+    <breadcrumb name="InvoicingView" title="@(Model.Source is Invoice { Kind: InvoiceKind.DebitNote } ? T["Debit note {0}", Model.Source.Number] : Model.Source is Invoice { Kind: InvoiceKind.Prepayment } ? T["Deposit invoice {0}", Model.Source.Number] : T["Invoice {0}", Model.Source.Number])" />
+</zone>
+
+<style>
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .business-document-print-area,
+        .business-document-print-area * {
+            visibility: visible;
+        }
+
+        .business-document-print-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+
+<div>
+    <div class="d-flex flex-wrap gap-2 mb-3 no-print">
+        @if (!string.IsNullOrEmpty(Model.PayUrl))
+        {
+            <a class="btn btn-success" href="@Model.PayUrl">@T["Pay this invoice"]</a>
+        }
+        <a class="btn btn-outline-secondary" href="@Model.PdfUrl">@T["Download PDF"]</a>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print();">@T["Print"]</button>
+    </div>
+
+    <div class="business-document-print-area">
+        @await DisplayAsync(await New.BusinessDocument(Document: Model.Document))
+    </div>
+</div>

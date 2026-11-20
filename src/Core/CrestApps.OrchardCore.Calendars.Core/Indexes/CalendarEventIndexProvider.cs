@@ -21,6 +21,8 @@ public sealed class CalendarEventIndexProvider : IndexProvider<CalendarEvent>
     public override void Describe(DescribeContext<CalendarEvent> context)
     {
         context.For<CalendarEventIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(calendarEvent => new CalendarEventIndex
             {
                 ItemId = calendarEvent.ItemId,
@@ -40,6 +42,7 @@ public sealed class CalendarEventIndexProvider : IndexProvider<CalendarEvent>
             });
 
         context.For<CalendarEventAttendeeIndex>()
+            .ExclusiveToDocumentType()
             .Map(calendarEvent => calendarEvent.Attendees
                 .Where(attendee => !string.IsNullOrEmpty(attendee.UserId) || !string.IsNullOrEmpty(attendee.ResourceCalendarId) || !string.IsNullOrWhiteSpace(attendee.Email))
                 .Select(attendee => new CalendarEventAttendeeIndex

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketNoteAddedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-lock" aria-hidden="true"></i>
+    @T["Ticket Note Added"]
+</h4>
+<p>@T["Starts when an internal note is added."]</p>

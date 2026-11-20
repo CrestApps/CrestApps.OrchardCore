@@ -1,22 +1,7 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Skills.Models;
 
 namespace CrestApps.OrchardCore.WorkOrders.Models;
-
-/// <summary>
-/// A skill a work order needs, at a lowest proficiency.
-/// </summary>
-public sealed class RequiredSkill
-{
-    /// <summary>
-    /// Gets or sets the skill.
-    /// </summary>
-    public string SkillId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the lowest proficiency, from 1.
-    /// </summary>
-    public int MinProficiency { get; set; } = 1;
-}
 
 /// <summary>
 /// A kind of job, with the defaults a new work order of it takes.
@@ -41,7 +26,7 @@ public sealed class WorkOrderType : CatalogItem
     /// <summary>
     /// Gets or sets the skills it needs.
     /// </summary>
-    public List<RequiredSkill> RequiredSkills { get; set; } = [];
+    public List<SkillRequirement> RequiredSkills { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the certifications it needs.

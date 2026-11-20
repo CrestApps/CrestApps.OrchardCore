@@ -60,6 +60,8 @@ Your Stripe account needs **Connect** turned on, in your Stripe dashboard, befor
 
 A sale is ready to pay once its hold ends and, for goods, its order is fulfilled. To pay one sooner, such as a service already delivered, open the vendor and choose **Release now** next to its order. **Pay out what's ready** pays the vendor everything that's ready. It shows once the vendor has a payout account: until then the vendor's page says it hasn't set up payouts yet.
 
+Each payout is also a disbursement: you find it under **Banking > Disbursements**, sent by **Stripe Connect transfer**, with Stripe's transfer number as its trace, or Stripe's reason when it was refused. A refused payout is tried again with the next **Pay out what's ready**.
+
 When you refund an order, the vendor's share of the refund comes off what they're owed.
 
 To stop paying a vendor, set it to **Suspended: nothing is paid out**.

@@ -1,9 +1,8 @@
+using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Core.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using OrchardCore;
 
 namespace CrestApps.OrchardCore.Commerce.Api;
 
@@ -32,13 +31,19 @@ public static class CommerceApi
     /// The header that makes a request safe to send again: a second request with the same key gets the first one's
     /// response instead of doing the work twice.
     /// </summary>
-    public const string IdempotencyKeyHeader = "Idempotency-Key";
+    public const string IdempotencyKeyHeader = ModuleApi.IdempotencyKeyHeader;
 
     /// <summary>
     /// The scheme API callers authenticate with: a bearer token from the tenant's OpenID server. Session cookies are
     /// never used, so no endpoint needs an antiforgery token.
     /// </summary>
-    public const string AuthenticationScheme = OrchardCoreConstants.AuthenticationSchemes.Api;
+    public const string AuthenticationScheme = ModuleApi.AuthenticationScheme;
+
+    /// <summary>
+    /// The headers a guest of the commerce API is known by for idempotent writes: their cart's token, or their checkout's
+    /// when they have no cart. Every endpoint in the group carries it.
+    /// </summary>
+    public static IdempotencyGuestHeaders GuestHeaders { get; } = new([CartTokenHeader, CheckoutTokenHeader]);
 
     /// <summary>
     /// Maps the commerce API's route group. Endpoints require a signed-in caller unless they call
@@ -48,11 +53,9 @@ public static class CommerceApi
     {
         ArgumentNullException.ThrowIfNull(routes);
 
-        return routes.MapGroup(RoutePrefix)
-            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = AuthenticationScheme })
-            .DisableAntiforgery()
+        return routes.MapModuleApi(RoutePrefix, tag)
             .WithMetadata(GuestSessionTokenHeaderTransport.Instance)
-            .WithTags(tag);
+            .WithMetadata(GuestHeaders);
     }
 
     /// <summary>

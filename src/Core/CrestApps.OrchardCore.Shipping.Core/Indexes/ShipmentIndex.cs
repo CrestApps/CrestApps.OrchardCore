@@ -27,6 +27,8 @@ public sealed class ShipmentIndexProvider : IndexProvider<Shipment>
     public override void Describe(DescribeContext<Shipment> context)
     {
         context.For<ShipmentIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(shipment => new ShipmentIndex
             {
                 ItemId = shipment.ItemId,

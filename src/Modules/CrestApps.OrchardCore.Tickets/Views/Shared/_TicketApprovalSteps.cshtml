@@ -1,0 +1,68 @@
+@model TicketApprovalViewModel
+
+@{
+    string StepName(TicketApprovalStep step, int index) => string.IsNullOrEmpty(step.Name) ? T.GetString("Step {0}", index + 1).Value : step.Name;
+}
+
+<ol class="list-unstyled small mb-2">
+    @for (var i = 0; i < Model.Approval.Steps.Count; i++)
+    {
+        var step = Model.Approval.Steps[i];
+        var waiting = Model.Approval.State == TicketApprovalState.Pending && i == Model.Approval.CurrentStep;
+        <li class="mb-1">
+            <span class="fw-semibold">@StepName(step, i)</span>
+            @if (step.Decision == TicketApprovalDecision.Approved)
+            {
+                <span class="badge text-bg-success fw-normal">@T["Approved"]</span>
+                <span class="text-muted">@step.DecidedByName</span>
+            }
+            else if (step.Decision == TicketApprovalDecision.Rejected)
+            {
+                <span class="badge text-bg-danger fw-normal">@T["Not approved"]</span>
+                <span class="text-muted">@step.DecidedByName</span>
+            }
+            else if (waiting)
+            {
+                <span class="badge text-bg-warning fw-normal">@T["Waiting"]</span>
+            }
+            else
+            {
+                <span class="badge text-bg-secondary fw-normal">@(Model.Approval.State == TicketApprovalState.Canceled ? T["Canceled"] : T["Later"])</span>
+            }
+            @if (!string.IsNullOrEmpty(step.Comment))
+            {
+                <div class="text-muted text-break">@step.Comment</div>
+            }
+        </li>
+    }
+</ol>
+
+@if (Model.CanDecide)
+{
+    var formId = "ticket-approval-" + Model.TicketId;
+    <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="TicketApprovals" asp-action="Decide" asp-route-id="@Model.TicketId" method="post" id="@formId" class="no-multisubmit">
+        @if (Model.Ticket is null)
+        {
+            @* Decided from the ticket page: back to the ticket. *@
+            <input type="hidden" name="backToTicket" value="true" />
+        }
+        <label for="@(formId)-comment" class="form-label small mb-1">@T["Comment"]</label>
+        <textarea id="@(formId)-comment" name="comment" class="form-control form-control-sm mb-2" rows="2"></textarea>
+        <span class="hint d-block mb-2">@T["Needed to refuse: the requester reads it."]</span>
+        <button type="submit" name="approve" value="true" class="btn btn-sm btn-success">@T["Approve"]</button>
+        <button type="submit" name="approve" value="false" class="btn btn-sm btn-outline-danger">@T["Refuse"]</button>
+    </form>
+}
+
+@if (Model.CanCancel)
+{
+    var cancelId = "ticket-approval-cancel-" + Model.TicketId;
+    <details class="mt-2 small">
+        <summary class="text-body-secondary">@T["Cancel the approval"]</summary>
+        <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="TicketApprovals" asp-action="Cancel" asp-route-id="@Model.TicketId" method="post" class="mt-2 no-multisubmit">
+            <label for="@cancelId" class="form-label small mb-1">@T["Why"]</label>
+            <input id="@cancelId" name="reason" class="form-control form-control-sm mb-2" required />
+            <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Cancel and send it to work"]</button>
+        </form>
+    </details>
+}

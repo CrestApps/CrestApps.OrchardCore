@@ -14,6 +14,8 @@ public sealed class TelephonyExtensionIndexProvider : IndexProvider<TelephonyExt
     {
         context
             .For<TelephonyExtensionIndex>()
+            .ExclusiveToDocumentType()
+            .SingleRecordPerDocument()
             .Map(extension => new TelephonyExtensionIndex
             {
                 ItemId = extension.ItemId,

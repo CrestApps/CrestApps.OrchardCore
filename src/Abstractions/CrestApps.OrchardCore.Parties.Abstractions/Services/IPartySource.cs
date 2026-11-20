@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Parties.Models;
 
 namespace CrestApps.OrchardCore.Parties.Services;
@@ -30,4 +31,14 @@ public interface IPartySource
     /// <param name="cancellationToken">A token to cancel the lookup.</param>
     /// <returns>The names by id.</returns>
     Task<IReadOnlyDictionary<string, string>> GetNamesAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets how to reach parties: their name, e-mail address and phone number, for the ids that are found. A source
+    /// whose parties can't be reached (or that doesn't know how) returns nothing, which is the default.
+    /// </summary>
+    /// <param name="ids">The ids.</param>
+    /// <param name="cancellationToken">A token to cancel the lookup.</param>
+    /// <returns>The contact details by id.</returns>
+    Task<IReadOnlyDictionary<string, ContactInfo>> GetContactInfoAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyDictionary<string, ContactInfo>>(new Dictionary<string, ContactInfo>());
 }

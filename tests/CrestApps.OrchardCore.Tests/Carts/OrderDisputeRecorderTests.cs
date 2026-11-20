@@ -31,7 +31,7 @@ public sealed class OrderDisputeRecorderTests
         _orderService
             .Setup(service => service.AddNoteAsync(It.IsAny<Order>(), It.IsAny<string>(), It.IsAny<OrderNoteKind>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback<Order, string, OrderNoteKind, string, CancellationToken>((_, text, _, _, _) => _notes.Add(text))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync([]);
     }
 
     [Fact]

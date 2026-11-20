@@ -1,0 +1,52 @@
+@model MyPayReviewViewModel
+@using System.Globalization
+
+@{
+    var statement = Model.Statement.Statement;
+}
+
+<zone Name="Title">
+    <breadcrumb name="PayrollMyPayReview" title="@T["Your coming pay"]">
+        <breadcrumb-item id="PayrollMyPay" action="Index" controller="MyPay" area="CrestApps.OrchardCore.Payroll">@T["My pay"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<p>@T["{0} will pay you on {1} for {2} to {3}. Look it over before the pay run is approved: say it is right, or ask about it.", Model.EmployerName, statement.PayDate.ToString("D", CultureInfo.CurrentCulture), statement.PeriodStart.ToString("d", CultureInfo.CurrentCulture), statement.PeriodEnd.ToString("d", CultureInfo.CurrentCulture)]</p>
+
+@if (Model.Review is { Status: not PayStatementReviewStatus.Pending } review)
+{
+    <div class="alert @(Model.IsCurrent ? "alert-info" : "alert-secondary")">
+        @if (!Model.IsCurrent)
+        {
+            @T["Your pay changed after you last looked at it. Please look again."]
+        }
+        else if (review.Status == PayStatementReviewStatus.Confirmed)
+        {
+            @T["You said this pay is right. You can still ask about it until the run is submitted."]
+        }
+        else
+        {
+            @T["You asked about this pay. Payroll was told."]
+        }
+    </div>
+}
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<partial name="PayStatementLines" model="Model.Statement" />
+
+<form asp-action="Review" asp-route-id="@statement.ItemId" method="post">
+    <div class="card mb-3">
+        <div class="card-header">@T["Something wrong?"]</div>
+        <div class="card-body">
+            <label for="note" class="form-label">@T["What looks wrong"]</label>
+            <textarea id="note" name="note" class="form-control" rows="3" maxlength="1000">@Model.Note</textarea>
+            <span class="hint">@T["Such as missing hours or a wrong rate. Payroll sees it before the run is approved."]</span>
+        </div>
+    </div>
+    <div class="action-bar-bottom">
+        <button type="submit" name="confirmed" value="true" class="btn btn-success">@T["This looks right"]</button>
+        <button type="submit" name="confirmed" value="false" class="btn btn-outline-danger">@T["Ask about it"]</button>
+        <a asp-action="Index" class="btn btn-secondary action-bar-secondary">@T["Back"]</a>
+    </div>
+</form>

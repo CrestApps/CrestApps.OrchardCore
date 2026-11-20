@@ -1,0 +1,18 @@
+@* The one prompt pay cards show until the viewer confirms their password (StaffPayPrivacy). *@
+@{
+    string confirmUrl = Model.ConfirmUrl;
+}
+
+<div class="card mb-3">
+    <div class="card-body d-flex align-items-center gap-3">
+        <i class="fa-solid fa-lock fa-lg text-secondary" aria-hidden="true"></i>
+        <div class="flex-grow-1">
+            <div class="fw-semibold">@T["Pay is private"]</div>
+            <div class="hint">@T["Confirm your password to see pay details and pay statements."]</div>
+        </div>
+        @if (!string.IsNullOrEmpty(confirmUrl))
+        {
+            <a class="btn btn-primary" href="@confirmUrl">@T["Confirm your password"]</a>
+        }
+    </div>
+</div>

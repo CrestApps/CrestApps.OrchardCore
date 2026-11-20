@@ -1,25 +1,24 @@
-using CrestApps.OrchardCore.Accounts;
+using CrestApps.OrchardCore.Agreements;
+using CrestApps.OrchardCore.Agreements.Models;
+using CrestApps.OrchardCore.Agreements.Services;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.WorkOrders.Agreements.Drivers;
-using CrestApps.OrchardCore.WorkOrders.Agreements.ViewModels;
-using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Migrations;
-using CrestApps.OrchardCore.WorkOrders.Services;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
-using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.WorkOrders.Agreements;
 
 /// <summary>
-/// Registers service agreements, their pages and the task that makes their work orders.
+/// The field-service terms of agreements: their visit schedules on the agreement editor, the task that makes their work
+/// orders, and their billable labor counted against the agreement's hours.
 /// </summary>
 [Feature(WorkOrdersConstants.Features.Agreements)]
 public sealed class AgreementsStartup : StartupBase
@@ -28,17 +27,16 @@ public sealed class AgreementsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddServiceAgreementsCore();
-        services.AddPermissionProvider<AgreementsPermissionsProvider>();
-        services.AddIndexProvider<ServiceAgreementIndexProvider>();
         services.AddDataMigration<ServiceAgreementsMigrations>();
-        services.AddDisplayDriver<ServiceAgreementRow, ServiceAgreementRowDisplayDriver>();
+        services.AddResumableStep<ServiceAgreementsMoveStep>();
+        services.AddDisplayDriver<Agreement, WorkOrderAgreementTermsDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ServiceAgreementBackgroundTask>());
         services.AddNavigationProvider<AgreementsAdminMenu>();
     }
 }
 
 /// <summary>
-/// Registers the expiring workflow event.
+/// Starts the expiring workflow event of agreements with visits.
 /// </summary>
 [Feature(WorkOrdersConstants.Features.Agreements)]
 [RequireFeatures(OrchardCoreFeatureIds.Workflows)]
@@ -47,44 +45,18 @@ public sealed class AgreementsWorkflowsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IServiceAgreementObserver, WorkflowServiceAgreementObserver>();
+        services.AddScoped<IAgreementObserver, WorkflowServiceAgreementObserver>();
         services.AddActivity<ServiceAgreementExpiringEvent, ServiceAgreementExpiringEventDisplayDriver>();
     }
 }
 
 /// <summary>
-/// Provides the service agreement permission.
-/// </summary>
-internal sealed class AgreementsPermissionsProvider : IPermissionProvider
-{
-    private readonly IEnumerable<Permission> _allPermissions =
-    [
-        WorkOrdersPermissions.ManageServiceAgreements,
-    ];
-
-    /// <inheritdoc/>
-    public Task<IEnumerable<Permission>> GetPermissionsAsync()
-        => Task.FromResult(_allPermissions);
-
-    /// <inheritdoc/>
-    public IEnumerable<PermissionStereotype> GetDefaultStereotypes()
-        =>
-        [
-            new PermissionStereotype
-            {
-                Name = global::OrchardCore.OrchardCoreConstants.Roles.Administrator,
-                Permissions = _allPermissions,
-            },
-        ];
-}
-
-/// <summary>
-/// Makes the work orders of service agreements ahead of their visits.
+/// Makes the work orders of agreements ahead of their visits.
 /// </summary>
 [BackgroundTask(
     Title = "Service agreement visits",
     Schedule = "5 * * * *",
-    Description = "Makes the work orders of active service agreements ahead of their visits, once each, and expires agreements past their end.",
+    Description = "Makes the work orders of the visits of active agreements ahead of time, once each.",
     LockTimeout = 1_000,
     LockExpiration = 900_000)]
 public sealed class ServiceAgreementBackgroundTask : IBackgroundTask
@@ -95,7 +67,7 @@ public sealed class ServiceAgreementBackgroundTask : IBackgroundTask
 }
 
 /// <summary>
-/// Adds Service Agreements to the Field Service menu.
+/// Adds the agreements to the Field Service menu.
 /// </summary>
 public sealed class AgreementsAdminMenu : AdminNavigationProvider
 {
@@ -116,24 +88,10 @@ public sealed class AgreementsAdminMenu : AdminNavigationProvider
         builder.Add(S["Field Service"], fieldService => fieldService
             .Add(S["Service Agreements"], S["Service Agreements"].PrefixPosition("20"), agreements => agreements
                 .Id("serviceAgreements")
-                .Action("Index", "ServiceAgreements", WorkOrdersConstants.Features.WorkOrders)
-                .Permission(WorkOrdersPermissions.ManageServiceAgreements)
+                .Action("Index", "Agreements", AgreementsConstants.Features.Agreements)
+                .Permission(AgreementsPermissions.ViewAgreements)
                 .LocalNav()));
 
         return ValueTask.CompletedTask;
-    }
-}
-
-/// <summary>
-/// Lists a CRM account's service agreements on its page.
-/// </summary>
-[Feature(WorkOrdersConstants.Features.Agreements)]
-[RequireFeatures(AccountsConstants.Feature)]
-public sealed class AccountAgreementsStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<global::OrchardCore.ContentManagement.Display.ContentDisplay.IContentDisplayDriver, AccountAgreementsDisplayDriver>();
     }
 }

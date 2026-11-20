@@ -18,6 +18,12 @@ public class TransactionDetailViewModel
     public string OwnerName { get; set; }
 
     /// <summary>
+    /// Gets or sets the name of the party that owes the transaction (an account, a customer, a user), when it could be
+    /// resolved.
+    /// </summary>
+    public string PayerName { get; set; }
+
+    /// <summary>
     /// Gets or sets what the transaction paid for, such as an order, as its module names and links it, or
     /// <see langword="null"/> when no module describes it.
     /// </summary>
@@ -36,4 +42,15 @@ public class TransactionDetailViewModel
     public bool CanSendReminder { get; set; }
 
     public bool ShowReceipts { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the payer can hold customer credit, which needs the Customers Store Credit
+    /// feature and a payer that is a user or a customer record.
+    /// </summary>
+    public bool CanHoldCredit { get; set; }
+
+    /// <summary>
+    /// Gets or sets the payer's customer credit in the transaction's currency, when they can hold credit.
+    /// </summary>
+    public decimal CreditBalance { get; set; }
 }

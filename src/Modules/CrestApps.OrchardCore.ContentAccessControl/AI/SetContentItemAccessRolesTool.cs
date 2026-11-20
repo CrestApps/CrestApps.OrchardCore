@@ -88,7 +88,7 @@ internal sealed class SetContentItemAccessRolesTool : ContentAccessControlAITool
         }
 
         var definition = await services.GetRequiredService<IContentDefinitionManager>().GetTypeDefinitionAsync(latest.ContentType);
-        IReadOnlyList<ContentTypePartDefinition> restrictingParts = definition is null ? [] :ContentAccessRestrictions.GetRestrictingParts(definition);
+        var restrictingParts = ContentAccessRestriction.GetRestrictingParts(definition);
 
         if (restrictingParts.Count == 0)
         {
