@@ -8,6 +8,8 @@ using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
+using OrchardCore.Contents;
+using OrchardCore.Lists.Indexes;
 using YesSql;
 using YesSql.Services;
 
@@ -16,7 +18,8 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Controllers;
 /// <summary>
 /// What the quiz editor's pickers read: the published questions, by title, for the fixed questions of a quiz, and the
 /// tags and difficulty of a bank's questions, for its "Draw at random" rules. Only people who edit quizzes or see
-/// question banks may read them, and only titles, tags and difficulties leave, never a key.
+/// question banks may read them, only from the banks they may view, and only titles, tags and difficulties leave, never
+/// a key.
 /// </summary>
 [Admin]
 public sealed class QuestionPickerController : Controller
@@ -69,6 +72,19 @@ public sealed class QuestionPickerController : Controller
         var text = query?.Trim();
         var all = _session.Query<ContentItem>();
 
+        // Someone who may not view every bank (a course instructor) finds only the questions of the banks they may view.
+        if (!await _authorizationService.AuthorizeAsync(User, AssessmentPermissions.ViewQuestionBanks))
+        {
+            var bankIds = await ViewableBankIdsAsync();
+
+            if (bankIds.Count == 0)
+            {
+                return Ok(Array.Empty<object>());
+            }
+
+            all = all.With<ContainedPartIndex>(index => index.ListContentItemId.IsIn(bankIds));
+        }
+
         // A search inside titles can't seek, so it goes without the grouping (see AGENTS.md, YesSql index declarations).
         var questions = string.IsNullOrEmpty(text)
             ? all.With<ContentItemIndex>(index => index.Published && index.ContentType.IsIn(contentTypes))
@@ -97,7 +113,7 @@ public sealed class QuestionPickerController : Controller
     [Admin("learning/question-banks/{bankId}/draw-summary", "LearningQuestionBankDrawSummary")]
     public async Task<IActionResult> DrawSummary(string bankId)
     {
-        if (!await CanPickAsync())
+        if (!await CanPickAsync() || !await CanViewBankAsync(bankId))
         {
             return Forbid();
         }
@@ -112,6 +128,37 @@ public sealed class QuestionPickerController : Controller
             });
 
         return Ok(new { questions });
+    }
+
+    private async Task<bool> CanViewBankAsync(string bankId)
+    {
+        if (await _authorizationService.AuthorizeAsync(User, AssessmentPermissions.ViewQuestionBanks))
+        {
+            return true;
+        }
+
+        var bank = string.IsNullOrEmpty(bankId)
+            ? null
+            : await _session.Query<ContentItem, ContentItemIndex>(index => index.ContentItemId == bankId && index.Published && index.ContentType == AssessmentsConstants.ContentTypes.QuestionBank).FirstOrDefaultAsync(HttpContext.RequestAborted);
+
+        return bank is not null && await _authorizationService.AuthorizeAsync(User, CommonPermissions.ViewContent, bank);
+    }
+
+    private async Task<IReadOnlyList<string>> ViewableBankIdsAsync()
+    {
+        var banks = await _session.Query<ContentItem, ContentItemIndex>(index => index.Published && index.ContentType == AssessmentsConstants.ContentTypes.QuestionBank)
+            .ListAsync(HttpContext.RequestAborted);
+        var ids = new List<string>();
+
+        foreach (var bank in banks)
+        {
+            if (await _authorizationService.AuthorizeAsync(User, CommonPermissions.ViewContent, bank))
+            {
+                ids.Add(bank.ContentItemId);
+            }
+        }
+
+        return ids;
     }
 
     private async Task<bool> CanPickAsync()

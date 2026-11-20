@@ -82,6 +82,30 @@ public sealed class QuizEditorTests
     }
 
     [Fact]
+    public async Task Round11S4_AnInstructorWhoMayNotViewABank_FindsNoneOfItsQuestions_NorReadsItsTags()
+    {
+        // Arrange: a bank the instructor (Manage own courses, no View question banks) may not view.
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var (bankId, _) = await CreateBankAsync(suffix, ("Ladder safety " + suffix, 2, ["ladders"]));
+
+        using var admin = await _fixture.CreateClientAsync("admin");
+        using var instructor = await _fixture.CreateClientAsync("instructor1");
+
+        // Act
+        var adminFound = await admin.GetStringAsync($"Admin/learning/questions/search?query={suffix}", TestContext.Current.CancellationToken);
+        var instructorFound = await instructor.GetAsync($"Admin/learning/questions/search?query={suffix}", TestContext.Current.CancellationToken);
+        var instructorSummary = await instructor.GetAsync($"Admin/learning/question-banks/{bankId}/draw-summary", TestContext.Current.CancellationToken);
+
+        // Assert
+        using var adminJson = JsonDocument.Parse(adminFound);
+        Assert.Single(adminJson.RootElement.EnumerateArray());
+        Assert.Equal(HttpStatusCode.OK, instructorFound.StatusCode);
+        using var instructorJson = JsonDocument.Parse(await instructorFound.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(instructorJson.RootElement.EnumerateArray());
+        Assert.NotEqual(HttpStatusCode.OK, instructorSummary.StatusCode);
+    }
+
+    [Fact]
     public async Task ADrawRule_AskingForMoreThanTheBankHas_IsRefused_WhileAQuizSavedBeforeStillLoadsSavesAndDraws()
     {
         // Arrange: a quiz saved with a rule in the stored format: a bank, a tag in another case, no difficulty.
