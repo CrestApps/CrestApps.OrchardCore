@@ -95,7 +95,11 @@ public sealed class CohortLearningSync
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The link, or <see langword="null"/> when no cohort is applied to it.</returns>
     public async Task<CohortLearningLink> FindLinkAsync(string targetId, CancellationToken cancellationToken = default)
-        => (await ListTargetLinksAsync(targetId, cancellationToken)).FirstOrDefault();
+    {
+        var links = await ListTargetLinksAsync(targetId, cancellationToken);
+
+        return links.Count > 0 ? links[0] : null;
+    }
 
     /// <summary>
     /// Applies the cohorts of a published course or path: the members of a newly linked cohort are enrolled, and the
@@ -146,7 +150,7 @@ public sealed class CohortLearningSync
             // Two publishes close together may each have saved a link before this lock existed: keep the first, read
             // what all of them applied, and remove the others.
             var links = await ListTargetLinksAsync(targetId, cancellationToken);
-            var link = links.FirstOrDefault();
+            var link = links.Count > 0 ? links[0] : null;
             var applied = links.SelectMany(candidate => candidate.CohortIds ?? []).Distinct(StringComparer.Ordinal).ToList();
 
             foreach (var extra in links.Skip(1))
