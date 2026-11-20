@@ -63,20 +63,29 @@ internal sealed class CompetenciesPartDisplayDriver : ContentPartDisplayDriver<C
 
         await context.Updater.TryUpdateModelAsync(model, Prefix, value => value.SkillIds, value => value.Proficiency);
 
-        if (!SkillProficiency.IsValid(model.Proficiency))
+        var chosen = (model.SkillIds ?? []).Where(id => !string.IsNullOrEmpty(id)).ToArray();
+
+        // The card posts no level when the site has no skills yet, and the level only matters once a competency is
+        // chosen: an empty one keeps the default, so a course can always be saved.
+        if (model.Proficiency == 0)
+        {
+            model.Proficiency = SkillProficiency.IsValid(part.Proficiency) ? part.Proficiency : CompetenciesPart.DefaultProficiency;
+        }
+
+        if (chosen.Length > 0 && !SkillProficiency.IsValid(model.Proficiency))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Proficiency), S["Choose a level from 1 to 5."]);
-        }
-        else
-        {
-            var skills = await SkillsByIdAsync();
 
-            part.SkillIds = (model.SkillIds ?? [])
-                .Where(id => !string.IsNullOrEmpty(id) && skills.ContainsKey(id))
-                .Distinct(StringComparer.Ordinal)
-                .ToList();
-            part.Proficiency = model.Proficiency;
+            return Edit(part, context);
         }
+
+        var skills = chosen.Length == 0 ? new Dictionary<string, Skill>(StringComparer.Ordinal) : await SkillsByIdAsync();
+
+        part.SkillIds = chosen
+            .Where(skills.ContainsKey)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        part.Proficiency = SkillProficiency.IsValid(model.Proficiency) ? model.Proficiency : CompetenciesPart.DefaultProficiency;
 
         return Edit(part, context);
     }
