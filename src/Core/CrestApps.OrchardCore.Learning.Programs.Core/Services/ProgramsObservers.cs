@@ -28,6 +28,11 @@ internal sealed class ProgramsEnrollmentObserver : IEnrollmentObserver
     public Task CourseStartedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
         => RefreshRequiredAsync(enrollment, cancellationToken);
 
+    // A path counts a course only once its completion supports issuing, so a path waiting on a course under review
+    // moves on (and earns its credential and credits) when the review is cleared.
+    public Task ReviewClearedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => enrollment?.Status == EnrollmentStatus.Completed ? CompletedAsync(enrollment, cancellationToken) : Task.CompletedTask;
+
     private async Task RefreshRequiredAsync(Enrollment enrollment, CancellationToken cancellationToken)
     {
         if (_services.GetService<IRequiredLearningService>() is { } required)

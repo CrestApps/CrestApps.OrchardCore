@@ -121,4 +121,16 @@ public interface IEnrollmentObserver
     /// <returns>A task.</returns>
     Task ReviewNeededAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <summary>
+    /// A person cleared the review of an enrollment. Raised after the change is committed, once per review. What is
+    /// issued on a completion (credentials, education credits, learning paths, certification paths) checks the
+    /// completion again here, because a completion under review supported nothing when it happened; each check must be
+    /// idempotent, as the completion may already have been awarded before it was flagged.
+    /// </summary>
+    /// <param name="enrollment">The enrollment, with its cleared <see cref="Enrollment.Review"/>.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task ReviewClearedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

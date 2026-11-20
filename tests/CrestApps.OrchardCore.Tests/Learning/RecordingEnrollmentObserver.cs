@@ -40,6 +40,9 @@ internal sealed class RecordingEnrollmentObserver : IEnrollmentObserver
     public Task ReviewNeededAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
         => Record("ReviewNeeded", enrollment);
 
+    public Task ReviewClearedAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => Record("ReviewCleared", enrollment);
+
     public Task DueSoonAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
         => Record("DueSoon:" + enrollment.ItemId, enrollment);
 
