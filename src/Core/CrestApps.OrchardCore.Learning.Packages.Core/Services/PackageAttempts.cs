@@ -53,7 +53,16 @@ public static class PackageAttempts
     /// <param name="state">The learner's state on the package.</param>
     /// <returns><see langword="true"/> when no attempt is left.</returns>
     public static bool UsedUp(LearningPackagePart part, PackageRuntimeState state)
-        => part?.MaxAttempts is int max && max > 0 && (state?.Attempts ?? 0) >= max;
+        => part?.MaxAttempts is int max && max > 0 && Used(state) >= max;
+
+    /// <summary>
+    /// Counts the attempts a learner used. A state written before attempts were counted (or while the package had no
+    /// attempt settings) has sessions but no attempt: its sessions were one attempt.
+    /// </summary>
+    /// <param name="state">The runtime state, or <see langword="null"/>.</param>
+    /// <returns>The number of attempts used.</returns>
+    public static int Used(PackageRuntimeState state)
+        => state is null ? 0 : state.Attempts == 0 && state.Sessions > 0 ? 1 : state.Attempts;
 
     /// <summary>
     /// Gets the item's score by the grading method, from the attempts kept, for a package with a grading method.

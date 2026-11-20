@@ -190,7 +190,7 @@ public sealed class PackageRuntimeService
                 {
                     // SCORM 2004 starts the attempt itself when the session does not resume; SCORM 1.2 starts afresh here.
                     state.Cmi = new Scorm12Cmi();
-                    state.Attempts++;
+                    state.Attempts = PackageAttempts.Used(state) + 1;
                     firstSession = true;
                 }
             }

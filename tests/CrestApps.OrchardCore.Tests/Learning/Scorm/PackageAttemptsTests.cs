@@ -110,4 +110,26 @@ public sealed class PackageAttemptsTests
         Assert.Equal("60", state.Cmi.ScoreRaw);
         Assert.Equal(0, state.Attempts);
     }
+
+    [Fact]
+    public async Task Round11L3_AStateFromBeforeAttemptCounting_CountsItsAttempt_WhenALimitIsAdded()
+    {
+        // Arrange: one finished attempt on a package without attempt settings (Attempts stays 0, as states written
+        // before attempts were counted), then a limit of one attempt is set.
+        await using var h = await PackageTestHarness.CreateAsync(completionMode: CompletionModes.Passed, configureItem: part => part.PassMark = 95);
+        var enrollment = await h.EnrollAsync("ana");
+        var first = await h.LaunchAsync("ana");
+        await h.ApplyAsync("ana", first, finish: true, changes: [("cmi.core.score.raw", "60"), ("cmi.core.lesson_status", "failed")]);
+        var before = await h.StateAsync(enrollment.ItemId);
+        h.Courses.Get(PackageTestHarness.Package).Alter<LearningPackagePart>(part => part.MaxAttempts = 1);
+
+        // Act
+        var second = await h.LaunchAsync("ana");
+
+        // Assert
+        Assert.Equal(0, before.Attempts);
+        Assert.True(second.Succeeded, second.Error);
+        Assert.True(second.Review);
+        Assert.True(second.AttemptsUsedUp);
+    }
 }
