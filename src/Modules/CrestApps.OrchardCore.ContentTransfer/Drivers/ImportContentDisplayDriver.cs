@@ -32,6 +32,7 @@ public sealed class ImportContentDisplayDriver : DisplayDriver<ImportContent>
                 viewModel.File = model.File;
                 viewModel.PublishImportedContent = options.PublishImportedContent;
                 viewModel.AcceptedFileTypes = string.Join(',', AllowedExtensions(model));
+                viewModel.ShowContentOptions = model.IsContentType;
             })
             .Location("Content:1"));
 

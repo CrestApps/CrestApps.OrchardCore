@@ -76,6 +76,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IContentImportHandlerResolver, ContentImportHandlerResolver>();
         services.AddScoped<IContentImportManager, ContentImportManager>();
+        services.AddScoped<IContentTransferImportTargetResolver, DefaultContentTransferImportTargetResolver>();
         services.AddScoped<IContentTransferEntryManager, ContentTransferEntryManager>();
         services.AddScoped<IContentTypeDefinitionDisplayDriver, ContentTypeTransferSettingsDisplayDriver>();
         services.AddScoped<IContentImportHandler, CommonContentImportHandler>();
