@@ -37,6 +37,7 @@ public static class SkillsCoreServiceCollectionExtensions
         services.AddNumberSequence();
         services.TryAddScoped<SkillsDailyCheck>();
         services.TryAddScoped<SkillsDailyCheckpointStore>();
+        services.TryAddScoped<SkillImporter>();
 
         return services;
     }
