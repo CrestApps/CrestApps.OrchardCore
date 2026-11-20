@@ -77,7 +77,8 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
                 .Select(category => new GradeCategoryRowViewModel { Id = category.Id, Name = category.Name, Weight = category.Weight, DropLowest = category.DropLowest })
                 .ToList();
             model.ItemOptions = await _editorOptions.GetItemOptionsAsync(courseId, null, S["No final assessment"], model.FinalItemId);
-            model.CourseOptions = await _editorOptions.GetCourseOptionsAsync(courseId, model.PrerequisiteCourseIds);
+            model.PrerequisiteCoursesJson = await _editorOptions.GetChosenCoursesJsonAsync(model.PrerequisiteCourseIds);
+            model.CourseId = courseId;
             model.EnrollmentModeOptions =
             [
                 new SelectListItem(S["Closed: staff, pipelines and workflows enroll learners"], nameof(EnrollmentMode.Closed), part.EnrollmentMode == EnrollmentMode.Closed),

@@ -1,8 +1,5 @@
 @model LearningPathPartEditViewModel
 
-<style asp-name="bootstrap-select"></style>
-<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
-
 @{
     var prefix = Html.NameFor(m => m.Sets).ToString();
     var sets = Model.Sets.ToList();
@@ -20,11 +17,11 @@
         <div data-path-sets>
             @for (var i = 0; i < sets.Count; i++)
             {
-                <partial name="LearningPathSetRow" model="@(new LearningPathSetRowModel { Prefix = prefix, Index = i.ToString(System.Globalization.CultureInfo.InvariantCulture), IsFirst = i == 0, Set = sets[i], Courses = Model.Courses })" />
+                <partial name="LearningPathSetRow" model="@(new LearningPathSetRowModel { Prefix = prefix, Index = i.ToString(System.Globalization.CultureInfo.InvariantCulture), IsFirst = i == 0, Set = sets[i], CourseTitles = Model.CourseTitles })" />
             }
         </div>
         <template data-path-set-template>
-            <partial name="LearningPathSetRow" model="@(new LearningPathSetRowModel { Prefix = prefix, Index = "__index__", Set = new LearningPathSetEditViewModel(), Courses = Model.Courses })" />
+            <partial name="LearningPathSetRow" model="@(new LearningPathSetRowModel { Prefix = prefix, Index = "__index__", Set = new LearningPathSetEditViewModel(), CourseTitles = Model.CourseTitles })" />
         </template>
         <button type="button" class="btn btn-sm btn-outline-secondary" data-path-add-set><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add a set"]</button>
     </div>
@@ -86,11 +83,13 @@
             rows.appendChild(template.content.cloneNode(true));
             renumber();
 
-            // A row added from the template was not in the page when the pickers started, so its picker starts here.
-            const courses = rows.lastElementChild.querySelector('[data-path-courses]');
+            // A row added from the template was not in the page when the course pickers started, so its picker gets an
+            // id of its own and starts here.
+            const courses = rows.lastElementChild.querySelector('select[data-item-selector]');
 
-            if (courses && window.Selectpicker) {
-                window.Selectpicker.getOrCreateInstance(courses);
+            if (courses && window.CrestAppsItemSelector) {
+                courses.id = courses.id.replace('__index__', 'new' + Date.now());
+                window.CrestAppsItemSelector.init(courses);
             }
         });
 

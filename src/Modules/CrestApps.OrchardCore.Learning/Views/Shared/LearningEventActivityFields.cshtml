@@ -6,7 +6,7 @@
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <div class="mb-3">
     <label asp-for="CourseIds" class="form-label">@T["Courses"]</label>
-    <select asp-for="CourseIds" asp-items="Model.CourseOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3" title="@T["Every course"]"></select>
+    @await Component.InvokeAsync("ItemSelector", new { id = Html.IdFor(m => m.CourseIds).ToString(), inputName = Html.NameFor(m => m.CourseIds).ToString(), endpoint = Url.RouteUrl("LearningCourseSearch"), initialItemsJson = Model.CoursesJson, multiple = true, buttonText = T["Every course"].Value, searchPlaceholder = T["Search courses by title"].Value, emptyResultsText = T["No course has this title."].Value, smallButton = false })
     <span class="hint">@T["The courses that start the workflow. Choose none for every course."]</span>
 </div>
 

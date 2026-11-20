@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -102,6 +103,29 @@ public sealed class CourseEditorOptions
         return (course?.Get<CoursePart>(nameof(CoursePart))?.GradeCategories ?? [])
             .Where(category => !string.IsNullOrEmpty(category?.Id))
             .ToList();
+    }
+
+    /// <summary>
+    /// Builds the chosen courses of a course picker that searches the server (the ItemSelector component), as the
+    /// <c>[{ value, text }]</c> JSON it starts with, in the order given. A course that is gone is left out.
+    /// </summary>
+    /// <param name="courseIds">The chosen courses.</param>
+    /// <returns>The JSON.</returns>
+    public async Task<string> GetChosenCoursesJsonAsync(IEnumerable<string> courseIds)
+    {
+        var ids = (courseIds ?? []).Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).ToArray();
+
+        if (ids.Length == 0)
+        {
+            return "[]";
+        }
+
+        var titles = (await _contentManager.GetAsync(ids, VersionOptions.Latest))
+            .ToDictionary(course => course.ContentItemId, course => course.DisplayText, StringComparer.Ordinal);
+
+        return JsonSerializer.Serialize(ids
+            .Where(titles.ContainsKey)
+            .Select(id => new { value = id, text = titles[id] }));
     }
 
     /// <summary>

@@ -52,4 +52,39 @@ public sealed class CourseLookup
             .Take(max)
             .ListAsync(cancellationToken)).ToArray();
     }
+
+    /// <summary>
+    /// Finds courses whose title contains a text, by name, at most some of them: what a course picker searches, so a
+    /// site with hundreds of courses never renders them all.
+    /// </summary>
+    /// <param name="text">The text to look for; empty for the first courses by name.</param>
+    /// <param name="max">The most courses to return.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The latest versions of the courses found.</returns>
+    public async Task<IReadOnlyList<ContentItem>> SearchCoursesAsync(string text, int max, CancellationToken cancellationToken = default)
+    {
+        text = text?.Trim();
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return await ListCoursesAsync(max, cancellationToken);
+        }
+
+        var courseTypes = await ListCourseTypesAsync();
+
+        if (courseTypes.Count == 0)
+        {
+            return [];
+        }
+
+        var types = courseTypes.ToArray();
+
+        // A search inside titles can't seek, so it goes without the grouping (see AGENTS.md, YesSql index declarations).
+        return (await _session.Query<ContentItem>()
+            .NoIndexOptimizations()
+            .With<ContentItemIndex>(index => index.ContentType.IsIn(types) && index.Latest && index.DisplayText.Contains(text))
+            .OrderBy(index => index.DisplayText)
+            .Take(max)
+            .ListAsync(cancellationToken)).ToArray();
+    }
 }

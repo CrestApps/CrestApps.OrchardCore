@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Learning.Commerce.Models;
 using CrestApps.OrchardCore.Learning.Commerce.ViewModels;
-using CrestApps.OrchardCore.Learning.Core.Services;
-using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
@@ -13,11 +12,11 @@ namespace CrestApps.OrchardCore.Learning.Commerce.Drivers;
 /// </summary>
 internal sealed class LearningProductPartDisplayDriver : ContentPartDisplayDriver<LearningProductPart>
 {
-    private readonly CourseLookup _courses;
+    private readonly IContentManager _contentManager;
 
-    public LearningProductPartDisplayDriver(CourseLookup courses)
+    public LearningProductPartDisplayDriver(IContentManager contentManager)
     {
-        _courses = courses;
+        _contentManager = contentManager;
     }
 
     public override IDisplayResult Edit(LearningProductPart part, BuildPartEditorContext context)
@@ -25,7 +24,9 @@ internal sealed class LearningProductPartDisplayDriver : ContentPartDisplayDrive
         {
             model.Grants = part.Grants.Select(grant => new LearningProductGrantRow { Kind = grant.Kind, TargetId = grant.TargetId, AccessDays = grant.AccessDays, Seats = grant.Seats }).ToList();
             model.EnrollsWithoutKeyOrApproval = part.EnrollsWithoutKeyOrApproval;
-            model.Courses = (await _courses.ListCoursesAsync(500)).Select(course => new SelectListItem(course.DisplayText, course.ContentItemId)).ToList();
+            // Only the courses the rows grant: the pickers search the rest on the server.
+            model.CourseTitles = (await _contentManager.GetAsync(model.Grants.Select(grant => grant.TargetId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal), VersionOptions.Latest))
+                .ToDictionary(course => course.ContentItemId, course => course.DisplayText, StringComparer.Ordinal);
         });
 
     public override async Task<IDisplayResult> UpdateAsync(LearningProductPart part, UpdatePartEditorContext context)

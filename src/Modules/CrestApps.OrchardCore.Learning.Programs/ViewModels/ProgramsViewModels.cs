@@ -14,8 +14,11 @@ public class LearningPathPartEditViewModel
 
     public bool AllowSelfStart { get; set; }
 
+    /// <summary>
+    /// Gets or sets the titles of the chosen courses, by id, which the course pickers start with.
+    /// </summary>
     [BindNever]
-    public IList<SelectListItem> Courses { get; set; } = [];
+    public IDictionary<string, string> CourseTitles { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
 }
 
 /// <summary>
@@ -49,7 +52,10 @@ public class LearningPathSetRowModel
 
     public LearningPathSetEditViewModel Set { get; set; }
 
-    public IList<SelectListItem> Courses { get; set; } = [];
+    /// <summary>
+    /// Gets or sets the titles of the chosen courses, by id.
+    /// </summary>
+    public IDictionary<string, string> CourseTitles { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
 }
 
 /// <summary>

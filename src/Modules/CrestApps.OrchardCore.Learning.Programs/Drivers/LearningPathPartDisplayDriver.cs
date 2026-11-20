@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Learning.Programs.Services;
 using CrestApps.OrchardCore.Learning.Programs.ViewModels;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.ContentManagement;
@@ -24,9 +23,6 @@ namespace CrestApps.OrchardCore.Learning.Programs.Drivers;
 /// </summary>
 internal sealed class LearningPathPartDisplayDriver : ContentPartDisplayDriver<LearningPathPart>
 {
-    private const int MaxCourses = 500;
-
-    private readonly CourseLookup _courses;
     private readonly IContentManager _contentManager;
     private readonly ILearningPathService _paths;
     private readonly IEnrollmentStore _enrollments;
@@ -35,14 +31,12 @@ internal sealed class LearningPathPartDisplayDriver : ContentPartDisplayDriver<L
     internal readonly IStringLocalizer S;
 
     public LearningPathPartDisplayDriver(
-        CourseLookup courses,
         IContentManager contentManager,
         ILearningPathService paths,
         IEnrollmentStore enrollments,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<LearningPathPartDisplayDriver> stringLocalizer)
     {
-        _courses = courses;
         _contentManager = contentManager;
         _paths = paths;
         _enrollments = enrollments;
@@ -106,9 +100,9 @@ internal sealed class LearningPathPartDisplayDriver : ContentPartDisplayDriver<L
                 MinimumCount = set.MinimumCount,
                 CourseIds = set.CourseIds.ToList(),
             }).ToList();
-            model.Courses = (await _courses.ListCoursesAsync(MaxCourses))
-                .Select(course => new SelectListItem(course.DisplayText, course.ContentItemId))
-                .ToList();
+            // Only the chosen courses: the pickers search the rest on the server.
+            model.CourseTitles = (await _contentManager.GetAsync(model.Sets.SelectMany(set => set.CourseIds).Distinct(StringComparer.Ordinal), VersionOptions.Latest))
+                .ToDictionary(course => course.ContentItemId, course => course.DisplayText, StringComparer.Ordinal);
         });
 
     public override async Task<IDisplayResult> UpdateAsync(LearningPathPart part, UpdatePartEditorContext context)

@@ -34,13 +34,13 @@
                             </select>
                         </td>
                         <td>
-                            <select name="@(prefix)[@i].TargetId" class="form-select form-select-sm" aria-label="@T["Course"]">
-                                <option value="">@T["This item"]</option>
-                                @foreach (var course in Model.Courses)
-                                {
-                                    <option value="@course.Value" selected="@(course.Value == rows[i].TargetId)">@course.Text</option>
-                                }
-                            </select>
+                            @{
+                                var targetId = rows[i].TargetId;
+                                var chosenJson = !string.IsNullOrEmpty(targetId) && Model.CourseTitles.TryGetValue(targetId, out var title)
+                                    ? System.Text.Json.JsonSerializer.Serialize(new[] { new { value = targetId, text = title } })
+                                    : "[]";
+                            }
+                            @await Component.InvokeAsync("ItemSelector", new { id = $"{Html.IdFor(m => m.Grants)}_{i}_TargetId", inputName = $"{prefix}[{i}].TargetId", endpoint = Url.RouteUrl("LearningCourseSearch"), initialItemsJson = chosenJson, multiple = false, buttonText = T["This item"].Value, searchPlaceholder = T["Search courses by title"].Value, emptyResultsText = T["No course has this title."].Value })
                         </td>
                         <td><input type="number" min="0" name="@(prefix)[@i].AccessDays" value="@rows[i].AccessDays" class="form-control form-control-sm" aria-label="@T["Access (days)"]" /></td>
                         <td><input type="number" min="1" name="@(prefix)[@i].Seats" value="@rows[i].Seats" class="form-control form-control-sm" aria-label="@T["Seats per unit"]" /></td>
