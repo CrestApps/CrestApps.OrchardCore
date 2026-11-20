@@ -84,6 +84,91 @@ public sealed class DefaultContactCenterEventPublisherTests
             Times.Once);
     }
 
+    // A webhook that connects an agent publishes several events. Each event's handlers ran one after another, so the push
+    // that opens the call's record waited for every handler of the events before it.
+    [Fact]
+    public async Task PublishAsync_PushesEveryEventOfTheChange_BeforeAnyEventsOtherHandlersRun()
+    {
+        // Arrange
+        var first = new InteractionEvent { ItemId = "event-1", EventType = ContactCenterConstants.Events.AgentStateChanged };
+        var second = new InteractionEvent { ItemId = "event-2", EventType = ContactCenterConstants.Events.AgentLegAnswered };
+        var store = CreateStore();
+        store.Setup(s => s.FindByIdAsync("event-1", It.IsAny<CancellationToken>())).ReturnsAsync(first);
+        store.Setup(s => s.FindByIdAsync("event-2", It.IsAny<CancellationToken>())).ReturnsAsync(second);
+
+        var calls = new List<string>();
+        var outbox = new Mock<IContactCenterOutbox>();
+        outbox
+            .Setup(o => o.DispatchRealTimeAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((e, _) => calls.Add("push " + e.ItemId))
+            .ReturnsAsync(["Test/Push/v1"]);
+        outbox
+            .Setup(o => o.DispatchAsync(It.IsAny<InteractionEvent>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, IReadOnlyCollection<string>, CancellationToken>((e, done, _) => calls.Add("dispatch " + e.ItemId + " skipping " + string.Join(",", done)))
+            .Returns(Task.CompletedTask);
+
+        var services = new ServiceCollection()
+            .AddSingleton(store.Object)
+            .AddSingleton(outbox.Object)
+            .AddSingleton<Microsoft.Extensions.Logging.ILogger<ContactCenterEventDispatchContext>>(NullLogger<ContactCenterEventDispatchContext>.Instance)
+            .AddTransient<ContactCenterEventDispatchContext>()
+            .BuildServiceProvider();
+        var scopeExecutor = new TestContactCenterScopeExecutor(services) { ScheduleAfterCommitResult = true };
+        var publisher = CreatePublisher(store.Object, outbox.Object, scopeExecutor);
+
+        await publisher.PublishAsync(first, TestContext.Current.CancellationToken);
+        await publisher.PublishAsync(second, TestContext.Current.CancellationToken);
+
+        // Act: the post-commit tasks run in the order they were scheduled.
+        foreach (var operation in scopeExecutor.ScheduledOperations)
+        {
+            await operation();
+        }
+
+        // Assert
+        Assert.Equal(
+        [
+            "push event-1",
+            "push event-2",
+            "dispatch event-1 skipping Test/Push/v1",
+            "dispatch event-2 skipping Test/Push/v1",
+        ], calls);
+        outbox.Verify(o => o.DispatchAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task PublishAsync_WhenTheRealTimePassDeliveredNothing_TheEventsOwnDispatchRunsEveryHandler()
+    {
+        // Arrange
+        var interactionEvent = new InteractionEvent { ItemId = "event-1", EventType = ContactCenterConstants.Events.CallConnected };
+        var store = CreateStore();
+        store.Setup(s => s.FindByIdAsync("event-1", It.IsAny<CancellationToken>())).ReturnsAsync(interactionEvent);
+        var outbox = new Mock<IContactCenterOutbox>();
+        outbox
+            .Setup(o => o.DispatchRealTimeAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("hub down"));
+
+        var services = new ServiceCollection()
+            .AddSingleton(store.Object)
+            .AddSingleton(outbox.Object)
+            .AddSingleton<Microsoft.Extensions.Logging.ILogger<ContactCenterEventDispatchContext>>(NullLogger<ContactCenterEventDispatchContext>.Instance)
+            .AddTransient<ContactCenterEventDispatchContext>()
+            .BuildServiceProvider();
+        var scopeExecutor = new TestContactCenterScopeExecutor(services) { ScheduleAfterCommitResult = true };
+        var publisher = CreatePublisher(store.Object, outbox.Object, scopeExecutor);
+
+        await publisher.PublishAsync(interactionEvent, TestContext.Current.CancellationToken);
+
+        // Act
+        foreach (var operation in scopeExecutor.ScheduledOperations)
+        {
+            await operation();
+        }
+
+        // Assert
+        outbox.Verify(o => o.DispatchAsync(interactionEvent, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task PublishAsync_WhenOccurredUtcIsDefault_StampsFromClock()
     {

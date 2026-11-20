@@ -16,6 +16,8 @@ internal sealed class TestContactCenterScopeExecutor : IContactCenterScopeExecut
 
     public Func<Task> ScheduledOperation { get; private set; }
 
+    public List<Func<Task>> ScheduledOperations { get; } = [];
+
     public Task ExecuteAsync<TContext>(Func<TContext, Task> operation)
         where TContext : notnull
     {
@@ -36,6 +38,7 @@ internal sealed class TestContactCenterScopeExecutor : IContactCenterScopeExecut
         }
 
         ScheduledOperation = () => operation(_serviceProvider.GetRequiredService<TContext>());
+        ScheduledOperations.Add(ScheduledOperation);
 
         return true;
     }
@@ -48,6 +51,7 @@ internal sealed class TestContactCenterScopeExecutor : IContactCenterScopeExecut
         }
 
         ScheduledOperation = operation;
+        ScheduledOperations.Add(operation);
 
         return true;
     }

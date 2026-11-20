@@ -25,6 +25,28 @@ public interface IContactCenterOutbox
     Task DispatchAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Runs every incomplete registered handler for an already-enqueued event, except the handlers that already
+    /// completed for it on the real-time pass (<see cref="DispatchRealTimeAsync"/>).
+    /// </summary>
+    /// <param name="interactionEvent">The event to dispatch.</param>
+    /// <param name="completedHandlerIds">The stable identifiers of the handlers that already completed for the event.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task DispatchAsync(
+        InteractionEvent interactionEvent,
+        IReadOnlyCollection<string> completedHandlerIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Runs only the <see cref="IContactCenterRealTimeEventHandler"/> handlers for an event, each in its own isolated
+    /// scope, without claiming the event's outbox message. A failure is logged rather than thrown: the handler stays
+    /// incomplete and runs again with the event's other handlers.
+    /// </summary>
+    /// <param name="interactionEvent">The event whose screens should hear of it.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The stable identifiers of the handlers that completed.</returns>
+    Task<IReadOnlyCollection<string>> DispatchRealTimeAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Processes the outbox messages that are due for retry, re-running their handlers and applying
     /// exponential back-off or dead-lettering based on the outcome. Each due message is processed in its
     /// own fresh Orchard child scope so a poison message or a canceled YesSql session cannot block the
