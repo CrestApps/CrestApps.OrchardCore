@@ -55,7 +55,7 @@ The import runs in the background. When it ends, its row shows how many items we
 | An enrolment duration | The **Access length (days)**. |
 | Activity completion | How each item completes: a SCORM package with a required score passes at that score, one with a passing grade at the grade to pass, and others when the package reports completed or passed; a quiz with a passing grade when it is passed; files, links and pages when they are opened, or when the learner marks them done if Moodle used manual completion. |
 | Course completion | The activities it names are required in the outline and the others optional. A course grade to pass becomes the **Minimum course grade (%)**; manual completion by a role becomes approval by the course staff in that role (a teacher is an instructor, a non-editing teacher an assistant); a course without completion criteria never completes. |
-| Cohort sync | The course's cohort sync, with the site's cohort of the same id number or name (turn on Cohorts and Enrollment by Cohort). |
+| Cohort sync | The course's cohort sync, with the site's cohort of the same id number or name (turn on Cohorts and Enrollment by Cohort), when the person importing may manage enrollments. Otherwise the report says the cohort was not linked, in the same words whether or not the site has it. |
 | Restrictions | An activity open only to people by e-mail address or user name opens only to the site's users with them; an opening date stays. Hidden activities are optional. |
 
 Questions: multiple choice becomes single or multiple choice (or a survey question when no answer is worth points), and true/false, short answer, numerical, essay, matching, drag and drop into text, select missing words and description keep their kind; the choices no blank uses become the extra choices offered.
@@ -67,7 +67,7 @@ Each of these is a failed row of the import, naming the course and the activity:
 - activities the site has no item for: forums, glossaries, databases, MooTyper and others, and assignments, feedback and choices while their feature is off;
 - SCORM packages kept outside the backup (from a repository or a web address), and a package the package checks refuse, with the reason;
 - questions of a kind the site does not have (embedded answers, calculated, drag and drop onto an image), questions whose text shows a picture, answers with pictures, matching questions with extra answers, and short answers with a wildcard;
-- a cohort the site does not have, guest access and other enrolment methods, and completion on a date, a length of enrolment, unenrolment, self completion or other courses;
+- a cohort the site does not have or the importer may not link, guest access and other enrolment methods, and completion on a date, a length of enrolment, unenrolment, self completion or other courses;
 - things to finish by hand: the enrollment key to set, a quiz password (set an access code on the quiz), a hidden course or activity (unpublish it if it should stay hidden), an assignment graded on a scale, a feedback item such as a captcha, restrictions on groups, grades or other profile fields, and a completion role no course staff role matches (kept on the course, and kept by the course editor, but nobody approves until you choose who does), and several completion roles (only the first is imported).
 
 ## Import a course again

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Environment.Shell.Scope;
 using YesSql;
@@ -70,7 +71,9 @@ internal sealed class LearningCohortUsage : ICohortUsage
 
 /// <summary>
 /// Applies the cohorts of a course or path when it is published, and forgets them when it is deleted. The work runs
-/// after the request, in its own scope, so the published version is committed and enrolling commits nothing else.
+/// after the request, in its own scope, so the published version is committed and enrolling commits nothing else. A save
+/// made in a request records the person on <see cref="LearningCohortsPart.LinkedBy"/>, so the cohorts are applied only
+/// when that person may manage enrollments, whatever the posted content said.
 /// </summary>
 internal sealed class LearningCohortsContentHandler : ContentHandlerBase
 {
@@ -81,6 +84,15 @@ internal sealed class LearningCohortsContentHandler : ContentHandlerBase
         _httpContextAccessor = httpContextAccessor;
     }
 
+    public override Task CreatingAsync(CreateContentContext context)
+        => StampAsync(context.ContentItem);
+
+    public override Task UpdatingAsync(UpdateContentContext context)
+        => StampAsync(context.ContentItem);
+
+    public override Task PublishingAsync(PublishContentContext context)
+        => StampAsync(context.ContentItem);
+
     public override Task PublishedAsync(PublishContentContext context)
     {
         if (context.ContentItem.Has(nameof(LearningCohortsPart)) || context.PreviousItem?.Has(nameof(LearningCohortsPart)) == true)
@@ -89,6 +101,20 @@ internal sealed class LearningCohortsContentHandler : ContentHandlerBase
             var actor = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
             ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<CohortLearningSync>().ApplyAsync(targetId, actor));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    // The person saving in a request is who linked the cohorts; a save without a request (an import, a recipe, a
+    // scheduled publish) keeps the person recorded before.
+    private Task StampAsync(ContentItem contentItem)
+    {
+        var userId = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!string.IsNullOrEmpty(userId) && contentItem.Has(nameof(LearningCohortsPart)))
+        {
+            contentItem.Alter<LearningCohortsPart>(part => part.LinkedBy = userId);
         }
 
         return Task.CompletedTask;
@@ -157,4 +183,5 @@ internal sealed class CourseCohortLearningTarget : ICohortLearningTarget
             actor,
             "No longer in a cohort linked to the course",
             cancellationToken);
+
 }

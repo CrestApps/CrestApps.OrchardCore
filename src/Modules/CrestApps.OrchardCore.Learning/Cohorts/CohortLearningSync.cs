@@ -1,6 +1,8 @@
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -12,7 +14,8 @@ namespace CrestApps.OrchardCore.Learning.Cohorts;
 /// Keeps the enrollments of courses and learning paths in step with the cohorts they are linked to: a person who joins
 /// a linked cohort is enrolled, a person who leaves it loses what the cohort gave them, and linking or unlinking a
 /// cohort does the same for all its members. Each course or path is enrolled through the
-/// <see cref="ICohortLearningTarget"/> of the part that marks it.
+/// <see cref="ICohortLearningTarget"/> of the part that marks it. Linking a cohort enrolls everyone in it, so a change
+/// of the linked cohorts applies only when the person who made it may manage enrollments.
 /// </summary>
 public sealed class CohortLearningSync
 {
@@ -27,6 +30,8 @@ public sealed class CohortLearningSync
     private readonly IContentManager _contentManager;
     private readonly ICohortService _cohorts;
     private readonly IEnumerable<ICohortLearningTarget> _targets;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IServiceProvider _services;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -38,6 +43,8 @@ public sealed class CohortLearningSync
         IContentManager contentManager,
         ICohortService cohorts,
         IEnumerable<ICohortLearningTarget> targets,
+        IAuthorizationService authorizationService,
+        IServiceProvider services,
         IClock clock,
         ILogger<CohortLearningSync> logger)
     {
@@ -45,6 +52,8 @@ public sealed class CohortLearningSync
         _contentManager = contentManager;
         _cohorts = cohorts;
         _targets = targets;
+        _authorizationService = authorizationService;
+        _services = services;
         _clock = clock;
         _logger = logger;
     }
@@ -79,10 +88,12 @@ public sealed class CohortLearningSync
 
     /// <summary>
     /// Applies the cohorts of a published course or path: the members of a newly linked cohort are enrolled, and the
-    /// members of an unlinked one lose what it gave them.
+    /// members of an unlinked one lose what it gave them. A change of the linked cohorts applies only when the person
+    /// who made it may manage enrollments: <paramref name="actor"/>, or else the person the item's
+    /// <see cref="LearningCohortsPart.LinkedBy"/> names; with neither (a recipe, setup) the site made it.
     /// </summary>
     /// <param name="targetId">The content item id.</param>
-    /// <param name="actor">Who published the item.</param>
+    /// <param name="actor">Who published the item, or <see langword="null"/> when no person did.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task.</returns>
     public async Task ApplyAsync(string targetId, string actor, CancellationToken cancellationToken = default)
@@ -95,9 +106,10 @@ public sealed class CohortLearningSync
             return;
         }
 
+        var part = item.TryGet<LearningCohortsPart>(out var cohortsPart) ? cohortsPart : null;
         var wanted = new List<string>();
 
-        foreach (var cohortId in (item.TryGet<LearningCohortsPart>(out var part) ? part.CohortIds ?? [] : []).Distinct(StringComparer.Ordinal))
+        foreach (var cohortId in (part?.CohortIds ?? []).Distinct(StringComparer.Ordinal))
         {
             // A cohort that is gone links nobody; it stays on the item until someone saves it again.
             if (await _cohorts.FindByIdAsync(cohortId, cancellationToken) is not null)
@@ -110,6 +122,14 @@ public sealed class CohortLearningSync
         var applied = link?.CohortIds ?? [];
         var added = wanted.Except(applied, StringComparer.Ordinal).ToArray();
         var removed = applied.Except(wanted, StringComparer.Ordinal).ToArray();
+
+        if ((added.Length > 0 || removed.Length > 0) && !await MayLinkAsync(actor ?? part?.LinkedBy))
+        {
+            // Linking a cohort enrolls all its members: someone who may not manage enrollments changes nothing.
+            _logger.LogWarning("The cohorts of a course or path were changed by someone who may not manage enrollments; the change was not applied.");
+
+            return;
+        }
 
         if (wanted.Count == 0)
         {
@@ -216,6 +236,19 @@ public sealed class CohortLearningSync
                 await LeaveAsync(target, link.TargetId, cohortId, userId, link.CohortIds, actor, cancellationToken);
             }
         }
+    }
+
+    // No person (a recipe, setup, a background job with no one behind it) is the site itself.
+    private async Task<bool> MayLinkAsync(string userId)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return true;
+        }
+
+        var principal = await LearningUserPrincipals.CreateAsync(_services, userId);
+
+        return principal is not null && await _authorizationService.AuthorizeAsync(principal, LearningPermissions.ManageEnrollments);
     }
 
     private ICohortLearningTarget FindTarget(string partName)

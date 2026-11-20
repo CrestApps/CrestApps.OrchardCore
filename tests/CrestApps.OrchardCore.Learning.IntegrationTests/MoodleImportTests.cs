@@ -435,12 +435,12 @@ public sealed class MoodleImportTests
             .Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType == LearningConstants.ContentTypes.Course && index.DisplayText == title)
             .FirstOrDefaultAsync());
 
-    private async Task<ContentTransferEntry> ImportAsync(byte[] backup)
+    private async Task<ContentTransferEntry> ImportAsync(byte[] backup, string ownerName = "admin")
     {
         var entryId = await _fixture.InTenantAsync(async services =>
         {
             var users = services.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>>();
-            var admin = await users.FindByNameAsync("admin");
+            var admin = await users.FindByNameAsync(ownerName);
             var store = services.GetRequiredService<IContentTransferFileStore>();
             var session = services.GetRequiredService<ISession>();
             var storedName = await store.CreateFileFromStreamAsync(Guid.NewGuid().ToString("n") + ".mbz", new MemoryStream(backup), false);

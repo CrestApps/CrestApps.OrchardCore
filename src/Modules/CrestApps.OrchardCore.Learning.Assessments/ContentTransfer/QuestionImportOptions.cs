@@ -301,15 +301,7 @@ internal sealed class QuestionSourceRowFilter : IContentImportRowFilter
 
         _importerRead = true;
 
-        if (string.IsNullOrEmpty(_entry?.Owner) ||
-            _services.GetService<Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>>() is not { } users ||
-            _services.GetService<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<global::OrchardCore.Users.IUser>>() is not { } principals ||
-            await users.FindByIdAsync(_entry.Owner) is not { } user)
-        {
-            return null;
-        }
-
-        return _importer = await principals.CreateAsync(user);
+        return _importer = await CrestApps.OrchardCore.Learning.Core.Services.LearningUserPrincipals.CreateAsync(_services, _entry?.Owner);
     }
 
     public Task<bool> ShouldSkipRowAsync(ContentImportRowFilterContext context)

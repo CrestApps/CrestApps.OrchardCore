@@ -1,4 +1,5 @@
 using System.Net;
+using CrestApps.OrchardCore.Learning.Cohorts;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Programs;
 using CrestApps.OrchardCore.Learning.Programs.Models;
@@ -180,6 +181,37 @@ public sealed class CohortEnrollmentTests
         Assert.NotEqual(HttpStatusCode.OK, forbidden.StatusCode);
     }
 
+    [Fact]
+    public async Task Round11S1_ACohortLinkSavedBySomeoneWhoMayNotManageEnrollments_EnrollsNobody_UntilSomeoneWhoMaySavesIt()
+    {
+        // Arrange: an instructor (Manage own courses, not Manage enrollments) links a site cohort to a course, as the
+        // Moodle import or the content API could.
+        var (ana, _, _) = await UsersAsync();
+        var cohortId = await CohortAsync(ana);
+        var courseId = await CourseLinkedByAsync(_fixture.InstructorId, cohortId);
+
+        // Act
+        var afterInstructor = await OpenAsync(ana, courseId);
+        var linkAfterInstructor = await _fixture.InTenantAsync(services => services.GetRequiredService<CohortLearningSync>().FindLinkAsync(courseId));
+
+        await LinkByAsync(courseId, await AdminIdAsync(), cohortId);
+
+        var afterAdmin = await OpenAsync(ana, courseId);
+
+        // Assert
+        Assert.Null(afterInstructor);
+        Assert.Null(linkAfterInstructor);
+        Assert.NotNull(afterAdmin);
+    }
+
+    private Task<string> AdminIdAsync()
+        => _fixture.InTenantAsync(async services =>
+        {
+            var users = services.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>>();
+
+            return await users.GetUserIdAsync(await users.FindByNameAsync("admin"));
+        });
+
     private async Task<(string Ana, string Ben, string Cid)> UsersAsync()
     {
         var suffix = Guid.NewGuid().ToString("n")[..6];
@@ -203,6 +235,9 @@ public sealed class CohortEnrollmentTests
         });
 
     private Task<string> CourseAsync(params string[] cohortIds)
+        => CourseLinkedByAsync(null, cohortIds);
+
+    private Task<string> CourseLinkedByAsync(string linkedBy, params string[] cohortIds)
         => _fixture.InTenantAsync(async services =>
         {
             var contentManager = services.GetRequiredService<IContentManager>();
@@ -210,7 +245,11 @@ public sealed class CohortEnrollmentTests
 
             course.DisplayText = "Cohort course " + Guid.NewGuid().ToString("n")[..6];
             course.Alter<TitlePart>(part => part.Title = course.DisplayText);
-            course.Alter<LearningCohortsPart>(part => part.CohortIds = [.. cohortIds]);
+            course.Alter<LearningCohortsPart>(part =>
+            {
+                part.CohortIds = [.. cohortIds];
+                part.LinkedBy = linkedBy;
+            });
             await contentManager.CreateAsync(course, VersionOptions.Published);
 
             return course.ContentItemId;
@@ -231,12 +270,19 @@ public sealed class CohortEnrollmentTests
         });
 
     private Task LinkAsync(string contentItemId, params string[] cohortIds)
+        => LinkByAsync(contentItemId, null, cohortIds);
+
+    private Task LinkByAsync(string contentItemId, string linkedBy, params string[] cohortIds)
         => _fixture.InTenantAsync(async services =>
         {
             var contentManager = services.GetRequiredService<IContentManager>();
             var item = await contentManager.GetAsync(contentItemId, VersionOptions.DraftRequired);
 
-            item.Alter<LearningCohortsPart>(part => part.CohortIds = [.. cohortIds]);
+            item.Alter<LearningCohortsPart>(part =>
+            {
+                part.CohortIds = [.. cohortIds];
+                part.LinkedBy = linkedBy;
+            });
             await contentManager.UpdateAsync(item);
             await contentManager.PublishAsync(item);
         });

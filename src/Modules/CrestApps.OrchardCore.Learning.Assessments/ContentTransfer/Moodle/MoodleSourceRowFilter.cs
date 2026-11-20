@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Learning.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Core.Moodle;
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
@@ -130,9 +131,13 @@ internal sealed class MoodleSourceRowFilter : IContentImportRowFilter
         {
             context.SkipReason = S["{0}: Moodle enrols learners by the cohort \"{1}\"; turn on Cohorts and Enrollment by Cohort and import the backup again.", title, name];
         }
-        else if (MoodleCohorts.Match(cohortSync, (await cohorts.ListAsync(10_000)).Select(cohort => (cohort.CohortId, cohort.Name))) is null)
+        else if (await ImporterAsync() is not { } importer ||
+            !await _authorizationService.AuthorizeAsync(importer, LearningPermissions.ManageEnrollments) ||
+            MoodleCohorts.Match(cohortSync, (await cohorts.ListAsync(10_000)).Select(cohort => (cohort.CohortId, cohort.Name))) is null)
         {
-            context.SkipReason = S["{0}: Moodle enrols learners by the cohort \"{1}\", which the site has no cohort for (by id number or name); add it under Access Control > Cohorts and import the backup again.", title, name];
+            // One message whether the cohort exists or the importer may not link it: the report never tells which
+            // cohorts the site has to someone who may not manage enrollments.
+            context.SkipReason = S["{0}: Moodle enrols learners by the cohort \"{1}\"; it is not linked to the course. A cohort is linked only when the site has a cohort of the same id number or name (Access Control > Cohorts) and the person importing may manage enrollments; then import the backup again.", title, name];
         }
 
         if (context.SkipReason is not null)
@@ -154,15 +159,7 @@ internal sealed class MoodleSourceRowFilter : IContentImportRowFilter
 
         _importerRead = true;
 
-        if (string.IsNullOrEmpty(_entry?.Owner) ||
-            _services.GetService<UserManager<IUser>>() is not { } users ||
-            _services.GetService<IUserClaimsPrincipalFactory<IUser>>() is not { } principals ||
-            await users.FindByIdAsync(_entry.Owner) is not { } user)
-        {
-            return null;
-        }
-
-        return _importer = await principals.CreateAsync(user);
+        return _importer = await LearningUserPrincipals.CreateAsync(_services, _entry?.Owner);
     }
 }
 

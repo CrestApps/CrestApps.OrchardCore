@@ -22,6 +22,7 @@ using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.Surveys;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
 using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -232,7 +233,7 @@ internal sealed class MoodleImportHandler : IContentImportHandler
             ApplyCompletion(part, moodle);
         });
 
-        await ApplyCohortsAsync(course, moodle);
+        await ApplyCohortsAsync(context, course, moodle);
 
         if (summary is not null)
         {
@@ -311,12 +312,21 @@ internal sealed class MoodleImportHandler : IContentImportHandler
     }
 
     // Moodle's cohort sync becomes the course's cohort sync (Enrollment by Cohort), with the site's cohort of the same
-    // id number or name; a cohort the site does not have was reported when the backup was read.
-    private async Task ApplyCohortsAsync(ContentItem course, MoodleCourse moodle)
+    // id number or name, when the person who queued the import may manage enrollments: linking a cohort enrolls everyone
+    // in it. A cohort the site does not have, or an importer who may not, was reported when the backup was read.
+    private async Task ApplyCohortsAsync(ContentImportContext context, ContentItem course, MoodleCourse moodle)
     {
         var syncs = moodle.Enrolments.Where(enrolment => enrolment.Enabled && enrolment.Method == "cohort").ToList();
 
         if (syncs.Count == 0 || _services.GetService<ICohortService>() is not { } cohorts || !_services.GetServices<ICohortLearningTarget>().Any())
+        {
+            return;
+        }
+
+        var owner = context.Entry?.Owner;
+
+        if (await LearningUserPrincipals.CreateAsync(_services, owner) is not { } importer ||
+            !await _services.GetRequiredService<IAuthorizationService>().AuthorizeAsync(importer, LearningPermissions.ManageEnrollments))
         {
             return;
         }
@@ -329,7 +339,11 @@ internal sealed class MoodleImportHandler : IContentImportHandler
             return;
         }
 
-        course.Alter<LearningCohortsPart>(part => part.CohortIds = [.. (part.CohortIds ?? []).Concat(matched).Distinct(StringComparer.Ordinal)]);
+        course.Alter<LearningCohortsPart>(part =>
+        {
+            part.CohortIds = [.. (part.CohortIds ?? []).Concat(matched).Distinct(StringComparer.Ordinal)];
+            part.LinkedBy = owner;
+        });
     }
 
     private static void ApplyEnrolment(CoursePart part, MoodleCourse moodle)

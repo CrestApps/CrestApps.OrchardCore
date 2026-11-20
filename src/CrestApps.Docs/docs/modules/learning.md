@@ -152,7 +152,7 @@ Secure Media protects the rest of the media library too: files outside lesson fo
 
 ## Enrollment by cohort
 
-With **Enrollment by Cohort** on, the editor of a course, and of a learning path when Learning Programs is on, has a **Cohorts** card for people with **Manage enrollments**. The cohorts chosen are kept on the item in a `LearningCohortsPart` (`CohortIds`), so recipes and deployments carry them with the course; the type does not need the part.
+With **Enrollment by Cohort** on, the editor of a course, and of a learning path when Learning Programs is on, has a **Cohorts** card for people with **Manage enrollments**. The cohorts chosen are kept on the item in a `LearningCohortsPart` (`CohortIds`), so recipes and deployments carry them with the course; the type does not need the part. The part also records who saved the cohorts (`LinkedBy`): every save made in a request writes the person saving, whatever the posted content said, and the Moodle import writes the person who queued it.
 
 When the item is published, a deferred task (after the request, in its own scope, because enrolling commits) compares the cohorts with the ones it applied before, kept in a `CohortLearningLink` document of the `Learning` collection with a `CohortLearningLinkIndex` row per cohort:
 
@@ -166,6 +166,8 @@ Each kind of item is enrolled through an `ICohortLearningTarget`, named by the p
 | --- | --- | --- | --- |
 | Course (Learning) | `CoursePart` | Enrolls with a grant of source `Cohort` and a source id made of the cohort, course and user ids (`CohortEnrollmentGrants.SourceId`), one grant per cohort. Someone who completed the course and has no open enrollment is not enrolled again. | Revokes that grant only. An enrollment left with no grant is withdrawn; one another source still grants stays open, and a completed one never changes. |
 | Learning path (Programs) | `LearningPathPart` | Starts the person with source `Cohort`; a person already on the path keeps their progress. | When the person is in no other linked cohort, `ILearningPathService.StopAsync` removes progress the sync started and revokes the path's course grants. A path the person, required learning or anyone else started, and a completed one, stay. |
+
+Linking a cohort enrolls everyone in it, so a change of the linked cohorts is applied only when the person who published the item, or else the person `LinkedBy` names, holds **Manage enrollments**; a change by anyone else (an instructor saving through the content API, a scheduled publish of their draft) is logged and not applied. A publish without a person (a recipe, setup) is the site's own.
 
 A cohort that a course or path is linked to cannot be deleted (`ICohortUsage`). Deleting the course forgets its link without touching enrollments. To target cohorts with required learning instead, use an audience with the `CohortMember` rule.
 

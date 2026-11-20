@@ -13,4 +13,12 @@ public sealed class LearningCohortsPart : ContentPart
     /// Gets or sets the ids of the linked cohorts.
     /// </summary>
     public List<string> CohortIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the user id of the person who last saved the cohorts. Linking a cohort enrolls everyone in it, so
+    /// the sync applies the cohorts only when this person (or the person who publishes the item) may manage enrollments.
+    /// It is written by the editor, by the Moodle import and on every save made in a request, never taken from the
+    /// posted content.
+    /// </summary>
+    public string LinkedBy { get; set; }
 }

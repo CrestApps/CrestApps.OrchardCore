@@ -41,6 +41,8 @@ From then on:
 - a completed enrollment never changes, and someone who already completed the course isn't enrolled again;
 - removing a cohort from the card and publishing ends the enrollments it gave, the same way.
 
+Only a change saved by someone with **Manage enrollments** is applied: if someone without it changes the cohorts (through an import or the content API), nothing is enrolled or ended.
+
 On a learning path, a person removed from every linked cohort is taken off the path, unless they started it themselves or required learning started it. In **Learning > Enrollments**, the enrollment's grants show **Cohort** as the source.
 
 ## Find enrollments
