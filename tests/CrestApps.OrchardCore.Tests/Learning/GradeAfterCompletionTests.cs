@@ -70,8 +70,8 @@ public sealed class GradeAfterCompletionTests
         // Act
         var kind = services.BuildServiceProvider().GetRequiredService<IOptions<CourseItemKindOptions>>().Value.Find("Coursework");
 
-        // Assert
-        Assert.True(kind.GradableCompletesWhenGraded);
+        // Assert: Graded stays the default; an author may still choose completion on hand-in for graded work (remaining
+        // work section 3, item 12), and a grade given after the course completed reaches it (the test above).
         Assert.Equal(CompletionModes.Graded, kind.DefaultCompletionMode);
     }
 }

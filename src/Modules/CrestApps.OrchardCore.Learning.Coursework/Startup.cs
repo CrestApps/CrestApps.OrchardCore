@@ -20,6 +20,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DataSources;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Recipes;
@@ -33,10 +34,22 @@ namespace CrestApps.OrchardCore.Learning.Coursework;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private readonly IShellConfiguration _configuration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="configuration">The tenant configuration.</param>
+    public Startup(IShellConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(CourseworkConstants.CollectionName));
+        services.Configure<CourseworkOptions>(_configuration.GetSection("CrestApps:Learning:Coursework"));
         services.AddDataMigration<CourseworkMigrations>()
             .AddIndexProvider<SubmissionIndexProvider>();
 

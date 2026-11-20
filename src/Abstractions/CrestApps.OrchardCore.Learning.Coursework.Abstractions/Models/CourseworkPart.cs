@@ -87,4 +87,9 @@ public enum CourseworkSubmissionType
     /// Text, files, or both.
     /// </summary>
     TextAndFiles,
+
+    /// <summary>
+    /// Nothing: a grader signs the work off with a grade, such as a mentor's practical sign-off.
+    /// </summary>
+    SignOff,
 }

@@ -4,8 +4,9 @@
     var part = Model.Part;
     var latest = Model.Latest;
     var accept = string.Join(",", part.AllowedExtensions ?? []);
-    var takesText = part.SubmissionType != CourseworkSubmissionType.Files;
-    var takesFiles = part.SubmissionType != CourseworkSubmissionType.Text;
+    var signOff = part.SubmissionType == CourseworkSubmissionType.SignOff;
+    var takesText = !signOff && part.SubmissionType != CourseworkSubmissionType.Files;
+    var takesFiles = !signOff && part.SubmissionType != CourseworkSubmissionType.Text;
 }
 
 <div class="card mb-3 learning-coursework" data-learning-coursework>
@@ -28,6 +29,11 @@
                 <li class="list-inline-item"><i class="fa-solid fa-paperclip me-1" aria-hidden="true"></i>@T.Plural(part.MaxFiles, "Up to 1 file", "Up to {0} files"), @T["{0} MB each", part.MaxFileSizeMb]@(string.IsNullOrEmpty(accept) ? null : " (" + accept + ")")</li>
             }
         </ul>
+
+        @if (signOff && (latest is null || latest.Status == SubmissionStatus.Submitted))
+        {
+            <p class="mb-3"><i class="fa-solid fa-user-check me-1" aria-hidden="true"></i>@T["Nothing is handed in here: your instructor signs this off with a grade once you have done the work."]</p>
+        }
 
         @if (!Model.SignedIn)
         {
@@ -53,12 +59,16 @@
                 {
                     <p class="mb-1"><i class="fa-solid fa-rotate-left me-1" aria-hidden="true"></i>@T["Your work was returned to you to hand in again."]</p>
                 }
+                else if (latest.SignOff)
+                {
+                    <p class="mb-1"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["Your instructor started signing this off."]</p>
+                }
                 else
                 {
                     <p class="mb-1"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["Your work is handed in and waits for a grader."]</p>
                 }
                 <p class="mb-0 small">
-                    @T["Handed in"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(latest.SubmittedUtc, DateTimeKind.Utc), Format: "g"))
+                    @(latest.SignOff ? T["Opened"] : T["Handed in"]) @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(latest.SubmittedUtc, DateTimeKind.Utc), Format: "g"))
                     @if (latest.Late)
                     {
                         <span class="badge text-bg-warning ms-1">@T["Late"]</span>

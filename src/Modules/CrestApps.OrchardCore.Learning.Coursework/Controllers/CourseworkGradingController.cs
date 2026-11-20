@@ -7,11 +7,13 @@ using CrestApps.OrchardCore.Learning.Coursework.Core.Services;
 using CrestApps.OrchardCore.Learning.Coursework.Models;
 using CrestApps.OrchardCore.Learning.Coursework.Services;
 using CrestApps.OrchardCore.Learning.Coursework.ViewModels;
+using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -35,6 +37,7 @@ public sealed class CourseworkGradingController : Controller
     private readonly ICourseworkContentSource _contentSource;
     private readonly IContentManager _contentManager;
     private readonly ICourseStructureService _courseStructure;
+    private readonly IEnrollmentStore _enrollments;
     private readonly GradingScope _scope;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUserSearchService _userSearchService;
@@ -50,6 +53,7 @@ public sealed class CourseworkGradingController : Controller
         ICourseworkContentSource contentSource,
         IContentManager contentManager,
         ICourseStructureService courseStructure,
+        IEnrollmentStore enrollments,
         GradingScope scope,
         IAuthorizationService authorizationService,
         IUserSearchService userSearchService,
@@ -60,6 +64,7 @@ public sealed class CourseworkGradingController : Controller
         _contentSource = contentSource;
         _contentManager = contentManager;
         _courseStructure = courseStructure;
+        _enrollments = enrollments;
         _scope = scope;
         _authorizationService = authorizationService;
         _userSearchService = userSearchService;
@@ -97,10 +102,13 @@ public sealed class CourseworkGradingController : Controller
         var pager = new Pager(pagerParameters, pagerOptions.Value);
         var (count, items) = await _submissions.ListByCourseworkAsync(coursework.ContentItemId, (pager.Page - 1) * pager.PageSize, pager.PageSize, HttpContext.RequestAborted);
         var names = await NamesAsync(items.Select(item => item.UserId));
+        var isSignOff = coursework.FindPart<CourseworkPart>()?.SubmissionType == CourseworkSubmissionType.SignOff;
 
         return View(new CourseworkSubmissionsViewModel
         {
             Coursework = coursework,
+            IsSignOff = isSignOff,
+            SignOffLearners = isSignOff && !string.IsNullOrEmpty(courseId) ? await SignOffLearnersAsync(courseId) : [],
             List = new AdminListContext<SubmissionRow>
             {
                 Source = items.Select(item => new SubmissionRow
@@ -111,6 +119,55 @@ public sealed class CourseworkGradingController : Controller
                 Pager = await shapeFactory.PagerAsync(pager, count, new RouteValueDictionary { ["courseworkId"] = coursework.ContentItemId }),
             },
         });
+    }
+
+    /// <summary>
+    /// Opens the sign-off of a learner for coursework that takes no hand-in, and goes to its grading page.
+    /// </summary>
+    /// <param name="courseworkId">The coursework item.</param>
+    /// <param name="enrollmentId">The learner's enrollment.</param>
+    /// <returns>The grading page, or back to the list with why it was refused.</returns>
+    [HttpPost]
+    [Admin("learning/coursework/{courseworkId}/sign-off", "LearningCourseworkSignOff")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SignOff(string courseworkId, string enrollmentId)
+    {
+        var coursework = string.IsNullOrEmpty(courseworkId) ? null : await _contentManager.GetAsync(courseworkId, VersionOptions.Latest);
+
+        if (coursework is null || !coursework.Has<CourseworkPart>())
+        {
+            return NotFound();
+        }
+
+        var enrollment = string.IsNullOrEmpty(enrollmentId) ? null : await _enrollments.FindByIdAsync(enrollmentId, HttpContext.RequestAborted);
+
+        // The same rule as grading the learner's work: a grader of the learner in the course.
+        if (enrollment is null || !await _scope.CanGradeAsync(User, enrollment.UserId, enrollment.CourseId))
+        {
+            return Forbid();
+        }
+
+        var result = await _submissions.StartSignOffAsync(new SignOffRequest
+        {
+            CourseworkId = coursework.ContentItemId,
+            EnrollmentId = enrollment.ItemId,
+            Actor = User.FindFirstValue(ClaimTypes.NameIdentifier),
+        }, HttpContext.RequestAborted);
+
+        if (result.Succeeded)
+        {
+            return RedirectToAction(nameof(Submission), new { id = result.Submission.ItemId });
+        }
+
+        await _notifier.WarningAsync(result.Error switch
+        {
+            SubmissionErrors.NotSignOff => H["This coursework takes work from learners; grade what they hand in instead."],
+            SubmissionErrors.OwnSubmission => H["Nobody signs off their own work."],
+            SubmissionErrors.NotEnrolled => H["The learner has no active enrollment in the course of this coursework."],
+            _ => ErrorText(result.Error),
+        });
+
+        return RedirectToAction(nameof(Index), new { courseworkId = coursework.ContentItemId });
     }
 
     /// <summary>
@@ -280,6 +337,18 @@ public sealed class CourseworkGradingController : Controller
         }
 
         return model;
+    }
+
+    // The course's active learners a grader may sign off, by name; the page lists at most 1,000.
+    private async Task<IList<SelectListItem>> SignOffLearnersAsync(string courseId)
+    {
+        var (_, enrollments) = await _enrollments.PageAsync(new EnrollmentQuery { CourseId = courseId, Status = EnrollmentStatus.Active }, 1, 1000, HttpContext.RequestAborted);
+        var names = await NamesAsync(enrollments.Select(enrollment => enrollment.UserId));
+
+        return enrollments
+            .Select(enrollment => new SelectListItem(names.TryGetValue(enrollment.UserId ?? string.Empty, out var name) ? name : enrollment.UserId, enrollment.ItemId))
+            .OrderBy(item => item.Text, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
     }
 
     private async Task<Submission> FindGradableAsync(string id)

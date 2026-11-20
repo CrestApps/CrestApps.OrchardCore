@@ -61,7 +61,11 @@
                     }
                 </ul>
             }
-            @if (string.IsNullOrWhiteSpace(submission.Text) && submission.Files.Count == 0)
+            @if (submission.SignOff)
+            {
+                <p class="text-secondary mb-0"><i class="fa-solid fa-user-check me-1" aria-hidden="true"></i>@T["A sign-off: the learner hands nothing in. Grade the work you saw them do."]</p>
+            }
+            else if (string.IsNullOrWhiteSpace(submission.Text) && submission.Files.Count == 0)
             {
                 <p class="text-secondary mb-0">@T["Nothing is left of this hand-in: the learner's personal data was erased."]</p>
             }
