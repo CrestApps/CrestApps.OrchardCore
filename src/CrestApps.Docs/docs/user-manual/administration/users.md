@@ -111,7 +111,23 @@ To add one, click **Add audience** and fill in:
 | **Who is in it** | **People who match every rule**, or **People who match any rule**. |
 | **Rules** | Pick a rule, then the values it matches; within one rule a person matches any value chosen. Click **Add rule** for another, or the bin to remove one. |
 
-The rules you can pick depend on the features that are on: **In a role**, **Member of a team or its sub-teams**, **Hired at least some days ago**, **Employment type**, **Holds a skill**, **Holds a valid certification** and **Enrolled in a course**. Click **Save**, then **People** to check the audience holds who you expect.
+The rules you can pick depend on the features that are on: **In a role**, **Member of a team or its sub-teams**, **Hired at least some days ago**, **Employment type**, **Holds a skill**, **Holds a valid certification**, **Enrolled in a course** and **Cohort member**. Click **Save**, then **People** to check the audience holds who you expect.
+
+## Cohorts
+
+A cohort is a named group of people you keep by hand, such as "2026 new hires" or "Warehouse supervisors". Where an audience follows rules, a cohort holds exactly the people you add, so use it for a group no rule describes. Turn on the **Cohorts** feature, then open **Access Control > Cohorts**.
+
+1. Click **Add cohort**, give it a **Name** (each cohort has its own) and, if you like, a **Description**, and click **Save**.
+2. On the cohort's people page, add people:
+    - **People**: search by name, user name or e-mail and choose one or more.
+    - **Many at once**: paste user names or e-mail addresses, one per line or separated by commas.
+
+    Click **Add to cohort**. People already in it are skipped, and the page tells you about any name that matches no user.
+3. To take someone out, click **Remove** on their row.
+
+The list shows how many people each cohort holds. **Edit** renames a cohort; **Delete**, in the row's menu, deletes it with its list of people. A cohort a course or learning path is linked to can't be deleted until you unlink it. Someone whose account is deleted leaves every cohort.
+
+To target a cohort from a feature that uses audiences, such as required learning, add an audience with the **Cohort member** rule and pick the cohorts. Courses and learning paths can enroll a cohort's people directly: see [Enroll a cohort](../learning/enrollments.md#enroll-a-cohort).
 
 ## Sign in with an email code
 

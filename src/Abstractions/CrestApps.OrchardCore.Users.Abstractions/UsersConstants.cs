@@ -26,6 +26,11 @@ public static class UsersConstants
         public const string Audiences = "CrestApps.OrchardCore.Users.Audiences";
 
         /// <summary>
+        /// Cohorts: named groups of people kept by hand, and the "Cohort member" audience rule.
+        /// </summary>
+        public const string Cohorts = "CrestApps.OrchardCore.Users.Cohorts";
+
+        /// <summary>
         /// The "my account" area on the site: <c>/account</c>, its menu and the frame of its pages, which modules add
         /// their pages to (orders, tickets, subscriptions...).
         /// </summary>
@@ -83,4 +88,14 @@ public static class UsersConstants
     /// The name of the recipe and deployment step of the audiences administrators define.
     /// </summary>
     public const string AudiencesRecipeStepName = "UserAudiences";
+
+    /// <summary>
+    /// The name of the recipe and deployment step of cohorts and their members.
+    /// </summary>
+    public const string CohortsRecipeStepName = "UserCohorts";
+
+    /// <summary>
+    /// The YesSql collection of cohorts and their members.
+    /// </summary>
+    public const string CohortsCollectionName = "Cohorts";
 }

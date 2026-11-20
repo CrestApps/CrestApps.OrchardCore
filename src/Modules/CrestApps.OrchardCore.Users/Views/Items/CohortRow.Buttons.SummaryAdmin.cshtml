@@ -1,0 +1,5 @@
+@using CrestApps.OrchardCore.Users.Cohorts
+@model ShapeViewModel<CohortRow>
+
+<a asp-controller="Cohorts" asp-action="Members" asp-route-id="@Model.Value.CohortId" class="btn btn-secondary btn-sm">@T["People"]</a>
+<a asp-controller="Cohorts" asp-action="Edit" asp-route-id="@Model.Value.CohortId" class="btn btn-primary btn-sm">@T["Edit"]</a>
