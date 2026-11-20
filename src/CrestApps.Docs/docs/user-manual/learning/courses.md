@@ -70,3 +70,16 @@ Learners see each file under the name it had when you uploaded it. Files can be 
 ## The catalog
 
 People find courses by searching at */search/courses* once your administrator has run the **Learning course catalog** recipe. Only published courses are listed.
+
+## Text between lessons
+
+Add a **Text** item to a course for text, pictures or a video that learners read in place, such as an introduction to a section. It shows in the course outline and in the player above the next lesson, and it is never completed, graded or required, so it never holds back a learner's progress.
+
+## Who approves completion, and courses that never complete
+
+Under **Completion and grade**, after ticking that a member of the course staff approves each completion, choose **Who approves**: anyone who manages the enrollments, or only the course's instructors, assistants, graders or observers. Tick **No completion criteria: the course never completes** for a course people read without finishing it; their progress is still shown.
+
+## Open an item only to some people
+
+On a lesson's **Who can open it** card, choose **People** or an **Audience** (from **Users > Audiences**, for example everyone of a team or with a profile value). Only those people, and the course staff, open the item; others see that it is open only to some learners.
+

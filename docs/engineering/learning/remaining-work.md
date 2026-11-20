@@ -131,7 +131,7 @@ Build, in this order. Items 1-6 cover almost every course; the rest is the long 
 3. ~~**Course categories (449 courses).**~~ Done: Course Categories feature and the course catalog (`adc810c5f`). A category tree on courses (Taxonomies), with category browsing and filters in the catalog and the admin lists.
 4. ~~**Course start and end dates (449).**~~ Done (`cac60cf24`): no access before the start; the end date does not lock (Moodle's meaning), it moves the course to Past courses. A course opens or closes on dates, in addition to the access length after enrolment.
 5. ~~**Cohorts (300 courses; the learning plans are assigned to cohorts).**~~ Done on `ma/lms-cohorts-8f9041` (not pushed): `5a7c5c0bb` (the Cohorts feature in Users: `ICohortService`, observers and usages, Access Control > Cohorts with the UserPicker and bulk add, the `UserCohorts` recipe and deployment steps, the **Cohort member** audience rule), `c6f6c53d2` (Enrollment by Cohort: a Cohorts card on the course and learning path editors, sync on publish and on joining or leaving, one `Cohort` grant per cohort so leaving ends only that grant; `ILearningPathService.StopAsync`), `40512fd1c` and `73c628ddc` (guard fixes, card placement). Teams was not reused: a team is an organization unit whose members other modules supply, a cohort is a flat hand-kept list of any users. Someone who completed a course is not enrolled again on joining; a completed enrollment or path never changes.
-6. **Inline text and media in a course (1,234 labels in 195 courses).** A "Text" course item or outline block that keeps HTML, images and video embeds, and isn't tracked for completion.
+6. ~~**Inline text and media in a course (1,234 labels in 195 courses).**~~ Done on `ma/lms-package-content-host` (`ffd8ebf90`): the Text course item (`TextBlock`, an `Inline` kind), shown in place in the outline and the player, never required or tracked; the Moodle import makes labels Text items. A "Text" course item or outline block that keeps HTML, images and video embeds, and isn't tracked for completion.
 7. ~~**Quizzes (152 quiz courses):**~~ Done on `ma/lms-quiz-gaps-9bb028`: questions per page, immediate feedback (check and lock), review options per moment (the review policy stays the default), the author's question order (an Order list in the editor), survey, drag into text, select missing words (gapselect) and description question types with QTI (gap match, inline choice, no interaction) and spreadsheet import. The question picker was done in section 2b.
    - several questions per page;
    - immediate feedback per question;
@@ -142,14 +142,14 @@ Build, in this order. Items 1-6 cover almost every course; the rest is the long 
    - drag-into-text with distractor choices;
    - gapselect (drop-down blanks);
    - description (an ungraded text block).
-8. **Completion:**
+8. ~~**Completion:**~~ Done on `ma/lms-package-content-host` (`433cfb58c`): `StaffApproval` with a `Role` (only course staff in that role approve), `CoursePart.NeverCompletes`, the `MinimumScore` completion mode; the Moodle import maps all three.
    - manual completion by a named role (62 courses);
    - "no criteria" courses that never complete (139);
    - SCORM "viewed + graded + score at least N" (251 of 337 activities read).
-9. **Access:**
+9. ~~**Access:**~~ Done on `ma/lms-package-content-host` (`0110b9505`): the `People` release rule (named people, or a Users audience for profile-based groups); learning paths skip unpublished courses; hidden Moodle activities import as optional. Not built: an audience rule source for user profile fields (the Users module has none yet); the import maps people by e-mail address or user name only.
    - restrictions to named people or profile fields (25 courses);
    - hidden items or courses that don't block a learning path from completing (the 30 Day plan holds 4 hidden courses).
-10. **SCORM settings:** new window (18), attempt limits (9), grading method (10).
+10. ~~**SCORM settings:**~~ Done on `ma/lms-package-content-host` (`d83b847fc`): open in a new window (a window page of the site, through the content-host bridge when a host is set), attempt limits (then review only), grading method across attempts (highest, average, first, last). New window (18), attempt limits (9), grading method (10).
 11. ~~**Media:**~~ Done on `ma/lms-activities-c0c0d6` (plan section 19, "Moodle migration: media, coursework and small activities"):
     - files over 30 MB: Learning raises Orchard Core Media's `MaxFileSize` to 2 GB (`CrestApps:Learning:Media:MaxFileSize`); the IIS and proxy request limits are documented;
     - `.ods`, `.odp`, `.odg`, `.odt`, `.rtf`, `.txt`, `.pps`, `.ppsx`, `.vsdx`, `.vtt` and `.srt` are allowed (configurable; programs, scripts and macro files never);
@@ -167,7 +167,9 @@ Build, in this order. Items 1-6 cover almost every course; the rest is the long 
     - MooTyper typing practice: **dropped** at migration; replaced by a link lesson to a typing site or a learning package. Follow-up only if typing scores must be kept;
     - database: **dropped** at migration; replaced by coursework (what learners hand in) or a page lesson (what they read).
 14. ~~**Competencies.**~~ Done on `ma/lms-competencies-ff9926` (not pushed): the Learning Competencies feature. A competency is a Skills skill and a framework its category; the Competencies part on a course or a learning path grants skills at a level on completion when `CompletionEvidence` supports issuing; My competencies in Your account; the Skills **Skill holders** report with a framework filter; Moodle competency framework CSV exports import through ContentTransfer (the `Skills.Skill` import target, on the new ContentTransfer import-target abstraction). Not done: course recipes still name skills by id, and Moodle's nested competencies import flat.
-15. **Course images, and images inside summaries and labels.** Import them into the media library.
+15. ~~**Course images, and images inside summaries and labels.**~~ Done on `ma/lms-package-content-host` (`6b8fc657e` catalog covers, `0d7f4f0fc` import): the course picture becomes its cover, shown in the catalog; pictures of summaries, labels, pages and descriptions go to the media library with their links rewritten. Pictures in questions and section summaries are not imported. Import them into the media library.
+
+**Moodle import after the merges** (`0d7f4f0fc`, `d8b3b31ff`): labels, assignments (coursework), feedback and choice (surveys), IMS content packages, quiz pages, immediate feedback and review options, survey, drag-into-text, gapselect and description questions, completion by role, no criteria and the score rule, restrictions to people and dates, SCORM window, attempts and grading, pictures, and cohort sync (matched by id number or name) are imported. Still failed rows: forum, glossary, database, MooTyper and the other modules without an item, a cohort the site does not have, other enrolment methods and completion conditions, unsupported question types; flagged: scales, captchas, other restriction conditions, completion roles the staff does not have.
 
 ## 4. Smaller follow-ups (done on `ma/lms-followups-133fef`, not pushed, except the AI and Reports items)
 

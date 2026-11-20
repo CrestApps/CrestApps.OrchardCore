@@ -41,6 +41,16 @@ From then on, every package opens from that host, and that host shows nothing bu
 
 An IMS content package (for example one exported from Moodle) is a `.zip` of web pages with a manifest but no SCORM tracking. Import it the same way. It plays in the course without reporting a score, and the lesson counts as done when the learner opens it.
 
+## Window, attempts and score
+
+On the package item's **How learners run it** card:
+
+- tick **Open in a new window** to run the package in a window of its own; the course page shows the learner's progress when the window closes;
+- set **Attempts allowed**; once a learner has used them, the package opens only to review;
+- choose **Score from**: the best, average, first or last attempt, or the attempt in progress for a package that keeps one attempt that resumes.
+
+For a package to complete on a score, choose the completion **When the score reaches the pass mark, whatever the package reports** and set the pass mark.
+
 ## What learners see
 
 Learners open the package with **Launch** in the course player, and **Resume** after they leave a package that saves its place. The package reports its own score and status; the course marks such results as reported by the browser.

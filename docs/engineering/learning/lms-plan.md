@@ -1411,6 +1411,28 @@ Items 2-4 of section 3 of `remaining-work.md`, to move the production Moodle sit
 
 **Not built.** A recipe and deployment step, a data source and workflow events for survey responses; a per-learner response list beyond named written answers; Learning-only media limits (they are the tenant's Media limits); forum, MooTyper and database items.
 
+### Moodle migration: text, completion, access, SCORM settings, images and the import (branch `ma/lms-package-content-host`)
+
+Items 6, 8, 9, 10 and 15 of section 3 of `remaining-work.md`, after merging `ma/lms-quiz-gaps-9bb028` (item 7) and `ma/lms-activities-c0c0d6` (items 11 to 13), then the Moodle importer taught what the merged branches added; later `ma/lms-cohorts-8f9041`, `ma/lms-competencies-ff9926` and `ma/lms-followups-133fef` were merged and the importer taught cohort sync.
+
+**Built.**
+
+- **Text items** (`ffd8ebf90`): `TextBlock` with the `Text` kind, `CourseItemKindDescriptor.Inline`, `CourseOutlineEntry.Inline`; never required, refused by the progress service (`NotTracked`), left out of the percent, the snapshot and the AI reader; rendered in place in the outline and above the next item in the player.
+- **Completion** (`433cfb58c`): `StaffApproval` `Role` with `CompletionApprovers`, `CoursePart.NeverCompletes`, `CompletionModes.MinimumScore` (offered by learning packages).
+- **Access** (`0110b9505`): `PeopleReleaseRule` (user ids, or a Users audience through `IUserAudienceService` when that feature is on); `LearningPathRules.WithAvailableCourses` applied whenever the path service loads a path.
+- **SCORM settings** (`d83b847fc`): `OpenInNewWindow` (window page `LearningPackageWindow`, same panel, same frame or bridge, a same-origin finished message to the opener), `MaxAttempts` and `GradingMethod` with `PackageAttempts` and `PackageRuntimeState.AttemptScores`. `GradingMethod` moved to `Learning.Abstractions` with `AttemptScores.Combine`, now used by quizzes too (the second user of the concept, reuse ladder step 4).
+- **Images** (`6b8fc657e`, `0d7f4f0fc`): `CourseCovers` and the catalog cover; `MoodleFiles.Rewrite` for `@@PLUGINFILE@@` links.
+- **Import** (`0d7f4f0fc`, `d8b3b31ff`): see remaining-work section 3, "Moodle import after the merges". Pure mappers in `Learning.Assessments.Core/Moodle` (`MoodleQuizSettings`, `MoodleScormSettings`, `MoodleRestrictions`, `MoodleAssignments`, `MoodleSurveys`) and `Learning.Core/Moodle` (`MoodleFiles`, `MoodleCohorts`); the Assessments module references the Coursework and Surveys abstractions only.
+
+**Differences from the brief, and why.**
+
+- Restrictions to profile fields reuse Users audiences instead of a new condition model; the Users module has no audience rule for profile fields, so such restrictions are flagged by the import and an administrator restricts the item to an audience they define.
+- Attempts in SCORM 1.2 only exist when a package has a limit or a grading method: a package without them keeps its one resuming attempt, so existing packages behave as before. The import sets the grading method of every Moodle package (Moodle's `whatgrade`), so imported packages count attempts.
+- A Moodle backup keeps a cohort sync's Moodle cohort id, not its name or id number (read when a backup has them), so a site cohort matches by that id, by the cohort name or by the enrolment's own name.
+- Hidden items are optional rather than unpublished: the import cannot leave one row as a draft when the import publishes; the failed row still says to unpublish it.
+
+**Tests.** Unit, written first and run red: `TextItemTests` (4 of 4), `CompletionRulesTests` (7 of 9), `AccessRestrictionTests` (6 of 6), `PackageAttemptsTests` (6 of 7), vitest `package-window-messages.test.js` (2 of 2), the Moodle mapping and reader tests (19 of 26), `MoodleCohortSyncTests` (3 of 3). `CourseCoversTests` and the integration tests (`MoodleImportTests`: every newly mapped activity, no criteria, cohort sync, the existing tests updated for labels) were written with the code and not run red.
+
 ### Phase 9: AI (branch `ma/learning-phase-9`, stacked on `ma/learning-phase-8`)
 
 **Built.**

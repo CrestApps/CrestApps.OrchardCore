@@ -30,6 +30,11 @@ A learning path is a content item of the **Learning Path** type (`LearningPath`,
 
 The path editor's **People** page (`/Admin/learning/paths/{id}/people`) lists the people on a path with their stage and starts a person by user name.
 
+
+### Hidden courses
+
+A learning path is read without the courses that are not published (`LearningPathRules.WithAvailableCourses`, used by `DefaultLearningPathService` whenever it loads a path): a hidden or deleted course is neither enrolled nor waited for, an **At least** set counts only the courses that are left, and a stage whose courses are all hidden is complete. A Moodle learning plan that holds hidden courses therefore completes when its visible courses do.
+
 ## Required learning
 
 A required learning rule (`LearningRequirement`) requires a target of a [user audience](./users#user-audiences) and of named people:

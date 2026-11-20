@@ -39,9 +39,13 @@ The import runs in the background. When it ends, its row shows how many items we
 | The course, its summary, start date and end date | A course with the same title, summary and dates. Its short name becomes the **Course code** when it differs from the title. |
 | The course category | The category of the same name in **Course categories**, added when there is none. A backup knows only the category itself, not the categories above it, so build the tree first if you want the same tree: courses go into the category that has the name. |
 | Sections | Sections of the outline, in the same order, with their summaries. |
-| Labels | Their text joins the summary of their section. Pictures and videos in labels are not brought over. |
-| SCORM packages | Learning packages, imported through the same checks as an upload. |
-| Quizzes | Quizzes with the same time limit, attempts, grading method, navigation, open and close dates and pass mark. Their questions go into a question bank named after the course and the Moodle question category. A random question becomes a draw from that bank. |
+| The course picture and pictures in the summary | The course's cover, shown in the catalog, and pictures in the media library. |
+| Labels | **Text** items, shown in place in the outline, with their pictures. |
+| SCORM packages | Learning packages, imported through the same checks as an upload, with their new window, attempts allowed and which attempt grades. |
+| IMS content packages | Learning packages that complete when opened. |
+| Assignments | **Coursework** (turn on Learning Coursework): due date, points, online text and files, or a grade-only sign-off when learners hand in nothing. |
+| Feedback and choice | **Feedback surveys** and **Choices** (turn on Learning Surveys). |
+| Quizzes | Quizzes with the same time limit, attempts, grading method, navigation, open and close dates, pass mark, questions per page, immediate feedback and review options. Their questions go into a question bank named after the course and the Moodle question category. A random question becomes a draw from that bank. |
 | Files | File lessons with the file attached, shown by its own name. |
 | URLs | Link lessons. |
 | Pages | Page lessons. |
@@ -50,19 +54,21 @@ The import runs in the background. When it ends, its row shows how many items we
 | Manual enrolment only | Closed enrollment: staff enroll learners. |
 | An enrolment duration | The **Access length (days)**. |
 | Activity completion | How each item completes: a SCORM package with a required score passes at that score, one with a passing grade at the grade to pass, and others when the package reports completed or passed; a quiz with a passing grade when it is passed; files, links and pages when they are opened, or when the learner marks them done if Moodle used manual completion. |
-| Course completion | The activities it names are required in the outline and the others optional. A course grade to pass becomes the **Minimum course grade (%)**; manual completion by a role becomes approval by the course staff. |
+| Course completion | The activities it names are required in the outline and the others optional. A course grade to pass becomes the **Minimum course grade (%)**; manual completion by a role becomes approval by the course staff in that role (a teacher is an instructor, a non-editing teacher an assistant); a course without completion criteria never completes. |
+| Cohort sync | The course's cohort sync, with the site's cohort of the same id number or name (turn on Cohorts and Enrollment by Cohort). |
+| Restrictions | An activity open only to people by e-mail address or user name opens only to the site's users with them; an opening date stays. Hidden activities are optional. |
 
-Questions: multiple choice becomes single or multiple choice, and true/false, short answer, numerical, essay and matching keep their kind. Drag and drop into text and select missing words become fill in the blanks, where learners type the missing words; the choices no blank uses are left out.
+Questions: multiple choice becomes single or multiple choice (or a survey question when no answer is worth points), and true/false, short answer, numerical, essay, matching, drag and drop into text, select missing words and description keep their kind; the choices no blank uses become the extra choices offered.
 
 ## What is reported instead
 
 Each of these is a failed row of the import, naming the course and the activity:
 
-- activities the site has no item for yet: assignments, forums, choices, feedback surveys, glossaries, databases, IMS content packages, MooTyper and others;
+- activities the site has no item for: forums, glossaries, databases, MooTyper and others, and assignments, feedback and choices while their feature is off;
 - SCORM packages kept outside the backup (from a repository or a web address), and a package the package checks refuse, with the reason;
-- questions of a kind the site does not have (description, embedded answers, calculated, drag and drop onto an image), questions whose text shows a picture, answers with pictures, matching questions with extra answers, and short answers with a wildcard;
-- cohort sync, guest access and other enrolment methods, and completion on a date, a length of enrolment, unenrolment, self completion or other courses;
-- things to finish by hand: the enrollment key to set, a quiz password (set an access code on the quiz), a hidden course or activity (unpublish it if it should stay hidden), a SCORM package that opened in a new window or limited attempts.
+- questions of a kind the site does not have (embedded answers, calculated, drag and drop onto an image), questions whose text shows a picture, answers with pictures, matching questions with extra answers, and short answers with a wildcard;
+- a cohort the site does not have, guest access and other enrolment methods, and completion on a date, a length of enrolment, unenrolment, self completion or other courses;
+- things to finish by hand: the enrollment key to set, a quiz password (set an access code on the quiz), a hidden course or activity (unpublish it if it should stay hidden), an assignment graded on a scale, a feedback item such as a captcha, restrictions on groups, grades or other profile fields, and a completion role the course staff does not have.
 
 ## Import a course again
 

@@ -50,18 +50,21 @@ The migration creates these types. Each lesson type has the **Course item** part
 | `FileLesson` | Title, Html body, `Files` media field | File |
 | `LinkLesson` | Title, Html body, `Url` link field | Link |
 | `Acknowledgement` | Title, Html body, **Acknowledgement** (the statement to confirm) | Acknowledgement |
+| `TextBlock` | Title, Html body | Text |
+
+**Text** items (a Moodle label) are text, pictures and video embeds shown in place. Their kind is `Inline` (`CourseItemKindDescriptor.Inline`): the outline reader (`DefaultCourseStructureService`) marks their entries `CourseOutlineEntry.Inline` and never `Required`, whatever the outline says; `CourseOutline.RequiredEntries` and the progress percent leave them out; the progress service refuses them (`LearningRefusals.NotTracked`); the completion snapshot (transcript) and the Learning AI reader skip them. The course page and the player's outline render their HTML in place (the HTML body is sanitized when it is saved, as Orchard's HTML body does), and the player shows the text that comes just before an item in its section above the item; **Previous** and **Next** step over text. On the course page, text with release rules waits for the player, which knows the release decision. The kind has no completion mode, so its editor shows a note instead of the completion and grade fields.
 
 Lessons are contained in their course through Orchard's List part, so **New** on the course's list creates a lesson in it. The **Course outline** card orders them into sections; an item that is in the course but not in a section is listed under the outline as not yet placed.
 
 ### Course part
 
-`Code`, `Summary`, `Level`, `EstimatedMinutes`, `EnrollmentMode` (`Closed`, `Open`, `Key`, `Approval`), the enrollment key (stored as a salted hash outside the content item, in `LearningSecretStore`, never shown again; five wrong keys for one course within 15 minutes lock that person out of it for 15 minutes), `AccessDays` (how long an enrollment gives access; empty for no end), `PassMark`, `GradeCategories` (gradebook categories with a weight and a number of lowest scores to drop; see [Learning Assessments](./learning-assessments#gradebook)), `Prerequisites` (other courses to complete first), `CompletionCriteria` and `Staff` (a user and a role: `Instructor`, `Assistant`, `Grader` or `Observer`).
+`Code`, `Summary`, `Level`, `EstimatedMinutes`, `NeverCompletes` (a course without completion criteria: it never completes, while the progress is kept), `EnrollmentMode` (`Closed`, `Open`, `Key`, `Approval`), the enrollment key (stored as a salted hash outside the content item, in `LearningSecretStore`, never shown again; five wrong keys for one course within 15 minutes lock that person out of it for 15 minutes), `AccessDays` (how long an enrollment gives access; empty for no end), `PassMark`, `GradeCategories` (gradebook categories with a weight and a number of lowest scores to drop; see [Learning Assessments](./learning-assessments#gradebook)), `Prerequisites` (other courses to complete first), `CompletionCriteria` and `Staff` (a user and a role: `Instructor`, `Assistant`, `Grader` or `Observer`).
 
 The admin's course pickers (the prerequisites, the courses of a learning path set, the courses of a Learning workflow event and the course of a learning product's grant row) use the `ItemSelector` component with the course search `/Admin/learning/course-picker/search?query=&exceptId=` (route `LearningCourseSearch`, `CoursePickerController`, backed by `CourseLookup.SearchCoursesAsync`): the latest version of each course whose title contains the text, 50 at most, titles only. It needs **Manage own courses**, **View enrollments** or **View learning reports**. The editors render only the chosen courses, so a site with hundreds of courses never lists them all.
 
 ### Course item part
 
-`CompletionMode` (`Viewed`, `MarkedDone`, `MinimumTime`, `Watched`, `Acknowledged`), `MinimumMinutes`, `EstimatedMinutes`, `Gradable`, `Weight`, `GradeCategoryId` (the gradebook category of its course), `PassMark`, `FreePreview` (anyone may open it), `AllowSelfReported` and `ReleaseRules`.
+`CompletionMode` (`Viewed`, `MarkedDone`, `MinimumTime`, `Watched`, `Acknowledged`, and the modes other kinds add, such as `MinimumScore` for learning packages: the score reaches the pass mark whatever the package reports about passing), `MinimumMinutes`, `EstimatedMinutes`, `Gradable`, `Weight`, `GradeCategoryId` (the gradebook category of its course), `PassMark`, `FreePreview` (anyone may open it), `AllowSelfReported` and `ReleaseRules`.
 
 ## Records
 
@@ -88,9 +91,13 @@ Each has its own index table (`EnrollmentIndex`, `EnrollmentGrantIndex`, `Enroll
 
 `ILearnerProgressService` records what a learner does: opening an item, time spent (a heartbeat from the player, at most 60 seconds a call), the share of a video watched, marking an item done and confirming an acknowledgement. A staff member with the right to manage enrollments can complete an item by hand with a reason.
 
-An item is complete when its completion mode is met. The course is complete when every required item is complete and every completion criterion passes: `MinimumGrade`, `MinimumTime`, `ItemPassed` and `StaffApproval`. Another module adds a criterion with `AddCourseCompletionCriterion<T>()`.
+An item is complete when its completion mode is met. The course is complete when every required item is complete and every completion criterion passes: `MinimumGrade`, `MinimumTime`, `ItemPassed` and `StaffApproval`. A course marked `NeverCompletes` never completes. Another module adds a criterion with `AddCourseCompletionCriterion<T>()`.
 
-**Release rules** decide when an item opens: `ItemCompleted` (after another item), `Date`, `DaysAfterEnrollment`. Add one with `AddCourseItemReleaseRule<T>()`.
+`StaffApproval` takes an optional `Role` value, a course staff role (the course editor's **Who approves**). With a role, only the course's staff in that role may approve (`CompletionApprovers.MayApprove`); the progress service refuses anyone else with `NotApprover`, and the enrollment page offers **Approve the completion** only to them. Without a role, anyone who manages the enrollment may approve, as before.
+
+**Release rules** decide when an item opens: `ItemCompleted` (after another item), `Date`, `DaysAfterEnrollment` and `People`. Add one with `AddCourseItemReleaseRule<T>()`.
+
+`People` (`PeopleReleaseRule`, the course item editor's **Who can open it** card) opens an item only to the people it names (`UserIds`, chosen with the user picker) and to the members of a user audience (`Audience`) of the Users module, which is where rule-based groups, such as people with a profile value, are defined. Without the User Audiences feature an audience opens the item to nobody. The locked item says `Restricted`; course staff and course managers still open it.
 
 ### Reviews after completion
 
@@ -202,7 +209,7 @@ No new records: the taxonomy, its terms and the field move with the `Content` an
 
 ### Course catalog
 
-With **Learner Pages** on, `/learning/catalog` (route `LearningCatalog`, for people with **View content**) lists the published courses by title, 24 to a page, with a title search (`q`) and, when courses have categories, a category tree to browse (`category`): a category lists its own courses and those of the categories under it (`CourseCategoryTerms.WithDescendants`, `TaxonomyIndex`). Each course shows its code, categories, dates and summary. My learning links to it. Full-text search stays on the **Learning course catalog** recipe's search index.
+With **Learner Pages** on, `/learning/catalog` (route `LearningCatalog`, for people with **View content**) lists the published courses by title, 24 to a page, with a title search (`q`) and, when courses have categories, a category tree to browse (`category`): a category lists its own courses and those of the categories under it (`CourseCategoryTerms.WithDescendants`, `TaxonomyIndex`). Each course shows its cover (the first file of the `Cover` media field, `CourseCovers.GetPath`), code, categories, dates and summary. My learning links to it. Full-text search stays on the **Learning course catalog** recipe's search index.
 
 ## Imported courses
 
