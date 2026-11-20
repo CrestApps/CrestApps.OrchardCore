@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.PersonalData.Core;
+using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Skills.BackgroundTasks;
 using CrestApps.OrchardCore.Skills.Core;
 using CrestApps.OrchardCore.Skills.Core.Indexes;
@@ -131,5 +133,19 @@ public sealed class IssuedCertificatesRateLimitsStartup : StartupBase
                 policyName: SkillsConstants.VerificationRateLimitGroup,
                 permitLimit: RequestsPerMinute,
                 window: TimeSpan.FromMinutes(1))));
+    }
+}
+
+/// <summary>
+/// Adds the Skill holders report and its skill category filter.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class SkillsReportsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddReport<SkillHoldersReport>();
+        services.AddDisplayDriver<ReportFilter, SkillCategoryReportFilterDisplayDriver>();
     }
 }

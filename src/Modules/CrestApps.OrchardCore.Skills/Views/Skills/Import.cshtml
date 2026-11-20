@@ -1,0 +1,59 @@
+@model SkillImportViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SkillsImport" title="@T["Import Skills"]">
+        <breadcrumb-item id="Skills" action="Index" controller="Skills" area="CrestApps.OrchardCore.Skills">@T["Skills"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Import" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    @if (Model.Result is not null)
+    {
+        var leftOut = Model.Result.Skipped.Concat(Model.Errors).ToList();
+
+        <div class="card text-bg-theme mb-3">
+            <div class="card-header">@T["Last import"]</div>
+            <div class="card-body">
+                <p class="mb-2">
+                    @(Model.Format == CrestApps.OrchardCore.Skills.Core.Services.SkillCsvImport.MoodleFormat ? T["Read as a Moodle competency framework export."] : T["Read as a file with Name, Category, Description and Enabled columns."])
+                </p>
+                <ul class="mb-2">
+                    <li>@T["{0} skills added", Model.Result.Created]</li>
+                    <li>@T["{0} skills updated", Model.Result.Updated]</li>
+                    <li>@T["{0} skills unchanged", Model.Result.Unchanged]</li>
+                    <li>@T["{0} rows left out", leftOut.Count]</li>
+                </ul>
+                @if (leftOut.Count > 0)
+                {
+                    <ul class="small text-muted mb-0">
+                        @foreach (var message in leftOut.Take(200))
+                        {
+                            <li>@message</li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["File"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label for="file" class="ocat-label ocat-label-required">@T["CSV file"]</label>
+                <div class="ocat-end">
+                    <input type="file" id="file" name="file" accept=".csv,text/csv" class="form-control" required />
+                    <span class="hint">@T["A Moodle competency framework export (Site administration > Competencies > Export competency framework): the framework becomes the category of its competencies. Or a file with a Name column and optional Category, Description and Enabled columns. Up to 5 MB."]</span>
+                    <span class="hint">@T["A skill is matched by its name: a new name adds a skill, a known one in the same category is updated, and a name another category already holds is left out. Importing a file again changes nothing that already matches."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Import"]</button>
+        <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

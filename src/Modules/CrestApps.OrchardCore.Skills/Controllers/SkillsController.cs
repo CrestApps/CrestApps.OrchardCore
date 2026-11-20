@@ -1,7 +1,10 @@
+using System.Text;
+using CrestApps.OrchardCore.Skills.Core.Services;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Skills.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -19,6 +22,8 @@ namespace CrestApps.OrchardCore.Skills.Controllers;
 /// </summary>
 public sealed class SkillsController : Controller
 {
+    private const int MaxImportBytes = 5 * 1024 * 1024;
+
     private readonly IAuthorizationService _authorizationService;
     private readonly ISkillManager _skillManager;
     private readonly ICertificationManager _certificationManager;
@@ -197,6 +202,82 @@ public sealed class SkillsController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// Shows the page that imports skills from a CSV file.
+    /// </summary>
+    /// <returns>The page.</returns>
+    [Admin("skills/import", "SkillsImport")]
+    public async Task<IActionResult> Import()
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, SkillsPermissions.ManageSkills))
+        {
+            return Forbid();
+        }
+
+        return View(new SkillImportViewModel());
+    }
+
+    /// <summary>
+    /// Imports skills from a CSV file: a Moodle competency framework export, or a file with Name, Category,
+    /// Description and Enabled columns.
+    /// </summary>
+    /// <param name="file">The CSV file.</param>
+    /// <param name="importer">The skill importer.</param>
+    /// <returns>The page with what was imported, or with the errors.</returns>
+    [HttpPost]
+    [ActionName(nameof(Import))]
+    [Admin("skills/import", "SkillsImport")]
+    [RequestSizeLimit(MaxImportBytes + 64 * 1024)]
+    public async Task<IActionResult> ImportPost(IFormFile file, [FromServices] SkillImporter importer)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, SkillsPermissions.ManageSkills))
+        {
+            return Forbid();
+        }
+
+        var model = new SkillImportViewModel();
+
+        if (file is null || file.Length == 0)
+        {
+            ModelState.AddModelError(nameof(file), H["Choose a CSV file."].Value);
+
+            return View(model);
+        }
+
+        if (file.Length > MaxImportBytes)
+        {
+            ModelState.AddModelError(nameof(file), H["The file is larger than 5 MB."].Value);
+
+            return View(model);
+        }
+
+        string text;
+
+        await using (var stream = file.OpenReadStream())
+        using (var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
+        {
+            text = await reader.ReadToEndAsync(HttpContext.RequestAborted);
+        }
+
+        var parsed = SkillCsvImport.Parse(text);
+
+        model.Format = parsed.Format;
+        model.Errors = parsed.Errors;
+
+        if (parsed.Rows.Count == 0)
+        {
+            ModelState.AddModelError(nameof(file), H["No skills were found in the file."].Value);
+
+            return View(model);
+        }
+
+        model.Result = await importer.ImportAsync(parsed.Rows, HttpContext.RequestAborted);
+
+        await _notifier.SuccessAsync(H["Imported the file: {0} skills added, {1} updated, {2} unchanged, {3} left out.", model.Result.Created, model.Result.Updated, model.Result.Unchanged, model.Result.Skipped.Count + parsed.Errors.Count]);
+
+        return View(model);
     }
 
     private async Task FillAsync(SkillEditViewModel model)
