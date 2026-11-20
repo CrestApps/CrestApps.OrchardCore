@@ -171,6 +171,17 @@ namespace CrestApps.OrchardCore.Accounts.Services
         public bool Succeeded { get; }
         public string Token { get; set; }
     }
+    public static class AccountMemberServiceExtensions
+    {
+        public static System.Threading.Tasks.Task<CrestApps.OrchardCore.Accounts.Services.AccountMembership> FindMembershipAsync(this CrestApps.OrchardCore.Accounts.Services.IAccountMemberService accountMemberService, System.Security.Claims.ClaimsPrincipal user, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AccountMembership : System.IEquatable<CrestApps.OrchardCore.Accounts.Services.AccountMembership>
+    {
+        public AccountMembership(OrchardCore.ContentManagement.ContentItem Account, CrestApps.OrchardCore.Accounts.Models.AccountMember Member) { }
+        public OrchardCore.ContentManagement.ContentItem Account { get; init; }
+        public bool IsAdmin { get; }
+        public CrestApps.OrchardCore.Accounts.Models.AccountMember Member { get; init; }
+    }
     public static class AccountRecordKinds
     {
         public static bool HasPart(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition, string partName) { }
