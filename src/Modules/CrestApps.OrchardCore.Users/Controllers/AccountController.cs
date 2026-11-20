@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Users.Navigation;
 using CrestApps.OrchardCore.Users.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,7 +35,7 @@ public sealed class AccountController : Controller
 
         return View(await _shapeFactory.CreateAsync<AccountOverviewViewModel>("AccountOverview", model =>
         {
-            model.Items = items.Where(item => !string.IsNullOrEmpty(item.Href) && item.Id != HomeItemId).ToList();
+            model.Items = AccountMenuItems.Arrange(items.Where(item => !string.IsNullOrEmpty(item.Href) && item.Id != HomeItemId));
         }));
     }
 }
