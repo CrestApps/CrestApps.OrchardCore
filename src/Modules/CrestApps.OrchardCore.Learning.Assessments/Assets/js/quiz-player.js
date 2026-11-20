@@ -3,6 +3,7 @@
 // immediate feedback is locked, so the player saves nothing for it.
 
 import { initBlanks } from './quiz-player-blanks.js';
+import { initSubmitConfirm } from './quiz-submit-confirm.js';
 
 const saveDelay = 600;
 
@@ -56,7 +57,7 @@ function watch(form) {
     form.addEventListener('input', event => {
         const fieldset = event.target.closest('[data-question]');
 
-        if (!fieldset || fieldset.hasAttribute('data-locked')) {
+        if (!fieldset || fieldset.dataset.locked === 'true') {
             return;
         }
 
@@ -65,13 +66,7 @@ function watch(form) {
         timers.set(fieldset, setTimeout(() => save(form, fieldset), saveDelay));
     });
 
-    form.querySelector('[data-learning-submit]')?.addEventListener('click', event => {
-        const text = event.currentTarget.dataset.confirmText;
-
-        if (text && !window.confirm(text)) {
-            event.preventDefault();
-        }
-    });
+    initSubmitConfirm(form);
 }
 
 function format(seconds) {

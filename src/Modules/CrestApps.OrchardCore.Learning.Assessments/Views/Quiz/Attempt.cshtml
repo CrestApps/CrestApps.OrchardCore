@@ -14,6 +14,11 @@
         </breadcrumb>
     </div>
 
+    @if (!string.IsNullOrEmpty(Model.CourseId))
+    {
+        <p class="mb-2"><a class="link-secondary small" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId, itemId = attempt.QuizId })" data-learning-back-to-course><i class="fa-solid fa-arrow-left me-1" aria-hidden="true"></i>@T["Back to the course"]</a></p>
+    }
+
     <h1 class="h3">@attempt.QuizTitle</h1>
     <p class="text-secondary">@T["Attempt {0}", attempt.Sequence] &middot; @T["Started"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(attempt.StartedUtc, DateTimeKind.Utc), Format: "g"))</p>
 
@@ -69,12 +74,36 @@
                 }
                 @if (lastPage)
                 {
-                    <button type="submit" class="btn btn-success" data-learning-submit data-confirm-text="@T["Submit your answers? You cannot change them afterwards."]">@T["Submit"]</button>
+                    <button type="submit" class="btn btn-success" data-learning-submit data-unanswered-elsewhere="@Model.UnansweredElsewhere">@T["Submit"]</button>
                 }
                 <span class="hint">@T["Your answers are saved as you go."]</span>
             }
         </div>
     </form>
+
+    @* The site's own confirmation, instead of the browser's: how many questions are still unanswered, and that the
+       answers cannot change afterwards. *@
+    <div class="modal fade" id="learning-submit-confirm" tabindex="-1" aria-labelledby="learning-submit-confirm-title" aria-hidden="true" data-learning-submit-confirm
+         data-unanswered-one="@T["1 question is not answered."]"
+         data-unanswered-many="@T["{0} questions are not answered.", "{0}"]"
+         data-all-answered="@T["You answered every question."]">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="learning-submit-confirm-title">@T["Submit your answers?"]</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="fw-semibold mb-2" data-learning-unanswered-text></p>
+                    <p class="mb-0">@T["You cannot change your answers after you submit them."]</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@T["Keep answering"]</button>
+                    <button type="button" class="btn btn-success" data-learning-submit-confirmed>@T["Submit"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script asp-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-player.min.js" debug-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-player.js" at="Foot"></script>

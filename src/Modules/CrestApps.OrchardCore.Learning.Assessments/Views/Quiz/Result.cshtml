@@ -12,6 +12,11 @@
         </breadcrumb>
     </div>
 
+    @if (!string.IsNullOrEmpty(Model.CourseId))
+    {
+        <p class="mb-2"><a class="link-secondary small" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId, itemId = attempt.QuizId })" data-learning-back-to-course><i class="fa-solid fa-arrow-left me-1" aria-hidden="true"></i>@T["Back to the course"]</a></p>
+    }
+
     <h1 class="h3">@attempt.QuizTitle</h1>
     <p class="text-secondary">
         @T["Attempt {0}", attempt.Sequence]
@@ -60,6 +65,20 @@
         </div>
     </div>
 
+    @if (Model.CanReview && !string.IsNullOrEmpty(Model.CourseId) && (Model.CourseCompleted || Model.NextItemId is not null))
+    {
+        <p class="mb-4">
+            @if (Model.CourseCompleted)
+            {
+                <a class="btn btn-success" href="@Url.RouteUrl("LearningCourseCompleted", new { courseId = Model.CourseId })">@T["Continue"]<i class="fa-solid fa-flag-checkered ms-1" aria-hidden="true"></i></a>
+            }
+            else
+            {
+                <a class="btn btn-primary" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId, itemId = Model.NextItemId })">@T["Continue to \"{0}\"", Model.NextItemTitle]<i class="fa-solid fa-arrow-right ms-1" aria-hidden="true"></i></a>
+            }
+        </p>
+    }
+
     @if (Model.CanReview)
     {
         <h2 class="h5">@T["Review"]</h2>
@@ -71,6 +90,16 @@
 
     @if (!string.IsNullOrEmpty(Model.CourseId))
     {
-        <a class="btn btn-outline-secondary" href="@Url.Content("~/learning/courses/" + Model.CourseId + "/play/" + attempt.QuizId)">@T["Back to the course"]</a>
+        <div class="d-flex flex-wrap gap-2 my-4" data-learning-result-actions>
+            @if (Model.CourseCompleted)
+            {
+                <a class="btn btn-success" href="@Url.RouteUrl("LearningCourseCompleted", new { courseId = Model.CourseId })" data-learning-continue>@T["Continue"]<i class="fa-solid fa-flag-checkered ms-1" aria-hidden="true"></i></a>
+            }
+            else if (Model.NextItemId is not null)
+            {
+                <a class="btn btn-primary" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId, itemId = Model.NextItemId })" data-learning-continue title="@Model.NextItemTitle">@T["Continue"]<i class="fa-solid fa-arrow-right ms-1" aria-hidden="true"></i></a>
+            }
+            <a class="btn btn-outline-secondary" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId, itemId = attempt.QuizId })">@T["Back to the course"]</a>
+        </div>
     }
 </div>

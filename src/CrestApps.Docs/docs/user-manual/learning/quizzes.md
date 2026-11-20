@@ -57,7 +57,7 @@ Importing the same package (the same file name) into the same bank again updates
 
 ## Taking a quiz
 
-The learner opens the quiz in the course player and starts an attempt. Answers are saved as they go. With several pages, the learner moves with **Next page**, **Previous page** or the page numbers (or **Save and continue** with one after another) and submits on the last page. The time left is kept by the site, not the browser: when the time is up, the attempt is submitted on its own. Questions scored automatically show the result at once; an essay waits for a grader.
+The learner opens the quiz in the course player and starts an attempt. Answers are saved as they go. With several pages, the learner moves with **Next page**, **Previous page** or the page numbers (or **Save and continue** with one after another) and submits on the last page. **Submit** asks first, in the site's own window: it says how many questions are still unanswered and that the answers cannot change afterwards; **Keep answering** goes back to the quiz. **Back to the course** at the top of the attempt and result pages returns to the quiz in the player, and the result page's **Continue** opens the next lesson, or the course completion panel when the quiz completed the course. The time left is kept by the site, not the browser: when the time is up, the attempt is submitted on its own. Questions scored automatically show the result at once; an essay waits for a grader.
 
 ## Give a learner an override
 
