@@ -3,6 +3,65 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
+	//#region src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-player-blanks.js
+	/**
+	* The blank a word dropped on an element goes into: the list itself or the list the element is inside, when it offers
+	* that word.
+	* @param {any} element The element under the drop.
+	* @param {string} choiceId The word.
+	* @returns {any} The list, or null.
+	*/
+	function dropTarget(element, choiceId) {
+		if (!element) return null;
+		const select = element.tagName === "SELECT" ? element : element.closest?.("select[data-blank-choices]");
+		if (!select || select.tagName !== "SELECT") return null;
+		return [...select.options].some((option) => option.value === choiceId && choiceId !== "") ? select : null;
+	}
+	/**
+	* The text of a word a list offers.
+	* @param {any} select The list.
+	* @param {string} choiceId The word.
+	* @returns {string}
+	*/
+	function choiceLabel(select, choiceId) {
+		const option = [...select.options].find((candidate) => candidate.value === choiceId);
+		return option ? (option.textContent ?? "").trim() : "";
+	}
+	/**
+	* Lets the words of the drag into text questions under a root be dragged onto their blanks.
+	* @param {ParentNode} root The page or form.
+	*/
+	function initBlanks(root) {
+		root.querySelectorAll("[data-blank-word]").forEach((word) => {
+			const chip = word;
+			chip.setAttribute("draggable", "true");
+			chip.addEventListener("dragstart", (event) => {
+				event.dataTransfer?.setData("text/plain", chip.dataset.choice ?? "");
+				chip.classList.add("opacity-50");
+			});
+			chip.addEventListener("dragend", () => chip.classList.remove("opacity-50"));
+		});
+		root.querySelectorAll("select[data-blank-choices]").forEach((element) => {
+			const select = element;
+			select.addEventListener("dragover", (event) => {
+				event.preventDefault();
+				select.classList.add("border-primary");
+			});
+			select.addEventListener("dragleave", () => select.classList.remove("border-primary"));
+			select.addEventListener("drop", (event) => {
+				event.preventDefault();
+				select.classList.remove("border-primary");
+				const choiceId = event.dataTransfer?.getData("text/plain") ?? "";
+				const target = dropTarget(select, choiceId);
+				if (!target) return;
+				target.value = choiceId;
+				target.title = choiceLabel(target, choiceId);
+				target.dispatchEvent(new Event("input", { bubbles: true }));
+				target.dispatchEvent(new Event("change", { bubbles: true }));
+			});
+		});
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-player.js
 	var saveDelay = 600;
 	function token(form) {
@@ -37,7 +96,7 @@
 		const timers = /* @__PURE__ */ new Map();
 		form.addEventListener("input", (event) => {
 			const fieldset = event.target.closest("[data-question]");
-			if (!fieldset) return;
+			if (!fieldset || fieldset.hasAttribute("data-locked")) return;
 			fieldset.querySelector("[data-saved]")?.classList.add("d-none");
 			clearTimeout(timers.get(fieldset));
 			timers.set(fieldset, setTimeout(() => save(form, fieldset), saveDelay));
@@ -72,7 +131,10 @@
 	}
 	document.addEventListener("DOMContentLoaded", () => {
 		const form = document.querySelector("[data-learning-attempt]");
-		if (form) watch(form);
+		if (form) {
+			watch(form);
+			initBlanks(form);
+		}
 		const timer = document.querySelector("[data-learning-timer]");
 		if (timer) countdown(timer, form);
 	});
