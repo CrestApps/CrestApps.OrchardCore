@@ -13,6 +13,43 @@
             "Learning": {
               "type": "object",
               "properties": {
+                "Media": {
+                  "type": "object",
+                  "description": "The media limits Learning sets on Orchard Core Media for lesson files and videos. They are the tenant's media limits.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "MaxFileSize": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 2147483648,
+                      "description": "The largest media file in bytes. Media's own limit is kept when it is larger; zero leaves Media's limit alone."
+                    },
+                    "AdditionalFileExtensions": {
+                      "type": "array",
+                      "items": { "type": "string" },
+                      "description": "File extensions added to the ones Media takes. Programs, scripts, web pages and macro-enabled Office files are never added."
+                    }
+                  }
+                },
+                "Coursework": {
+                  "type": "object",
+                  "description": "The limits of coursework hand-ins.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "MaxFilesPerSubmission": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "default": 20,
+                      "description": "The most files an author may let a learner hand in at once."
+                    },
+                    "MaxFileSizeMb": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "default": 50,
+                      "description": "The largest file, in megabytes, an author may let a learner hand in."
+                    }
+                  }
+                },
                 "Upkeep": {
                   "type": "object",
                   "description": "The daily Learning upkeep: reminders and inactive learners.",

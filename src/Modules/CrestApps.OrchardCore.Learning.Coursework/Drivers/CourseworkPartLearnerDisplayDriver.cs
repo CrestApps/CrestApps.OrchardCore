@@ -65,7 +65,7 @@ internal sealed class CourseworkPartLearnerDisplayDriver : ContentPartDisplayDri
             var latest = model.Latest;
 
             // Past the close date only work a grader returned is taken again.
-            model.CanSubmit = model.EnrollmentActive && (latest?.Status == SubmissionStatus.Returned
+            model.CanSubmit = model.EnrollmentActive && part.SubmissionType != CourseworkSubmissionType.SignOff && (latest?.Status == SubmissionStatus.Returned
                 || (!model.Closed && (latest is null || (latest.Status == SubmissionStatus.Submitted && part.AllowResubmission))));
 
             var rubricId = latest?.Status == SubmissionStatus.Graded && !string.IsNullOrEmpty(latest.RubricId) ? latest.RubricId : part.RubricId;

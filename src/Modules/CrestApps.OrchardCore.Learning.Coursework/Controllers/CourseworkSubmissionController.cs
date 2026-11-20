@@ -17,11 +17,6 @@ namespace CrestApps.OrchardCore.Learning.Coursework.Controllers;
 /// </summary>
 public sealed class CourseworkSubmissionController : Controller
 {
-    /// <summary>
-    /// The largest request a hand-in may be: the coursework editor allows at most 10 files of 50 MB.
-    /// </summary>
-    internal const long MaxRequestBytes = 520L * 1024 * 1024;
-
     private readonly IAuthorizationService _authorizationService;
     private readonly CourseworkLearnerResolver _learnerResolver;
     private readonly ISubmissionService _submissions;
@@ -60,8 +55,7 @@ public sealed class CourseworkSubmissionController : Controller
     /// <returns>Back to the coursework in the player.</returns>
     [HttpPost("learning/coursework/{courseworkId}/submit", Name = "LearningCourseworkSubmit")]
     [ValidateAntiForgeryToken]
-    [RequestSizeLimit(MaxRequestBytes)]
-    [RequestFormLimits(MultipartBodyLengthLimit = MaxRequestBytes)]
+    [CourseworkRequestLimits]
     public async Task<IActionResult> Submit(string courseworkId, string text, IList<IFormFile> files)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -156,6 +150,7 @@ public sealed class CourseworkSubmissionController : Controller
             SubmissionErrors.AlreadyGraded => H["Your work is graded, so it cannot be handed in again."],
             SubmissionErrors.Busy => H["Your work is being saved. Try again in a moment."],
             SubmissionErrors.Closed => H["This coursework no longer takes work: it closed some days after the due date."],
+            SubmissionErrors.SignOffOnly => H["Nothing is handed in for this coursework: a grader signs it off."],
             _ => H["Your work could not be handed in."],
         };
 

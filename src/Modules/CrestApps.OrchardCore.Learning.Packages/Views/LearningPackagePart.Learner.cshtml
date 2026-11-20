@@ -70,7 +70,14 @@
                 <p class="small text-secondary">@T["You completed this course. You can open the package again to review it; nothing you do now changes your record."]</p>
             }
 
-            <p class="small text-secondary">@T["The package reports your progress itself, so its results are marked as reported by your browser."]</p>
+            @if (PackagesConstants.Standards.HasNoRuntime(Model.Part.Standard))
+            {
+                <p class="small text-secondary">@T["This package does not track your progress: it counts as done once you open it."]</p>
+            }
+            else
+            {
+                <p class="small text-secondary">@T["The package reports your progress itself, so its results are marked as reported by your browser."]</p>
+            }
 
             @if (Model.Part.Cmi5 is { } course)
             {

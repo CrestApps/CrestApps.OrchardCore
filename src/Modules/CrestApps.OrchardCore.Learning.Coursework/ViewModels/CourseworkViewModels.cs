@@ -59,6 +59,14 @@ public class CourseworkPartViewModel
     /// <summary>Gets or sets the submission types.</summary>
     [BindNever]
     public IList<SelectListItem> SubmissionTypeOptions { get; set; } = [];
+
+    /// <summary>Gets or sets the most files the site lets an author allow.</summary>
+    [BindNever]
+    public int MaxFilesLimit { get; set; }
+
+    /// <summary>Gets or sets the largest file, in megabytes, the site lets an author allow.</summary>
+    [BindNever]
+    public int MaxFileSizeMbLimit { get; set; }
 }
 
 /// <summary>
@@ -172,6 +180,14 @@ public class CourseworkSubmissionsViewModel
     /// <summary>Gets or sets the submissions.</summary>
     [BindNever]
     public AdminListContext<SubmissionRow> List { get; set; }
+
+    /// <summary>Gets or sets whether a grader signs the coursework off, with nothing handed in.</summary>
+    [BindNever]
+    public bool IsSignOff { get; set; }
+
+    /// <summary>Gets or sets the learners a grader may sign off: the course's active enrollments.</summary>
+    [BindNever]
+    public IList<SelectListItem> SignOffLearners { get; set; } = [];
 }
 
 /// <summary>

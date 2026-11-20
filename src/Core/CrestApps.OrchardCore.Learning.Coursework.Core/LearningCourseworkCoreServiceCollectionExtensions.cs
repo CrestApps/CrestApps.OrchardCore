@@ -36,12 +36,13 @@ public static class LearningCourseworkCoreServiceCollectionExtensions
             kind.DisplayName = LocalizationSource.Create("Coursework", typeof(LearningCourseworkCoreServiceCollectionExtensions));
             kind.LearnerName = LocalizationSource.Create("Coursework", typeof(LearningCourseworkCoreServiceCollectionExtensions));
             kind.ContentType = CourseworkConstants.ContentTypes.Coursework;
-            // Graded first, so it is the default: a gradable item handed in last would otherwise complete the course
-            // before the grader gives its grade.
+            // Graded first, so it is the default: a gradable item handed in last completes the course before the
+            // grader gives its grade. An author may still choose completion on hand-in for graded work, as Moodle
+            // assignments allow; the grade given later reaches the course grade, and a completed enrollment whose
+            // outcome it changes is flagged for review.
             kind.CompletionModes.Add(CompletionModes.Graded);
             kind.CompletionModes.Add(CompletionModes.Submitted);
             kind.ProducesGrade = true;
-            kind.GradableCompletesWhenGraded = true;
             kind.Icon = "fa-solid fa-file-pen";
         });
 

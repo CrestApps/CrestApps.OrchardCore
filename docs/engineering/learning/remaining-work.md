@@ -150,24 +150,22 @@ Build, in this order. Items 1-6 cover almost every course; the rest is the long 
    - restrictions to named people or profile fields (25 courses);
    - hidden items or courses that don't block a learning path from completing (the 30 Day plan holds 4 hidden courses).
 10. **SCORM settings:** new window (18), attempt limits (9), grading method (10).
-11. **Media:**
-    - files over 30 MB, for videos;
-    - `.ods` and other office formats;
-    - showing the original file name instead of the GUID-prefixed stored name.
-12. **Assignments:**
-    - grade-only sign-off with no submission;
-    - completes on hand-in and is graded;
-    - up to 20 files.
-13. **Small activity types (1-3 courses each):**
-    - feedback survey (an ungraded essay quiz is a rough stand-in);
-    - forum;
-    - glossary;
-    - choice;
-    - MooTyper typing practice;
-    - IMS content package;
-    - database.
-
-    For each, decide to build it, replace it, or drop it at migration.
+11. ~~**Media:**~~ Done on `ma/lms-activities-c0c0d6` (plan section 19, "Moodle migration: media, coursework and small activities"):
+    - files over 30 MB: Learning raises Orchard Core Media's `MaxFileSize` to 2 GB (`CrestApps:Learning:Media:MaxFileSize`); the IIS and proxy request limits are documented;
+    - `.ods`, `.odp`, `.odg`, `.odt`, `.rtf`, `.txt`, `.pps`, `.ppsx`, `.vsdx`, `.vtt` and `.srt` are allowed (configurable; programs, scripts and macro files never);
+    - learners see the original file name (`MediaField-LearningFiles`).
+12. ~~**Assignments:**~~ Done on `ma/lms-activities-c0c0d6`:
+    - grade-only sign-off: coursework that takes nothing (`SignOff`), signed off from its Submissions page;
+    - completes on hand-in and is graded: graded coursework may use **Submitted**;
+    - up to 20 files, configurable (`CrestApps:Learning:Coursework`), with the hand-in request limit following it.
+13. ~~**Small activity types (1-3 courses each):**~~ Decided and built on `ma/lms-activities-c0c0d6`:
+    - feedback survey: **built**, the new Learning Surveys module (Feedback survey item);
+    - choice: **built**, the Choice item of Learning Surveys (a survey of one question);
+    - IMS content package: **built**, imported and played by Learning Packages without the run-time API, completes when viewed;
+    - glossary: **replaced** at migration by a page lesson with the terms;
+    - forum: **dropped** at migration for now; follow-up: a discussion course item on the Timeline building block, which needs a Timeline access provider for course items;
+    - MooTyper typing practice: **dropped** at migration; replaced by a link lesson to a typing site or a learning package. Follow-up only if typing scores must be kept;
+    - database: **dropped** at migration; replaced by coursework (what learners hand in) or a page lesson (what they read).
 14. **Competencies.** 17 frameworks with about 457 competencies, mapped onto Skills (skills with proficiency levels). Learning-plan templates become learning paths or programs whose completion grants the competency (a skill assignment).
 15. **Course images, and images inside summaries and labels.** Import them into the media library.
 

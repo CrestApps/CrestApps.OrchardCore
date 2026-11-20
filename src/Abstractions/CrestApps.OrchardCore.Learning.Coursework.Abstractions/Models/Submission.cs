@@ -55,6 +55,11 @@ public sealed class Submission : CatalogItem
     public List<SubmissionFile> Files { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets whether a grader opened the record to sign the work off, with nothing handed in by the learner.
+    /// </summary>
+    public bool SignOff { get; set; }
+
+    /// <summary>
     /// Gets or sets when the work was handed in, in UTC.
     /// </summary>
     public DateTime SubmittedUtc { get; set; }

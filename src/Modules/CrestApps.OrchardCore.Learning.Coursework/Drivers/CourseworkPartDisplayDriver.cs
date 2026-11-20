@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Learning.Coursework.Models;
 using CrestApps.OrchardCore.Learning.Coursework.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
@@ -20,20 +21,23 @@ namespace CrestApps.OrchardCore.Learning.Coursework.Drivers;
 /// </summary>
 internal sealed class CourseworkPartDisplayDriver : ContentPartDisplayDriver<CourseworkPart>
 {
-    internal const int MaxFileSizeMbLimit = 50;
-    internal const int MaxFilesLimit = 10;
-
     private readonly ILocalClock _localClock;
     private readonly ISession _session;
+    private readonly CourseworkOptions _options;
 
     internal readonly IStringLocalizer S;
 
-    public CourseworkPartDisplayDriver(ILocalClock localClock, ISession session, IStringLocalizer<CourseworkPartDisplayDriver> stringLocalizer)
+    public CourseworkPartDisplayDriver(ILocalClock localClock, ISession session, IOptions<CourseworkOptions> options, IStringLocalizer<CourseworkPartDisplayDriver> stringLocalizer)
     {
         _localClock = localClock;
         _session = session;
+        _options = options.Value;
         S = stringLocalizer;
     }
+
+    private int MaxFileSizeMbLimit => Math.Max(_options.MaxFileSizeMb, 1);
+
+    private int MaxFilesLimit => Math.Max(_options.MaxFilesPerSubmission, 1);
 
     public override IDisplayResult Edit(CourseworkPart part, BuildPartEditorContext context)
         => Initialize<CourseworkPartViewModel>(GetEditorShapeType(context), async model =>
@@ -51,6 +55,8 @@ internal sealed class CourseworkPartDisplayDriver : ContentPartDisplayDriver<Cou
             model.MaxPoints = part.MaxPoints;
             model.CourseworkId = part.ContentItem.ContentItemId;
             model.IsNew = context.IsNew;
+            model.MaxFilesLimit = MaxFilesLimit;
+            model.MaxFileSizeMbLimit = MaxFileSizeMbLimit;
 
             await PopulateOptionsAsync(model);
         });
@@ -61,12 +67,12 @@ internal sealed class CourseworkPartDisplayDriver : ContentPartDisplayDriver<Cou
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (model.MaxFileSizeMb is < 1 or > MaxFileSizeMbLimit)
+        if (model.MaxFileSizeMb < 1 || model.MaxFileSizeMb > MaxFileSizeMbLimit)
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.MaxFileSizeMb), S["The largest file must be between 1 and {0} MB.", MaxFileSizeMbLimit]);
         }
 
-        if (model.MaxFiles is < 1 or > MaxFilesLimit)
+        if (model.MaxFiles < 1 || model.MaxFiles > MaxFilesLimit)
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.MaxFiles), S["The most files must be between 1 and {0}.", MaxFilesLimit]);
         }
@@ -139,7 +145,10 @@ internal sealed class CourseworkPartDisplayDriver : ContentPartDisplayDriver<Cou
             new SelectListItem(S["Text or files, or both"], nameof(CourseworkSubmissionType.TextAndFiles), model.SubmissionType == CourseworkSubmissionType.TextAndFiles),
             new SelectListItem(S["Text only"], nameof(CourseworkSubmissionType.Text), model.SubmissionType == CourseworkSubmissionType.Text),
             new SelectListItem(S["Files only"], nameof(CourseworkSubmissionType.Files), model.SubmissionType == CourseworkSubmissionType.Files),
+            new SelectListItem(S["Nothing: a grader signs it off"], nameof(CourseworkSubmissionType.SignOff), model.SubmissionType == CourseworkSubmissionType.SignOff),
         ];
+        model.MaxFilesLimit = MaxFilesLimit;
+        model.MaxFileSizeMbLimit = MaxFileSizeMbLimit;
     }
 
     private async Task<bool> IsPublishedRubricAsync(string rubricId)

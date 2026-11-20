@@ -78,6 +78,19 @@ public static class PackagesConstants
         public const string Cmi5 = "cmi5";
 
         /// <summary>
+        /// IMS Content Packaging: a manifest with no SCORM resources, played without a run-time API.
+        /// </summary>
+        public const string ImsContentPackage = "IMS Content Package";
+
+        /// <summary>
+        /// Gets whether the content of a standard runs without the SCORM run-time API.
+        /// </summary>
+        /// <param name="standard">The standard.</param>
+        /// <returns><see langword="true"/> for an IMS content package.</returns>
+        public static bool HasNoRuntime(string standard)
+            => standard == ImsContentPackage;
+
+        /// <summary>
         /// Gets whether a standard is an edition of SCORM 2004.
         /// </summary>
         /// <param name="standard">The standard.</param>

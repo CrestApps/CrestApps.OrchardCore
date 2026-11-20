@@ -37,6 +37,10 @@ Your administrator sets the content host once:
 
 From then on, every package opens from that host, and that host shows nothing but package files. Packages that already worked keep working. To go back, empty the field and save.
 
+## IMS content packages
+
+An IMS content package (for example one exported from Moodle) is a `.zip` of web pages with a manifest but no SCORM tracking. Import it the same way. It plays in the course without reporting a score, and the lesson counts as done when the learner opens it.
+
 ## What learners see
 
 Learners open the package with **Launch** in the course player, and **Resume** after they leave a package that saves its place. The package reports its own score and status; the course marks such results as reported by the browser.

@@ -41,6 +41,9 @@ public static class LearningPackagesCoreServiceCollectionExtensions
             kind.CompletionModes.Add(CompletionModes.PackageReported);
             kind.CompletionModes.Add(CompletionModes.Passed);
             kind.CompletionModes.Add(CompletionModes.MarkedDone);
+
+            // An IMS content package has no run-time API to report anything: it completes when the learner opens it.
+            kind.CompletionModes.Add(CompletionModes.Viewed);
             kind.ProducesGrade = true;
             kind.Icon = "fa-solid fa-box-open";
         });

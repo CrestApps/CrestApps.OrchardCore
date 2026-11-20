@@ -243,6 +243,79 @@ internal sealed class DefaultSubmissionService : ISubmissionService
         return result;
     }
 
+    public async Task<SubmissionResult> StartSignOffAsync(SignOffRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var coursework = await FindCourseworkAsync(request.CourseworkId);
+
+        if (coursework is null)
+        {
+            return SubmissionResult.Fail(SubmissionErrors.NotCoursework);
+        }
+
+        if (coursework.Part.SubmissionType != CourseworkSubmissionType.SignOff)
+        {
+            return SubmissionResult.Fail(SubmissionErrors.NotSignOff);
+        }
+
+        var enrollment = string.IsNullOrEmpty(request.EnrollmentId) ? null : await _enrollments.FindByIdAsync(request.EnrollmentId, cancellationToken);
+
+        // Only an enrollment in the item's own course, open to grading.
+        if (enrollment is null ||
+            !string.Equals(enrollment.CourseId, coursework.CourseId, StringComparison.Ordinal) ||
+            enrollment.Status is not (EnrollmentStatus.Active or EnrollmentStatus.Completed))
+        {
+            return SubmissionResult.Fail(SubmissionErrors.NotEnrolled);
+        }
+
+        if (!string.IsNullOrEmpty(request.Actor) && string.Equals(enrollment.UserId, request.Actor, StringComparison.Ordinal))
+        {
+            return SubmissionResult.Fail(SubmissionErrors.OwnSubmission);
+        }
+
+        return await RunLockedAsync(enrollment.ItemId, coursework.Item.ContentItemId, async () =>
+        {
+            var earlier = await _store.ListForEnrollmentAsync(enrollment.ItemId, coursework.Item.ContentItemId, cancellationToken);
+            var current = earlier.FirstOrDefault(candidate => candidate.Current);
+
+            if (current is not null)
+            {
+                current = await _store.FindFreshAsync(current.ItemId, cancellationToken) ?? current;
+
+                // A returned sign-off cannot come back from the learner, so it is closed and a new attempt is opened.
+                if (current.Status != SubmissionStatus.Returned)
+                {
+                    return new SubmissionResult { Submission = current };
+                }
+
+                current.Current = false;
+                await _store.UpdateAsync(current, cancellationToken);
+            }
+
+            // Nothing is reported to the learner's progress: the item counts once it is graded.
+            var submission = new Submission
+            {
+                ItemId = IdGenerator.GenerateId(),
+                EnrollmentId = enrollment.ItemId,
+                UserId = enrollment.UserId,
+                CourseId = coursework.CourseId,
+                CourseworkId = coursework.Item.ContentItemId,
+                CourseworkTitle = coursework.Item.DisplayText,
+                Attempt = (earlier.Count == 0 ? 0 : earlier.Max(candidate => candidate.Attempt)) + 1,
+                Current = true,
+                SignOff = true,
+                SubmittedUtc = _clock.UtcNow,
+                Status = SubmissionStatus.Submitted,
+            };
+
+            await _store.CreateAsync(submission, cancellationToken);
+            await _session.SaveChangesAsync(cancellationToken);
+
+            return new SubmissionResult { Submission = submission };
+        }, cancellationToken);
+    }
+
     public async Task<SubmissionResult> GradeAsync(GradeSubmissionRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -527,6 +600,9 @@ internal sealed class DefaultSubmissionService : ISubmissionService
     {
         switch (part.SubmissionType)
         {
+            case CourseworkSubmissionType.SignOff:
+                return SubmissionErrors.SignOffOnly;
+
             case CourseworkSubmissionType.Text:
                 if (uploads.Count > 0)
                 {

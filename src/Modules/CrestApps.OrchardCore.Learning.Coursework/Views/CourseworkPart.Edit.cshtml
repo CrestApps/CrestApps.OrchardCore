@@ -33,6 +33,7 @@
             <label asp-for="SubmissionType" class="ocat-label">@T["Learners hand in"]</label>
             <div class="ocat-end">
                 <select asp-for="SubmissionType" asp-items="Model.SubmissionTypeOptions" class="form-select"></select>
+                <span class="hint">@T["With \"Nothing\", learners hand nothing in: a grader opens the learner from Submissions and signs the work off with a grade, as a mentor sign-off. Complete it when it is graded."]</span>
             </div>
         </div>
 
@@ -99,7 +100,8 @@
         <div class="ocat-wrapper" asp-validation-class-for="MaxFileSizeMb">
             <label asp-for="MaxFileSizeMb" class="ocat-label">@T["Largest file (MB)"]</label>
             <div class="ocat-end">
-                <input asp-for="MaxFileSizeMb" type="number" min="1" max="50" class="form-control" />
+                <input asp-for="MaxFileSizeMb" type="number" min="1" max="@Model.MaxFileSizeMbLimit" class="form-control" />
+                <span class="hint">@T["Up to {0} MB on this site.", Model.MaxFileSizeMbLimit]</span>
                 <span asp-validation-for="MaxFileSizeMb"></span>
             </div>
         </div>
@@ -107,7 +109,8 @@
         <div class="ocat-wrapper" asp-validation-class-for="MaxFiles">
             <label asp-for="MaxFiles" class="ocat-label">@T["Most files"]</label>
             <div class="ocat-end">
-                <input asp-for="MaxFiles" type="number" min="1" max="10" class="form-control" />
+                <input asp-for="MaxFiles" type="number" min="1" max="@Model.MaxFilesLimit" class="form-control" />
+                <span class="hint">@T["Up to {0} files on this site.", Model.MaxFilesLimit]</span>
                 <span asp-validation-for="MaxFiles"></span>
             </div>
         </div>

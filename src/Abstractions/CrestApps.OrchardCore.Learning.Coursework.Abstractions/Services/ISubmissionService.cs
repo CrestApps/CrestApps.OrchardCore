@@ -34,6 +34,17 @@ public interface ISubmissionService
     Task<SubmissionResult> GradeAsync(GradeSubmissionRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Opens the record a grader grades to sign off coursework that takes no hand-in
+    /// (<see cref="CourseworkSubmissionType.SignOff"/>) for one learner: an empty current submission under the
+    /// learner's enrollment, or the current one when there is already one. Opening it reports nothing to the learner's
+    /// progress; grading it does, as for handed-in work.
+    /// </summary>
+    /// <param name="request">The coursework item, the enrollment and the grader.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The record to grade, or why it was refused.</returns>
+    Task<SubmissionResult> StartSignOffAsync(SignOffRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Records that scoring help gave a grader a suggestion for a submission: the next grade that grader saves for it is
     /// AI-assisted. A grade saved again with the same score keeps the mark.
     /// </summary>
@@ -90,6 +101,27 @@ public interface ISubmissionService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The count and the page.</returns>
     Task<(int Count, IReadOnlyList<Submission> Items)> ListWaitingAsync(IReadOnlyCollection<string> courseIds, int skip, int take, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// A sign-off a grader opens for one learner.
+/// </summary>
+public sealed class SignOffRequest
+{
+    /// <summary>
+    /// Gets or sets the coursework course item.
+    /// </summary>
+    public string CourseworkId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the learner's enrollment in the course of the item.
+    /// </summary>
+    public string EnrollmentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the grader.
+    /// </summary>
+    public string Actor { get; set; }
 }
 
 /// <summary>
@@ -293,4 +325,10 @@ public static class SubmissionErrors
 
     /// <summary>The reason is longer than <c>CourseworkConstants.MaxReasonLength</c>.</summary>
     public const string ReasonTooLong = "ReasonTooLong";
+
+    /// <summary>The coursework takes no hand-in: a grader signs it off.</summary>
+    public const string SignOffOnly = "SignOffOnly";
+
+    /// <summary>The coursework takes work from learners, so it is graded from their hand-ins, not signed off.</summary>
+    public const string NotSignOff = "NotSignOff";
 }

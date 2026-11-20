@@ -12,7 +12,7 @@ description: "The coursework course item of Learning: work learners hand in as t
 
 ## The coursework item
 
-Coursework is a content item of the **Coursework** type (`CourseworkLesson`, defined in code with `TitlePart`, `HtmlBodyPart` for the instructions, `CourseworkPart` and `CourseItemPart`). Its course item kind is `Coursework`. A new coursework item is **gradable**, so its grade counts in the course grade with the item's weight, and its completion mode is **Graded**: the item is done once the work is graded, so the course cannot complete before the grade is in. A gradable coursework item cannot use **Submitted** (done once the work is handed in); the editor refuses it. An item that is not gradable may use either. Add it to a course outline like any other course item.
+Coursework is a content item of the **Coursework** type (`CourseworkLesson`, defined in code with `TitlePart`, `HtmlBodyPart` for the instructions, `CourseworkPart` and `CourseItemPart`). Its course item kind is `Coursework`. A new coursework item is **gradable**, so its grade counts in the course grade with the item's weight, and its completion mode is **Graded**: the item is done once the work is graded, so the course cannot complete before the grade is in. A gradable coursework item may also use **Submitted** (done once the work is handed in, as a Moodle assignment that completes on hand-in and is graded): the grade given later still counts in the course grade, and when the course completed in between and the grade changes its outcome, the enrollment is flagged for review ([Reviews after completion](./learning#reviews-after-completion)). Add it to a course outline like any other course item.
 
 `CourseworkPart` holds:
 
@@ -20,14 +20,49 @@ Coursework is a content item of the **Coursework** type (`CourseworkLesson`, def
 | --- | --- |
 | `DueUtc` | When the work is due. The editor takes it in the editor's time zone and keeps it in UTC; work handed in after it is marked late. Empty means no due date. |
 | `LatePenaltyPercentPerDay`, `MaxLatePenaltyPercent`, `CloseAfterDays` | The late policy (see [Late work](#late-work)). |
-| `SubmissionType` | What the learner hands in: `Text`, `Files`, or `TextAndFiles` (text, files or both, the default). |
+| `SubmissionType` | What the learner hands in: `Text`, `Files`, `TextAndFiles` (text, files or both, the default), or `SignOff` (nothing: a grader signs the work off, see [Sign-off](#sign-off)). |
 | `AllowedExtensions` | The file types taken, such as `.pdf, .docx`. Empty takes any type. |
-| `MaxFileSizeMb`, `MaxFiles` | The largest file (1 to 50 MB) and the most files (1 to 10). |
+| `MaxFileSizeMb`, `MaxFiles` | The largest file and the most files, from 1 up to the site's limits: 50 MB and 20 files unless [configured](#configuration). |
 | `AllowResubmission` | Whether the learner may hand the work in again until it is graded. A grader can always return work to hand in again. |
 | `RubricId` | The published rubric the work is graded against. Empty grades out of `MaxPoints`. |
 | `MaxPoints` | The points the work is graded out of without a rubric. |
 
 Once the coursework is saved, its editor links to its **Submissions** page.
+
+## Sign-off
+
+Coursework with `SubmissionType` `SignOff` takes nothing from the learner, as a mentor's practical sign-off: the learner panel says the instructor signs it off, and a hand-in is refused (`SubmissionErrors.SignOffOnly`). Its **Submissions** page has a **Sign off a learner** card with the course's active learners; choosing one calls `ISubmissionService.StartSignOffAsync`, which opens an empty current submission marked `SignOff` under the learner's enrollment (or the current one again) and goes to its grading page. Opening it reports nothing to the learner's progress; the grade does, as for handed-in work, so use the **Graded** completion mode. The grader needs the same rights as for grading the learner's work (`GradingScope`), never signs off their own work, and a coursework item that takes hand-ins refuses a sign-off (`NotSignOff`).
+
+## Configuration
+
+The limits of hand-ins read `OrchardCore:CrestApps:Learning:Coursework`:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Learning": {
+        "Coursework": {
+          "MaxFilesPerSubmission": 20,
+          "MaxFileSizeMb": 50
+        }
+      }
+    }
+  }
+}
+```
+
+The editor offers values up to these limits (`CourseworkOptions`). A hand-in request may be as large as every file at the largest size plus 16 MB for the form: the hand-in action raises Kestrel's request body limit and the multipart limit to that size for its own request. Behind IIS (Azure App Service on Windows), IIS refuses a request over `maxAllowedContentLength` (30,000,000 bytes by default) before the site sees it; raise it in `web.config` to the largest hand-in:
+
+```xml
+<system.webServer>
+  <security>
+    <requestFiltering>
+      <requestLimits maxAllowedContentLength="1065353216" />
+    </requestFiltering>
+  </security>
+</system.webServer>
+```
 
 ## Rubrics
 

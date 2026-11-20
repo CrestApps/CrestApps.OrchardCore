@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Packages.Core.Services;
 using CrestApps.OrchardCore.Learning.Packages.Models;
 using CrestApps.OrchardCore.Learning.Packages.Services;
@@ -131,6 +132,12 @@ public sealed class PackagesAdminController : Controller
         var draft = await _contentManager.GetAsync(item.ContentItemId, VersionOptions.DraftRequired);
 
         draft.Alter<LearningPackagePart>(part => result.ApplyTo(part, Path.GetFileName(package.FileName), User.FindFirstValue(ClaimTypes.NameIdentifier), _clock.UtcNow));
+
+        // A package with no run-time API reports nothing, so its item completes when the learner opens it.
+        if (PackageImportResult.CompletionModeFor(result.Manifest?.Standard) is { } completionMode)
+        {
+            draft.Alter<CourseItemPart>(part => part.CompletionMode = completionMode);
+        }
         await _contentManager.UpdateAsync(draft);
         await _contentManager.SaveDraftAsync(draft);
 
@@ -145,6 +152,13 @@ public sealed class PackagesAdminController : Controller
         if (result.UsesScormDriver && await _contentHost.GetOriginAsync() is null)
         {
             await _notifier.WarningAsync(H["This package uses Articulate's SCORM Driver (Rise or Storyline 360), which runs in several frames. It shows a blank page until a package content host is set under Settings › Learning packages."]);
+        }
+
+        if (PackagesConstants.Standards.HasNoRuntime(result.Manifest.Standard))
+        {
+            await _notifier.SuccessAsync(H["The IMS content package \"{0}\" was imported. It plays without tracking and completes when the learner opens it; learners open its first page, \"{1}\". Publish the item to give it to learners.", result.Manifest.Title, result.Manifest.Launch.Title]);
+
+            return RedirectToAction("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = item.ContentItemId });
         }
 
         await _notifier.SuccessAsync(result.Manifest.Scos.Count > 1
