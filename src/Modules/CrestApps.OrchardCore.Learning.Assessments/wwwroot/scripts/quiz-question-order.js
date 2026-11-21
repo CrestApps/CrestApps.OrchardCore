@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-question-order-helpers.js
+	// src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-question-order-helpers.js
 	/**
 	* Keeps the order set for the questions still chosen and adds the new ones last.
 	* @param {string[] | null | undefined} order The order set so far.
@@ -30,8 +30,7 @@
 		[result[index], result[target]] = [result[target], result[index]];
 		return result;
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-question-order.js
+	// src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-question-order.js
 	function chosen(select) {
 		return [...select.options].filter((option) => option.selected && option.value).map((option) => option.value);
 	}
@@ -92,5 +91,4 @@
 	document.addEventListener("DOMContentLoaded", () => {
 		document.querySelectorAll("[data-question-order]").forEach(init);
 	});
-	//#endregion
 })();

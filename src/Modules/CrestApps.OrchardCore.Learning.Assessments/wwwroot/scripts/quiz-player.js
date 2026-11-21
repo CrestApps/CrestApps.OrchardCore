@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-player-blanks.js
+	// src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-player-blanks.js
 	/**
 	* The blank a word dropped on an element goes into: the list itself or the list the element is inside, when it offers
 	* that word.
@@ -61,8 +61,7 @@
 			});
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-submit-confirm.js
+	// src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-submit-confirm.js
 	function isAnswered(fields) {
 		return fields.some((field) => {
 			if (field.type === "radio" || field.type === "checkbox") return field.checked;
@@ -107,8 +106,7 @@
 			form.requestSubmit(button);
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-player.js
+	// src/Modules/CrestApps.OrchardCore.Learning.Assessments/Assets/js/quiz-player.js
 	var saveDelay = 600;
 	function token(form) {
 		return form.querySelector("input[name=\"__RequestVerificationToken\"]")?.value ?? "";
@@ -181,5 +179,4 @@
 		const timer = document.querySelector("[data-learning-timer]");
 		if (timer) countdown(timer, form);
 	});
-	//#endregion
 })();

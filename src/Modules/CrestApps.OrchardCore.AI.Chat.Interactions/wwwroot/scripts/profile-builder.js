@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/Assets/js/profile-builder.js
+	// src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/Assets/js/profile-builder.js
 	(function(window, document) {
 		"use strict";
 		var FEEDBACK_KIND = {
@@ -665,5 +665,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
 		else start();
 	})(window, document);
-	//#endregion
 })();

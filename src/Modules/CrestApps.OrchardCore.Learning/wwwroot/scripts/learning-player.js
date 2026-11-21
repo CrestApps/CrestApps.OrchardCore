@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Learning/Assets/js/learning-player-helpers.js
+	// src/Modules/CrestApps.OrchardCore.Learning/Assets/js/learning-player-helpers.js
 	function progressText(template, completed, required, percent) {
 		return template.replace("{0}", String(completed)).replace("{1}", String(required)).replace("{2}", String(percent));
 	}
@@ -43,8 +43,7 @@
 			}
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Learning/Assets/js/learning-player.js
+	// src/Modules/CrestApps.OrchardCore.Learning/Assets/js/learning-player.js
 	var heartbeatSeconds = 30;
 	var viewedReportSeconds = 10;
 	function token(root) {
@@ -218,5 +217,4 @@
 		trackTime(root);
 		trackVideo(root);
 	});
-	//#endregion
 })();

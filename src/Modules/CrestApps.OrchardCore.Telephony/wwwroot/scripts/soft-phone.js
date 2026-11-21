@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/format.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/format.js
 	function normalizeDialNumber(value) {
 		var input = String(value || "").trim();
 		var hasInternationalPrefix = input.charAt(0) === "+";
@@ -245,8 +245,7 @@
 		var window = probe.read();
 		return window && window.reads ? window.peak : -1;
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/hold-audio.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/hold-audio.js
 	var TONE_PLAN = {
 		frequencies: [440, 480],
 		gain: .05,
@@ -425,8 +424,7 @@
 			}
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/provider-errors.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/provider-errors.js
 	var ERROR_NAME = /\b([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b/;
 	var SIGNALING_LOST_ERRORS = [
 		"SDP_SEND_FAILED",
@@ -459,8 +457,7 @@
 		if (SIGNALING_LOST_ERRORS.indexOf(name) !== -1) return strings && strings.providerSignalingLost || DEFAULT_SIGNALING_LOST;
 		return getProviderErrorText(error) || "Telnyx WebRTC error.";
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/shared/call-timer.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/shared/call-timer.js
 	function pad(value) {
 		return value < 10 ? "0" + value : String(value);
 	}
@@ -471,8 +468,7 @@
 		var hours = Math.floor(totalSeconds / 3600);
 		return (hours > 0 ? hours + ":" + pad(minutes) : minutes) + ":" + pad(seconds);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-status.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-status.js
 	var STATUS_SEPARATOR = " · ";
 	function formatElapsed(totalSeconds) {
 		return formatDuration(totalSeconds);
@@ -490,8 +486,7 @@
 		if (inProgress || typeof durationSeconds !== "number" || !isFinite(durationSeconds) || durationSeconds <= 0) return "";
 		return formatElapsed(durationSeconds);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/audio-devices.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/audio-devices.js
 	var VIRTUAL_DEVICE_PATTERNS = [
 		/vb-audio/,
 		/\bvb-cable\b/,
@@ -542,8 +537,7 @@
 			return device.deviceId === selectedDeviceId;
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/mic-boost.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/mic-boost.js
 	var MIC_BOOST_OPTIONS_DB = [
 		0,
 		3,
@@ -667,8 +661,7 @@
 			}
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-level.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-level.js
 	var AUTO_LEVEL_DEFAULTS = {
 		targetDb: -18,
 		maxGainDb: 20,
@@ -709,8 +702,7 @@
 		if (measuredDb <= option(options, "hotDb")) next = Math.max(next, Math.min(current, 0));
 		return clampAutoLevelGainDb(next, options);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voice-isolation.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voice-isolation.js
 	var VOICE_ISOLATION_ENGINES = ["gtcrn", "rnnoise"];
 	var VOICE_ISOLATION_STRENGTHS = [
 		"low",
@@ -1143,8 +1135,7 @@
 			if (context && typeof context.close === "function") Promise.resolve(context.close()).catch(function() {});
 		} catch (error) {}
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/playout-delay.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/playout-delay.js
 	var PLAYOUT_DELAY_OPTIONS = [
 		-1,
 		.12,
@@ -1179,8 +1170,7 @@
 		if (received > 0) return Math.max(0, concealed / received * 100);
 		return inbound.totalSamplesReceived > 0 ? Math.max(0, inbound.concealedSamples / inbound.totalSamplesReceived * 100) : -1;
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/signaling-region.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/signaling-region.js
 	var SIGNALING_REGIONS = [
 		{
 			value: "",
@@ -1235,8 +1225,7 @@
 		if (region) clientOptions.region = region;
 		return clientOptions;
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/diagnostics.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/diagnostics.js
 	var WARNING_TEXT_LIMIT = 400;
 	function describeProviderWarning(warning) {
 		if (!warning) return "";
@@ -1257,8 +1246,7 @@
 		var code = warning && typeof warning === "object" ? warning.code || warning.warning && warning.warning.code : null;
 		return code != null && PAUSE_DRIVEN_WARNING_CODES[code] ? "info" : "warning";
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/telnyx-state.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/telnyx-state.js
 	function mapTelnyxOutboundState(state) {
 		switch (state) {
 			case "new":
@@ -1288,8 +1276,7 @@
 			});
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/reconnect.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/reconnect.js
 	var RECONNECT_DELAYS_MS = [
 		0,
 		2e3,
@@ -1301,8 +1288,7 @@
 	function reconnectDelayMs(attempt) {
 		return RECONNECT_DELAYS_MS[Math.min(attempt > 0 ? attempt : 0, RECONNECT_DELAYS_MS.length - 1)];
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/send-audio.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/send-audio.js
 	var OUTBOUND_SILENCE_MS = 5e3;
 	var OUTBOUND_CHECK_INTERVAL_MS = 1e3;
 	var TEARDOWN_STATES = ["destroy", "recovering"];
@@ -1445,8 +1431,7 @@
 			}, 0);
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/agent-hold.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/agent-hold.js
 	function isUp(stateName) {
 		return stateName === "Connected" || stateName === "OnHold";
 	}
@@ -1508,8 +1493,7 @@
 		if (!call.browserOriginated) return "hub";
 		return hasBrowserController ? "local" : "none";
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/agent-mute.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/agent-mute.js
 	function rememberAgentMute(mutes, callId, muted) {
 		if (!mutes || !callId) return;
 		if (muted) mutes[callId] = true;
@@ -1571,8 +1555,7 @@
 			return isAgentMuted(mutes, callId);
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js
 	var PRE_DIALED_LEG_INTENT = "cc-predial";
 	var OFFER_ID_HEADER = "x-offer-id";
 	var ACCEPTED_OFFER_MEMORY_MS = 6e4;
@@ -1695,8 +1678,7 @@
 		if (offer && offer.callId === report.callId) return offer.accepting || isAccepted(accepted, offer.reservationId, now) ? "apply" : "keep-ringing";
 		return isUnacceptedOfferCall(unaccepted, report.callId, now) ? "ignore" : "apply";
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-answer.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-answer.js
 	var AUTO_ANSWER_WINDOW_MS = 2e4;
 	var EXTENSION_CALL_KEY = "extension";
 	function offerKey(reservationId) {
@@ -1755,8 +1737,7 @@
 		if (leg && (leg.transferLeg || isDestinationLeg(leg))) return false;
 		return consumeAutoAnswer(arm, now) !== "";
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/predictive-standby.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/predictive-standby.js
 	var STANDBY_RESERVATION_HEADER = "x-cc-reservation";
 	var STANDBY_AGENT_USER_HEADER = "x-cc-agent-user";
 	var STANDBY_GRACE_MS = 5e3;
@@ -1953,8 +1934,7 @@
 		media = media || {};
 		return "Monitor leg media: transceivers " + (directions || "none") + ", sent " + (media.bytesSent || 0) + " bytes (mic " + format(media.microphoneLevel) + "), received " + (media.bytesReceived || 0) + " bytes (heard " + format(media.heardLevel) + "), codec " + (media.codec || "-") + ".";
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/dial-target.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/dial-target.js
 	function digitsOf$1(value) {
 		return value == null ? "" : String(value).replace(/\D+/g, "");
 	}
@@ -2064,8 +2044,7 @@
 		var value = options.value == null ? "" : String(options.value).trim();
 		return options.agentEntered && !value ? "release" : "keep";
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-dial.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-dial.js
 	var BRIDGED_DIAL_LEG_CAPABILITY = "bridged-dial-leg";
 	var SOFT_PHONE_CREDENTIAL_ID = "softPhoneCredentialId";
 	function canOriginate(session) {
@@ -2099,8 +2078,7 @@
 			return call.state === "Connected" && !call.isMuted && !call.isOnHold && !held(call);
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-ring.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-ring.js
 	var OFFER_CHANNEL_NAME = "crestapps-soft-phone-offers";
 	var OFFER_HANDLED_MESSAGE = "offer-handled";
 	function shouldRingForOffer(offerVisible, acceptPending) {
@@ -2114,8 +2092,7 @@
 			marksCurrentCallHandled: !!currentCallId && currentCallId === message.callId
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/ringback.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/ringback.js
 	var RINGBACK_MAX_MS = 12e4;
 	var RINGBACK_CADENCE = {
 		frequencies: [440, 480],
@@ -2219,8 +2196,7 @@
 		};
 		return { play: true };
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/registration.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/registration.js
 	function shouldStartRegistration(state) {
 		state = state || {};
 		return !!state.browserAudioEnabled && !state.registered && !state.registering && !state.microphoneBlocked && !state.captureInFlight && state.hubConnected !== false;
@@ -2297,8 +2273,7 @@
 			});
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/answer-state.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/answer-state.js
 	var ANSWER_REGISTRATION_TIMEOUT_MS = 15e3;
 	function answerButtonView(inProgress, restingLabel, labels) {
 		if (!inProgress) return {
@@ -2339,8 +2314,7 @@
 	function isOfferActionPending(pending, offer) {
 		return !!(pending && offer && pending.reservationId && pending.reservationId === offer.reservationId);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-legs.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-legs.js
 	function createCallLegs() {
 		return {
 			platform: null,
@@ -2509,8 +2483,7 @@
 	function canConferenceCall(call) {
 		return !!(call && call.callId && !call.browserOriginated);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/conference.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/conference.js
 	function defaultStateOf(call) {
 		return call ? String(call.state || "") : "";
 	}
@@ -2790,8 +2763,7 @@
 			}).length
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/in-call-controls.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/in-call-controls.js
 	function planInCallControls(options) {
 		options = options || {};
 		var stateName = String(options.stateName || "Idle");
@@ -2842,8 +2814,7 @@
 			showKeypad: !options.transferOpen && (!active || adding || held || connected && !!options.keypadOpen)
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-labels.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-labels.js
 	var ID_PATTERNS = [
 		/^v\d+:/i,
 		/^(conf|ext|consult|cc-[a-z]+)-/i,
@@ -2964,8 +2935,7 @@
 			};
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-target.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-target.js
 	var TRANSFER_CAPABILITY = 32;
 	var ATTENDED_TRANSFER_CAPABILITY = 2048;
 	var TRANSFER_MODE_VALUES = {
@@ -3135,8 +3105,7 @@
 		options = options || {};
 		return options.call && options.call.browserOriginated && !options.serviceApplies ? "browser-call" : "";
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-search.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-search.js
 	var MAX_KEYPAD_MATCHES = 6;
 	function text$2(value) {
 		return value == null ? "" : String(value).trim();
@@ -3224,8 +3193,7 @@
 		if (isLive(previousStatus)) return format$2(label$2(strings, "consultTargetLeft", "{0} did not take the call. The caller is back with you."), targetName || "");
 		return label$2(strings, "consultCancelled", "The caller is back with you.");
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/phone-input.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/phone-input.js
 	function normalize(value) {
 		return typeof normalizeDialNumber === "function" ? normalizeDialNumber(value) : String(value || "").trim();
 	}
@@ -3270,8 +3238,7 @@
 			valid: !!number
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-panel.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-panel.js
 	var KIND_ICONS = {
 		agent: "fa-user",
 		queue: "fa-users",
@@ -3721,8 +3688,7 @@
 			submit
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-service.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-service.js
 	function label(strings, key, fallback) {
 		return strings && typeof strings[key] === "string" && strings[key] ? strings[key] : fallback;
 	}
@@ -4043,8 +4009,7 @@
 		var call = options.call;
 		return !!(options.bridgedDial && call && call.callId && !call.browserOriginated && !call.isOnHold && !options.serviceCall);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/in-app-confirm.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/in-app-confirm.js
 	function showInAppConfirm(host, options) {
 		options = options || {};
 		if (!host || !host.ownerDocument) return Promise.resolve(false);
@@ -4102,8 +4067,7 @@
 			(options.focusCancel ? cancel : confirm).focus();
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/browser-calls.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/browser-calls.js
 	function createCallNotifiers() {
 		return { entries: {} };
 	}
@@ -4246,8 +4210,7 @@
 			})
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/remote-elements.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/remote-elements.js
 	function createRemoteElementPool(primary, createElement, disposeElement) {
 		return {
 			primary: primary || null,
@@ -4292,8 +4255,7 @@
 			releaseRemoteElement(pool, key);
 		});
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/incoming-card.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/incoming-card.js
 	function pick(value, fallback) {
 		return typeof value === "string" && value.trim() ? value : fallback;
 	}
@@ -4567,8 +4529,7 @@
 			}
 		};
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voicemail-route.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voicemail-route.js
 	var VOICEMAIL_ROUTES = Object.freeze({
 		browserLeg: "browser-leg",
 		contactCenter: "contact-center",
@@ -4586,8 +4547,7 @@
 		};
 		return { route: current.hasCall ? VOICEMAIL_ROUTES.telephony : VOICEMAIL_ROUTES.none };
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/microphone-errors.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/microphone-errors.js
 	var PERMISSION_ERRORS = [
 		"NotAllowedError",
 		"PermissionDeniedError",
@@ -4640,8 +4600,7 @@
 			"browser=" + known(details.userAgent)
 		].join("; ");
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-deadline.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-deadline.js
 	var OFFER_RING_STOP_GRACE_MS = 2e3;
 	var OFFSET_KEY = "__crestAppsServerOffsetMs";
 	function parseUtcMs(value) {
@@ -4673,8 +4632,7 @@
 		}
 		return computeOfferRingStopDelayMs(properties.expiresUtc, properties[OFFSET_KEY], nowMs);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/ring-policy.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/ring-policy.js
 	var INBOUND_RING_ACTIONS = {
 		ring: "ring",
 		decline: "decline"
@@ -4687,8 +4645,7 @@
 	function offerDeclinesRing(ringCallId, offerCallId) {
 		return !!ringCallId && ringCallId !== offerCallId;
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voicemail-delete.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voicemail-delete.js
 	var DEFAULT_TEXT = {
 		refused: "The server refused the request. Reload the page and try again.",
 		expired: "The page is out of date. Reload it and try again.",
@@ -4758,8 +4715,7 @@
 		if (total === 1) return (strings && strings.voicemailDeleteFailed || "The voicemail could not be deleted.") + " " + voicemailDeleteFailureText(failed[0].reason, strings);
 		return (strings && strings.voicemailDeletePartiallyFailed || "{0} of {1} voicemails could not be deleted. They are still selected.").replace("{0}", String(failed.length)).replace("{1}", String(total));
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone.js
+	// src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone.js
 	(function() {
 		"use strict";
 		var setPredictiveStandbyFor = setPredictiveStandby;
@@ -11150,5 +11106,4 @@
 		if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initializeAll);
 		else initializeAll();
 	})();
-	//#endregion
 })();

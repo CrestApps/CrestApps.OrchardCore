@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/date-range-picker.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/date-range-picker.js
 	(function() {
 		var selector = "[data-date-range-picker]";
 		function pad(value) {
@@ -396,5 +396,4 @@
 		}
 		initialize();
 	})();
-	//#endregion
 })();
