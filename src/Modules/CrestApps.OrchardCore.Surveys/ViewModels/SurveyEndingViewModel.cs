@@ -52,4 +52,14 @@ public class SurveyEndingViewModel
     /// Gets or sets the collector token of a poll whose totals respondents may see, or <see langword="null"/>.
     /// </summary>
     public string ResultsToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the local URL a consumer asked the respondent to return to, or <see langword="null"/>.
+    /// </summary>
+    public string ReturnUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the text of the link back, or <see langword="null"/> for the default text.
+    /// </summary>
+    public string ReturnText { get; set; }
 }

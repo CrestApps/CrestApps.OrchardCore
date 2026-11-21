@@ -48,7 +48,6 @@ internal sealed class MoodleFileFormatProvider : IContentTransferFileFormatProvi
     private readonly ITempDirectoryProvider _tempDirectoryProvider;
     private readonly MoodleWorkspaces _workspaces;
     private readonly MoodleImportOptions _options;
-    private readonly QuestionTypeOptions _questionTypes;
     private readonly CourseItemKindOptions _kinds;
     private readonly ILogger _logger;
 
@@ -58,7 +57,6 @@ internal sealed class MoodleFileFormatProvider : IContentTransferFileFormatProvi
         ITempDirectoryProvider tempDirectoryProvider,
         MoodleWorkspaces workspaces,
         IOptions<MoodleImportOptions> options,
-        IOptions<QuestionTypeOptions> questionTypes,
         IOptions<CourseItemKindOptions> kinds,
         ILogger<MoodleFileFormatProvider> logger,
         IStringLocalizer<MoodleFileFormatProvider> stringLocalizer)
@@ -66,7 +64,6 @@ internal sealed class MoodleFileFormatProvider : IContentTransferFileFormatProvi
         _tempDirectoryProvider = tempDirectoryProvider;
         _workspaces = workspaces;
         _options = options.Value;
-        _questionTypes = questionTypes.Value;
         _kinds = kinds.Value;
         _logger = logger;
         S = stringLocalizer;
@@ -118,7 +115,7 @@ internal sealed class MoodleFileFormatProvider : IContentTransferFileFormatProvi
 
         var token = _workspaces.Add(new MoodleWorkspace(folder, result.Backup));
 
-        return new MoodleImportReader(token, _workspaces, MoodleCourseRows.Write(result.Backup, token, _questionTypes, S, kind => _kinds.Find(kind) is not null));
+        return new MoodleImportReader(token, _workspaces, MoodleCourseRows.Write(result.Backup, token, S, kind => _kinds.Find(kind) is not null));
     }
 
     /// <inheritdoc />

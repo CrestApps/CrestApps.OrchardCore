@@ -176,6 +176,15 @@ public sealed class SurveyRunnerController : Controller
             return NotFoundPage();
         }
 
+        // A resume link (a consumer that started the response for someone, such as a course) carries the token once;
+        // keep it as the resume cookie so the page posts that follow still find the response.
+        var linkToken = Request.Query[SurveyRespondentIdentityFactory.ResumeQueryKey].ToString();
+
+        if (!string.IsNullOrEmpty(linkToken) && !string.IsNullOrEmpty(response.ResumeTokenHash))
+        {
+            _identities.WriteResumeCookie(response.SurveyId, linkToken);
+        }
+
         if (response.Status != SurveyResponseStatus.InProgress)
         {
             return RedirectToAction(nameof(Done), new { responseId });
@@ -383,6 +392,15 @@ public sealed class SurveyRunnerController : Controller
             ShowScore = definition.Scoring?.Enabled == true && definition.Scoring.ShowScoreToRespondent && (shows & ReviewShows.Score) != 0 && response.Grading == GradingStatus.Graded,
             ResultsToken = definition.Review?.ResultsVisibility is ResultsVisibility.AfterAnswer or ResultsVisibility.Always ? collector?.Token : null,
         };
+
+        // A consumer that started the response (a course item) may ask for a link back; only a local URL is followed.
+        var returnUrl = SurveyResponseProperties.ReadString(response, SurveyResponseProperties.ReturnUrl);
+
+        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            model.ReturnUrl = returnUrl;
+            model.ReturnText = SurveyResponseProperties.ReadString(response, SurveyResponseProperties.ReturnText);
+        }
 
         if (collector?.Kind == SurveyCollectorKinds.Kiosk)
         {

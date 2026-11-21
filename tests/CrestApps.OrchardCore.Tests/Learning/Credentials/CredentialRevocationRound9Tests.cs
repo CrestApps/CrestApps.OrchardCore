@@ -1,6 +1,3 @@
-using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
-using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Credentials;
 using CrestApps.OrchardCore.Learning.Credentials.Models;
@@ -8,6 +5,7 @@ using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,21 +57,11 @@ public sealed class CredentialRevocationRound9Tests
         await h.RunQueuedAsync();
 
         // Act: ana's attempt is regraded below the pass mark; ben's is voided.
-        await h.RunAsync(async services =>
-        {
-            var store = services.GetRequiredService<AssessmentAttemptStore>();
-            var regraded = await store.FindByIdAsync(ana.ItemId);
-            var voided = await store.FindByIdAsync(ben.ItemId);
+        ana.Passed = false;
+        ben.Status = SurveyResponseStatus.Voided;
 
-            regraded.Passed = false;
-            voided.Status = AttemptStatus.Voided;
-
-            foreach (var observer in services.GetServices<IAttemptObserver>())
-            {
-                await observer.ScoreChangedAsync(regraded, new AttemptScoreChange { ChangedUtc = h.Clock.UtcNow, Actor = "grader", Kind = "Regraded", From = 100, To = 0, Reason = "Key corrected" });
-                await observer.ScoreChangedAsync(voided, new AttemptScoreChange { ChangedUtc = h.Clock.UtcNow, Actor = "grader", Kind = "Voided", From = 100, To = null, Reason = "Cheating" });
-            }
-        });
+        await h.NotifyAsync(ana, (observer, context) => observer.ScoreChangedAsync(context));
+        await h.NotifyAsync(ben, (observer, context) => observer.VoidedAsync(context));
 
         // Assert
         Assert.True(Assert.Single(await h.AwardsAsync("ana")).IsRevoked);

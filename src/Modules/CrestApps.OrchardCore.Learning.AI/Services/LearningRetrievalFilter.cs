@@ -32,7 +32,6 @@ internal sealed class LearningRetrievalFilter : IAIDataSourceResultFilter
     private readonly IAuthorizationService _authorizationService;
     private readonly LearningTutorProfiles _tutorProfiles;
     private readonly LearningAIOptions _options;
-    private readonly QuestionTypeOptions _questionTypes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningRetrievalFilter"/> class.
@@ -44,10 +43,8 @@ internal sealed class LearningRetrievalFilter : IAIDataSourceResultFilter
         ICourseStructureService courseStructure,
         IAuthorizationService authorizationService,
         LearningTutorProfiles tutorProfiles,
-        IOptions<LearningAIOptions> options,
-        IOptions<QuestionTypeOptions> questionTypes)
+        IOptions<LearningAIOptions> options)
     {
-        _questionTypes = questionTypes.Value;
         _contentManager = contentManager;
         _contentDefinitionManager = contentDefinitionManager;
         _courseAccessService = courseAccessService;
@@ -108,26 +105,13 @@ internal sealed class LearningRetrievalFilter : IAIDataSourceResultFilter
     }
 
     /// <summary>
-    /// Gets whether a content item is exam content: a question, a question bank or a quiz, whose text may hold answer
-    /// keys.
+    /// Gets whether a content item is exam content: a quiz, whose text may hold answer keys. Questions and question banks
+    /// are survey records, not content, so retrieval never sees them.
     /// </summary>
     /// <param name="item">The content item.</param>
     /// <returns><see langword="true"/> for exam content.</returns>
-    internal bool IsExamContent(ContentItem item)
-        => IsExamContent(item, _questionTypes);
-
-    /// <summary>
-    /// Gets whether a content item is exam content: a question type registered with <c>AddQuestionType</c> (as the
-    /// question access handler decides), a question bank or a quiz, whose text may hold answer keys.
-    /// </summary>
-    /// <param name="item">The content item.</param>
-    /// <param name="questionTypes">The question types.</param>
-    /// <returns><see langword="true"/> for exam content.</returns>
-    internal static bool IsExamContent(ContentItem item, QuestionTypeOptions questionTypes)
-        => string.Equals(item.ContentType, AssessmentsConstants.ContentTypes.QuestionBank, StringComparison.Ordinal)
-            || string.Equals(item.ContentType, AssessmentsConstants.ContentTypes.Quiz, StringComparison.Ordinal)
-            || questionTypes?.IsQuestion(item.ContentType) == true
-            || item.Has<QuestionPart>()
+    internal static bool IsExamContent(ContentItem item)
+        => string.Equals(item.ContentType, AssessmentsConstants.ContentTypes.Quiz, StringComparison.Ordinal)
             || item.Has<QuizPart>()
             || string.Equals(item.Get<CourseItemPart>(nameof(CourseItemPart))?.Kind, AssessmentsConstants.QuizKind, StringComparison.Ordinal);
 

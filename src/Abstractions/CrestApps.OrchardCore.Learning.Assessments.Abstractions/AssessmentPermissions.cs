@@ -4,34 +4,20 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Learning.Assessments;
 
 /// <summary>
-/// The permissions of Learning assessments.
+/// The permissions of Learning Assessments. Quizzes are surveys: designing, grading and accommodations use the Surveys
+/// permissions, or course staff roles.
 /// </summary>
 public static class AssessmentPermissions
 {
     /// <summary>
-    /// Author questions and banks.
+    /// Grade the work of every course (quizzes and coursework) on the Learning grading page.
     /// </summary>
-    public static readonly Permission ManageQuestionBanks = new("ManageQuestionBanks", LocalizationSource.Create("Manage question banks", typeof(AssessmentPermissions)));
+    public static readonly Permission GradeAssessments = new("GradeAssessments", LocalizationSource.Create("Grade the work of every course", typeof(AssessmentPermissions)));
 
     /// <summary>
-    /// See questions and their answer keys.
-    /// </summary>
-    public static readonly Permission ViewQuestionBanks = new("ViewQuestionBanks", LocalizationSource.Create("View question banks and answer keys", typeof(AssessmentPermissions)), [ManageQuestionBanks]);
-
-    /// <summary>
-    /// Grade attempts that need a grader.
-    /// </summary>
-    public static readonly Permission GradeAssessments = new("GradeAssessments", LocalizationSource.Create("Grade assessments", typeof(AssessmentPermissions)));
-
-    /// <summary>
-    /// Change a score with a reason, regrade and void attempts.
+    /// Change grades that are already given.
     /// </summary>
     public static readonly Permission OverrideGrades = new("OverrideGrades", LocalizationSource.Create("Override grades", typeof(AssessmentPermissions)));
-
-    /// <summary>
-    /// Give a person more time, more attempts or another window.
-    /// </summary>
-    public static readonly Permission ManageAssessmentOverrides = new("ManageAssessmentOverrides", LocalizationSource.Create("Manage assessment overrides", typeof(AssessmentPermissions)));
 
     /// <summary>
     /// Manage grade scales.

@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.Skills.Core.Indexes;
 using CrestApps.OrchardCore.Skills.Core.Services;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Learning.Assessments;
 using CrestApps.OrchardCore.YesSql.Core.WorkQueues;
 using Microsoft.Extensions.DependencyInjection;
@@ -325,10 +326,13 @@ public sealed class CertificationPathTests
 /// </summary>
 internal sealed class CertificationHarness : IAsyncDisposable
 {
-    private CertificationHarness(AssessmentTestHarness inner)
+    private CertificationHarness(AssessmentTestHarness inner, InMemorySurveyResponses responses)
     {
         Inner = inner;
+        Responses = responses;
     }
+
+    public InMemorySurveyResponses Responses { get; }
 
     public static DateOnly Today => DateOnly.FromDateTime(LearningTestHarness.Now);
 
@@ -339,6 +343,13 @@ internal sealed class CertificationHarness : IAsyncDisposable
     public static async Task<CertificationHarness> CreateAsync(bool dropCompletionEvents = false, Action<IServiceCollection> configure = null)
     {
         AssessmentTestHarness inner = null;
+        var responses = new InMemorySurveyResponses();
+
+        // The final exam's quiz names the survey its attempts answer.
+        var quiz = new ContentItem { ContentItemId = "final", ContentType = "QuizLesson", DisplayText = "Final exam" };
+        quiz.Alter<QuizPart>(part => part.SurveyId = "final-survey");
+        var contentManager = new Mock<IContentManager>();
+        contentManager.Setup(manager => manager.GetAsync("final", It.IsAny<VersionOptions>())).ReturnsAsync(quiz);
 
         inner = await AssessmentTestHarness.CreateAsync(
             services =>
@@ -348,7 +359,8 @@ internal sealed class CertificationHarness : IAsyncDisposable
                 services.AddLearningCertificationsAssessments();
                 services.RemoveAll<CertificateHolderResolver>();
                 services.AddScoped<CertificateHolderResolver, NamedHolderResolver>();
-                services.TryAddSingleton(Mock.Of<IContentManager>());
+                services.AddSingleton(contentManager.Object);
+                services.AddSingleton<ISurveyResponseQueries>(responses);
                 services.AddSingleton<ILocalClock>(provider => new UtcLocalClock(provider.GetRequiredService<IClock>()));
 
                 configure?.Invoke(services);
@@ -357,7 +369,7 @@ internal sealed class CertificationHarness : IAsyncDisposable
                 {
                     // Every completion event is lost, as when an observer fails after the commit.
                     services.RemoveAll<IEnrollmentObserver>();
-                    services.RemoveAll<CrestApps.OrchardCore.Learning.Assessments.Services.IAttemptObserver>();
+                    services.RemoveAll<ISurveyResponseObserver>();
                 }
             },
             async schemaBuilder =>
@@ -372,14 +384,9 @@ internal sealed class CertificationHarness : IAsyncDisposable
         inner.Courses.AddCourse("safety");
         inner.Courses.AddItem("safety", "lesson");
         inner.Courses.AddCourse("exams");
-        inner.Questions.AddChoice("q1", "a", options: ["a", "b"]);
-        inner.AddQuiz("exams", "final", quiz =>
-        {
-            quiz.QuestionIds = ["q1"];
-            quiz.MaxAttempts = null;
-        });
+        inner.AddQuiz("exams", "final", part => part.SurveyId = "final-survey");
 
-        return new CertificationHarness(inner);
+        return new CertificationHarness(inner, responses);
     }
 
     public Task<T> RunAsync<T>(Func<IServiceProvider, Task<T>> work) => Inner.RunAsync(work);
@@ -464,16 +471,9 @@ internal sealed class CertificationHarness : IAsyncDisposable
 
     public async Task PassQuizAsync(string userId)
     {
-        await Inner.EnrollAsync(userId, "exams");
+        var enrollment = await Inner.EnrollAsync(userId, "exams");
 
-        var started = await Inner.StartAsync(userId, "final");
-
-        Assert.True(started.Succeeded, started.ErrorCode);
-        await Inner.RunAsync(service => service.SaveResponseAsync(started.Attempt.ItemId, userId, 0, new AttemptResponse { ChoiceIds = ["a"] }));
-
-        var submitted = await Inner.RunAsync(service => service.SubmitAsync(started.Attempt.ItemId, userId));
-
-        Assert.True(submitted.Attempt.Passed, "The attempt should pass.");
+        await RunAsync(services => Responses.CompleteAsync(services, "final", "final-survey", userId, enrollment.ItemId, Clock.UtcNow, 100, passed: true));
     }
 
     public Task<IReadOnlyList<Enrollment>> EnrollmentsAsync(string userId, string courseId)

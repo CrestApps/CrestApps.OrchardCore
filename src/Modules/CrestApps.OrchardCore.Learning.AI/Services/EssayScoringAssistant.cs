@@ -1,9 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Coursework;
 using CrestApps.OrchardCore.Learning.Coursework.Core.Services;
 using CrestApps.OrchardCore.Learning.Coursework.Models;
@@ -52,15 +50,14 @@ public sealed class EssayScoringResult
 }
 
 /// <summary>
-/// Scoring help for graders: asks the model for a suggested score and feedback for a quiz essay answer (against the
-/// question's grader guidance) or a coursework text submission (against its rubric or out of its points). It reads the
+/// Scoring help for coursework graders: asks the model for a suggested score and feedback for a coursework text
+/// submission (against its rubric or out of its points). Quiz essay answers get scoring help on the Surveys grading
+/// page. It reads the
 /// work and checks that the person may grade it, and it never writes a grade: the grader confirms or changes the
 /// suggestion and saves it. The learner's name is not sent to the model.
 /// </summary>
 public sealed class EssayScoringAssistant
 {
-    private const int AttemptCommentLength = 1000;
-
     private readonly ILearningAICompleter _completer;
     private readonly IServiceProvider _services;
     private readonly IAuthorizationService _authorizationService;
@@ -76,57 +73,6 @@ public sealed class EssayScoringAssistant
         _completer = completer;
         _services = services;
         _authorizationService = authorizationService;
-    }
-
-    /// <summary>
-    /// Suggests a score for a quiz essay answer.
-    /// </summary>
-    public async Task<EssayScoringResult> SuggestForAttemptItemAsync(ClaimsPrincipal user, string attemptId, int index, CancellationToken cancellationToken)
-    {
-        var store = _services.GetService<AssessmentAttemptStore>();
-        var attempt = store is null || string.IsNullOrEmpty(attemptId) ? null : await store.FindByIdAsync(attemptId, cancellationToken);
-
-        if (attempt is null ||
-            index < 0 ||
-            index >= attempt.Items.Count ||
-            !await CanUseAsync(user, attempt.UserId, attempt.CourseId))
-        {
-            return new EssayScoringResult { Error = EssayScoringResult.NotFound };
-        }
-
-        var item = attempt.Items[index];
-
-        if (item.QuestionType != AssessmentsConstants.QuestionTypes.Essay)
-        {
-            return new EssayScoringResult { Error = EssayScoringResult.NotFound };
-        }
-
-        var answer = item.Response?.Texts.FirstOrDefault();
-
-        if (string.IsNullOrWhiteSpace(answer))
-        {
-            return new EssayScoringResult { Error = EssayScoringResult.NoText };
-        }
-
-        var question = string.IsNullOrEmpty(item.QuestionId) ? null : await _services.GetRequiredService<IContentManager>().GetAsync(item.QuestionId, VersionOptions.Latest);
-        var input = new JsonObject
-        {
-            ["task"] = QuizResultExplainer.Text(item.Prompt) ?? item.Title,
-            ["guidance"] = question?.Get<EssayQuestionPart>(nameof(EssayQuestionPart))?.GraderGuidance ?? string.Empty,
-            ["maxPoints"] = item.Points,
-            ["answer"] = answer,
-        };
-
-        var result = await SuggestAsync(input, item.Points, null, AttemptCommentLength, cancellationToken);
-
-        // The server records that this grader was given a suggestion: the grade they save next is AI-assisted.
-        if (result.Suggestion is not null && user?.FindFirstValue(ClaimTypes.NameIdentifier) is { Length: > 0 } grader &&
-            _services.GetService<CrestApps.OrchardCore.Learning.Assessments.Services.IAssessmentAttemptService>() is { } attempts)
-        {
-            await attempts.RecordScoringHelpAsync(attemptId, index, grader, cancellationToken);
-        }
-
-        return result;
     }
 
     /// <summary>

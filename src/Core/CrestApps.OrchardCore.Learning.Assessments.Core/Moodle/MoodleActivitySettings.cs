@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Learning.Core.Moodle;
 using CrestApps.OrchardCore.Learning.Models;
 
@@ -36,13 +36,13 @@ public static class MoodleQuizSettings
     /// </summary>
     /// <param name="quiz">The quiz.</param>
     /// <returns>The feedback mode.</returns>
-    public static QuizFeedbackMode FeedbackMode(MoodleActivity quiz)
+    public static global::CrestApps.OrchardCore.Surveys.Models.FeedbackMode FeedbackMode(MoodleActivity quiz)
     {
         ArgumentNullException.ThrowIfNull(quiz);
 
         return quiz.Get("preferredbehaviour") is "immediatefeedback" or "immediatecbm" or "interactive" or "interactivecountback"
-            ? QuizFeedbackMode.Immediate
-            : QuizFeedbackMode.Deferred;
+            ? global::CrestApps.OrchardCore.Surveys.Models.FeedbackMode.Immediate
+            : global::CrestApps.OrchardCore.Surveys.Models.FeedbackMode.Deferred;
     }
 
     /// <summary>
@@ -51,11 +51,11 @@ public static class MoodleQuizSettings
     /// </summary>
     /// <param name="quiz">The quiz.</param>
     /// <returns>The review options.</returns>
-    public static QuizReviewOptions ReviewOptions(MoodleActivity quiz)
+    public static SurveyReviewSettings ReviewOptions(MoodleActivity quiz)
     {
         ArgumentNullException.ThrowIfNull(quiz);
 
-        return new QuizReviewOptions
+        return new SurveyReviewSettings
         {
             During = Shows(quiz, During),
             ImmediatelyAfter = Shows(quiz, ImmediatelyAfter),
@@ -79,7 +79,8 @@ public static class MoodleQuizSettings
             return ReviewShows.None;
         }
 
-        var shows = ReviewShows.None;
+        // Moodle shows the learner's own answers whenever it lets them review the attempt.
+        var shows = ReviewShows.Responses;
 
         if ((Bits(quiz, "reviewmarks") & moment) != 0)
         {

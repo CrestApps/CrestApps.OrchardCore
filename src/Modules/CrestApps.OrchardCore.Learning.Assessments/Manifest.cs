@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Learning;
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Packages;
+using CrestApps.OrchardCore.Surveys;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -15,11 +16,12 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = AssessmentsConstants.Features.Assessments,
     Name = "Learning Assessments",
-    Description = "Question banks of nine question types, the quiz course item with fixed and random questions, attempts that copy each question so they never depend on a question version, deadlines kept by the server, essay grading, regrades with a reason, overrides of time, attempts and window, and the exam player.",
+    Description = "The quiz course item. Each quiz owns a scored survey of the Surveys module: its questions and question banks, pools, time limit, attempts, pass mark, review options, grading and accommodations. A learner's attempts are survey responses through their enrollment, and the quiz grade combines them with the quiz's grading method.",
     Category = "Learning",
     Dependencies =
     [
         LearningConstants.Features.Learning,
+        SurveysConstants.Features.Surveys,
     ]
 )]
 
@@ -35,22 +37,9 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = AssessmentsConstants.Features.QtiImport,
-    Name = "Learning QTI Import",
-    Description = "Imports QTI 3.0 and QTI 2.1 assessment items (a content package or a single item file) as questions through Bulk Import, into a question bank you choose, with their images in the media library.",
-    Category = "Learning",
-    Dependencies =
-    [
-        AssessmentsConstants.Features.Assessments,
-        ContentTransferConstants.Feature.ModuleId,
-        OrchardCoreFeatureIds.Media,
-    ]
-)]
-
-[assembly: Feature(
     Id = AssessmentsConstants.Features.MoodleImport,
     Name = "Learning Moodle Import",
-    Description = "Imports Moodle course backups (.mbz, zip or tar.gz) through Bulk Import on the Course type: the course in its category with its dates, enrolment and completion, its sections, and an item for each SCORM package, quiz (with its questions), file, link and page. Each activity, question or setting it does not import is reported as a failed row, and importing a course again updates it.",
+    Description = "Imports Moodle course backups (.mbz, zip or tar.gz) through Bulk Import on the Course type: the course in its category with its dates, enrolment and completion, its sections, and an item for each SCORM package, quiz (a survey with its questions and question banks), feedback, choice, file, link and page. Each activity, question or setting it does not import is reported as a failed row, and importing a course again updates it.",
     Category = "Learning",
     Dependencies =
     [

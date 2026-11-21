@@ -6,8 +6,8 @@
     <Description>
       $(CrestAppsDescription)
 
-      Core services of Learning surveys: the survey course item kind (feedback surveys and choices), learners' responses
-      checked against the questions, the answer reported to the learner's progress, and the totals staff see.
+      Core services of Learning surveys: the survey a feedback survey or choice owns, created on the item's first save,
+      and the item's result recorded when the learner answers.
     </Description>
     <PackageTags>$(PackageTags) Learning LMS Surveys Feedback Choice Polls Core</PackageTags>
   </PropertyGroup>
@@ -24,14 +24,13 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Abstractions" />
     <PackageReference Include="OrchardCore.ContentManagement" />
-    <PackageReference Include="OrchardCore.Data.Abstractions" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Surveys.Abstractions\CrestApps.OrchardCore.Learning.Surveys.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Core\CrestApps.OrchardCore.Learning.Core.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Surveys.Core\CrestApps.OrchardCore.Surveys.Core.csproj" />
   </ItemGroup>
 
 </Project>

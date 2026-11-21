@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Learning;
-using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Certifications;
 using CrestApps.OrchardCore.Learning.Classes;
 using CrestApps.OrchardCore.Learning.Classes.Services;
@@ -46,7 +45,6 @@ public sealed class LearningNotificationsTests
                 LearningConstants.NotificationTypes.EnrollmentRequested,
             ]
         },
-        { typeof(AssessmentsNotificationsStartup), [AssessmentsConstants.NotificationTypes.Graded] },
         {
             typeof(global::CrestApps.OrchardCore.Learning.Certifications.NotificationsStartup),
             [
