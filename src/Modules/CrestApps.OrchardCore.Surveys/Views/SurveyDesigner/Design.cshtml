@@ -99,7 +99,20 @@
                 }
                 @foreach (var group in Model.Picker.GroupBy(item => item.Category))
                 {
-                    <h6 class="text-uppercase text-body-secondary small mt-2">@group.Key</h6>
+                    <h6 class="text-uppercase text-body-secondary small mt-2">@(group.Key switch
+                    {
+                        SurveyControlCategories.Choice => T["Choice"],
+                        SurveyControlCategories.Text => T["Text"],
+                        SurveyControlCategories.Number => T["Number"],
+                        SurveyControlCategories.Rating => T["Rating"],
+                        SurveyControlCategories.Matrix => T["Grid"],
+                        SurveyControlCategories.Date => T["Date"],
+                        SurveyControlCategories.Content => T["Content"],
+                        SurveyControlCategories.Files => T["Files"],
+                        SurveyControlCategories.Assessment => T["Quiz"],
+                        SurveyControlCategories.Advanced => T["Advanced"],
+                        _ => new LocalizedHtmlString(group.Key, group.Key),
+                    })</h6>
                     <div class="row row-cols-1 row-cols-md-2 g-2 mb-2">
                         @foreach (var item in group)
                         {

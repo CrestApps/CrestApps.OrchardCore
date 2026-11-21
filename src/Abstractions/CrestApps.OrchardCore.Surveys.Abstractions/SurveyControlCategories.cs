@@ -54,4 +54,26 @@ public static class SurveyControlCategories
     /// Other questions, such as hidden and calculated values.
     /// </summary>
     public const string Advanced = "Advanced";
+
+    /// <summary>
+    /// Gets the position of a category in the question type picker: the built-in categories in the order people look
+    /// for them, then any other category.
+    /// </summary>
+    /// <param name="category">The category.</param>
+    /// <returns>The position; lower comes first.</returns>
+    public static int Order(string category)
+        => category switch
+        {
+            Choice => 0,
+            Text => 1,
+            Number => 2,
+            Rating => 3,
+            Matrix => 4,
+            Date => 5,
+            Content => 6,
+            Files => 7,
+            Assessment => 8,
+            Advanced => 10,
+            _ => 9,
+        };
 }

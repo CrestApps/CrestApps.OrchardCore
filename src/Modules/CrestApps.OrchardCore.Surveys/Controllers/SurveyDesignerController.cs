@@ -565,7 +565,8 @@ public sealed class SurveyDesignerController : Controller
                 Icon = preset.Icon,
                 Category = preset.Category ?? _registry.GetControl(preset.BaseControl)?.Category,
             }))
-            .OrderBy(item => item.Category, StringComparer.Ordinal)
+            .OrderBy(item => SurveyControlCategories.Order(item.Category))
+            .ThenBy(item => item.Category, StringComparer.Ordinal)
             .ThenBy(item => item.DisplayName, StringComparer.CurrentCulture)
             .ToList();
 
