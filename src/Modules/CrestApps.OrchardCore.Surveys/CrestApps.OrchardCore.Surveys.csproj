@@ -41,6 +41,7 @@
     <PackageReference Include="OrchardCore.Media.Abstractions" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Notifications.Abstractions" />
+    <PackageReference Include="OrchardCore.Notifications.Core" />
     <PackageReference Include="OrchardCore.ReCaptcha.Core" />
     <PackageReference Include="OrchardCore.RateLimits.Core" />
     <PackageReference Include="OrchardCore.Recipes.Abstractions" />

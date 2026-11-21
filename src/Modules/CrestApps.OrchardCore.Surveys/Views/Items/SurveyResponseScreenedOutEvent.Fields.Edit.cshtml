@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+
+@model SurveyEventActivityViewModel
+
+<partial name="_SurveyEventActivityFields" model="Model" />
+
+<div class="mb-3">
+    <label asp-for="Names" class="form-label">@T["Endings"]</label>
+    <input asp-for="Names" class="form-control" />
+    <span class="hint">@T["The names of the endings that start the workflow, separated by commas. Leave it empty for every ending."]</span>
+</div>

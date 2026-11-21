@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SurveyResponseAbandonedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-hourglass-end" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Survey Response Abandoned"])
+    </h4>
+</header>

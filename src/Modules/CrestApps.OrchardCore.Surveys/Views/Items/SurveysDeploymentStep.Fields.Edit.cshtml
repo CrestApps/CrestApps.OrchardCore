@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model SurveysDeploymentStepViewModel
+
+<partial name="_SurveysDeploymentSelection" model="Model" />
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeSecrets" type="checkbox" class="form-check-input" />
+            <label asp-for="IncludeSecrets" class="form-check-label">@T["Include link tokens and passwords"]</label>
+            <span class="hint dashed">@T["Off by default: the imported links get new addresses. Needs the Export survey responses permission. The secret that keeps anonymous respondents apart is never exported."]</span>
+        </div>
+    </div>
+</div>
