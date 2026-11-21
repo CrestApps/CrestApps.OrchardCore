@@ -1,6 +1,6 @@
 # Surveys: a general-purpose survey, form and quiz platform
 
-Status: proposed 2026-11-20; decisions answered by Mike the same day (section 24). Implementation in progress (section 26). Written for an implementing engineer (or model) working phase by phase. Section 25 lists facts to check in phase 0. Section 26 is the progress log the implementer keeps up to date.
+Status: proposed 2026-11-20; decisions answered by Mike the same day (section 24). Implemented on branch `ma/surveys-module-31dcec` (section 26). Written for an implementing engineer (or model) working phase by phase. Section 25 lists facts to check in phase 0. Section 26 is the progress log the implementer keeps up to date.
 
 **Ground rules from Mike (2026-11-20):** the LMS was never released or used in production, so Learning can change freely and **nothing is migrated**: no upgrade migrations, no data conversion, no compatibility shims and no breaking-change notes for Learning. Where Mike left a choice open, follow industry standard and state-of-the-art products; the plan records the choice made.
 
@@ -1418,10 +1418,32 @@ All eight checks pass; three need a small change of approach, recorded here.
 - `fceb09021`, `e46fb8de5`, `aed46b64a`, `ffff61f3c` Answer index, SQL aggregates, eight reports (adds `survey-activity` for the dashboard widget), the `Surveys` data source (C2 approach).
 - `4f952b6a0`, `0d01a5ffa`, `43cd9dd16` Recipe and deployment steps with schemas and a sample recipe, workflow events and tasks, notifications, audit trail, webhooks, personal data, telemetry. Deviations: `SurveySettings` travels in Orchard's Settings step (with a site settings schema) rather than a step of its own; the recipe steps write the stores directly, so catalog handlers do not run on import.
 
+### Phase 6: collecting extras (done)
+
+- `349af2dd8`, `bf033abea`, `a683a2eca`, `fa6d86d9f`, `f31ba3055`, `43512a23f` Quotas (counter document under the completion lock, screen out or close, quota-reached workflow event), evenly presented pools, page time limits, invitations (personal links `/s/i/{token}` whose token is an HMAC of the invitation id keyed by the survey secret, notifications to users, Liquid e-mails to others, hourly reminders; answered anonymous invitations are found through the participation count of their pseudonymous key), the Survey part, widget and `[survey]` shortcode, the Surveys API, and HTTP integration tests (public link, invitation link, API). Kiosk mode and poll results came with the runtime. Deviations: invitations are sent by the service and a background task rather than through Outreach runs; the invite page takes users, audiences, cohorts and e-mails (parties through the service and the API only); the Survey part picks from a list of open surveys.
+
+### Phase 7: Learning on Surveys (done)
+
+- `e4b307126`, `700051112`, `0bed82c3f`, `a4439f2b6`, `f7e1f709b`, `93a08c5c5`, `d62655554`, `c1632e285` Course surveys and choices (`CourseSurveyPart`), quizzes (`QuizPart { SurveyId, GradingMethod }`), the Learning access rule, access provider, grading scope, result providers, response field provider, owner back-link provider and the `LearningEnrollment` context kind; Certifications, Credentials, Coursework and Learning.AI read survey responses; the Moodle importer creates surveys and banks. The old question content types, banks, attempts, overrides, deadline task, attempt events, webhooks, data source, item analysis report, notification, audit events and the Learning QTI import are deleted, and the Learning.Assessments and Learning.Surveys migrations build only the new shape (version 1). A service cycle between Learning and the response service (found by the integration run) is broken by resolving the response service when a response starts. Removed without replacement: quiz access codes and per-quiz overrides (Surveys accommodations cover overrides).
+
+### Phase 8: localization, AI and advanced controls (done)
+
+- `36ee46468`, `19588e1e2`, `1dff32ba3` Translations (`SurveyTextKeys`, culture from the link, the collector or the request with parent-culture fallback, Translations page with JSON export and import, publish warnings for orphan keys), the Surveys.AI module (tools `list_surveys`, `get_survey_results`, `create_survey_draft`; answer summaries; AI translation; scoring help on the grading page through the `SurveyGradingQuestionTools` shape). The advanced controls came with the controls track. Deviations: text keys are `title:{q}`, `choice:{q}:{c}` and similar (the shapes the projector already read); the answer summary is a page of its own rather than a button in the report.
+
+### Phase 9: docs (done)
+
+- `b30e6a044`, `08f2a9542`, `a628f8822`, `4eddbbe8a`, `d45e45bc3` Technical manual (`docs/modules/surveys/`, 16 pages), user manual (`docs/user-manual/surveys/`, 13 pages), both sidebars with the clipboard-list icon, the Surveys card on the docs home page, the feature reference, the 3.0.0 changelog and the `crestapps-survey-controls` skill. The Learning pages describe Learning on Surveys.
+
+### Fixes found by the browser pass
+
+- `8c7fd4bdb` the question type settings shape was named so no view matched, which broke the question editor; `69ad82525` respondent display names and the report filter key `ReportFilter.SurveyId`; `907000245` ordered and localized picker categories.
+
 ### Open issues
 
 - The "matches condition" workflow event takes its rule as JSON; its optional formula is not evaluated yet.
 - The override grant form takes a user name rather than the user picker (the picker lives in the CrestApps Users module, which Surveys does not depend on).
+- Invitations do not go through Outreach yet, so contact opt-outs are not checked before an e-mail invitation is sent.
+- QTI images used only in feedback go to the public media library (Learning kept them in a protected store).
 - The Excel reader of bank imports repeats a private reader of ContentTransfer.OpenXml; extracting a shared reader is a follow-up.
 
 ## 27. Sources
