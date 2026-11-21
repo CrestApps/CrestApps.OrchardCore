@@ -103,5 +103,15 @@ services.AddProtectedFileArea<CourseworkFiles>("LearningCoursework");
 ```
 
 The area follows the tenant's storage on its own: when **Protected Files - Azure Blob Storage** is enabled, it is
-kept in the container like every other area. To keep protected files somewhere else, replace
-`IProtectedFileAreaStoreFactory`, which returns the `IFileStore` of an area from its folder name.
+kept in the container like every other area. To keep protected files somewhere else, register
+`ProtectedFileAreaStore` with the `IFileStore` every area is kept in, each area in a folder of its own. The Azure
+feature does it with `AddTenantFileStore`, like the other Azure Blob Storage features:
+
+```csharp
+services.TryAddSingleton(ProtectedFileAreaStore.Local);
+services.AddTenantFileStore<ProtectedFileAreaStore>(
+    "ProtectedFiles",
+    "CrestApps:ProtectedFiles:AzureBlobStorage",
+    (serviceProvider, fileStore) => new ProtectedFileAreaStore(fileStore),
+    removeOnTenantRemoval: true);
+```
