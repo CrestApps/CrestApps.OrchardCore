@@ -24,4 +24,13 @@ public interface ISurveyPoolCounter
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task.</returns>
     Task RecordAsync(string surveyId, IReadOnlyCollection<string> questionIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Loads the presentation counts of a survey before its plan is drawn, so <see cref="Order"/> can read them.
+    /// </summary>
+    /// <param name="surveyId">The survey.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    Task PrepareAsync(string surveyId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

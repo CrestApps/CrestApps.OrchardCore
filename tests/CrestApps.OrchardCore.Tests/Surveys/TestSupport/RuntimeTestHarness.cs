@@ -72,6 +72,7 @@ internal sealed class RuntimeTestHarness : IAsyncDisposable
             new QuestionBankIndexProvider(),
             new BankQuestionIndexProvider(),
             new BankQuestionTagIndexProvider(),
+            new SurveyCounterIndexProvider(),
             new LeasedWorkItemIndexProvider<SurveyDeadlineWork>(SurveyDeadlineWork.CollectionName),
         });
 
@@ -88,6 +89,7 @@ internal sealed class RuntimeTestHarness : IAsyncDisposable
             var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
 
             await SurveysIndexSchema.CreateAsync(schemaBuilder);
+            await SurveyCountersIndexSchema.CreateAsync(schemaBuilder);
             await LeasedWorkItemIndexSchema.CreateAsync(schemaBuilder, SurveyDeadlineWork.CollectionName);
             await transaction.CommitAsync(cancellationToken);
         }

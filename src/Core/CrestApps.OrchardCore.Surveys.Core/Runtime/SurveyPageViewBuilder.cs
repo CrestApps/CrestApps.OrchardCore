@@ -64,7 +64,7 @@ public sealed class SurveyPageViewBuilder
             Description = _piping.Render(page.Description, definition, response, hiddenQuestions),
             Position = position,
             PageCount = Math.Max(showing.Count, 1),
-            DeadlineUtc = response.DeadlineUtc is { } deadline ? DateTime.SpecifyKind(deadline, DateTimeKind.Utc) : null,
+            DeadlineUtc = SurveyPageTimer.Deadline(definition, response),
         };
 
         var number = NumberBefore(definition, response, state, screenId, questions);
