@@ -1,0 +1,12 @@
+@model ShapeViewModel<BankQuestion>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Question type"]"><i class="fa-solid fa-list-check me-1" aria-hidden="true"></i>@Model.Value.Question?.ControlType</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Difficulty"]"><i class="fa-solid fa-signal me-1" aria-hidden="true"></i>@Model.Value.Difficulty</span>
+@if (Model.Value.Retired)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Pools no longer draw this question"]"><i class="fa-solid fa-box-archive me-1" aria-hidden="true"></i>@T["Retired"]</span>
+}
+@foreach (var tag in Model.Value.Tags ?? [])
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Tag"]"><i class="fa-solid fa-tag me-1" aria-hidden="true"></i>@tag</span>
+}

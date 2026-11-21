@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Learning.Core.Archives;
+namespace CrestApps.OrchardCore.Archives;
 
 /// <summary>
 /// Makes the path of a file inside a package safe: relative, with forward slashes, and unable to leave the package.

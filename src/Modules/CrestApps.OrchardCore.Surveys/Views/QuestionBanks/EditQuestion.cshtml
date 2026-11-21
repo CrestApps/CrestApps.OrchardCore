@@ -1,0 +1,73 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model BankQuestionEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="@(Model.IsNew ? "SurveysBankQuestionCreate" : "SurveysBankQuestionEdit")" title="@(Model.IsNew ? T["Add question ({0})", Model.ControlTypeName] : T["Edit question ({0})", Model.ControlTypeName])">
+        <breadcrumb-item id="SurveysQuestionBanks" action="Index" controller="QuestionBanks" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ViewQuestionBanks.Name">@T["Question banks"]</breadcrumb-item>
+        <breadcrumb-item id="SurveysQuestionBank" action="Bank" controller="QuestionBanks" area="CrestApps.OrchardCore.Surveys" route-id="@Model.BankId">@Model.BankTitle</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    @await DisplayAsync(Model.Editor)
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Question bank"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label for="Bank_Tags" class="ocat-label">@T["Tags"]</label>
+                <div class="ocat-end">
+                    <input id="Bank_Tags" name="Bank.Tags" value="@Model.Tags" class="form-control" />
+                    <span class="hint">@T["Separate tags with commas. Pools draw questions by tag."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label for="Bank_Difficulty" class="ocat-label">@T["Difficulty"]</label>
+                <div class="ocat-end">
+                    <select id="Bank_Difficulty" name="Bank.Difficulty" asp-for="Difficulty" class="form-select">
+                        <option value="1">@T["1 - Easiest"]</option>
+                        <option value="2">@T["2 - Easy"]</option>
+                        <option value="3">@T["3 - Medium"]</option>
+                        <option value="4">@T["4 - Hard"]</option>
+                        <option value="5">@T["5 - Hardest"]</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input id="Bank_Retired" name="Bank.Retired" type="checkbox" value="true" class="form-check-input" checked="@Model.Retired" />
+                        <label for="Bank_Retired" class="form-check-label">@T["Retired"]</label>
+                        <span class="hint dashed">@T["Pools no longer draw a retired question. Published surveys keep it."]</span>
+                    </div>
+                </div>
+            </div>
+
+            @if (!Model.IsNew)
+            {
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <span class="hint">@T["Revision {0}", Model.Revision]@if (Model.ModifiedUtc.HasValue)
+                        {
+                            <text>, @T["last modified"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(Model.ModifiedUtc.Value, DateTimeKind.Utc), Format: "g"))</text>
+                        }</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        @if (!Model.IsNew)
+        {
+            <button class="btn btn-danger action-bar-secondary" type="submit" asp-action="DeleteQuestion" asp-route-questionId="@Model.QuestionId" data-url-af="RemoveUrl" data-title="@T["Delete"]" data-message="@T["Delete this question? Published surveys keep their copy."]">@T["Delete"]</button>
+        }
+        <a class="btn btn-secondary cancel" role="button" asp-action="Bank" asp-route-id="@Model.BankId">@T["Cancel"]</a>
+    </div>
+</form>

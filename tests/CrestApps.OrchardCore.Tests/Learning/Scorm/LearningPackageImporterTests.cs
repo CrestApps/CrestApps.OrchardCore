@@ -1,6 +1,6 @@
 using System.IO.Compression;
 using CrestApps.OrchardCore.Learning.Packages;
-using CrestApps.OrchardCore.Learning.Core.Archives;
+using CrestApps.OrchardCore.Archives;
 using CrestApps.OrchardCore.Learning.Packages.Core.Services;
 using CrestApps.OrchardCore.Learning.Packages.Core.Scorm;
 using CrestApps.OrchardCore.Learning.Packages.Models;

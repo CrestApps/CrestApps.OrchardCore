@@ -1,75 +1,7 @@
 using System.Formats.Tar;
 using System.IO.Compression;
 
-namespace CrestApps.OrchardCore.Learning.Core.Archives;
-
-/// <summary>
-/// The limits an uploaded package must stay within.
-/// </summary>
-public sealed class PackageArchiveLimits
-{
-    /// <summary>
-    /// Gets or sets the most entries the archive may have, folders included.
-    /// </summary>
-    public int MaxEntries { get; set; } = 10_000;
-
-    /// <summary>
-    /// Gets or sets the most bytes the files may take once extracted. The bytes are counted as they are written, so a
-    /// size the archive claims for an entry is never trusted.
-    /// </summary>
-    public long MaxExpandedBytes { get; set; } = 1024L * 1024 * 1024;
-}
-
-/// <summary>
-/// Why an archive was refused.
-/// </summary>
-public static class PackageArchiveErrors
-{
-    /// <summary>The file is not a zip archive.</summary>
-    public const string InvalidArchive = "InvalidArchive";
-
-    /// <summary>An entry has a path that is absolute, climbs out of the package or is not a safe file name.</summary>
-    public const string UnsafePath = "UnsafePath";
-
-    /// <summary>An entry is a symbolic link.</summary>
-    public const string SymbolicLink = "SymbolicLink";
-
-    /// <summary>The archive has more entries than allowed.</summary>
-    public const string TooManyEntries = "TooManyEntries";
-
-    /// <summary>The files are larger than allowed once extracted.</summary>
-    public const string TooLarge = "TooLarge";
-
-    /// <summary>Two entries have the same path, ignoring case.</summary>
-    public const string DuplicateEntry = "DuplicateEntry";
-
-    /// <summary>The archive has no files.</summary>
-    public const string Empty = "Empty";
-}
-
-/// <summary>
-/// What an extraction did.
-/// </summary>
-public sealed class PackageArchiveResult
-{
-    /// <summary>Gets or sets the error, one of <see cref="PackageArchiveErrors"/>, or <see langword="null"/>.</summary>
-    public string Error { get; set; }
-
-    /// <summary>Gets or sets the entry that was refused, for the message.</summary>
-    public string Entry { get; set; }
-
-    /// <summary>Gets or sets the paths of the extracted files, normalized with <see cref="PackagePath"/>.</summary>
-    public IReadOnlyList<string> Files { get; set; } = [];
-
-    /// <summary>Gets or sets the bytes written.</summary>
-    public long ExpandedSize { get; set; }
-
-    /// <summary>Gets whether the archive was extracted.</summary>
-    public bool Succeeded => Error is null;
-
-    internal static PackageArchiveResult Fail(string error, string entry = null)
-        => new() { Error = error, Entry = entry };
-}
+namespace CrestApps.OrchardCore.Archives;
 
 /// <summary>
 /// Extracts an uploaded package into a folder, refusing what could write outside it or exhaust the disk: an absolute
