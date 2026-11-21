@@ -57,6 +57,7 @@ internal sealed class PackageTestHarness : IAsyncDisposable
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(clock);
                 services.AddLearningPackagesCore();
+                CrestApps.OrchardCore.Tests.Learning.Scorm.PackageArchiveCacheTestServices.Use(services);
                 services.RemoveAll<IProtectedFileStore<LearningPackageFiles>>();
                 services.AddSingleton<IProtectedFileStore<LearningPackageFiles>>(files);
                 services.RemoveAll<IPackageContentSource>();
