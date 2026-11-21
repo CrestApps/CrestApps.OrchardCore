@@ -75,16 +75,23 @@ public sealed class LearnerController : Controller
     /// <summary>
     /// Shows the learner's courses.
     /// </summary>
+    /// <param name="status">The state to show: <c>inprogress</c>, <c>notstarted</c>, <c>completed</c>, or all.</param>
+    /// <param name="q">The text to find in the course titles and codes.</param>
+    /// <param name="view">The view: <c>list</c>, or cards.</param>
     /// <returns>The page.</returns>
     [HttpGet("learning", Name = "LearningMyLearning")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string status, string q, string view)
     {
         if (!await _authorizationService.AuthorizeAsync(User, LearningPermissions.AccessLearning))
         {
             return User.Identity?.IsAuthenticated == true ? Forbid() : Challenge();
         }
 
-        return View(await _pageService.BuildMyLearningAsync(CurrentUserId()));
+        var model = await _pageService.BuildMyLearningAsync(CurrentUserId(), status, q);
+
+        model.View = string.Equals(view, "list", StringComparison.OrdinalIgnoreCase) ? "list" : "cards";
+
+        return View(model);
     }
 
     /// <summary>

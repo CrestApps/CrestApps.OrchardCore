@@ -12,6 +12,7 @@ using OrchardCore.ContentManagement.Routing;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Zones;
+using OrchardCore.Media;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Learning.Services;
@@ -30,6 +31,8 @@ public sealed class LearnerPageService
     private readonly IContentManager _contentManager;
     private readonly CourseItemKindOptions _kindOptions;
     private readonly IStringLocalizerFactory _localizerFactory;
+    private readonly IMediaFileStore _mediaFileStore;
+    private readonly CourseCategoryService _categories;
     private readonly IEnumerable<ICourseCompletionLinkProvider> _completionLinks;
     private readonly IClock _clock;
 
@@ -46,6 +49,8 @@ public sealed class LearnerPageService
     /// <param name="kindOptions">The course item kinds.</param>
     /// <param name="localizerFactory">The string localizer factory.</param>
     /// <param name="completionLinks">The providers of links on the course completion panel.</param>
+    /// <param name="mediaFileStore">The media file store, for course covers.</param>
+    /// <param name="categories">The course categories.</param>
     /// <param name="clock">The clock.</param>
     public LearnerPageService(
         ICourseStructureService courseStructure,
@@ -58,6 +63,8 @@ public sealed class LearnerPageService
         IOptions<CourseItemKindOptions> kindOptions,
         IStringLocalizerFactory localizerFactory,
         IEnumerable<ICourseCompletionLinkProvider> completionLinks,
+        IMediaFileStore mediaFileStore,
+        CourseCategoryService categories,
         IClock clock)
     {
         _courseStructure = courseStructure;
@@ -70,6 +77,8 @@ public sealed class LearnerPageService
         _kindOptions = kindOptions.Value;
         _localizerFactory = localizerFactory;
         _completionLinks = completionLinks;
+        _mediaFileStore = mediaFileStore;
+        _categories = categories;
         _clock = clock;
     }
 
@@ -226,17 +235,35 @@ public sealed class LearnerPageService
     }
 
     /// <summary>
-    /// Builds My learning for a learner.
+    /// Builds My learning for a learner: a card per course, filtered by state and searched by title or code.
     /// </summary>
     /// <param name="userId">The learner.</param>
+    /// <param name="status">The state filter, one of <see cref="LearnerCourseStates.Filters"/>; anything else shows all.</param>
+    /// <param name="search">The text to find in the course titles and codes, or <see langword="null"/>.</param>
     /// <returns>The page.</returns>
-    public async Task<MyLearningViewModel> BuildMyLearningAsync(string userId)
+    public async Task<MyLearningViewModel> BuildMyLearningAsync(string userId, string status = null, string search = null)
     {
-        var model = new MyLearningViewModel();
-        var seenOpen = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (var enrollment in await _enrollmentStore.ListByUserAsync(userId))
+        var model = new MyLearningViewModel
         {
+            Status = LearnerCourseStates.Filters.FirstOrDefault(filter => string.Equals(filter, status, StringComparison.OrdinalIgnoreCase)) ?? LearnerCourseStates.All,
+            Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
+        };
+
+        var rows = new List<LearnerCourseViewModel>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var tree = await _categories.GetTreeAsync();
+        var enrollments = (await _enrollmentStore.ListByUserAsync(userId))
+            .OrderBy(enrollment => enrollment.Status == EnrollmentStatus.Completed ? 1 : 0)
+            .ThenByDescending(enrollment => enrollment.LastActivityUtc ?? enrollment.CreatedUtc);
+
+        foreach (var enrollment in enrollments)
+        {
+            // One card per course: the open enrollment, else the completed one, else the one whose access ended.
+            if (!(enrollment.IsOpen || enrollment.Status is EnrollmentStatus.Completed or EnrollmentStatus.Expired) || !seen.Add(enrollment.CourseId))
+            {
+                continue;
+            }
+
             var course = await _courseStructure.GetCourseAsync(enrollment.CourseId);
             var coursePart = course?.Get<CoursePart>(nameof(CoursePart));
             var row = new LearnerCourseViewModel
@@ -246,32 +273,51 @@ public sealed class LearnerPageService
                 Schedule = CourseSchedules.Of(coursePart, _clock.UtcNow),
                 Enrollment = enrollment,
                 Title = course?.DisplayText ?? enrollment.Completion?.CourseTitle ?? enrollment.CourseId,
-                Code = (course is not null && course.TryGet<CoursePart>(out var part) ? part.Code : null) ?? enrollment.Completion?.CourseCode,
+                Code = coursePart?.Code ?? enrollment.Completion?.CourseCode,
                 CourseAvailable = course is not null,
                 CourseRouteValues = course is null ? null : (await _contentManager.PopulateAspectAsync<ContentItemMetadata>(course)).DisplayRouteValues,
+                CoverUrl = course is not null && CourseCovers.GetPath(course) is { } cover ? _mediaFileStore.MapPathToPublicUrl(cover) : null,
             };
 
-            if (enrollment.Status == EnrollmentStatus.Completed)
+            if (course is not null)
             {
-                model.Completed.Add(row);
+                var categoryId = (await _categories.GetCategoryIdsAsync(course)).FirstOrDefault();
+
+                row.Category = categoryId is null ? null : tree.GetPathText(categoryId);
+
+                var outline = await _courseStructure.GetOutlineAsync(course);
+                var progress = enrollment.Status == EnrollmentStatus.Completed ? null : await _progressService.GetAsync(enrollment.ItemId);
+
+                row.RequiredCount = outline.RequiredEntries.Count();
+                row.CompletedCount = enrollment.Status == EnrollmentStatus.Completed
+                    ? row.RequiredCount
+                    : outline.RequiredEntries.Count(entry => progress?.Find(entry.Item.ContentItemId)?.State == CourseItemState.Completed);
             }
-            else if (enrollment.IsOpen && seenOpen.Add(enrollment.CourseId))
+
+            row.State = enrollment.Status switch
             {
-                // As in Moodle, a course whose end date has passed is a past course, not one in progress; it stays open.
-                if (row.Schedule == CourseSchedule.Ended)
-                {
-                    model.Past.Add(row);
-                }
-                else
-                {
-                    model.Current.Add(row);
-                }
-            }
-            else if (enrollment.Status == EnrollmentStatus.Expired)
-            {
-                model.Other.Add(row);
-            }
+                EnrollmentStatus.Completed => LearnerCourseStates.Completed,
+                EnrollmentStatus.Active when enrollment.StartedUtc is not null && row.Schedule != CourseSchedule.NotStarted => LearnerCourseStates.InProgress,
+                EnrollmentStatus.Expired or EnrollmentStatus.Suspended when enrollment.StartedUtc is not null => LearnerCourseStates.InProgress,
+                _ => LearnerCourseStates.NotStarted,
+            };
+
+            rows.Add(row);
         }
+
+        model.Counts[LearnerCourseStates.All] = rows.Count;
+
+        foreach (var state in LearnerCourseStates.Filters.Skip(1))
+        {
+            model.Counts[state] = rows.Count(row => row.State == state);
+        }
+
+        model.Courses = rows
+            .Where(row => model.Status == LearnerCourseStates.All || row.State == model.Status)
+            .Where(row => model.Search is null
+                || row.Title?.Contains(model.Search, StringComparison.CurrentCultureIgnoreCase) == true
+                || row.Code?.Contains(model.Search, StringComparison.CurrentCultureIgnoreCase) == true)
+            .ToList();
 
         return model;
     }

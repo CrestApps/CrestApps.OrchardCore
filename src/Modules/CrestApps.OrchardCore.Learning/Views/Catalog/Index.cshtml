@@ -52,10 +52,7 @@
                     {
                         <div class="col">
                             <article class="card h-100" data-course-id="@course.ContentItemId">
-                                @if (!string.IsNullOrEmpty(course.CoverUrl))
-                                {
-                                    <img src="@course.CoverUrl" class="card-img-top object-fit-cover" style="max-height: 10rem" alt="" loading="lazy" data-course-cover />
-                                }
+                                <partial name="_CourseCover" model='(course.ContentItemId, course.Title, course.CoverUrl, "8rem")' />
                                 <div class="card-body">
                                     <h2 class="h6 card-title">
                                         @if (course.DisplayRouteValues is not null)
