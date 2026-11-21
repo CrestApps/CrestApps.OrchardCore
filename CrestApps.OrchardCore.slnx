@@ -201,6 +201,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Outreach/CrestApps.OrchardCore.Outreach.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Payroll/CrestApps.OrchardCore.Payroll.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Surveys/CrestApps.OrchardCore.Surveys.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Surveys.AI/CrestApps.OrchardCore.Surveys.AI.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.TimeTracker/CrestApps.OrchardCore.TimeTracker.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.WorkOrders/CrestApps.OrchardCore.WorkOrders.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" />

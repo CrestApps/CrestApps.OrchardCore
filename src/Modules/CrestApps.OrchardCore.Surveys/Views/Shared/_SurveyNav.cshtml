@@ -14,6 +14,7 @@
     <li class="nav-item"><a class="nav-link @Active("Surveys", "Logic")" asp-action="Logic" asp-controller="Surveys" asp-route-id="@Model.ItemId">@T["Logic"]</a></li>
     <li class="nav-item"><a class="nav-link @Active("Surveys", "Access")" asp-action="Access" asp-controller="Surveys" asp-route-id="@Model.ItemId">@T["Access and settings"]</a></li>
     <li class="nav-item"><a class="nav-link @Active("SurveyCollectors", null)" asp-action="Index" asp-controller="SurveyCollectors" asp-route-id="@Model.ItemId">@T["Collect"]</a></li>
+    <li class="nav-item"><a class="nav-link @Active("SurveyTranslations", null)" asp-action="Index" asp-controller="SurveyTranslations" asp-route-id="@Model.ItemId">@T["Translations"]</a></li>
     <li class="nav-item"><a class="nav-link @Active("SurveyVersions", null)" asp-action="Index" asp-controller="SurveyVersions" asp-route-id="@Model.ItemId">@T["Versions"]</a></li>
     <li class="nav-item"><a class="nav-link" href="@Url.Content("~/Admin/surveys/" + Model.ItemId + "/responses")">@T["Responses"]</a></li>
     <li class="nav-item"><a class="nav-link" href="@(Url.RouteUrl("ReportsDisplay", new { id = "survey-results" }) + "?SurveyReport.SurveyId=" + Uri.EscapeDataString(Model.ItemId))">@T["Results"]</a></li>

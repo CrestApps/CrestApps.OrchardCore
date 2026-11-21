@@ -2,13 +2,13 @@ using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Surveys.Recipes;
+namespace CrestApps.OrchardCore.Surveys.Core.Schemas;
 
 /// <summary>
 /// Builds the JSON schema of a survey definition, with the settings of every registered question type, so authors and
 /// AI tools can write survey recipes.
 /// </summary>
-internal sealed class SurveyDefinitionSchemaBuilder
+public sealed class SurveyDefinitionSchemaBuilder
 {
     private readonly ISurveyControlRegistry _registry;
     private readonly IEnumerable<ISurveyControlSchemaProvider> _providers;

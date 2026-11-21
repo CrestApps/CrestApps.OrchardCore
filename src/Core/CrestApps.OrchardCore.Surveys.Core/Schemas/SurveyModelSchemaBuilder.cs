@@ -8,14 +8,14 @@ using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Parties.Models;
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Surveys.Recipes;
+namespace CrestApps.OrchardCore.Surveys.Core.Schemas;
 
 /// <summary>
 /// Builds the JSON schema of a Surveys model from its public properties, so the schema follows the model as it grows.
 /// Conditions are described with the shared rule schema; a question's settings with the schema of every registered
 /// question type.
 /// </summary>
-internal static class SurveyModelSchemaBuilder
+public static class SurveyModelSchemaBuilder
 {
     /// <summary>
     /// Builds the schema of a type.

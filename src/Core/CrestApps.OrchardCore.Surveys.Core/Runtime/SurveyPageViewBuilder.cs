@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Core.Logic;
+using CrestApps.OrchardCore.Surveys.Core.Translations;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 
@@ -17,6 +18,7 @@ public sealed class SurveyPageViewBuilder
     private readonly ISurveyControlRegistry _registry;
     private readonly SurveyPipingRenderer _piping;
     private readonly SurveyRespondentProjector _projector;
+    private readonly SurveyDefinitionLocalizer _localizer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyPageViewBuilder"/> class.
@@ -24,11 +26,14 @@ public sealed class SurveyPageViewBuilder
     /// <param name="registry">The control registry.</param>
     /// <param name="piping">The piping renderer.</param>
     /// <param name="projector">The respondent projector.</param>
+    /// <param name="localizer">The definition localizer, for translated texts.</param>
     public SurveyPageViewBuilder(
         ISurveyControlRegistry registry,
         SurveyPipingRenderer piping,
-        SurveyRespondentProjector projector)
+        SurveyRespondentProjector projector,
+        SurveyDefinitionLocalizer localizer)
     {
+        _localizer = localizer;
         _registry = registry;
         _piping = piping;
         _projector = projector;
@@ -47,6 +52,8 @@ public sealed class SurveyPageViewBuilder
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(response);
         ArgumentNullException.ThrowIfNull(state);
+
+        definition = _localizer.Localize(definition, response.Culture);
 
         var plan = response.Plan;
         var pageId = SurveyPlanNavigator.PageOf(plan, screenId);
@@ -147,6 +154,9 @@ public sealed class SurveyPageViewBuilder
     {
         ArgumentNullException.ThrowIfNull(question);
         ArgumentNullException.ThrowIfNull(handler);
+
+        definition = _localizer.Localize(definition, response?.Culture);
+        question = definition?.Pages?.SelectMany(page => page.Questions ?? []).FirstOrDefault(item => string.Equals(item?.Id, question.Id, StringComparison.Ordinal)) ?? question;
 
         var allowed = AllowedChoices(definition, question, response, state).ToHashSet(StringComparer.Ordinal);
         var hiddenChoices = SurveyChoiceSource.GetChoices(question, definition)

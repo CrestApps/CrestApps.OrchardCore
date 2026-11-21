@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Surveys.Core.Schemas;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Recipes;

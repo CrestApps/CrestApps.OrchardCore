@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
+using CrestApps.OrchardCore.Surveys.Core.Schemas;
 using CrestApps.OrchardCore.Surveys.Deployments;
 using CrestApps.OrchardCore.Surveys.Recipes;
 using Microsoft.Extensions.DependencyInjection;

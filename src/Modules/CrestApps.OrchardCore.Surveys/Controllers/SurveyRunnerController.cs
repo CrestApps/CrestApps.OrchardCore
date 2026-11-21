@@ -1,7 +1,9 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Services;
+using CrestApps.OrchardCore.Surveys.Core.Translations;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.ViewModels;
@@ -32,7 +34,9 @@ public sealed class SurveyRunnerController : Controller
         Converters = { new JsonStringEnumConverter() },
     };
 
-    private static readonly HashSet<string> _reservedQueryKeys = new(StringComparer.OrdinalIgnoreCase) { SurveyRespondentIdentityFactory.ResumeQueryKey, "preview", "hidden" };
+    private const string CultureQueryKey = "culture";
+
+    private static readonly HashSet<string> _reservedQueryKeys = new(StringComparer.OrdinalIgnoreCase) { SurveyRespondentIdentityFactory.ResumeQueryKey, "preview", "hidden", CultureQueryKey };
 
     private readonly ISurveyResponseService _responses;
     private readonly SurveyStore _surveyStore;
@@ -567,7 +571,7 @@ public sealed class SurveyRunnerController : Controller
             Identity = identity,
             QueryVariables = query,
             Password = password,
-            Culture = System.Globalization.CultureInfo.CurrentUICulture.Name,
+            Culture = RespondentCulture(collector),
         });
 
         if (!result.Succeeded)
@@ -589,17 +593,39 @@ public sealed class SurveyRunnerController : Controller
         return RedirectToAction(nameof(Respond), new { responseId = result.Response.ItemId });
     }
 
+    // The culture a respondent sees: one asked for on the link (?culture=), else the collector's, else the request's.
+    private string RespondentCulture(SurveyCollector collector)
+    {
+        var asked = Request.Query[CultureQueryKey].ToString();
+
+        if (!string.IsNullOrWhiteSpace(asked) && asked.Length <= 20)
+        {
+            try
+            {
+                return CultureInfo.GetCultureInfo(asked.Trim()).Name;
+            }
+            catch (CultureNotFoundException)
+            {
+                // An unknown culture on the link is ignored.
+            }
+        }
+
+        return !string.IsNullOrWhiteSpace(collector?.Culture) ? collector.Culture : CultureInfo.CurrentUICulture.Name;
+    }
+
     private async Task<SurveyLandingViewModel> LandingModelAsync(string token, Survey survey, SurveyCollector collector)
     {
         var version = await _versionCache.GetPublishedAsync(survey);
         var definition = version?.Definition;
+        var culture = RespondentCulture(collector);
+        var title = SurveyDefinitionLocalizer.Translate(definition, culture, SurveyTextKeys.SurveyTitle, definition?.Title);
 
         return new SurveyLandingViewModel
         {
             Token = token,
             Survey = survey,
-            Title = string.IsNullOrWhiteSpace(definition?.Title) ? survey.Title : definition.Title,
-            Introduction = definition?.Introduction,
+            Title = string.IsNullOrWhiteSpace(title) ? survey.Title : title,
+            Introduction = SurveyDefinitionLocalizer.Translate(definition, culture, SurveyTextKeys.SurveyIntroduction, definition?.Introduction),
             NeedsPassword = !string.IsNullOrEmpty(collector?.PasswordHash),
             NeedsCaptcha = survey.Access?.RequireCaptcha == true && User?.Identity?.IsAuthenticated != true && _serviceProvider.GetService<ReCaptchaService>() is not null,
             CanStart = survey.Status == SurveyStatus.Open && definition is not null && collector?.Status != CollectorStatus.Closed,
