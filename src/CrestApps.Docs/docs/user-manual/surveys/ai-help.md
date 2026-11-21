@@ -25,7 +25,7 @@ The summary reads the latest answers and never names a respondent. Check it agai
 
 ## Translate with AI
 
-In the survey's menu, select **Translate with AI**, pick the culture in **Translate into**, and select **Translate**. Tick **Replace existing translations** to translate every text again. Review the result on the **Translations** tab, then publish.
+In the survey's menu, select **Translate with AI**, pick the culture in **Translate into**, and select **Translate**. Tick **Replace existing translations** to translate every text again. Review the result on the **Translations** page (in the survey's side menu), then publish.
 
 ## Suggest a score
 

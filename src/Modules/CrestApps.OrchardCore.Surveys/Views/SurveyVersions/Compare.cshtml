@@ -8,7 +8,7 @@
     </breadcrumb>
 </zone>
 
-<partial name="_SurveyNav" model="Model.Survey" />
+<survey-layout survey="Model.Survey">
 
 @if (Model.Diff.Changes.Count == 0)
 {
@@ -18,3 +18,5 @@ else
 {
     <partial name="_SurveyChanges" model="Model.Diff" />
 }
+
+</survey-layout>

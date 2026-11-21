@@ -30,6 +30,18 @@ Each row has **Design** and **Preview** buttons, and a menu with **Collect respo
 
 You can delete only a survey that has no responses. Archive a survey with responses instead: it keeps its results and leaves the default list.
 
+## The survey's pages
+
+Every page of a survey shows a header with its status (**Draft**, **Open**, **Closed** or **Archived**), the published version, an **Unpublished changes** badge when the draft differs, and the **Preview** and **Publish** buttons. A menu at the side moves between its pages:
+
+| Group | Pages |
+| --- | --- |
+| **Build** | **Design**, **Logic**, **Access and settings**, **Translations**, **Versions** |
+| **Collect** | **Collectors** |
+| **Analyze** | **Responses**, **Results** (opens the Survey results report), **Accommodations** |
+
+On a small screen the menu folds behind a button that names the page you're on.
+
 ## Who may respond and when
 
 Open the survey's menu and select **Access and settings**. These settings apply at once, without publishing again.

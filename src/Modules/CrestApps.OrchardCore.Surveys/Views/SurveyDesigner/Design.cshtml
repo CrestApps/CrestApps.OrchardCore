@@ -51,7 +51,7 @@
     </breadcrumb>
 </zone>
 
-<partial name="_SurveyNav" model="survey" />
+<survey-layout survey="survey">
 
 @if (survey.HasUnpublishedChanges && survey.PublishedVersionNumber > 0)
 {
@@ -62,7 +62,7 @@
 <script type="application/json" id="survey-designer-texts">@Html.Raw(SurveyRuleJson.Serialize(texts))</script>
 
 <div class="row g-3 mb-3 survey-designer" data-survey-designer>
-    <div class="col-lg-5">
+    <div class="col-xl-5">
         <div class="card h-100">
             <div class="card-header d-flex align-items-center">
                 <span class="me-auto">@T["Pages and questions"]</span>
@@ -75,7 +75,7 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-7">
+    <div class="col-xl-7">
         <div class="card h-100">
             <div class="card-header">@T["Editor"]</div>
             <div class="card-body" id="survey-editor-panel" aria-live="polite">
@@ -153,3 +153,5 @@
 </form>
 
 <script asp-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-designer.min.js" debug-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-designer.js" at="Foot"></script>
+
+</survey-layout>

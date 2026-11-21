@@ -12,7 +12,7 @@
     </breadcrumb>
 </zone>
 
-<partial name="_SurveyNav" model="Model.Survey" />
+<survey-layout survey="Model.Survey">
 
 @if (Model.Version is not null)
 {
@@ -60,3 +60,5 @@
         </ul>
     </div>
 }
+
+</survey-layout>

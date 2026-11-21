@@ -8,7 +8,7 @@
     </breadcrumb>
 </zone>
 
-<partial name="_SurveyNav" model="Model.Survey" />
+<survey-layout survey="Model.Survey">
 
 @if (Model.Cultures.Count == 0)
 {
@@ -102,3 +102,5 @@
         <a class="btn btn-secondary cancel" role="button" asp-action="Design" asp-controller="SurveyDesigner" asp-route-id="@Model.Survey.ItemId">@T["Cancel"]</a>
     </div>
 </form>
+
+</survey-layout>

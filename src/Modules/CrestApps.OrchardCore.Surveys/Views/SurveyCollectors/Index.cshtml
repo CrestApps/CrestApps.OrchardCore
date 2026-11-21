@@ -8,7 +8,7 @@
     </breadcrumb>
 </zone>
 
-<partial name="_SurveyNav" model="Model.Survey" />
+<survey-layout survey="Model.Survey">
 
 @if (string.IsNullOrEmpty(Model.Survey.PublishedVersionId))
 {
@@ -46,3 +46,5 @@
 </form>
 
 <script asp-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-admin.min.js" debug-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-admin.js" at="Foot"></script>
+
+</survey-layout>

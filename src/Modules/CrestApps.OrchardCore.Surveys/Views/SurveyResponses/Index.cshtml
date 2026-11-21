@@ -10,6 +10,7 @@
 @{
     Model.List.ToolbarActions = await New.SurveyResponsesFilters(ViewModel: Model, FormId: "survey-responses-filter");
 }
+<survey-layout survey="Model.Survey">
 
 <form asp-action="Index" asp-route-id="@Model.Survey.ItemId" method="post" id="survey-responses-filter" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
@@ -49,3 +50,5 @@
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <script asp-name="list-management-ui" at="Foot"></script>
+
+</survey-layout>

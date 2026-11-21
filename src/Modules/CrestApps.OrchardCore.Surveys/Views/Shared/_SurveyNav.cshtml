@@ -1,13 +1,16 @@
 @model Survey
 @inject IEnumerable<CrestApps.OrchardCore.Surveys.Services.ISurveyOwnerLinkProvider> OwnerLinkProviders
-@* The links between the pages of one survey. *@
+@* The side menu of one survey's pages, grouped into building, collecting and analyzing. *@
 
 @{
-    var action = ViewContext.RouteData.Values["action"]?.ToString();
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
 
-    string Active(string c, string a)
-        => string.Equals(controller, c, StringComparison.OrdinalIgnoreCase) && (a is null || string.Equals(action, a, StringComparison.OrdinalIgnoreCase)) ? "active" : null;
+    bool Is(string c, string a = null)
+        => string.Equals(controller, c, StringComparison.OrdinalIgnoreCase) && (a is null || string.Equals(action, a, StringComparison.OrdinalIgnoreCase));
+
+    string Item(bool active)
+        => active ? "list-group-item list-group-item-action d-flex align-items-center text-nowrap active" : "list-group-item list-group-item-action d-flex align-items-center text-nowrap";
 
     // An owned survey (a course item's quiz, say) links back to its owner's page.
     CrestApps.OrchardCore.Surveys.Services.SurveyOwnerLink ownerLink = null;
@@ -24,21 +27,52 @@
             }
         }
     }
+
+    var resultsUrl = Url.RouteUrl("ReportsDisplay", new { id = "survey-results" }) + "?ReportFilter.SurveyId=" + Uri.EscapeDataString(Model.ItemId);
+
+    // On small screens the menu folds behind a button that names the current page.
+    var current = Is("SurveyDesigner") ? T["Design"]
+        : Is("Surveys", "Logic") ? T["Logic"]
+        : Is("Surveys", "Access") ? T["Access and settings"]
+        : Is("SurveyTranslations") ? T["Translations"]
+        : Is("SurveyVersions") ? T["Versions"]
+        : Is("SurveyCollectors") || Is("SurveyInvitations") ? T["Collectors"]
+        : Is("SurveyResponses") ? T["Responses"]
+        : Is("SurveyOverrides") ? T["Accommodations"]
+        : T["Survey"];
 }
 
-@if (ownerLink is not null && Url.IsLocalUrl(ownerLink.Url))
-{
-    <p class="mb-2"><a href="@ownerLink.Url"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> @T["Back to {0}", ownerLink.Text]</a></p>
-}
+<nav aria-label="@T["Survey"]">
+    @if (ownerLink is not null && Url.IsLocalUrl(ownerLink.Url))
+    {
+        <a class="d-block small mb-3" href="@ownerLink.Url"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> @T["Back to {0}", ownerLink.Text]</a>
+    }
 
-<ul class="nav nav-tabs flex-column flex-md-row mb-3">
-    <li class="nav-item pe-md-2"><a class="nav-link @Active("SurveyDesigner", null)" asp-action="Design" asp-controller="SurveyDesigner" asp-route-id="@Model.ItemId">@T["Design"]</a></li>
-    <li class="nav-item pe-md-2"><a class="nav-link @Active("Surveys", "Logic")" asp-action="Logic" asp-controller="Surveys" asp-route-id="@Model.ItemId">@T["Logic"]</a></li>
-    <li class="nav-item pe-md-2"><a class="nav-link @Active("Surveys", "Access")" asp-action="Access" asp-controller="Surveys" asp-route-id="@Model.ItemId">@T["Access and settings"]</a></li>
-    <li class="nav-item pe-md-2"><a class="nav-link @Active("SurveyCollectors", null)" asp-action="Index" asp-controller="SurveyCollectors" asp-route-id="@Model.ItemId">@T["Collect"]</a></li>
-    <li class="nav-item pe-md-2"><a class="nav-link @Active("SurveyTranslations", null)" asp-action="Index" asp-controller="SurveyTranslations" asp-route-id="@Model.ItemId">@T["Translations"]</a></li>
-    <li class="nav-item pe-md-2"><a class="nav-link @Active("SurveyVersions", null)" asp-action="Index" asp-controller="SurveyVersions" asp-route-id="@Model.ItemId">@T["Versions"]</a></li>
-    <li class="nav-item pe-md-2"><a class="nav-link" href="@Url.Content("~/Admin/surveys/" + Model.ItemId + "/responses")">@T["Responses"]</a></li>
-    <li class="nav-item pe-md-2"><a class="nav-link" href="@(Url.RouteUrl("ReportsDisplay", new { id = "survey-results" }) + "?ReportFilter.SurveyId=" + Uri.EscapeDataString(Model.ItemId))">@T["Results"]</a></li>
-    <li class="nav-item pe-md-2"><a class="nav-link" href="@Url.Content("~/Admin/surveys/" + Model.ItemId + "/overrides")">@T["Accommodations"]</a></li>
-</ul>
+    <button type="button" class="btn btn-outline-secondary w-100 d-flex align-items-center d-lg-none mb-3" data-bs-toggle="collapse" data-bs-target="#survey-nav-menu" aria-expanded="false" aria-controls="survey-nav-menu">
+        <i class="fa-solid fa-bars me-2" aria-hidden="true"></i><span class="me-auto">@current</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+    </button>
+
+    <div class="collapse d-lg-block" id="survey-nav-menu">
+
+        <div class="small text-body-secondary text-uppercase fw-semibold mb-1">@T["Build"]</div>
+        <div class="list-group mb-3">
+            <a class="@Item(Is("SurveyDesigner"))" aria-current="@(Is("SurveyDesigner") ? "page" : null)" asp-action="Design" asp-controller="SurveyDesigner" asp-route-id="@Model.ItemId"><i class="fa-solid fa-pen-ruler fa-fw me-2 flex-shrink-0" aria-hidden="true"></i>@T["Design"]</a>
+            <a class="@Item(Is("Surveys", "Logic"))" aria-current="@(Is("Surveys", "Logic") ? "page" : null)" asp-action="Logic" asp-controller="Surveys" asp-route-id="@Model.ItemId"><i class="fa-solid fa-code-branch fa-fw me-2 flex-shrink-0" aria-hidden="true"></i>@T["Logic"]</a>
+            <a class="@Item(Is("Surveys", "Access"))" aria-current="@(Is("Surveys", "Access") ? "page" : null)" asp-action="Access" asp-controller="Surveys" asp-route-id="@Model.ItemId"><i class="fa-solid fa-sliders fa-fw me-2 flex-shrink-0" aria-hidden="true"></i>@T["Access and settings"]</a>
+            <a class="@Item(Is("SurveyTranslations"))" aria-current="@(Is("SurveyTranslations") ? "page" : null)" asp-action="Index" asp-controller="SurveyTranslations" asp-route-id="@Model.ItemId"><i class="fa-solid fa-language fa-fw me-2 flex-shrink-0" aria-hidden="true"></i>@T["Translations"]</a>
+            <a class="@Item(Is("SurveyVersions"))" aria-current="@(Is("SurveyVersions") ? "page" : null)" asp-action="Index" asp-controller="SurveyVersions" asp-route-id="@Model.ItemId"><i class="fa-solid fa-clock-rotate-left fa-fw me-2 flex-shrink-0" aria-hidden="true"></i>@T["Versions"]</a>
+        </div>
+
+        <div class="small text-body-secondary text-uppercase fw-semibold mb-1">@T["Collect"]</div>
+        <div class="list-group mb-3">
+            <a class="@Item(Is("SurveyCollectors") || Is("SurveyInvitations"))" aria-current="@(Is("SurveyCollectors") || Is("SurveyInvitations") ? "page" : null)" asp-action="Index" asp-controller="SurveyCollectors" asp-route-id="@Model.ItemId"><i class="fa-solid fa-share-nodes fa-fw me-2 flex-shrink-0" aria-hidden="true"></i>@T["Collectors"]</a>
+        </div>
+
+        <div class="small text-body-secondary text-uppercase fw-semibold mb-1">@T["Analyze"]</div>
+        <div class="list-group mb-3">
+            <a class="@Item(Is("SurveyResponses"))" aria-current="@(Is("SurveyResponses") ? "page" : null)" href="@Url.Content("~/Admin/surveys/" + Model.ItemId + "/responses")"><i class="fa-solid fa-inbox fa-fw me-2 flex-shrink-0" aria-hidden="true"></i>@T["Responses"]</a>
+            <a class="@Item(false)" href="@resultsUrl" title="@T["Opens the Survey results report"]"><i class="fa-solid fa-chart-column fa-fw me-2 flex-shrink-0" aria-hidden="true"></i>@T["Results"] <i class="fa-solid fa-arrow-up-right-from-square fa-xs text-body-secondary ms-1" aria-hidden="true"></i></a>
+            <a class="@Item(Is("SurveyOverrides"))" aria-current="@(Is("SurveyOverrides") ? "page" : null)" href="@Url.Content("~/Admin/surveys/" + Model.ItemId + "/overrides")"><i class="fa-solid fa-universal-access fa-fw me-2 flex-shrink-0" aria-hidden="true"></i>@T["Accommodations"]</a>
+        </div>
+    </div>
+</nav>

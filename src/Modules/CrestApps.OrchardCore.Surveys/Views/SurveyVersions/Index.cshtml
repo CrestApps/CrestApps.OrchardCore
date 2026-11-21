@@ -8,7 +8,7 @@
     </breadcrumb>
 </zone>
 
-<partial name="_SurveyNav" model="Model.Survey" />
+<survey-layout survey="Model.Survey">
 
 <form method="post" class="no-multisubmit">
     <admin-list name="SurveyVersions" context="Model.List"
@@ -22,3 +22,5 @@
         </admin-list-grid>
     </admin-list>
 </form>
+
+</survey-layout>

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Surveys.Models;
 using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Surveys.ViewModels;
@@ -16,6 +17,11 @@ public class SurveyOverridesViewModel
     /// Gets or sets the survey title.
     /// </summary>
     public string SurveyTitle { get; set; }
+
+    /// <summary>
+    /// Gets or sets the survey.
+    /// </summary>
+    public Survey Survey { get; set; }
 
     /// <summary>
     /// Gets or sets the list.

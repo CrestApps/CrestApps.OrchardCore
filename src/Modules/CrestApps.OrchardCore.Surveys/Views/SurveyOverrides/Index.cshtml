@@ -7,6 +7,7 @@
         <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
     </breadcrumb>
 </zone>
+<survey-layout survey="Model.Survey">
 
 <div class="card text-bg-theme mb-3 position-sticky action-bar">
     <div class="card-body">
@@ -30,3 +31,5 @@
         <admin-list-column type="Actions" title="@T["Actions"]" />
     </admin-list-grid>
 </admin-list>
+
+</survey-layout>

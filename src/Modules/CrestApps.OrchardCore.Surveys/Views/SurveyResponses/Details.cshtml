@@ -10,6 +10,7 @@
         <breadcrumb-item id="Responses" url="@Url.Content("~/admin/surveys/" + Model.Survey.ItemId + "/responses")">@T["Responses"]</breadcrumb-item>
     </breadcrumb>
 </zone>
+<survey-layout survey="Model.Survey">
 
 <div class="card mb-3">
     <div class="card-header">@T["Summary"]</div>
@@ -125,3 +126,5 @@
         </div>
     </form>
 }
+
+</survey-layout>

@@ -11,6 +11,7 @@
         <breadcrumb-item id="SurveyCollectorsIndex" action="Index" controller="SurveyCollectors" area="CrestApps.OrchardCore.Surveys" route-id="@Model.Survey.ItemId">@T["Collect responses"]</breadcrumb-item>
     </breadcrumb>
 </zone>
+<survey-layout survey="Model.Survey">
 
 <form method="post" class="no-multisubmit">
     @Html.ValidationSummary()
@@ -123,3 +124,5 @@
 </form>
 
 <script asp-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-admin.min.js" debug-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-admin.js" at="Foot"></script>
+
+</survey-layout>

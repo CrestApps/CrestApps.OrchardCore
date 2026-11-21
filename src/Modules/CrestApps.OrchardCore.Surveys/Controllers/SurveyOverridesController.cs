@@ -108,6 +108,7 @@ public sealed class SurveyOverridesController : Controller
         {
             SurveyId = surveyId,
             SurveyTitle = survey.Title,
+            Survey = survey,
             List = new AdminListContext<SurveyOverrideListItem>
             {
                 Source = rows,

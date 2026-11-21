@@ -8,7 +8,7 @@
     </breadcrumb>
 </zone>
 
-<partial name="_SurveyNav" model="Model.Survey" />
+<survey-layout survey="Model.Survey">
 
 <form method="post" asp-action="Access" asp-route-id="@Model.Survey.ItemId" class="no-multisubmit">
     @Html.ValidationSummary()
@@ -19,3 +19,5 @@
         <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
     </div>
 </form>
+
+</survey-layout>

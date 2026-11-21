@@ -10,7 +10,7 @@ Translate a survey so each respondent reads it in their language.
 
 | | |
 | --- | --- |
-| **Menu** | Surveys > Surveys, then the survey's **Translations** tab |
+| **Menu** | Surveys > Surveys, then **Translations** in the survey's side menu |
 | **Permission** | Manage own surveys, or Manage all surveys |
 | **Feature** | Surveys |
 
@@ -18,7 +18,7 @@ Translate a survey so each respondent reads it in their language.
 
 ## Translate
 
-1. Open the survey and select the **Translations** tab. The site needs more than one culture; your administrator adds them in **Settings > Localization**.
+1. Open the survey and select **Translations** in its side menu. The site needs more than one culture; your administrator adds them in **Settings > Localization**.
 2. Pick the culture in **Translate into** and select **Open**.
 3. Enter the translations next to the originals: the **Survey**, **Pages**, **Questions**, **Choices**, **Rows** and **Endings**. Select **Save**.
 4. [Publish](./publish-and-versions.md) the survey. Respondents see a translation once it is published, when their language or the link's language matches.
