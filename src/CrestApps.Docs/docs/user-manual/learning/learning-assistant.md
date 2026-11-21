@@ -47,8 +47,8 @@ Go to **Learning > Authoring assistant**. Each card makes drafts that you review
 
 ## Use scoring help while grading
 
-1. Open an attempt with an essay, or a coursework submission, from **Learning > Grading**.
-2. Select **Suggest a score**. The AI fills in a score (or a level for each rubric criterion) and feedback, based on the grader guidance or the rubric.
+1. Open a coursework submission from **Learning > Grading**.
+2. Select **Suggest a score**. The AI fills in a score (or a level for each rubric criterion) and feedback, based on the rubric.
 3. Read the work yourself, change anything you disagree with, and save the grade as usual.
 
-The grade then shows **AI-assisted**, on the attempt or the submission and in its history. A suggestion is never saved on its own, and a certificate or credential only ever follows the grade you save. Work handed in only as files gets no suggestion.
+The grade then shows **AI-assisted**, on the submission and in its history. Quiz answers, such as essays, are graded on the Surveys grading page, which has its own AI scoring help when the Surveys AI feature is on. A suggestion is never saved on its own, and a certificate or credential only ever follows the grade you save. Work handed in only as files gets no suggestion.
