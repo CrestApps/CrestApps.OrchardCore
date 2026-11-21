@@ -57,4 +57,26 @@ public sealed class SurveyVersionStore : DocumentCatalog<SurveyVersion, SurveyVe
         return await Session.Query<SurveyVersion, SurveyVersionIndex>(index => index.SurveyId == surveyId && index.Number == number, collection: SurveysConstants.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Refuses to delete a version that a response, other than a test response, is pinned to.
+    /// </summary>
+    /// <param name="model">The version.</param>
+    /// <returns>A task.</returns>
+    /// <exception cref="InvalidOperationException">When a response is pinned to the version.</exception>
+    protected override async ValueTask DeletingAsync(SurveyVersion model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+
+        var versionId = model.ItemId;
+        var count = await Session.QueryIndex<SurveyResponseIndex>(index => index.SurveyVersionId == versionId && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName)
+            .CountAsync();
+
+        if (count > 0)
+        {
+            throw new InvalidOperationException($"The survey version {versionId} has responses and cannot be deleted.");
+        }
+
+        await base.DeletingAsync(model);
+    }
 }
