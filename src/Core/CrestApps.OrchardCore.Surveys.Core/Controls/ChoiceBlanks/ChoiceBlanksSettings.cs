@@ -23,4 +23,9 @@ public sealed class ChoiceBlanksSettings
     /// Gets or sets how words are picked.
     /// </summary>
     public ChoiceBlanksDisplay Display { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a picked word must match the right word's case.
+    /// </summary>
+    public bool CaseSensitive { get; set; }
 }

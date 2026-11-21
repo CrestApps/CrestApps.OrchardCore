@@ -31,5 +31,14 @@
                 </select>
             </div>
         </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Settings.CaseSensitive" class="form-check-input" />
+                    <label asp-for="Settings.CaseSensitive" class="form-check-label">@T["Picked words must match case"]</label>
+                </div>
+            </div>
+        </div>
     </div>
 </div>

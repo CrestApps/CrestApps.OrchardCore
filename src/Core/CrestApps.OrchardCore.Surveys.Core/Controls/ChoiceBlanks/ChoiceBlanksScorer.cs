@@ -16,7 +16,9 @@ public sealed class ChoiceBlanksScorer : SurveyControlScorerBase
     {
         ArgumentNullException.ThrowIfNull(question);
 
-        return SurveyBlankScoring.Score(SurveyBlankText.Parse(question.GetSettings<ChoiceBlanksSettings>().Text).Answers, answer, MaxPoints(question, context), caseSensitive: true);
+        var settings = question.GetSettings<ChoiceBlanksSettings>();
+
+        return SurveyBlankScoring.Score(SurveyBlankText.Parse(settings.Text).Answers, answer, MaxPoints(question, context), settings.CaseSensitive);
     }
 
     /// <inheritdoc />

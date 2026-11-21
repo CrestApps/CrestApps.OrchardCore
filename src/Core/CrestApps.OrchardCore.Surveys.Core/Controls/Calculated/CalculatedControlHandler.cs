@@ -81,6 +81,7 @@ public sealed class CalculatedControlHandler : SurveyControlHandlerBase<Calculat
             }
             catch (FormatException)
             {
+                // An author's format that .NET cannot read falls back to the plain value below.
             }
         }
 
