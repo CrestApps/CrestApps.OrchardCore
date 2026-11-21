@@ -1,0 +1,8 @@
+[
+  {
+    "action": "vite",
+    "name": "survey-runner.js",
+    "source": "Assets/js/survey-runner.js",
+    "dest": "wwwroot/scripts/survey-runner.js"
+  }
+]

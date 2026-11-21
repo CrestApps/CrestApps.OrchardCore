@@ -1,0 +1,127 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyResponseDetailsViewModel
+
+@{
+    var response = Model.Response;
+}
+
+<zone Name="Title">
+    <breadcrumb name="SurveysResponse" title="@T["Response {0}", response.Number]">
+        <breadcrumb-item id="Surveys" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="Responses" url="@Url.Content("~/admin/surveys/" + Model.Survey.ItemId + "/responses")">@T["Responses"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Summary"]</div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@T["Survey"]</dt>
+            <dd class="col-sm-9">@Model.Survey.Title (@T["version {0}", response.VersionNumber])</dd>
+            <dt class="col-sm-3">@T["Status"]</dt>
+            <dd class="col-sm-9">@response.Status @(response.IsTest ? T["(test)"].Value : string.Empty)</dd>
+            <dt class="col-sm-3">@T["Respondent"]</dt>
+            <dd class="col-sm-9">@(string.IsNullOrEmpty(response.UserId) && response.Respondent is null ? T["Anonymous"].Value : (response.Respondent?.ToString() ?? response.UserId))</dd>
+            <dt class="col-sm-3">@T["Started"]</dt>
+            <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(response.StartedUtc, DateTimeKind.Utc), Format: "g"))</dd>
+            @if (response.CompletedUtc is { } completed)
+            {
+                <dt class="col-sm-3">@T["Completed"]</dt>
+                <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: "g")) @(response.AutoSubmitted ? T["(at the deadline)"].Value : string.Empty)</dd>
+            }
+            @if (response.Score is not null)
+            {
+                <dt class="col-sm-3">@T["Score"]</dt>
+                <dd class="col-sm-9">@response.Score.Value.ToString("0.##") / @((response.MaxScore ?? 0).ToString("0.##")) (@((response.Percent ?? 0).ToString("0.#"))%) @(response.Passed == true ? T["Passed"].Value : response.Passed == false ? T["Not passed"].Value : string.Empty)</dd>
+            }
+        </dl>
+    </div>
+</div>
+
+@await DisplayAsync(Model.Extensions)
+
+<div class="card mb-3">
+    <div class="card-header">@T["Answers"]</div>
+    <div class="card-body">
+        @foreach (var question in Model.Questions)
+        {
+            @await DisplayAsync(question)
+        }
+    </div>
+</div>
+
+@if (response.CategoryScores.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Score by category"]</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var category in response.CategoryScores)
+            {
+                <li class="list-group-item d-flex justify-content-between"><span>@(Model.CategoryNames.TryGetValue(category.Key, out var name) ? name : category.Key)</span><span>@category.Value.ToString("0.##")</span></li>
+            }
+        </ul>
+    </div>
+}
+
+@if (response.Variables.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Variables"]</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var variable in response.Variables)
+            {
+                <li class="list-group-item d-flex justify-content-between"><code>@variable.Key</code><span>@variable.Value</span></li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Page visits"]</div>
+    <ul class="list-group list-group-flush">
+        @foreach (var visit in response.PageVisits)
+        {
+            var pageId = CrestApps.OrchardCore.Surveys.Core.Runtime.SurveyPlanNavigator.PageOf(response.Plan, visit.PageId);
+            <li class="list-group-item d-flex flex-wrap justify-content-between">
+                <span>@(Model.PageNames.TryGetValue(pageId ?? string.Empty, out var pageName) ? pageName : visit.PageId)</span>
+                <span class="text-muted small">
+                    @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(visit.EnteredUtc, DateTimeKind.Utc), Format: "T"))
+                    @if (visit.LeftUtc is { } left)
+                    {
+                        <text>&ndash; @((left - visit.EnteredUtc).ToString(@"m\:ss"))</text>
+                    }
+                </span>
+            </li>
+        }
+    </ul>
+</div>
+
+@if (response.ScoreHistory.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Score history"]</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var change in response.ScoreHistory)
+            {
+                <li class="list-group-item">
+                    <span class="text-muted small">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(change.ChangedUtc, DateTimeKind.Utc), Format: "g"))</span>
+                    @change.Kind: @(change.From?.ToString("0.##") ?? "-") &rarr; @(change.To?.ToString("0.##") ?? "-") @change.Reason
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+@if (Model.CanDelete)
+{
+    <form method="post" action="@Url.Content("~/admin/surveys/responses/" + response.ItemId + "/void")">
+        @Html.AntiForgeryToken()
+        <div class="action-bar-bottom">
+            <a class="btn btn-secondary cancel" role="button" href="@Url.Content("~/admin/surveys/" + Model.Survey.ItemId + "/responses")">@T["Back"]</a>
+            @if (response.Status != SurveyResponseStatus.Voided)
+            {
+                <button type="submit" class="btn btn-warning action-bar-secondary" data-url-af="UnsafeUrl" data-title="@T["Void response"]" data-message="@T["Void this response?"]">@T["Void"]</button>
+            }
+            <button type="submit" class="btn btn-danger action-bar-secondary" formaction="@Url.Content("~/admin/surveys/responses/" + response.ItemId + "/delete")" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete response"]" data-message="@T["Delete this response? This cannot be undone."]">@T["Delete"]</button>
+        </div>
+    </form>
+}

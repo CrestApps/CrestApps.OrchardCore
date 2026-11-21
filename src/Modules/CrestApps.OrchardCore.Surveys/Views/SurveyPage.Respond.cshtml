@@ -1,0 +1,108 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyPageRespondViewModel
+
+@{
+    var screen = Model.Page;
+    var formUrl = Url.Content("~/s/r/" + Model.Response.ItemId) + (Model.IsPreview ? "?preview=true" : string.Empty);
+    var deadline = screen.DeadlineUtc?.ToString("o", System.Globalization.CultureInfo.InvariantCulture);
+}
+
+@if (Model.IsPreview)
+{
+    <div class="alert alert-info d-flex flex-wrap align-items-center gap-2" role="status">
+        <span class="me-auto"><i class="fa-solid fa-eye" aria-hidden="true"></i> @T["Preview: this test response is left out of results and limits."]</span>
+        <form method="post" action="@Url.Content("~/admin/surveys/responses/" + Model.Response.ItemId + "/jump")" class="d-flex gap-2">
+            @Html.AntiForgeryToken()
+            <label class="visually-hidden" for="survey-jump">@T["Go to page"]</label>
+            <select id="survey-jump" name="screen" class="form-select form-select-sm w-auto">
+                @foreach (var item in Model.Screens)
+                {
+                    <option value="@item.Key" selected="@(item.Key == screen.Id)">@item.Value</option>
+                }
+            </select>
+            <button type="submit" class="btn btn-sm btn-secondary">@T["Go"]</button>
+        </form>
+        <a class="btn btn-sm btn-outline-secondary" href="@(Url.Content("~/s/r/" + Model.Response.ItemId) + "?preview=true&hidden=" + (!Model.ShowHidden).ToString().ToLowerInvariant())">@(Model.ShowHidden ? T["Hide hidden questions"] : T["Show hidden questions"])</a>
+    </div>
+}
+
+<div class="survey-runner @Model.Presentation.CssClass">
+    @if (Model.Presentation.ShowTitle)
+    {
+        <h1 class="h3 mb-3">@Model.Title</h1>
+    }
+
+    @if (Model.Presentation.ShowProgressBar && screen.PageCount > 1)
+    {
+        <div class="progress mb-3" role="progressbar" aria-label="@T["Progress"]" aria-valuenow="@screen.ProgressPercent" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar" style="width: @screen.ProgressPercent%"></div>
+        </div>
+    }
+
+    @if (screen.DeadlineUtc is not null)
+    {
+        <div class="survey-timer alert alert-secondary py-2" data-survey-timer data-deadline-utc="@deadline" role="timer" aria-live="off">
+            <i class="fa-regular fa-clock" aria-hidden="true"></i> @T["Time left:"] <span data-survey-timer-value></span>
+        </div>
+    }
+
+    <div class="visually-hidden" aria-live="assertive" data-survey-live></div>
+
+    @if (!string.IsNullOrEmpty(Model.Message))
+    {
+        <div class="alert alert-danger" role="alert" tabindex="-1" data-survey-message>@Model.Message</div>
+    }
+
+    <form action="@formUrl" method="post" class="survey-form" novalidate
+          data-survey-form
+          data-response-id="@Model.Response.ItemId"
+          data-page-id="@screen.Id"
+          data-save-url="@Url.Content("~/s/r/" + Model.Response.ItemId + "/save")"
+          data-evaluate-url="@Url.Content("~/s/r/" + Model.Response.ItemId + "/evaluate")"
+          data-check-url="@Url.Content("~/s/r/" + Model.Response.ItemId + "/check/")"
+          data-server-rules="@string.Join(" ", screen.ServerRuleKeys)"
+          data-confirm-message="@(Model.ConfirmBeforeSubmit ? T["Submit your answers? You cannot change them afterwards."].Value : string.Empty)"
+          data-time-warning="@T["{0} minutes left."].Value"
+          data-time-up="@T["Your time is up."].Value">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="pageId" value="@screen.Id" />
+        <script type="application/json" data-survey-rules>@Html.Raw(ViewData["SurveyClientRules"] ?? "{}")</script>
+
+        @if (Model.Presentation.ShowPageTitles && !string.IsNullOrWhiteSpace(screen.Title))
+        {
+            <h2 class="h4 mb-2">@screen.Title</h2>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(screen.Description))
+        {
+            <div class="survey-page-description mb-3">@Html.Raw(screen.Description)</div>
+        }
+
+        @foreach (var question in Model.Questions)
+        {
+            @await DisplayAsync(question)
+        }
+
+        <div class="survey-navigation d-flex gap-2 mt-4">
+            @if (screen.CanGoBack)
+            {
+                <button type="submit" name="direction" value="back" class="btn btn-secondary" formnovalidate>@T["Back"]</button>
+            }
+
+            @if (screen.IsLast)
+            {
+                <button type="submit" name="direction" value="finish" class="btn btn-primary" data-survey-finish>@T["Submit"]</button>
+            }
+            else
+            {
+                <button type="submit" name="direction" value="next" class="btn btn-primary">@T["Next"]</button>
+            }
+        </div>
+
+        @if (screen.PageCount > 1)
+        {
+            <p class="text-muted small mt-2">@T["Page {0} of {1}", screen.Position, screen.PageCount]</p>
+        }
+    </form>
+</div>
+
+<script asp-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-runner.min.js" debug-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-runner.js" at="Foot"></script>

@@ -67,4 +67,26 @@ public sealed class SurveyResponseCounter
             ? _store.YesSqlSession.Query<SurveyResponse, SurveyResponseIndex>(index => index.SurveyId == surveyId && index.UserId == userId && index.ContextRef == null && index.Status == inProgress && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName).FirstOrDefaultAsync()
             : _store.YesSqlSession.Query<SurveyResponse, SurveyResponseIndex>(index => index.SurveyId == surveyId && index.UserId == userId && index.ContextRef == contextRef && index.Status == inProgress && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName).FirstOrDefaultAsync();
     }
+
+    /// <summary>
+    /// Lists the responses of a user that are not tests or voided, newest first.
+    /// </summary>
+    /// <param name="userId">The user.</param>
+    /// <param name="take">The most to read.</param>
+    /// <returns>The responses.</returns>
+    public async Task<IReadOnlyList<SurveyResponse>> ListForUserAsync(string userId, int take)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return [];
+        }
+
+        var voided = nameof(SurveyResponseStatus.Voided);
+        var items = await _store.YesSqlSession.Query<SurveyResponse, SurveyResponseIndex>(index => index.UserId == userId && index.Status != voided && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName)
+            .OrderByDescending(index => index.StartedUtc)
+            .Take(take)
+            .ListAsync();
+
+        return items.ToList();
+    }
 }

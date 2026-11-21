@@ -1,0 +1,51 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyResponsesIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveysResponses" title="@T["Responses"]">
+        <breadcrumb-item id="Surveys" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="Survey">@Model.Survey.Title</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@{
+    Model.List.ToolbarActions = await New.SurveyResponsesFilters(ViewModel: Model, FormId: "survey-responses-filter");
+}
+
+<form asp-action="Index" asp-route-id="@Model.Survey.ItemId" method="post" id="survey-responses-filter" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+    <input asp-for="BulkAction" type="hidden" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Search" class="form-control" placeholder="@T["Search by number"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary" href="@Url.Content("~/admin/surveys/" + Model.Survey.ItemId + "/preview")">@T["Preview"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="SurveyResponses" context="Model.List"
+                bulk-actions="Model.BulkActions"
+                empty-message="@T["<strong>Nothing here!</strong> This survey has no responses yet."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column type="Select" />
+            <admin-list-column name="Number" position="20" title="@T["Response"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Started" position="40" title="@T["Started"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<script asp-name="list-management-ui" at="Foot"></script>

@@ -1,0 +1,65 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyEndingViewModel
+
+@{
+    var title = string.IsNullOrWhiteSpace(Model.Ending.Title) ? (Model.Ending.ScreenedOut ? T["Thank you"].Value : T["Thank you for your response"].Value) : Model.Ending.Title;
+}
+
+@if (!string.IsNullOrEmpty(Model.KioskToken))
+{
+    <meta http-equiv="refresh" content="@Model.KioskResetSeconds;url=@Url.Content("~/s/" + Model.KioskToken)" />
+}
+
+<zone Name="Title">
+    <breadcrumb name="SurveyRunnerDone" title="@Html.Raw(Html.Encode(title))">
+        <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="survey-ending">
+    <h1 class="h3 mb-3">@title</h1>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Ending.MessageHtml))
+    {
+        <div class="survey-ending-message mb-3">@Html.Raw(Model.Ending.MessageHtml)</div>
+    }
+
+    @if (Model.Response.IsTest && !string.IsNullOrEmpty(Model.Ending.RedirectUrl))
+    {
+        <div class="alert alert-info">@T["A respondent would now go to {0}.", Model.Ending.RedirectUrl]</div>
+    }
+
+    @if (Model.ShowScore && Model.Response.Score is not null)
+    {
+        <p class="lead">
+            @T["Your score: {0} of {1} ({2}%)", Model.Response.Score.Value.ToString("0.##"), (Model.Response.MaxScore ?? 0).ToString("0.##"), (Model.Response.Percent ?? 0).ToString("0.#")]
+            @if (Model.Response.Passed is true)
+            {
+                <span class="badge text-bg-success">@T["Passed"]</span>
+            }
+            else if (Model.Response.Passed is false)
+            {
+                <span class="badge text-bg-danger">@T["Not passed"]</span>
+            }
+        </p>
+    }
+
+    <div class="d-flex gap-2">
+        @if (Model.CanReview)
+        {
+            <a class="btn btn-secondary" href="@Url.Content("~/s/r/" + Model.Response.ItemId + "/review")">@T["Review your answers"]</a>
+        }
+
+        @if (Model.CanReopen)
+        {
+            <form method="post" action="@Url.Content("~/s/r/" + Model.Response.ItemId + "/reopen")">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-secondary">@T["Change your answers"]</button>
+            </form>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.ResultsToken))
+        {
+            <a class="btn btn-outline-secondary" href="@Url.Content("~/s/" + Model.ResultsToken + "/results")">@T["See the results"]</a>
+        }
+    </div>
+</div>
