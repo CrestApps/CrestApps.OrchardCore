@@ -25,7 +25,7 @@ public sealed class SurveyManagerTests : IAsyncLifetime
         var services = _harness.CreateServices(session);
 
         // Act
-        var first = await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Customer Feedback", Template = SurveyTemplateProvider.CustomerSatisfaction }, cancellationToken);
+        var first = await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Customer Feedback", Template = SurveyTemplateNames.CustomerSatisfaction }, cancellationToken);
         await session.SaveChangesAsync(cancellationToken);
         var second = await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Customer Feedback" }, cancellationToken);
         await session.SaveChangesAsync(cancellationToken);

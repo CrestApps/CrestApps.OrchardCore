@@ -1,10 +1,7 @@
-using System.Text.Json.Serialization;
-using OrchardCore.Localization;
-
 namespace CrestApps.OrchardCore.Surveys.Services;
 
 /// <summary>
-/// Describes a survey template.
+/// Describes a survey template in the new survey page.
 /// </summary>
 public sealed class SurveyTemplateDescriptor
 {
@@ -14,16 +11,14 @@ public sealed class SurveyTemplateDescriptor
     public string Name { get; set; }
 
     /// <summary>
-    /// Gets or sets the name shown.
+    /// Gets or sets the title shown.
     /// </summary>
-    [JsonIgnore]
-    public LocalizationSource DisplayName { get; set; }
+    public string Title { get; set; }
 
     /// <summary>
     /// Gets or sets the description shown.
     /// </summary>
-    [JsonIgnore]
-    public LocalizationSource Description { get; set; }
+    public string Description { get; set; }
 
     /// <summary>
     /// Gets or sets the kind of survey the template makes.

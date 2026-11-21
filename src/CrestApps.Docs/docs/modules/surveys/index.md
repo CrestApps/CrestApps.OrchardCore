@@ -41,12 +41,13 @@ Access settings, retention and anonymity (`Survey.Access`, `Survey.Retention`) a
 
 ## Admin pages
 
-The **Surveys** menu holds **Surveys**, **Question banks** and **Grading**. The site settings are under **Configuration > Settings > Surveys**. Reports are under **Reports > Surveys**. The User Manual walks through the screens: [Surveys](../../user-manual/surveys/index.md).
+The **Surveys** menu holds **Surveys**, **Question banks**, **Grading** and **Templates**. The site settings are under **Settings > Surveys**. Reports are under **Reports > Surveys**. The User Manual walks through the screens: [Surveys](../../user-manual/surveys/index.md).
 
 | Route (under the admin prefix) | Page |
 | --- | --- |
 | `surveys` | Survey list |
 | `surveys/create` | New survey from a template |
+| `surveys/templates` | Survey templates |
 | `surveys/{id}/design` | Designer |
 | `surveys/{id}/publish` | Publish with checks and changes |
 | `surveys/{id}/versions` | Versions, compare and restore |
@@ -70,6 +71,7 @@ The **Surveys** menu holds **Surveys**, **Question banks** and **Grading**. The 
 | `ManageSurveys` | Manage all surveys | |
 | `ManageOwnSurveys` | Manage own surveys | `ManageSurveys` |
 | `PublishSurveys` | Publish, restore and close surveys | `ManageSurveys` |
+| `ManageSurveyTemplates` | Manage survey templates | `ManageSurveys` |
 | `ViewSurveyResponses` | View responses of all surveys | `ManageSurveys` |
 | `ViewOwnSurveyResponses` | View responses of own surveys | `ViewSurveyResponses`, `ManageOwnSurveys` |
 | `ExportSurveyResponses` | Export survey responses with respondent identity (security critical) | |
@@ -88,7 +90,7 @@ Checks on one survey go through `ISurveyAuthorizationService`: the global permis
 
 ## Site settings
 
-**Configuration > Settings > Surveys** (permission `ManageSurveySettings`) sets the defaults of new surveys (retention days, idle hours before an unfinished response is abandoned, minimum group size), the largest upload in MB, and the hosts an ending may redirect to besides the site. The settings travel in Orchard Core's `Settings` recipe step under `SurveySettings`.
+**Settings > Surveys** (permission `ManageSurveySettings`) sets the defaults of new surveys (retention days, idle hours before an unfinished response is abandoned, minimum group size), the largest upload in MB, and the hosts an ending may redirect to besides the site. The settings travel in Orchard Core's `Settings` recipe step under `SurveySettings`.
 
 ## Privacy and security
 

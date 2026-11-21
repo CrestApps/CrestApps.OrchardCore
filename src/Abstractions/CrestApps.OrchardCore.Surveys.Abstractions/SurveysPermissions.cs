@@ -20,6 +20,11 @@ public static class SurveysPermissions
     public static readonly Permission ManageOwnSurveys = new("ManageOwnSurveys", LocalizationSource.Create("Manage own surveys", typeof(SurveysPermissions)), [ManageSurveys]);
 
     /// <summary>
+    /// Add, change and remove the templates new surveys start from.
+    /// </summary>
+    public static readonly Permission ManageSurveyTemplates = new("ManageSurveyTemplates", LocalizationSource.Create("Manage survey templates", typeof(SurveysPermissions)), [ManageSurveys]);
+
+    /// <summary>
     /// Publish, restore and close surveys.
     /// </summary>
     public static readonly Permission PublishSurveys = new("PublishSurveys", LocalizationSource.Create("Publish, restore and close surveys", typeof(SurveysPermissions)), [ManageSurveys]);

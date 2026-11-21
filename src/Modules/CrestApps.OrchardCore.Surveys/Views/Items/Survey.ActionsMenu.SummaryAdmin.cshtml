@@ -13,6 +13,7 @@
 <a href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/overrides")" class="dropdown-item">@T["Accommodations"]</a>
 <a href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/regrade")" class="dropdown-item">@T["Regrade versions"]</a>
 <a href="@Url.Content("~/Admin/surveys/grading?surveyId=" + Uri.EscapeDataString(survey.ItemId))" class="dropdown-item">@T["Grading"]</a>
+<a asp-action="Create" asp-controller="SurveyTemplates" asp-route-fromSurveyId="@survey.ItemId" class="dropdown-item">@T["Save as a template"]</a>
 <a asp-action="Duplicate" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Copy"]" data-message="@T["Create a draft copy of this survey?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Copy as a draft"]</a>
 @if (survey.Status == SurveyStatus.Open)
 {

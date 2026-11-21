@@ -13,6 +13,7 @@ internal sealed class SurveysPermissionProvider : IPermissionProvider
         SurveysPermissions.ManageSurveys,
         SurveysPermissions.ManageOwnSurveys,
         SurveysPermissions.PublishSurveys,
+        SurveysPermissions.ManageSurveyTemplates,
         SurveysPermissions.ViewSurveyResponses,
         SurveysPermissions.ViewOwnSurveyResponses,
         SurveysPermissions.ExportSurveyResponses,

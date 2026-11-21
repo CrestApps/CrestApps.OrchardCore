@@ -20,6 +20,8 @@ internal sealed class AuthoringServices
 
     public SurveyTemplateProvider Templates { get; init; }
 
+    public SurveyTemplateStore TemplateStore { get; init; }
+
     public SurveyStore SurveyStore { get; init; }
 
     public SurveyVersionStore VersionStore { get; init; }

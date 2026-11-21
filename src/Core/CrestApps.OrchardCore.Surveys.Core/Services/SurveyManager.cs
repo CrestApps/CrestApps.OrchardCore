@@ -67,10 +67,15 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         var survey = await NewAsync(data: null, cancellationToken);
         var definition = request.Definition is not null
             ? SurveyDefinitionCloner.Clone(request.Definition)
-            : BuildFromTemplate(request.Template) ?? new SurveyDefinition();
+            : await BuildFromTemplateAsync(request.Template, cancellationToken);
 
-        if (request.Definition is not null)
+        if (definition is null)
         {
+            definition = new SurveyDefinition();
+        }
+        else
+        {
+            // A template or a passed-in definition is copied with new ids, so two surveys never share one.
             SurveyDefinitionCloner.RegenerateIds(definition);
         }
 
@@ -234,7 +239,7 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
     public Task<IReadOnlyList<Survey>> ListByOwnerAsync(RecordRef owner, CancellationToken cancellationToken = default)
         => _store.ListByOwnerAsync(owner.ToString(), cancellationToken);
 
-    private SurveyDefinition BuildFromTemplate(string template)
+    private async Task<SurveyDefinition> BuildFromTemplateAsync(string template, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(template))
         {
@@ -243,7 +248,7 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
 
         foreach (var provider in _templateProviders)
         {
-            var definition = provider.Build(template);
+            var definition = await provider.BuildAsync(template, cancellationToken);
 
             if (definition is not null)
             {

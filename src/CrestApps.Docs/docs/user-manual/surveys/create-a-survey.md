@@ -21,12 +21,12 @@ Create a survey from a template, then design its questions and set who may respo
 
 1. Go to **Surveys > Surveys** and select **Add survey**.
 2. Enter a **Title**. You can enter a **Technical name** (lowercase letters, digits and dashes), or leave it empty to make one from the title.
-3. Under **Start from**, pick a template: **Blank survey**, **Customer satisfaction**, **Net Promoter Score**, **Employee engagement**, **Event feedback**, **Course feedback**, **Quiz** or **Poll**.
+3. Under **Start from**, pick a template. **Blank survey** is always there. The others are the site's [survey templates](./templates.md): out of the box **Customer satisfaction**, **Net Promoter Score**, **Employee engagement**, **Event feedback**, **Quiz** and **Poll**, plus **Course feedback** when Learning surveys are on. **Manage templates** opens the template list.
 4. Select **Create**. The designer opens.
 
 ## The survey list
 
-Each row has **Design** and **Preview** buttons, and a menu with **Collect responses**, **Responses**, **Results**, **Versions**, **Access and settings**, **Logic overview**, **Accommodations**, **Regrade versions**, **Grading**, **Copy as a draft**, **Close** or **Open**, **Archive** or **Unarchive**, and **Delete**. Search by name, and filter the list by its filters above the rows.
+Each row has **Design** and **Preview** buttons, and a menu with **Collect responses**, **Responses**, **Results**, **Versions**, **Access and settings**, **Logic overview**, **Accommodations**, **Regrade versions**, **Grading**, **Save as a template**, **Copy as a draft**, **Close** or **Open**, **Archive** or **Unarchive**, and **Delete**. Search by name, and filter the list by its filters above the rows.
 
 You can delete only a survey that has no responses. Archive a survey with responses instead: it keeps its results and leaves the default list.
 

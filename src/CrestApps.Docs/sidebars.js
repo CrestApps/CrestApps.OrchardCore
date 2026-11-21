@@ -283,6 +283,7 @@ const sidebars = {
             link: { type: 'doc', id: 'user-manual/surveys/index' },
             items: [
                 'user-manual/surveys/create-a-survey',
+                'user-manual/surveys/templates',
                 'user-manual/surveys/add-questions',
                 'user-manual/surveys/logic',
                 'user-manual/surveys/quizzes',

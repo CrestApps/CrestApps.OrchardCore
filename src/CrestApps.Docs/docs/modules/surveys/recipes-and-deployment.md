@@ -11,6 +11,7 @@ Every Surveys record has a recipe step and a deployment step with schemas (when 
 | Step | Records | Matched by |
 | --- | --- | --- |
 | `Surveys` | Surveys with their draft, access, retention, `Versions` and `Collectors` | Id, then `Name`; versions by survey and number |
+| `SurveyTemplates` | Survey templates (`Templates`) with their `Definition` | Id, then `Name` |
 | `SurveyQuestionBanks` | Question banks (`QuestionBanks`) with their `Questions` | Bank id, then `Name`; questions by id, then `SourceIdentifier` |
 | `SurveyResponses` | Responses (opt-in) | Id |
 | `SurveyOverrides` | Accommodations, people by user name | Id |

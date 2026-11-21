@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
 using CrestApps.OrchardCore.Surveys;
-using CrestApps.OrchardCore.Surveys.Core.Services;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Metadata;
@@ -49,7 +48,7 @@ public sealed class CourseSurveyPartHandler : ContentPartHandler<CourseSurveyPar
         var settings = definition?.Parts
             .FirstOrDefault(candidate => string.Equals(candidate.PartDefinition.Name, nameof(CourseSurveyPart), StringComparison.Ordinal))
             ?.GetSettings<CourseSurveyPartSettings>();
-        var template = settings?.SingleQuestion == true ? SurveyTemplateProvider.Poll : SurveyTemplateProvider.CourseFeedback;
+        var template = settings?.SingleQuestion == true ? SurveyTemplateNames.Poll : LearningSurveysConstants.CourseFeedbackTemplate;
         var kind = settings?.SingleQuestion == true ? SurveyKinds.Poll : SurveyKinds.Survey;
         var survey = await _learningSurveys.CreateOwnedSurveyAsync(part.ContentItem, kind, template);
 

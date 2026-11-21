@@ -57,13 +57,22 @@ public sealed class LearningSurveyService : ILearningSurveyService
 
         var title = string.IsNullOrWhiteSpace(item.DisplayText) ? kind : item.DisplayText;
 
-        return await _surveyManager.CreateSurveyAsync(new SurveyCreateRequest
+        var survey = await _surveyManager.CreateSurveyAsync(new SurveyCreateRequest
         {
             Title = title,
             Kind = kind,
             Template = template,
             Owner = LearningSurveyContexts.Owner(item.ContentItemId),
         }, cancellationToken);
+
+        // Templates are records an administrator may remove; a quiz is scored even when it started blank.
+        if (survey is not null && string.Equals(kind, SurveyKinds.Quiz, StringComparison.Ordinal) && survey.Draft is { Scoring.Enabled: false })
+        {
+            survey.Draft.Scoring.Enabled = true;
+            await _surveyManager.SaveDraftAsync(survey, survey.Draft, cancellationToken: cancellationToken);
+        }
+
+        return survey;
     }
 
     /// <inheritdoc />

@@ -26,6 +26,9 @@ public static class SurveysCoreServiceCollectionExtensions
         services.TryAddScoped<SurveyStore>();
         services.TryAddScoped<ICatalog<Survey>>(provider => provider.GetRequiredService<SurveyStore>());
         services.TryAddScoped<INamedCatalog<Survey>>(provider => provider.GetRequiredService<SurveyStore>());
+        services.TryAddScoped<SurveyTemplateStore>();
+        services.TryAddScoped<ICatalog<SurveyTemplate>>(provider => provider.GetRequiredService<SurveyTemplateStore>());
+        services.TryAddScoped<INamedCatalog<SurveyTemplate>>(provider => provider.GetRequiredService<SurveyTemplateStore>());
         services.TryAddScoped<SurveyVersionStore>();
         services.TryAddScoped<ICatalog<SurveyVersion>>(provider => provider.GetRequiredService<SurveyVersionStore>());
         services.TryAddScoped<QuestionBankStore>();

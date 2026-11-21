@@ -13,6 +13,7 @@ using Moq;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
+using OrchardCore.Recipes.Services;
 using OrchardCore.Settings;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -49,6 +50,7 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
         harness.Store.RegisterIndexes(
             [
                 new SurveyIndexProvider(),
+                new SurveyTemplateIndexProvider(),
                 new SurveyVersionIndexProvider(),
                 new QuestionBankIndexProvider(),
                 new BankQuestionIndexProvider(),
@@ -68,7 +70,7 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
         await using var session = harness.Store.CreateSession();
         var transaction = await session.BeginTransactionAsync(cancellationToken);
 
-        Assert.Equal(1, await new SurveysMigrations { SchemaBuilder = new SchemaBuilder(harness.Store.Configuration, transaction) }.CreateAsync());
+        Assert.Equal(1, await new SurveysMigrations(Mock.Of<IRecipeMigrator>()) { SchemaBuilder = new SchemaBuilder(harness.Store.Configuration, transaction) }.CreateAsync());
 
         await transaction.CommitAsync(cancellationToken);
 
@@ -129,7 +131,8 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
         var bankQuestionStore = new BankQuestionStore(session);
         var queries = new SurveyResponseQueries(session);
         var draftEditor = new SurveyDraftEditor(registry, new AuthoringLocalizer<SurveyDraftEditor>());
-        var templates = new SurveyTemplateProvider(draftEditor, new AuthoringLocalizer<SurveyTemplateProvider>());
+        var templateStore = new SurveyTemplateStore(session);
+        var templates = new SurveyTemplateProvider(templateStore, new AuthoringLocalizer<SurveyTemplateProvider>());
         var manager = new SurveyManager(
             surveyStore,
             versionStore,
@@ -162,6 +165,7 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
             Registry = registry,
             DraftEditor = draftEditor,
             Templates = templates,
+            TemplateStore = templateStore,
             SurveyStore = surveyStore,
             VersionStore = versionStore,
             CollectorStore = collectorStore,

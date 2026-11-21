@@ -24,12 +24,14 @@ public sealed class PortabilityStartup : StartupBase
         services.TryAddScoped<SurveysExportAuthorizer>();
 
         services.AddRecipeExecutionStep<SurveysRecipeStep>();
+        services.AddRecipeExecutionStep<SurveyTemplatesRecipeStep>();
         services.AddRecipeExecutionStep<SurveyQuestionBanksRecipeStep>();
         services.AddRecipeExecutionStep<SurveyResponsesRecipeStep>();
         services.AddRecipeExecutionStep<SurveyOverridesRecipeStep>();
         services.AddRecipeExecutionStep<SurveyInvitationsRecipeStep>();
 
         services.AddDeployment<SurveysDeploymentSource, SurveysDeploymentStep, SurveysDeploymentStepDisplayDriver>();
+        services.AddDeployment<SurveyTemplatesDeploymentSource, SurveyTemplatesDeploymentStep, SurveyTemplatesDeploymentStepDisplayDriver>();
         services.AddDeployment<SurveyQuestionBanksDeploymentSource, SurveyQuestionBanksDeploymentStep, SurveyQuestionBanksDeploymentStepDisplayDriver>();
         services.AddDeployment<SurveyResponsesDeploymentSource, SurveyResponsesDeploymentStep, SurveyResponsesDeploymentStepDisplayDriver>();
         services.AddDeployment<SurveyOverridesDeploymentSource, SurveyOverridesDeploymentStep, SurveyOverridesDeploymentStepDisplayDriver>();

@@ -37,6 +37,11 @@ public sealed class SurveysAdminMenu : AdminNavigationProvider
                 .Action("Index", "QuestionBanks", SurveysConstants.Features.Surveys)
                 .Permission(SurveysPermissions.ViewQuestionBanks)
                 .LocalNav())
+            .Add(S["Templates"], S["Templates"].PrefixPosition("4"), templates => templates
+                .Id("surveysTemplates")
+                .Action("Index", "SurveyTemplates", SurveysConstants.Features.Surveys)
+                .Permission(SurveysPermissions.ManageSurveyTemplates)
+                .LocalNav())
             .Add(S["Grading"], S["Grading"].PrefixPosition("3"), grading => grading
                 .Id("surveysGrading")
                 .Action("Index", "SurveyGrading", SurveysConstants.Features.Surveys)

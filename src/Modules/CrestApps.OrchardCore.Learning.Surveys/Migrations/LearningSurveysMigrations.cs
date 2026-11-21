@@ -5,27 +5,36 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
 using OrchardCore.Html.Models;
+using OrchardCore.Recipes;
+using OrchardCore.Recipes.Services;
 using OrchardCore.Title.Models;
 
 namespace CrestApps.OrchardCore.Learning.Surveys.Migrations;
 
 /// <summary>
-/// Defines the course survey part and the feedback survey and choice course item types.
+/// Defines the course survey part and the feedback survey and choice course item types, and seeds the course
+/// feedback survey template.
 /// </summary>
 internal sealed class LearningSurveysMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly CourseListSynchronizer _courseListSynchronizer;
+    private readonly IRecipeMigrator _recipeMigrator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningSurveysMigrations"/> class.
     /// </summary>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="courseListSynchronizer">The course list synchronizer.</param>
-    public LearningSurveysMigrations(IContentDefinitionManager contentDefinitionManager, CourseListSynchronizer courseListSynchronizer)
+    /// <param name="recipeMigrator">The recipe migrator.</param>
+    public LearningSurveysMigrations(
+        IContentDefinitionManager contentDefinitionManager,
+        CourseListSynchronizer courseListSynchronizer,
+        IRecipeMigrator recipeMigrator)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _courseListSynchronizer = courseListSynchronizer;
+        _recipeMigrator = recipeMigrator;
     }
 
     /// <summary>
@@ -43,6 +52,10 @@ internal sealed class LearningSurveysMigrations : DataMigration
         await DefineAsync(LearningSurveysConstants.ContentTypes.Choice, "Choice", "One question learners answer by picking a choice, as a poll, with totals learners may see.", singleQuestion: true);
 
         await _courseListSynchronizer.SynchronizeAsync();
+
+        // The course feedback template belongs to Learning: feedback survey items start from it, and administrators
+        // may change it on the Survey templates page.
+        await _recipeMigrator.ExecuteAsync($"course-feedback-template{RecipesConstants.RecipeExtension}", this);
 
         return 1;
     }

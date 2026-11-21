@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Surveys;
-using CrestApps.OrchardCore.Surveys.Core.Services;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 
@@ -38,7 +37,7 @@ public sealed class QuizPartHandler : ContentPartHandler<QuizPart>
             return;
         }
 
-        var survey = await _learningSurveys.CreateOwnedSurveyAsync(part.ContentItem, SurveyKinds.Quiz, SurveyTemplateProvider.Quiz);
+        var survey = await _learningSurveys.CreateOwnedSurveyAsync(part.ContentItem, SurveyKinds.Quiz, SurveyTemplateNames.Quiz);
 
         part.SurveyId = survey?.ItemId;
         part.ContentItem.Apply(part);

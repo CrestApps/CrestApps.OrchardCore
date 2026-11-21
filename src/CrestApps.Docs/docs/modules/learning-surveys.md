@@ -21,6 +21,8 @@ Both types are defined in code with `TitlePart`, `HtmlBodyPart` (the introductio
 | Feedback survey | `FeedbackSurvey` | `false` | **Course feedback** (kind `Survey`) |
 | Choice | `Choice` | `true` | **Poll** (kind `Poll`) |
 
+The **Course feedback** template is a survey template record that this feature seeds from `Migrations/course-feedback-template.recipe.json` when it is first enabled (name `LearningSurveysConstants.CourseFeedbackTemplate`). Administrators change it under **Surveys > Templates**; if it is removed, new feedback survey items start blank.
+
 `CourseSurveyPart` holds one property, `SurveyId`. `CourseSurveyPartHandler` creates the survey when the item is first saved, with the owner `ContentItem:{item id}`. The item's editor shows the survey's status, its question count and published version, and links to **Edit questions** (the Surveys designer), **Access and settings** and **Totals** (the Surveys results report for the survey). The designer of an owned survey links back to its course item (`LearningSurveyOwnerLinkProvider`). Learners can answer once the survey is published.
 
 What the earlier `SurveyPart` held is now a setting of the survey:

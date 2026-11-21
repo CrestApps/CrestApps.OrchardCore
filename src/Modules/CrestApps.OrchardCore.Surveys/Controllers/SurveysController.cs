@@ -204,7 +204,7 @@ public sealed class SurveysController : Controller
             return Forbid();
         }
 
-        return View(new SurveyCreateViewModel { Templates = Templates() });
+        return View(new SurveyCreateViewModel { Templates = await TemplatesAsync() });
     }
 
     /// <summary>
@@ -222,7 +222,7 @@ public sealed class SurveysController : Controller
             return Forbid();
         }
 
-        var templates = Templates();
+        var templates = await TemplatesAsync();
         var template = templates.FirstOrDefault(item => item.Name == model.Template);
 
         if (template is null)
@@ -511,8 +511,20 @@ public sealed class SurveysController : Controller
         return View(model);
     }
 
-    private List<SurveyTemplateDescriptor> Templates()
-        => _templateProviders.SelectMany(provider => provider.GetTemplates()).OrderBy(template => template.Position).ToList();
+    private async Task<List<SurveyTemplateDescriptor>> TemplatesAsync()
+    {
+        var templates = new List<SurveyTemplateDescriptor>();
+
+        foreach (var provider in _templateProviders)
+        {
+            templates.AddRange(await provider.GetTemplatesAsync(HttpContext.RequestAborted));
+        }
+
+        return templates
+            .OrderBy(template => template.Position)
+            .ThenBy(template => template.Title, StringComparer.CurrentCulture)
+            .ToList();
+    }
 
     private string CurrentUserId()
         => User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;

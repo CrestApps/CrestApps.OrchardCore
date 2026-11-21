@@ -17,6 +17,11 @@ public static class LearningSurveysConstants
     public const string SurveyKind = "Survey";
 
     /// <summary>
+    /// The name of the survey template feedback survey items start from, which this feature seeds.
+    /// </summary>
+    public const string CourseFeedbackTemplate = "course-feedback";
+
+    /// <summary>
     /// The content types.
     /// </summary>
     public static class ContentTypes

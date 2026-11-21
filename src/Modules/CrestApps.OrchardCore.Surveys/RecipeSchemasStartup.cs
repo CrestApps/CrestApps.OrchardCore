@@ -21,6 +21,7 @@ public sealed class RecipeSchemasStartup : StartupBase
         services.TryAddScoped<SurveyDefinitionSchemaBuilder>();
 
         services.AddScoped<IRecipeStep, SurveysRecipeStepSchema>();
+        services.AddScoped<IRecipeStep, SurveyTemplatesRecipeStepSchema>();
         services.AddScoped<IRecipeStep, SurveyQuestionBanksRecipeStepSchema>();
         services.AddScoped<IRecipeStep, SurveyResponsesRecipeStepSchema>();
         services.AddScoped<IRecipeStep, SurveyOverridesRecipeStepSchema>();
@@ -28,6 +29,7 @@ public sealed class RecipeSchemasStartup : StartupBase
         services.AddScoped<ISiteSettingsSchemaDefinition, SurveySettingsSchema>();
 
         services.AddDeploymentStepSchema<SurveysDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<SurveyTemplatesDeploymentStepSchema>();
         services.AddDeploymentStepSchema<SurveyQuestionBanksDeploymentStepSchema>();
         services.AddDeploymentStepSchema<SurveyResponsesDeploymentStepSchema>();
         services.AddDeploymentStepSchema<SurveyOverridesDeploymentStepSchema>();

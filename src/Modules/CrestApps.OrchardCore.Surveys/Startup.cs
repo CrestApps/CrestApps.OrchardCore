@@ -30,6 +30,7 @@ public sealed class Startup : StartupBase
         services.AddSurveysStorage();
         services.AddDataMigration<SurveysMigrations>();
         services.AddIndexProvider<SurveyIndexProvider>()
+            .AddIndexProvider<SurveyTemplateIndexProvider>()
             .AddIndexProvider<SurveyVersionIndexProvider>()
             .AddIndexProvider<QuestionBankIndexProvider>()
             .AddIndexProvider<BankQuestionIndexProvider>()

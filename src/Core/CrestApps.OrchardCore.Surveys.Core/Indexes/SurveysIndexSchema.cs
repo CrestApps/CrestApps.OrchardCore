@@ -40,6 +40,21 @@ public static class SurveysIndexSchema
             table.CreateIndex("IDX_SurveyIndex_Modified", "ModifiedUtc", "Id");
         }, collection: collection);
 
+        await schemaBuilder.CreateMapIndexTableAsync<SurveyTemplateIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("Name", column => column.Nullable().WithLength(100))
+            .Column<string>("Title", column => column.Nullable().WithLength(255))
+            .Column<string>("Kind", column => column.Nullable().WithLength(50))
+            .Column<int>("Position"),
+            collection: collection);
+
+        await schemaBuilder.AlterIndexTableAsync<SurveyTemplateIndex>(table =>
+        {
+            table.CreateIndex("IDX_SurveyTemplateIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_SurveyTemplateIndex_Name", "Name");
+            table.CreateIndex("IDX_SurveyTemplateIndex_Position", "Position", "Title");
+        }, collection: collection);
+
         await schemaBuilder.CreateMapIndexTableAsync<SurveyVersionIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("SurveyId", column => column.Nullable().WithLength(26))

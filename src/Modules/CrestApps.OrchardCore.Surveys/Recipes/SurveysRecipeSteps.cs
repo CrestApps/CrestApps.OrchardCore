@@ -11,6 +11,16 @@ internal static class SurveysRecipeSteps
     public const string Surveys = "Surveys";
 
     /// <summary>
+    /// The name of the step that imports survey templates.
+    /// </summary>
+    public const string Templates = "SurveyTemplates";
+
+    /// <summary>
+    /// The section of the survey templates step that holds the templates.
+    /// </summary>
+    public const string TemplatesSection = "Templates";
+
+    /// <summary>
     /// Question banks with their questions.
     /// </summary>
     public const string QuestionBanks = "SurveyQuestionBanks";

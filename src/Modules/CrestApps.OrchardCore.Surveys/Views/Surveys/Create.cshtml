@@ -1,7 +1,6 @@
 @using CrestApps.OrchardCore.Surveys.ViewModels
-@using Microsoft.Extensions.Localization
-@using OrchardCore.Localization
-@inject IStringLocalizerFactory LocalizerFactory
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService
 @model SurveyCreateViewModel
 
 <zone Name="Title">
@@ -35,7 +34,13 @@
     </div>
 
     <div class="card mb-3">
-        <div class="card-header">@T["Start from"]</div>
+        <div class="card-header d-flex align-items-center">
+            <span class="me-auto">@T["Start from"]</span>
+            @if (await AuthorizationService.AuthorizeAsync(User, SurveysPermissions.ManageSurveyTemplates))
+            {
+                <a asp-action="Index" asp-controller="SurveyTemplates" class="small">@T["Manage templates"]</a>
+            }
+        </div>
         <div class="card-body">
             <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3">
                 @foreach (var template in Model.Templates)
@@ -47,10 +52,10 @@
                             <input class="form-check-input" type="radio" name="Template" id="@id" value="@template.Name" checked="@(template.Name == Model.Template)" />
                             <label class="form-check-label w-100" for="@id">
                                 <i class="@template.Icon me-1" aria-hidden="true"></i>
-                                <span class="fw-semibold">@(template.DisplayName is null ? template.Name : LocalizerFactory.Localize(template.DisplayName).Value)</span>
-                                @if (template.Description is not null)
+                                <span class="fw-semibold">@(string.IsNullOrWhiteSpace(template.Title) ? template.Name : template.Title)</span>
+                                @if (!string.IsNullOrWhiteSpace(template.Description))
                                 {
-                                    <span class="d-block hint">@LocalizerFactory.Localize(template.Description).Value</span>
+                                    <span class="d-block hint">@template.Description</span>
                                 }
                             </label>
                         </div>
