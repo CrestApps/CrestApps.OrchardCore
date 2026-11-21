@@ -99,7 +99,14 @@ public sealed class EmailOwnershipController : Controller
             return NotFound();
         }
 
-        var view = CreateView(account, model.ReturnUrl, _proof.ReadKeptLogin(model.Token, account), model.Token);
+        var keptLogin = _proof.ReadKeptLogin(model.Token, account);
+
+        if (KeptLoginLapsed(account, model, keptLogin) is { } lapsed)
+        {
+            return lapsed;
+        }
+
+        var view = CreateView(account, model.ReturnUrl, keptLogin, model.Token);
 
         if (!await _codes.TryCountSendAsync(account.Email, ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted))
         {
@@ -129,6 +136,15 @@ public sealed class EmailOwnershipController : Controller
         }
 
         var keptLogin = _proof.ReadKeptLogin(model.Token, account);
+
+        // A4: the page promised to keep the login the owner signed in through again. When that step expired or the
+        // account changed since, confirming would keep nothing and could remove the account's only login, so it stops
+        // here, before the code is looked at or anything changes, and asks for the sign-in again.
+        if (KeptLoginLapsed(account, model, keptLogin) is { } lapsed)
+        {
+            return lapsed;
+        }
+
         var view = CreateView(account, model.ReturnUrl, keptLogin, model.Token);
 
         if (!await _codes.TryCountVerifyAsync(ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted))
@@ -275,6 +291,19 @@ public sealed class EmailOwnershipController : Controller
         var token = _proof.ProtectStep(EmailOwnershipProof.KeptLoginStep, account, login);
 
         return View(nameof(Confirm), CreateView(account, returnUrl, login, token));
+    }
+
+    // A kept-login step was posted but no longer holds: the confirmation page again, without it, asking for the sign-in.
+    private ViewResult KeptLoginLapsed(User account, EmailSignInViewModel model, UserLoginInfo keptLogin)
+    {
+        if (string.IsNullOrEmpty(model.Token) || keptLogin is not null)
+        {
+            return null;
+        }
+
+        ModelState.AddModelError(nameof(EmailSignInViewModel.Email), S["The sign-in you used again to keep it took too long, or this account changed since, so nothing was changed. To keep it, sign in with it again below; otherwise ask for a code without it."]);
+
+        return View(nameof(Confirm), CreateView(account, model.ReturnUrl));
     }
 
     // What the confirmation pages show: the external login the owner just signed in through again (kept), the account's
