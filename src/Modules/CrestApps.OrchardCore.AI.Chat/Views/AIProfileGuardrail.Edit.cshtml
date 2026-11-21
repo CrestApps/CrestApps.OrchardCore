@@ -18,7 +18,7 @@
 <p class="text-muted">@T["The utility model checks each message against the topics below and the AI answers with the placeholder reply instead. This is on top of Prompt Security, on web chat, text messages and turn-based calls; realtime voice calls are not checked. Each check is one more utility model request, which adds a moment to every turn."]</p>
 
 <div class="ocat-wrapper">
-    <div class="ocat-end">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="CheckCustomer" />
             <label class="form-check-label" asp-for="CheckCustomer">@T["Check what the customer says"]</label>
@@ -28,7 +28,7 @@
 </div>
 
 <div class="ocat-wrapper">
-    <div class="ocat-end">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="CheckReplies" />
             <label class="form-check-label" asp-for="CheckReplies">@T["Check the AI's replies"]</label>
