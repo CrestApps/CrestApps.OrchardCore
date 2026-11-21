@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer.Moodle;
 using CrestApps.OrchardCore.Learning.Core.Moodle;
 using Microsoft.Extensions.Localization;
@@ -69,7 +68,7 @@ public sealed class MoodleCohortSyncTests
         localizer.Setup(value => value[It.IsAny<string>(), It.IsAny<object[]>()]).Returns((string name, object[] arguments) => new LocalizedString(name, string.Format(System.Globalization.CultureInfo.InvariantCulture, name, arguments)));
 
         // Act
-        var rows = MoodleCourseRows.Write(backup, "token", new QuestionTypeOptions(), localizer.Object);
+        var rows = MoodleCourseRows.Write(backup, "token", localizer.Object);
 
         // Assert: the course row, then one row per enabled cohort sync, and no failed row.
         var sources = rows.Select(row => row[3]).ToList();

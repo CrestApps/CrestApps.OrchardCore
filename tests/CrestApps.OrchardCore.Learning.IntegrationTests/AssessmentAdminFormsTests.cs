@@ -1,6 +1,9 @@
 using System.Net;
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
+using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,8 +14,8 @@ using OrchardCore.Title.Models;
 namespace CrestApps.OrchardCore.Learning.IntegrationTests;
 
 /// <summary>
-/// The admin forms of Assessments save what they post: a quiz override and a new grade scale. Both posted to a path
-/// that a page action without an HTTP method also matched, so the page answered and nothing was saved.
+/// Assessments on a running site: a quiz owns the survey its attempts answer, and the grade scale form saves what it
+/// posts (it once posted to a path that a page action without an HTTP method also matched, so nothing was saved).
 /// </summary>
 [Collection(LearningSiteCollection.Name)]
 public sealed class AssessmentAdminFormsTests
@@ -25,17 +28,17 @@ public sealed class AssessmentAdminFormsTests
     }
 
     [Fact]
-    public async Task GiveAnOverride_SavesTheOverride()
+    public async Task ANewQuiz_CreatesTheQuizSurveyItOwns_AndRemovingTheQuizDeletesIt()
     {
-        // Arrange
-        var quizId = await _fixture.InTenantAsync(async services =>
+        // Arrange and act: a quiz lesson saved in a course gets a survey of kind Quiz owned by the content item.
+        var (quizId, surveyId, survey) = await _fixture.InTenantAsync(async services =>
         {
             var contentManager = services.GetRequiredService<IContentManager>();
             var course = await contentManager.GetAsync(_fixture.OtherCourseId, VersionOptions.Published);
             var quiz = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.Quiz);
 
-            quiz.DisplayText = "Override form quiz";
-            quiz.Alter<TitlePart>(part => part.Title = "Override form quiz");
+            quiz.DisplayText = "Owned survey quiz";
+            quiz.Alter<TitlePart>(part => part.Title = "Owned survey quiz");
             quiz.Alter<ContainedPart>(part =>
             {
                 part.ListContentItemId = course.ContentItemId;
@@ -44,30 +47,28 @@ public sealed class AssessmentAdminFormsTests
             quiz.Alter<CourseItemPart>(part => part.CompletionMode = CompletionModes.Submitted);
             await contentManager.CreateAsync(quiz, VersionOptions.Published);
 
-            return quiz.ContentItemId;
-        });
-        using var admin = await _fixture.CreateClientAsync("admin");
-        var form = await admin.GetAsync($"Admin/learning/quizzes/{quizId}/overrides", TestContext.Current.CancellationToken);
-        var token = LearningSiteFixture.Token(await form.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+            var surveyId = quiz.Get<QuizPart>(nameof(QuizPart))?.SurveyId;
+            var survey = (await services.GetRequiredService<ISurveyManager>().ListByOwnerAsync(new RecordRef(RecordKinds.ContentItem, quiz.ContentItemId))).SingleOrDefault();
 
-        // Act
-        var response = await admin.PostAsync($"Admin/learning/quizzes/{quizId}/overrides", new FormUrlEncodedContent(new Dictionary<string, string>
+            return (quiz.ContentItemId, surveyId, survey);
+        });
+
+        var afterRemoving = await _fixture.InTenantAsync(async services =>
         {
-            ["UserName"] = "learner1",
-            ["ExtraMinutes"] = "0",
-            ["ExtraAttempts"] = "1",
-            ["Reason"] = "Missed the first sitting",
-            ["__RequestVerificationToken"] = token,
-        }), TestContext.Current.CancellationToken);
+            var contentManager = services.GetRequiredService<IContentManager>();
+            var quiz = await contentManager.GetAsync(quizId, VersionOptions.Latest);
+            await contentManager.RemoveAsync(quiz);
+
+            return await services.GetRequiredService<ISurveyManager>().ListByOwnerAsync(new RecordRef(RecordKinds.ContentItem, quizId));
+        });
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, form.StatusCode);
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-
-        var overrides = await _fixture.InTenantAsync(async services => await services.GetRequiredService<AssessmentOverrideStore>().ListByQuizAsync(quizId));
-        var entry = Assert.Single(overrides);
-        Assert.Equal(1, entry.ExtraAttempts);
-        Assert.Equal("Missed the first sitting", entry.Reason);
+        Assert.False(string.IsNullOrEmpty(surveyId));
+        Assert.NotNull(survey);
+        Assert.Equal(surveyId, survey.ItemId);
+        Assert.Equal(SurveyKinds.Quiz, survey.Kind);
+        Assert.Equal(new RecordRef(RecordKinds.ContentItem, quizId), survey.Owner);
+        Assert.Empty(afterRemoving);
     }
 
     [Fact]

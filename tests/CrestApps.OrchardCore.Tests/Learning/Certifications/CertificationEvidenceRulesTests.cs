@@ -1,10 +1,9 @@
-using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Certifications.Models;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
+using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Certifications;
@@ -67,21 +66,16 @@ public sealed class CertificationEvidenceRulesTests
         await h.PassQuizAsync("ana");
         await ChangeEnrollmentAsync(h, "ana", "exams", enrollment => enrollment.Review = new EnrollmentReview { Reason = LearningReviewReasons.ResultChangedAfterCompletion, FlaggedUtc = DateTime.UtcNow });
 
-        await h.RunAsync(async services =>
+        h.Responses.Add(new SurveyResponse
         {
-            var store = services.GetRequiredService<AssessmentAttemptStore>();
-
-            await store.CreateAsync(new AssessmentAttempt
-            {
-                UserId = "ben",
-                QuizId = "final",
-                CourseId = "exams",
-                Status = AttemptStatus.Submitted,
-                Passed = true,
-                Percent = 100,
-                StartedUtc = h.Clock.UtcNow,
-                SubmittedUtc = h.Clock.UtcNow,
-            });
+            ItemId = "preview-ben",
+            SurveyId = "final-survey",
+            UserId = "ben",
+            Status = SurveyResponseStatus.Completed,
+            Passed = true,
+            Percent = 100,
+            StartedUtc = h.Clock.UtcNow,
+            CompletedUtc = h.Clock.UtcNow,
         });
 
         // Act

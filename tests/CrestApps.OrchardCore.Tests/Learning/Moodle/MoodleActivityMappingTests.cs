@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.Learning.Assessments.Core.Moodle;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Core.Moodle;
 using CrestApps.OrchardCore.Learning.Models;
+using CrestApps.OrchardCore.Surveys.Models;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Moodle;
 
@@ -20,7 +20,7 @@ public sealed class MoodleActivityMappingTests
         {
             ["questionsperpage"] = "3",
             ["preferredbehaviour"] = "interactive",
-            ["reviewattempt"] = "69904",
+            ["reviewattempt"] = "69648",
             ["reviewmarks"] = "69632",
             ["reviewrightanswer"] = "16",
             ["reviewspecificfeedback"] = "16",
@@ -34,19 +34,19 @@ public sealed class MoodleActivityMappingTests
 
         // Assert
         Assert.Equal(3, perPage);
-        Assert.Equal(QuizFeedbackMode.Immediate, feedback);
-        Assert.Equal(ReviewShows.Score, review.During);
-        Assert.Equal(ReviewShows.Score, review.ImmediatelyAfter);
+        Assert.Equal(FeedbackMode.Immediate, feedback);
+        Assert.Equal(ReviewShows.Responses | ReviewShows.Score, review.During);
+        Assert.Equal(ReviewShows.Responses | ReviewShows.Score, review.ImmediatelyAfter);
         Assert.Equal(ReviewShows.None, review.LaterWhileOpen);
-        Assert.Equal(ReviewShows.RightAnswers | ReviewShows.Feedback, review.AfterClose);
+        Assert.Equal(ReviewShows.Responses | ReviewShows.RightAnswers | ReviewShows.Feedback, review.AfterClose);
     }
 
     [Theory]
-    [InlineData("deferredfeedback", QuizFeedbackMode.Deferred)]
-    [InlineData("immediatefeedback", QuizFeedbackMode.Immediate)]
-    [InlineData("immediatecbm", QuizFeedbackMode.Immediate)]
-    [InlineData(null, QuizFeedbackMode.Deferred)]
-    public void AQuizBehaviour_MapsToAFeedbackMode(string behaviour, QuizFeedbackMode expected)
+    [InlineData("deferredfeedback", FeedbackMode.Deferred)]
+    [InlineData("immediatefeedback", FeedbackMode.Immediate)]
+    [InlineData("immediatecbm", FeedbackMode.Immediate)]
+    [InlineData(null, FeedbackMode.Deferred)]
+    public void AQuizBehaviour_MapsToAFeedbackMode(string behaviour, FeedbackMode expected)
         => Assert.Equal(expected, MoodleQuizSettings.FeedbackMode(Activity("quiz", new() { ["preferredbehaviour"] = behaviour })));
 
     [Fact]

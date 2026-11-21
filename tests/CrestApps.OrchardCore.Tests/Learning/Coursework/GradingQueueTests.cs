@@ -1,9 +1,11 @@
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
+using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Coursework;
 using CrestApps.OrchardCore.Learning.Models;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Tests.Learning.Assessments;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Coursework;
@@ -54,16 +56,31 @@ public sealed class GradingQueueTests
     [Fact]
     public async Task TheRealSources_ListAnEssayAttemptAndACourseworkSubmissionTogether_OldestFirst()
     {
-        // Arrange: an essay attempt that needs a grader, then a coursework submission an hour later.
+        // Arrange: a quiz attempt (a survey response) that waits for a grader, then a coursework submission an hour later.
         await using var h = await CourseworkTestHarness.CreateAsync();
         h.Courses.AddCourse("course1");
-        h.Inner.Questions.AddEssay("essay", points: 4);
-        h.Inner.AddQuiz("course1", "quiz", quiz => quiz.QuestionIds = ["essay"], completionMode: CompletionModes.Graded);
         h.AddCoursework("course1", "work1");
-        await h.EnrollAsync("ana", "course1");
-        var attempt = (await h.Inner.StartAsync("ana", "quiz")).Attempt;
-        await h.Inner.RunAsync(service => service.SaveResponseAsync(attempt.ItemId, "ana", 0, new AttemptResponse { Texts = ["Heat, fuel and oxygen."] }));
-        var submittedAttempt = await h.Inner.RunAsync(service => service.SubmitAsync(attempt.ItemId, "ana"));
+        var enrollment = await h.EnrollAsync("ana", "course1");
+        var attempt = await h.RunAsync(services =>
+        {
+            var response = new SurveyResponse
+            {
+                ItemId = "response1",
+                SurveyId = "quiz-survey",
+                UserId = "ana",
+                Status = SurveyResponseStatus.Completed,
+                Grading = GradingStatus.Pending,
+                Context = LearningSurveyContexts.Enrollment(enrollment.ItemId),
+                StartedUtc = LearningTestHarness.Now,
+                CompletedUtc = LearningTestHarness.Now,
+            };
+
+            response.Properties[LearningSurveyContexts.CourseIdProperty] = "course1";
+            response.Properties[LearningSurveyContexts.CourseItemIdProperty] = "quiz";
+            services.GetRequiredService<InMemorySurveyResponses>().Add(response);
+
+            return Task.FromResult(response);
+        });
         h.Clock.UtcNow = LearningTestHarness.Now.AddHours(1);
         var submission = (await h.SubmitAsync("ana", "work1", "My answer")).Submission;
 
@@ -72,15 +89,15 @@ public sealed class GradingQueueTests
         var otherCourse = await h.RunAsync(services => services.GetRequiredService<GradingQueue>().PageAsync(["course2"], 1, 10));
 
         // Assert
-        Assert.Equal(AttemptStatus.NeedsGrading, submittedAttempt.Attempt.Status);
         Assert.NotNull(submission);
         Assert.Equal(2, page.Count);
         Assert.Collection(
             page.Items,
             item =>
             {
-                Assert.Equal(AssessmentsConstants.AttemptGradingQueueKind, item.Kind);
+                Assert.Equal(AssessmentsConstants.QuizResponseGradingQueueKind, item.Kind);
                 Assert.Equal(attempt.ItemId, item.Id);
+                Assert.Equal("SurveyGrading", item.Controller);
             },
             item =>
             {

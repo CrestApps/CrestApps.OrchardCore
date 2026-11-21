@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Moodle;
 using CrestApps.OrchardCore.Learning.Core.Moodle;
+using CrestApps.OrchardCore.Surveys.Core.Qti;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Moodle;
 
@@ -30,7 +30,7 @@ public sealed class MoodleQuestionMapperTests
         var item = mapping.Item;
         Assert.Equal("moodle:site:question:55", item.Identifier);
         Assert.Equal("course.mbz/questions.xml", item.Path);
-        Assert.Equal(AssessmentsConstants.QuestionTypes.SingleChoice, item.Question.QuestionType);
+        Assert.Equal(QtiQuestionTypes.SingleChoice, item.Question.QuestionType);
         Assert.Equal("<p>Which extinguisher is for <b>electrical</b> fires?</p>", item.Question.Prompt);
         Assert.Equal(["CO2", "Water & foam"], item.Question.Options.Select(option => option.Text));
         Assert.Equal([true, false], item.Question.Options.Select(option => option.Correct));
@@ -50,7 +50,7 @@ public sealed class MoodleQuestionMapperTests
         var mapping = MoodleQuestionMapper.Map(question, "id", "file");
 
         // Assert
-        Assert.Equal(AssessmentsConstants.QuestionTypes.MultipleChoice, mapping.Item.Question.QuestionType);
+        Assert.Equal(QtiQuestionTypes.MultipleChoice, mapping.Item.Question.QuestionType);
         Assert.Equal([true, true, false], mapping.Item.Question.Options.Select(option => option.Correct));
         Assert.True(mapping.Item.Question.PartialCredit);
     }
@@ -67,7 +67,7 @@ public sealed class MoodleQuestionMapperTests
         var mapping = MoodleQuestionMapper.Map(question, "id", "file");
 
         // Assert
-        Assert.Equal(AssessmentsConstants.QuestionTypes.TrueFalse, mapping.Item.Question.QuestionType);
+        Assert.Equal(QtiQuestionTypes.TrueFalse, mapping.Item.Question.QuestionType);
         Assert.False(mapping.Item.Question.TrueFalseAnswer);
     }
 
@@ -82,7 +82,7 @@ public sealed class MoodleQuestionMapperTests
         var mapping = MoodleQuestionMapper.Map(question, "id", "file");
 
         // Assert
-        Assert.Equal(AssessmentsConstants.QuestionTypes.ShortText, mapping.Item.Question.QuestionType);
+        Assert.Equal(QtiQuestionTypes.ShortText, mapping.Item.Question.QuestionType);
         Assert.Equal(["Oxygen", "O2"], mapping.Item.Question.AcceptedAnswers);
         Assert.True(mapping.Item.Question.CaseSensitive);
     }
@@ -98,7 +98,7 @@ public sealed class MoodleQuestionMapperTests
         var mapping = MoodleQuestionMapper.Map(question, "id", "file");
 
         // Assert
-        Assert.Equal(AssessmentsConstants.QuestionTypes.Numeric, mapping.Item.Question.QuestionType);
+        Assert.Equal(QtiQuestionTypes.Numeric, mapping.Item.Question.QuestionType);
         Assert.Equal(2.5m, mapping.Item.Question.NumericAnswer);
         Assert.Equal(0.1m, mapping.Item.Question.Tolerance);
     }
@@ -114,7 +114,7 @@ public sealed class MoodleQuestionMapperTests
         var mapping = MoodleQuestionMapper.Map(question, "id", "file");
 
         // Assert
-        Assert.Equal(AssessmentsConstants.QuestionTypes.Essay, mapping.Item.Question.QuestionType);
+        Assert.Equal(QtiQuestionTypes.Essay, mapping.Item.Question.QuestionType);
         Assert.Equal("Look for the meeting point.", mapping.Item.Question.GraderGuidance);
     }
 
@@ -134,14 +134,14 @@ public sealed class MoodleQuestionMapperTests
         var refused = MoodleQuestionMapper.Map(distractors, "id", "file");
 
         // Assert
-        Assert.Equal(AssessmentsConstants.QuestionTypes.Matching, mapped.Item.Question.QuestionType);
+        Assert.Equal(QtiQuestionTypes.Matching, mapped.Item.Question.QuestionType);
         Assert.Equal([("Fire", "Extinguisher"), ("Smoke", "Alarm")], mapped.Item.Question.Pairs);
         Assert.Equal(MoodleQuestionRefusals.Distractors, refused.Refusal);
     }
 
     [Theory]
-    [InlineData("ddwtos", AssessmentsConstants.QuestionTypes.DragIntoText)]
-    [InlineData("gapselect", AssessmentsConstants.QuestionTypes.GapSelect)]
+    [InlineData("ddwtos", QtiQuestionTypes.DragIntoText)]
+    [InlineData("gapselect", QtiQuestionTypes.GapSelect)]
     public void DragIntoTextAndGapSelect_KeepTheirChoices_WithTheUnusedOnesAsDistractors(string type, string questionType)
     {
         // Arrange
@@ -160,7 +160,7 @@ public sealed class MoodleQuestionMapperTests
     }
 
     [Fact]
-    public void AMultipleChoiceWithNoRightAnswer_BecomesASurveyQuestion_WhereEveryAnswerCounts()
+    public void AMultipleChoiceWithNoRightAnswer_BecomesAnUnscoredChoice()
     {
         // Arrange
         var question = Question("multichoice", "<p>How confident are you?</p>", answers: [Answer("Very", 0), Answer("Not much", 0)]);
@@ -171,7 +171,8 @@ public sealed class MoodleQuestionMapperTests
 
         // Assert
         Assert.Null(mapping.Refusal);
-        Assert.Equal(AssessmentsConstants.QuestionTypes.Survey, mapping.Item.Question.QuestionType);
+        Assert.Equal(QtiQuestionTypes.SingleChoice, mapping.Item.Question.QuestionType);
+        Assert.Equal(0m, mapping.Item.Question.Points);
         Assert.Equal(["Very", "Not much"], mapping.Item.Question.Options.Select(option => option.Text));
         Assert.False(mapping.Item.Question.PartialCredit);
     }
@@ -184,7 +185,7 @@ public sealed class MoodleQuestionMapperTests
 
         // Assert
         Assert.Null(mapping.Refusal);
-        Assert.Equal(AssessmentsConstants.QuestionTypes.Description, mapping.Item.Question.QuestionType);
+        Assert.Equal(QtiQuestionTypes.Description, mapping.Item.Question.QuestionType);
         Assert.Equal(0, mapping.Item.Question.Points);
         Assert.Equal("<p>Read the next questions carefully.</p>", mapping.Item.Question.Prompt);
     }

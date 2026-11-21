@@ -29,7 +29,6 @@ public sealed partial class IndexDeclarationArchitectureTests
         "AgentAllowedQueueIndex",
         "AgentQueueMembershipIndex",
         "AppointmentResourceIndex",
-        "AttemptItemIndex",
         "BankQuestionTagIndex",
         "CalendarEventAttendeeIndex",
         "CalendarShareIndex",
