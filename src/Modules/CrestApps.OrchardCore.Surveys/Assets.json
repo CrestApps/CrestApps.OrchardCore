@@ -16,5 +16,11 @@
     "name": "survey-admin.js",
     "source": "Assets/js/survey-admin.js",
     "dest": "wwwroot/scripts/survey-admin.js"
+  },
+  {
+    "action": "vite",
+    "name": "survey-runner.js",
+    "source": "Assets/js/survey-runner.js",
+    "dest": "wwwroot/scripts/survey-runner.js"
   }
 ]

@@ -1,0 +1,7 @@
+@model ShapeViewModel<SurveyResponse>
+
+<a href="@Url.Content("~/admin/surveys/responses/" + Model.Value.ItemId)"><span class="fw-semibold">@Model.Value.Number</span></a>
+@if (Model.Value.IsTest)
+{
+    <span class="badge text-bg-info fw-normal ms-1">@T["Test"]</span>
+}
