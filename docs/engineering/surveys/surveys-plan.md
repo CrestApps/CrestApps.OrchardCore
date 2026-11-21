@@ -1,6 +1,6 @@
 # Surveys: a general-purpose survey, form and quiz platform
 
-Status: proposed 2026-11-20; decisions answered by Mike the same day (section 24). Nothing is built. Written for an implementing engineer (or model) working phase by phase. Section 25 lists facts to check in phase 0. Section 26 is the progress log the implementer keeps up to date.
+Status: proposed 2026-11-20; decisions answered by Mike the same day (section 24). Implementation in progress (section 26). Written for an implementing engineer (or model) working phase by phase. Section 25 lists facts to check in phase 0. Section 26 is the progress log the implementer keeps up to date.
 
 **Ground rules from Mike (2026-11-20):** the LMS was never released or used in production, so Learning can change freely and **nothing is migrated**: no upgrade migrations, no data conversion, no compatibility shims and no breaking-change notes for Learning. Where Mike left a choice open, follow industry standard and state-of-the-art products; the plan records the choice made.
 
@@ -1376,7 +1376,22 @@ Mike: "Go with your recommendations", no LMS migration, Surveys replaces the Lea
 
 ## 26. Progress
 
-Not started. The implementer records, per slice: what was built, the commit, deviations from this plan with the reason, and open issues.
+The implementer records, per slice: what was built, the commit, deviations from this plan with the reason, and open issues.
+
+### Phase 0: checks (2026-11-20)
+
+All eight checks pass; three need a small change of approach, recorded here.
+
+| # | Result | What we do |
+| --- | --- | --- |
+| C1 | Pass. `ExpressionCompiler.Compile(string, IExpressionScope, IExpressionFunctionCatalog, IStringLocalizer)` takes any catalog; `IExpressionFunctionCatalog` has one method, `Find(name)`, so a composing catalog is a few lines. `IExpressionScope.TryResolve(key, out ExpressionFieldBinding)` receives the key as written between brackets, so `[score:category]` and `[var:name]` resolve to row slots of our own layout | `SurveyExpressionFunctionCatalog` tries the survey functions first, then the DI catalog (or `ExpressionFunctionCatalog.BuiltIn`). Survey functions are never registered with `AddExpressionFunctionProvider`, so pipeline editors do not list them |
+| C2 | Pass, with a different base for the per-survey sets. `RecordDataSource.DataSets` is a synchronous property and cannot list surveys. DataConnectors' `ConnectedDataSource` already implements `IDataSource` directly and lists data sets read from a store at run time | `SurveysDataSource` implements `IDataSource` directly: the static data sets are `IRecordDataSet`s it delegates to, and `SurveyResponses_{name}` sets are built per published survey in `GetDataSetsAsync`. Field contributions (Learning) come through `ISurveyResponseFieldProvider`, which our own `SurveyResponses` data set asks, so no Reports change is needed |
+| C3 | Pass. `CatalogItem` derives from CrestApps.Core's `ExtensibleEntity`, which has `Properties` and `As<T>()` / `TryGet<T>()` / `Put<T>()` (used by Calendars) | Surveys records use the inherited bag; no extra `Properties` member is declared on catalog records. `SurveyDefinition`, `SurveyQuestion` and `SurveyAnswer`, which are not catalog items, keep their own `JsonObject` members |
+| C4 | Pass. `NamedCatalogRecipeStep<T>` exposes `Preparing(entry, token)`, `CreateAsync`, `CommitUpdateAsync` and `FindExistingAsync` overrides | `SurveysRecipeStep` captures the token's `Versions` and `Collectors` arrays in `Preparing` and writes them after the survey in `CreateAsync` / `CommitUpdateAsync` |
+| C5 | Pass. `AttachmentUpload` takes an `Owner` (`RecordRef`) and an optional `UploadedBy` (`PartyRef`); access is decided per owner kind by `IAttachmentAccessProvider` | Owner kind `SurveyResponse`; `UploadedBy` stays empty for anonymous respondents; the access provider allows staff with response permissions and the respondent who holds the response |
+| C6 | Pass, partly. Outreach runs page an `IOutreachAudienceSource`, render per recipient through `IOutreachTemplateRenderer`, and apply `IOutreachRecipientPolicy`; it has no reminder schedule of its own | Invitations add an audience source over pending invitations and a renderer that writes each recipient's personal link. Reminders are new runs started by `SurveyInvitationReminderTask` over invitations that are due |
+| C7 | Pass. `ReportDocument` sections hold metrics, tables, bars and charts (`ReportChart`, `ReportBar`, `ReportMetric`); the Report Builder reads any registered `IDataSource`, dynamic sets included (as Connected data does) | Analyzers return `ReportSection`s directly |
+| C8 | Pass. YesSql serializes documents with System.Text.Json: typed `Dictionary<string, SurveyAnswer>` and `JsonObject` round-trip without type names (the DictionaryDocument trap only affects whole-set catalogs, and we use one document per record). `DateTime` values come back with an unspecified or UTC kind | No `object`-typed members anywhere (ExpandoObject trap). Every displayed time goes through `ILocalClock` after `DateTime.SpecifyKind(value, DateTimeKind.Utc)`. A storage round-trip test covers a response with every answer shape |
 
 ## 27. Sources
 
