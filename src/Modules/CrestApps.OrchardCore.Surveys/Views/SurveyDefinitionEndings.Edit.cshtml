@@ -10,7 +10,7 @@
 <div class="card mb-3" data-rule-sources="@Model.Sources">
     <div class="card-header">@T["Endings"]</div>
     <div class="card-body" data-repeater data-repeater-prefix="@prefix" data-repeater-also="@rules">
-        <p class="hint">@T["After the last page, the first ending whose rule holds is used, else the default one. Messages may use Liquid and {code} piping."]</p>
+        <p class="hint">@T["After the last page, the first ending whose rule holds is used, else the default one. Messages may use Liquid and {{code}} piping."]</p>
         <div data-repeater-items>
             @for (var i = 0; i < Model.Endings.Count; i++)
             {
