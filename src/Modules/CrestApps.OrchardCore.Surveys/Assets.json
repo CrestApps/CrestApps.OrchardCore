@@ -1,6 +1,12 @@
 [
   {
     "action": "vite",
+    "name": "survey-controls.js",
+    "source": "Assets/js/controls/survey-controls.js",
+    "dest": "wwwroot/scripts/survey-controls.js"
+  },
+  {
+    "action": "vite",
     "name": "survey-runner.js",
     "source": "Assets/js/survey-runner.js",
     "dest": "wwwroot/scripts/survey-runner.js"

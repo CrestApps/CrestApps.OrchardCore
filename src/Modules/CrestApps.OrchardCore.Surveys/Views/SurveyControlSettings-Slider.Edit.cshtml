@@ -1,0 +1,41 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.Slider.SliderSettings>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Slider settings"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Min" class="ocat-label">@T["Lowest value"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.Min" class="form-control" type="number" step="any" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Max" class="ocat-label">@T["Highest value"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.Max" class="form-control" type="number" step="any" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Step" class="ocat-label">@T["Step"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.Step" class="form-control" type="number" step="any" min="0" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.MinLabel" class="ocat-label">@T["Label of the lowest value"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.MinLabel" class="form-control" type="text" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.MaxLabel" class="ocat-label">@T["Label of the highest value"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.MaxLabel" class="form-control" type="text" />
+            </div>
+        </div>
+    </div>
+</div>

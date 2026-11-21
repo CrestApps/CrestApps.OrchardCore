@@ -1,0 +1,34 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model SurveysDeploymentStepViewModel
+
+<partial name="_SurveysDeploymentSelection" model="Model" />
+<div class="ocat-wrapper">
+    <label asp-for="FromDate" class="ocat-label">@T["Started on or after"]</label>
+    <div class="ocat-end">
+        <input asp-for="FromDate" type="date" class="form-control" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="ToDate" class="ocat-label">@T["Started on or before"]</label>
+    <div class="ocat-end">
+        <input asp-for="ToDate" type="date" class="form-control" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeInProgress" type="checkbox" class="form-check-input" />
+            <label asp-for="IncludeInProgress" class="form-check-label">@T["Include responses in progress"]</label>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeTest" type="checkbox" class="form-check-input" />
+            <label asp-for="IncludeTest" class="form-check-label">@T["Include test responses"]</label>
+            <span class="hint dashed">@T["Responses are exported only for a user who holds the Export survey responses permission, and each export is recorded in the audit trail."]</span>
+        </div>
+    </div>
+</div>

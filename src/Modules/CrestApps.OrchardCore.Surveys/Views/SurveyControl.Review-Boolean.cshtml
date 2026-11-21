@@ -1,0 +1,42 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+
+<div class="survey-answer">
+    @if (string.IsNullOrWhiteSpace(Model.AnswerText))
+    {
+        <span class="text-body-secondary">@T["No answer"]</span>
+    }
+    else
+    {
+        <span class="text-break" style="white-space: pre-line">@Model.AnswerText</span>
+    }
+</div>
+
+@if (Model.Feedback is { } feedback)
+{
+    <div class="survey-feedback mt-2">
+        @if (feedback.Correct == true)
+        {
+            <div class="text-success"><i class="fa-solid fa-check" aria-hidden="true"></i> @T["Correct"]</div>
+        }
+        else if (feedback.Correct == false)
+        {
+            <div class="text-danger"><i class="fa-solid fa-xmark" aria-hidden="true"></i> @T["Incorrect"]</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(feedback.RightAnswer) && feedback.Correct != true)
+        {
+            <div class="small">@T["Right answer: {0}", feedback.RightAnswer]</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(feedback.Feedback))
+        {
+            <div class="small">@feedback.Feedback</div>
+        }
+        @foreach (var choiceFeedback in feedback.ChoiceFeedback)
+        {
+            <div class="small">@choiceFeedback.Value</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(feedback.GeneralFeedback))
+        {
+            <div class="small text-body-secondary">@feedback.GeneralFeedback</div>
+        }
+    </div>
+}

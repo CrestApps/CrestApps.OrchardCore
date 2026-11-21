@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SurveyPageCompletedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-file-circle-check" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Survey Page Completed"])
+    </h4>
+</header>

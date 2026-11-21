@@ -1,0 +1,3 @@
+@model ShapeViewModel<BankQuestion>
+
+<a asp-action="DeleteQuestion" asp-controller="QuestionBanks" asp-route-area="CrestApps.OrchardCore.Surveys" asp-route-questionId="@Model.Value.ItemId" class="dropdown-item text-danger" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete"]" data-message="@T["Delete this question? Published surveys keep their copy."]">@T["Delete"]</a>

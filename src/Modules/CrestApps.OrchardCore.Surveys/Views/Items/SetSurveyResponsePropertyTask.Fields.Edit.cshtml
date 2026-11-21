@@ -1,0 +1,27 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+
+@model SurveyTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="ResponseId" class="form-label">@T["Response id"]</label>
+    <input asp-for="ResponseId" class="form-control code" />
+    <span class="hint">@T["The id of the response, a Liquid expression such as Workflow.Input.ResponseId between double braces."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="PropertyName" class="form-label">@T["Property name"]</label>
+    <input asp-for="PropertyName" class="form-control code" />
+    <span class="hint">@T["The name of the property to write."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="PropertyValue" class="form-label">@T["Value"]</label>
+    <input asp-for="PropertyValue" class="form-control code" />
+    <span class="hint">@T["The value to write. Supports Liquid."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="OutputName" class="form-label">@T["Output name"]</label>
+    <input asp-for="OutputName" class="form-control code" />
+    <span class="hint">@T["The workflow output that holds the result."]</span>
+</div>

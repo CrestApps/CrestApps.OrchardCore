@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+
+@model SurveyTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="ResponseId" class="form-label">@T["Response id"]</label>
+    <input asp-for="ResponseId" class="form-control code" />
+    <span class="hint">@T["The id of the response, a Liquid expression such as Workflow.Input.ResponseId between double braces."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Reason" class="form-label">@T["Reason"]</label>
+    <input asp-for="Reason" class="form-control code" />
+    <span class="hint">@T["Why. Required; kept with the change."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="OutputName" class="form-label">@T["Output name"]</label>
+    <input asp-for="OutputName" class="form-control code" />
+    <span class="hint">@T["The workflow output that holds the result."]</span>
+</div>

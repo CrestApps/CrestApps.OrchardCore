@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CreateSurveyLinkTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-link" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Create Survey Link"])
+    </h4>
+</header>

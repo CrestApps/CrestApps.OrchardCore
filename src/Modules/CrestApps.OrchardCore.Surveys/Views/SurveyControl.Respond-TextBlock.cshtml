@@ -1,0 +1,13 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.TextBlock
+@{
+    var settings = Model.GetSettings<TextBlockSettings>();
+}
+<div class="survey-text-block">
+    @if (!string.IsNullOrWhiteSpace(settings.ImageUrl))
+    {
+        <img src="@settings.ImageUrl" alt="" class="img-fluid mb-2" />
+    }
+    @* The HTML was sanitized when the survey was saved. *@
+    @Html.Raw(settings.Html)
+</div>

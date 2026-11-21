@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SurveyResponseMatchesConditionEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-bell" aria-hidden="true"></i>
+    @T["Survey Response Matches Condition"]
+</h4>
+<p>@T["Starts when a completed response matches a rule over its answers."]</p>

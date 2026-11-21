@@ -1,0 +1,607 @@
+{
+  "name": "SurveysSamples",
+  "displayName": "Surveys: samples",
+  "description": "Adds sample surveys: a customer satisfaction survey, a Net Promoter Score survey, a graded quiz, and a question bank. Each survey is published with a public link.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "surveys"
+  ],
+  "tags": [
+    "surveys",
+    "samples",
+    "quiz"
+  ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "CrestApps.OrchardCore.Surveys"
+      ]
+    },
+    {
+      "name": "SurveyQuestionBanks",
+      "QuestionBanks": [
+        {
+          "ItemId": "4vqa6x2mwg88ptpsk78ar2mvjq",
+          "Name": "general-knowledge",
+          "Title": "General knowledge",
+          "Tags": [
+            "sample"
+          ],
+          "Questions": [
+            {
+              "ItemId": "4zhh5pdmwj1vvys6xxx3vdm9hj",
+              "SourceIdentifier": "gk-1",
+              "Tags": [
+                "geography"
+              ],
+              "Difficulty": 2,
+              "Question": {
+                "Id": "4zhh5pdmwj1vvys6xxx3vdm9hj",
+                "Name": "q_mountain",
+                "ControlType": "ShortText",
+                "Title": "What is the highest mountain on Earth?",
+                "Scoring": {
+                  "Points": 1,
+                  "AcceptedAnswers": [
+                    "Everest",
+                    "Mount Everest"
+                  ]
+                }
+              }
+            },
+            {
+              "ItemId": "4pde9e9dw0tzmz3005nx586pkj",
+              "SourceIdentifier": "gk-2",
+              "Tags": [
+                "science"
+              ],
+              "Difficulty": 3,
+              "Question": {
+                "Id": "4pde9e9dw0tzmz3005nx586pkj",
+                "Name": "q_water",
+                "ControlType": "Boolean",
+                "Title": "Water boils at 100 degrees Celsius at sea level.",
+                "Scoring": {
+                  "Points": 1,
+                  "Key": {
+                    "Value": true
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Surveys",
+      "Surveys": [
+        {
+          "ItemId": "4rms7fax89k2wzve83qm3qhkzf",
+          "Name": "customer-satisfaction",
+          "Title": "Customer satisfaction",
+          "Kind": "Survey",
+          "Status": "Open",
+          "Draft": {
+            "SchemaVersion": 1,
+            "Title": "How did we do?",
+            "Introduction": "<p>Two quick questions about your last visit.</p>",
+            "Pages": [
+              {
+                "Id": "4wrjd8t6v88kdxqnak5k37psqm",
+                "Name": "page_1",
+                "Title": "Your visit",
+                "Questions": [
+                  {
+                    "Id": "4rqq0fpevz3tq2myxyrhsq0x2k",
+                    "Name": "q_csat",
+                    "ControlType": "Rating",
+                    "Title": "How satisfied are you with your visit?",
+                    "Required": true,
+                    "Settings": {
+                      "Min": 1,
+                      "Max": 5,
+                      "Style": "Stars",
+                      "MinLabel": "Very unsatisfied",
+                      "MaxLabel": "Very satisfied"
+                    }
+                  },
+                  {
+                    "Id": "46da49njnv812zg1h4b053hrfk",
+                    "Name": "q_comment",
+                    "ControlType": "LongText",
+                    "Title": "What could we do better?",
+                    "Settings": {
+                      "Rows": 4
+                    }
+                  }
+                ]
+              }
+            ],
+            "Endings": [
+              {
+                "Id": "43p3872q0da0yrktmmx2664qsw",
+                "Name": "thanks",
+                "Title": "Thank you",
+                "Message": "<p>Thank you for your answers.</p>",
+                "Outcome": "Completed",
+                "IsDefault": true
+              }
+            ]
+          },
+          "PublishedVersionNumber": 1,
+          "Tags": [
+            "sample"
+          ],
+          "Access": {
+            "Audience": "Anyone",
+            "Anonymity": "Anonymous",
+            "Limits": {
+              "Uniqueness": "Cookie"
+            }
+          },
+          "Versions": [
+            {
+              "ItemId": "473x1s1y51z65qb3fjj5nh41r0",
+              "Number": 1,
+              "Definition": {
+                "SchemaVersion": 1,
+                "Title": "How did we do?",
+                "Introduction": "<p>Two quick questions about your last visit.</p>",
+                "Pages": [
+                  {
+                    "Id": "4wrjd8t6v88kdxqnak5k37psqm",
+                    "Name": "page_1",
+                    "Title": "Your visit",
+                    "Questions": [
+                      {
+                        "Id": "4rqq0fpevz3tq2myxyrhsq0x2k",
+                        "Name": "q_csat",
+                        "ControlType": "Rating",
+                        "Title": "How satisfied are you with your visit?",
+                        "Required": true,
+                        "Settings": {
+                          "Min": 1,
+                          "Max": 5,
+                          "Style": "Stars",
+                          "MinLabel": "Very unsatisfied",
+                          "MaxLabel": "Very satisfied"
+                        }
+                      },
+                      {
+                        "Id": "46da49njnv812zg1h4b053hrfk",
+                        "Name": "q_comment",
+                        "ControlType": "LongText",
+                        "Title": "What could we do better?",
+                        "Settings": {
+                          "Rows": 4
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "Endings": [
+                  {
+                    "Id": "43p3872q0da0yrktmmx2664qsw",
+                    "Name": "thanks",
+                    "Title": "Thank you",
+                    "Message": "<p>Thank you for your answers.</p>",
+                    "Outcome": "Completed",
+                    "IsDefault": true
+                  }
+                ]
+              },
+              "PublishedUtc": "2026-11-20T00:00:00Z",
+              "Notes": "Sample"
+            }
+          ],
+          "Collectors": [
+            {
+              "ItemId": "4b0bzmts16wmakk67e73q7rwwr",
+              "Name": "Public link",
+              "Kind": "WebLink",
+              "Status": "Open",
+              "IsDefault": true
+            }
+          ]
+        },
+        {
+          "ItemId": "43cxfrt81g8mm52kvve7jp02cq",
+          "Name": "net-promoter-score",
+          "Title": "Net Promoter Score",
+          "Kind": "Survey",
+          "Status": "Open",
+          "Draft": {
+            "SchemaVersion": 1,
+            "Title": "Would you recommend us?",
+            "Pages": [
+              {
+                "Id": "4fna3nztjphx3vvktbfk2pa12v",
+                "Name": "page_1",
+                "Title": null,
+                "Questions": [
+                  {
+                    "Id": "4dfhbt1zbets75mz7j6b1bhkz8",
+                    "Name": "q_nps",
+                    "ControlType": "Rating",
+                    "Title": "How likely are you to recommend us to a friend or colleague?",
+                    "Required": true,
+                    "Settings": {
+                      "Min": 0,
+                      "Max": 10,
+                      "Style": "Numbers",
+                      "MinLabel": "Not at all likely",
+                      "MaxLabel": "Extremely likely"
+                    }
+                  },
+                  {
+                    "Id": "4temrh99b49d7z5y3axnvw5yn4",
+                    "Name": "q_reason",
+                    "ControlType": "LongText",
+                    "Title": "What is the main reason for your score?"
+                  }
+                ]
+              }
+            ],
+            "Endings": [
+              {
+                "Id": "4k2c3szmm1twwgd96qe16wnzr1",
+                "Name": "thanks",
+                "Title": "Thank you",
+                "Message": "<p>Thank you for your answers.</p>",
+                "Outcome": "Completed",
+                "IsDefault": true
+              }
+            ]
+          },
+          "PublishedVersionNumber": 1,
+          "Tags": [
+            "sample"
+          ],
+          "Access": {
+            "Audience": "Anyone",
+            "Anonymity": "Anonymous",
+            "Limits": {
+              "Uniqueness": "Cookie"
+            }
+          },
+          "Versions": [
+            {
+              "ItemId": "4znryzkaj914jzb6z1gk8zfxep",
+              "Number": 1,
+              "Definition": {
+                "SchemaVersion": 1,
+                "Title": "Would you recommend us?",
+                "Pages": [
+                  {
+                    "Id": "4fna3nztjphx3vvktbfk2pa12v",
+                    "Name": "page_1",
+                    "Title": null,
+                    "Questions": [
+                      {
+                        "Id": "4dfhbt1zbets75mz7j6b1bhkz8",
+                        "Name": "q_nps",
+                        "ControlType": "Rating",
+                        "Title": "How likely are you to recommend us to a friend or colleague?",
+                        "Required": true,
+                        "Settings": {
+                          "Min": 0,
+                          "Max": 10,
+                          "Style": "Numbers",
+                          "MinLabel": "Not at all likely",
+                          "MaxLabel": "Extremely likely"
+                        }
+                      },
+                      {
+                        "Id": "4temrh99b49d7z5y3axnvw5yn4",
+                        "Name": "q_reason",
+                        "ControlType": "LongText",
+                        "Title": "What is the main reason for your score?"
+                      }
+                    ]
+                  }
+                ],
+                "Endings": [
+                  {
+                    "Id": "4k2c3szmm1twwgd96qe16wnzr1",
+                    "Name": "thanks",
+                    "Title": "Thank you",
+                    "Message": "<p>Thank you for your answers.</p>",
+                    "Outcome": "Completed",
+                    "IsDefault": true
+                  }
+                ]
+              },
+              "PublishedUtc": "2026-11-20T00:00:00Z",
+              "Notes": "Sample"
+            }
+          ],
+          "Collectors": [
+            {
+              "ItemId": "4k5scec6vn1b0d9zt0rhh3n61h",
+              "Name": "Public link",
+              "Kind": "WebLink",
+              "Status": "Open",
+              "IsDefault": true
+            }
+          ]
+        },
+        {
+          "ItemId": "4h5ybg6g41h8xb2426gvh92jjx",
+          "Name": "general-knowledge-quiz",
+          "Title": "General knowledge quiz",
+          "Kind": "Quiz",
+          "Status": "Open",
+          "Draft": {
+            "SchemaVersion": 1,
+            "Title": "General knowledge quiz",
+            "Introduction": "<p>Three questions; you need 60% to pass.</p>",
+            "Pages": [
+              {
+                "Id": "4f6gbtaea67hf06wk8qv10nyje",
+                "Name": "page_1",
+                "Title": "Questions",
+                "Questions": [
+                  {
+                    "Id": "43r6rdnwnfgvwk3yg3jqm8t8z4",
+                    "Name": "q_capital",
+                    "ControlType": "SingleChoice",
+                    "Title": "What is the capital of France?",
+                    "Required": true,
+                    "ShuffleChoices": true,
+                    "Choices": [
+                      {
+                        "Id": "42kahc8j8a2syzbz5h2g6xtz3n",
+                        "Value": "paris",
+                        "Text": "Paris"
+                      },
+                      {
+                        "Id": "4hyxqn2hqwphtnnrdm4fh0atmt",
+                        "Value": "lyon",
+                        "Text": "Lyon"
+                      },
+                      {
+                        "Id": "4mgvs6mvfkshn8mfsjgf2ef955",
+                        "Value": "nice",
+                        "Text": "Nice"
+                      }
+                    ],
+                    "Scoring": {
+                      "Points": 1,
+                      "CorrectChoiceIds": [
+                        "42kahc8j8a2syzbz5h2g6xtz3n"
+                      ],
+                      "CorrectFeedback": "Right.",
+                      "IncorrectFeedback": "The capital of France is Paris."
+                    }
+                  },
+                  {
+                    "Id": "4a7penrg8a6gptme43j1ej6ztg",
+                    "Name": "q_primes",
+                    "ControlType": "MultipleChoice",
+                    "Title": "Which of these numbers are prime?",
+                    "Required": true,
+                    "Choices": [
+                      {
+                        "Id": "4wwkh8mvrmsta2ftbbfr616ejd",
+                        "Value": "2",
+                        "Text": "2"
+                      },
+                      {
+                        "Id": "4qn01096h7xbxcare2c1efaamt",
+                        "Value": "3",
+                        "Text": "3"
+                      },
+                      {
+                        "Id": "43ad5167y84zg3bdeqrxf1ajye",
+                        "Value": "5",
+                        "Text": "5"
+                      },
+                      {
+                        "Id": "4n3bnw9jvadcgv3bdq8nqmavh0",
+                        "Value": "9",
+                        "Text": "9"
+                      }
+                    ],
+                    "Scoring": {
+                      "Points": 2,
+                      "PartialCredit": true,
+                      "CorrectChoiceIds": [
+                        "4wwkh8mvrmsta2ftbbfr616ejd",
+                        "4qn01096h7xbxcare2c1efaamt",
+                        "43ad5167y84zg3bdeqrxf1ajye"
+                      ]
+                    }
+                  },
+                  {
+                    "Id": "4xacg18m69qfxwg7jtkcsk2h2q",
+                    "Name": "q_ocean",
+                    "ControlType": "ShortText",
+                    "Title": "Which ocean is the largest?",
+                    "Required": true,
+                    "Scoring": {
+                      "Points": 1,
+                      "AcceptedAnswers": [
+                        "Pacific",
+                        "Pacific Ocean"
+                      ]
+                    }
+                  }
+                ]
+              }
+            ],
+            "Endings": [
+              {
+                "Id": "4sw2ax49q5cm4ceq4y1q36w1cn",
+                "Name": "thanks",
+                "Title": "Thank you",
+                "Message": "<p>Thank you for your answers.</p>",
+                "Outcome": "Completed",
+                "IsDefault": true
+              }
+            ],
+            "Scoring": {
+              "Enabled": true,
+              "PassMarkPercent": 60,
+              "DefaultPoints": 1,
+              "ShowScoreToRespondent": true
+            },
+            "Review": {
+              "ImmediatelyAfter": "Score, Responses, RightAnswers, Feedback"
+            }
+          },
+          "PublishedVersionNumber": 1,
+          "Tags": [
+            "sample"
+          ],
+          "Access": {
+            "Audience": "Anyone",
+            "Anonymity": "Identified",
+            "Limits": {
+              "Uniqueness": "Cookie"
+            }
+          },
+          "Versions": [
+            {
+              "ItemId": "4v7w0q8mcsd27fgvfc8ynkfmjq",
+              "Number": 1,
+              "Definition": {
+                "SchemaVersion": 1,
+                "Title": "General knowledge quiz",
+                "Introduction": "<p>Three questions; you need 60% to pass.</p>",
+                "Pages": [
+                  {
+                    "Id": "4f6gbtaea67hf06wk8qv10nyje",
+                    "Name": "page_1",
+                    "Title": "Questions",
+                    "Questions": [
+                      {
+                        "Id": "43r6rdnwnfgvwk3yg3jqm8t8z4",
+                        "Name": "q_capital",
+                        "ControlType": "SingleChoice",
+                        "Title": "What is the capital of France?",
+                        "Required": true,
+                        "ShuffleChoices": true,
+                        "Choices": [
+                          {
+                            "Id": "42kahc8j8a2syzbz5h2g6xtz3n",
+                            "Value": "paris",
+                            "Text": "Paris"
+                          },
+                          {
+                            "Id": "4hyxqn2hqwphtnnrdm4fh0atmt",
+                            "Value": "lyon",
+                            "Text": "Lyon"
+                          },
+                          {
+                            "Id": "4mgvs6mvfkshn8mfsjgf2ef955",
+                            "Value": "nice",
+                            "Text": "Nice"
+                          }
+                        ],
+                        "Scoring": {
+                          "Points": 1,
+                          "CorrectChoiceIds": [
+                            "42kahc8j8a2syzbz5h2g6xtz3n"
+                          ],
+                          "CorrectFeedback": "Right.",
+                          "IncorrectFeedback": "The capital of France is Paris."
+                        }
+                      },
+                      {
+                        "Id": "4a7penrg8a6gptme43j1ej6ztg",
+                        "Name": "q_primes",
+                        "ControlType": "MultipleChoice",
+                        "Title": "Which of these numbers are prime?",
+                        "Required": true,
+                        "Choices": [
+                          {
+                            "Id": "4wwkh8mvrmsta2ftbbfr616ejd",
+                            "Value": "2",
+                            "Text": "2"
+                          },
+                          {
+                            "Id": "4qn01096h7xbxcare2c1efaamt",
+                            "Value": "3",
+                            "Text": "3"
+                          },
+                          {
+                            "Id": "43ad5167y84zg3bdeqrxf1ajye",
+                            "Value": "5",
+                            "Text": "5"
+                          },
+                          {
+                            "Id": "4n3bnw9jvadcgv3bdq8nqmavh0",
+                            "Value": "9",
+                            "Text": "9"
+                          }
+                        ],
+                        "Scoring": {
+                          "Points": 2,
+                          "PartialCredit": true,
+                          "CorrectChoiceIds": [
+                            "4wwkh8mvrmsta2ftbbfr616ejd",
+                            "4qn01096h7xbxcare2c1efaamt",
+                            "43ad5167y84zg3bdeqrxf1ajye"
+                          ]
+                        }
+                      },
+                      {
+                        "Id": "4xacg18m69qfxwg7jtkcsk2h2q",
+                        "Name": "q_ocean",
+                        "ControlType": "ShortText",
+                        "Title": "Which ocean is the largest?",
+                        "Required": true,
+                        "Scoring": {
+                          "Points": 1,
+                          "AcceptedAnswers": [
+                            "Pacific",
+                            "Pacific Ocean"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "Endings": [
+                  {
+                    "Id": "4sw2ax49q5cm4ceq4y1q36w1cn",
+                    "Name": "thanks",
+                    "Title": "Thank you",
+                    "Message": "<p>Thank you for your answers.</p>",
+                    "Outcome": "Completed",
+                    "IsDefault": true
+                  }
+                ],
+                "Scoring": {
+                  "Enabled": true,
+                  "PassMarkPercent": 60,
+                  "DefaultPoints": 1,
+                  "ShowScoreToRespondent": true
+                },
+                "Review": {
+                  "ImmediatelyAfter": "Score, Responses, RightAnswers, Feedback"
+                }
+              },
+              "PublishedUtc": "2026-11-20T00:00:00Z",
+              "Notes": "Sample"
+            }
+          ],
+          "Collectors": [
+            {
+              "ItemId": "49vqepxxeqn20r64sdvc4mkyq1",
+              "Name": "Public link",
+              "Kind": "WebLink",
+              "Status": "Open",
+              "IsDefault": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Surveys.Deployments
+
+@model ShapeViewModel<SurveysDeploymentStep>
+
+<h5>@T["Surveys"]</h5>
+
+@if (Model.Value.IncludeAll)
+{
+    <span class="badge text-bg-success">@T["All surveys"]</span>
+}
+else
+{
+    foreach (var name in Model.Value.SurveyNames)
+    {
+        <span class="badge text-bg-secondary">@name</span>
+    }
+}
+@if (Model.Value.IncludeSecrets)
+{
+    <span class="badge text-bg-warning">@T["With link tokens and passwords"]</span>
+}

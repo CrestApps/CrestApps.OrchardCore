@@ -1,0 +1,57 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.Rating.RatingSettings>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Rating settings"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Min" class="ocat-label">@T["Lowest value"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.Min" class="form-control" type="number" min="0" max="10" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Max" class="ocat-label">@T["Highest value"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.Max" class="form-control" type="number" min="1" max="20" />
+                <span class="hint">@T["At most 11 values from lowest to highest."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Style" class="ocat-label">@T["Show as"]</label>
+            <div class="ocat-end">
+                <select asp-for="Settings.Style" class="form-select">
+                    <option value="Stars">@T["Stars"]</option>
+                    <option value="Numbers">@T["Numbers"]</option>
+                    <option value="Smileys">@T["Faces"]</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.MinLabel" class="ocat-label">@T["Label of the lowest value"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.MinLabel" class="form-control" type="text" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.MaxLabel" class="ocat-label">@T["Label of the highest value"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.MaxLabel" class="form-control" type="text" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Metric" class="ocat-label">@T["Results show"]</label>
+            <div class="ocat-end">
+                <select asp-for="Settings.Metric" class="form-select">
+                    <option value="None">@T["The average"]</option>
+                    <option value="Nps">@T["The Net Promoter Score"]</option>
+                    <option value="Csat">@T["The customer satisfaction score"]</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>

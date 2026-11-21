@@ -1,0 +1,62 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model QuestionBankImportViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveysQuestionBankImport" title="@T["Import questions"]">
+        <breadcrumb-item id="SurveysQuestionBanks" action="Index" controller="QuestionBanks" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ViewQuestionBanks.Name">@T["Question banks"]</breadcrumb-item>
+        <breadcrumb-item id="SurveysQuestionBank" action="Bank" controller="QuestionBanks" area="CrestApps.OrchardCore.Surveys" route-id="@Model.BankId">@Model.BankTitle</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    @if (Model.Checked)
+    {
+        <div class="alert alert-info">@T["The file holds {0} questions that can be imported.", Model.ReadCount]</div>
+    }
+    else if (Model.Created > 0 || Model.Updated > 0)
+    {
+        <div class="alert alert-success">@T["{0} questions added and {1} updated.", Model.Created, Model.Updated]</div>
+    }
+
+    @if (Model.Errors.Count > 0)
+    {
+        <div class="alert alert-warning">
+            <p class="mb-1">@T["These rows or items were not imported:"]</p>
+            <ul class="mb-0">
+                @foreach (var error in Model.Errors.Take(200))
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <div class="card mb-3">
+        <div class="card-header">@T["File"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Format" class="ocat-label">@T["Format"]</label>
+                <div class="ocat-end">
+                    <select asp-for="Format" asp-items="Model.Formats" class="form-select"></select>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="File" class="ocat-label">@T["File"]</label>
+                <div class="ocat-end">
+                    <input asp-for="File" type="file" class="form-control" required />
+                    <span class="hint">@T["A spreadsheet has the columns Id, Type, Question, Choices, Correct, Points, Tags, Difficulty and Feedback. Separate choices and right answers with |, and tags with commas. A question whose Id is already in the bank is updated."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit" name="submit.Import">@T["Import"]</button>
+        <button class="btn btn-secondary" type="submit" name="submit.Check">@T["Check the file"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Bank" asp-route-id="@Model.BankId">@T["Back"]</a>
+    </div>
+</form>

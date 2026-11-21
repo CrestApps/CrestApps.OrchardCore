@@ -1,0 +1,42 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.ConstantSum
+
+@using System.Globalization
+@{
+    var settings = Model.GetSettings<ConstantSumSettings>();
+}
+<fieldset data-survey-constant-sum data-total="@settings.Total.ToString(CultureInfo.InvariantCulture)" aria-describedby="@Model.DescribedBy()">
+    <legend class="visually-hidden">@Model.Question.Title</legend>
+    @foreach (var row in Model.Question.Rows)
+    {
+        var id = $"{Model.InputId}-{row.Id}";
+        <div class="row g-2 align-items-center mb-1">
+            <div class="col-8"><label for="@id">@row.Text</label></div>
+            <div class="col-4">
+                <div class="input-group input-group-sm">
+                    <input type="number" class="form-control" id="@id" name="@(Model.Prefix).@row.Id" value="@Model.RowValue(row.Id)" min="0" step="any" readonly="@Model.ReadOnly" aria-invalid="@(Model.HasErrors ? "true" : null)" />
+                    @if (!string.IsNullOrWhiteSpace(settings.Unit))
+                    {
+                        <span class="input-group-text">@settings.Unit</span>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    <div class="row g-2 fw-semibold">
+        <div class="col-8">@T["Total (must be {0})", settings.Total.ToString(CultureInfo.CurrentCulture)]</div>
+        <div class="col-4"><output data-constant-sum-total aria-live="polite"></output></div>
+    </div>
+</fieldset>
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}
+
+<script asp-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-controls.min.js" debug-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-controls.js" at="Foot"></script>

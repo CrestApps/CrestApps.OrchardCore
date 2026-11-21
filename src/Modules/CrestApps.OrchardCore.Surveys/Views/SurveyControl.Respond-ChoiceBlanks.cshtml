@@ -1,0 +1,39 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+
+@using System.Text.Json.Nodes
+@{
+    var segments = (Model.Settings["Segments"] as JsonArray)?.Select(node => node?.ToString() ?? string.Empty).ToList() ?? [];
+    var blanks = Math.Max(segments.Count - 1, 0);
+}
+
+@{
+    var words = (Model.Settings["Words"] as JsonArray)?.Select(node => node?.ToString()).Where(word => word is not null).ToList() ?? [];
+}
+<fieldset aria-describedby="@Model.DescribedBy()">
+    <legend class="visually-hidden">@Model.Question.Title</legend>
+    <p class="survey-blanks lh-lg mb-0">
+        @for (var i = 0; i < blanks; i++)
+        {
+            var current = Model.ValueAt(i);
+            @segments[i]
+            <select class="form-select d-inline-block w-auto mx-1" name="@(Model.Prefix).@i" aria-label="@T["Blank {0}", i + 1]" disabled="@Model.ReadOnly">
+                <option value=""></option>
+                @foreach (var word in words)
+                {
+                    <option value="@word" selected="@(current == word)">@word</option>
+                }
+            </select>
+        }
+        @(segments.Count > 0 ? segments[segments.Count - 1] : null)
+    </p>
+</fieldset>
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}

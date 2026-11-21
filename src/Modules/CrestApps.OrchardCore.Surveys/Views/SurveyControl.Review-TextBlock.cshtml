@@ -1,0 +1,6 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.TextBlock
+@{
+    var settings = Model.GetSettings<TextBlockSettings>();
+}
+<div class="survey-text-block">@Html.Raw(settings.Html)</div>
