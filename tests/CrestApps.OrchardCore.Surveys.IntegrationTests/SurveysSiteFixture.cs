@@ -48,6 +48,9 @@ public sealed partial class SurveysSiteFixture : IAsyncLifetime
         "OrchardCore.Notifications",
         "OrchardCore.Themes",
         SurveysConstants.Features.Surveys,
+        SurveysConstants.Features.Invitations,
+        SurveysConstants.Features.Embedding,
+        SurveysConstants.Features.Api,
         CrestApps.OrchardCore.Reports.ReportsConstants.Feature,
         CrestApps.OrchardCore.Users.UsersConstants.Feature.Audiences,
     ];

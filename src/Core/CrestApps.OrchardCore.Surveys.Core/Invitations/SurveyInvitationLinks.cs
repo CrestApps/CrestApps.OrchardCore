@@ -29,7 +29,7 @@ public sealed class SurveyInvitationLinks
     /// Builds the link of a token.
     /// </summary>
     /// <param name="token">The invitation token.</param>
-    /// <returns>The absolute URL, or a site-relative one when neither a base URL nor a request is known.</returns>
+    /// <returns>The absolute URL, or a site-relative one when neither a base URL nor a request with a host is known.</returns>
     public async Task<string> BuildAsync(string token)
     {
         ArgumentException.ThrowIfNullOrEmpty(token);
@@ -44,7 +44,7 @@ public sealed class SurveyInvitationLinks
 
         var request = _httpContextAccessor.HttpContext?.Request;
 
-        return request is null
+        return request is null || !request.Host.HasValue || string.IsNullOrEmpty(request.Scheme)
             ? path
             : $"{request.Scheme}://{request.Host}{request.PathBase}{path}";
     }
