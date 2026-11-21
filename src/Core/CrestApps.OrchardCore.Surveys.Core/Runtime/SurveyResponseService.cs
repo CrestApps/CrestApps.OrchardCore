@@ -201,7 +201,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
         var anonymous = survey.Access?.Anonymity == AnonymityMode.Anonymous;
         var respondentKey = isTest ? null : SurveyRespondentKeys.For(survey, identity, invitation);
-        var lockKey = $"Surveys:Start:{survey.ItemId}:{respondentKey ?? identity.ResumeToken ?? Guid.NewGuid().ToString("N")}";
+        var lockKey = $"Surveys:Start:{survey.ItemId}:{respondentKey ?? identity.ResumeToken ?? (global::OrchardCore.IdGenerator.GenerateId())}";
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync(lockKey, _lockTimeout, _lockExpiration);
 
         if (!locked)
@@ -1349,7 +1349,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
         => JsonSerializer.Deserialize<SurveyResponse>(JsonSerializer.Serialize(response, _cloneOptions), _cloneOptions);
 
     private static string UniqueIdOf(SurveyResponse response)
-        => string.IsNullOrEmpty(response.ItemId) ? global::CrestApps.Core.UniqueId.GenerateId() : response.ItemId;
+        => string.IsNullOrEmpty(response.ItemId) ? global::OrchardCore.IdGenerator.GenerateId() : response.ItemId;
 
     private Task<T> WriteOwnAsync<T>(string responseId, SurveyRespondentIdentity identity, Func<T> busy, Func<Survey, SurveyVersion, SurveyResponse, IList<Func<Task>>, Task<T>> work, CancellationToken cancellationToken)
         where T : SurveyResponseResult, new()

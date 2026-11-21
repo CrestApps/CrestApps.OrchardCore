@@ -1,5 +1,5 @@
+using OrchardCore;
 using System.Globalization;
-using CrestApps.Core;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Numbering;
@@ -121,7 +121,7 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
             var number = await _numberSequence.NextAsync(LearningConstants.EnrollmentNumberSeries, cancellationToken: cancellationToken);
             var enrollment = new Enrollment
             {
-                ItemId = UniqueId.GenerateId(),
+                ItemId = IdGenerator.GenerateId(),
                 UserId = request.UserId,
                 CourseId = request.CourseId,
                 OfferingId = offeringId,
@@ -253,7 +253,7 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
                 enrollment.Grants.Add(new EnrollmentGrant
                 {
                     Source = LearningConstants.EnrollmentSources.Manual,
-                    SourceId = "Extension:" + UniqueId.GenerateId(),
+                    SourceId = "Extension:" + IdGenerator.GenerateId(),
                     GrantedUtc = now,
                     AccessEndsUtc = DateTime.SpecifyKind(accessEndsUtc.Value, DateTimeKind.Utc),
                 });

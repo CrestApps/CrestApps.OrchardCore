@@ -1,5 +1,5 @@
+using OrchardCore;
 using System.Globalization;
-using CrestApps.Core;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.ViewModels;
@@ -58,7 +58,7 @@ internal sealed class CourseOutlinePartDisplayDriver : ContentPartDisplayDriver<
 
             for (var index = 0; index < BlankSections; index++)
             {
-                model.Sections.Add(new CourseOutlineSectionViewModel { Id = UniqueId.GenerateId(), Order = ++order });
+                model.Sections.Add(new CourseOutlineSectionViewModel { Id = IdGenerator.GenerateId(), Order = ++order });
             }
 
             if (context.IsNew)
@@ -114,7 +114,7 @@ internal sealed class CourseOutlinePartDisplayDriver : ContentPartDisplayDriver<
 
         foreach (var row in (model.Sections ?? []).Where(row => !string.IsNullOrWhiteSpace(row?.Title)).OrderBy(row => row.Order))
         {
-            var id = string.IsNullOrWhiteSpace(row.Id) ? UniqueId.GenerateId() : row.Id.Trim();
+            var id = string.IsNullOrWhiteSpace(row.Id) ? IdGenerator.GenerateId() : row.Id.Trim();
             var section = existing.TryGetValue(id, out var current) ? current : new CourseSection { Id = id };
 
             section.Title = row.Title.Trim();

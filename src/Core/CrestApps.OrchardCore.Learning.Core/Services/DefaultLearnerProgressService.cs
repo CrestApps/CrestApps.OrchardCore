@@ -1,4 +1,4 @@
-using CrestApps.Core;
+using OrchardCore;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.Extensions.Logging;
@@ -622,7 +622,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         progress ??= new EnrollmentProgress
         {
-            ItemId = UniqueId.GenerateId(),
+            ItemId = IdGenerator.GenerateId(),
             EnrollmentId = enrollment.ItemId,
             UserId = enrollment.UserId,
             CourseId = enrollment.CourseId,
