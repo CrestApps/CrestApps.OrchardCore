@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Surveys.Models;
 
 namespace CrestApps.OrchardCore.Learning.Core.Surveys;
 
@@ -64,4 +65,12 @@ public static class LearningSurveyContexts
     /// <returns><see langword="true"/> when it is a content item.</returns>
     public static bool IsContentOwner(RecordRef? owner)
         => owner is { } value && !value.IsEmpty && string.Equals(value.Kind, RecordKinds.ContentItem, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Gets the enrollment a response was given through.
+    /// </summary>
+    /// <param name="response">The response, or <see langword="null"/>.</param>
+    /// <returns>The id of the enrollment, or <see langword="null"/> when the response does not belong to one.</returns>
+    public static string EnrollmentIdOf(SurveyResponse response)
+        => response?.Context is { } context && string.Equals(context.Kind, EnrollmentKind, StringComparison.Ordinal) ? context.Id : null;
 }

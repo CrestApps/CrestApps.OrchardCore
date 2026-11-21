@@ -15,7 +15,7 @@ public sealed class CourseSurveyResultProvider : ILearningSurveyItemResultProvid
     public string Kind => LearningSurveysConstants.SurveyKind;
 
     /// <inheritdoc />
-    public CourseItemResult Build(ContentItem item, Enrollment enrollment, IReadOnlyList<SurveyResponse> responses)
+    public CourseItemResult Build(ContentItem item, Enrollment enrollment, SurveyDefinition definition, IReadOnlyList<SurveyResponse> responses)
     {
         ArgumentNullException.ThrowIfNull(item);
 

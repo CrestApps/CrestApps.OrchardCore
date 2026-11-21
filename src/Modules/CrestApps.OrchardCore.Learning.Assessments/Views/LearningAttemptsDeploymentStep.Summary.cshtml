@@ -1,5 +1,0 @@
-@using CrestApps.OrchardCore.Learning.Assessments.Deployments
-@model ShapeViewModel<LearningAttemptsDeploymentStep>
-
-<h5>@T["Learning quiz attempts (learner records)"]</h5>
-<span class="hint">@(Model.Value.QuizId is null ? T["Every quiz"] : T["One quiz"])@(Model.Value.IncludeOverrides ? T[", with overrides"] : null)</span>

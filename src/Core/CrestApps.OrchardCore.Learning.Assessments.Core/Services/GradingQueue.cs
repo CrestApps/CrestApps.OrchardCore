@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Core.Services;
@@ -63,48 +62,4 @@ public sealed class GradingQueue
                 .ToArray(),
         };
     }
-}
-
-/// <summary>
-/// The quiz attempts that wait for a grader.
-/// </summary>
-internal sealed class AttemptGradingQueueSource : IGradingQueueSource
-{
-    private readonly AssessmentAttemptStore _attemptStore;
-
-    public AttemptGradingQueueSource(AssessmentAttemptStore attemptStore)
-    {
-        _attemptStore = attemptStore;
-    }
-
-    public async Task<GradingQueuePage> ListWaitingAsync(GradingQueueQuery query, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(query);
-
-        var (count, attempts) = await _attemptStore.PageNeedingGradingAsync(query.CourseIds, 1, Math.Max(query.Take, 1), cancellationToken);
-
-        return new GradingQueuePage
-        {
-            Count = count,
-            Items = attempts.Select(ToItem).ToArray(),
-        };
-    }
-
-    private static GradingQueueItem ToItem(AssessmentAttempt attempt)
-        => new()
-        {
-            Kind = AssessmentsConstants.AttemptGradingQueueKind,
-            Id = attempt.ItemId,
-            UserId = attempt.UserId,
-            CourseId = attempt.CourseId,
-            ItemId = attempt.QuizId,
-            ItemTitle = attempt.QuizTitle,
-            Reference = attempt.Number,
-            Icon = "fa-solid fa-circle-question",
-            SubmittedUtc = DateTime.SpecifyKind(attempt.SubmittedUtc ?? attempt.StartedUtc, DateTimeKind.Utc),
-            Area = "CrestApps.OrchardCore.Learning.Assessments",
-            Controller = "Grading",
-            Action = "Attempt",
-            RouteValues = new Dictionary<string, object>(StringComparer.Ordinal) { ["id"] = attempt.ItemId },
-        };
 }

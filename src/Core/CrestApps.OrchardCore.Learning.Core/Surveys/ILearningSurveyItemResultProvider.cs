@@ -22,7 +22,8 @@ public interface ILearningSurveyItemResultProvider
     /// </summary>
     /// <param name="item">The course item.</param>
     /// <param name="enrollment">The enrollment.</param>
+    /// <param name="definition">The definition of the version the latest response ran on, such as its pass mark.</param>
     /// <param name="responses">The learner's responses through the enrollment, voided ones left out.</param>
     /// <returns>The result, or <see langword="null"/> to record nothing.</returns>
-    CourseItemResult Build(ContentItem item, Enrollment enrollment, IReadOnlyList<SurveyResponse> responses);
+    CourseItemResult Build(ContentItem item, Enrollment enrollment, SurveyDefinition definition, IReadOnlyList<SurveyResponse> responses);
 }

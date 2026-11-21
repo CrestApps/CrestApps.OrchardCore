@@ -1,12 +1,15 @@
 using System.Security.Claims;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Learning.AI.Services;
 using CrestApps.OrchardCore.Learning.AI.ViewModels;
-using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Coursework;
+using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
@@ -125,22 +128,22 @@ public sealed class AuthoringController : Controller
     public async Task<IActionResult> Questions(AuthoringViewModel model)
     {
         var lesson = string.IsNullOrEmpty(model.LessonId) ? null : await _contentManager.GetAsync(model.LessonId, VersionOptions.Latest);
-        var bank = string.IsNullOrEmpty(model.BankId) ? null : await _contentManager.GetAsync(model.BankId, VersionOptions.Latest);
+        var banks = HttpContext.RequestServices.GetService<ICatalog<QuestionBank>>();
+        var bank = banks is null || string.IsNullOrEmpty(model.BankId) ? null : await banks.FindByIdAsync(model.BankId, HttpContext.RequestAborted);
 
-        if (!await CanUseAsync() || !await _authorizationService.AuthorizeAsync(User, AssessmentPermissions.ManageQuestionBanks))
+        if (!await CanUseAsync() || !await _authorizationService.AuthorizeAsync(User, SurveysPermissions.ManageQuestionBanks))
         {
             return Forbid();
         }
 
-        if (lesson is null || bank is null || bank.ContentType != AssessmentsConstants.ContentTypes.QuestionBank)
+        if (lesson is null || bank is null)
         {
             await _notifier.WarningAsync(H["Pick a lesson and a question bank."]);
 
             return View(nameof(Index), await BuildAsync(model));
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, CommonPermissions.ViewContent, lesson) ||
-            !await _authorizationService.AuthorizeAsync(User, CommonPermissions.EditContent, bank))
+        if (!await _authorizationService.AuthorizeAsync(User, CommonPermissions.ViewContent, lesson))
         {
             return Forbid();
         }
@@ -149,9 +152,9 @@ public sealed class AuthoringController : Controller
 
         if (result.Succeeded)
         {
-            await _notifier.SuccessAsync(H["{0} draft questions were added to the bank. None is published: review each one, then publish it.", result.ContentItemIds.Count]);
+            await _notifier.SuccessAsync(H["{0} draft questions were added to the bank. They are retired until you review each one and bring it back.", result.ContentItemIds.Count]);
 
-            return EditorOf(bank.ContentItemId);
+            return LocalRedirect(Url.Content("~/Admin/surveys/banks/" + bank.ItemId));
         }
 
         return await FinishAsync(result, model, null);
@@ -267,8 +270,8 @@ public sealed class AuthoringController : Controller
     private async Task<AuthoringViewModel> BuildAsync(AuthoringViewModel model)
     {
         model.ModelAvailable = await _completer.IsAvailableAsync();
-        model.CanDraftQuestions = await _contentDefinitionManager.GetTypeDefinitionAsync(AssessmentsConstants.ContentTypes.QuestionBank) is not null
-            && await _authorizationService.AuthorizeAsync(User, AssessmentPermissions.ManageQuestionBanks);
+        model.CanDraftQuestions = HttpContext.RequestServices.GetService<ICatalog<QuestionBank>>() is not null
+            && await _authorizationService.AuthorizeAsync(User, SurveysPermissions.ManageQuestionBanks);
         model.CanDraftRubrics = await _contentDefinitionManager.GetTypeDefinitionAsync(CourseworkConstants.ContentTypes.Rubric) is not null;
 
         var lessons = await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(_lessonTypes))
@@ -293,13 +296,12 @@ public sealed class AuthoringController : Controller
 
         if (model.CanDraftQuestions)
         {
-            var banks = await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType == AssessmentsConstants.ContentTypes.QuestionBank)
-                .OrderBy(index => index.DisplayText)
-                .Take(MaxListed)
-                .ListAsync(HttpContext.RequestAborted);
+            var banks = (await HttpContext.RequestServices.GetRequiredService<ICatalog<QuestionBank>>().GetAllAsync(HttpContext.RequestAborted))
+                .OrderBy(bank => bank.Title ?? bank.Name, StringComparer.CurrentCultureIgnoreCase)
+                .Take(MaxListed);
 
             model.Banks = banks
-                .Select(item => new SelectListItem(item.DisplayText ?? item.ContentItemId, item.ContentItemId, item.ContentItemId == model.BankId))
+                .Select(bank => new SelectListItem(bank.Title ?? bank.Name, bank.ItemId, bank.ItemId == model.BankId))
                 .ToList();
         }
 

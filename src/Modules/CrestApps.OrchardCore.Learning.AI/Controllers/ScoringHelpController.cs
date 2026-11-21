@@ -7,7 +7,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Learning.AI.Controllers;
 
 /// <summary>
-/// Scoring help for the grading pages. It returns a suggestion as JSON for the page to fill its fields with; it never
+/// Scoring help for the coursework grading page. It returns a suggestion as JSON for the page to fill its fields with; it never
 /// saves a grade.
 /// </summary>
 [Admin]
@@ -28,18 +28,6 @@ public sealed class ScoringHelpController : Controller
         _assistant = assistant;
         S = stringLocalizer;
     }
-
-    /// <summary>
-    /// Suggests a score for a quiz essay answer.
-    /// </summary>
-    /// <param name="id">The attempt.</param>
-    /// <param name="index">The question's index in the attempt.</param>
-    /// <returns>The suggestion as JSON.</returns>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Admin("learning/ai/scoring-help/attempts/{id}/{index:int}", "LearningAIScoringHelpAttempt")]
-    public async Task<IActionResult> Attempt(string id, int index)
-        => Write(await _assistant.SuggestForAttemptItemAsync(User, id, index, HttpContext.RequestAborted));
 
     /// <summary>
     /// Suggests a score for a coursework submission.

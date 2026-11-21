@@ -35,6 +35,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Assessments.Abstractions\CrestApps.OrchardCore.Learning.Assessments.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Core\CrestApps.OrchardCore.Learning.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Surveys.Core\CrestApps.OrchardCore.Surveys.Core.csproj" />
   </ItemGroup>
 
 </Project>

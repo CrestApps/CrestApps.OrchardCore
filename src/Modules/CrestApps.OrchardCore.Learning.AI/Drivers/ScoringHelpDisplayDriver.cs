@@ -10,7 +10,7 @@ using OrchardCore.DisplayManagement.Views;
 namespace CrestApps.OrchardCore.Learning.AI.Drivers;
 
 /// <summary>
-/// Adds the scoring help panel next to the grade fields of an essay answer or a coursework submission, for graders who
+/// Adds the scoring help panel next to the grade fields of a coursework submission, for graders who
 /// may use it, while the grade can still be changed.
 /// </summary>
 internal sealed class ScoringHelpDisplayDriver : DisplayDriver<GradingAssistContext>
@@ -47,7 +47,6 @@ internal sealed class ScoringHelpDisplayDriver : DisplayDriver<GradingAssistCont
 
         var url = model.Kind switch
         {
-            GradingAssistContext.AttemptItemKind when model.ItemIndex is { } index => _linkGenerator.GetPathByRouteValues(httpContext, "LearningAIScoringHelpAttempt", new { id = model.RecordId, index }),
             GradingAssistContext.SubmissionKind => _linkGenerator.GetPathByRouteValues(httpContext, "LearningAIScoringHelpSubmission", new { id = model.RecordId }),
             _ => null,
         };
@@ -63,7 +62,7 @@ internal sealed class ScoringHelpDisplayDriver : DisplayDriver<GradingAssistCont
         {
             viewModel.Url = url;
             viewModel.ModelAvailable = available;
-            viewModel.HtmlId = "scoring-help-" + (model.RecordId ?? string.Empty) + (model.ItemIndex is { } i ? "-" + i : string.Empty);
+            viewModel.HtmlId = "scoring-help-" + (model.RecordId ?? string.Empty);
             viewModel.PointsField = model.PointsField;
             viewModel.FeedbackField = model.FeedbackField;
             viewModel.RubricFieldPrefix = model.RubricFieldPrefix;

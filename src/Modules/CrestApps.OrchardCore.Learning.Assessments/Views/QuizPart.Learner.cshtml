@@ -1,107 +1,105 @@
 @model QuizPanelViewModel
-@inject CrestApps.OrchardCore.Learning.Assessments.Core.Services.AttemptReviewPolicy AttemptReview
 
 @{
-    var quiz = Model.Quiz;
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+    var published = Model.Survey is { Status: CrestApps.OrchardCore.Surveys.Models.SurveyStatus.Open } && Model.Definition is not null;
+    var timeLimit = Model.Definition?.Timing?.TimeLimitMinutes;
+    var passMark = Model.Definition?.Scoring?.PassMarkPercent;
 }
 
 <div class="card mb-3 learning-quiz" data-learning-quiz>
     <div class="card-body">
         <ul class="list-inline text-secondary small mb-3">
-            @if (Model.QuestionCount > 0)
+            @if (timeLimit is > 0)
             {
-                <li class="list-inline-item"><i class="fa-regular fa-circle-question me-1" aria-hidden="true"></i>@T["{0} questions", Model.QuestionCount]</li>
+                <li class="list-inline-item"><i class="fa-solid fa-stopwatch me-1" aria-hidden="true"></i>@T["{0} minutes", timeLimit.Value]</li>
             }
-            @if (quiz.TimeLimitMinutes is { } minutes)
+            @if (passMark is not null)
             {
-                <li class="list-inline-item"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["{0} minutes", minutes]</li>
+                <li class="list-inline-item"><i class="fa-solid fa-flag-checkered me-1" aria-hidden="true"></i>@T["Pass mark {0}%", passMark.Value.ToString("0.#")]</li>
             }
-            @if (quiz.MaxAttempts is { } max)
+            @if (Model.AttemptsLeft is { } left)
             {
-                <li class="list-inline-item"><i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>@T["{0} attempts allowed", max]</li>
-            }
-            @if (quiz.PassMark is { } passMark)
-            {
-                <li class="list-inline-item"><i class="fa-solid fa-flag-checkered me-1" aria-hidden="true"></i>@T["Pass mark {0}%", passMark.ToString("0.##")]</li>
-            }
-            @if (quiz.ClosesUtc is { } closes)
-            {
-                <li class="list-inline-item"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>@T["Closes"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(closes, DateTimeKind.Utc), Format: "g"))</li>
+                <li class="list-inline-item"><i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>@T["{0} attempts left", left]</li>
             }
         </ul>
 
-        @if (!Model.SignedIn)
+        @if (!published)
         {
-            <p class="mb-0">@T["Sign in to take this quiz."]</p>
+            <p class="text-secondary small mb-0" data-learning-quiz-reason><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["This quiz is not open."]</p>
         }
-        else if (Model.Open is not null)
+        else if (!Model.SignedIn)
         {
-            <a class="btn btn-primary" href="@Url.RouteUrl("LearningAttempt", new { attemptId = Model.Open.ItemId })"><i class="fa-solid fa-play me-1" aria-hidden="true"></i>@T["Continue the attempt"]</a>
+            <p class="mb-0">@T["Sign in to attempt the quiz."]</p>
         }
-        else if (Model.AttemptsLeft is 0)
+        else if (!Model.Enrolled)
         {
-            <p class="mb-0">@T["You have used every attempt of this quiz."]</p>
-        }
-        else
-        {
-            <form method="post" action="@Url.RouteUrl("LearningQuizStart", new { quizId = Model.QuizId })">
-                @Html.AntiForgeryToken()
-                @if (Model.NeedsAccessCode)
-                {
-                    <div class="mb-2">
-                        <label class="form-label" for="quiz-access-code-@Model.QuizId">@T["Access code"]</label>
-                        <input class="form-control" id="quiz-access-code-@Model.QuizId" name="accessCode" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore required />
-                    </div>
-                }
-                @if (!string.IsNullOrWhiteSpace(quiz.HonorStatement))
-                {
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" name="honor" value="true" id="quiz-honor-@Model.QuizId" required />
-                        <label class="form-check-label" for="quiz-honor-@Model.QuizId">@quiz.HonorStatement</label>
-                    </div>
-                }
-                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-play me-1" aria-hidden="true"></i>@(Model.Attempts.Count == 0 ? T["Start the quiz"] : T["Start another attempt"])</button>
-                @if (quiz.TimeLimitMinutes is { } limit)
-                {
-                    <span class="hint ms-2">@T["The time starts when you select Start and keeps running if you leave the page."]</span>
-                }
-            </form>
+            <p class="text-secondary small mb-0" data-learning-quiz-reason>@T["You cannot attempt this quiz now."]</p>
         }
 
         @if (Model.Attempts.Count > 0)
         {
-            <h2 class="h6 mt-4">@T["Your attempts"]</h2>
-            <ul class="list-group">
-                @foreach (var attempt in Model.Attempts)
-                {
-                    <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <span>
-                            <a href="@Url.RouteUrl("LearningAttempt", new { attemptId = attempt.ItemId })">@T["Attempt {0}", attempt.Sequence]</a>
-                            <span class="text-secondary small ms-2">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(attempt.StartedUtc, DateTimeKind.Utc), Format: "g"))</span>
-                        </span>
-                        <span>
-                            @switch (attempt.Status)
-                            {
-                                case AttemptStatus.InProgress:
-                                    <span class="badge text-bg-primary">@T["In progress"]</span>
-                                    break;
-                                case AttemptStatus.NeedsGrading:
-                                    <span class="badge text-bg-warning">@T["Waiting for a grader"]</span>
-                                    break;
-                                case AttemptStatus.Graded when AttemptReview.CanSeeScore(attempt):
-                                    <span class="badge @(attempt.Passed == true ? "text-bg-success" : "text-bg-secondary")">@(attempt.Percent?.ToString("0.##"))%</span>
-                                    break;
-                                case AttemptStatus.Voided:
-                                    <span class="badge text-bg-light border">@T["Cancelled"]</span>
-                                    break;
-                                default:
-                                    <span class="badge text-bg-light border">@T["Submitted"]</span>
-                                    break;
-                            }
-                        </span>
-                    </li>
-                }
-            </ul>
+            <table class="table table-sm mb-3">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Attempt"]</th>
+                        <th scope="col">@T["Ended"]</th>
+                        <th scope="col">@T["Score"]</th>
+                        <th scope="col"><span class="visually-hidden">@T["Review"]</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var attempt in Model.Attempts)
+                    {
+                        <tr>
+                            <td>@attempt.AttemptNumber</td>
+                            <td>
+                                @if (attempt.CompletedUtc is { } completed)
+                                {
+                                    @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: "g"))
+                                }
+                                else if (attempt.Status == CrestApps.OrchardCore.Surveys.Models.SurveyResponseStatus.InProgress)
+                                {
+                                    @T["In progress"]
+                                }
+                            </td>
+                            <td>
+                                @if (attempt.Grading == CrestApps.OrchardCore.Surveys.Models.GradingStatus.Pending && attempt.Status == CrestApps.OrchardCore.Surveys.Models.SurveyResponseStatus.Completed)
+                                {
+                                    @T["Waiting for a grader"]
+                                }
+                                else if (attempt.Percent is { } percent)
+                                {
+                                    @T["{0}%", percent.ToString("0.#")]
+                                    @if (attempt.Passed is true)
+                                    {
+                                        <span class="badge text-bg-success ms-1">@T["Passed"]</span>
+                                    }
+                                    else if (attempt.Passed is false)
+                                    {
+                                        <span class="badge text-bg-danger ms-1">@T["Not passed"]</span>
+                                    }
+                                }
+                            </td>
+                            <td>
+                                @if (attempt.Status == CrestApps.OrchardCore.Surveys.Models.SurveyResponseStatus.Completed)
+                                {
+                                    <a href="@Url.Content("~/s/r/" + attempt.ItemId + "/review")">@T["Review"]</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        @if (published && Model.Enrolled && (Model.Open is not null || Model.AttemptsLeft is null or > 0))
+        {
+            <form method="post" action="@Url.Content("~/learning/quizzes/" + Model.QuizId + "/start")">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <button type="submit" class="btn btn-primary">@(Model.Open is not null ? T["Continue your attempt"] : Model.Attempts.Count > 0 ? T["Attempt again"] : T["Start the quiz"])</button>
+            </form>
         }
     </div>
 </div>

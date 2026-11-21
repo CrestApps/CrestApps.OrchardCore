@@ -116,7 +116,7 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
             .Where(candidate => candidate.Status != SurveyResponseStatus.Voided && (candidate.ItemId != response.ItemId || !deleted))
             .ToList();
 
-        var result = provider.Build(entry.Item ?? item, enrollment, responses);
+        var result = provider.Build(entry.Item ?? item, enrollment, context.Version?.Definition, responses);
 
         if (result is null)
         {
