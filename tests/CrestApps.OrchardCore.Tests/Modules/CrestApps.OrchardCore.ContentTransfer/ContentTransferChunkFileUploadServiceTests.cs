@@ -314,6 +314,142 @@ public sealed class ContentTransferChunkFileUploadServiceTests
         Assert.Equal(ContentTransferUploadError.InvalidRequest, invalidError);
     }
 
+    // Review 10 (B7): the declared range was checked, then the whole file was copied, so a chunk larger than its range
+    // reached temporary storage past the chunk size limit.
+    [Fact]
+    public async Task ProcessRequestAsync_AChunkLargerThanItsRange_IsRefused_BeforeAnythingIsWritten()
+    {
+        // Arrange
+        var service = CreateService(new ContentImportOptions { MaxUploadChunkSize = 5, MaxUploadFileSize = 1_000 });
+        var uploadId = Guid.NewGuid();
+        var file = CreateFormFile("0123456789ABCDEF", "oversized.csv");
+        var context = CreateContext("bytes 0-4/10", uploadId, file);
+        var chunkInvoked = false;
+        ContentTransferUploadError? invalidError = null;
+
+        // Act
+        await service.ProcessRequestAsync(
+            context.Request,
+            (_, _, _) =>
+            {
+                chunkInvoked = true;
+
+                return Ok();
+            },
+            _ => Ok(),
+            error =>
+            {
+                invalidError = error;
+
+                return Invalid();
+            });
+
+        // Assert
+        var tempFile = TempFile(uploadId, file);
+
+        try
+        {
+            Assert.False(chunkInvoked);
+            Assert.Equal(ContentTransferUploadError.InvalidRequest, invalidError);
+            Assert.False(tempFile.Exists && tempFile.Length > 0, "Nothing of the chunk may reach temporary storage.");
+        }
+        finally
+        {
+            tempFile.Delete();
+        }
+    }
+
+    // Review 10 (B7): the range decided completion, so a final chunk shorter than its range completed a short file.
+    [Fact]
+    public async Task ProcessRequestAsync_AFinalChunkShorterThanItsRange_DoesNotComplete()
+    {
+        // Arrange
+        var service = CreateService(new ContentImportOptions { MaxUploadChunkSize = 5, MaxUploadFileSize = 1_000 });
+        var uploadId = Guid.NewGuid();
+        var first = CreateFormFile("01234", "short.csv");
+
+        await service.ProcessRequestAsync(CreateContext("bytes 0-4/10", uploadId, first).Request, (_, _, _) => Ok(), _ => Ok(), _ => Invalid());
+
+        var completedInvoked = false;
+        ContentTransferUploadError? invalidError = null;
+
+        // Act
+        await service.ProcessRequestAsync(
+            CreateContext("bytes 5-9/10", uploadId, CreateFormFile("5", "short.csv")).Request,
+            (_, _, _) => Ok(),
+            _ =>
+            {
+                completedInvoked = true;
+
+                return Ok();
+            },
+            error =>
+            {
+                invalidError = error;
+
+                return Invalid();
+            });
+
+        // Assert
+        TempFile(uploadId, first).Delete();
+        Assert.False(completedInvoked);
+        Assert.Equal(ContentTransferUploadError.InvalidRequest, invalidError);
+    }
+
+    // Review 10 (B7): an upload whose assembled file isn't the length its final chunk declares isn't completed, such as
+    // a file grown by an earlier chunk past the length declared at the end.
+    [Fact]
+    public async Task ProcessRequestAsync_AnAssembledFileLongerThanItsDeclaredLength_DoesNotComplete()
+    {
+        // Arrange
+        var service = CreateService(new ContentImportOptions { MaxUploadChunkSize = 10, MaxUploadFileSize = 1_000 });
+        var uploadId = Guid.NewGuid();
+        var first = CreateFormFile("0123456789", "assembled.csv");
+
+        await service.ProcessRequestAsync(CreateContext("bytes 0-9/20", uploadId, first).Request, (_, _, _) => Ok(), _ => Ok(), _ => Invalid());
+
+        var completedInvoked = false;
+        ContentTransferUploadError? invalidError = null;
+
+        // Act: a final chunk that declares the file five bytes long.
+        await service.ProcessRequestAsync(
+            CreateContext("bytes 0-4/5", uploadId, CreateFormFile("01234", "assembled.csv")).Request,
+            (_, _, _) => Ok(),
+            _ =>
+            {
+                completedInvoked = true;
+
+                return Ok();
+            },
+            error =>
+            {
+                invalidError = error;
+
+                return Invalid();
+            });
+
+        // Assert
+        var tempFile = TempFile(uploadId, first);
+
+        try
+        {
+            Assert.False(completedInvoked);
+            Assert.Equal(ContentTransferUploadError.InvalidRequest, invalidError);
+            Assert.False(tempFile.Exists, "A refused upload's temporary file is removed.");
+        }
+        finally
+        {
+            tempFile.Delete();
+        }
+    }
+
+    private static FileInfo TempFile(Guid uploadId, FormFile file)
+    {
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('|', uploadId.ToString("N"), file.FileName, file.Name))));
+
+        return new FileInfo(Path.Combine(Path.GetTempPath(), "CrestAppsContentTransferUploads", "Default_" + hash));
+    }
+
     private static ContentTransferChunkFileUploadService CreateService(ContentImportOptions options)
         => new(
             new ShellSettings { Name = "Default" },
