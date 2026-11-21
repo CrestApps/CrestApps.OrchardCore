@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Surveys.Core.Drivers;
 
 /// <summary>
 /// The base of a question type's settings editor in the designer. It edits <c>SurveyQuestion.Settings</c> as
-/// <typeparamref name="TSettings"/> with the shape <c>SurveyControlSettings__{ControlType}_Edit</c> (view
+/// <typeparamref name="TSettings"/> with the shape <c>SurveyControlSettings_Edit__{ControlType}</c> (view
 /// <c>SurveyControlSettings-{ControlType}.Edit.cshtml</c>), only for questions of its type.
 /// </summary>
 /// <typeparam name="TSettings">The settings type.</typeparam>
@@ -31,7 +31,7 @@ public abstract class SurveyControlSettingsDisplayDriver<TSettings> : DisplayDri
 
     /// <inheritdoc />
     public override IDisplayResult Edit(SurveyQuestion model, BuildEditorContext context)
-        => Initialize<SurveyControlSettingsViewModel<TSettings>>($"{SurveyControlShapes.Settings}__{SurveyControlShapes.Encode(ControlType)}_Edit", viewModel =>
+        => Initialize<SurveyControlSettingsViewModel<TSettings>>($"{SurveyControlShapes.Settings}_Edit__{SurveyControlShapes.Encode(ControlType)}", viewModel =>
         {
             viewModel.Settings = model.GetSettings<TSettings>();
             viewModel.Question = model;

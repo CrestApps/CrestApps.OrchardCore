@@ -33,7 +33,7 @@ public sealed class ContactInfoSettingsDisplayDriver : DisplayDriver<SurveyQuest
 
     /// <inheritdoc />
     public override IDisplayResult Edit(SurveyQuestion model, BuildEditorContext context)
-        => Initialize<ContactInfoSettingsViewModel>($"{SurveyControlShapes.Settings}__{SurveyControlNames.ContactInfo}_Edit", viewModel =>
+        => Initialize<ContactInfoSettingsViewModel>($"{SurveyControlShapes.Settings}_Edit__{SurveyControlNames.ContactInfo}", viewModel =>
         {
             var settings = model.GetSettings<ContactInfoSettings>();
 
