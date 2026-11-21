@@ -25,7 +25,7 @@
 
     <div class="row g-4">
         <aside class="col-lg-4 order-lg-1 order-2 learning-player-index" aria-label="@T["Course outline"]">
-            <div class="card">
+            <div class="card" data-learning-refresh="index">
                 <div class="card-body">
                     <h2 class="h6 mb-2">@course.DisplayText</h2>
                     @if (enrollment is { Status: EnrollmentStatus.Completed })
@@ -50,7 +50,7 @@
                     <h2 class="h6 text-uppercase text-body-secondary mb-0">@T["Course outline"]</h2>
                     <button type="button" class="btn btn-link btn-sm p-0" data-learning-toggle-sections data-collapse-text="@T["Collapse all"]" data-expand-text="@T["Expand all"]" aria-controls="learning-player-outline">@T["Collapse all"]</button>
                 </div>
-                <div id="learning-player-outline">
+                <div id="learning-player-outline" data-learning-refresh="outline">
                     <partial name="_LearnerOutline" model="new LearnerOutlineViewModel { Outline = Model.Outline, Progress = Model.Progress, KindIcons = Model.KindIcons, CurrentItemId = itemId, CanOpen = canOpen, LockedItems = Model.LockedItems, Navigation = true }" />
                 </div>
             }
@@ -91,7 +91,7 @@
                         }
                     </div>
                     <h1 class="h3 mb-2">@current.Item.DisplayText</h1>
-                    <partial name="_ItemCondition" model="(current, Model.CurrentProgress, enrollment is { Status: EnrollmentStatus.Active or EnrollmentStatus.Completed })" />
+                    <div data-learning-refresh="condition"><partial name="_ItemCondition" model="(current, Model.CurrentProgress, enrollment is { Status: EnrollmentStatus.Active or EnrollmentStatus.Completed })" /></div>
                 </header>
 
                 @if (Model.CurrentShape is not null)
@@ -207,7 +207,7 @@
                     </div>
                 }
 
-                <nav class="d-flex justify-content-between my-4" aria-label="@T["Course items"]">
+                <nav class="d-flex justify-content-between my-4" data-learning-refresh="nav" aria-label="@T["Course items"]">
                     @if (Model.PreviousItemId is not null)
                     {
                         <a class="btn btn-outline-secondary" href="@Url.RouteUrl("LearningPlayer", new { courseId, itemId = Model.PreviousItemId })"><i class="fa-solid fa-arrow-left me-1" aria-hidden="true"></i>@T["Previous"]</a>

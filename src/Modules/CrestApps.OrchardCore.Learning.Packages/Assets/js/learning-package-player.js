@@ -120,6 +120,11 @@ function start(root) {
                 console.warn('The server refused some values the package set.', result.refused);
             }
 
+            // The course player refreshes its outline and progress when the server completed the item.
+            if (result.itemCompleted) {
+                document.dispatchEvent(new CustomEvent('learning:item-completed', { detail: result }));
+            }
+
             return result;
         } catch {
             return null;

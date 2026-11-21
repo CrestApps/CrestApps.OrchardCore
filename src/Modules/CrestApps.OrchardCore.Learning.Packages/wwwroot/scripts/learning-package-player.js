@@ -175,6 +175,7 @@
 				const result = await response.json();
 				if (!result.retry && !result.accepted) setStatus(root, result.message || root.dataset.errorText);
 				else if (result.refused?.length) console.warn("The server refused some values the package set.", result.refused);
+				if (result.itemCompleted) document.dispatchEvent(new CustomEvent("learning:item-completed", { detail: result }));
 				return result;
 			} catch {
 				return null;

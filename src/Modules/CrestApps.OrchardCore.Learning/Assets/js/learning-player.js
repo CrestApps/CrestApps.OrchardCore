@@ -2,7 +2,7 @@
 // It records the time on the open item (a call when the item opens, one every half minute while the page is visible,
 // and one when the learner leaves it) and, for a video lesson, how much of the video has been watched.
 
-import { createActiveTimer, progressText } from './learning-player-helpers.js';
+import { createActiveTimer, progressText, swapRefreshed } from './learning-player-helpers.js';
 
 const heartbeatSeconds = 30;
 const viewedReportSeconds = 10;
@@ -58,6 +58,44 @@ function showCompleted(root, result) {
     if (result.courseCompleted) {
         document.querySelector('[data-learning-course-done]')?.classList.remove('d-none');
     }
+
+    refreshPlayer();
+}
+
+// An item that completes in the background (minimum time, video, a package's runtime) can open the next items: the
+// outline's locks, ticks and section counts, the progress and the Previous/Next buttons are swapped in from a fresh copy
+// of this page, so the learner sees them without reloading.
+let refreshing = null;
+
+async function refreshPlayer() {
+    if (refreshing) {
+        return refreshing;
+    }
+
+    refreshing = (async () => {
+        try {
+            const response = await fetch(window.location.href, {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            const fresh = new DOMParser().parseFromString(await response.text(), 'text/html');
+            const parts = doc => new Map([...doc.querySelectorAll('[data-learning-refresh]')].map(node => [node.dataset.learningRefresh, node]));
+
+            swapRefreshed(parts(document), parts(fresh));
+            document.querySelectorAll('[data-learning-toggle-sections]').forEach(button => button.learningSections?.());
+        } catch {
+            // The page stays as it is; the next page shows the new state.
+        } finally {
+            refreshing = null;
+        }
+    })();
+
+    return refreshing;
 }
 
 // The bar and "3 of 7 complete · 43%" beside it.
@@ -117,8 +155,12 @@ function toggleSections(button) {
         update();
     });
 
-    sections().forEach(section => section.addEventListener('toggle', update));
-    update();
+    // The outline is swapped in again when an item completes in the background: listen to its new sections.
+    button.learningSections = () => {
+        sections().forEach(section => section.addEventListener('toggle', update));
+        update();
+    };
+    button.learningSections();
 }
 
 // The share of the video's length covered by the ranges the learner played.
@@ -234,6 +276,9 @@ function trackTime(root) {
 }
 
 document.querySelectorAll('[data-learning-toggle-sections]').forEach(toggleSections);
+
+// A package's runtime reports through its own script; it tells the page when the server completed the item.
+document.addEventListener('learning:item-completed', () => refreshPlayer());
 
 document.querySelectorAll('[data-learning-player]').forEach(root => {
     trackTime(root);

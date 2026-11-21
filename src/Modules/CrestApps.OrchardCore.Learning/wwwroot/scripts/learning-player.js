@@ -7,6 +7,21 @@
 	function progressText(template, completed, required, percent) {
 		return template.replace("{0}", String(completed)).replace("{1}", String(required)).replace("{2}", String(percent));
 	}
+	function swapRefreshed(current, fresh) {
+		const replaced = [];
+		for (const [key, node] of current) {
+			const next = fresh.get(key);
+			if (!next) continue;
+			const before = [...node.querySelectorAll("[data-learning-section]")];
+			const after = [...next.querySelectorAll("[data-learning-section]")];
+			if (before.length > 0 && before.length === after.length) after.forEach((section, index) => {
+				section.open = before[index].open;
+			});
+			node.replaceWith(next);
+			replaced.push(key);
+		}
+		return replaced;
+	}
 	function createActiveTimer(startedAt) {
 		let last = startedAt;
 		let visible = true;
@@ -70,6 +85,27 @@
 		});
 		showProgress(result);
 		if (result.courseCompleted) document.querySelector("[data-learning-course-done]")?.classList.remove("d-none");
+		refreshPlayer();
+	}
+	var refreshing = null;
+	async function refreshPlayer() {
+		if (refreshing) return refreshing;
+		refreshing = (async () => {
+			try {
+				const response = await fetch(window.location.href, {
+					credentials: "same-origin",
+					headers: { "X-Requested-With": "XMLHttpRequest" }
+				});
+				if (!response.ok) return;
+				const fresh = new DOMParser().parseFromString(await response.text(), "text/html");
+				const parts = (doc) => new Map([...doc.querySelectorAll("[data-learning-refresh]")].map((node) => [node.dataset.learningRefresh, node]));
+				swapRefreshed(parts(document), parts(fresh));
+				document.querySelectorAll("[data-learning-toggle-sections]").forEach((button) => button.learningSections?.());
+			} catch {} finally {
+				refreshing = null;
+			}
+		})();
+		return refreshing;
 	}
 	function showProgress(result) {
 		const progress = document.querySelector("[data-learning-progress]");
@@ -108,8 +144,11 @@
 			});
 			update();
 		});
-		sections().forEach((section) => section.addEventListener("toggle", update));
-		update();
+		button.learningSections = () => {
+			sections().forEach((section) => section.addEventListener("toggle", update));
+			update();
+		};
+		button.learningSections();
 	}
 	function watchedPercent(video) {
 		if (!video.duration || !Number.isFinite(video.duration)) return 0;
@@ -174,6 +213,7 @@
 		window.addEventListener("pagehide", leave);
 	}
 	document.querySelectorAll("[data-learning-toggle-sections]").forEach(toggleSections);
+	document.addEventListener("learning:item-completed", () => refreshPlayer());
 	document.querySelectorAll("[data-learning-player]").forEach((root) => {
 		trackTime(root);
 		trackVideo(root);
