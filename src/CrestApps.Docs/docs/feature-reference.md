@@ -306,6 +306,17 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Learning.Programs.RequiredLearning` | Required Learning | [Learning Programs](./modules/learning-programs#required-learning) |
 | `CrestApps.OrchardCore.Learning.Programs.TeamLearning` | Team Learning | [Learning Programs](./modules/learning-programs#team-learning) |
 
+## Surveys
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Surveys` | Surveys | [Surveys](./modules/surveys/index.md) |
+| `CrestApps.OrchardCore.Surveys.Invitations` | Survey Invitations | [Collecting responses](./modules/surveys/collecting.md#invitations) |
+| `CrestApps.OrchardCore.Surveys.Embedding` | Survey Embedding | [Collecting responses](./modules/surveys/collecting.md#embedding) |
+| `CrestApps.OrchardCore.Surveys.Qti` | QTI Question Import | [Versions](./modules/surveys/versions.md#bank-questions) |
+| `CrestApps.OrchardCore.Surveys.Api` | Surveys API | [Surveys API](./modules/surveys/api.md) |
+| `CrestApps.OrchardCore.Surveys.AI` | Surveys AI | [Surveys AI](./modules/surveys/ai.md) |
+
 ## Data connectors
 
 | Feature ID | Name | Docs |
