@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Records;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -46,6 +47,7 @@ internal sealed class ContentItemRecordSource : IRecordSource
 
     public string Kind => RecordKind;
 
+    [JsonIgnore]
     public LocalizationSource DisplayName => LocalizationSource.Create<ContentItemRecordSource>("Content item");
 
     public async Task<bool> CanSearchAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)

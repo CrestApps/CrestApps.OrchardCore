@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Calendars.Core.External;
 using CrestApps.OrchardCore.Calendars.Core.ICalendar;
 using CrestApps.OrchardCore.Calendars.Models;
@@ -48,6 +49,7 @@ public sealed class ICalendarUrlProvider : ICalendarProvider
     public string Name => ProviderName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; } = LocalizationSource.Create<ICalendarUrlProvider>("iCalendar address (.ics)");
 
     /// <inheritdoc />

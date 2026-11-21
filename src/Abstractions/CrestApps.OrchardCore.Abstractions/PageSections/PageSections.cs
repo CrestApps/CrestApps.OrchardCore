@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Localization;
 
@@ -17,6 +18,7 @@ public sealed class PageSection
     /// <summary>
     /// Gets or sets the title shown in the side menu.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource Title { get; set; }
 
     /// <summary>

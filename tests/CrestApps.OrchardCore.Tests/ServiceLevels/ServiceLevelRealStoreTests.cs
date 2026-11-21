@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.BusinessHours.Core;
@@ -349,6 +350,7 @@ public sealed class ServiceLevelRealStoreTests
     {
         public string Name => "Tickets";
 
+        [JsonIgnore]
         public LocalizationSource DisplayName { get; } = LocalizationSource.Create<TicketsScope>("Tickets");
 
         public Task<IReadOnlyList<ServiceLevelOption>> GetMetricsAsync(CancellationToken cancellationToken = default)

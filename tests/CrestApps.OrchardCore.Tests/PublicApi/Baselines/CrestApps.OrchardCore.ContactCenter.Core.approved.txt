@@ -3899,6 +3899,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class AgentPresenceAvailabilitySource : CrestApps.OrchardCore.Teams.Services.ITeamMemberAvailabilitySource
     {
         public AgentPresenceAvailabilitySource(YesSql.ISession session) { }
+        [System.Text.Json.Serialization.JsonIgnore]
         public OrchardCore.Localization.LocalizationSource DisplayName { get; }
         public bool HonoredByDefault { get; }
         public string Name { get; }
@@ -4372,9 +4373,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public const int MaxBatchSize = 100;
         public ContactCenterOutbox(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventHandler> handlers, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterOutboxStore outboxStore, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventStore eventStore, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor, CrestApps.OrchardCore.ContactCenter.IContactCenterFeatureWorkManager workManager, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterOutbox> logger, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor) { }
         public System.Threading.Tasks.Task DispatchAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DispatchAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Collections.Generic.IReadOnlyCollection<string> completedHandlerIds, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> DispatchDueAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> DispatchDueMessageAsync(string messageId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task DispatchHandlerAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, string handlerId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> DispatchRealTimeAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task EnqueueAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> SettleClaimAsync(string messageId, string ownerToken, long fenceToken, System.Collections.Generic.IReadOnlyCollection<string> completedHandlerIds, string error, bool handlerUnavailable, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -5318,9 +5321,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IContactCenterOutbox
     {
         System.Threading.Tasks.Task DispatchAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task DispatchAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Collections.Generic.IReadOnlyCollection<string> completedHandlerIds, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> DispatchDueAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> DispatchDueMessageAsync(string messageId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task DispatchHandlerAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, string handlerId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> DispatchRealTimeAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task EnqueueAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> SettleClaimAsync(string messageId, string ownerToken, long fenceToken, System.Collections.Generic.IReadOnlyCollection<string> completedHandlerIds, string error, bool handlerUnavailable, System.Threading.CancellationToken cancellationToken = default);
     }
@@ -5350,6 +5355,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterProjectionCheckpoint> FindByHandlerAsync(string handlerId, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IContactCenterRealTimeEventHandler : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventHandler { }
     public interface IContactCenterRecordingService
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingCommandResult> AutoResumeAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);

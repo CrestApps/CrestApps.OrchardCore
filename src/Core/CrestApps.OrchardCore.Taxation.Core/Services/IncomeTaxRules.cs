@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.Text.Json.Serialization;
 using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
@@ -419,6 +420,7 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
     public string Name => ProviderName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Numbering;
@@ -16,6 +17,7 @@ public sealed class NumberSeries
     /// <summary>
     /// Gets or sets the title shown for the series.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource Title { get; set; }
 
     /// <summary>

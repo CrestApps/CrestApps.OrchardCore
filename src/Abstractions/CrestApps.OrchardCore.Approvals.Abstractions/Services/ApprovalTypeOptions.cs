@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Approvals.Services;
@@ -28,11 +29,13 @@ public sealed class ApprovalType
     /// <summary>
     /// Gets or sets what people see, such as "Pay run".
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; set; }
 
     /// <summary>
     /// Gets or sets what is approved, for the policy editor.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource Description { get; set; }
 
     /// <summary>

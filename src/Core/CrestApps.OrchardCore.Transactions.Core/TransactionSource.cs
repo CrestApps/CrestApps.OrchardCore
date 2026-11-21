@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Transactions.Core;
@@ -27,10 +28,12 @@ public sealed class TransactionSource
     /// Gets or sets the display name shown in the report and its source filter, translated in the language of the
     /// request that shows it.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; set; }
 
     /// <summary>
     /// Gets or sets the optional description of the source, translated in the language of the request that shows it.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource Description { get; set; }
 }

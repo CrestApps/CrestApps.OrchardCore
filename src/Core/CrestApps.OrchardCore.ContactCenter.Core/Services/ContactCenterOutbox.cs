@@ -135,9 +135,82 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     }
 
     /// <inheritdoc/>
-    public async Task DispatchAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
+    public Task DispatchAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
+        => DispatchAsync(interactionEvent, [], cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<string>> DispatchRealTimeAsync(InteractionEvent interactionEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);
+
+        var handlers = _handlers.Where(IsRealTime).ToArray();
+
+        if (handlers.Length == 0)
+        {
+            return [];
+        }
+
+        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Area);
+
+        if (workLease is null)
+        {
+            return [];
+        }
+
+        return await RunInHandlerContextAsync(() => RunRealTimeHandlersAsync(interactionEvent, handlers, cancellationToken));
+    }
+
+    private async Task<IReadOnlyCollection<string>> RunRealTimeHandlersAsync(
+        InteractionEvent interactionEvent,
+        IContactCenterEventHandler[] handlers,
+        CancellationToken cancellationToken)
+    {
+        var completed = new List<string>(handlers.Length);
+
+        foreach (var handler in handlers)
+        {
+            var handlerId = handler.HandlerId;
+            var handlerStarted = Stopwatch.GetTimestamp();
+
+            try
+            {
+                await _scopeExecutor.ExecuteAsync<IContactCenterOutbox>(outbox =>
+                    outbox.DispatchHandlerAsync(interactionEvent, handlerId, cancellationToken));
+
+                ContactCenterDiagnostics.RecordOutboxHandler(handlerId, Stopwatch.GetElapsedTime(handlerStarted), exception: null);
+                completed.Add(handlerId);
+            }
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+            {
+                ContactCenterDiagnostics.RecordOutboxHandler(handlerId, Stopwatch.GetElapsedTime(handlerStarted), ex);
+
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // Not lost: the handler stays incomplete, so it runs again with the event's other handlers.
+                ContactCenterDiagnostics.RecordOutboxHandler(handlerId, Stopwatch.GetElapsedTime(handlerStarted), ex);
+
+                _logger.LogWarning(
+                    ex,
+                    "Real-time handler '{Handler}' failed for the Contact Center event '{EventType}' ({EventId}); it runs again with the event's other handlers.",
+                    handlerId,
+                    interactionEvent.EventType,
+                    interactionEvent.ItemId.SanitizeLogValue());
+            }
+        }
+
+        return completed;
+    }
+
+    /// <inheritdoc/>
+    public async Task DispatchAsync(
+        InteractionEvent interactionEvent,
+        IReadOnlyCollection<string> completedHandlerIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(interactionEvent);
+        ArgumentNullException.ThrowIfNull(completedHandlerIds);
 
         var message = await GetOrCreateMessageAsync(interactionEvent, cancellationToken);
         using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Area);
@@ -171,6 +244,14 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             }
 
             return;
+        }
+
+        // The screens already heard of the event on the real-time pass; those handlers count as done for this delivery.
+        if (completedHandlerIds.Count > 0)
+        {
+            claimed.CompletedHandlerTypes = claimed.CompletedHandlerTypes
+                .Union(completedHandlerIds, StringComparer.Ordinal)
+                .ToArray();
         }
 
         using var activity = StartDispatch(interactionEvent, ContactCenterDiagnostics.DeliveryFirst);
@@ -442,10 +523,13 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         return await _queue.TryClaimAsync(message.ItemId, _claimLease, cancellationToken);
     }
 
-    private async Task<(string Error, bool HandlerUnavailable)> RunHandlersAsync(
+    private Task<(string Error, bool HandlerUnavailable)> RunHandlersAsync(
         InteractionEvent interactionEvent,
         ContactCenterOutboxMessage message,
         CancellationToken cancellationToken)
+        => RunInHandlerContextAsync(() => RunHandlersInContextAsync(interactionEvent, message, cancellationToken));
+
+    private async Task<T> RunInHandlerContextAsync<T>(Func<Task<T>> run)
     {
         // Handlers run after the commit that published the event, which can be after the request that made it has ended
         // (an answer command its timeout gave up waiting on keeps running), or on the background retry pass. Without an
@@ -455,20 +539,28 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         if (_httpContextAccessor.HttpContext is not null ||
             ShellScope.Context is null)
         {
-            return await RunHandlersInContextAsync(interactionEvent, message, cancellationToken);
+            return await run();
         }
 
         _httpContextAccessor.HttpContext = ShellScope.Context.CreateHttpContext();
 
         try
         {
-            return await RunHandlersInContextAsync(interactionEvent, message, cancellationToken);
+            return await run();
         }
         finally
         {
             _httpContextAccessor.HttpContext = null;
         }
     }
+
+    private static bool IsRealTime(IContactCenterEventHandler handler)
+        => handler is IContactCenterRealTimeEventHandler;
+
+    // The handlers that push to someone's screen go first, so the push never waits for the slower handlers of the event.
+    private IEnumerable<string> OrderRealTimeFirst(IEnumerable<string> handlerIds)
+        => handlerIds.OrderBy(handlerId => _handlers.Any(handler =>
+            IsRealTime(handler) && string.Equals(handler.HandlerId, handlerId, StringComparison.Ordinal)) ? 0 : 1);
 
     private async Task<(string Error, bool HandlerUnavailable)> RunHandlersInContextAsync(
         InteractionEvent interactionEvent,
@@ -484,7 +576,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             ? message.ExpectedHandlerIds
             : _handlers.Select(handler => handler.HandlerId).ToArray();
 
-        foreach (var handlerId in expectedHandlerIds)
+        foreach (var handlerId in OrderRealTimeFirst(expectedHandlerIds))
         {
             var handler = _handlers.FirstOrDefault(candidate =>
                 string.Equals(candidate.HandlerId, handlerId, StringComparison.Ordinal));

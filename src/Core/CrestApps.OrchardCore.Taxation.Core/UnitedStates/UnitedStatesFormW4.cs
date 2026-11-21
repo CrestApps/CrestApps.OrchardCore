@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Taxation.Services;
 using OrchardCore.Localization;
 
@@ -147,6 +148,7 @@ public sealed class UnitedStatesFormW4WithholdingMethod : IIncomeTaxWithholdingM
     public string Name => UnitedStatesIncomeTax.FormW4Method;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />

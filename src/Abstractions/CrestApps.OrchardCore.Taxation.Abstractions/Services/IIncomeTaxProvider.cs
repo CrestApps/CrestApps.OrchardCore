@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Taxation.Models;
 using OrchardCore.Localization;
 
@@ -17,6 +18,7 @@ public interface IIncomeTaxProvider
     /// <summary>
     /// Gets what people see.
     /// </summary>
+    [JsonIgnore]
     LocalizationSource DisplayName { get; }
 
     /// <summary>

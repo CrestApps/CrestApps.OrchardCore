@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Timeline.Models;
@@ -21,6 +22,7 @@ public sealed class TimelineComposerKind
     /// <summary>
     /// Gets or sets the button's text.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource ButtonText { get; set; }
 
     /// <summary>

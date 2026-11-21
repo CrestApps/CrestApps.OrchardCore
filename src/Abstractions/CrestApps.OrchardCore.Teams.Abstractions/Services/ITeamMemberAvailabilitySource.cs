@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Teams.Services;
@@ -18,6 +19,7 @@ public interface ITeamMemberAvailabilitySource
     /// <summary>
     /// Gets what the source is called where a person chooses the sources to honor.
     /// </summary>
+    [JsonIgnore]
     LocalizationSource DisplayName => null;
 
     /// <summary>

@@ -195,7 +195,7 @@ public sealed class FulfillmentOrderBuilderTests
             },
             Lines =
             [
-                new OrderLine { LineId = "l1", ContentItemId = "p1", VariantId = "v1", Title = "Tee", VariantTitle = "White / S", Quantity = 3, ProductType = ProductType.Good },
+                new OrderLine { LineId = "l1", ContentItemId = "p1", VariantId = "v1", Title = "Tee (White / S)", VariantTitle = "White / S", Quantity = 3, ProductType = ProductType.Good },
                 new OrderLine { LineId = "l2", ContentItemId = "d1", Title = "Digital art", Quantity = 1, ProductType = ProductType.Digital },
             ],
         };

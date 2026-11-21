@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using OrchardCore.Modules;
@@ -15,6 +16,7 @@ internal sealed class CalendarAbsenceAvailabilitySource : ITeamMemberAvailabilit
     public string Name => "CalendarAbsences";
 
     /// <inheritdoc/>
+    [JsonIgnore]
     public global::OrchardCore.Localization.LocalizationSource DisplayName { get; } = global::OrchardCore.Localization.LocalizationSource.Create<CalendarAbsenceAvailabilitySource>("Not out of office or on time off in the calendar");
 
     private readonly ICalendarService _calendars;

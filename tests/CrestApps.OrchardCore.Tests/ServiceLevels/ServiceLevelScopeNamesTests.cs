@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
@@ -45,6 +46,7 @@ public sealed class ServiceLevelScopeNamesTests
     {
         public string Name => "Tickets";
 
+        [JsonIgnore]
         public LocalizationSource DisplayName => LocalizationSource.Create<TicketsScope>("Tickets");
 
         public Task<IReadOnlyList<ServiceLevelOption>> GetMetricsAsync(CancellationToken cancellationToken = default)

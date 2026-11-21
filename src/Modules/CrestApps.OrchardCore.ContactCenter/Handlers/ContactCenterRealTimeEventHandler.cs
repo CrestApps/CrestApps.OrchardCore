@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 /// desktop and supervisor dashboards stay live. The handler is read-only with respect to domain state; it
 /// only enriches events and forwards them to <see cref="IContactCenterRealTimeNotifier"/>.
 /// </summary>
-public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandler
+public sealed class ContactCenterRealTimeEventHandler : IContactCenterRealTimeEventHandler
 {
     private readonly IContactCenterRealTimeNotifier _notifier;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
