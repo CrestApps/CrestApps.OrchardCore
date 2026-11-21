@@ -88,13 +88,19 @@
   
   <PropertyGroup Label="Analysis rules">
 
+    <!-- A local build fails on a warning, as the CI build (-warnaserror) always has. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- The IDE rules .editorconfig sets to warning are enforced by the build, not only shown in the editor. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
     <AnalysisLevel>latest-Recommended</AnalysisLevel>
 
     <!-- Member is explicitly initialized to its default value -->
     <NoWarn>$(NoWarn);CA1805</NoWarn>
 
-    <!-- The behavior could vary based on the current user's locale setting -->
-    <NoWarn>$(NoWarn);CA1304;CA1305;CA1310</NoWarn>
+    <!-- The behavior could vary based on the current user's locale setting. CA1305 is set per folder in .editorconfig. -->
+    <NoWarn>$(NoWarn);CA1304;CA1310</NoWarn>
 
     <!-- Specify a culture or use an invariant version to avoid implicit dependency on current culture -->
     <NoWarn>$(NoWarn);CA1311</NoWarn>
@@ -122,9 +128,6 @@
 
     <!-- Reserved keyword -->
     <NoWarn>$(NoWarn);CA1716</NoWarn>
-
-    <!-- Type owns disposable field(s) -->
-    <NoWarn>$(NoWarn);CA1001</NoWarn>
 
     <!-- Exception type is not sufficiently specific -->
     <NoWarn>$(NoWarn);CA2201</NoWarn>

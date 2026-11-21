@@ -152,8 +152,9 @@
         }
         @if (Model.CanCancel)
         {
-            <a class="btn btn-outline-secondary action-bar-secondary" asp-action="Cancel" asp-route-id="@request.ItemId" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Withdraw"]" data-message="@T["Withdraw this request? Its approvers are no longer asked."]" data-ok-text="@T["Withdraw"]">@T["Withdraw"]</a>
+            <button class="btn btn-outline-secondary action-bar-secondary" type="submit" asp-action="Cancel" asp-route-id="@request.ItemId" data-confirm-title="@T["Withdraw"]" data-confirm="@T["Withdraw this request? Its approvers are no longer asked."]" data-confirm-ok="@T["Withdraw"]">@T["Withdraw"]</button>
         }
         <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Back"]</a>
     </div>
 </form>
+<script asp-name="crestapps-browser" at="Foot"></script>

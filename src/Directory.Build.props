@@ -1,3 +1,13 @@
 <Project>
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!--
+    APIs the source projects must not call (RS0030), listed with what to use instead in BannedSymbols.txt at the
+    repository root. Only the projects under src get the analyzer: the tests build fixtures with DateTime.UtcNow on
+    purpose. A call that has to stay is wrapped in '#pragma warning disable RS0030' with the reason beside it.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)../BannedSymbols.txt" Link="BannedSymbols.txt" Visible="false" />
+  </ItemGroup>
 </Project>

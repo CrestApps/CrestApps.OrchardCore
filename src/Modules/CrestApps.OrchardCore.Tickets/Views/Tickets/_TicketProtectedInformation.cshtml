@@ -47,7 +47,7 @@
                                     <form asp-action="RemoveProtected" asp-route-id="@ticketId" method="post">
                                         <input type="hidden" name="itemId" value="@item.ItemId" />
                                         <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="@T["Remove {0}", item.Label]" aria-label="@T["Remove {0}", item.Label]"
-                                                data-url-af="RemoveUrl" data-title="@T["Remove"]" data-message="@T["Remove {0}? It can't be brought back.", item.Label]">
+                                                data-url-af="RemoveUrl" data-confirm-title="@T["Remove"]" data-confirm="@T["Remove {0}? It can't be brought back.", item.Label]">
                                             <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
                                         </button>
                                     </form>
@@ -94,3 +94,5 @@
         </div>
     </div>
 }
+
+<script asp-name="crestapps-browser" at="Foot"></script>

@@ -30,6 +30,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly CopilotCallbackUrlProvider _callbackUrlProvider;
     private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
+    private readonly IAIEndpointPolicy _endpointPolicy;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -41,6 +42,8 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="callbackUrlProvider">The callback url provider.</param>
+    /// <param name="optionsUpdateNotifier">The notifier that refreshes the Copilot options after a save.</param>
+    /// <param name="endpointPolicy">The policy that keeps the base URL off the site's own network.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CopilotSettingsDisplayDriver(
@@ -49,6 +52,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         IDataProtectionProvider dataProtectionProvider,
         CopilotCallbackUrlProvider callbackUrlProvider,
         IOptionsUpdateNotifier optionsUpdateNotifier,
+        IAIEndpointPolicy endpointPolicy,
         IHtmlLocalizer<CopilotSettingsDisplayDriver> htmlLocalizer,
         IStringLocalizer<CopilotSettingsDisplayDriver> stringLocalizer)
     {
@@ -57,6 +61,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         _dataProtectionProvider = dataProtectionProvider;
         _callbackUrlProvider = callbackUrlProvider;
         _optionsUpdateNotifier = optionsUpdateNotifier;
+        _endpointPolicy = endpointPolicy;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -108,6 +113,12 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, CopilotSettings settings, UpdateEditorContext context)
     {
+        // The editor is shown only to those who may manage the settings; the AI settings group can be posted by others.
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, CopilotPermissionProvider.ManageCopilotSettings))
+        {
+            return null;
+        }
+
         var model = new CopilotSettingsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
@@ -134,6 +145,9 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         else if (settings.AuthenticationType == CopilotAuthenticationType.ApiKey)
         {
             // BYOK (API Key) validation
+            // The stored key was given for the stored base URL; another scheme, host or port drops it, so a user who never
+            // saw it can't send it to a host of their own.
+            settings.ProtectedApiKey = SecretDestination.Keep(settings.ProtectedApiKey, SecretDestination.SameOrigin(settings.BaseUrl, model.BaseUrl));
             settings.ProviderType = model.ProviderType;
             settings.BaseUrl = model.BaseUrl;
             settings.WireApi = model.WireApi;
@@ -148,6 +162,12 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
             if (string.IsNullOrWhiteSpace(settings.BaseUrl))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["Base URL is required."]);
+            }
+            else if (!_endpointPolicy.IsAllowed(settings.BaseUrl))
+            {
+                // The Copilot SDK builds its own transport, which the connect-time egress guard does not cover, so the base
+                // URL is checked here, as every other AI endpoint is when it is saved.
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
             }
 
             if (string.IsNullOrWhiteSpace(settings.DefaultModel))

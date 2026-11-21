@@ -47,11 +47,14 @@ public interface ISubscriptionManager : ICatalogManager<Subscription>
     Task<IReadOnlyList<Subscription>> GetDueForRenewalAsync(DateTime asOfUtc, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns the past-due subscriptions whose grace period has elapsed.
+    /// Returns the past-due subscriptions whose grace period has elapsed, and the canceled subscriptions whose paid period
+    /// has ended.
     /// </summary>
     /// <param name="asOfUtc">The UTC time to evaluate against.</param>
+    /// <param name="skip">How many of them to skip, in the order they were recorded.</param>
+    /// <param name="take">The most to return.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    Task<IReadOnlyList<Subscription>> GetLapsedAsync(DateTime asOfUtc, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Subscription>> GetLapsedAsync(DateTime asOfUtc, int skip, int take, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns a page of subscriptions for the administration report.

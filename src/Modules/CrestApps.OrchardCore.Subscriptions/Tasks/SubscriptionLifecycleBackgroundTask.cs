@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -31,6 +32,15 @@ namespace CrestApps.OrchardCore.Subscriptions.Tasks;
     LockExpiration = 120_000)]
 public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
 {
+    private const int LapsedPageSize = 100;
+
+    // Enough for one run to stay within its lock; what is left is expired by the next run.
+    private const int MaxLapsedPages = 10;
+
+    // The sweep runs every half hour, so a canceled subscription is found within the hour its paid period ends. One whose
+    // period ended long before is the backlog recorded before the sweep looked for canceled subscriptions.
+    private static readonly TimeSpan _backlogAge = TimeSpan.FromDays(7);
+
     private readonly ILogger _logger;
 
     /// <summary>
@@ -57,7 +67,8 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
         await RenewDueAsync(subscriptionManager, lifecycleService, providerResolver, run, now, cancellationToken);
     }
 
-    // A past-due agreement whose grace window ran out is over. Leaving it past due would give away the plan.
+    // A past-due agreement whose grace window ran out is over, and so is a canceled one whose paid period ended. Leaving
+    // either as it is would give away the plan: nothing else revokes what it granted, such as a sold site.
     private async Task ExpireLapsedAsync(
         ISubscriptionManager subscriptionManager,
         ISubscriptionLifecycleService lifecycleService,
@@ -65,30 +76,62 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
         DateTime now,
         CancellationToken cancellationToken)
     {
-        var lapsed = await subscriptionManager.GetLapsedAsync(now, cancellationToken);
+        // An expired agreement leaves the query, so each page starts after the ones that could not be expired.
+        var stuck = 0;
 
-        foreach (var subscription in lapsed)
+        for (var page = 0; page < MaxLapsedPages; page++)
         {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
+            var lapsed = await subscriptionManager.GetLapsedAsync(now, stuck, LapsedPageSize, cancellationToken);
 
-            try
+            foreach (var subscription in lapsed)
             {
-                await lifecycleService.ExpireAsync(
-                    subscription.ItemId,
-                    "The grace period for the unpaid renewal elapsed.",
-                    cancellationToken);
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                if (!await TryExpireAsync(lifecycleService, subscription, now, cancellationToken))
+                {
+                    stuck++;
+                    run.AddItems(1, CrestAppsOrchardCoreTelemetry.OutcomeError);
+
+                    continue;
+                }
 
                 run.AddItems(1, "expired");
             }
-            catch (Exception exception)
+
+            if (lapsed.Count < LapsedPageSize)
             {
-                // One bad agreement must not stop the sweep; it stays lapsed and is retried next run.
-                run.AddItems(1, CrestAppsOrchardCoreTelemetry.OutcomeError);
-                _logger.LogError(exception, "Failed to expire lapsed subscription '{SubscriptionId}'.", subscription.ItemId);
+                return;
             }
+        }
+    }
+
+    private async Task<bool> TryExpireAsync(ISubscriptionLifecycleService lifecycleService, Subscription subscription, DateTime now, CancellationToken cancellationToken)
+    {
+        var canceled = subscription.Status == SubscriptionStatus.Canceled;
+
+        try
+        {
+            // A store with an "expired" e-mail workflow would otherwise mail everyone who ever canceled, the first time the
+            // sweep runs after the upgrade.
+            await lifecycleService.ExpireAsync(
+                subscription.ItemId,
+                canceled
+                    ? "The subscription was canceled and the period it was paid for ended."
+                    : "The grace period for the unpaid renewal elapsed.",
+                canceled && subscription.CurrentPeriodEndUtc < now - _backlogAge ? SubscriptionConstants.LapsedBacklogSource : null,
+                cancellationToken);
+
+            return true;
+        }
+        catch (Exception exception)
+        {
+            // One bad agreement must not stop the sweep; it stays lapsed and is retried next run.
+            _logger.LogError(exception, "Failed to expire lapsed subscription '{SubscriptionId}'.", subscription.ItemId);
+
+            return false;
         }
     }
 

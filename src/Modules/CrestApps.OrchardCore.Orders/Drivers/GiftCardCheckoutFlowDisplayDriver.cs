@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core;
 using CrestApps.OrchardCore.Checkout.Core.Services;
@@ -102,7 +103,7 @@ internal sealed class GiftCardCheckoutFlowDisplayDriver : CheckoutFlowDisplayDri
             return await EditStepAsync(flow, context);
         }
 
-        var address = _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
+        var address = ClientNetworkKey.NetworkOnly(_httpContextAccessor.HttpContext);
 
         if (await _giftCards.ApplyAsync(flow, model.GiftCardCode, address) is { } error)
         {

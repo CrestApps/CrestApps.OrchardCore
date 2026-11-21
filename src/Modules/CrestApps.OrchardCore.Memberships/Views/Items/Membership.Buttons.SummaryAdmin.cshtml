@@ -2,5 +2,5 @@
 
 @if (Model.Value.Status == MembershipStatus.Active)
 {
-    <a asp-action="End" asp-controller="MembershipsAdmin" asp-route-itemId="@Model.Value.ItemId" class="btn btn-danger btn-sm" data-url-af="UnsafeUrl" data-title="@T["End the membership"]" data-message="@T["Its member is taken out of its roles now. Nothing is refunded."]">@T["End now"]</a>
+    <a asp-action="End" asp-controller="MembershipsAdmin" asp-route-itemId="@Model.Value.ItemId" class="btn btn-danger btn-sm" data-url-af="UnsafeUrl RemoveUrl" data-title="@T["End the membership"]" data-message="@T["Its member is taken out of its roles now. Nothing is refunded."]">@T["End now"]</a>
 }

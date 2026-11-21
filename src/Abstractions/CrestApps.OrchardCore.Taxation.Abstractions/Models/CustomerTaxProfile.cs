@@ -29,6 +29,13 @@ public sealed class CustomerTaxProfile
     public string VatNumber { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the registration number was verified by the store (an administrator, or
+    /// an account the store manages). Reverse charge applies only to a business with a verified number: a shopper who
+    /// calls themselves a business is taxed like anyone else.
+    /// </summary>
+    public bool TaxRegistrationVerified { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the customer is tax exempt.
     /// </summary>
     public bool IsTaxExempt { get; set; }

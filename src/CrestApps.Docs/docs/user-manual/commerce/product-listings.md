@@ -214,11 +214,11 @@ AI agents read your products from feeds too. **Settings > Commerce > Agent feeds
 
 ### Push the feed over SFTP every day
 
-OpenAI reads the feed from an SFTP server it gives the stores it approves. In the **Daily SFTP push** card, tick **Push the full feed over SFTP every day** and enter the **Host**, **Port**, **User name**, and a **Password** or **Private key** (with its **Key passphrase**) OpenAI gave you. Saved passwords and keys aren't shown again: leave a field empty to keep it, or tick **Remove the saved password** or **Remove the saved key**.
+OpenAI reads the feed from an SFTP server it gives the stores it approves. In the **Daily SFTP push** card, tick **Push the full feed over SFTP every day** and enter the **Host**, **Port**, **User name**, and a **Password** or **Private key** (with its **Key passphrase**) OpenAI gave you. Saved passwords and keys aren't shown again: leave a field empty to keep it, or tick **Remove the saved password** or **Remove the saved key**. Changing the host, port, user name or fingerprint clears them, so enter them again.
 
 | Field | What it does |
 | --- | --- |
-| **Host key fingerprint** | Optional. The server's fingerprint: the push stops when the server shows another key. |
+| **Host key fingerprint** | Required to push. The server's fingerprint (`SHA256:...`, or `MD5:...` for an older one; separate several with commas): the push stops when the server shows another key. |
 | **Folder** | The folder on the server the files go in. |
 | **File format** | **JSON lines, gzipped** or **CSV, gzipped**. |
 | **Currency** | Optional. The currency the feed is priced in; each product's own when empty. |

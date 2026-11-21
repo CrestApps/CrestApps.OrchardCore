@@ -93,12 +93,15 @@ window.checkoutPayment = (function () {
         var deferred = !!checked && checked.getAttribute('data-defers-payment') === 'true';
         var label = document.querySelector('#checkout-submit .checkout-submit-label');
 
-        if (label && config.deferredSubmitLabel) {
+        // The page gives the words on the label itself (data-deferred-text), so the view keeps them out of its script.
+        var deferredText = label && (label.getAttribute('data-deferred-text') || config.deferredSubmitLabel);
+
+        if (label && deferredText) {
             if (!label.hasAttribute('data-default-text')) {
                 label.setAttribute('data-default-text', label.textContent);
             }
 
-            label.textContent = deferred ? config.deferredSubmitLabel : label.getAttribute('data-default-text');
+            label.textContent = deferred ? deferredText : label.getAttribute('data-default-text');
         }
 
         var dueLabels = document.querySelectorAll('[data-checkout-due-label]');
@@ -139,7 +142,7 @@ window.checkoutPayment = (function () {
             // A body that is not JSON is treated as a generic failure below.
         }
 
-        return { ok: response.ok, status: response.status, payload: payload };
+        return { ok: response.ok, status: response.status, retryAfter: Number(response.headers.get('Retry-After')) || 0, payload: payload };
     }
 
     // Asks the server whether the checkout settled. The provider may still be finalizing, so a pending answer
@@ -148,6 +151,14 @@ window.checkoutPayment = (function () {
     async function pollUntilSettled() {
         for (var attempt = 0; attempt < config.maxStatusAttempts; attempt++) {
             var result = await postJson(config.statusEndpoint, {});
+
+            // Polls are limited per network, and buyers behind one address share it. Being told to slow down says nothing
+            // about the payment, which may well be taken: wait as asked and ask again.
+            if (result.status === 429) {
+                await new Promise(function (resolve) { setTimeout(resolve, Math.max(result.retryAfter * 1000, config.statusIntervalMs)); });
+
+                continue;
+            }
 
             if (!result.ok) {
                 showError(result.payload && result.payload.errorMessage);

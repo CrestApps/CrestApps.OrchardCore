@@ -1,0 +1,7 @@
+@model ShapeViewModel<StockMovementRow>
+
+@{
+    var quantity = Model.Value.Movement.Quantity;
+}
+
+<span class="badge ta-badge fw-normal" title="@T["Change"]"><i class="fa-solid @(quantity < 0 ? "fa-arrow-down text-danger" : "fa-arrow-up text-success")" aria-hidden="true"></i> @(quantity > 0 ? "+" + quantity : quantity.ToString())</span>

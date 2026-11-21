@@ -137,7 +137,9 @@
             </form>
         }
 
-        @if (subscription.Status is SubscriptionStatus.Paused or SubscriptionStatus.PastDue)
+        @* An expired offline agreement the customer did not cancel can be restored, for example after a late payment. *@
+        @if (subscription.Status is SubscriptionStatus.Paused or SubscriptionStatus.PastDue ||
+            (subscription.Status == SubscriptionStatus.Expired && string.IsNullOrEmpty(subscription.ProviderSubscriptionId) && subscription.CanceledUtc is null && !subscription.CancelAtPeriodEnd))
         {
             <form asp-action="Resume" asp-route-itemId="@subscription.ItemId" method="post">
                 <button type="submit" class="btn btn-primary"

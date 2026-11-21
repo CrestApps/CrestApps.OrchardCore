@@ -1,0 +1,9 @@
+@model ShapeViewModel<StockMovementRow>
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@{
+    // Stored times are UTC; people read them in the site's time zone.
+    var local = (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(Model.Value.Movement.Utc, DateTimeKind.Utc))).DateTime;
+}
+
+<span class="badge ta-badge fw-normal text-nowrap" title="@T["When"]"><i class="fa-regular fa-clock text-info" aria-hidden="true"></i> @local.ToString("g")</span>

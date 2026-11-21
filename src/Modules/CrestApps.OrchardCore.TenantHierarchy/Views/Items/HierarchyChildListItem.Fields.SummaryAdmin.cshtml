@@ -1,0 +1,4 @@
+@model ShapeViewModel<HierarchyChildListItem>
+
+@* Plain text: the platform has no edit page for a child tenant; its parent manages it. *@
+<span class="text-break">@Model.Value.Child.DisplayName</span>

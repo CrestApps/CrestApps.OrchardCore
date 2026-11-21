@@ -70,8 +70,9 @@ Two people changing the same line at once can't overwrite each other: the second
 
 Keep stock in more than one place, such as a warehouse and a shop, under **Settings > Commerce > Inventory**, **Locations**:
 
-1. Fill in the blank **Add a location** with its **Name**, such as *Main warehouse*, and, if you like, an **Address** for your staff.
-2. Click **Save**. A new blank location is there for the next one.
+1. Fill in the blank **Add a location** with its **Name**, such as *Main warehouse*, and, if you like, an **Address**.
+2. Tick **Show to shoppers** for a place buyers can visit or pick up from, such as a shop. Shoppers and storefront apps then see whether products are in stock there, with the location's name and address. Leave it off for a warehouse: its stock and address stay with your staff. It's off for every location until you tick it, including locations you had before this setting existed.
+3. Click **Save**. A new blank location is there for the next one.
 
 The **Default location** is always there. It holds the stock you counted before there were locations, and stock imported without a location; rename it, but it can't be removed. Tick **Remove this location** to remove another: units still there stay on their items and can be moved to another location.
 

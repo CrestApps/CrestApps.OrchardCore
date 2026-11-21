@@ -26,6 +26,12 @@ public static class MarketplaceTelemetry
     public const string OutcomeFailed = "failed";
 
     /// <summary>
+    /// Whether a transfer was made isn't known yet (the provider couldn't be reached, or answered with a temporary or
+    /// idempotency error); the payout stays pending with its key.
+    /// </summary>
+    public const string OutcomeUnsettled = "unsettled";
+
+    /// <summary>
     /// The meter of the marketplace.
     /// </summary>
     public static Meter Meter { get; } = CrestAppsOrchardCoreTelemetry.CreateMeter("Marketplace");

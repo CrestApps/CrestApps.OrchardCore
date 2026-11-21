@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Resources;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -22,6 +24,13 @@ using OrchardCore.Modules.Manifest;
         CommerceConstants.Features.Foundation,
         OrchardCoreFeatureIds.Users,
         AddressConstants.Feature.ModuleId,
+
+        // The account pages ask before removing an address with the shared browser helpers.
+        ResourcesConstants.Feature.Area,
+
+        // A guest's orders join an account only once its address is proved; an account with a password proves it on
+        // the "Confirm it's you" pages, which must be there.
+        UsersConstants.Feature.EmailOwnership,
     ]
 )]
 

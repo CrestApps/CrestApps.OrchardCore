@@ -7,9 +7,10 @@
     <button type="submit" class="btn btn-secondary btn-sm"
             data-url-af="RemoveUrl"
             data-title="@T["Retry now"]"
-            data-message="@T["Try to create the site {0} again now?", Model.Value.TenantName]"
+            data-confirm="@T["Try to create the site {0} again now?", Model.Value.TenantName]"
             data-ok-text="@T["Retry now"]"
             data-cancel-text="@T["Cancel"]">
         @T["Retry now"]
     </button>
 </form>
+<script asp-name="crestapps-browser" at="Foot"></script>

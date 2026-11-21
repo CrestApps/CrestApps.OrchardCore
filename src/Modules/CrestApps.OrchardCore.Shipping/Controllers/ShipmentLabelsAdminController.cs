@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce.Stores;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Settings;
 using YesSql;
 
@@ -17,8 +19,19 @@ namespace CrestApps.OrchardCore.Shipping.Controllers;
 /// Buys a carrier's label for a shipment being packed: weigh it, compare the carriers' rates, buy one. The shipment is
 /// then shipped with the label's carrier and tracking number.
 /// </summary>
+/// <remarks>
+/// A shipment gets one label: a purchase holds the shipment's lock from reading the shipment until the label is
+/// committed, and a shipment with a label isn't sold another. A label is bought only from rates quoted for the shipment,
+/// which <see cref="ShipmentLabelQuotes"/> binds to it.
+/// </remarks>
 public sealed class ShipmentLabelsAdminController : Controller
 {
+    private const string LabelLockPrefix = "SHIPMENT_LABEL_";
+
+    // The carrier sells the label while the lock is held, which can take a few seconds.
+    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(1);
+
     private readonly IShipmentStore _shipments;
     private readonly IShipmentService _shipmentService;
     private readonly IOrderStore _orders;
@@ -28,6 +41,8 @@ public sealed class ShipmentLabelsAdminController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly ISession _session;
+    private readonly IDistributedLock _distributedLock;
+    private readonly SignedTokenService _tokens;
 
     internal readonly IHtmlLocalizer H;
 
@@ -41,6 +56,8 @@ public sealed class ShipmentLabelsAdminController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         ISession session,
+        IDistributedLock distributedLock,
+        SignedTokenService tokens,
         IHtmlLocalizer<ShipmentLabelsAdminController> htmlLocalizer)
     {
         _shipments = shipments;
@@ -52,6 +69,8 @@ public sealed class ShipmentLabelsAdminController : Controller
         _authorizationService = authorizationService;
         _notifier = notifier;
         _session = session;
+        _distributedLock = distributedLock;
+        _tokens = tokens;
         H = htmlLocalizer;
     }
 
@@ -121,6 +140,7 @@ public sealed class ShipmentLabelsAdminController : Controller
 
         model.Error = quote.Error;
         model.QuoteId = quote.QuoteId;
+        model.QuoteToken = quote.Succeeded ? ShipmentLabelQuotes.Protect(_tokens, shipment, carrier, quote, shipFrom, order.ShippingAddress) : null;
         model.Rates = [.. quote.Rates.OrderBy(rate => rate.Amount)];
 
         return View(nameof(Label), model);
@@ -130,6 +150,36 @@ public sealed class ShipmentLabelsAdminController : Controller
     [Admin("shipping/shipments/{shipmentId}/label/buy", "ShipmentsLabelBuy")]
     public async Task<IActionResult> Buy(string shipmentId, ShipmentLabelViewModel model)
     {
+        if (!await _authorizationService.AuthorizeAsync(User, ShippingPermissions.FulfillOrders))
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrEmpty(shipmentId))
+        {
+            return NotFound();
+        }
+
+        // A double click, or a second member of staff, waits here and then finds the label the first one bought.
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LabelLockPrefix + shipmentId, _lockTimeout, _lockExpiration);
+
+        if (!locked)
+        {
+            await _notifier.WarningAsync(H["A label is being bought for this shipment right now. Check the shipment before buying another."]);
+
+            return RedirectToAction(nameof(Label), new { shipmentId });
+        }
+
+        await using (locker)
+        {
+            return await BuyLockedAsync(shipmentId, model);
+        }
+    }
+
+    // Reads the shipment inside its lock, so a label the previous holder bought is seen, and commits before the lock is
+    // let go.
+    private async Task<IActionResult> BuyLockedAsync(string shipmentId, ShipmentLabelViewModel model)
+    {
         var (shipment, order, carrier, result) = await LoadAsync(shipmentId);
 
         if (result is not null)
@@ -137,7 +187,18 @@ public sealed class ShipmentLabelsAdminController : Controller
             return result;
         }
 
-        var label = await carrier.BuyLabelAsync(model.QuoteId, model.RateId, HttpContext.RequestAborted);
+        var shipFrom = await GetShipFromAsync(await _siteService.GetSettingsAsync<ShippingSettings>());
+
+        if (!ShipmentLabelQuotes.IsFor(_tokens, model?.QuoteToken, shipment, carrier, model?.QuoteId, model?.RateId, shipFrom, order.ShippingAddress))
+        {
+            await _notifier.ErrorAsync(H["These rates weren't quoted for this shipment as it is now, or are over an hour old. Compare the rates again."]);
+
+            return RedirectToAction(nameof(Label), new { shipmentId });
+        }
+
+        // From the purchase to the commit, nothing stops for an aborted request: a label the carrier sold is paid for, and
+        // a shipment that didn't record it would be sold a second one.
+        var label = await carrier.BuyLabelAsync(model.QuoteId, model.RateId, CancellationToken.None);
 
         if (!label.Succeeded)
         {
@@ -150,12 +211,15 @@ public sealed class ShipmentLabelsAdminController : Controller
         shipment.LabelCost = label.Amount;
         shipment.LabelCurrency = label.Currency;
 
+        // Kept on the shipment even if it can't be shipped below, so the label isn't bought again.
+        await _shipments.UpdateAsync(shipment, CancellationToken.None);
+
         // The label is paid for, so the shipment is on its way with the carrier's tracking.
-        var shipped = await _shipmentService.ShipAsync(shipment, new ShipmentDetails(label.Carrier, label.TrackingNumber, label.TrackingUrl), HttpContext.RequestAborted);
+        var shipped = await _shipmentService.ShipAsync(shipment, new ShipmentDetails(label.Carrier, label.TrackingNumber, label.TrackingUrl), CancellationToken.None);
 
         try
         {
-            await _session.SaveChangesAsync(HttpContext.RequestAborted);
+            await _session.SaveChangesAsync(CancellationToken.None);
         }
         catch (ConcurrencyException)
         {
@@ -189,6 +253,13 @@ public sealed class ShipmentLabelsAdminController : Controller
         if (shipment.Status != ShipmentStatus.Pending)
         {
             await _notifier.WarningAsync(H["This shipment has already left."]);
+
+            return (null, null, null, RedirectToRoute("OrdersDetail", new { orderId = order.ItemId }));
+        }
+
+        if (!string.IsNullOrEmpty(shipment.LabelUrl))
+        {
+            await _notifier.WarningAsync(H["This shipment already has its label. Print it from the shipment."]);
 
             return (null, null, null, RedirectToRoute("OrdersDetail", new { orderId = order.ItemId }));
         }

@@ -1,4 +1,3 @@
-using System.Globalization;
 using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Services;
 using CrestApps.OrchardCore.Banking.Disbursements.Models;
@@ -79,7 +78,8 @@ internal sealed class DisbursementDisplayDriver : DisplayDriver<Disbursement>
             model.DestinationBankAccountId = disbursement.DestinationBankAccountId;
             model.PayeeName = disbursement.PayeeName;
             model.IsBusinessPayee = disbursement.IsBusinessPayee;
-            model.Amount = disbursement.Amount > 0 ? disbursement.Amount.ToString(CultureInfo.InvariantCulture) : null;
+            model.Amount = disbursement.Amount > 0 ? disbursement.Amount : null;
+            model.Currency = disbursement.Currency;
             model.Memo = disbursement.Memo;
             model.MethodOptions = _disbursementService.Providers
                 .Select(provider => new SelectListItem(provider.DisplayName, provider.Method, provider.Method == disbursement.Method))
@@ -108,7 +108,8 @@ internal sealed class DisbursementDisplayDriver : DisplayDriver<Disbursement>
         disbursement.IsBusinessPayee = model.IsBusinessPayee;
         disbursement.Memo = Clean(model.Memo);
 
-        if (decimal.TryParse(model.Amount?.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) && amount > 0)
+        // An amount that can't be read is also a model error from the binder, so it is never saved as another number.
+        if (model.Amount is decimal amount && amount > 0m)
         {
             disbursement.Amount = amount;
         }

@@ -1,0 +1,18 @@
+@model ShapeViewModel<HierarchyParentListItem>
+
+@{
+    var parent = Model.Value.Parent;
+    var policy = parent.Settings.GetParentPolicy();
+    var strategy = policy.DatabaseStrategy switch
+    {
+        ChildDatabaseStrategy.SqlitePerChild => T["SQLite per child"].Value,
+        ChildDatabaseStrategy.DatabasePerChild => T["Database per child"].Value,
+        ChildDatabaseStrategy.SchemaPerChild => T["Schema per child"].Value,
+        ChildDatabaseStrategy.TablePrefixPerChild => T["Table prefix per child"].Value,
+        _ => policy.DatabaseStrategy.ToString(),
+    };
+}
+
+<span class="badge ta-badge fw-normal"><i class="fa-solid fa-building text-info" aria-hidden="true"></i> @T["Parent"]</span>
+<span class="badge ta-badge fw-normal" title="@T["Child tenants"]"><i class="fa-solid fa-sitemap text-info" aria-hidden="true"></i> @T["{0} of {1} child tenants", parent.Children.Count, policy.MaxChildren]</span>
+<span class="badge ta-badge fw-normal" title="@T["Databases of the child tenants"]"><i class="fa-solid fa-database text-info" aria-hidden="true"></i> @strategy</span>

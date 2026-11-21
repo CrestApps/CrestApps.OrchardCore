@@ -57,12 +57,15 @@ internal sealed class AgentPlatformHandler : CatalogEntryHandlerBase<AgentPlatfo
             context.Result.Fail(new ValidationResult(S["Choose at least one protocol."], [nameof(AgentPlatform.Protocols)]));
         }
 
-        foreach (var url in new[] { context.Model.ProfileUrl, context.Model.WebhookUrl })
+        // The profile holds the keys the platform's signatures are checked with, so it is read over https only.
+        if (!string.IsNullOrWhiteSpace(context.Model.ProfileUrl) && (!Uri.TryCreate(context.Model.ProfileUrl, UriKind.Absolute, out var profileUri) || profileUri.Scheme != Uri.UriSchemeHttps))
         {
-            if (!string.IsNullOrWhiteSpace(url) && (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
-            {
-                context.Result.Fail(new ValidationResult(S["Enter a full address that starts with https://."], [url == context.Model.ProfileUrl ? nameof(AgentPlatform.ProfileUrl) : nameof(AgentPlatform.WebhookUrl)]));
-            }
+            context.Result.Fail(new ValidationResult(S["Enter a full address that starts with https://."], [nameof(AgentPlatform.ProfileUrl)]));
+        }
+
+        if (!string.IsNullOrWhiteSpace(context.Model.WebhookUrl) && (!Uri.TryCreate(context.Model.WebhookUrl, UriKind.Absolute, out var webhookUri) || webhookUri.Scheme != Uri.UriSchemeHttps && webhookUri.Scheme != Uri.UriSchemeHttp))
+        {
+            context.Result.Fail(new ValidationResult(S["Enter a full address that starts with https:// or http://."], [nameof(AgentPlatform.WebhookUrl)]));
         }
 
         ValidateRequestSigning(context);
@@ -106,6 +109,11 @@ internal sealed class AgentPlatformHandler : CatalogEntryHandlerBase<AgentPlatfo
         {
             context.Result.Fail(new ValidationResult(S["The allowed clock skew is 1 to 3600 seconds."], [nameof(AgentPlatform.AcpSignatureClockSkewSeconds)]));
         }
+
+        if (platform.AcpSignatureVersion is int version && version is not (AcpRequestSignature.BodyOnlyVersion or AcpRequestSignature.BoundVersion))
+        {
+            context.Result.Fail(new ValidationResult(S["The signature version is 1 or 2."], [nameof(AgentPlatform.AcpSignatureVersion)]));
+        }
     }
 
     private static void Populate(AgentPlatform model, JsonNode data)
@@ -128,6 +136,7 @@ internal sealed class AgentPlatformHandler : CatalogEntryHandlerBase<AgentPlatfo
         model.AcpSignatureAlgorithm = json[nameof(AgentPlatform.AcpSignatureAlgorithm)]?.GetValue<string>()?.Trim() ?? model.AcpSignatureAlgorithm;
         model.AcpSignaturePublicKey = json[nameof(AgentPlatform.AcpSignaturePublicKey)]?.GetValue<string>()?.Trim() ?? model.AcpSignaturePublicKey;
         model.AcpSignatureClockSkewSeconds = json[nameof(AgentPlatform.AcpSignatureClockSkewSeconds)]?.GetValue<int?>() ?? model.AcpSignatureClockSkewSeconds;
+        model.AcpSignatureVersion = json[nameof(AgentPlatform.AcpSignatureVersion)]?.GetValue<int?>() ?? model.AcpSignatureVersion;
         model.Protocols = ReadList(json[nameof(AgentPlatform.Protocols)]) ?? model.Protocols;
         model.AllowedPaymentHandlers = ReadList(json[nameof(AgentPlatform.AllowedPaymentHandlers)]) ?? model.AllowedPaymentHandlers;
         model.AllowedIpRanges = ReadList(json[nameof(AgentPlatform.AllowedIpRanges)]) ?? model.AllowedIpRanges;

@@ -3,6 +3,11 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
+	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
+	function escapeHtml(value) {
+		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/supervisor-actions.js
 	var MONITOR_MODES = [
 		"Monitor",
@@ -24,9 +29,6 @@
 		return String(template).replace(/\{(\d+)\}/g, function(match, index) {
 			return args[index] !== void 0 ? args[index] : match;
 		});
-	}
-	function escapeHtml(value) {
-		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 	}
 	function modeLabel(mode, labels) {
 		switch (mode) {

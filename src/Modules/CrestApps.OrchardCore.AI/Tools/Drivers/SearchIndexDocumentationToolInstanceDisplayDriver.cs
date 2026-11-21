@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.AI.Tooling.Instances.Documentation;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -15,14 +16,18 @@ namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 /// </summary>
 internal sealed class SearchIndexDocumentationToolInstanceDisplayDriver : DisplayDriver<AIToolInstance>
 {
+    private readonly IAIEndpointPolicy _endpointPolicy;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SearchIndexDocumentationToolInstanceDisplayDriver"/> class.
     /// </summary>
+    /// <param name="endpointPolicy">The policy that keeps the instance's addresses off the site's own network.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public SearchIndexDocumentationToolInstanceDisplayDriver(IStringLocalizer<SearchIndexDocumentationToolInstanceDisplayDriver> stringLocalizer)
+    public SearchIndexDocumentationToolInstanceDisplayDriver(IAIEndpointPolicy endpointPolicy, IStringLocalizer<SearchIndexDocumentationToolInstanceDisplayDriver> stringLocalizer)
     {
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -63,12 +68,20 @@ internal sealed class SearchIndexDocumentationToolInstanceDisplayDriver : Displa
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["The base URL must be an absolute HTTP or HTTPS URL."]);
         }
+        else if (!string.IsNullOrWhiteSpace(model.BaseUrl) && !_endpointPolicy.IsAllowed(model.BaseUrl))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
+        }
 
         if (!string.IsNullOrWhiteSpace(model.IndexUrl) &&
             (!Uri.TryCreate(model.IndexUrl.Trim(), UriKind.Absolute, out var indexUrl) ||
             (indexUrl.Scheme != Uri.UriSchemeHttp && indexUrl.Scheme != Uri.UriSchemeHttps)))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexUrl), S["The index URL must be an absolute HTTP or HTTPS URL."]);
+        }
+        else if (!string.IsNullOrWhiteSpace(model.IndexUrl) && !_endpointPolicy.IsAllowed(model.IndexUrl))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexUrl), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
 
         if (model.MaxResults.HasValue && model.MaxResults.Value <= 0)

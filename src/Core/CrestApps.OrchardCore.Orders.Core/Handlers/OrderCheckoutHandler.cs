@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
@@ -24,6 +25,7 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
     private readonly IOrderService _orderService;
     private readonly IEnumerable<IOrderEventHandler> _orderHandlers;
     private readonly ICartStore _cartStore;
+    private readonly ICheckoutPaymentProviderResolver _paymentProviderResolver;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -34,10 +36,12 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         IOrderService orderService,
         IEnumerable<IOrderEventHandler> orderHandlers,
         ICartStore cartStore,
+        ICheckoutPaymentProviderResolver paymentProviderResolver,
         IClock clock,
         ILogger<OrderCheckoutHandler> logger,
         IStringLocalizer<OrderCheckoutHandler> stringLocalizer)
     {
+        _paymentProviderResolver = paymentProviderResolver;
         _orderStore = orderStore;
         _orderService = orderService;
         _orderHandlers = orderHandlers;
@@ -165,6 +169,9 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         // An order replaced by a newer one from the same cart is still what this payment bought.
         order.Status = OrderStatus.Paid;
         order.PaidUtc = now;
+
+        // A promise to pay completes the checkout with nothing collected, so what delivers instantly waits for the money.
+        order.PaymentDeferred = CheckoutPaymentDeferral.IsDeferred(session, _paymentProviderResolver);
         order.ModifiedUtc = now;
         order.CheckoutSessionId = session.SessionId;
         order.Total = invoice.GrandTotal;

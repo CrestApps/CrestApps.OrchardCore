@@ -1,0 +1,55 @@
+@model CrestApps.OrchardCore.Users.Controllers.EmailSignInViewModel
+
+<zone Name="Title">
+    <breadcrumb name="EmailSignInConfirm" title="@T["Confirm it's you"]" />
+</zone>
+
+<div class="container my-5" style="max-width: 480px">
+    <h1 class="h3 mb-2">@T["Confirm it's you"]</h1>
+    <p class="text-muted">@T["Confirming that {0} is yours links what was placed with it before you had an account, such as guest orders. We'll email a six-digit code to it.", Model.Email]</p>
+    @if (Model.HasCredentials)
+    {
+        <p class="text-muted">@T["Confirming removes the sign-ins this account had before its email was confirmed, and signs out its other sessions, because they may not be yours. You keep only what you show here: the password, if you type it with the code, and a sign-in you use again below."]</p>
+    }
+    @if (Model.Passkeys == 1)
+    {
+        <p class="text-muted">@T["This account's passkey is removed too, since it can't be shown here. Add yours again from your account's security settings once your email is confirmed."]</p>
+    }
+    else if (Model.Passkeys > 1)
+    {
+        <p class="text-muted">@T["This account's {0} passkeys are removed too, since they can't be shown here. Add yours again from your account's security settings once your email is confirmed.", Model.Passkeys]</p>
+    }
+    @if (Model.KeptLoginProvider is not null)
+    {
+        <div class="alert alert-success">@T["You signed in with {0} again, so that sign-in stays.", Model.KeptLoginProvider]</div>
+    }
+    else if (Model.KeepableLogins.Count > 0)
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <p class="mb-2">@T["To keep one of this account's sign-ins, sign in with it again first:"]</p>
+                @foreach (var login in Model.KeepableLogins)
+                {
+                    <form action="@Url.RouteUrl("EmailSignInConfirmLogin")" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="provider" value="@login.Key" />
+                        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                        <button type="submit" class="btn btn-outline-secondary btn-sm mb-1">@T["Keep {0}", login.Value]</button>
+                    </form>
+                }
+            </div>
+        </div>
+    }
+
+    <form action="@Url.RouteUrl("EmailSignInConfirm")" method="post" class="card">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+        <input type="hidden" name="Token" value="@Model.Token" />
+        <div class="card-body">
+            <span asp-validation-for="Email" class="text-danger small"></span>
+        </div>
+        <div class="card-footer d-grid">
+            <button type="submit" class="btn btn-primary">@T["Email me a code"]</button>
+        </div>
+    </form>
+</div>

@@ -48,4 +48,9 @@ public sealed class AgentPayment
     /// for one (<see cref="AgentCheckoutStatus.AuthenticationRequired"/>). It is never stored or logged.
     /// </summary>
     public ThreeDSecureResult Authentication { get; set; }
+
+    /// <summary>
+    /// Gets or sets protocol evidence the payment comes with, such as an AP2 checkout mandate, by name.
+    /// </summary>
+    public IDictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();
 }

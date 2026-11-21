@@ -24,6 +24,7 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
         ContactCenterPermissions.SecurePauseRecording,
         ContactCenterPermissions.InitiateSecureCapture,
         ContactCenterPermissions.MonitorContactCenter,
+        ContactCenterPermissions.MonitorAllAICalls,
         ContactCenterPermissions.TransferExternally,
         ContactCenterPermissions.ViewReports,
         ContactCenterPermissions.InterveneInCalls,

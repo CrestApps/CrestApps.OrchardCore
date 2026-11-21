@@ -20,4 +20,15 @@ public sealed class BankTransferSettings
     /// Gets or sets how many days after checkout the transfer is due. 0 records the balance without a due date.
     /// </summary>
     public int NetTermDays { get; set; } = 7;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether only a signed-in buyer may pay by bank transfer. Off by default: what is
+    /// delivered at once waits for the money anyway.
+    /// </summary>
+    public bool RequireSignedIn { get; set; }
+
+    /// <summary>
+    /// Gets or sets the largest order total that may be paid by bank transfer, or <see langword="null"/> for no limit.
+    /// </summary>
+    public decimal? MaxOrderAmount { get; set; }
 }

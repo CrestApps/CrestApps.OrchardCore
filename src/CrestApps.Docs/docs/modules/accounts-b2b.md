@@ -26,7 +26,7 @@ The feature's migration defines `B2BAccountPart` and adds it to the `Account` ty
 | `Terms` | `AccountTerms`: `NetDays`, `DepositPercent`, `CreditLimit`, `RequirePurchaseOrder`. `OffersTerms` is true when `NetDays` is set. |
 | `PriceListId` | The `PriceList` its buyers pay, or none. |
 | `MonthlyBudget` | What its buyers may order in a calendar month, in the store's currency, or none. |
-| `Punchout` | `AccountPunchout`: `Enabled`, `UserId` (the buyer the procurement system shops as), `KeyHash` (SHA-256 of the key, hex), `KeyCreatedUtc`. |
+| `Punchout` | `AccountPunchout`: `Enabled`, `UserId` (the buyer the procurement system shops as), `KeyHash` (SHA-256 of the key, hex), `KeyCreatedUtc`, `AllowLinkSignIn` (OCI link mode, off by default). |
 
 The account's name is its title. `B2BAccount` reads an account content item together with its part: `AccountId` (the content item id), `Name`, `IsEnabled` (the part is on and the version is published) and the part's values, plus:
 
@@ -102,12 +102,14 @@ public sealed record BuyerPriceContext(ContentItem ContentItem, string VariantId
 
 - an account admin never needs it;
 - a buyer's order over their `OrderLimit`;
-- an order that takes the account's paid orders this calendar month past `MonthlyBudget` (orders in other currencies converted with `IShopperCurrency`).
+- an order that takes what the account spent or committed this calendar month past `MonthlyBudget` (orders in other currencies converted with `IShopperCurrency`).
+
+`GetSpentThisMonthAsync` counts, for the calendar month in UTC, the account's orders `Paid` this month (their total, by `OrderIndex.PaidUtc`), asked to be approved this month and waiting or approved but not paid (`Approval.Amount`, by `Approval.RequestedUtc`), or whose payment began this month (`Order.BudgetHold`, Orders.Core `OrderBudgetHold`: `Amount`, `Currency`, by `HeldUtc`). An order counts in the month it was paid, asked for or held, not the month it was made, so a checkout opened on a month's last day and paid after midnight counts in the new month. Both are read in the database: paid orders by `OrderIndex.PaidUtc`, and unpaid ones by `OrderIndex.BudgetCommittedUtc` (the later of when the approval was asked for and when the hold was made), so a check reads only this month's orders, at most 1,000 of each. An order indexed before the orders migration added `PaidUtc` counts by when it was made until it is saved again; the migration that added `BudgetCommittedUtc` indexes the unpaid orders again once the site has started. The order being checked is left out. A `Draft` or `AwaitingPayment` order with none of these is an open checkout that committed nothing, and `AbandonedOrderSweeper` cancels it.
 
 `Order.Approval` (Orders.Core `OrderApproval`) records it: `Status` (`Pending`, `Approved`, `Rejected`), `Reason`, `Amount` and `Currency` (the total asked about), `RequestedUtc`, `RequestedBy`, `DecidedUtc`, `DecidedBy`, `Note`. `Covers(total, currency)` is true for an approval of at least that total, so an order that grows needs approval again.
 
 - **Asking.** The Business account step reports the reason on `approval` and doesn't save. With `requestApproval`, `RequestAsync` sets the approval pending, gives the order an `OrderInvoice` (so it outlives its checkout, which puts it back to `Draft` when it ends, and is paid from the buyer's orders), and emails the account's admins.
-- **Blocking.** `B2BApprovalPaymentGate` (`ICheckoutPaymentGate`) refuses payment for an order that needs approval it doesn't have, whatever path the buyer took. `QuoteService.CanPay` is false for a pending or rejected approval, so no pay link is offered.
+- **Blocking.** `B2BApprovalPaymentGate` (`ICheckoutPaymentGate`) refuses payment for an order that needs approval it doesn't have, whatever path the buyer took. For an account with a budget it checks under the account's lock (`IDistributedLock`, key `B2BApprovalService.GetBudgetLockKey(accountId)`, `B2B_BUDGET_{accountId}`), and an order that passes gets its `BudgetHold` committed before the lock is let go, so two buyers paying at once can't both spend the rest of the budget; when the lock is busy the payment is refused with a try-again message. `QuoteService.CanPay` is false for a pending or rejected approval, so no pay link is offered.
 - **Deciding.** `DecideAsync(order, approve, adminName, note)` records it and emails the buyer; a rejected order is canceled with `OrderCancelReason.Rejected`.
 
 ## Punchout (OCI)
@@ -116,8 +118,10 @@ public sealed record BuyerPriceContext(ContentItem ContentItem, string VariantId
 
 | Route | |
 | --- | --- |
-| `GET` or `POST punchout/oci/{accountId}` | Takes the key as `PASSWORD` or `key`, `HOOK_URL` and `~TARGET`. Refuses (401) an unknown account, one that doesn't buy as a business, a wrong key (compared by hash in fixed time), a `HOOK_URL` that isn't absolute `https` (or `http` on loopback) or carries user info, a punchout user who isn't one of its members, or one in the `Administrator` role. A refusal is logged without the account's id. Otherwise signs the punchout buyer in, keeps `{ AccountId, HookUrl, Target }` in a data-protected `punchout` cookie, and opens the home page. |
+| `POST punchout/oci/{accountId}` (and `GET` only for an account with **Allow link sign-in**) | Takes the key as `PASSWORD` or `key`, `HOOK_URL` and `~TARGET` from the posted form (from the query string in link mode). A `GET` for an account without link mode answers `405`, so the key never lands in access logs and another site can't sign a visitor in with a link. Refuses (401) an unknown account, one that doesn't buy as a business, a wrong key (compared by hash in fixed time), a `HOOK_URL` that isn't absolute `https` (or `http` on loopback) or carries user info, a punchout user who isn't one of its members, is disabled or locked out, can't sign in (`SignInManager.CanSignInAsync`), or has **Access admin panel**. A refusal is logged without the account's id. Otherwise signs the punchout buyer in with a `punchout` claim (the account id), keeps `{ AccountId, HookUrl, Target }` in a data-protected `punchout` cookie, and opens the home page. |
 | `GET punchout/oci/transfer` (`PunchoutTransfer`) | Renders the `PunchoutTransfer` shape: a form of OCI fields that posts itself to the `HOOK_URL` in the target frame (`_top`, `_parent`, `_self` or `_blank`). |
+
+**Upgrading:** a procurement system that starts the punchout with a link (OCI link mode, a `GET` with the key in the address) now gets `405` until **Allow link sign-in** is ticked on the account. One that posts the form needs no change. An account whose punchout settings were never saved is refused the same way.
 
 `PunchoutCartActionProvider` adds **Transfer to your procurement system** to the cart while the cookie is there. `PunchoutService.ToOciFields(pricing)` writes, for each line that can be bought, numbered from 1: `NEW_ITEM-DESCRIPTION[n]` (40 characters, the full title in `NEW_ITEM-LONGTEXT_n:132[]` when longer), `QUANTITY`, `UNIT` (`EA`), `PRICE` (one unit with its add-ons, invariant), `PRICEUNIT` (`1`), `CURRENCY`, `VENDORMAT` (SKU) and `EXT_PRODUCT_ID` (content item id). The cart stays; the order is placed in the procurement system.
 

@@ -31,4 +31,10 @@ public sealed class AgentPlatformIndex : CatalogItemIndex
     /// Gets or sets the address of its UCP profile.
     /// </summary>
     public string ProfileUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the host of its UCP profile, as <see cref="Services.AgentPlatformAddress.NormalizeHost"/> writes it,
+    /// so a profile saved with capitals or in Unicode is found by its host.
+    /// </summary>
+    public string ProfileHost { get; set; }
 }

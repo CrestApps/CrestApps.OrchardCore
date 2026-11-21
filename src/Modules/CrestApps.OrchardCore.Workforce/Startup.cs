@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.PageSections;
 using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Staff.Models;
@@ -30,6 +31,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(WorkforceConstants.CollectionName));
         services.AddScoped<WorkforceTeamAddressMoveRunner>();
         services.AddScoped<IModularTenantEvents, WorkforceTeamAddressMoveTenantEvents>();

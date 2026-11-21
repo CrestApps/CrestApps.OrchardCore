@@ -16,6 +16,13 @@ public abstract class PaymentEventContextBase
     public GatewayMode GatewayMode { get; set; }
 
     /// <summary>
+    /// Gets or sets the gateway's identifier of the event, the same on every delivery of it, so a handler whose effect
+    /// lives outside the database, such as a counter in a cache, acts on it once. <see langword="null"/> when the gateway
+    /// gives none.
+    /// </summary>
+    public string EventId { get; set; }
+
+    /// <summary>
     /// Gets the additional gateway-specific data associated with the event.
     /// </summary>
     public Dictionary<string, object> Data { get; } = new(StringComparer.OrdinalIgnoreCase);

@@ -69,6 +69,14 @@ internal sealed class AgentPlatformDisplayDriver : DisplayDriver<AgentPlatform>
             model.AcpSignatureAlgorithm = platform.AcpSignatureAlgorithm ?? AcpRequestSignature.ES256;
             model.AcpSignaturePublicKey = platform.AcpSignaturePublicKey;
             model.AcpSignatureClockSkewSeconds = platform.AcpSignatureClockSkewSeconds;
+
+            // A new platform signs its target too; one saved before versions existed keeps the body-only form until moved.
+            model.AcpSignatureVersion = platform.AcpSignatureVersion ?? (context.IsNew ? AcpRequestSignature.BoundVersion : AcpRequestSignature.BodyOnlyVersion);
+            model.SignatureVersionOptions =
+            [
+                new SelectListItem(S["Version 2: the timestamp, method, path and body"], AcpRequestSignature.BoundVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                new SelectListItem(S["Version 1: the body only (older platforms)"], AcpRequestSignature.BodyOnlyVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            ];
             model.SignatureAlgorithmOptions = [.. AcpRequestSignature.Algorithms.Select(algorithm => new SelectListItem(algorithm, algorithm))];
             model.ApiKeyHint = platform.ApiKeyHint;
             model.HasWebhookSecret = !string.IsNullOrEmpty(platform.ProtectedWebhookSecret);
@@ -105,6 +113,9 @@ internal sealed class AgentPlatformDisplayDriver : DisplayDriver<AgentPlatform>
         platform.AcpSignatureAlgorithm = Clean(model.AcpSignatureAlgorithm);
         platform.AcpSignaturePublicKey = Clean(model.AcpSignaturePublicKey);
         platform.AcpSignatureClockSkewSeconds = model.AcpSignatureClockSkewSeconds;
+        platform.AcpSignatureVersion = model.AcpSignatureVersion is AcpRequestSignature.BodyOnlyVersion or AcpRequestSignature.BoundVersion
+            ? model.AcpSignatureVersion
+            : AcpRequestSignature.BoundVersion;
 
         return Edit(platform, context);
     }

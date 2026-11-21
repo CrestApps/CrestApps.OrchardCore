@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.FileStorage;
 using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer.Qti;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Qti;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement;
@@ -40,7 +41,7 @@ public sealed class QtiMediaImportHandlerTests
             })
             .ReturnsAsync((string path, Stream _, bool _) => path);
         store.Setup(media => media.MapPathToPublicUrl(It.IsAny<string>())).Returns<string>(path => "/media/" + path);
-        var handler = new QtiMediaImportHandler(store.Object, Mock.Of<IProtectedFileStore<QtiFeedbackImages>>(MockBehavior.Strict), new ShellSettings(), Options.Create(Media()), Formats(), new Localizer());
+        var handler = new QtiMediaImportHandler(store.Object, Mock.Of<IProtectedFileStore<QtiFeedbackImages>>(MockBehavior.Strict), new ShellSettings(), Options.Create(Media()), Formats(), new Localizer(), NullLogger<QtiMediaImportHandler>.Instance);
         var context = Context(
             "<p><img src=\"qti-media:items/images/sign.png\" alt=\"Sign\" /></p>",
             [new QtiMediaCell { Path = "items/images/sign.png", Data = Convert.ToBase64String(QtiSamples.Png) }]);
@@ -61,7 +62,7 @@ public sealed class QtiMediaImportHandlerTests
         var store = new Mock<IMediaFileStore>(MockBehavior.Strict);
         var options = Media();
         options.AllowedFileExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg" };
-        var handler = new QtiMediaImportHandler(store.Object, Mock.Of<IProtectedFileStore<QtiFeedbackImages>>(MockBehavior.Strict), new ShellSettings(), Options.Create(options), Formats(), new Localizer());
+        var handler = new QtiMediaImportHandler(store.Object, Mock.Of<IProtectedFileStore<QtiFeedbackImages>>(MockBehavior.Strict), new ShellSettings(), Options.Create(options), Formats(), new Localizer(), NullLogger<QtiMediaImportHandler>.Instance);
         var context = Context("<p><img src=\"qti-media:a.png\" /></p>", [new QtiMediaCell { Path = "a.png", Data = Convert.ToBase64String(QtiSamples.Png) }]);
 
         // Act

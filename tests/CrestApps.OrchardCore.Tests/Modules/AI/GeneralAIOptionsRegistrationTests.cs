@@ -25,7 +25,7 @@ public sealed class GeneralAIOptionsRegistrationTests
         var services = new ServiceCollection();
         services.AddSingleton(CreateSiteService(settings));
 
-        new CrestApps.OrchardCore.AI.Startup().ConfigureServices(services);
+        new CrestApps.OrchardCore.AI.Startup(new global::OrchardCore.Environment.Shell.Configuration.ShellConfiguration()).ConfigureServices(services);
 
         using var serviceProvider = services.BuildServiceProvider();
         var options = serviceProvider.GetRequiredService<IOptions<GeneralAIOptions>>().Value;

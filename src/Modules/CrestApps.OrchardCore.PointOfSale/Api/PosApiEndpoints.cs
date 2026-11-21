@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Checkout;
@@ -5,6 +6,7 @@ using CrestApps.OrchardCore.Checkout.Core.Api;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Api;
 using CrestApps.OrchardCore.Commerce.Emails;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Orders;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -78,6 +80,7 @@ internal static class PosApiEndpoints
 
         group.MapPost("pos/sales/{checkoutId}/pay", PayAsync)
             .WithIdempotency()
+            .WithRateLimitGroup(PosConstants.PaymentRateLimitGroup)
             .WithName("PayPosSale")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
@@ -96,6 +99,7 @@ internal static class PosApiEndpoints
 
         group.MapPost("pos/returns", ReturnAsync)
             .WithIdempotency()
+            .WithRateLimitGroup(PosConstants.PaymentRateLimitGroup)
             .WithName("PosReturn")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
@@ -390,12 +394,17 @@ internal static class PosApiEndpoints
         IRegisterShiftStore shiftStore,
         PosShiftService shifts,
         IOrderOperationsService operations,
-        IAuthorizationService authorizationService,
-        ICheckoutTenderLedger ledger)
+        IAuthorizationService authorizationService)
     {
         if (request?.Amount is <= 0m)
         {
             return ApiProblems.Validation("amount", "Give the amount to refund, or none to refund all of it.");
+        }
+
+        // A refund pays money back, cash out of the drawer included, so selling at a register isn't enough.
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, PosPermissions.RefundAtRegister))
+        {
+            return ApiProblems.Forbidden("Refunding at a register takes the Refund at a register permission.");
         }
 
         if (await registers.FindByIdAsync(request?.RegisterId, httpContext.RequestAborted) is not { } register || !await shifts.MaySellAtAsync(httpContext.User, register))
@@ -403,9 +412,11 @@ internal static class PosApiEndpoints
             return ApiProblems.NotFound("There's no register with that id you may sell at.");
         }
 
-        // A till returns the store's register sales; an online order is returned there only by staff who manage orders.
+        // A till returns its own store's register sales; another store's sale, or an online order, is returned there
+        // only by staff who manage orders.
         if (await orders.FindByIdAsync(request.OrderId, httpContext.RequestAborted) is not { Status: OrderStatus.Paid } order ||
-            (!OrderChannels.IsCounterSale(order) && !await authorizationService.AuthorizeAsync(httpContext.User, OrderPermissions.ManageOrders)))
+            ((!OrderChannels.IsCounterSale(order) || !await IsSameStoreAsync(order, register, registers, httpContext.RequestAborted)) &&
+                !await authorizationService.AuthorizeAsync(httpContext.User, OrderPermissions.ManageOrders)))
         {
             return ApiProblems.NotFound("There's no paid order with that id you may return.");
         }
@@ -416,33 +427,55 @@ internal static class PosApiEndpoints
             return ApiProblems.Conflict(PosCodes.ShiftClosed, "Open a shift at the register first.");
         }
 
-        var cashBefore = await GetCashHeldAsync(ledger, order, httpContext.RequestAborted);
         var result = await operations.RefundAsync(order, request.Amount, request.Reason ?? "Returned at the till", request.Restock != false, PosShiftService.GetName(httpContext.User), asStoreCredit: false, httpContext.RequestAborted);
 
-        if (!result.Succeeded)
+        // What this refund put back on the sale's cash goes back in cash, out of this register's drawer. The card is refunded
+        // first, so this is only what the card didn't cover. It is what the refund measured under the order's lock, not what
+        // the sale held before it: another return of the same sale may have given that cash back in between.
+        var cashBack = result.ReturnedToBalances.GetValueOrDefault(PosConstants.CashTenderKey);
+
+        List<string> messages = [.. result.Errors, .. result.Messages];
+        var incomplete = !result.Succeeded;
+
+        // The drawer movement is recorded whenever cash went back, even when another part of the refund failed, and not
+        // with the request's token: the refund doesn't stop for an aborted request, so neither does the record of its cash.
+        // The refund committed the session, which no longer tracks the shift read above, so the open shift is read again:
+        // a shift a manager closed meanwhile isn't saved open again. The cash leaves the drawer now, so it goes on the
+        // register's open shift, whichever that is.
+        if (cashBack > 0m && !await shifts.MoveCashAsync(await shiftStore.FindOpenAsync(shift.RegisterId, CancellationToken.None), -cashBack, $"Refund of order {order.OrderNumber}", httpContext.User, CancellationToken.None))
+        {
+            // Cash that left the drawer but isn't in any count is a part of the return that failed, so it is flagged too.
+            messages.Add($"The register's shift was closed while the refund ran, so the {CurrencyScale.Format(cashBack, order.Currency)} {order.Currency} paid out isn't in its count.");
+            incomplete = true;
+        }
+
+        if (!result.Succeeded && cashBack <= 0m)
         {
             return ApiProblems.Conflict(ApiProblems.Codes.NotAvailable, string.Join(" ", result.Errors));
         }
 
-        // What the refund put back on the sale's cash goes back in cash, out of this register's drawer. The card is
-        // refunded first, so this is only what the card didn't cover.
-        var cashBack = Math.Max(0m, cashBefore - await GetCashHeldAsync(ledger, order, httpContext.RequestAborted));
-
-        if (cashBack > 0m)
-        {
-            await shifts.MoveCashAsync(shift, -cashBack, $"Refund of order {order.OrderNumber}", httpContext.User, httpContext.RequestAborted);
-        }
-
-        return TypedResults.Ok(new ApiPosReturn(order.ItemId, order.OrderNumber, ApiMoney.From(result.Refunded, order.Currency), ApiMoney.From(cashBack, order.Currency), result.Messages));
+        // A return that gave cash back is answered with it, so the clerk pays it out, and what failed besides is told first
+        // and flagged.
+        return TypedResults.Ok(new ApiPosReturn(order.ItemId, order.OrderNumber, ApiMoney.From(result.Refunded, order.Currency), ApiMoney.From(cashBack, order.Currency), messages, incomplete));
     }
 
-    // The cash a sale was paid with that hasn't been given back yet.
-    private static async Task<decimal> GetCashHeldAsync(ICheckoutTenderLedger ledger, Order order, CancellationToken cancellationToken)
-        => string.IsNullOrEmpty(order.CheckoutSessionId)
-            ? 0m
-            : (await ledger.GetRedeemedAsync(order.CheckoutSessionId, cancellationToken))
-                .Where(hold => hold.ProviderKey == PosConstants.CashTenderKey)
-                .Sum(hold => hold.Amount - hold.ReturnedAmount);
+    // A counter sale belongs to the store its register is in.
+    private static async Task<bool> IsSameStoreAsync(Order order, Register register, IRegisterStore registers, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrEmpty(order.LocationId))
+        {
+            return string.Equals(order.LocationId, register.LocationId, StringComparison.Ordinal);
+        }
+
+        // No location on the order: its register says which store it was sold at. One whose register can't be found says
+        // nothing, and matching it to every register without a location would let any till return it.
+        if (string.IsNullOrEmpty(order.RegisterId) || await registers.FindByIdAsync(order.RegisterId, cancellationToken) is not { } soldAt)
+        {
+            return false;
+        }
+
+        return string.Equals(soldAt.LocationId ?? string.Empty, register.LocationId ?? string.Empty, StringComparison.Ordinal);
+    }
 
     // A shift opens for whoever may sell at its register.
     private static async Task<(RegisterShift Shift, Register Register)?> FindShiftAsync(string shiftId, HttpContext httpContext, IRegisterShiftStore shiftStore, IRegisterStore registers, PosShiftService shifts)

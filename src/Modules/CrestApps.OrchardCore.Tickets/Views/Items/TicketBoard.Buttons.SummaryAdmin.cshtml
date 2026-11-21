@@ -15,7 +15,9 @@
     <a asp-controller="TicketBoards" asp-action="Delete"
        asp-route-id="@Model.Board.ItemId"
        class="btn btn-danger btn-sm"
-       data-title="@T["Delete"]"
-       data-message="@T["Delete the board {0}? The tickets on it stay as they are.", Model.Board.Name]"
+       data-confirm-title="@T["Delete"]"
+       data-confirm="@T["Delete the board {0}? The tickets on it stay as they are.", Model.Board.Name]"
        data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
 }
+
+<script asp-name="crestapps-browser" at="Foot"></script>

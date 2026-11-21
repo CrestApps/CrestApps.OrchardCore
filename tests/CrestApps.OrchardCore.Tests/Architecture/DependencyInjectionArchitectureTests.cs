@@ -4,8 +4,10 @@ using System.Text.RegularExpressions;
 namespace CrestApps.OrchardCore.Tests.Architecture;
 
 /// <summary>
-/// Guards how contact-centre code obtains its collaborators. Two habits are refused because both hide a missing
-/// registration until run time and in the wrong tenant.
+/// Guards how code obtains its collaborators. Two habits are refused because both hide a missing registration until
+/// run time and in the wrong tenant. The rules began with the Contact Center, Telephony and Omnichannel code and now
+/// cover all of <c>src</c> (CQ-7 in <c>docs/engineering/review-2026-11/04-code-quality.md</c>); the types outside that
+/// first scope that already took the container are listed in <see cref="_knownServiceLocators"/>, which only shrinks.
 /// <para>
 /// The first is taking an <see cref="IServiceProvider"/> and resolving from it. A constructor that does this
 /// tells the container nothing about what the type needs, so a tenant that has not enabled the feature that
@@ -117,6 +119,317 @@ public sealed class DependencyInjectionArchitectureTests
     ];
 
     /// <summary>
+    /// The types that took an <see cref="IServiceProvider"/> when the rule was widened to all of <c>src</c>, keyed by
+    /// file and type. This list only shrinks: inject the collaborator itself (as a handler parameter in a minimal API),
+    /// give an optional contract a null-object default, and delete the entry. Never add one; a type that genuinely has
+    /// to take the container goes in <see cref="_serviceProviderExceptions"/> with its reason.
+    /// </summary>
+    private static readonly Dictionary<string, int> _knownServiceLocators = new(StringComparer.Ordinal)
+    {
+        ["src/Abstractions/CrestApps.OrchardCore.Abstractions/Configuration/TenantOptionsStartupValidator.cs: TenantOptionsStartupValidator"] = 1,
+        ["src/Core/CrestApps.OrchardCore.AI.Core/Conversations/AIConversationMetrics.cs: AIConversationMetrics"] = 1,
+        ["src/Core/CrestApps.OrchardCore.AI.Core/Services/DataSourceIndexingService.cs: DataSourceIndexingService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.AI.Core/Services/OrchardCoreSearchDocumentManager.cs: OrchardCoreSearchDocumentManager"] = 1,
+        ["src/Core/CrestApps.OrchardCore.AI.Core/Services/OrchardCoreSearchIndexManager.cs: OrchardCoreSearchIndexManager"] = 1,
+        ["src/Core/CrestApps.OrchardCore.AI.Core/Webhooks/AIWebhookPayloads.cs: AIWebhookConversationStartingHandler"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/CouponRedemptionService.cs: CouponRedemptionService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/CouponScopeEvaluator.cs: CouponScopeEvaluator"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutRefundReconciliationService.cs: DefaultCheckoutRefundReconciliationService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutRefundService.cs: DefaultCheckoutRefundService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Commerce.Core/Emails/CommerceEmailSender.cs: CommerceEmailSender"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Commerce.Core/Emails/LiquidCommerceEmailTemplates.cs: LiquidCommerceEmailTemplates"] = 1,
+        ["src/Core/CrestApps.OrchardCore.ContentTransfer.Core/ContentTransferEntryQueryContext.cs: ContentTransferEntryQueryContext"] = 1,
+        ["src/Core/CrestApps.OrchardCore.ContentTransfer.Core/Services/ContentImportHandlerResolver.cs: ContentImportHandlerResolver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.ContentTransfer.Core/Services/DefaultContentTransferEntryAdminListQueryService.cs: DefaultContentTransferEntryAdminListQueryService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Customers.Core/Services/DefaultCustomerOwnerNotifier.cs: DefaultCustomerOwnerNotifier"] = 1,
+        ["src/Core/CrestApps.OrchardCore.DataConnectors.Core/DataConnectorManager.cs: DataConnectorManager"] = 1,
+        ["src/Core/CrestApps.OrchardCore.PhoneNumbers.Core/Services/DefaultPhoneNumberVerificationManager.cs: DefaultPhoneNumberVerificationManager"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Recipes.Core/Services/RecipeSchemaExampleService.cs: RecipeSchemaExampleService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Reports.Core/Services/ReportExportManager.cs: ReportExportManager"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Reports.Core/Services/ReportManager.cs: ReportManager"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Staff.Core/Handlers/StaffMemberCatalogHandler.cs: StaffMemberCatalogHandler"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Staff.Core/Services/StaffTeamReader.cs: StaffTeamReader"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Handlers/SubscriptionsPermissionsHandler.cs: SubscriptionsPermissionsHandler"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/TenantProvisioningService.cs: TenantProvisioningService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Telnyx.Core/Services/TelnyxAutomaticCallRecorder.cs: TelnyxAutomaticCallRecorder"] = 1,
+        ["src/Core/CrestApps.OrchardCore.TenantHierarchy.Core/Services/HierarchyAuditLog.cs: HierarchyAuditLog"] = 1,
+        ["src/Core/CrestApps.OrchardCore.TenantHierarchy.Core/Services/TenantHierarchyBroker.cs: TenantHierarchyBroker"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Transactions.Core/Services/TransactionManager.cs: TransactionManager"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Transactions.Core/Services/TransactionSettlementService.cs: TransactionSettlementService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Users.Core/Handlers/UserComponentsEventHandler.cs: UserComponentsEventHandler"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Webhooks.Core/Services/ShellProviderWebhookInboxScopeExecutor.cs: ShellProviderWebhookInboxScopeExecutor"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultTimesheetService.cs: DefaultTimesheetService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/TimeClockTimeTracker.cs: TimeClockTimeTrackerSync"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI.DataSources/Services/SearchIndexProfileAIDataSourceSourceHandler.cs: SearchIndexProfileAIDataSourceSourceHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI.Documents/Drivers/AICompletionWithConfigDocumentsDisplayDriver.cs: AICompletionWithConfigDocumentsDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI.Documents/Drivers/AIProfileDocumentsDisplayDriver.cs: AIProfileDocumentsDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI.Documents/Drivers/AIProfileTemplateDocumentsDisplayDriver.cs: AIProfileTemplateDocumentsDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI.Documents/Drivers/ChatInteractionDocumentsDisplayDriver.cs: ChatInteractionDocumentsDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI.Documents/Services/AIDocumentsIndexingService.cs: AIDocumentsIndexingService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI.Memory/Services/AIMemoryIndexingService.cs: AIMemoryIndexingService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI.WebMcp/Services/ContentItemWebMcpToolServiceFactory.cs: ContentItemWebMcpToolServiceFactory"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI.WebMcp/Services/StorefrontWebMcpToolService.cs: StorefrontWebMcpToolService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI/Handlers/AIPersonaDeletionHandler.cs: AIPersonaDeletionHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI/Providers/CustomLlm/CustomLlmClientProvider.cs: CustomLlmClientProvider"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI/Services/AIAlertRuleNotifier.cs: AIAlertRuleNotifier"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI/Services/AIChatSessionCloser.cs: AIChatSessionCloser"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI/Workflows/Models/EvaluateConversationTask.cs: EvaluateConversationTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.AI/Workflows/Models/SimulateConversationTask.cs: SimulateConversationTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Assets/Recipes/AssetsRecipes.cs: AssetsDeploymentSource"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Assets/Recipes/AssetsRecipes.cs: AssetsRecipeStep"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Bookings/Handlers/BookingOrderEventHandler.cs: BookingOrderEventHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Bookings/Services/BookingBalanceTenderProvider.cs: BookingBalanceTenderProvider"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Bookings/Services/BookingStores.cs: BookingStore"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Checkout/Services/CurrencySetupStep.cs: CurrencySetupStep"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.ContentFields/Indexes/AddressFieldIndexProvider.cs: AddressFieldIndexProvider"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Customers/Handlers/CustomerCheckoutTaxProfileHandler.cs: CustomerCheckoutTaxProfileHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Customers/Handlers/CustomerMergeUserEvents.cs: CustomerMergeLoginFormEvent"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Customers/Handlers/CustomerMergeUserEvents.cs: CustomerMergeUserEventHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Customers/Handlers/LoyaltyOrderEventHandler.cs: LoyaltyOrderEventHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Customers/Handlers/ReferralHandlers.cs: ReferralOrderEventHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Dispatch/Mobile/FieldIntegrations.cs: InventoryFieldStockSource"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Dispatch/Reports/FieldServiceKpis.cs: FieldServiceKpiService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Geo/Recipes/GeoRecipes.cs: GeoDeploymentSource"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Geo/Recipes/GeoRecipes.cs: GeoRecipeStep"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Inventory/Services/InventoryAvailabilityProvider.cs: InventoryAvailabilityProvider"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Inventory/Services/StockAlertService.cs: StockAlertService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.NLWeb/AI/VectorNLWebRetriever.cs: VectorNLWebRetriever"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Customers/OrderAnonymizer.cs: OrderAnonymizer"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Customers/OrderCustomerMergeHandler.cs: OrderCustomerMergeHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Customers/OrderCustomerPrivacyHandler.cs: OrderCustomerPrivacyHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Handlers/GiftCardOrderEventHandler.cs: GiftCardOrderEventHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Handlers/OrderWebhookEventHandler.cs: OrderWebhookEventHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Services/CartCheckoutService.cs: CartCheckoutService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Services/DraftOrderService.cs: DraftOrderService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Services/OrderConfirmationEmailBuilder.cs: OrderConfirmationEmailBuilder"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Services/OrderDocumentBuilder.cs: OrderDocumentBuilder"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Services/OrderOperationsService.cs: OrderOperationsService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Services/OrderPayLinks.cs: OrderPayLinks"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Services/OrderRefundRecorder.cs: OrderRefundRecorder"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Services/QuoteService.cs: QuoteService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.PayLater/Services/OfflinePaymentLookup.cs: OfflinePaymentLookup"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Products/Drivers/ProductListingPartDisplayDriver.cs: ProductListingPartDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Products/Drivers/ProductPartDisplayDriver.cs: ProductPartDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Products/Feeds/ProductFeedBuilder.cs: ProductFeedBuilder"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Products/Indexing/ProductSearchIndexingService.cs: ProductSearchIndexingService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Products/Services/ProductSearchRouter.cs: ProductSearchRouter"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Reports/Designer/Workflows/Activities/ExportReportTask.cs: ExportReportTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Reviews/Services/ReviewPhotoStore.cs: ReviewPhotoStore"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Seo/SchemaOrg/SchemaOrgContentSources.cs: SchemaOrgContentSources"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Staff/Drivers/UserStaffDisplayDriver.cs: StaffUserEventHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Stripe/Controllers/AccountPaymentMethodsController.cs: AccountPaymentMethodsController"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Stripe/Services/StripePersonalDataContributor.cs: StripePersonalDataContributor"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Stripe/Workflows/StripeWorkflowNotifier.cs: StripeWorkflowNotifier"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Subscriptions/Drivers/ContentStepCheckoutFlowDisplayDriver.cs: ContentStepCheckoutFlowDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Handlers/LinkedUserEventHandler.cs: LinkedUserEventHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Services/ChildTenantManager.cs: ChildTenantManager"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Services/TenantHierarchyPlatformService.cs: TenantHierarchyPlatformService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Services/DefaultTransactionCommandService.cs: DefaultTransactionCommandService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Services/DefaultTransactionReminderService.cs: DefaultTransactionReminderService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Services/PaymentReceiptTransactionPaymentHandler.cs: PaymentReceiptTransactionPaymentHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Services/TransactionCustomerPageService.cs: TransactionCustomerPageService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Services/TransactionReceiptBuilder.cs: TransactionReceiptBuilder"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Services/TransactionRefundHandler.cs: TransactionRefundHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Services/TransactionSettlementCheckoutHandler.cs: TransactionSettlementCheckoutHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Wizard/Contents/ContentWizardAccessPolicy.cs: ContentWizardAccessPolicy"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Wizard/Contents/ContentWizardHandler.cs: ContentWizardHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Wizard/Contents/ContentWizardStepDisplayDriver.cs: ContentWizardStepDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Wizard/Drivers/WizardPartDisplayDriver.cs: WizardPartDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.WorkOrders/Drivers/WorkOrderDisplayDriver.cs: WorkOrderDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.WorkOrders/Recipes/WorkOrdersRecipes.cs: WorkOrdersDeploymentSource"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.WorkOrders/Recipes/WorkOrdersRecipes.cs: WorkOrdersRecipeStep"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Deployments/WorkforceSettingsDeploymentSource.cs: WorkforceSettingsDeploymentSource"] = 1,
+
+        // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Approvals.Core/Services/ApprovalNotificationObserver.cs: ApprovalNotificationObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Approvals.Core/Services/ApprovalTypeCatalog.cs: ApprovalTypeCatalog"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Approvals.Core/Services/BuiltInApproverRuleProviders.cs: PermissionApproverRuleProvider"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Approvals.Core/Services/BuiltInApproverRuleProviders.cs: RoleApproverRuleProvider"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Banking.Core/DirectDeposit/NachaPrenoteVerifier.cs: NachaPrenoteVerifier"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Banking.Core/Disbursements/Services/CheckDisbursementProvider.cs: CheckDisbursementObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Calculation/PayCalculationContextFactory.cs: PayCalculationContextFactory"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Calculation/PayCalculationSteps.cs: TaxesPayCalculationStep"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Canada/CanadaProvinceOfEmploymentBlockers.cs: CanadaProvinceOfEmploymentBlockers"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/Garnishments.cs: GarnishmentOrderHandler"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/Garnishments.cs: GarnishmentStatementObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayDetailsChangedNotificationObserver.cs: PayDetailsChangedNotificationObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayProfileServices.cs: DefaultPayProfileService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayRunServices.cs: DefaultPayRunService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayRunServices.cs: PayRunApprovalTypeHandler"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayStatementNotificationObserver.cs: PayStatementNotificationObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayStatementReviews.cs: PayReviewNotificationObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayStatementReviews.cs: PayStatementReviewService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollFilings.cs: PayrollFilingService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollNoticeObservers.cs: BankAccountChangedNotificationObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollNoticeObservers.cs: DepositReturnedNotificationObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollPayCodeSeeder.cs: PayCodeBaseUsage"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/IncomeTaxRules.cs: IncomeTaxRuleHandler"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/TimeClockPayInputSource.cs: TimeClockPayInputSource"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/TimeClockPaySetupUsage.cs: TimeClockPaySetupUsage"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Approvals/Workflows/ApprovalsWorkflowObserver.cs: ApprovalsWorkflowObserver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Banking/Disbursements/Services/DisbursementFileRecorder.cs: DisbursementFileRecorder"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/DataSources/JournalEntriesDataSet.cs: JournalEntriesDataSet"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/DataSources/PayInputsDataSet.cs: PayInputsDataSet"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Drivers/GarnishmentOrderDisplayDriver.cs: GarnishmentOrderDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Drivers/PayProfileDisplayDriver.cs: PayProfileDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Services/MyPayPageBuilder.cs: MyPayPageBuilder"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Services/PayrollTaxFormDocuments.cs: PayrollTaxFormDocuments"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Workflows/PayrollTasks.cs: AddPayInputTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Workflows/PayrollTasks.cs: ApprovePayRunTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Workflows/PayrollTasks.cs: CalculatePayRunTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Workflows/PayrollTasks.cs: OpenPayRunTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Workflows/PayrollTasks.cs: ProcessPayRunTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Workflows/PayrollTasks.cs: RejectPayRunTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Payroll/Workflows/PayrollTasks.cs: SubmitPayRunTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Recipes/PayrollCsvPipelineImporter.cs: PayrollCsvPipelineImporter"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Recipes/TimeClockRecipeStep.cs: TimeClockRecipeStep"] = 1,
+
+        // Existing debt from main's #1331 (Invoicing and Billing), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Handlers/InvoiceHandler.cs: InvoiceHandler"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/BillingServices.cs: BillingInvoiceHandler"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultCreditNoteCommandService.cs: DefaultCreditNoteCommandService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultEstimateCommandService.cs: DefaultEstimateCommandService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultInvoiceCommandService.cs: DefaultInvoiceCommandService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultInvoiceSender.cs: DefaultInvoiceSender"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultInvoiceStatementService.cs: DefaultInvoiceStatementService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultLateFeeService.cs: DefaultLateFeeService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultRecurringPlanService.cs: DefaultRecurringPlanService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/InvoiceAutoCharge.cs: InvoiceAutoCharge"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/InvoiceDocumentBuilder.cs: InvoiceDocumentBuilder"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/InvoiceObserverNotifier.cs: InvoiceObserverNotifier"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/InvoiceScheduleStarter.cs: InvoiceScheduleStarter"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Transactions.Core/Services/TransactionLedgerPortability.cs: TransactionLedgerExporter"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Transactions.Core/Services/TransactionLedgerPortability.cs: TransactionLedgerImporter"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Customers/Services/CustomerPartyTaxProfileProvider.cs: CustomerPartyTaxProfileProvider"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Customers/Services/StoreCreditCustomerCreditService.cs: StoreCreditCustomerCreditService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/DeferredDebts/DeferredDebtInvoicing.cs: DeferredDebtInvoiceBuilder"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/DeferredDebts/DeferredDebtInvoicing.cs: DeferredDebtInvoiceHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/Drivers/InvoiceDisplayDriver.cs: InvoiceDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/Orders/OrderDocuments.cs: InvoicingOrderDocumentSender"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/Orders/OrderDocuments.cs: OrderDocumentBridge"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/Orders/OrderDocuments.cs: OrderDocumentEventHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/Orders/OrderDocuments.cs: OrderEstimateObserver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/Orders/OrderInvoicing.cs: OrderBalanceInvoiceHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/Orders/OrderInvoicing.cs: OrderInvoiceBuilder"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/Services/DocumentLinesEditorContext.cs: DocumentLinesEditorContext"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.PayLater/Drivers/OfflinePaymentConfirmationDisplayDriver.cs: OfflinePaymentConfirmationDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.PayLater/Drivers/PayLaterSettingsDisplayDriver.cs: PayLaterSettingsDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.PayLater/Services/PayLaterDueDateResolver.cs: PayLaterDueDateResolver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Drivers/TransactionDetailDisplayDriver.cs: TransactionDetailDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/PartyCollectionSettingsFeature.cs: AccountCollectionSettingsDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/PartyCollectionSettingsFeature.cs: CustomerCollectionSettingsDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Services/DefaultSavedPaymentMethodChargeService.cs: DefaultSavedPaymentMethodChargeService"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Services/TransactionCreditSettlement.cs: TransactionCreditSettlement"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Services/TransactionPayLinkService.cs: TransactionPayLinkService"] = 1,
+
+        // Existing debt from main's #1330 (help desk), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Handlers/TicketSettingsRecordHandler.cs: TicketSettingsRecordHandler"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketAccessService.cs: DefaultTicketAccessService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketService.cs: DefaultTicketService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/TicketApprovalStarter.cs: TicketApprovalStarter"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/TicketEmailObserver.cs: TicketEmailObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/TicketProblemObserver.cs: TicketProblemObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/TicketRecordSource.cs: TicketRecordSource"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/TicketServiceLevelObserver.cs: TicketServiceLevelObserver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Agreements/Services/AgreementAccountManagerNotifier.cs: AgreementAccountManagerNotifier"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.ContentAccessControl/Indexes/ContentAccessRoleIndexProvider.cs: ContentAccessRoleIndexProvider"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.KnowledgeBase/Migrations/KnowledgeBaseMigrations.cs: KnowledgeBaseMigrations"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/AI/TicketAssistant.cs: TicketAssistant"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/AI/TriageTicketTask.cs: TriageTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Controllers/TicketBoardsController.cs: TicketBoardsController"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Controllers/TicketsController.cs: TicketsController"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Drivers/TicketPartDisplayDriver.cs: TicketPartDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Drivers/TicketPartSettingsDisplayDriver.cs: TicketPartSettingsDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Integrations/TicketPersonalDataContributor.cs: TicketPersonalDataContributor"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Notifications/TicketNotificationObserver.cs: TicketNotificationObserver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Portal/TicketPortalAccess.cs: TicketPortalAccess"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Reports/TicketAccountHealthReport.cs: TicketAccountHealthReport"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Reports/TicketReportData.cs: TicketReportData"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Services/TicketFilesViewComponent.cs: TicketFilesViewComponent"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/WorkOrders/CreateTicketWorkOrderTask.cs: CreateTicketWorkOrderTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: AddTicketNoteTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: AddTicketReplyTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: AssignTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: CheckTicketServiceLevelTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: CreateTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: EscalateTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: FindTicketsTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: GetTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: LinkTicketsTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: NotifyTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketTasks.cs: UpdateTicketTask"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Workflows/TicketWorkflowServices.cs: TicketTimeElapsedScanner"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.WorkOrders/Migrations/ServiceAgreementsMoveStep.cs: ServiceAgreementsMoveStep"] = 1,
+        // Existing debt from main's #1338 (Fulfillment Partners), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Fulfillment.Core/Handlers/FulfillmentOrderEventHandler.cs: FulfillmentOrderEventHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Fulfillment/Services/FulfillmentNotificationHandler.cs: FulfillmentNotificationHandler"] = 1,
+        // Existing debt from main's #1335 (MCP file providers), baselined when PR #1319 merged main; the named provider
+        // factories take the service provider by design. Remove as it is paid down.
+        ["src/Modules/CrestApps.OrchardCore.AI.Mcp/Services/DefaultMcpFileProviderResolver.cs: DefaultMcpFileProviderResolver"] = 1,
+
+        // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Accounts.Core/Services/DefaultAccountInvitationService.cs: DefaultAccountInvitationService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Certifications.Core/Services/CertificateHolderResolver.cs: CertificateHolderResolver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Certifications.Core/Services/CertificationObservers.cs: CertificationAttemptObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Certifications.Core/Services/CertificationObservers.cs: CertificationEnrollmentObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Certifications.Core/Services/CertificationObservers.cs: CertificationSkillsObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Certifications.Core/Services/CompetencyEnrollmentObserver.cs: CompetencyEnrollmentObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Certifications.Core/Services/DefaultEducationCreditService.cs: DefaultEducationCreditService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Certifications.Core/Services/EducationCreditEnrollmentObserver.cs: EducationCreditEnrollmentObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Classes.Core/Services/ClassObservers.cs: ClassAttendanceObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Classes.Core/Services/ClassObservers.cs: ClassEnrollmentObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Classes.Core/Services/ClassSessionCalendarEventSource.cs: ClassSessionCalendarEventSource"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Classes.Core/Services/ClassSessionCancelledObserver.cs: ClassSessionCancelledObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Classes.Core/Services/ClassShiftSegmentObserver.cs: ClassShiftSegmentObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Classes.Core/Services/ClassShiftSegmentPlanner.cs: ClassShiftSegmentPlanner"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Commerce.Core/Services/DefaultLicensePoolService.cs: DefaultLicensePoolService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Commerce.Core/Services/DefaultLicensePoolService.cs: LicenseSeatInvitationObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Core/Services/PeopleReleaseRule.cs: PeopleReleaseRule"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Credentials.Core/Rules/CredentialCertificationObserver.cs: CredentialCertificationObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Credentials.Core/Services/CredentialAwardEraser.cs: CredentialAwardEraser"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Credentials.Core/Services/CredentialRecipientResolver.cs: CredentialRecipientResolver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Credentials.Core/Services/DefaultCredentialAwardService.cs: DefaultCredentialAwardService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Programs.Core/Services/DefaultLearningPathService.cs: DefaultLearningPathService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Programs.Core/Services/DefaultRequiredLearningService.cs: DefaultRequiredLearningService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Programs.Core/Services/ProgramsObservers.cs: ProgramsEnrollmentObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Programs.Core/Services/ProgramsObservers.cs: RequiredLearningCertificationObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Programs.Core/Services/ProgramsObservers.cs: RequiredLearningPathObserver"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Programs.Core/Targets/RequiredLearningTargets.cs: CertificationPathRequiredLearningTarget"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Programs.Core/Targets/RequiredLearningTargets.cs: CourseRequiredLearningTarget"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Programs.Core/Targets/RequiredLearningTargets.cs: LearningPathRequiredLearningTarget"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Xapi.Core/Services/XapiAuthenticator.cs: XapiAuthenticator"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Xapi.Core/Services/XapiStatementService.cs: XapiStatementService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Scheduling.Core/Services/DefaultAppointmentService.cs: DefaultAppointmentService"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Users.Core/Cohorts/CohortUserEventHandler.cs: CohortUserEventHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.AI/Services/EssayScoringAssistant.cs: EssayScoringAssistant"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.AI/Services/LearnerRecordsLister.cs: LearnerRecordsLister"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/ContentTransfer/Moodle/MoodleImportHandler.cs: MoodleImportHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/ContentTransfer/Moodle/MoodleSourceRowFilter.cs: MoodleSourceRowFilter"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/ContentTransfer/QuestionImportOptions.cs: QuestionSourceRowFilter"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Certifications/Handlers/CertificationPathCatalogHandler.cs: CertificationPathCatalogHandler"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Certifications/Services/CertificationNotificationObserver.cs: CertificationNotificationObserver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Certifications/Services/CertificationReviewActionProvider.cs: CertificationReviewActionProvider"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Commerce/Migrations/LearningPathProductMigrations.cs: LearningPathProductMigrations"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Commerce/Services/LearningPurchaseProcessor.cs: LearningPurchaseProcessor"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Credentials/Drivers/CredentialDefinitionPartDisplayDriver.cs: CredentialDefinitionPartDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Credentials/Services/ContentCredentialDefinitionCatalog.cs: ContentCredentialDefinitionCatalog"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Programs/Reports/LearningProgramsDataSource.cs: LearningProgramsDataSource"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Programs/Services/LearningPathCompetenciesObserver.cs: LearningPathCompetenciesObserver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Programs/Services/LearningPathCreditsObserver.cs: LearningPathCreditsObserver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Programs/Services/ProgramsNotificationObserver.cs: ProgramsNotificationObserver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Programs/Services/ProgramsPersonalDataContributor.cs: ProgramsPersonalDataContributor"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning/Cohorts/CohortLearningSync.cs: CohortLearningSync"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning/Drivers/CourseItemPartDisplayDriver.cs: CourseItemPartDisplayDriver"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning/Notifications/EnrollmentApprovers.cs: EnrollmentApprovers"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Users/Controllers/UserNotificationsController.cs: UserNotificationsController"] = 1,
+    };
+
+    /// <summary>
     /// The remaining places that inject a collection and take the first element, with the reason each is not one
     /// of the optional contracts above. Adding to this list is a decision, not a formality.
     /// </summary>
@@ -128,16 +441,42 @@ public sealed class DependencyInjectionArchitectureTests
     ];
 
     [Fact]
-    public void ContactCenterCode_DoesNotResolveItsCollaboratorsFromTheContainer()
+    public void SourceCode_DoesNotResolveItsCollaboratorsFromTheContainer()
     {
         // Arrange
-        var files = EnumerateInScopeSourceFiles();
+        var violations = FindServiceLocators().Where(violation => !_knownServiceLocators.ContainsKey(violation)).ToList();
+
+        // Assert
+        AssertNoViolations(
+            ServiceProviderRule,
+            violations,
+            "Inject the collaborator itself. When it is genuinely optional, register a null-object default in the " +
+            "feature that declares the contract and replace it in the feature that implements it; when taking the " +
+            "container is unavoidable, add the type to the exception list with the reason.");
+    }
+
+    [Fact]
+    public void EveryKnownServiceLocator_StillTakesTheContainer()
+    {
+        // Arrange
+        var actual = FindServiceLocators().Distinct(StringComparer.Ordinal).ToDictionary(violation => violation, _ => 1, StringComparer.Ordinal);
+
+        // Assert
+        Ratchet.AssertNothingStale(actual, _knownServiceLocators, $"{nameof(DependencyInjectionArchitectureTests)}.{nameof(_knownServiceLocators)}");
+    }
+
+    private static List<string> FindServiceLocators()
+    {
         var violations = new List<string>();
 
-        // Act
-        foreach (var file in files)
+        foreach (var file in EnumerateInScopeSourceFiles())
         {
-            var source = File.ReadAllText(file.FullPath);
+            var source = Ratchet.ReadAllText(file);
+
+            if (!source.Contains("IServiceProvider", StringComparison.Ordinal))
+            {
+                continue;
+            }
 
             foreach (Match match in _constructorRegex.Matches(source))
             {
@@ -157,13 +496,7 @@ public sealed class DependencyInjectionArchitectureTests
             }
         }
 
-        // Assert
-        AssertNoViolations(
-            ServiceProviderRule,
-            violations,
-            "Inject the collaborator itself. When it is genuinely optional, register a null-object default in the " +
-            "feature that declares the contract and replace it in the feature that implements it; when taking the " +
-            "container is unavoidable, add the type to the exception list with the reason.");
+        return violations;
     }
 
     [Fact]
@@ -176,7 +509,7 @@ public sealed class DependencyInjectionArchitectureTests
         // Act
         foreach (var file in files)
         {
-            var source = File.ReadAllText(file.FullPath);
+            var source = Ratchet.ReadAllText(file);
 
             foreach (var contract in _contractsWithNullObjectDefaults)
             {
@@ -216,11 +549,14 @@ public sealed class DependencyInjectionArchitectureTests
             });
     }
 
+    // An authorization handler resolves what it checks lazily: the authorization service constructs every handler, so an
+    // injected collaborator that authorizes would close a construction cycle (AGENTS.md).
     private static bool IsExcepted(string typeName, DependencyInjectionException[] exceptions)
         => exceptions.Any(exception => string.Equals(exception.TypeName, typeName, StringComparison.Ordinal))
             || typeName.EndsWith("ScopeContext", StringComparison.Ordinal)
             || typeName.EndsWith("BackgroundTask", StringComparison.Ordinal)
-            || typeName.EndsWith("Hub", StringComparison.Ordinal);
+            || typeName.EndsWith("Hub", StringComparison.Ordinal)
+            || typeName.EndsWith("AuthorizationHandler", StringComparison.Ordinal);
 
     private static void AssertNoViolations(string rule, List<string> violations, string guidance)
     {
@@ -243,44 +579,8 @@ public sealed class DependencyInjectionArchitectureTests
         Assert.Fail(message.ToString());
     }
 
-    private static List<SourceFile> EnumerateInScopeSourceFiles()
-    {
-        var repositoryRoot = FindRepositoryRoot();
-        var sourceRoot = Path.Combine(repositoryRoot, "src");
-
-        return Directory
-            .EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
-            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            .Select(file => new SourceFile(file, Path.GetRelativePath(repositoryRoot, file).Replace('\\', '/')))
-            .Where(file => IsInScope(file.RelativePath))
-            .ToList();
-    }
-
-    private static bool IsInScope(string relativePath)
-        => relativePath.Contains("ContactCenter", StringComparison.OrdinalIgnoreCase)
-            || relativePath.Contains("Telephony", StringComparison.OrdinalIgnoreCase)
-            || relativePath.Contains("Omnichannel", StringComparison.OrdinalIgnoreCase);
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-
-        while (directory is not null)
-        {
-            if (Directory.Exists(Path.Combine(directory.FullName, "src"))
-                && Directory.Exists(Path.Combine(directory.FullName, "tests", "CrestApps.OrchardCore.Tests")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Unable to locate the repository root from the test assembly location.");
-    }
-
-    private sealed record SourceFile(string FullPath, string RelativePath);
+    private static List<Ratchet.SourceFile> EnumerateInScopeSourceFiles()
+        => Ratchet.EnumerateFiles("src").ToList();
 
     private sealed record DependencyInjectionException(string TypeName, string Reason);
 }

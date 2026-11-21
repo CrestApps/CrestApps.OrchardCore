@@ -1,0 +1,3 @@
+@model ShapeViewModel<HierarchyChildListItem>
+
+<span class="badge ta-badge fw-normal text-break" title="@T["Address"]"><i class="fa-solid fa-globe text-info" aria-hidden="true"></i> @Model.Value.Child.Settings.GetPrimaryHost()</span>

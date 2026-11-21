@@ -43,5 +43,11 @@ public sealed class B2BCheckoutTaxProfileHandler : ICheckoutTaxProfileHandler
 
         // The same rule the tax profile of an account party uses for the tax number its billing profile carries.
         profile.Customer.SetTaxNumber(account.Part.TaxId);
+
+        // A B2B account and its tax number are set up by the store, not by the buyer, so the number counts as verified.
+        if (!string.IsNullOrWhiteSpace(account.Part.TaxId))
+        {
+            profile.Customer.TaxRegistrationVerified = true;
+        }
     }
 }

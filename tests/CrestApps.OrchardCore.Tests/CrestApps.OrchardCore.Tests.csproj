@@ -69,6 +69,7 @@
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Inventory.Core/CrestApps.OrchardCore.Inventory.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Shipping.Core/CrestApps.OrchardCore.Shipping.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Wizard.Core/CrestApps.OrchardCore.Wizard.Core.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Wizard/CrestApps.OrchardCore.Wizard.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Transactions.Abstractions/CrestApps.OrchardCore.Transactions.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Agreements.Abstractions/CrestApps.OrchardCore.Agreements.Abstractions.csproj" />
@@ -273,6 +274,7 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Products.AzureAI\CrestApps.OrchardCore.Products.AzureAI.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Products.Elasticsearch\CrestApps.OrchardCore.Products.Elasticsearch.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Products.Lucene\CrestApps.OrchardCore.Products.Lucene.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.DncRegistry\CrestApps.OrchardCore.DncRegistry.csproj" PrivateAssets="none" />
   </ItemGroup>
 
   <ItemGroup>

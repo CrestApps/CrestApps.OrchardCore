@@ -3,25 +3,28 @@ using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Transactions.Core.Services;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Transactions.Core;
+using CrestApps.OrchardCore.Transactions.Core.Services;
+using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-using CrestApps.OrchardCore.Transactions.Models;
-using CrestApps.OrchardCore.Transactions.Services;
 
 namespace CrestApps.OrchardCore.Transactions.Controllers;
 
@@ -190,7 +193,31 @@ public sealed class RefundsAdminController : Controller
             return Forbid();
         }
 
-        var refund = string.IsNullOrEmpty(itemId) ? null : await _refundStore.FindByIdAsync(itemId);
+        if (string.IsNullOrEmpty(itemId))
+        {
+            return NotFound();
+        }
+
+        // One resolution of a refund at a time: a double submit would settle it, and tell its handlers, twice.
+        var (locker, locked) = await HttpContext.RequestServices.GetRequiredService<IDistributedLock>()
+            .TryAcquireLockWithoutWaitingAsync($"PAYMENT_REFUND_{itemId}", TimeSpan.FromMinutes(1));
+
+        if (!locked)
+        {
+            await _notifier.WarningAsync(H["This refund is being resolved already."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        await using (locker)
+        {
+            return await ResolveLockedAsync(itemId, reference, logger);
+        }
+    }
+
+    private async Task<IActionResult> ResolveLockedAsync(string itemId, string reference, ILogger logger)
+    {
+        var refund = await _refundStore.FindByIdAsync(itemId);
 
         if (refund is null)
         {
@@ -214,6 +241,9 @@ public sealed class RefundsAdminController : Controller
 
         await _refundStore.UpdateAsync(refund);
         await HttpContext.RequestServices.RefundSucceededAsync(refund, previousStatus, logger, HttpContext.RequestAborted);
+
+        // Committed before the lock is let go, so a second submit reads it settled.
+        await HttpContext.RequestServices.GetRequiredService<global::YesSql.ISession>().SaveChangesAsync(HttpContext.RequestAborted);
 
         await _notifier.SuccessAsync(H["The refund was marked as settled."]);
 

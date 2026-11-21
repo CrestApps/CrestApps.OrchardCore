@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.ModelBinding;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Commerce;
@@ -19,6 +21,7 @@ using CrestApps.OrchardCore.Customers.Navigation;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Customers.Recipes;
 using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Orders.Core.Models;
@@ -51,6 +54,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         // Customers live in their own YesSql collection, which has to be declared for its documents to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(CustomersConstants.CollectionName));
         services.AddDataMigration<CustomerMigrations>()
@@ -74,10 +79,13 @@ public sealed class Startup : StartupBase
         // checkout tax uses. The profile service itself comes with Taxation, or with the feature that taxes a document.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPartyTaxProfileProvider, CustomerPartyTaxProfileProvider>());
 
-        // A guest's history joins their account once the account's email is verified.
+        // A guest's history joins their account once the account's email is verified. Following a confirmation link is
+        // one proof of the address, recorded by the Users building block's handler, which is registered first so the
+        // merge on ConfirmedAsync sees it; and a link only confirms the address it was sent to.
+        services.AddEmailOwnershipConfirmation();
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
         services.AddScoped<ILoginFormEvent, CustomerMergeLoginFormEvent>();
-        services.AddScoped<IRegistrationFormEvents, CustomerMergeRegistrationFormEvents>();
+        services.AddScoped<IRegistrationFormEvents, CustomerMergeRegistrationFormEvent>();
         services.AddScoped<IUserEventHandler, CustomerMergeUserEventHandler>();
 
         services.AddScoped<CustomerAddressBook>();
@@ -218,6 +226,9 @@ public sealed class ReferralsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Referral codes generated per network.
+        services.AddAttemptPolicy(Controllers.ReferralController.ReferralAttemptPolicy, 20, TimeSpan.FromHours(1));
+
         services.AddDataMigration<ReferralMigrations>()
             .AddIndexProvider<Indexes.ReferralProfileIndexProvider>();
         services.AddScoped<IReferralStore, ReferralStore>();

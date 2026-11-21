@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout.ViewModels;
@@ -27,6 +28,7 @@ public sealed class CheckoutController : Controller
 {
     private readonly ICheckoutSessionStore _sessionStore;
     private readonly ICheckoutEngine _engine;
+    private readonly ICheckoutPaymentReleaseService _paymentReleaser;
     private readonly IDisplayManager<CheckoutFlow> _displayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IShapeFactory _shapeFactory;
@@ -53,6 +55,7 @@ public sealed class CheckoutController : Controller
     public CheckoutController(
         ICheckoutSessionStore sessionStore,
         ICheckoutEngine engine,
+        ICheckoutPaymentReleaseService paymentReleaser,
         IDisplayManager<CheckoutFlow> displayManager,
         IUpdateModelAccessor updateModelAccessor,
         IShapeFactory shapeFactory,
@@ -64,6 +67,7 @@ public sealed class CheckoutController : Controller
     {
         _sessionStore = sessionStore;
         _engine = engine;
+        _paymentReleaser = paymentReleaser;
         _displayManager = displayManager;
         _updateModelAccessor = updateModelAccessor;
         _shapeFactory = shapeFactory;
@@ -134,8 +138,23 @@ public sealed class CheckoutController : Controller
         }
 
         var flow = new CheckoutFlow(session);
+        var onePage = await IsOnePageAsync();
 
-        if (await IsOnePageAsync())
+        // An edit can change what the checkout costs, so a payment begun for the old total is canceled and set aside
+        // first: its client secret then can't settle the old amount, and the buyer pays the new total. A submit of the
+        // payment step itself is the payment, not an edit, and is left alone. A payment the provider has already taken,
+        // or won't cancel, stops the edit.
+        var postedAction = Request.Form[CheckoutConstants.FormActions.FieldName].ToString();
+        var isEdit = !string.IsNullOrEmpty(postedAction) || !string.Equals(model.Step, CheckoutConstants.PaymentStepKey, StringComparison.Ordinal);
+
+        if (isEdit && await _paymentReleaser.ReleaseAsync(session.SessionId, HttpContext.RequestAborted) == CheckoutPaymentReleaseResult.PaymentInProgress)
+        {
+            await _notifier.WarningAsync(H["A payment for this checkout is in progress. Wait for it to finish before changing the checkout."]);
+
+            return RedirectToRoute(CheckoutConstants.RouteNames.Step, new { sessionId = session.SessionId });
+        }
+
+        if (onePage)
         {
             return await OnePagePostAsync(flow, model);
         }

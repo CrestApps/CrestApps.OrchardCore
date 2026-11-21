@@ -1,0 +1,10 @@
+@model ShapeViewModel<AccessGrantListItem>
+
+@{
+    var item = Model.Value;
+}
+
+@foreach (var role in item.Grant.ChildRoles)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Roles inside the {0}", item.Labels.ChildLower]"><i class="fa-solid fa-user-tag text-info" aria-hidden="true"></i> @role</span>
+}

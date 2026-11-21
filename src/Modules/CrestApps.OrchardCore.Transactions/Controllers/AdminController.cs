@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Currencies;
@@ -434,7 +433,7 @@ public sealed class AdminController : Controller
         {
             foreach (var error in result.Errors)
             {
-                await _notifier.WarningAsync(new LocalizedHtmlString(error, HtmlEncoder.Default.Encode(error)));
+                await _notifier.WarningAsync(new LocalizedHtmlString(error, "{0}", false, error));
             }
         }
 
@@ -555,14 +554,14 @@ public sealed class AdminController : Controller
         {
             foreach (var error in result.Errors)
             {
-                await _notifier.WarningAsync(new LocalizedHtmlString(error, HtmlEncoder.Default.Encode(error)));
+                await _notifier.WarningAsync(new LocalizedHtmlString(error, "{0}", false, error));
             }
         }
 
         // What followed the saved change but did not finish with it, such as a customer credit change left for later.
         foreach (var warning in result.Warnings)
         {
-            await _notifier.WarningAsync(new LocalizedHtmlString(warning, HtmlEncoder.Default.Encode(warning)));
+            await _notifier.WarningAsync(new LocalizedHtmlString(warning, "{0}", false, warning));
         }
 
         return RedirectToAction(nameof(Detail), new { itemId });

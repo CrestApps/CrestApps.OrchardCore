@@ -1,9 +1,14 @@
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
+using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using CrestApps.OrchardCore.YesSql.Core.Upgrades;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
+using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Orders.Migrations;
@@ -32,6 +37,8 @@ internal sealed class OrderMigrations : DataMigration
             .Column<string>("CheckoutSessionId", column => column.WithLength(26))
             .Column<int>("Status")
             .Column<DateTime>("CreatedUtc")
+            .Column<DateTime>("PaidUtc", column => column.Nullable())
+            .Column<DateTime>("BudgetCommittedUtc", column => column.Nullable())
             .Column<DateTime>("AnonymizedUtc", column => column.Nullable())
             .Column<string>("Channel", column => column.Nullable().WithLength(16))
             .Column<string>("LocationId", column => column.Nullable().WithLength(26))
@@ -58,7 +65,7 @@ internal sealed class OrderMigrations : DataMigration
 
         await CreateReportIndexAsync();
 
-        return 4;
+        return 6;
     }
 
     /// <summary>
@@ -101,6 +108,53 @@ internal sealed class OrderMigrations : DataMigration
 
         return 4;
     }
+
+    /// <summary>
+    /// Adds when an order was paid to the order index, so a business account's monthly budget counts a paid order in the
+    /// month it was paid. An order indexed before this step has no paid time until it is saved again, and counts by when it
+    /// was placed meanwhile, as every order did before; nothing is backfilled, so the step doesn't read every order.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OrderIndex>(table => table
+            .AddColumn<DateTime>("PaidUtc", column => column.Nullable()),
+            collection: OrderConstants.CollectionName);
+
+        return 5;
+    }
+
+    /// <summary>
+    /// Adds when an order last committed part of its account's budget to the order index, so a business account's monthly
+    /// budget reads only the unpaid orders asked for or held this month rather than every unpaid order. The unpaid orders
+    /// saved before this step are indexed again once the tenant has started, outside activation; the abandoned order sweep
+    /// keeps them few.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OrderIndex>(table => table
+            .AddColumn<DateTime>("BudgetCommittedUtc", column => column.Nullable()),
+            collection: OrderConstants.CollectionName);
+
+        ShellScope.AddDeferredTask(scope => ReindexUnpaidAsync(
+            scope.ServiceProvider.GetRequiredService<ISession>(),
+            scope.ServiceProvider.GetRequiredService<ILogger<OrderMigrations>>()));
+
+        return 6;
+    }
+
+    /// <summary>
+    /// Maps the unpaid orders (drafts and orders awaiting payment) again, so their budget column is filled in.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="logger">The logger an order that can't be indexed again is logged to.</param>
+    internal static Task<int> ReindexUnpaidAsync(ISession session, ILogger logger)
+        => CatalogIndexBackfill.ReindexAsync<Order, OrderIndex>(
+            session,
+            OrderConstants.CollectionName,
+            logger: logger,
+            filter: index => index.Status == OrderStatus.Draft || index.Status == OrderStatus.AwaitingPayment);
 
     private Task<bool> CreateReportIndexAsync()
     {

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Bookings.Indexes;
 using CrestApps.OrchardCore.Bookings.Models;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -133,7 +134,8 @@ internal sealed class BookingMigrations : DataMigration
 
         ShellScope.AddDeferredTask(scope => CatalogIndexBackfill.ReindexAsync<Booking, BookingIndex>(
             scope.ServiceProvider.GetRequiredService<ISession>(),
-            BookingsConstants.CollectionName));
+            BookingsConstants.CollectionName,
+            logger: scope.ServiceProvider.GetRequiredService<ILogger<BookingMigrations>>()));
 
         return 3;
     }

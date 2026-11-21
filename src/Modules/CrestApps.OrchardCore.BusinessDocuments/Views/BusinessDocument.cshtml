@@ -259,7 +259,7 @@
                                     {
                                         <tr class="@(total.Muted && !total.Emphasized ? "text-muted" : null)">
                                             <th scope="row" class="text-end @(total.Emphasized ? null : "fw-normal")" colspan="@labelColumns">@total.Label</th>
-                                            <th class="text-end @(total.Emphasized ? (accent is null ? null : "business-document-accent") : "fw-normal")">@total.Value</th>
+                                            <th scope="row" class="text-end @(total.Emphasized ? (accent is null ? null : "business-document-accent") : "fw-normal")">@total.Value</th>
                                         </tr>
                                     }
                                 </tfoot>

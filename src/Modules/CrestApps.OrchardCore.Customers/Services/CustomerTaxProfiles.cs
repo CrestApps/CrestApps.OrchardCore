@@ -13,10 +13,20 @@ namespace CrestApps.OrchardCore.Customers.Services;
 internal static class CustomerTaxProfiles
 {
     /// <summary>
-    /// Returns the tax type of a customer: a business customer is taxed as a business, anyone else as a person.
+    /// Returns the tax type of a customer: a business customer with a tax number the store verified is taxed as a
+    /// business, anyone else as a person. The customer sets their own kind, and tax rules are scoped by it, so a
+    /// self-declared business would step out of a consumer-only rule; a store-managed business account says so through
+    /// its own handler.
     /// </summary>
     public static CustomerTaxType TypeOf(Customer customer)
-        => customer.Kind == CustomerKind.Business ? CustomerTaxType.B2B : CustomerTaxType.B2C;
+        => customer.Kind == CustomerKind.Business && IsVerified(customer) ? CustomerTaxType.B2B : CustomerTaxType.B2C;
+
+    /// <summary>
+    /// Returns whether the customer's tax number counts as verified. Only a number an administrator verified counts: the
+    /// customer chooses their kind and types their number themselves.
+    /// </summary>
+    public static bool IsVerified(Customer customer)
+        => customer.TaxIdVerified && !string.IsNullOrWhiteSpace(customer.TaxId);
 
     /// <summary>
     /// Returns a new profile of the customer, for a buyer nothing else is known about.
@@ -28,6 +38,7 @@ internal static class CustomerTaxProfiles
             CustomerType = TypeOf(customer),
             TaxRegistrationNumber = customer.TaxId,
             VatNumber = customer.TaxId,
+            TaxRegistrationVerified = IsVerified(customer),
             IsTaxExempt = customer.IsTaxExempt,
             ExemptionCertificateIds = await GetCertificateIdsAsync(customer.ItemId, serviceProvider, cancellationToken),
         };
@@ -42,6 +53,7 @@ internal static class CustomerTaxProfiles
         known.CustomerId = customer.ItemId;
         known.TaxRegistrationNumber ??= customer.TaxId;
         known.VatNumber ??= customer.TaxId;
+        known.TaxRegistrationVerified |= IsVerified(customer);
         known.IsTaxExempt |= customer.IsTaxExempt;
         known.ExemptionCertificateIds = [.. (known.ExemptionCertificateIds ?? []).Union(await GetCertificateIdsAsync(customer.ItemId, serviceProvider, cancellationToken))];
     }

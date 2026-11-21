@@ -418,7 +418,7 @@ public sealed class InvoiceLateFeesController : Controller
 
         foreach (var error in result.Errors)
         {
-            await _notifier.WarningAsync(new LocalizedHtmlString(error, System.Text.Encodings.Web.HtmlEncoder.Default.Encode(error)));
+            await _notifier.WarningAsync(new LocalizedHtmlString(error, "{0}", false, error));
         }
 
         if (result.DebitNotes.Count > 0)

@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
@@ -149,6 +150,37 @@ public sealed partial class VoiceAgentConversationLoopTests
         // Assert
         Assert.Equal(["+15552223333"], harness.Media.Transfers);
         Assert.Equal(AICallTransferMode.Cold, Part<AICallTransfer>(harness.Activity).Mode);
+    }
+
+    /// <summary>
+    /// Fix verification Mild: the briefing is a model turn, and a tool on it (the secure keypad commits the session and
+    /// opens its window in a scope of its own) changes the stored activity. Saving the transfer on the copy read before
+    /// the briefing put the old activity back over that change.
+    /// </summary>
+    [Fact]
+    public async Task ATransferWhoseBriefingTurnChangesTheActivity_KeepsThatChange()
+    {
+        // Arrange
+        var harness = new LoopHarness(storesCopies: true);
+        harness.Activity.Status = ActivityStatus.InProgress;
+        harness.Activity.InteractionType = ActivityInteractionType.Automated;
+        harness.Activity.AISessionId = "session-1";
+        harness.Activity.Put(new AILiveCall { ProviderName = "Fake", ProviderCallId = "call-1" });
+        harness.Activity.Put(new AITakeOverRequest { TargetPhoneNumber = "+15552223333", TransferMode = AICallTransferMode.Warm });
+        harness.Reply = "A caller needs help with a refund.";
+        harness.DuringCompletion = () => harness.SecureKeypadCaptures
+            .StartAsync(harness.Activity.ItemId, SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken)
+            .GetAwaiter()
+            .GetResult();
+
+        // Act
+        var started = await harness.Loop.TakeOverTurnBasedCallAsync(harness.Activity, Part<AILiveCall>(harness.Activity), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(started);
+        var stored = harness.ReadStoredCopy();
+        Assert.Equal("A caller needs help with a refund.", Part<AIAttendedTransfer>(stored)?.Briefing);
+        Assert.True(stored.Has<SecureCaptureWindow>(), "Saving the transfer must not write over what the briefing turn saved.");
     }
 
     [Fact]

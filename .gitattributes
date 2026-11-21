@@ -13,6 +13,9 @@
 # patch-package patches are diffs against LF files in node_modules. A CRLF checkout makes them fail to apply.
 *.patch text eol=lf
 
+# The Public Suffix List is kept byte for byte as publicsuffix.org serves it, so a refresh diffs only the rules that changed.
+src/Core/CrestApps.OrchardCore.Subscriptions.Core/Data/public_suffix_list.dat text eol=lf
+
 # Vendored specification cassettes are verified against the SHA-256 of the upstream file recorded in their
 # manifest. Line ending normalization would rewrite the bytes and break that check on Windows checkouts.
 tests/CrestApps.OrchardCore.Tests/Telephony/Cassettes/** -text

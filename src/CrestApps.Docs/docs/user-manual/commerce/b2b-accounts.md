@@ -68,9 +68,11 @@ A product on the list by SKU costs its price there; any other product costs your
 Two settings send a buyer's order to the account's admins before it can be paid:
 
 - a buyer's **Order limit**: an order over it;
-- the account's **Monthly budget**: an order that takes the account's paid orders this month past it.
+- the account's **Monthly budget**: an order that takes what the account has spent or committed this month past it.
 
 An admin's own orders never need approval.
+
+What counts against the budget is the account's orders this month that are paid, waiting for approval, approved but not paid yet, or being paid (from the moment the buyer begins paying until the order is paid or canceled). A checkout that was opened and left doesn't count. Two buyers paying at the same moment take turns, so they can't both spend what's left of the budget: the second one's order is checked with the first one's counted.
 
 When an order needs approval, the buyer's **Business account** step says why and has an **Ask for approval** box to tick. Once they ask, the account's admins are emailed, and the order waits under the buyer's orders as *Waiting for approval*; it can't be paid yet.
 
@@ -79,7 +81,7 @@ An admin approves or rejects it from the **Business account** page of their own 
 - **Approved**: the order shows *... approved this order. Pay it to place it.*, with the admin's note, and **Pay now**. **Pay now** opens the checkout at the **Business account** step again, where the buyer enters the purchase order number once more.
 - **Rejected**: the order is canceled.
 
-An order that grows past the total that was approved, such as with more items, needs approval again. The admin's **Business account** page also shows the monthly budget and what's been spent.
+An order that grows past the total that was approved, such as with more items, needs approval again. The admin's **Business account** page also shows the monthly budget and what's been spent or committed.
 
 ## Quotes
 

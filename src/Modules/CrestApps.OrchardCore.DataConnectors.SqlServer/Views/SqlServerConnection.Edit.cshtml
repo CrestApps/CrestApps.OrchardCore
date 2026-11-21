@@ -29,10 +29,16 @@
         <div class="ocat-end">
             <select asp-for="Authentication" class="form-select">
                 <option value="@nameof(SqlServerAuthenticationType.SqlLogin)">@T["A SQL Server login"]</option>
-                <option value="@nameof(SqlServerAuthenticationType.Integrated)">@T["The site's Windows account"]</option>
+                @if (Model.AllowHostIdentity)
+                {
+                    <option value="@nameof(SqlServerAuthenticationType.Integrated)">@T["The site's Windows account"]</option>
+                }
                 <option value="@nameof(SqlServerAuthenticationType.EntraServicePrincipal)">@T["A Microsoft Entra service principal"]</option>
-                <option value="@nameof(SqlServerAuthenticationType.EntraManagedIdentity)">@T["The managed identity of the site's host"]</option>
-                <option value="@nameof(SqlServerAuthenticationType.EntraDefault)">@T["The default Microsoft Entra credential of the site's host"]</option>
+                @if (Model.AllowHostIdentity)
+                {
+                    <option value="@nameof(SqlServerAuthenticationType.EntraManagedIdentity)">@T["The managed identity of the site's host"]</option>
+                    <option value="@nameof(SqlServerAuthenticationType.EntraDefault)">@T["The default Microsoft Entra credential of the site's host"]</option>
+                }
             </select>
             <span class="hint">@T["Use a login that can only read what the data sets need: data sets read with the connection's rights."]</span>
         </div>

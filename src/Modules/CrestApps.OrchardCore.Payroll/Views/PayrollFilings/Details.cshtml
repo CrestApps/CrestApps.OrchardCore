@@ -111,7 +111,7 @@
         <div class="action-bar-bottom">
             <button type="submit" class="btn btn-primary">@T["Mark as filed"]</button>
             <button type="submit" class="btn btn-secondary action-bar-secondary" formaction="@Url.Action("PrepareAgain", new { id = filing.ItemId })">@T["Prepare again"]</button>
-            <button type="submit" class="btn btn-danger action-bar-secondary" formaction="@Url.Action("Delete", new { id = filing.ItemId })" data-url-af="UnsafeUrl" data-title="@T["Delete"]" data-message="@T["Delete the draft?"]">@T["Delete"]</button>
+            <button type="submit" class="btn btn-danger action-bar-secondary" formaction="@Url.Action("Delete", new { id = filing.ItemId })" data-confirm-title="@T["Delete"]" data-confirm="@T["Delete the draft?"]">@T["Delete"]</button>
             <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-employerId="@filing.EmployerId">@T["Back"]</a>
         </div>
     </form>
@@ -128,3 +128,4 @@ else
         </div>
     </form>
 }
+<script asp-name="crestapps-browser" at="Foot"></script>

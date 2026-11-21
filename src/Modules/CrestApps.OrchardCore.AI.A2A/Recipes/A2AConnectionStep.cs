@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.AI.A2A.Models;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Recipes;
 using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
@@ -37,7 +38,11 @@ internal sealed class A2AConnectionStep : CatalogRecipeStepBase<A2AConnection>
         => _manager.FindByIdAsync(id);
 
     protected override ValueTask UpdateAsync(A2AConnection entry, JsonObject token)
-        => _manager.UpdateAsync(entry, token);
+    {
+        // A recipe that leaves a secret out keeps the stored one; when it also changes where the entry sends it, the
+        // kept secret is dropped, as the editor drops it.
+        return RecipeSecretDestinations.UpdateAsync(entry, token, data => _manager.UpdateAsync(entry, data));
+    }
 
     protected override ValueTask<A2AConnection> NewAsync(JsonObject token, RecipeExecutionContext context)
         => _manager.NewAsync(token);

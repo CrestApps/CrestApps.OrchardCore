@@ -165,7 +165,9 @@ public sealed class TimeOffController : Controller
         {
             var request = await _requestService.FindAsync(id, HttpContext.RequestAborted);
 
-            if (request is null || !scope.Covers(request.TeamId) || !request.IsOpen)
+            // The caller's own request is skipped: it is someone else's to decide.
+            if (request is null || !scope.Covers(request.TeamId) || !request.IsOpen ||
+                !await _scopeService.CanDecideForWorkerAsync(User, request.WorkerId, HttpContext.RequestAborted))
             {
                 continue;
             }
@@ -401,7 +403,7 @@ public sealed class TimeOffController : Controller
     [Admin("workforce/time-off/approve/{id}", "WorkforceTimeOffApprove")]
     public Task<IActionResult> Approve(string id, string note)
     {
-        return DecideAsync(id, () => _requestService.ApproveAsync(id, User.Identity?.Name, note, HttpContext.RequestAborted), H["The time off has been approved."]);
+        return DecideAsync(id, () => _requestService.ApproveAsync(id, User.Identity?.Name, note, HttpContext.RequestAborted), H["The time off has been approved."], isDecision: true);
     }
 
     /// <summary>
@@ -414,7 +416,7 @@ public sealed class TimeOffController : Controller
     [Admin("workforce/time-off/decline/{id}", "WorkforceTimeOffDecline")]
     public Task<IActionResult> Decline(string id, string note)
     {
-        return DecideAsync(id, () => _requestService.DeclineAsync(id, User.Identity?.Name, note, HttpContext.RequestAborted), H["The request has been declined."]);
+        return DecideAsync(id, () => _requestService.DeclineAsync(id, User.Identity?.Name, note, HttpContext.RequestAborted), H["The request has been declined."], isDecision: true);
     }
 
     /// <summary>
@@ -427,7 +429,7 @@ public sealed class TimeOffController : Controller
     [Admin("workforce/time-off/cancel/{id}", "WorkforceTimeOffCancel")]
     public Task<IActionResult> Cancel(string id, string note)
     {
-        return DecideAsync(id, () => _requestService.CancelAsync(id, User.Identity?.Name, note, HttpContext.RequestAborted), H["The time off has been canceled and the balance given back."]);
+        return DecideAsync(id, () => _requestService.CancelAsync(id, User.Identity?.Name, note, HttpContext.RequestAborted), H["The time off has been canceled and the balance given back."], isDecision: false);
     }
 
     /// <summary>
@@ -532,7 +534,9 @@ public sealed class TimeOffController : Controller
             return NotFound();
         }
 
-        if (!await _scopeService.ManagesWorkerAsync(User, worker, HttpContext.RequestAborted))
+        // A manager doesn't add hours to their own balance on the strength of managing their own team.
+        if (!await _scopeService.ManagesWorkerAsync(User, worker, HttpContext.RequestAborted) ||
+            !await _scopeService.CanDecideForWorkerAsync(User, worker.ItemId, HttpContext.RequestAborted))
         {
             return Forbid();
         }
@@ -586,6 +590,11 @@ public sealed class TimeOffController : Controller
             return NotFound();
         }
 
+        if (!await _scopeService.CanDecideForWorkerAsync(User, worker.ItemId, HttpContext.RequestAborted))
+        {
+            return Forbid();
+        }
+
         policy.Assignments.Add(new TimeOffPolicyAssignment { WorkerId = worker.ItemId, EffectiveFrom = model.EffectiveFrom, EffectiveTo = model.EffectiveTo });
 
         await SavePolicyAsync(policy, H["{0} now has the '{1}' policy.", worker.DisplayName, policy.Name]);
@@ -613,6 +622,11 @@ public sealed class TimeOffController : Controller
         if (policy is null)
         {
             return NotFound();
+        }
+
+        if (!await _scopeService.CanDecideForWorkerAsync(User, workerId, HttpContext.RequestAborted))
+        {
+            return Forbid();
         }
 
         foreach (var assignment in policy.Assignments.Where(assignment => assignment.WorkerId == workerId).ToArray())
@@ -643,7 +657,7 @@ public sealed class TimeOffController : Controller
         }
     }
 
-    private async Task<IActionResult> DecideAsync(string id, Func<Task<PlanningResult<TimeOffRequest>>> decide, LocalizedHtmlString success)
+    private async Task<IActionResult> DecideAsync(string id, Func<Task<PlanningResult<TimeOffRequest>>> decide, LocalizedHtmlString success, bool isDecision)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ApproveTimeOff))
         {
@@ -658,6 +672,12 @@ public sealed class TimeOffController : Controller
         }
 
         if (!(await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted)).Covers(request.TeamId))
+        {
+            return Forbid();
+        }
+
+        // Approving or declining one's own request is someone else's call.
+        if (isDecision && !await _scopeService.CanDecideForWorkerAsync(User, request.WorkerId, HttpContext.RequestAborted))
         {
             return Forbid();
         }

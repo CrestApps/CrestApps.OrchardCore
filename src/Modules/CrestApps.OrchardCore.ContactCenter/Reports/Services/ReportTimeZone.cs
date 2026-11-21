@@ -107,7 +107,10 @@ internal sealed class ReportTimeZone
             midnight = midnight.AddMinutes(1);
         }
 
+        // The loop above moved midnight past any skipped hour, so the conversion cannot throw.
+#pragma warning disable RS0030
         var start = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(midnight, DateTimeKind.Unspecified), Zone);
+#pragma warning restore RS0030
 
         return start <= utc ? start : utc;
     }
@@ -130,7 +133,10 @@ internal sealed class ReportTimeZone
             midnight = midnight.AddMinutes(1);
         }
 
+        // The loop above moved midnight past any skipped hour, so the conversion cannot throw.
+#pragma warning disable RS0030
         var next = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(midnight, DateTimeKind.Unspecified), Zone);
+#pragma warning restore RS0030
 
         return next > utc ? next : utc.AddDays(1);
     }

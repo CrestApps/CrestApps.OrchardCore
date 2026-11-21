@@ -457,6 +457,7 @@ public sealed class BookingPaymentEventsTests
             CreateBalanceStore().Object,
             CreateBookingStore().Object,
             transactions.Object,
+            new LocalLock(NullLogger<LocalLock>.Instance),
             CreateClock(),
             NullLogger<BookingBalanceCharger>.Instance,
             new PassThroughLocalizer<BookingBalanceCharger>(),

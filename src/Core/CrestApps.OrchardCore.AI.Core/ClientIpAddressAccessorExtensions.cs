@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Cysharp.Text;
@@ -32,7 +33,7 @@ public static class ClientIpAddressAccessorExtensions
 
         foreach (var b in hashBytes)
         {
-            sb.Append(b.ToString("x2")); // Format each byte as a hex value
+            sb.Append(b.ToString("x2", CultureInfo.InvariantCulture)); // Format each byte as a hex value
         }
 
         return sb.ToString();

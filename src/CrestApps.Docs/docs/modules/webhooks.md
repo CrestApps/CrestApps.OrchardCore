@@ -154,6 +154,29 @@ services.Configure<WebhookDeliveryRetentionOptions>(options =>
 });
 ```
 
+### Outbound calls through a proxy
+
+Deliveries, like every other egress-guarded client (`EgressNetwork.AddEgressGuardedHttpClient` in
+`CrestApps.OrchardCore.Core`), connect directly by default: the guard checks the address it connects to, and through a
+proxy that would be the proxy's. On a host whose only way out is an HTTP proxy, set `CrestApps:Egress:UseSystemProxy` to
+`true` in the host's or the tenant's configuration (described in this module's `ConfigurationSchema.json`). The guarded
+clients then go through the system proxy (`HTTPS_PROXY`, `HTTP_PROXY`, `NO_PROXY`), connect to the proxy whatever its
+address, and check each destination's DNS answer before the proxy is asked to reach it, on every request and redirect.
+The proxy resolves the name itself, so keep egress rules on the proxy as well. A client built with
+`EgressNetwork.CreateHandler` passes `EgressNetwork.GetProxy(serviceProvider)` to get the same behavior.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Egress": {
+        "UseSystemProxy": true
+      }
+    }
+  }
+}
+```
+
 ## Provider webhook inbox
 
 Providers deliver webhooks at least once, and they deliver them again when the site is slow to answer or restarting.

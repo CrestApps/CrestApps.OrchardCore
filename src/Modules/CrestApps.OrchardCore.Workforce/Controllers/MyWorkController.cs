@@ -743,7 +743,11 @@ public sealed class MyWorkController : Controller
             return BadRequest();
         }
 
-        await _pushService.SubscribeAsync(worker.ItemId, input.Endpoint, input.Keys.P256dh, input.Keys.Auth, Request.Headers.UserAgent.ToString(), HttpContext.RequestAborted);
+        // An endpoint on the site's own network, or outside the allowed push services, is refused.
+        if (await _pushService.SubscribeAsync(worker.ItemId, input.Endpoint, input.Keys.P256dh, input.Keys.Auth, Request.Headers.UserAgent.ToString(), HttpContext.RequestAborted) is null)
+        {
+            return BadRequest();
+        }
 
         return NoContent();
     }
@@ -833,10 +837,13 @@ public sealed class MyWorkController : Controller
     /// when the portal is opened offline.
     /// </summary>
     /// <returns>The script.</returns>
+    /// <param name="u">A hash of the signed-in user (see <see cref="GetServiceWorkerUserKey"/>), which names the caches,
+    /// so the pages one worker kept offline are never shown to the next one on a shared device.</param>
     [AllowAnonymous]
     [HttpGet("my-work/sw.js")]
-    public IActionResult ServiceWorker()
+    public IActionResult ServiceWorker(string u)
     {
+        var userKey = NormalizeServiceWorkerUserKey(u);
         var home = Url.Content("~/Admin/my-work");
         var icon = Url.Content("~/CrestApps.OrchardCore.Workforce/portal/icon-192.png");
         var offline = System.Text.Json.JsonSerializer.Serialize(S["You're offline. My Work needs a connection; it will load again once you're back online."].Value);
@@ -848,8 +855,8 @@ public sealed class MyWorkController : Controller
             const home = '{{home}}';
             const icon = '{{icon}}';
             const offlinePages = {{offlinePages}};
-            const pageCache = 'my-work-pages-v1';
-            const assetCache = 'my-work-assets-v1';
+            const pageCache = 'my-work-pages-v2-{{userKey}}';
+            const assetCache = 'my-work-assets-v2-{{userKey}}';
             const isOfflinePage = url => offlinePages.some(page => url.pathname === page || url.pathname.startsWith(page + '/'));
             const offlineMessage = () => new Response(
                 '<!doctype html><meta name="viewport" content="width=device-width, initial-scale=1"><title>My Work</title><p style="font-family:system-ui;padding:2rem">' + {{offline}} + '</p>',
@@ -865,7 +872,10 @@ public sealed class MyWorkController : Controller
                 self.skipWaiting();
                 event.waitUntil(caches.open(pageCache).then(cache => Promise.all(offlinePages.map(page => cache.add(page).catch(() => { })))));
             });
-            self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+            // The caches belong to one user: when another user registers the worker, the previous user's caches go.
+            self.addEventListener('activate', event => event.waitUntil(caches.keys()
+                .then(keys => Promise.all(keys.filter(key => key.startsWith('my-work-') && key !== pageCache && key !== assetCache).map(key => caches.delete(key))))
+                .then(() => self.clients.claim())));
             self.addEventListener('fetch', event => {
                 const request = event.request;
                 if (request.method !== 'GET') {
@@ -900,14 +910,37 @@ public sealed class MyWorkController : Controller
             });
             """;
 
-        Response.Headers["Service-Worker-Allowed"] = Url.Content("~/Admin/my-work");
         Response.Headers.CacheControl = "no-cache";
+        Portal.MyWorkSignOut.RememberDevice(Request, Response);
 
         // The service worker is served here, outside the admin, but looks after the My Work pages in the admin.
         Response.Headers["Service-Worker-Allowed"] = home;
 
         return Content(script, "text/javascript; charset=utf-8");
     }
+
+    /// <summary>
+    /// The key the My Work service worker names its caches with: a short hash of the user and tenant, never the user id.
+    /// </summary>
+    /// <param name="userId">The signed-in user's id.</param>
+    /// <param name="tenantName">The tenant's name.</param>
+    public static string GetServiceWorkerUserKey(string userId, string tenantName)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return "anonymous";
+        }
+
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(tenantName + "|" + userId));
+
+        return Convert.ToHexString(hash, 0, 12).ToLowerInvariant();
+    }
+
+    // Only a key this site made reaches the script; anything else falls back to a key of its own.
+    internal static string NormalizeServiceWorkerUserKey(string value)
+        => !string.IsNullOrEmpty(value) && value.Length <= 64 && value.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c))
+            ? value
+            : "anonymous";
 
     private async Task<(StaffMember Worker, IActionResult Denied)> AuthorizeAsync()
     {

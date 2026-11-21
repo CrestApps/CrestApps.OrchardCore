@@ -92,6 +92,77 @@ public sealed class DataConnectorRecipeTests
         Assert.Equal("first", await ReadSecretAsync(harness, connection, "Password"));
     }
 
+    /// <summary>
+    /// SEC-A20 l: a recipe entry that names an existing connection and moves its token requests to another host, or
+    /// signs in another way, must not carry the stored password there. The step drops the stored secrets as the editor
+    /// does; a secret the entry itself gives is kept.
+    /// </summary>
+    [Fact]
+    public async Task DataConnectionStep_ThatSendsTheTokenRequestsElsewhere_DropsTheStoredSecrets()
+    {
+        // Arrange
+        await using var harness = await Harness.CreateAsync();
+        await RunAsync(harness, Step("DataConnection", "Connections", BasicConnection("Source", secrets: new JsonObject { [HttpAuthenticationSecrets.Password] = "first" })));
+
+        // Act: OAuth 2.0 password grant against a token endpoint on another host, with the password box left empty.
+        var errors = await RunAsync(harness, Step("DataConnection", "Connections", new JsonObject
+        {
+            ["Name"] = "Source",
+            ["Properties"] = new JsonObject
+            {
+                [nameof(HttpConnectionSettings)] = new JsonObject
+                {
+                    ["BaseUrl"] = "https://api.example.com",
+                    ["Authentication"] = new JsonObject
+                    {
+                        ["Type"] = (int)HttpAuthenticationType.OAuth2,
+                        ["GrantType"] = (int)OAuthGrantType.Password,
+                        ["UserName"] = "service",
+                        ["TokenUrl"] = "https://evil.example.net/token",
+                        ["ClientId"] = "client",
+                    },
+                },
+            },
+            ["Secrets"] = new JsonObject { [HttpAuthenticationSecrets.Password] = string.Empty },
+        }));
+        var connection = await FindConnectionAsync(harness, "Source");
+
+        // Assert
+        Assert.Empty(errors);
+        Assert.Equal("https://evil.example.net/token", connection.GetOrCreate<HttpConnectionSettings>().Authentication.TokenUrl);
+        Assert.Null(await ReadSecretAsync(harness, connection, HttpAuthenticationSecrets.Password));
+    }
+
+    [Fact]
+    public async Task DataConnectionStep_ThatMovesTheHost_KeepsASecretTheEntryGives()
+    {
+        // Arrange
+        await using var harness = await Harness.CreateAsync();
+        await RunAsync(harness, Step("DataConnection", "Connections", BasicConnection("Source", secrets: new JsonObject { [HttpAuthenticationSecrets.Password] = "first" })));
+
+        // Act
+        await RunAsync(harness, Step("DataConnection", "Connections", BasicConnection("Source", "https://other.example.net", new JsonObject { [HttpAuthenticationSecrets.Password] = "second" })));
+        var connection = await FindConnectionAsync(harness, "Source");
+
+        // Assert
+        Assert.Equal("second", await ReadSecretAsync(harness, connection, HttpAuthenticationSecrets.Password));
+    }
+
+    [Fact]
+    public async Task DataConnectionStep_OnTheSameHost_KeepsTheStoredSecret()
+    {
+        // Arrange
+        await using var harness = await Harness.CreateAsync();
+        await RunAsync(harness, Step("DataConnection", "Connections", BasicConnection("Source", secrets: new JsonObject { [HttpAuthenticationSecrets.Password] = "first" })));
+
+        // Act
+        await RunAsync(harness, Step("DataConnection", "Connections", BasicConnection("Source", "https://api.example.com/v2")));
+        var connection = await FindConnectionAsync(harness, "Source");
+
+        // Assert
+        Assert.Equal("first", await ReadSecretAsync(harness, connection, HttpAuthenticationSecrets.Password));
+    }
+
     [Theory]
     [InlineData("Missing", "Test", "isn't enabled")]
     [InlineData("1st", "Test", "technical name")]
@@ -316,6 +387,26 @@ public sealed class DataConnectorRecipeTests
         }
     }
 
+    private static JsonObject BasicConnection(string name, string baseUrl = "https://api.example.com", JsonObject secrets = null)
+        => new()
+        {
+            ["Name"] = name,
+            ["Connector"] = "Test",
+            ["Properties"] = new JsonObject
+            {
+                [nameof(HttpConnectionSettings)] = new JsonObject
+                {
+                    ["BaseUrl"] = baseUrl,
+                    ["Authentication"] = new JsonObject
+                    {
+                        ["Type"] = (int)HttpAuthenticationType.Basic,
+                        ["UserName"] = "service",
+                    },
+                },
+            },
+            ["Secrets"] = secrets,
+        };
+
     private static JsonObject Step(string name, string member, params JsonObject[] entries)
         => new()
         {
@@ -323,7 +414,61 @@ public sealed class DataConnectorRecipeTests
             [member] = new JsonArray([.. entries]),
         };
 
-    private static async Task<List<string>> RunAsync(Harness harness, JsonObject step)
+    [Fact]
+    public async Task DataConnectionStep_ReimportingAConnectionToAnotherServer_DropsItsStoredPassword()
+    {
+        // Arrange (Low, Data): a recipe could re-point an existing SQL Server connection and keep its password. The
+        // connector's secret target says where the password may go; the test connector reads its server the same way.
+        await using var harness = await Harness.CreateAsync();
+        var target = new ServerSecretTarget();
+
+        await RunAsync(harness, Step("DataConnection", "Connections", SqlConnection("sql.example.com", new JsonObject { ["Password"] = "stored-secret" })), [target]);
+
+        // Act
+        var errors = await RunAsync(harness, Step("DataConnection", "Connections", SqlConnection("attacker.example", secrets: null)), [target]);
+        var connection = await FindConnectionAsync(harness, "Warehouse");
+
+        // Assert
+        Assert.Empty(errors);
+        Assert.False(connection.Secrets?.ContainsKey("Password") ?? false);
+    }
+
+    [Fact]
+    public async Task DataConnectionStep_ReimportingAConnectionToTheSameServer_KeepsItsStoredPassword()
+    {
+        await using var harness = await Harness.CreateAsync();
+        var target = new ServerSecretTarget();
+
+        await RunAsync(harness, Step("DataConnection", "Connections", SqlConnection("sql.example.com", new JsonObject { ["Password"] = "stored-secret" })), [target]);
+        await RunAsync(harness, Step("DataConnection", "Connections", SqlConnection("sql.example.com", secrets: null)), [target]);
+        var connection = await FindConnectionAsync(harness, "Warehouse");
+
+        Assert.Equal("stored-secret", await ReadSecretAsync(harness, connection, "Password"));
+    }
+
+    private static JsonObject SqlConnection(string server, JsonObject secrets)
+        => new()
+        {
+            ["Name"] = "Warehouse",
+            ["Connector"] = "Test",
+            ["Properties"] = new JsonObject
+            {
+                ["SqlServerConnectionSettings"] = new JsonObject { ["Server"] = server, ["Authentication"] = 0 },
+            },
+            ["Secrets"] = secrets,
+        };
+
+    // Describes a connection by the server in its SQL Server settings, as the SQL Server connector's target does.
+    private sealed class ServerSecretTarget : IDataConnectionSecretTarget
+    {
+        public string Connector
+            => "Test";
+
+        public string Describe(DataConnection connection)
+            => (connection.Properties.TryGetValue("SqlServerConnectionSettings", out var settings) ? JsonSerializer.SerializeToNode(settings)?["Server"]?.GetValue<string>() : null)?.ToUpperInvariant();
+    }
+
+    private static async Task<List<string>> RunAsync(Harness harness, JsonObject step, IDataConnectionSecretTarget[] secretTargets = null)
     {
         var context = new RecipeExecutionContext
         {
@@ -338,6 +483,7 @@ public sealed class DataConnectorRecipeTests
                     provider.GetRequiredService<IDataConnectionStore>(),
                     provider.GetRequiredService<IDataConnectorManager>(),
                     provider.GetRequiredService<IDataConnectionSecretManager>(),
+                    secretTargets ?? provider.GetServices<IDataConnectionSecretTarget>(),
                     harness.Clock,
                     new PassThroughStringLocalizer<DataConnectionStep>())
                 : new ConnectedDataSetStep(

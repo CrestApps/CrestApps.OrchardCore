@@ -215,9 +215,10 @@ public sealed class PayProfilesController : Controller
                 await _notifier.SuccessAsync(H["The pay profile has been removed."]);
             }
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException)
         {
-            await _notifier.ErrorAsync(H["{0}", ex.Message]);
+            // The manager refuses a profile that still has pay items; its message is not shown as is.
+            await _notifier.ErrorAsync(H["The pay profile has pay items: remove them first, or end the profile instead."]);
         }
 
         // Back to the person's staff profile, where their pay setup is.

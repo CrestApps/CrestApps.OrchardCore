@@ -13,11 +13,14 @@ using CrestApps.OrchardCore.Users.Models;
 using CrestApps.OrchardCore.Users.Recipes;
 using CrestApps.OrchardCore.Users.Schemas;
 using CrestApps.OrchardCore.Users.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using OrchardCore.ContentFields.Drivers;
 using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentFields.Services;
@@ -27,6 +30,7 @@ using OrchardCore.Contents.Drivers;
 using OrchardCore.Contents.Models;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Liquid;
@@ -246,14 +250,12 @@ public sealed class DisplayNameRecipesSchemaStartup : StartupBase
 }
 
 /// <summary>
-/// Signing in with an emailed code.
+/// Signing in with an emailed code. The codes and the services it shares with the confirmation pages come from the
+/// "Confirm email ownership" feature, which it depends on.
 /// </summary>
 [Feature(UsersConstants.Feature.EmailCodeSignIn)]
 public sealed class EmailCodeSignInStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<EmailSignInCodes>();
-        services.AddDisplayDriver<LoginForm, EmailCodeLoginFormDisplayDriver>();
-    }
+        => services.AddDisplayDriver<LoginForm, EmailCodeLoginFormDisplayDriver>();
 }

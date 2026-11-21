@@ -26,6 +26,12 @@
 @inject IAIProfileStore ProfilesCatalog
 @inject IAIChatSessionPromptStore PromptStore
 @inject IAIDeploymentManager AIDeploymentManager
+@inject CrestApps.OrchardCore.AI.Chat.Core.Services.AIChatProfileAccessEvaluator AIChatProfileAccessEvaluator
+@inject CrestApps.OrchardCore.AI.Core.Services.ChatImageContentSecurityPolicy ChatImageContentSecurityPolicy
+@{
+    // Model output is rendered as Markdown here; images may load only from the site and the configured sources.
+    ChatImageContentSecurityPolicy.Apply(Context);
+}
 
 @{
     var baseId = Html.IdForModel();
@@ -41,7 +47,8 @@
     // session, so asking it to load, rate, speak or extend the conversation only produced a "Session not found."
     // bubble. The transcript below is rendered from the prompt store instead.
     var isReadOnly = Model.IsReadOnly;
-    var promptGeneratedProfiles = await ProfilesCatalog.GetByTypeAsync(AIProfileType.TemplatePrompt);
+    // Only the templates this user may use are named; the hub refuses the others anyway.
+    var promptGeneratedProfiles = await AIChatProfileAccessEvaluator.GetAccessibleProfilesAsync(User, await ProfilesCatalog.GetByTypeAsync(AIProfileType.TemplatePrompt));
     var shellFeaturesManager = ShellScope.Services.GetRequiredService<IShellFeaturesManager>();
     var enabledFeatures = await shellFeaturesManager.GetEnabledFeaturesAsync();
     var sessionDocumentsFeatureEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatSessionDocuments);
@@ -206,7 +213,7 @@
                 @if (promptGeneratedProfiles.Any())
                 {
                     <div class="dropdown">
-                        <button class="btn btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@T["Tools"]" title="@T["Tools"]">
                             <i class="fa-solid fa-screwdriver-wrench"></i>
                         </button>
                         <ul class="dropdown-menu">
@@ -227,7 +234,7 @@
                     </button>
 
                     @* Send sits with the message box it belongs to. *@
-                    <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                    <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" aria-label="@T["Send"]" title="@T["Send"]" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
                 </div>

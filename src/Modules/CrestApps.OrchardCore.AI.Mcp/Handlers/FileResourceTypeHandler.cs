@@ -2,7 +2,9 @@
 using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
+using CrestApps.OrchardCore.AI.Mcp.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
@@ -19,6 +21,7 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
 
     private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
     private readonly IMcpFileProviderResolver _fileProviderResolver;
+    private readonly McpFileResourceOptions _options;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -28,10 +31,12 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
     /// <param name="logger">The logger.</param>
     public FileResourceTypeHandler(
         IMcpFileProviderResolver fileProviderResolver,
+        IOptions<McpFileResourceOptions> options,
         ILogger<FileResourceTypeHandler> logger)
     : base(TypeName)
     {
         _fileProviderResolver = fileProviderResolver;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -67,6 +72,12 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
         if (fileInfo.IsDirectory)
         {
             return CreateErrorResult(resource.Resource.Uri, $"The path '{fileName}' is a directory, not a file. Only file resources are supported.");
+        }
+
+        // A file is read into memory to answer, so one larger than the limit is refused rather than read.
+        if (fileInfo.Length > _options.MaxBytes)
+        {
+            return CreateErrorResult(resource.Resource.Uri, $"The file '{fileName}' is too large to read as a resource.");
         }
 
         if (_logger.IsEnabled(LogLevel.Debug))

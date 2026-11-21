@@ -2,7 +2,9 @@ using CrestApps.OrchardCore.Memberships.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Users;
 using OrchardCore.ContentManagement;
+using OrchardCore.Entities;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 using OrchardCore.Users.Services;
 
 namespace CrestApps.OrchardCore.Memberships.Services;
@@ -18,17 +20,20 @@ public sealed class MembershipService
     private readonly IMembershipStore _memberships;
     private readonly IUserService _userService;
     private readonly IRoleGrantService _roleGrantService;
+    private readonly ISiteService _siteService;
     private readonly IClock _clock;
 
     public MembershipService(
         IMembershipStore memberships,
         IUserService userService,
         IRoleGrantService roleGrantService,
+        ISiteService siteService,
         IClock clock)
     {
         _memberships = memberships;
         _userService = userService;
         _roleGrantService = roleGrantService;
+        _siteService = siteService;
         _clock = clock;
     }
 
@@ -71,7 +76,12 @@ public sealed class MembershipService
         ArgumentNullException.ThrowIfNull(order);
         ArgumentNullException.ThrowIfNull(line);
 
-        if (part?.RoleNames is not { Length: > 0 } ||
+        // Every path that grants a membership ends here, so the roles a purchase may give are checked here too: a
+        // product saved by a recipe or an API write, not through the editor, still never grants an excluded role or
+        // one outside the store's allowlist.
+        var roleNames = await GetGrantableRolesAsync(part?.RoleNames);
+
+        if (roleNames.Length == 0 ||
             string.IsNullOrEmpty(order.UserId) ||
             await _userService.GetUserByUniqueIdAsync(order.UserId) is not { } user)
         {
@@ -105,7 +115,7 @@ public sealed class MembershipService
             };
 
             current.OrderIds.Add(order.ItemId);
-            current.RoleNames = [.. part.RoleNames];
+            current.RoleNames = roleNames;
             current.ModifiedUtc = now;
 
             await _memberships.CreateAsync(current, cancellationToken);
@@ -114,19 +124,41 @@ public sealed class MembershipService
         {
             // One that doesn't end stays so.
             current.EndsUtc = current.EndsUtc is null ? null : MembershipPeriods.Extend(now, current.EndsUtc, part.DurationDays, line.Quantity);
-            current.RoleNames = [.. current.RoleNames.Union(part.RoleNames, StringComparer.OrdinalIgnoreCase)];
+            current.RoleNames = [.. current.RoleNames.Union(roleNames, StringComparer.OrdinalIgnoreCase)];
             current.OrderIds.Add(order.ItemId);
             current.ModifiedUtc = now;
 
             await _memberships.UpdateAsync(current, cancellationToken);
         }
 
-        foreach (var role in current.RoleNames)
+        foreach (var role in roleNames)
         {
             await _roleGrantService.GrantAsync(order.UserId, role, MembershipRoleGrantSource.SourceName, current.ItemId);
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Returns the roles of <paramref name="roleNames"/> a membership purchase may grant: never an excluded role
+    /// (<see cref="RoleGrantRules"/>), and only the store's <see cref="MembershipSettings.GrantableRoles"/> when it
+    /// names any.
+    /// </summary>
+    /// <param name="roleNames">The roles a product names.</param>
+    public async Task<string[]> GetGrantableRolesAsync(IEnumerable<string> roleNames)
+    {
+        var candidates = (roleNames ?? []).Where(RoleGrantRules.IsGrantable).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+        if (candidates.Length == 0)
+        {
+            return candidates;
+        }
+
+        var allowed = (await _siteService.GetSettingsAsync<MembershipSettings>()).GrantableRoles;
+
+        return allowed is { Length: > 0 }
+            ? [.. candidates.Where(role => allowed.Contains(role, StringComparer.OrdinalIgnoreCase))]
+            : candidates;
     }
 
     /// <summary>

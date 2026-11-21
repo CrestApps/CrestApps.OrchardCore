@@ -55,6 +55,13 @@ public sealed class BillingProfilePartyTaxProfileProvider : IPartyTaxProfileProv
         if (string.IsNullOrEmpty(profile.TaxRegistrationNumber) && string.IsNullOrEmpty(profile.VatNumber))
         {
             profile.SetTaxNumber(billing.TaxId);
+
+            // An account and its tax number are set up by the store, so the number counts as verified and reverse charge
+            // may apply. Any other party typed its own number, which stays unverified.
+            if (isBusiness && !string.IsNullOrWhiteSpace(billing.TaxId))
+            {
+                profile.TaxRegistrationVerified = true;
+            }
         }
 
         profile.IsTaxExempt |= billing.TaxExempt;

@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Webhooks;
 using CrestApps.OrchardCore.AI.Workflows.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -114,7 +115,11 @@ public sealed class AIChatSessionCloser : IAIChatSessionCloser
 
         if (_postCloseProcessor.QueueIfNeeded(profile, chatSession))
         {
-            await _postCloseProcessor.ProcessAsync(profile, chatSession, prompts, cancellationToken);
+            // The analysis's tools act on what a visitor wrote, so they never run with the rights of whoever's request
+            // closes the session.
+            await PostSessionCaller.RunAsNoOneAsync(
+                _serviceProvider.GetService<IHttpContextAccessor>()?.HttpContext,
+                () => _postCloseProcessor.ProcessAsync(profile, chatSession, prompts, cancellationToken));
         }
         else
         {

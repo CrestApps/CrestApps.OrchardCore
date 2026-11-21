@@ -3,4 +3,5 @@
 
 @model ShapeViewModel<TelnyxOwnedNumber>
 
-<a asp-action="Release" asp-controller="TelnyxNumbers" asp-route-id="@Model.Value.Id" class="dropdown-item text-danger" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Release"]" data-message="@T["Release {0}? It stops working at once and anyone can buy it.", Model.Value.PhoneNumber]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Release"]</a>
+<a asp-action="Release" asp-controller="TelnyxNumbers" asp-route-id="@Model.Value.Id" class="dropdown-item text-danger" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Release"]" data-confirm="@T["Release {0}? It stops working at once and anyone can buy it.", Model.Value.PhoneNumber]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Release"]</a>
+<script asp-name="crestapps-browser" at="Foot"></script>

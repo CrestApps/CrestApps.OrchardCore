@@ -18,18 +18,23 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
+    private readonly IAIEndpointPolicy _endpointPolicy;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AzureAIInferenceConnectionDisplayDriver"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="endpointPolicy">The policy for the endpoints AI features call.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AzureAIInferenceConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<AzureAIInferenceConnectionDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -71,23 +76,31 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
 
         var metadata = connection.GetOrCreate<AzureAIInferenceConnectionMetadata>();
 
+        // The stored key was given for one endpoint and one way of signing in; changing either drops it.
+        var storedKey = SecretDestination.Keep(metadata.ApiKey, metadata.AuthenticationType == model.AuthenticationType);
+
         if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Endpoint is required field."]);
         }
+        else if (!_endpointPolicy.IsAllowed(model.Endpoint))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
+        }
         else
         {
+            storedKey = SecretDestination.Keep(storedKey, SecretDestination.SameOrigin(metadata.Endpoint, uri));
             metadata.Endpoint = uri;
         }
 
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
 
-        if (model.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey) && !hasNewKey)
+        if (model.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(storedKey) && !hasNewKey)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["API key is required field."]);
         }
 
-        metadata.ApiKey = _dataProtectionProvider.ApplySecret(AIConstants.ConnectionProtectorName, metadata.ApiKey, model.ApiKey);
+        metadata.ApiKey = _dataProtectionProvider.ApplySecret(AIConstants.ConnectionProtectorName, storedKey, model.ApiKey);
 
         metadata.AuthenticationType = model.AuthenticationType;
 

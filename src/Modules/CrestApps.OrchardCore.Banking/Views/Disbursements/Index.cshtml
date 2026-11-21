@@ -17,7 +17,7 @@
             <div class="row gx-2 gy-2">
                 <div class="col-12 col-md">
                     <div class="input-group">
-                        <input id="search-box" asp-for="Search" class="form-control" placeholder="@T["Search by payee or trace number"]" type="search" autofocus autocomplete="off" />
+                        <input id="search-box" aria-label="@T["Search by payee or trace number"]" asp-for="Search" class="form-control" placeholder="@T["Search by payee or trace number"]" type="search" autofocus autocomplete="off" />
                         <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>

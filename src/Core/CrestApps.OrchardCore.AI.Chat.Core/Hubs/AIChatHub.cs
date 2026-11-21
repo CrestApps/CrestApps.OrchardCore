@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Threading.Channels;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.AGUI;
 using CrestApps.Core.AI.Chat.Hubs;
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Clients;
@@ -13,6 +14,7 @@ using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.Core.AI.Security;
+using CrestApps.Core.AI.Services;
 using CrestApps.Core.Security;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
@@ -21,6 +23,7 @@ using Cysharp.Text;
 using Fluid;
 using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -121,19 +124,11 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         }
 
         // Captured eagerly, as the base hub does: the caller context is not guaranteed once the invocation returns.
-        var user = Context?.User;
         var connectionId = Context?.ConnectionId;
-        var userId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = Context?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        await ExecuteInScopeAsync(async services =>
+        await RunAsCallerAsync(async services =>
         {
-            var userAccessor = services.GetService<IUserAccessor>();
-
-            if (userAccessor is not null)
-            {
-                userAccessor.User = user;
-            }
-
             var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
             var chatSession = await sessionManager.FindAsync(sessionId);
 
@@ -193,6 +188,47 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
                     prompts.Count,
                     userId,
                     connectionId);
+            }
+        });
+    }
+
+    // Runs the work of a method this hub replaces as the caller, as the base hub's own scope does. The user accessor
+    // carries the caller. Where the transport left IHttpContextAccessor empty (long polling answers each invocation on a
+    // request of its own) it carries the connection's request for the invocation, since the visitor identity, and with it
+    // every rate limiter's key and an anonymous visitor's sessions, are read from it.
+    private Task RunAsCallerAsync(Func<IServiceProvider, Task> action)
+    {
+        // Captured eagerly, as the base hub does: the caller context is not guaranteed once the invocation returns.
+        var user = Context?.User;
+        var connectionContext = Context?.GetHttpContext();
+
+        return ExecuteInScopeAsync(async services =>
+        {
+            var userAccessor = services.GetService<IUserAccessor>();
+
+            if (userAccessor is not null)
+            {
+                userAccessor.User = user;
+            }
+
+            var httpContextAccessor = services.GetService<IHttpContextAccessor>();
+            var setConnectionContext = httpContextAccessor is not null && httpContextAccessor.HttpContext is null && connectionContext is not null;
+
+            if (setConnectionContext)
+            {
+                httpContextAccessor.HttpContext = connectionContext;
+            }
+
+            try
+            {
+                await action(services);
+            }
+            finally
+            {
+                if (setConnectionContext)
+                {
+                    httpContextAccessor.HttpContext = null;
+                }
             }
         });
     }
@@ -272,21 +308,19 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
             return;
         }
 
-        // Captured eagerly, as the base hub does: the caller context is not guaranteed once the invocation returns.
-        var user = Context?.User;
+        if (text.Length > MaxSpeechTextLength)
+        {
+            await Clients.Caller.ReceiveError(GetSpeechTextTooLongMessage());
+
+            return;
+        }
+
         var cancellationToken = Context.ConnectionAborted;
 
         try
         {
-            await ExecuteInScopeAsync(async services =>
+            await RunAsCallerAsync(async services =>
             {
-                var userAccessor = services.GetService<IUserAccessor>();
-
-                if (userAccessor is not null)
-                {
-                    userAccessor.User = user;
-                }
-
                 var profileManager = services.GetRequiredService<IAIProfileManager>();
                 var profile = await profileManager.FindByIdAsync(profileId);
 
@@ -304,7 +338,26 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
                     return;
                 }
 
+                // Read-aloud is offered only by a profile that speaks: one with playback on, or in conversation mode, as
+                // the chat views decide when they show the button.
                 profile.TryGetSettings<ChatModeProfileSettings>(out var chatModeSettings);
+
+                if (!await IsSpeechSynthesisEnabledAsync(services, profile))
+                {
+                    await Clients.Caller.ReceiveError(GetTtsNotEnabledMessage());
+
+                    return;
+                }
+
+                // Each read-aloud reaches a provider, so it counts against the per-message limit, as in the base hub.
+                var messageLimit = await EvaluateMessageRateLimitAsync(services, profile, sessionId, cancellationToken);
+
+                if (messageLimit.IsBlocked)
+                {
+                    await Clients.Caller.ReceiveError(GetBlockedPromptMessage(messageLimit));
+
+                    return;
+                }
 
                 var deploymentSettings = await GetDeploymentSettingsAsync(services);
 
@@ -325,15 +378,27 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
                     return;
                 }
 
+                // The persona's voice comes after the profile's own, as in the base hub, and like every candidate it is
+                // used only when the deployment offers it.
+                var persona = await services.ResolvePersonaAsync(profile, cancellationToken);
                 var voiceSelector = services.GetRequiredService<TextToSpeechVoiceSelector>();
                 var effectiveVoiceName = await voiceSelector.SelectVoiceAsync(
                     deployment,
                     voiceName,
                     chatModeSettings?.VoiceName,
+                    persona?.VoiceName,
                     deploymentSettings.DefaultTextToSpeechVoiceId);
 
+                // The profile's speech settings (fallback deployment, pronunciation dictionary, speaking rate) apply to
+                // read-aloud too.
                 var clientFactory = services.GetRequiredService<IAIClientFactory>();
-                using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(deployment);
+                using var textToSpeechClient = await ProfileSpeech.DecorateAsync(
+                    await clientFactory.CreateTextToSpeechClientAsync(deployment),
+                    ProfileSpeech.GetSettings(profile),
+                    deploymentManager,
+                    clientFactory,
+                    Logger,
+                    cancellationToken);
                 await StreamSpeechAsync(textToSpeechClient, sessionId ?? string.Empty, text, effectiveVoiceName, cancellationToken);
             });
         }
@@ -431,6 +496,9 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
     protected override string GetTtsNotEnabledMessage()
         => S["Text-to-speech is not enabled for this profile."].Value;
 
+    protected override string GetSpeechTextTooLongMessage()
+        => S["This message is too long to read aloud."].Value;
+
     protected override string GetConversationErrorMessage()
         => S["An error occurred during the conversation. Please try again."].Value;
 
@@ -491,96 +559,6 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
     }
 
     /// <summary>
-    /// Extends the base handler to support <see cref="AIProfileType.TemplatePrompt"/> profiles
-    /// which render a Liquid template and send the result to the AI completion service.
-    /// The base class does not handle TemplatePrompt profiles, so this override intercepts
-    /// them and delegates everything else to the base implementation.
-    /// </summary>
-    protected override async Task HandleSendMessageAsync(
-        ChannelWriter<CompletionPartialMessage> writer,
-        IServiceProvider services,
-        string profileId,
-        string prompt,
-        string sessionId,
-        string sessionProfileId,
-        CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(profileId))
-        {
-            var profileManager = services.GetRequiredService<IAIProfileManager>();
-            var profile = await profileManager.FindByIdAsync(profileId, cancellationToken);
-
-            if (profile?.Type == AIProfileType.TemplatePrompt)
-            {
-                try
-                {
-                    using var invocationScope = AIInvocationScope.Begin();
-
-                    if (string.IsNullOrWhiteSpace(sessionProfileId))
-                    {
-                        await Clients.Caller.ReceiveError(GetRequiredFieldMessage(nameof(sessionProfileId)));
-
-                        return;
-                    }
-
-                    var parentProfile = await profileManager.FindByIdAsync(sessionProfileId, cancellationToken);
-
-                    if (parentProfile is null)
-                    {
-                        await Clients.Caller.ReceiveError(S["Invalid value given to {0}.", nameof(sessionProfileId)].Value);
-
-                        return;
-                    }
-
-                    if (!await AuthorizeProfileAsync(services, parentProfile))
-                    {
-                        await Clients.Caller.ReceiveError(GetNotAuthorizedMessage());
-
-                        return;
-                    }
-
-                    await ProcessGeneratedPromptAsync(writer, services, profile, sessionId, parentProfile, cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
-                    {
-                        Logger.LogDebug("Chat prompt processing was cancelled.");
-
-                        return;
-                    }
-
-                    Logger.LogError(ex, "An error occurred while processing the chat prompt.");
-
-                    try
-                    {
-                        var errorMessage = new CompletionPartialMessage
-                        {
-                            SessionId = sessionId,
-                            MessageId = GenerateId(),
-                            Content = GetFriendlyErrorMessage(ex),
-                        };
-
-                        await writer.WriteAsync(errorMessage, CancellationToken.None);
-                    }
-                    catch (Exception writeEx)
-                    {
-                        Logger.LogWarning(writeEx, "Failed to write error message to the channel.");
-                    }
-                }
-                finally
-                {
-                    writer.Complete();
-                }
-
-                return;
-            }
-        }
-
-        await base.HandleSendMessageAsync(writer, services, profileId, prompt, sessionId, sessionProfileId, cancellationToken);
-    }
-
-    /// <summary>
     /// Processes a TemplatePrompt profile by rendering a Liquid template and streaming
     /// the AI response. This is OrchardCore-specific because it depends on
     /// <see cref="ILiquidTemplateManager"/>.
@@ -620,6 +598,17 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
             return;
         }
 
+        // On the AG-UI protocol the run is started on the session, and the text is written as one message's content,
+        // as the base method does: the turn's writer sends every write after the first under one message id as
+        // "message replaced", which showed only the last chunk.
+        var aguiTurn = writer as AGUIChatTurn;
+
+        if (aguiTurn is not null)
+        {
+            aguiTurn.Events.ThreadId = chatSession.SessionId;
+            await aguiTurn.Events.StartAsync(CancellationToken.None);
+        }
+
         var generatedPrompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
         new Dictionary<string, FluidValue>
         {
@@ -655,6 +644,13 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
             }
 
             builder.Append(chunk.Text);
+
+            if (aguiTurn is not null)
+            {
+                await aguiTurn.Events.WriteTextAsync(assistantMessage.ItemId, chunk.Text, cancellationToken);
+
+                continue;
+            }
 
             var partialMessage = new CompletionPartialMessage
             {

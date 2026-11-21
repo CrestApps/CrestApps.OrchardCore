@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Banking;
 using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Plaid.Services;
 using CrestApps.OrchardCore.Webhooks;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,7 +27,9 @@ public static class PlaidCoreServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddHttpClient(PlaidConstants.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30))
+        // Plaid is a fixed host, but its client is egress-guarded like every other, so a configured address can never reach
+        // the private network.
+        services.AddEgressGuardedHttpClient(PlaidConstants.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30))
             .AddStandardResilienceHandler(ConfigureResilience);
 
         services.AddMemoryCache();

@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Core.Controllers;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Invoicing.Core;
@@ -406,7 +405,7 @@ public sealed class InvoiceUnbilledWorkDisplayDriver : DisplayDriver<Invoice>
                 model.TimeUser = query["timeUser"];
                 model.TimeFrom = DateOnly.TryParse(query["timeFrom"], CultureInfo.InvariantCulture, out var from) ? from : null;
                 model.TimeThrough = DateOnly.TryParse(query["timeThrough"], CultureInfo.InvariantCulture, out var through) ? through : null;
-                model.TimeRate = decimal.TryParse(query["timeRate"], NumberStyles.Number, CultureInfo.InvariantCulture, out var rate) ? rate : null;
+                model.TimeRate = decimal.TryParse(query["timeRate"].ToString().Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var rate) ? rate : null;
                 model.Time = await _billing.ListUnbilledAsync(TimeTrackerBillableSource.SourceType, model.TimeQuery, httpContext.RequestAborted);
             }
         }).Location(InvoicingConstants.DisplayTypes.DetailAdmin, "Content:6");
@@ -465,7 +464,7 @@ public sealed class InvoiceBillingController : Controller
         {
             foreach (var error in result.Errors)
             {
-                await _notifier.WarningAsync(new LocalizedHtmlString(error, HtmlEncoder.Default.Encode(error)));
+                await _notifier.WarningAsync(new LocalizedHtmlString(error, "{0}", false, error));
             }
         }
 

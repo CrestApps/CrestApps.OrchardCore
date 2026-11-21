@@ -209,7 +209,7 @@ public sealed class MyInvoicesController : Controller
         {
             foreach (var error in ex.Errors)
             {
-                await _notifier.WarningAsync(new LocalizedHtmlString(error, System.Text.Encodings.Web.HtmlEncoder.Default.Encode(error)));
+                await _notifier.WarningAsync(new LocalizedHtmlString(error, "{0}", false, error));
             }
 
             return RedirectToRoute(InvoicingConstants.RouteNames.MyInvoices);

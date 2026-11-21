@@ -17,6 +17,8 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
+    private readonly IAIEndpointPolicy _endpointPolicy;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -26,10 +28,12 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
     /// <param name="stringLocalizer">The string localizer.</param>
     public OpenAIProviderConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<OpenAIProviderConnectionDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
         S = stringLocalizer;
+        _endpointPolicy = endpointPolicy;
     }
 
     public override IDisplayResult Edit(AIProviderConnection connection, BuildEditorContext context)
@@ -61,6 +65,9 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
         var metadata = connection.GetOrCreate<OpenAIConnectionMetadata>();
 
+        // The stored key was given for one endpoint; pointing the connection elsewhere drops it.
+        var storedKey = metadata.ApiKey;
+
         if (string.IsNullOrEmpty(model.Endpoint))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Endpoint is a required field"]);
@@ -69,19 +76,24 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Endpoint must be a valid address."]);
         }
+        else if (!_endpointPolicy.IsAllowed(model.Endpoint))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
+        }
         else
         {
+            storedKey = SecretDestination.Keep(storedKey, SecretDestination.SameOrigin(metadata.Endpoint, endpoint));
             metadata.Endpoint = endpoint;
         }
 
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
 
-        if (string.IsNullOrEmpty(metadata.ApiKey) && !hasNewKey)
+        if (string.IsNullOrEmpty(storedKey) && !hasNewKey)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["API key is required field."]);
         }
 
-        metadata.ApiKey = _dataProtectionProvider.ApplySecret(AIConstants.ConnectionProtectorName, metadata.ApiKey, model.ApiKey);
+        metadata.ApiKey = _dataProtectionProvider.ApplySecret(AIConstants.ConnectionProtectorName, storedKey, model.ApiKey);
 
         connection.Put(metadata);
 

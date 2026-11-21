@@ -47,6 +47,10 @@
                     <label class="form-label" for="Notes">@T["Notes"]</label>
                     <textarea id="Notes" name="Notes" class="form-control" rows="2">@Model.Notes</textarea>
                 </div>
+                @if (Model.ShowReCaptcha)
+                {
+                    <div class="mb-3">@await DisplayAsync(await New.ReCaptcha())</div>
+                }
                 <button type="submit" class="btn btn-primary">@T["Book"]</button>
             </div>
         </div>

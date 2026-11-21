@@ -50,10 +50,18 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Checkout.Core\CrestApps.OrchardCore.Checkout.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Orders.Core\CrestApps.OrchardCore.Orders.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Customers.Core\CrestApps.OrchardCore.Customers.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Users.Core\CrestApps.OrchardCore.Users.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.PersonalData.Core\CrestApps.OrchardCore.PersonalData.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Carries the Resources feature dependency so the package comes along. -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
+    <!-- Carries the "Confirm email ownership" feature the Customers feature depends on; no type of it is used. -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

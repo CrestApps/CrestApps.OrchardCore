@@ -1,8 +1,10 @@
 using CrestApps.OrchardCore.BusinessDocuments;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Receipts.Core;
@@ -50,6 +52,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(TransactionsConstants.CollectionName));
 
         services
@@ -100,6 +104,7 @@ public sealed class CheckoutStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICheckoutHandler, TransactionSettlementCheckoutHandler>();
+        services.AddScoped<ICheckoutPaymentGate, TransactionSettlementPaymentGate>();
         services.AddNavigationProvider<PaymentLedgerAdminMenu>();
 
         // The rows of the payments and refunds ledgers.

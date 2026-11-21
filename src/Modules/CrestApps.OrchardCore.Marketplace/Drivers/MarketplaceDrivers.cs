@@ -1,4 +1,3 @@
-using System.Globalization;
 using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Marketplace.Services;
@@ -19,15 +18,23 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Marketplace.Drivers;
 
 /// <summary>
-/// The Vendor part's editor: which vendor a product is sold for.
+/// The Vendor part's editor: which vendor a product is sold for. Only someone who manages the marketplace changes it:
+/// the vendor is who a sale's earnings are paid to.
 /// </summary>
 internal sealed class VendorPartDisplayDriver : ContentPartDisplayDriver<VendorPart>
 {
     private readonly IVendorStore _vendors;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public VendorPartDisplayDriver(IVendorStore vendors)
+    public VendorPartDisplayDriver(
+        IVendorStore vendors,
+        IAuthorizationService authorizationService,
+        IHttpContextAccessor httpContextAccessor)
     {
         _vendors = vendors;
+        _authorizationService = authorizationService;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public override IDisplayResult Edit(VendorPart part, BuildPartEditorContext context)
@@ -42,6 +49,11 @@ internal sealed class VendorPartDisplayDriver : ContentPartDisplayDriver<VendorP
         var model = new VendorPartViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        if (_httpContextAccessor.HttpContext?.User is not { } user || !await _authorizationService.AuthorizeAsync(user, MarketplacePermissions.ManageMarketplace))
+        {
+            return Edit(part, context);
+        }
 
         part.VendorId = string.IsNullOrEmpty(model.VendorId) || await _vendors.FindByIdAsync(model.VendorId) is null ? null : model.VendorId;
 
@@ -107,7 +119,7 @@ internal sealed class MarketplaceSettingsDisplayDriver : SiteDisplayDriver<Marke
     public override IDisplayResult Edit(ISite site, MarketplaceSettings settings, BuildEditorContext context)
         => Initialize<MarketplaceSettingsViewModel>("MarketplaceSettings_Edit", model =>
         {
-            model.CommissionPercent = settings.CommissionPercent.ToString(CultureInfo.InvariantCulture);
+            model.CommissionPercent = settings.CommissionPercent;
             model.HoldDays = settings.HoldDays;
             model.ReleaseOnFulfillment = settings.ReleaseOnFulfillment;
             model.AutomaticPayouts = settings.AutomaticPayouts;
@@ -129,13 +141,14 @@ internal sealed class MarketplaceSettingsDisplayDriver : SiteDisplayDriver<Marke
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (!decimal.TryParse(model.CommissionPercent?.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var commission) || commission is < 0m or > 100m)
+        // Empty, out of range or unreadable (a model error from the binder) keeps the stored commission.
+        if (model.CommissionPercent is not (>= 0m and <= 100m))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.CommissionPercent), S["Enter the commission as a percent from 0 to 100, such as 10 or 12.5."]);
         }
         else
         {
-            settings.CommissionPercent = commission;
+            settings.CommissionPercent = model.CommissionPercent.Value;
         }
 
         settings.HoldDays = Math.Clamp(model.HoldDays, 0, 365);

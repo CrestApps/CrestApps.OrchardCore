@@ -50,7 +50,7 @@
                 }
                 @if (Model.Account.MonthlyBudget is { } budget)
                 {
-                    <div class="small text-body-secondary">@T["Monthly budget: {0}, {1} spent this month.", ProductPriceFormatter.Format(budget, Model.Currency), ProductPriceFormatter.Format(Model.SpentThisMonth ?? 0m, Model.Currency)]</div>
+                    <div class="small text-body-secondary">@T["Monthly budget: {0}, {1} spent or committed this month.", ProductPriceFormatter.Format(budget, Model.Currency), ProductPriceFormatter.Format(Model.SpentThisMonth ?? 0m, Model.Currency)]</div>
                 }
                 @if (!string.IsNullOrEmpty(Model.Account.TaxId))
                 {

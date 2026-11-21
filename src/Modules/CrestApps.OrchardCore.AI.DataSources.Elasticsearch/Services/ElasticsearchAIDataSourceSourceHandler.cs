@@ -8,6 +8,7 @@ using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
 using CrestApps.OrchardCore.DataConnectors;
 using CrestApps.OrchardCore.DataConnectors.Http;
@@ -28,6 +29,8 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     private readonly ElasticsearchDataSourceOptions _options;
     private readonly ILogger<ElasticsearchAIDataSourceSourceHandler> _logger;
     private readonly IDataConnectionResolver _dataConnectionResolver;
+    private readonly IAIEndpointPolicy _endpointPolicy;
+    private readonly AIDataSourceStoredSettings _storedSettings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ElasticsearchAIDataSourceSourceHandler"/> class.
@@ -36,19 +39,93 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     /// <param name="options">The global Elasticsearch data source options.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="dataConnectionResolver">Resolves the data connection a data source may reference; <see langword="null"/> while the Data Connectors feature is off.</param>
+    /// <param name="endpointPolicy">The policy that keeps the cluster's URL off the site's own network; <see langword="null"/> refuses every private address.</param>
+    /// <param name="storedSettings">The data sources as they were stored, read in this request, so a URL a save keeps is not checked again.</param>
     public ElasticsearchAIDataSourceSourceHandler(
         IDataProtectionProvider dataProtectionProvider,
         IOptions<ElasticsearchDataSourceOptions> options,
         ILogger<ElasticsearchAIDataSourceSourceHandler> logger,
-        IDataConnectionResolver dataConnectionResolver = null)
+        IDataConnectionResolver dataConnectionResolver = null,
+        IAIEndpointPolicy endpointPolicy = null,
+        AIDataSourceStoredSettings storedSettings = null)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _options = options.Value;
         _logger = logger;
         _dataConnectionResolver = dataConnectionResolver;
+        _endpointPolicy = endpointPolicy;
+        _storedSettings = storedSettings;
     }
 
     public string SourceType => AIDataSourceSourceTypes.Elasticsearch;
+
+    private bool IsAllowed(string url)
+        => _endpointPolicy?.IsAllowed(url) ?? AIEgress.IsAllowedEndpoint(url, isDevelopment: false, options: null);
+
+    // A URL the save keeps as it was stored is not checked again (review 8, G7): a cluster on a private network saved
+    // before the check keeps syncing, and refusing every other change would only stop it being edited.
+    private bool KeepsStoredUrl(AIDataSource dataSource, string url)
+        => _storedSettings?.Find(dataSource.ItemId) is { } stored &&
+            stored.TryGet<ElasticsearchSourceMetadata>(out var storedMetadata) &&
+            UsedStoredUrl(storedMetadata, AIDataSourceConnectionPicker.GetConnectionId(stored), url);
+
+    /// <summary>
+    /// Says whether a URL is the one the stored data source used as its own self-managed cluster, which was checked when
+    /// it was saved. A URL stored while the source was in Cloud mode or used a data connection was not used, so the API
+    /// saved it unchecked, and it is checked when the source starts using it (review 9, K6). The editor applies the same
+    /// rule.
+    /// </summary>
+    /// <param name="stored">The stored settings.</param>
+    /// <param name="storedConnectionId">The data connection the stored source used, if any.</param>
+    /// <param name="url">The URL being saved.</param>
+    /// <returns><see langword="true"/> when the URL needs no new check.</returns>
+    internal static bool UsedStoredUrl(ElasticsearchSourceMetadata stored, string storedConnectionId, string url)
+        => storedConnectionId is null &&
+            stored is not null &&
+            !string.IsNullOrWhiteSpace(stored.Url) &&
+            !string.Equals(stored.GetEnvironmentType(), ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(stored.Url.Trim(), url?.Trim(), StringComparison.Ordinal);
+
+    /// <summary>
+    /// Says whether a Cloud ID is the one the stored data source used, in Cloud mode and without a data connection, which
+    /// was checked when it was saved (review 10, A3). The rule mirrors <see cref="UsedStoredUrl"/>.
+    /// </summary>
+    /// <param name="stored">The stored settings.</param>
+    /// <param name="storedConnectionId">The data connection the stored source used, if any.</param>
+    /// <param name="cloudId">The Cloud ID being saved.</param>
+    /// <returns><see langword="true"/> when the Cloud ID needs no new check.</returns>
+    internal static bool UsedStoredCloudId(ElasticsearchSourceMetadata stored, string storedConnectionId, string cloudId)
+        => storedConnectionId is null &&
+            stored is not null &&
+            !string.IsNullOrWhiteSpace(stored.CloudId) &&
+            string.Equals(stored.GetEnvironmentType(), ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(stored.CloudId.Trim(), cloudId?.Trim(), StringComparison.Ordinal);
+
+    /// <summary>
+    /// Returns why the client may not connect to the cluster a Cloud ID names, or <see langword="null"/>. The client
+    /// derives the address from the ID, so the address goes through the same policy as a self-managed URL (review 10, A3).
+    /// </summary>
+    /// <param name="cloudId">The Cloud ID.</param>
+    /// <param name="isAllowed">The endpoint policy.</param>
+    /// <returns>The error, or <see langword="null"/>.</returns>
+    internal static string GetCloudIdError(string cloudId, Func<string, bool> isAllowed)
+    {
+        if (!ElasticCloudId.TryGetEndpoint(cloudId?.Trim(), out var endpoint))
+        {
+            return InvalidCloudIdError;
+        }
+
+        return isAllowed(endpoint.AbsoluteUri) ? null : OwnNetworkError;
+    }
+
+    internal const string InvalidCloudIdError = "This is not an Elastic Cloud ID. Copy the Cloud ID from the deployment's page in Elastic Cloud.";
+
+    internal const string OwnNetworkError = "This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections.";
+
+    private bool KeepsStoredCloudId(AIDataSource dataSource, string cloudId)
+        => _storedSettings?.Find(dataSource.ItemId) is { } stored &&
+            stored.TryGet<ElasticsearchSourceMetadata>(out var storedMetadata) &&
+            UsedStoredCloudId(storedMetadata, AIDataSourceConnectionPicker.GetConnectionId(stored), cloudId);
 
     public async ValueTask ValidateAsync(
         AIDataSource dataSource,
@@ -104,30 +181,26 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
         var environmentType = metadata.GetEnvironmentType();
         var authenticationType = metadata.GetAuthenticationType();
 
-        if (string.Equals(environmentType, ElasticsearchSourceMetadata.SelfManagedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
-            string.IsNullOrWhiteSpace(metadata.Url))
-        {
-            result.Fail(new ValidationResult("Elasticsearch URL is required for self-managed environments.", [nameof(ElasticsearchSourceMetadata.Url)]));
-        }
-
-        if (string.Equals(environmentType, ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
-            string.IsNullOrWhiteSpace(metadata.CloudId))
-        {
-            result.Fail(new ValidationResult("Elastic Cloud ID is required for cloud-hosted environments.", [nameof(ElasticsearchSourceMetadata.CloudId)]));
-        }
+        ValidateDestination(dataSource, metadata, environmentType, result);
 
         if (string.IsNullOrWhiteSpace(metadata.IndexName))
         {
             result.Fail(new ValidationResult("Elasticsearch index name is required.", [nameof(ElasticsearchSourceMetadata.IndexName)]));
         }
 
-        var hasUsername = !string.IsNullOrWhiteSpace(metadata.Username);
-        var hasPassword = !string.IsNullOrWhiteSpace(metadata.Password);
-
-        if (string.Equals(authenticationType, ElasticsearchSourceMetadata.BasicAuthenticationType, StringComparison.OrdinalIgnoreCase) &&
-            hasUsername != hasPassword)
+        // Basic authentication needs a username and a password, as the editor requires (review 9, K1): neither was
+        // accepted, so an update that moved the source and dropped its password still passed.
+        if (string.Equals(authenticationType, ElasticsearchSourceMetadata.BasicAuthenticationType, StringComparison.OrdinalIgnoreCase))
         {
-            result.Fail(new ValidationResult("Elasticsearch basic authentication requires both username and password.", [nameof(ElasticsearchSourceMetadata.Username), nameof(ElasticsearchSourceMetadata.Password)]));
+            if (string.IsNullOrWhiteSpace(metadata.Username))
+            {
+                result.Fail(new ValidationResult("Elasticsearch basic authentication requires a username.", [nameof(ElasticsearchSourceMetadata.Username)]));
+            }
+
+            if (string.IsNullOrWhiteSpace(metadata.Password))
+            {
+                result.Fail(new ValidationResult("Elasticsearch basic authentication requires a password.", [nameof(ElasticsearchSourceMetadata.Password)]));
+            }
         }
 
         if (string.Equals(authenticationType, ElasticsearchSourceMetadata.ApiKeyAuthenticationType, StringComparison.OrdinalIgnoreCase) &&
@@ -152,6 +225,34 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
             string.Equals(authenticationType, ElasticsearchSourceMetadata.NoneAuthenticationType, StringComparison.OrdinalIgnoreCase))
         {
             result.Fail(new ValidationResult("Elastic Cloud connections require an authentication type and matching credentials.", [nameof(ElasticsearchSourceMetadata.AuthenticationType)]));
+        }
+    }
+
+    // The editor, the recipe step and the API all validate here, so none of them can point a data source at the site's
+    // own network: neither by a self-managed URL nor by a Cloud ID, whose address the client derives from the ID.
+    private void ValidateDestination(AIDataSource dataSource, ElasticsearchSourceMetadata metadata, string environmentType, ValidationResultDetails result)
+    {
+        if (string.Equals(environmentType, ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(metadata.CloudId))
+            {
+                result.Fail(new ValidationResult("Elastic Cloud ID is required for cloud-hosted environments.", [nameof(ElasticsearchSourceMetadata.CloudId)]));
+            }
+            else if (!KeepsStoredCloudId(dataSource, metadata.CloudId) && GetCloudIdError(metadata.CloudId, IsAllowed) is { } error)
+            {
+                result.Fail(new ValidationResult(error, [nameof(ElasticsearchSourceMetadata.CloudId)]));
+            }
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(metadata.Url))
+        {
+            result.Fail(new ValidationResult("Elasticsearch URL is required for self-managed environments.", [nameof(ElasticsearchSourceMetadata.Url)]));
+        }
+        else if (!IsAllowed(metadata.Url) && !KeepsStoredUrl(dataSource, metadata.Url))
+        {
+            result.Fail(new ValidationResult(OwnNetworkError, [nameof(ElasticsearchSourceMetadata.Url)]));
         }
     }
 
@@ -295,8 +396,17 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
 
         if (string.Equals(environmentType, ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase))
         {
+            // The address the ID decodes to is checked before every connection (review 10, A3): no Elastic Cloud deployment
+            // is on the site's own network, so this refuses only an ID made to point there.
+            var cloudId = metadata.CloudId?.Trim();
+
+            if (GetCloudIdError(cloudId, IsAllowed) is { } error)
+            {
+                throw new InvalidOperationException(error);
+            }
+
             settings = new ElasticsearchClientSettings(
-                new CloudNodePool(metadata.CloudId?.Trim(), authorizationHeader ?? throw new InvalidOperationException("Elastic Cloud connections require an authentication type and matching credentials.")));
+                new CloudNodePool(cloudId, authorizationHeader ?? throw new InvalidOperationException("Elastic Cloud connections require an authentication type and matching credentials.")));
         }
         else
         {

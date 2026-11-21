@@ -166,6 +166,7 @@
 
 <style asp-name="contact-center-workspace"></style>
 <script asp-name="contact-center-supervisor-dashboard" at="Foot"></script>
+<script asp-name="crestapps-browser" at="Foot"></script>
 
 <zone Name="Title">
     <breadcrumb name="ContactCenterSupervisorDashboard" title="@T["Live dashboard"]" />
@@ -207,7 +208,8 @@
     </div>
 
     @* The calls an AI voice agent is holding right now (see Endpoints/SupervisorAICallsEndpoints.cs). *@
-    <div class="cc-panel mb-3" data-cc-ai-calls-panel data-url="@Url.Content("~/Admin/contact-center/dashboard/ai-calls")" data-token="@antiForgeryToken">
+    @* Mapped only with the AI feature: without it there are no AI calls to show. *@
+    <div class="cc-panel mb-3" data-cc-ai-calls-panel data-url="@Url.Content("~/Admin/contact-center/dashboard/ai-calls")" data-token="@antiForgeryToken" hidden="@(Url.RouteUrl(CrestApps.OrchardCore.ContactCenter.Endpoints.SupervisorAICallsEndpoints.ListRouteName) is null ? "hidden" : null)">
         <div class="cc-panel__header d-flex align-items-center justify-content-between gap-2">
             <span id="ccDashboardAICalls">@T["Live AI calls"]</span>
             <span class="small text-body-secondary fw-normal" data-cc-ai-calls-count role="status" aria-live="polite"></span>
@@ -345,7 +347,7 @@
     (function () {
         var panel = document.querySelector('[data-cc-ai-calls-panel]');
 
-        if (!panel) {
+        if (!panel || panel.hidden) {
             return;
         }
 
@@ -411,8 +413,8 @@
             });
         }
 
-        function act(call, action, confirmText) {
-            if (confirmText && !window.confirm(confirmText)) {
+        async function act(call, action, confirmText) {
+            if (confirmText && !(await crestapps.confirm('', confirmText))) {
                 return;
             }
 

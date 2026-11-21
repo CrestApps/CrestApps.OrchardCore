@@ -89,7 +89,15 @@ public static class CheckoutPaymentDataKeys
             or ThreeDSecureElectronicCommerceIndicator
             or ThreeDSecureTransactionId
             or ThreeDSecureVersion
-            or ThreeDSecureTransactionStatus;
+            or ThreeDSecureTransactionStatus
+            or ProviderCustomerReference;
+
+    /// <summary>
+    /// The provider's own customer a payment is charged to, such as a Stripe <c>cus_</c> id. Only server code names it:
+    /// a customer id a browser sent (one that leaked, or was guessed from another payment) would charge, or keep cards
+    /// for, someone else's customer.
+    /// </summary>
+    public const string ProviderCustomerReference = "customerId";
 
     /// <summary>
     /// The provider's reference for the customer a saved payment method belongs to

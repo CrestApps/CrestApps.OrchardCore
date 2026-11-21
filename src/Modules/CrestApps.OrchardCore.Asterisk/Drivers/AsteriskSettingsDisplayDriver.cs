@@ -290,15 +290,15 @@ internal sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<Asterisk
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.VoicemailPriority), S["Enter a voicemail priority greater than zero."]);
             }
 
-            if (string.IsNullOrEmpty(settings.Password) && string.IsNullOrWhiteSpace(model.Password))
+            // The stored password was given for the ARI address; another scheme, host or port drops it, so it is entered again.
+            var protectedPassword = _dataProtectionProvider.ApplySecret(AsteriskConstants.ProtectorName, SecretDestination.Keep(settings.Password, SecretDestination.SameOrigin(previousBaseUrl, settings.BaseUrl)), model.Password);
+
+            if (string.IsNullOrEmpty(protectedPassword))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Password), S["Enter the Asterisk ARI password."]);
             }
 
-            var protectedPassword = _dataProtectionProvider.ApplySecret(AsteriskConstants.ProtectorName, settings.Password, model.Password);
-
             hasChanges |= settings.Password != protectedPassword;
-
             settings.Password = protectedPassword;
 
             var protectedTurnSharedSecret = _dataProtectionProvider.ApplySecret(AsteriskConstants.ProtectorName, settings.TurnSharedSecret, model.TurnSharedSecret);

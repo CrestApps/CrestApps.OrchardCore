@@ -34,15 +34,16 @@ User Manual: [Restrict Content by Role](../user-manual/administration/content-ac
 The feature registers `RoleBasedContentItemAuthorizationHandler`, an `IAuthorizationHandler` for
 `PermissionRequirement`:
 
-- It acts on every permission that reads a `ContentItem` resource: view, view own, preview, preview own and list,
-  in general or for a securable type (such as `ViewContent_Handbook`), matched by name. A securable type is checked
-  with its own permissions, so without this a restricted item would leak through them. Edit, publish and delete
-  checks are not affected.
+- It acts on every permission that reads a `ContentItem` resource: view, view own, preview, preview own, list, clone
+  and clone own, in general or for a securable type (such as `ViewContent_Handbook`), matched by name. A preview or a
+  clone shows everything the item holds, and a securable type is checked with its own permissions, so without this a
+  restricted item would leak through them. Edit, publish and delete checks are not affected.
 - It collects the role names from every `RolePickerPart` on the content type (named or unnamed) whose settings have
   `IsContentRestricted` set to `true`.
 - If the user is in any of those roles, a view permission (`ViewContent` or the type's `ViewContent_{Type}`)
-  succeeds; listing and previewing still need their own permission. If roles were collected and the user is in none
-  of them, the handler fails every reading permission. If no roles were picked, the item is not restricted.
+  succeeds; listing, previewing and cloning still need their own permission, which this handler never grants. If
+  roles were collected and the user is in none of them, the handler fails every reading permission. If no roles were
+  picked, the item is not restricted.
 - **Authenticated** stands for anyone signed in and **Anonymous** for a visitor, though Orchard Core never puts
   either role in a user's claims: an item restricted to Authenticated opens for every signed-in user, one restricted
   to Anonymous only for visitors, and one restricted to both for everyone. `ContentAccessRoles` (in
@@ -51,6 +52,32 @@ The feature registers `RoleBasedContentItemAuthorizationHandler`, an `IAuthoriza
 - It runs even when another handler already succeeded the requirement, as the permission handler does for everyone
   who has **View content**, anonymous visitors included: a restricted item is refused to whoever isn't in its roles.
   Users in the Administrator role see every item.
+
+## Where restricted items are left out
+
+Beyond the item's own page, a restricted item is kept out of the other places that show content:
+
+| Surface | How | Needs |
+| --- | --- | --- |
+| Sitemaps | `RestrictedContentSitemapFilter` (`ISitemapContentItemExtendedMetadataProvider`) leaves every restricted item out. A sitemap is built once and cached for everyone, so the item is left out whoever asks. | Sitemaps (`OrchardCore.Sitemaps`) |
+| RSS feeds | `RestrictedContentFeedItemBuilder` wraps the feed item builder and removes each item the reader may not view. The feed of a list the reader may not view (a members-only blog) is emptied, its title and description included. | Feeds (`OrchardCore.Feeds`) |
+| Search results page | `RestrictedContentSearchService` wraps every provider's `ISearchService` (Lucene, Elasticsearch, Azure AI Search) and removes the items the searcher may not view. The page window the search page asks for is kept; when it holds restricted hits, the hits right after it refill it (at most five windows read and authorized per search, whichever page is asked for), so a page with restricted hits is still full and the next-page link still shows. The hits that refilled a page show again at the top of the next one. | Search (`OrchardCore.Search`) |
+| Search index | `ContentAccessIndexHandler` adds each role of a restricted item to its document as the keyword field `Content.ContentAccessControl.RoleNames`, so a query, an AI data source or a custom search page can filter by the reader's roles. | Indexing (`OrchardCore.Indexing`) |
+| GraphQL `contentItem` and content type list queries | Orchard Core checks `ViewContent` on every item they return, so this handler leaves restricted items out. | GraphQL |
+| Preview and clone | The handler refuses `PreviewContent` and `CloneContent` on a restricted item. | |
+
+### Known gaps
+
+- **Search engines can't skip an item:** Orchard Core's indexing has no hook that leaves an item out of an index, so a
+  restricted item is still indexed (with its roles). Anything that queries the index directly (the Lucene or
+  Elasticsearch query APIs, Queries) must filter on `Content.ContentAccessControl.RoleNames` itself.
+- **Rebuild the indexes after enabling the feature:** the role field is written when an item is next indexed, so
+  documents indexed before carry no roles until the index is rebuilt (**Search > Indexes > Rebuild**).
+- **List rendering:** list parts, taxonomy term pages and Liquid or Queries summaries are not filtered yet.
+- **GraphQL paging and nested fields:** list queries are filtered after paging, so `first: 10` can return fewer
+  items, and items reached through a content picker, a list or a taxonomy field are not checked by Orchard Core.
+- **The editor's live preview** (`PreviewController.Draft`) builds an item from the posted editor and checks the
+  permission without the item; it is reached only from an editor the user could already open.
 
 ## Filtering lists and searches in SQL
 

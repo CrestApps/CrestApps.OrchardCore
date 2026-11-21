@@ -1,0 +1,3 @@
+@model ShapeViewModel<MyOfferRow>
+
+<span>@(Model.Value.Offer.Kind == IntradayOfferKind.VoluntaryOvertime ? T["Extra hours"] : T["Time off"])</span>

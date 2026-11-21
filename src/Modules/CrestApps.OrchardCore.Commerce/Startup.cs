@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Commerce.Navigation;
 using CrestApps.OrchardCore.Commerce.Services;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.PersonalData.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -24,6 +25,8 @@ public sealed class FoundationStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.AddNavigationProvider<CommerceAdminMenu>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, CommerceResourceManagementOptionsConfiguration>();
         services.AddScoped<IAuthorizationHandler, CustomerAdminPageAuthorizationHandler>();

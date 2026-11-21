@@ -88,6 +88,9 @@ public static class ReportSubscriptionSchedule
             unspecified = unspecified.AddHours(1);
         }
 
+        // A skipped time was moved an hour on above, so the conversion cannot throw.
+#pragma warning disable RS0030
         return TimeZoneInfo.ConvertTimeToUtc(unspecified, timeZone);
+#pragma warning restore RS0030
     }
 }

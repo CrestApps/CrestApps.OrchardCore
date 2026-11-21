@@ -94,9 +94,20 @@ public sealed class CollectSecureDigitsTool : AIFunction
             return "Secure keypad entry works only on a phone call.";
         }
 
-        SecureKeypadCaptures.Start(activityId, field, services.GetRequiredService<IClock>().UtcNow);
-
         var logger = services.GetService<ILogger<CollectSecureDigitsTool>>();
+
+        try
+        {
+            await services.GetRequiredService<ISecureKeypadCaptureStore>().StartAsync(activityId, field, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The keypad could not be made private, whatever the reason (a lost race, a database that timed out or
+            // refused the write), so the caller must not be asked to type.
+            logger?.LogWarning(ex, "The keypad on AI call activity '{ActivityId}' could not be made private.", activityId.SanitizeLogValue());
+
+            return "Secure keypad entry is not available right now. Do not ask for the number; offer another way to pay or to verify.";
+        }
 
         if (logger is not null && logger.IsEnabled(LogLevel.Information))
         {

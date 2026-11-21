@@ -10,17 +10,24 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.Documents.Drivers;
+using CrestApps.OrchardCore.AI.Documents.Endpoints;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.AI.Documents.Handlers;
 using CrestApps.OrchardCore.AI.Documents.Migrations;
 using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.OrchardCore.AI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
+using OrchardCore;
 using OrchardCore.Data;
+using OrchardCore.Environment.Shell.Configuration;
+using OrchardCore.RateLimits;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.FileStorage;
@@ -134,16 +141,63 @@ public sealed class ProfileDocumentsStartup : StartupBase
 [Feature(AIConstants.Feature.ChatSessionDocuments)]
 public sealed class ChatSessionDocumentsStartup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatSessionDocumentsStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration.</param>
+    public ChatSessionDocumentsStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<AIProfile, AIProfileSessionDocumentsDisplayDriver>();
         services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateSessionDocumentsDisplayDriver>();
+        services.Configure<ChatSessionDocumentUploadOptions>(_shellConfiguration.GetSection(ChatSessionDocumentUploadOptions.SectionName));
+
+        // CrestApps.Core's upload endpoint caps the documents of a session; the tenant sets that cap under
+        // CrestApps_AI:ChatSessionDocuments:MaxFilesPerSession. The package reads 0 or less as "no limit", so a value
+        // below 1 is held at 1 rather than removing the cap.
+        services
+            .AddOptions<ChatDocumentsOptions>()
+            .Configure<IOptions<ChatSessionDocumentUploadOptions>>((documents, uploads) => documents.MaxDocumentsPerSession = Math.Max(1, uploads.Value.MaxFilesPerSession));
+
+        // Every upload has a ceiling, a signed-in user's by user and an anonymous visitor's by network; an operator
+        // changes it under CrestApps_Throttling:AttemptPolicies:ai-chat-document-uploads.
+        services
+            .AddAttemptPolicy(ChatSessionDocumentUploadOptions.UploadPolicyName, ChatSessionDocumentUploadOptions.DefaultUploadLimit, ChatSessionDocumentUploadOptions.DefaultUploadWindow)
+            .AddAttemptPolicyOverrides(_shellConfiguration.GetSection(CrestApps.OrchardCore.Throttling.AttemptLimitOptions.SectionName));
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddUploadChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionUploadDocument);
-        routes.AddRemoveChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionRemoveDocument);
+        // CrestApps.Core's upload endpoint authorizes, limits session starts and caps the documents of a session; the
+        // quota filter adds the per-caller ceiling on every upload. It runs after the package's antiforgery filter, so
+        // a forged request is refused before it is counted.
+        routes.AddUploadChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionUploadDocument)
+            .AddEndpointFilter<ChatSessionDocumentUploadQuotaFilter>()
+            .WithRateLimitGroup(ChatSessionDocumentUploadOptions.RateLimitGroup);
+
+        routes.AddRemoveChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionRemoveDocument)
+            .WithRateLimitGroup(ChatSessionDocumentUploadOptions.RateLimitGroup);
+    }
+}
+
+/// <summary>
+/// Holds each visitor to a number of chat session document requests when Orchard Core's Rate Limits feature is enabled.
+/// </summary>
+[Feature(AIConstants.Feature.ChatSessionDocuments)]
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class ChatSessionDocumentsRateLimitsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(ChatSessionDocumentUploadOptions.RateLimitGroup, 30, TimeSpan.FromMinutes(10))
+            .AddJsonRejectionHandler(AIConstants.RouteNames.ChatSessionUploadDocument, AIConstants.RouteNames.ChatSessionRemoveDocument));
     }
 }
 

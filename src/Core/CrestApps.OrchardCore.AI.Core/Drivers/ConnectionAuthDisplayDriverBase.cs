@@ -35,6 +35,7 @@ public abstract class ConnectionAuthDisplayDriverBase<TModel> : DisplayDriver<TM
 
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly string _protectionPurpose;
+    private readonly IAIEndpointPolicy _endpointPolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionAuthDisplayDriverBase{TModel}"/> class.
@@ -46,11 +47,29 @@ public abstract class ConnectionAuthDisplayDriverBase<TModel> : DisplayDriver<TM
         IDataProtectionProvider dataProtectionProvider,
         string protectionPurpose,
         IStringLocalizer stringLocalizer)
+        : this(dataProtectionProvider, protectionPurpose, stringLocalizer, endpointPolicy: null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConnectionAuthDisplayDriverBase{TModel}"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The provider the secrets are protected with.</param>
+    /// <param name="protectionPurpose">The purpose the secrets of this connection type are protected for.</param>
+    /// <param name="stringLocalizer">The localizer of the derived driver, which owns the validation messages.</param>
+    /// <param name="endpointPolicy">The policy an OAuth2 token endpoint is checked with, or <see langword="null"/> to
+    /// refuse every address on the site's own network.</param>
+    protected ConnectionAuthDisplayDriverBase(
+        IDataProtectionProvider dataProtectionProvider,
+        string protectionPurpose,
+        IStringLocalizer stringLocalizer,
+        IAIEndpointPolicy endpointPolicy)
     {
         ArgumentException.ThrowIfNullOrEmpty(protectionPurpose);
 
         _dataProtectionProvider = dataProtectionProvider;
         _protectionPurpose = protectionPurpose;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -114,10 +133,28 @@ public abstract class ConnectionAuthDisplayDriverBase<TModel> : DisplayDriver<TM
     /// <param name="model">The posted editor model.</param>
     /// <param name="metadata">The stored authentication metadata to update.</param>
     protected void ApplyAuthFields(UpdateEditorContext context, ConnectionAuthFieldsViewModel model, IConnectionAuthMetadata metadata)
+        => ApplyAuthFields(context, model, metadata, samePlace: true);
+
+    /// <summary>
+    /// Applies the posted authentication fields onto the stored metadata, as
+    /// <see cref="ApplyAuthFields(UpdateEditorContext, ConnectionAuthFieldsViewModel, IConnectionAuthMetadata)"/> does. The
+    /// stored secrets are kept only when the connection still sends them to the same place: its own endpoint (which the
+    /// caller compares, <paramref name="samePlace"/>), the same OAuth2 token endpoint and the same authentication type.
+    /// Otherwise they are dropped, so the required ones must be entered again.
+    /// </summary>
+    /// <param name="context">The editor update context the validation errors are added to.</param>
+    /// <param name="model">The posted editor model.</param>
+    /// <param name="metadata">The stored authentication metadata to update.</param>
+    /// <param name="samePlace">Whether the connection's own endpoint keeps its scheme, host and port.</param>
+    protected void ApplyAuthFields(UpdateEditorContext context, ConnectionAuthFieldsViewModel model, IConnectionAuthMetadata metadata, bool samePlace)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(metadata);
+
+        var keep = samePlace &&
+            metadata.AuthenticationType == model.AuthenticationType &&
+            SecretDestination.SameOrigin(metadata.OAuth2TokenEndpoint, IsOAuth2(model.AuthenticationType) ? model.OAuth2TokenEndpoint : metadata.OAuth2TokenEndpoint);
 
         // Only the fields of the chosen authentication type are kept; every other field is cleared.
         var values = new ConnectionAuthValues
@@ -130,7 +167,7 @@ public abstract class ConnectionAuthDisplayDriverBase<TModel> : DisplayDriver<TM
             case ClientAuthenticationType.ApiKey:
                 values.ApiKeyHeaderName = model.ApiKeyHeaderName;
                 values.ApiKeyPrefix = model.ApiKeyPrefix;
-                values.ApiKey = ApplyRequiredSecret(context, metadata.ApiKey, model.ApiKey, nameof(model.ApiKey), S["API Key is required."]);
+                values.ApiKey = ApplyRequiredSecret(context, SecretDestination.Keep(metadata.ApiKey, keep), model.ApiKey, nameof(model.ApiKey), S["API Key is required."]);
                 break;
 
             case ClientAuthenticationType.Basic:
@@ -140,24 +177,24 @@ public abstract class ConnectionAuthDisplayDriverBase<TModel> : DisplayDriver<TM
                 }
 
                 values.BasicUsername = model.BasicUsername;
-                values.BasicPassword = ApplyRequiredSecret(context, metadata.BasicPassword, model.BasicPassword, nameof(model.BasicPassword), S["Password is required."]);
+                values.BasicPassword = ApplyRequiredSecret(context, SecretDestination.Keep(metadata.BasicPassword, keep), model.BasicPassword, nameof(model.BasicPassword), S["Password is required."]);
                 break;
 
             case ClientAuthenticationType.OAuth2ClientCredentials:
                 ApplyOAuth2CommonFields(context, model, values);
-                values.OAuth2ClientSecret = ApplyRequiredSecret(context, metadata.OAuth2ClientSecret, model.OAuth2ClientSecret, nameof(model.OAuth2ClientSecret), S["Client Secret is required."]);
+                values.OAuth2ClientSecret = ApplyRequiredSecret(context, SecretDestination.Keep(metadata.OAuth2ClientSecret, keep), model.OAuth2ClientSecret, nameof(model.OAuth2ClientSecret), S["Client Secret is required."]);
                 break;
 
             case ClientAuthenticationType.OAuth2PrivateKeyJwt:
                 ApplyOAuth2CommonFields(context, model, values);
                 values.OAuth2KeyId = model.OAuth2KeyId;
-                values.OAuth2PrivateKey = ApplyRequiredSecret(context, metadata.OAuth2PrivateKey, model.OAuth2PrivateKey, nameof(model.OAuth2PrivateKey), S["Private Key is required."]);
+                values.OAuth2PrivateKey = ApplyRequiredSecret(context, SecretDestination.Keep(metadata.OAuth2PrivateKey, keep), model.OAuth2PrivateKey, nameof(model.OAuth2PrivateKey), S["Private Key is required."]);
                 break;
 
             case ClientAuthenticationType.OAuth2Mtls:
                 ApplyOAuth2CommonFields(context, model, values);
-                values.OAuth2ClientCertificate = ApplyRequiredSecret(context, metadata.OAuth2ClientCertificate, model.OAuth2ClientCertificate, nameof(model.OAuth2ClientCertificate), S["Client Certificate is required."]);
-                values.OAuth2ClientCertificatePassword = _dataProtectionProvider.ApplySecret(_protectionPurpose, metadata.OAuth2ClientCertificatePassword, model.OAuth2ClientCertificatePassword);
+                values.OAuth2ClientCertificate = ApplyRequiredSecret(context, SecretDestination.Keep(metadata.OAuth2ClientCertificate, keep), model.OAuth2ClientCertificate, nameof(model.OAuth2ClientCertificate), S["Client Certificate is required."]);
+                values.OAuth2ClientCertificatePassword = _dataProtectionProvider.ApplySecret(_protectionPurpose, SecretDestination.Keep(metadata.OAuth2ClientCertificatePassword, keep), model.OAuth2ClientCertificatePassword);
                 break;
 
             case ClientAuthenticationType.CustomHeaders:
@@ -167,6 +204,9 @@ public abstract class ConnectionAuthDisplayDriverBase<TModel> : DisplayDriver<TM
 
         values.CopyTo(metadata);
     }
+
+    private static bool IsOAuth2(ClientAuthenticationType type)
+        => type is ClientAuthenticationType.OAuth2ClientCredentials or ClientAuthenticationType.OAuth2PrivateKeyJwt or ClientAuthenticationType.OAuth2Mtls;
 
     private string ApplyRequiredSecret(UpdateEditorContext context, string existing, string posted, string fieldName, LocalizedString requiredMessage)
     {
@@ -189,6 +229,12 @@ public abstract class ConnectionAuthDisplayDriverBase<TModel> : DisplayDriver<TM
         else if (!Uri.TryCreate(model.OAuth2TokenEndpoint, UriKind.Absolute, out _))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.OAuth2TokenEndpoint), S["Invalid Token Endpoint URL."]);
+        }
+        else if (!(_endpointPolicy?.IsAllowed(model.OAuth2TokenEndpoint) ?? AIEgress.IsAllowedEndpoint(model.OAuth2TokenEndpoint, isDevelopment: false, options: null)))
+        {
+            // The server posts the client's credentials here and sends the token it answers with to the connection, so
+            // it is held to the same rule as the connection's own endpoint.
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.OAuth2TokenEndpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
 
         if (string.IsNullOrWhiteSpace(model.OAuth2ClientId))

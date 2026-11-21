@@ -4,6 +4,9 @@
 @inject TransactionDisplayText DisplayText
 @inject OrchardCore.Modules.ILocalClock LocalClock
 
+@* Take back asks with data-confirm (the crestapps-browser helpers), which lets the browser check the required reason first. *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
 @{
     // Dates go into the sentences as arguments, in the site's or user's time zone, so a translation can place them.
     async Task<string> FormatLocalAsync(DateTime utc)
@@ -78,13 +81,13 @@
                     }
                     @if (canTakeBack)
                     {
-                        <form asp-action="Reverse" asp-controller="Admin" asp-area="CrestApps.OrchardCore.Transactions" method="post" class="mt-2">
+                        <form asp-action="Reverse" asp-controller="Admin" asp-area="CrestApps.OrchardCore.Transactions" method="post" class="mt-2 no-multisubmit">
                             <input type="hidden" name="itemId" value="@transaction.ItemId" />
                             <input type="hidden" name="eventId" value="@evt.Id" />
                             <div class="input-group input-group-sm">
                                 <input type="text" class="form-control" name="reason" required maxlength="500" placeholder="@T["Why it is taken back (required)"]" aria-label="@T["Why it is taken back"]" />
                                 <button type="submit" class="btn btn-outline-warning"
-                                        data-url-af="RemoveUrl" data-title="@T["Take back"]" data-message="@T["Take back this entry? What it paid or took off is owed again. Both entries stay on the timeline."]" data-ok-text="@T["Take back"]" data-cancel-text="@T["Cancel"]">
+                                        data-confirm-title="@T["Take back"]" data-confirm="@T["Take back this entry? What it paid or took off is owed again. Both entries stay on the timeline."]" data-confirm-ok="@T["Take back"]" data-confirm-cancel="@T["Cancel"]">
                                     @T["Take back"]
                                 </button>
                             </div>

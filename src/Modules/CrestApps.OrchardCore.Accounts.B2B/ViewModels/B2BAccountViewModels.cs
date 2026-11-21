@@ -57,6 +57,11 @@ public class B2BAccountPartViewModel
     [BindNever]
     public IList<SelectListItem> Members { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the procurement system may open the store with a link (OCI link mode).
+    /// </summary>
+    public bool PunchoutAllowLinkSignIn { get; set; }
+
     public bool NewPunchoutKey { get; set; }
 
     [BindNever]

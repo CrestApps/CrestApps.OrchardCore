@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.BusinessDocuments;
@@ -59,6 +60,9 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Line quantities, prices and deposit amounts are posted as "24.5" in every culture.
+        services.AddInvariantNumberInputs();
+
         // The Taxation module, which Invoicing depends on, sets the taxes of a document's lines from its rules.
         services.AddDocumentTaxProvider<TaxationDocumentTaxProvider>();
         services.AddScoped<DocumentLinesEditorContext>();

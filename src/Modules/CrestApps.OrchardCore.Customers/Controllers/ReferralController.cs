@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -26,7 +28,12 @@ public sealed class ReferralController : Controller
     private readonly IReferralStore _store;
     private readonly ICustomerStore _customerStore;
     private readonly ICouponStore _couponStore;
-    private readonly IPaymentAttemptLimiter _limiter;
+    /// <summary>
+    /// Referral codes generated per network: 20 per hour.
+    /// </summary>
+    internal const string ReferralAttemptPolicy = "referral-link";
+
+    private readonly IAttemptLimiter _limiter;
     private readonly ISiteService _siteService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
@@ -37,7 +44,7 @@ public sealed class ReferralController : Controller
         IReferralStore store,
         ICustomerStore customerStore,
         ICouponStore couponStore,
-        IPaymentAttemptLimiter limiter,
+        IAttemptLimiter limiter,
         ISiteService siteService,
         INotifier notifier,
         IClock clock,
@@ -105,7 +112,7 @@ public sealed class ReferralController : Controller
             !string.IsNullOrEmpty(settings.FriendCouponId) &&
             await _couponStore.FindByIdAsync(settings.FriendCouponId) is { IsAutomatic: false } coupon &&
             coupon.IsRedeemable(_clock.UtcNow) &&
-            await _limiter.AcquireAsync("referral-link", HttpContext.Connection?.RemoteIpAddress?.ToString() ?? "unknown"))
+            (await _limiter.AcquireAsync(ReferralAttemptPolicy, ClientNetworkKey.NetworkOnly(HttpContext))).Allowed)
         {
             var generated = await _couponStore.GenerateCodesAsync(coupon, 1, "REF-", usesPerCode: 1, HttpContext.RequestAborted);
 

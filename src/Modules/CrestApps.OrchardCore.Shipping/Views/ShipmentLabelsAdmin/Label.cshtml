@@ -66,6 +66,7 @@
             {
                 <form asp-action="Buy" asp-route-shipmentId="@Model.Shipment.ItemId" method="post" class="no-multisubmit">
                     <input type="hidden" asp-for="QuoteId" />
+                    <input type="hidden" asp-for="QuoteToken" />
                     <div class="list-group list-group-flush">
                         @for (var i = 0; i < Model.Rates.Count; i++)
                         {
@@ -85,7 +86,7 @@
                         }
                     </div>
                     <div class="card-body">
-                        <button type="submit" class="btn btn-primary btn-sm" data-title="@T["Buy label"]" data-message="@T["Buy this label? The account is charged, and the shipment is marked shipped."]" data-ok-text="@T["Buy label"]" data-ok-class="btn-primary" data-url-af="RemoveUrl">@T["Buy label and ship"]</button>
+                        <button type="submit" class="btn btn-primary btn-sm" data-url-af="RemoveUrl" data-title="@T["Buy label"]" data-message="@T["Buy this label? The account is charged, and the shipment is marked shipped."]" data-ok-text="@T["Buy label"]" data-ok-class="btn-primary">@T["Buy label and ship"]</button>
                         <span class="hint d-block mt-1">@T["The buyer is emailed the tracking number."]</span>
                     </div>
                 </form>

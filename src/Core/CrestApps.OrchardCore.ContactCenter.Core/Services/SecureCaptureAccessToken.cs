@@ -1,6 +1,4 @@
-using System.Security.Cryptography;
-using System.Text;
-using OrchardCore;
+using CrestApps.OrchardCore.Core.Security;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -17,7 +15,8 @@ public static class SecureCaptureAccessToken
     /// <returns>A tuple of the raw token to hand to the agent once and the hash to persist.</returns>
     public static (string RawToken, string Hash) Create()
     {
-        var rawToken = $"{IdGenerator.GenerateId()}{IdGenerator.GenerateId()}";
+        // 256 bits from the cryptographic generator: an id generator makes no promise of unpredictability.
+        var rawToken = SecretTokens.Create();
 
         return (rawToken, Hash(rawToken));
     }
@@ -28,14 +27,5 @@ public static class SecureCaptureAccessToken
     /// <param name="rawToken">The raw access token presented by the customer page.</param>
     /// <returns>The lowercase hexadecimal SHA-256 hash, or <see langword="null"/> when the token is empty.</returns>
     public static string Hash(string rawToken)
-    {
-        if (string.IsNullOrEmpty(rawToken))
-        {
-            return null;
-        }
-
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawToken));
-
-        return Convert.ToHexStringLower(bytes);
-    }
+        => SecretTokens.Hash(rawToken);
 }

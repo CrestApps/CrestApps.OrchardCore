@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
 using CrestApps.OrchardCore.AgenticCommerce.Services;
 using CrestApps.OrchardCore.AgenticCommerce.Ucp;
+using CrestApps.OrchardCore.AgenticCommerce.ViewModels;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -70,8 +71,12 @@ public sealed class AgentHandoffController : Controller
             : null;
 
         // The checkout goes to the browser the agent sends the buyer to, the way the store gives out a new checkout: to
-        // the signed-in user, or to a guest who holds its token. A checkout already made for a linked buyer stays theirs.
-        if (string.IsNullOrEmpty(session.OwnerId) || session.OwnerId.StartsWith(AgentPrincipal.OwnerPrefix, StringComparison.Ordinal))
+        // the signed-in user, or to a guest who holds its token. It is given once: the link opened again, by anyone who
+        // got hold of it, doesn't hand the checkout over a second time. A checkout made for a linked buyer stays theirs.
+        var claimed = false;
+
+        if ((string.IsNullOrEmpty(session.OwnerId) && string.IsNullOrEmpty(session.GuestTokenHash)) ||
+            session.OwnerId?.StartsWith(AgentPrincipal.OwnerPrefix, StringComparison.Ordinal) == true)
         {
             var userId = User.Identity?.IsAuthenticated == true ? User.FindFirstValue(ClaimTypes.NameIdentifier) : null;
 
@@ -79,6 +84,24 @@ public sealed class AgentHandoffController : Controller
             session.GuestTokenHash = userId is null ? _guestTokens.Issue(CheckoutSessionStore.GuestTokenScope, session.SessionId) : null;
 
             await _sessions.SaveAsync(session, HttpContext.RequestAborted);
+
+            claimed = true;
+        }
+
+        // Opened again in a browser the checkout wasn't given to, such as the buyer's phone after they paid on their laptop,
+        // the checkout and its confirmation would answer 404 there. That browser is told where the order stands and how to
+        // see it, and nothing of the order itself: whoever holds the link could be reading.
+        var owned = claimed || await _sessions.GetAsync(session.SessionId, session.Status, HttpContext.RequestAborted) is not null;
+
+        if (!owned)
+        {
+            // Completing is idempotent and shows nothing, so a buyer back from their bank in another browser is told the
+            // order was placed rather than that it is still open.
+            var placed = session.Status == CheckoutSessionStatus.Completed ||
+                (session.Status is CheckoutSessionStatus.AwaitingProvider or CheckoutSessionStatus.PaymentPending &&
+                (await _engine.TryCompleteAsync(session.SessionId, HttpContext.RequestAborted)).IsCompleted);
+
+            return View("Elsewhere", new AgentHandoffElsewhereViewModel { Placed = placed });
         }
 
         if (embedded is not null && await embedded.StartAsync(HttpContext, checkout, session, token) is { } model)

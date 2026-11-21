@@ -80,7 +80,7 @@ public sealed class UcpCheckoutMapper
 
         var instrument = instruments.FirstOrDefault(entry => AgentJson.Bool(entry, "selected") == true) ?? instruments[0];
 
-        return new AgentPayment
+        var payment = new AgentPayment
         {
             HandlerId = AgentJson.String(instrument, "handler_id"),
             InstrumentType = AgentJson.String(instrument, "type"),
@@ -90,6 +90,14 @@ public sealed class UcpCheckoutMapper
             LastDigits = AgentJson.String(instrument?["display"], "last_digits"),
             BillingAddress = ReadAddress(instrument?["billing_address"]),
         };
+
+        // AP2's checkout mandate goes with the payment, so the completion checks it whichever binding brought it.
+        if (AgentJson.String(body["ap2"], "checkout_mandate") is { Length: > 0 } mandate)
+        {
+            payment.Properties[Ap2.Ap2CheckoutExtension.MandateProperty] = mandate;
+        }
+
+        return payment;
     }
 
     /// <summary>
@@ -450,7 +458,7 @@ public sealed class UcpCheckoutMapper
         };
     }
 
-    private static JsonObject WriteFulfillment(AgentCheckoutView view, string version)
+    internal static JsonObject WriteFulfillment(AgentCheckoutView view, string version)
     {
         var fulfillment = view.Fulfillment;
         var lineIds = new JsonArray([.. view.Lines.Select(line => (JsonNode)line.Id)]);

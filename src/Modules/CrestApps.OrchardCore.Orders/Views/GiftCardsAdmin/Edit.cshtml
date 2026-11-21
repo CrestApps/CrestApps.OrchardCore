@@ -93,7 +93,8 @@
 
 <div class="row g-3 mb-3">
     <div class="col-lg-8">
-        <form asp-action="Adjust" asp-route-itemId="@Model.ItemId" method="post" class="card h-100">
+        <script asp-name="crestapps-browser" at="Foot"></script>
+        <form asp-action="Adjust" asp-route-itemId="@Model.ItemId" method="post" class="card h-100 no-multisubmit" data-confirm-title="@T["Change the balance"]" data-confirm="@T["Change the balance of this gift card?"]" data-confirm-ok="@T["Change balance"]" data-confirm-cancel="@T["Cancel"]">
             <div class="card-body">
                 <h5 class="card-title">@T["Change the balance"]</h5>
                 <div class="row g-2 align-items-end">

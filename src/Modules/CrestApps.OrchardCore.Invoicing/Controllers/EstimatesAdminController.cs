@@ -1,4 +1,3 @@
-using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Invoicing.Core;
@@ -592,7 +591,7 @@ public sealed class EstimatesAdminController : Controller
         {
             foreach (var error in result.Errors)
             {
-                await _notifier.WarningAsync(new LocalizedHtmlString(error, HtmlEncoder.Default.Encode(error)));
+                await _notifier.WarningAsync(new LocalizedHtmlString(error, "{0}", false, error));
             }
         }
 

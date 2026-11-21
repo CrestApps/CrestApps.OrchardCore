@@ -22,6 +22,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Name = "Payment Rate Limits",
+    Id = CheckoutConstants.Features.RateLimits,
+    Description = "Limits how often the payment, payment status, checkout start and discount code routes can be called, as built-in group limits of Orchard Core's Rate Limits (listed under Tools > Rate Limits), and answers a refused call with a JSON body and a Retry-After header. Enable it on every store; the card-testing protection works without it.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        CheckoutConstants.Features.Area,
+        OrchardCoreFeatureIds.RateLimits,
+    ]
+)]
+
+[assembly: Feature(
     Name = "Test payments",
     Id = CheckoutConstants.Features.TestProvider,
     Description = "Adds a test payment method that confirms every checkout payment without moving money, for development and automated tests. It is active only in the Development environment unless configuration allows it.",

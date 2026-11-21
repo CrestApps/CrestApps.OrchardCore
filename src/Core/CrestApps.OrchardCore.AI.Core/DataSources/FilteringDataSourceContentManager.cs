@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.AI.Core.DataSources;
 /// question's phrases run at once on the same instance, but the filters run one at a time: a filter may use the
 /// request's database session, which takes one command at a time.
 /// </summary>
-public sealed class FilteringDataSourceContentManager : IDataSourceContentManager
+public sealed class FilteringDataSourceContentManager : IDataSourceContentManager, IDisposable
 {
     private readonly IDataSourceContentManager _inner;
     private readonly IAIDataSourceResultFilter[] _filters;
@@ -44,6 +44,10 @@ public sealed class FilteringDataSourceContentManager : IDataSourceContentManage
     /// Gets the provider's content manager this one wraps.
     /// </summary>
     public IDataSourceContentManager Inner => _inner;
+
+    /// <inheritdoc />
+    public void Dispose()
+        => _filtering.Dispose();
 
     /// <inheritdoc />
     public async Task<IEnumerable<DataSourceSearchResult>> SearchAsync(

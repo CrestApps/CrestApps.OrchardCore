@@ -15,11 +15,15 @@
                 var id = Html.IdFor(model => model.RoleNames) + "-" + role;
 
                 <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="@id" name="@Html.NameFor(model => model.RoleNames)" value="@role" checked="@Model.RoleNames.Contains(role, StringComparer.OrdinalIgnoreCase)" />
+                    <input type="checkbox" class="form-check-input" id="@id" name="@Html.NameFor(model => model.RoleNames)" value="@role" checked="@Model.RoleNames.Contains(role, StringComparer.OrdinalIgnoreCase)" disabled="@(!Model.CanChangeRoles)" />
                     <label class="form-check-label" for="@id">@role</label>
                 </div>
             }
             <span class="hint">@T["Content gated to these roles with Content Access Control opens to members. Anyone in a role already stays in it when a membership ends."]</span>
+            @if (!Model.CanChangeRoles)
+            {
+                <span class="hint">@T["Only someone who may manage memberships and assign roles to users can change these roles."]</span>
+            }
             <span asp-validation-for="RoleNames" class="text-danger"></span>
         </div>
     </div>

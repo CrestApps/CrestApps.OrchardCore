@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.ViewModels;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Workforce.ContactCenter.ViewModels;
 
@@ -121,6 +122,22 @@ public class IntradayOfferEditViewModel
 }
 
 /// <summary>
+/// A row of the My Work list of offers: an offer the worker can take, shown in the worker's time zone.
+/// </summary>
+public sealed class MyOfferRow
+{
+    /// <summary>
+    /// Gets or sets the offer.
+    /// </summary>
+    public IntradayOffer Offer { get; set; }
+
+    /// <summary>
+    /// Gets or sets the worker's time zone.
+    /// </summary>
+    public string TimeZoneId { get; set; }
+}
+
+/// <summary>
 /// The My Work page of offers.
 /// </summary>
 public class MyOffersViewModel
@@ -134,6 +151,11 @@ public class MyOffersViewModel
     /// Gets or sets the offers the worker can take.
     /// </summary>
     public IReadOnlyList<IntradayOffer> Offers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the list of the offers the worker can take.
+    /// </summary>
+    public AdminListContext List { get; set; }
 
     /// <summary>
     /// Gets or sets the worker's time zone.

@@ -93,12 +93,13 @@ internal sealed class InMemorySubscriptionStore : ISubscriptionStore
                 s.NextBillingUtc.Value <= asOfUtc &&
                 (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Trialing))]);
 
-    public Task<IReadOnlyList<Subscription>> GetLapsedAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<Subscription>> GetLapsedAsync(DateTime asOfUtc, int skip, int take, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<Subscription>>(
             [.. _subscriptions.Values.Where(s =>
-                s.Status == SubscriptionStatus.PastDue &&
-                s.GraceEndsUtc.HasValue &&
-                s.GraceEndsUtc.Value <= asOfUtc)]);
+                (s.Status == SubscriptionStatus.PastDue &&
+                    s.GraceEndsUtc.HasValue &&
+                    s.GraceEndsUtc.Value <= asOfUtc) ||
+                (s.Status == SubscriptionStatus.Canceled && s.CurrentPeriodEndUtc <= asOfUtc)).Skip(skip).Take(take)]);
 
     public Task<PageResult<Subscription>> PageAsync(int page, int pageSize, SubscriptionQuery query, CancellationToken cancellationToken = default)
     {

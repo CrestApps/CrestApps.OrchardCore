@@ -1,0 +1,8 @@
+P:System.DateTime.UtcNow;Inject IClock, so the time can be tested and is never server-local
+P:System.DateTime.Now;Inject IClock, so the time can be tested and is never server-local
+P:System.DateTime.Today;Inject IClock, and ILocalClock for the user's date
+M:System.DateTime.ToLocalTime;Convert with ILocalClock, which uses the user's or site's time zone instead of the server's
+M:System.TimeZoneInfo.ConvertTimeToUtc(System.DateTime,System.TimeZoneInfo);Convert wall-clock times with CalendarTime, which resolves daylight-saving gaps instead of throwing
+M:System.Net.Http.HttpClient.#ctor;Create clients with IHttpClientFactory
+M:System.Net.Http.HttpClient.#ctor(System.Net.Http.HttpMessageHandler);Create clients with IHttpClientFactory
+M:System.Net.Http.HttpClient.#ctor(System.Net.Http.HttpMessageHandler,System.Boolean);Create clients with IHttpClientFactory

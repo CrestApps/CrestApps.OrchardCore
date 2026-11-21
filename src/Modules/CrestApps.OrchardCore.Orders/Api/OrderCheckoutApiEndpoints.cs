@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Api;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Carts.Core;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Api;
@@ -24,7 +25,7 @@ internal static class OrderCheckoutApiEndpoints
         group.MapPost("checkout", StartAsync)
             .AllowGuests()
             .WithIdempotency()
-            .WithRateLimitGroup(CartConstants.RateLimitGroup)
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Start)
             .WithName("StartCheckout")
             .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Checks out the caller's cart: places an order for what's in it, holding its stock, and starts the order's checkout. A guest's checkout comes back in the X-Checkout-Token header.");
@@ -38,17 +39,20 @@ internal static class OrderCheckoutApiEndpoints
 
         group.MapPost("checkout/{id}/gift-cards", ApplyGiftCardAsync)
             .AllowGuests()
-            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Payment)
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Code)
             .WithName("ApplyCheckoutGiftCard")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .WithSummary("Puts a gift card toward the checkout, by its code.");
+            .WithSummary("Puts a gift card toward the checkout, by its code.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         group.MapDelete("checkout/{id}/gift-cards/{giftCardId}", RemoveGiftCardAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("RemoveCheckoutGiftCard")
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .WithSummary("Takes a gift card off the checkout. The gift card's id is the reference of its tender.");
+            .WithSummary("Takes a gift card off the checkout. The gift card's id is the reference of its tender.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         return routes;
     }
@@ -99,7 +103,7 @@ internal static class OrderCheckoutApiEndpoints
             return ApiProblems.Conflict(ApiProblems.Codes.Unsupported, "Gift cards can't pay for this checkout.");
         }
 
-        if (await giftCards.ApplyAsync(flow, request.Code.Trim(), httpContext.Connection?.RemoteIpAddress?.ToString() ?? "unknown") is { } error)
+        if (await giftCards.ApplyAsync(flow, request.Code.Trim(), ClientNetworkKey.NetworkOnly(httpContext)) is { } error)
         {
             return ApiProblems.Validation("code", error);
         }

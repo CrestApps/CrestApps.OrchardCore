@@ -3,12 +3,12 @@
 @model FeatureProfilesViewModel
 
 <div class="ocat-wrapper" asp-validation-class-for="FeatureProfile">
-    <label asp-for="FeatureProfile" class="ocat-label">@T["Feature profile"]</label>
+    <label asp-for="FeatureProfile" class="ocat-label ocat-label-required">@T["Feature profile"]</label>
     <div class="ocat-end">
         <select asp-for="FeatureProfile" asp-items="Model.FeatureProfiles" class="form-select">
-            <option value="">@T["None"]</option>
+            <option value="">@T["Choose a feature profile"]</option>
         </select>
         <span asp-validation-for="FeatureProfile"></span>
-        <span class="hint">@T["Limits the features the new site can enable. Leave at None to allow every feature."]</span>
+        <span class="hint">@T["Limits the features the new site can enable. Required: without it the buyer could enable host-level features, such as local MCP connections."]</span>
     </div>
 </div>

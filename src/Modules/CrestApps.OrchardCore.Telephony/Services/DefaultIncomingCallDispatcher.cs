@@ -98,8 +98,10 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
                 CallId = call.CallId,
                 ProviderName = call.ProviderName,
                 UserId = userId,
-                From = call.From,
-                To = call.To,
+
+                // The caller id is chosen by whoever places the call, and the recent calls list shows it.
+                From = CallerNumbers.Sanitize(call.From),
+                To = CallerNumbers.Sanitize(call.To),
                 Direction = call.Direction,
                 Outcome = CallOutcome.InProgress,
                 StartedUtc = call.StartedUtc?.UtcDateTime ?? _clock.UtcNow,
@@ -119,8 +121,8 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
             candidate =>
             {
                 candidate.ProviderName = call.ProviderName;
-                candidate.From = string.IsNullOrEmpty(call.From) ? candidate.From : call.From;
-                candidate.To = string.IsNullOrEmpty(call.To) ? candidate.To : call.To;
+                candidate.From = CallerNumbers.Sanitize(call.From) ?? candidate.From;
+                candidate.To = CallerNumbers.Sanitize(call.To) ?? candidate.To;
                 candidate.Direction = call.Direction;
 
                 if (!candidate.EndedUtc.HasValue)

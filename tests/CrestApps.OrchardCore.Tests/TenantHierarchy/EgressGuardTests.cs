@@ -32,7 +32,7 @@ public sealed class EgressGuardTests
     public void IsInternal_ClassifiesTheAddress(string address, bool expected)
     {
         // Act
-        var isInternal = EgressAddressClassifier.IsInternal(IPAddress.Parse(address));
+        var isInternal = global::CrestApps.OrchardCore.Core.Http.EgressNetwork.IsInternal(IPAddress.Parse(address));
 
         // Assert
         Assert.Equal(expected, isInternal);

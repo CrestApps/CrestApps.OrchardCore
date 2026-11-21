@@ -12,6 +12,7 @@ using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.DataConnectors;
 using CrestApps.OrchardCore.DataConnectors.Http;
 using CrestApps.OrchardCore.DataConnectors.Models;
@@ -25,6 +26,8 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger<AzureAISearchAIDataSourceSourceHandler> _logger;
     private readonly IDataConnectionResolver _dataConnectionResolver;
+    private readonly IAIEndpointPolicy _endpointPolicy;
+    private readonly AzureAISearchHostIdentity _hostIdentity;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AzureAISearchAIDataSourceSourceHandler"/> class.
@@ -32,15 +35,25 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="dataConnectionResolver">Resolves the data connection a data source may reference; <see langword="null"/> while the Data Connectors feature is off.</param>
+    /// <param name="endpointPolicy">The policy that keeps the search endpoint off the site's own network; <see langword="null"/> refuses every private address.</param>
+    /// <param name="hostIdentity">Where the data source may sign in as the host; <see langword="null"/> refuses it everywhere.</param>
     public AzureAISearchAIDataSourceSourceHandler(
         IDataProtectionProvider dataProtectionProvider,
         ILogger<AzureAISearchAIDataSourceSourceHandler> logger,
-        IDataConnectionResolver dataConnectionResolver = null)
+        IDataConnectionResolver dataConnectionResolver = null,
+        IAIEndpointPolicy endpointPolicy = null,
+        AzureAISearchHostIdentity hostIdentity = null)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
         _dataConnectionResolver = dataConnectionResolver;
+        _endpointPolicy = endpointPolicy;
+        _hostIdentity = hostIdentity;
     }
+
+    // The host's identity reads whatever the host can, other tenants' indexes included (review 10, B1).
+    private bool MaySignInAsHost(string endpoint, string indexName, string identityClientId)
+        => _hostIdentity?.IsApproved(endpoint, indexName, identityClientId) == true;
 
     public string SourceType => AIDataSourceSourceTypes.AzureAISearch;
 
@@ -75,6 +88,12 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
             {
                 result.Fail(new ValidationResult(resolution.Error, [nameof(DataConnectionReference.ConnectionId)]));
             }
+            else if (resolution.Context.Connection.GetOrCreate<HttpConnectionSettings>() is { } settings &&
+                AzureAISearchHostIdentity.SignsInAsHost(settings) &&
+                !MaySignInAsHost(settings.BaseUrl, metadata.IndexName, identityClientId: null))
+            {
+                result.Fail(new ValidationResult(AzureAISearchHostIdentity.NotApprovedError, [nameof(DataConnectionReference.ConnectionId)]));
+            }
 
             return;
         }
@@ -82,6 +101,12 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
         if (string.IsNullOrWhiteSpace(metadata.Endpoint))
         {
             result.Fail(new ValidationResult("Azure AI Search endpoint is required.", [nameof(AzureAISearchSourceMetadata.Endpoint)]));
+        }
+        else if (!(_endpointPolicy?.IsAllowed(metadata.Endpoint) ?? AIEgress.IsAllowedEndpoint(metadata.Endpoint, isDevelopment: false, options: null)))
+        {
+            // The editor, the recipe step and the API all validate here, so none of them can point a data source at the
+            // site's own network.
+            result.Fail(new ValidationResult("This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections.", [nameof(AzureAISearchSourceMetadata.Endpoint)]));
         }
 
         if (string.IsNullOrWhiteSpace(metadata.IndexName))
@@ -93,6 +118,13 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
             string.IsNullOrWhiteSpace(metadata.ApiKey))
         {
             result.Fail(new ValidationResult("Azure AI Search API key is required.", [nameof(AzureAISearchSourceMetadata.ApiKey)]));
+        }
+
+        if (AzureAISearchHostIdentity.SignsInAsHost(metadata) &&
+            !string.IsNullOrWhiteSpace(metadata.Endpoint) &&
+            !MaySignInAsHost(metadata.Endpoint, metadata.IndexName, metadata.IdentityClientId))
+        {
+            result.Fail(new ValidationResult(AzureAISearchHostIdentity.NotApprovedError, [nameof(AzureAISearchSourceMetadata.AuthenticationType)]));
         }
     }
 
@@ -226,7 +258,15 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
                 throw new InvalidOperationException(resolution.Error);
             }
 
-            return AzureAISearchDataConnectionClient.Create(resolution.Context.Connection.GetOrCreate<HttpConnectionSettings>(), resolution.Context.Secrets, metadata.IndexName);
+            var settings = resolution.Context.Connection.GetOrCreate<HttpConnectionSettings>();
+
+            // Checked before every sync too: the connection, or the host's approval, may have changed since the save.
+            if (AzureAISearchHostIdentity.SignsInAsHost(settings) && !MaySignInAsHost(settings.BaseUrl, metadata.IndexName, identityClientId: null))
+            {
+                throw new InvalidOperationException(AzureAISearchHostIdentity.NotApprovedError);
+            }
+
+            return AzureAISearchDataConnectionClient.Create(settings, resolution.Context.Secrets, metadata.IndexName);
         }
 
         var endpoint = new Uri(metadata.Endpoint);
@@ -238,6 +278,11 @@ internal sealed class AzureAISearchAIDataSourceSourceHandler : IAIDataSourceSour
             var apiKey = DataProtectionHelper.Unprotect(protector, metadata.ApiKey, _logger, "Failed to unprotect AI data source field '{FieldName}' for data source '{DataSourceId}'.", nameof(AzureAISearchSourceMetadata.ApiKey), dataSource.ItemId);
 
             return new SearchClient(endpoint, metadata.IndexName, new AzureKeyCredential(apiKey));
+        }
+
+        if (!MaySignInAsHost(metadata.Endpoint, metadata.IndexName, metadata.IdentityClientId))
+        {
+            throw new InvalidOperationException(AzureAISearchHostIdentity.NotApprovedError);
         }
 
         TokenCredential credential;

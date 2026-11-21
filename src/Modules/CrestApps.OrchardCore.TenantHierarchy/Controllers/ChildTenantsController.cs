@@ -717,10 +717,18 @@ public sealed class ChildTenantsController : Controller
             ? await _broker.GetChildFeaturesAsync(id)
             : [];
 
+        // One row per feature, category by category, searched as you type by the list-management script.
         return View(new ChildTenantFeaturesViewModel
         {
             Info = info,
-            Categories = features.GroupBy(feature => feature.Category).ToList(),
+            List = new AdminListContext<ChildFeatureListItem>
+            {
+                Source = features.GroupBy(feature => feature.Category)
+                    .SelectMany(category => category)
+                    .Select(feature => new ChildFeatureListItem { Feature = feature, EntryId = id })
+                    .ToList(),
+                ShowSelectAll = false,
+            },
             EnabledCount = features.Count(feature => feature.IsEnabled),
             Labels = _labelsProvider.GetLabels(),
         });

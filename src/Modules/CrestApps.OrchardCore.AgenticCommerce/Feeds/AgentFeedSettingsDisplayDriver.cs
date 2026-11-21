@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Core.Http;
+using CrestApps.OrchardCore.AI.FileTransfer.Core;
 using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Core.Feeds;
@@ -148,15 +149,25 @@ public sealed class AgentFeedSettingsDisplayDriver : SiteDisplayDriver<AgentFeed
         settings.TargetCountries = countries;
 
         var sftp = settings.Sftp ??= new AgentFeedSftpSettings();
+        var host = Clean(model.SftpHost);
+        var port = model.SftpPort is > 0 and <= 65535 ? model.SftpPort : 22;
+        var username = Clean(model.SftpUsername);
+        var fingerprint = Clean(model.SftpHostKeyFingerprint);
+
+        // The stored password and key were given for one account on the server the host key identifies; another host,
+        // port, user name or host key drops them, so a user who never saw them can't send them to a server of their own.
+        var sameAccount = SecretDestination.SameServer(sftp.Host, sftp.Port, host, port) &&
+            SecretDestination.SameValue(sftp.Username, username) &&
+            SecretDestination.SameValue(sftp.HostKeyFingerprint, fingerprint);
 
         sftp.Enabled = model.SftpEnabled;
-        sftp.Host = Clean(model.SftpHost);
-        sftp.Port = model.SftpPort is > 0 and <= 65535 ? model.SftpPort : 22;
-        sftp.Username = Clean(model.SftpUsername);
-        sftp.Password = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, sftp.Password, model.SftpPassword, model.RemoveSftpPassword);
-        sftp.PrivateKey = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, sftp.PrivateKey, model.SftpPrivateKey, model.RemoveSftpPrivateKey);
-        sftp.PrivateKeyPassphrase = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, sftp.PrivateKeyPassphrase, model.SftpPrivateKeyPassphrase, model.RemoveSftpPrivateKey);
-        sftp.HostKeyFingerprint = Clean(model.SftpHostKeyFingerprint);
+        sftp.Host = host;
+        sftp.Port = port;
+        sftp.Username = username;
+        sftp.Password = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, SecretDestination.Keep(sftp.Password, sameAccount), model.SftpPassword, model.RemoveSftpPassword);
+        sftp.PrivateKey = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, SecretDestination.Keep(sftp.PrivateKey, sameAccount), model.SftpPrivateKey, model.RemoveSftpPrivateKey);
+        sftp.PrivateKeyPassphrase = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, SecretDestination.Keep(sftp.PrivateKeyPassphrase, sameAccount), model.SftpPrivateKeyPassphrase, model.RemoveSftpPrivateKey);
+        sftp.HostKeyFingerprint = fingerprint;
         sftp.RemoteFolder = Clean(model.SftpRemoteFolder) ?? "/";
         sftp.Format = model.SftpFormat is OpenAIProductFeedFormats.CsvGzip ? OpenAIProductFeedFormats.CsvGzip : OpenAIProductFeedFormats.JsonLinesGzip;
         sftp.Currency = CurrencyCodeUtility.IsValid(model.SftpCurrency) ? CurrencyCodeUtility.Normalize(model.SftpCurrency) : null;
@@ -164,6 +175,17 @@ public sealed class AgentFeedSettingsDisplayDriver : SiteDisplayDriver<AgentFeed
         if (sftp.Enabled && (sftp.Host is null || sftp.Username is null || (sftp.Password is null && sftp.PrivateKey is null)))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SftpHost), S["Enter the SFTP host, user name, and a password or private key to push the feed."]);
+        }
+
+        // The push never runs without the server's host key, so turning it on without one would save and do nothing.
+        if (sftp.Enabled && sftp.HostKeyFingerprint is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SftpHostKeyFingerprint), S["Enter the SFTP server's host key fingerprint to push the feed."]);
+        }
+        else if (sftp.HostKeyFingerprint is not null && !SftpHostKeyFingerprints.IsValid(sftp.HostKeyFingerprint))
+        {
+            // A fingerprint the push never matches would save and then fail on every push.
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SftpHostKeyFingerprint), S["Enter the server's host key fingerprint, as ssh-keygen -lf prints it (SHA256:... or MD5:...). Separate several with commas."]);
         }
 
         settings.FeedApiTargets = UpdateTargets(settings.FeedApiTargets ?? [], model.FeedApiTargets ?? [], context);
@@ -196,9 +218,13 @@ public sealed class AgentFeedSettingsDisplayDriver : SiteDisplayDriver<AgentFeed
 
             var target = current ?? new AcpFeedTarget { Id = IdGenerator.GenerateId() };
 
+            // The stored token was given for the target's address; another scheme, host or port drops it, so a user who
+            // never saw it can't send it to a host of their own.
+            var storedToken = SecretDestination.Keep(target.BearerToken, SecretDestination.SameOrigin(target.BaseUrl, baseUrl));
+
             target.Name = Clean(row.Name) ?? baseUrl;
             target.BaseUrl = baseUrl;
-            target.BearerToken = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, target.BearerToken, row.BearerToken);
+            target.BearerToken = _dataProtectionProvider.ApplySecret(AgentFeedSettings.ProtectionPurpose, storedToken, row.BearerToken);
             target.FeedId = Clean(row.FeedId);
             target.TargetCountry = Clean(row.TargetCountry)?.ToUpperInvariant();
             target.Currency = CurrencyCodeUtility.IsValid(row.Currency) ? CurrencyCodeUtility.Normalize(row.Currency) : null;

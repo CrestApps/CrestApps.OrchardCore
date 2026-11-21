@@ -92,7 +92,7 @@ else if (!Model.HasVectorSearchService)
 
         <div id="activityRemovedDocumentsContainer-@uniqueId"></div>
 
-        <div id="activityDocumentsList-@uniqueId" class="document-list">
+        <div id="activityDocumentsList-@uniqueId" class="document-list" data-remove-title="@T["Remove document"]" data-remove-message="@T["Are you sure you want to remove this document? The removal will take effect when you save."]">
             @if (Model.Documents != null && Model.Documents.Any())
             {
                 foreach (var doc in Model.Documents)
@@ -126,6 +126,7 @@ else if (!Model.HasVectorSearchService)
 
 <style asp-name="document-drop-zone" at="Head"></style>
 
+<script asp-name="crestapps-browser" at="Foot"></script>
 <script at="Foot">
     (function () {
         const uniqueId = '@uniqueId';
@@ -289,12 +290,12 @@ else if (!Model.HasVectorSearchService)
         });
 
         // Handle removing existing documents (already saved).
-        documentsList.addEventListener('click', function (e) {
+        documentsList.addEventListener('click', async function (e) {
             const removeBtn = e.target.closest('.remove-activity-document');
             if (!removeBtn) return;
 
             const documentId = removeBtn.getAttribute('data-document-id');
-            if (!confirm('@T["Are you sure you want to remove this document? The removal will take effect when you save."]')) return;
+            if (!(await crestapps.confirm(documentsList.dataset.removeTitle, documentsList.dataset.removeMessage))) return;
 
             const hiddenInput = document.createElement('input');
             hiddenInput.type = 'hidden';

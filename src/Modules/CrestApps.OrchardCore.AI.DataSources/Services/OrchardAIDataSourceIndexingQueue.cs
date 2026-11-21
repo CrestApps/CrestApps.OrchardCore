@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI.Models;
+﻿using CrestApps.Core.AI.DataSources;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
@@ -173,14 +174,14 @@ internal sealed class OrchardAIDataSourceIndexingQueue : IAIDataSourceIndexingQu
         // The work runs in the background job, so that is what is measured, rather than the hand-off to it.
         return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(
             "process-ai-datasource-indexing",
-            scope => DeferredWork.RunAsync("ai_datasource_indexing", traceParent, scope, s => ProcessAsync(s, pendingWorkItems)));
+            scope => DeferredWork.RunAsync("ai_datasource_indexing", traceParent, scope, s => ProcessAsync(s.ServiceProvider, pendingWorkItems)));
     }
 
-    private static async Task ProcessAsync(
-        ShellScope scope,
+    internal static async Task ProcessAsync(
+        IServiceProvider services,
         OrchardAIDataSourceIndexingWorkItem[] workItems)
     {
-        ArgumentNullException.ThrowIfNull(scope);
+        ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(workItems);
 
         if (workItems.Length == 0)
@@ -188,8 +189,9 @@ internal sealed class OrchardAIDataSourceIndexingQueue : IAIDataSourceIndexingQu
             return;
         }
 
-        var indexingService = scope.ServiceProvider.GetRequiredService<IAIDataSourceIndexingService>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<OrchardAIDataSourceIndexingQueue>>();
+        var indexingService = services.GetRequiredService<IAIDataSourceIndexingService>();
+        var logger = services.GetRequiredService<ILogger<OrchardAIDataSourceIndexingQueue>>();
+        var synced = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var workItem in workItems)
         {
@@ -198,7 +200,7 @@ internal sealed class OrchardAIDataSourceIndexingQueue : IAIDataSourceIndexingQu
                 switch (workItem.Type)
                 {
                     case OrchardAIDataSourceIndexingWorkItemType.SyncDataSource:
-                        await indexingService.SyncDataSourceAsync(workItem.DataSource);
+                        await SyncStoredDataSourceAsync(services, indexingService, workItem.DataSource.ItemId, synced);
                         break;
                     case OrchardAIDataSourceIndexingWorkItemType.DeleteDataSource:
                         await indexingService.DeleteDataSourceDocumentsAsync(workItem.DataSource);
@@ -221,6 +223,24 @@ internal sealed class OrchardAIDataSourceIndexingQueue : IAIDataSourceIndexingQu
             {
                 logger.LogError(ex, "An error occurred while processing deferred AI data-source work item '{WorkItemType}'.", workItem.Type);
             }
+        }
+    }
+
+    // The data source is read again rather than taken from the copy queued with the work: a request can save a data
+    // source more than once, and only what it left stored may be synced (review 9, K1). Each one is synced once, since
+    // every read returns the same record; one no longer stored is not synced.
+    private static async Task SyncStoredDataSourceAsync(IServiceProvider services, IAIDataSourceIndexingService indexingService, string dataSourceId, HashSet<string> synced)
+    {
+        if (string.IsNullOrEmpty(dataSourceId) || !synced.Add(dataSourceId))
+        {
+            return;
+        }
+
+        var dataSource = await services.GetRequiredService<IAIDataSourceStore>().FindByIdAsync(dataSourceId);
+
+        if (dataSource is not null)
+        {
+            await indexingService.SyncDataSourceAsync(dataSource);
         }
     }
 

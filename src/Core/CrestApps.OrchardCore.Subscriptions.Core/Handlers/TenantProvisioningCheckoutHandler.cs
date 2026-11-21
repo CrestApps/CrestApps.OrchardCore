@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout.Services;
 using System.Text.Json;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
@@ -36,6 +37,7 @@ public sealed class TenantProvisioningCheckoutHandler : CheckoutHandlerBase
     private readonly IContentManager _contentManager;
     private readonly ITenantProvisioningJobStore _jobStore;
     private readonly ISubscriptionManager _subscriptionManager;
+    private readonly ICheckoutPaymentProviderResolver _paymentProviderResolver;
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly DocumentJsonSerializerOptions _jsonOptions;
@@ -60,6 +62,7 @@ public sealed class TenantProvisioningCheckoutHandler : CheckoutHandlerBase
         IContentManager contentManager,
         ITenantProvisioningJobStore jobStore,
         ISubscriptionManager subscriptionManager,
+        ICheckoutPaymentProviderResolver paymentProviderResolver,
         IClock clock,
         ILogger<TenantProvisioningCheckoutHandler> logger,
         IOptions<DocumentJsonSerializerOptions> jsonOptions,
@@ -70,6 +73,7 @@ public sealed class TenantProvisioningCheckoutHandler : CheckoutHandlerBase
         _contentManager = contentManager;
         _jobStore = jobStore;
         _subscriptionManager = subscriptionManager;
+        _paymentProviderResolver = paymentProviderResolver;
         _clock = clock;
         _logger = logger;
         _jsonOptions = jsonOptions.Value;
@@ -184,24 +188,18 @@ public sealed class TenantProvisioningCheckoutHandler : CheckoutHandlerBase
         job.Domains = info.Domains;
         job.RecipeName = info.RecipeName;
         job.FeatureProfile = info.FeatureProfile;
-        job.Status = TenantProvisioningStatus.Pending;
+        // A site bought with a promise to pay is created once the money arrives, unless the plan is delivered before
+        // payment: a buyer could otherwise take a site and never pay for it.
+        job.Status = CheckoutPaymentDeferral.IsDeferred(session, _paymentProviderResolver) && !await DeliversBeforePaymentAsync(session)
+            ? TenantProvisioningStatus.AwaitingPayment
+            : TenantProvisioningStatus.Pending;
         job.CreatedUtc = now;
         job.UpdatedUtc = now;
 
         await _jobStore.CreateAsync(job);
 
-        if (subscription is not null)
-        {
-            // The site exists for as long as the subscription does, so the agreement carries an entitlement
-            // naming it. That is what lets the site be suspended when the customer stops paying.
-            subscription.Entitlements.Add(new SubscriptionEntitlement
-            {
-                Kind = SubscriptionConstants.EntitlementKinds.Tenant,
-                Value = info.TenantName,
-            });
-
-            await _subscriptionManager.UpdateAsync(subscription);
-        }
+        // The tenant entitlement is added by the provisioning job once the site exists, naming that job, so a name that
+        // turns out to be taken never gives this subscription power over the tenant that already had it.
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -227,6 +225,11 @@ public sealed class TenantProvisioningCheckoutHandler : CheckoutHandlerBase
             return null;
         }
     }
+
+    private async Task<bool> DeliversBeforePaymentAsync(CheckoutSession session)
+        => await ResolvePlanAsync(session) is { } plan &&
+            plan.TryGet<ProductPart>(out var product) &&
+            product.DeliverBeforePayment;
 
     private async Task<Subscription> FindSubscriptionAsync(string sessionId)
     {

@@ -23,6 +23,26 @@ public sealed class ContentWizardAccessPolicy : IWizardAccessPolicy
     }
 
     /// <inheritdoc/>
+    public async Task<bool?> IsKnownDefinitionAsync(string wizardType, string definitionId)
+    {
+        if (!string.Equals(wizardType, ContentWizardConstants.WizardType, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        // A content wizard runs from a published content item whose type has the wizard part.
+        var contentItem = await _serviceProvider.GetRequiredService<IContentManager>().GetAsync(definitionId, VersionOptions.Published);
+
+        if (contentItem == null)
+        {
+            return false;
+        }
+
+        var typeDefinition = await _serviceProvider.GetRequiredService<IContentDefinitionManager>().GetTypeDefinitionAsync(contentItem.ContentType);
+
+        return typeDefinition?.Parts.Any(part => string.Equals(part.PartDefinition.Name, nameof(WizardPart), StringComparison.Ordinal)) == true;
+    }
+
     public async Task<bool> RequiresAuthenticatedUserAsync(string wizardType, string definitionId)
     {
         if (!string.Equals(wizardType, ContentWizardConstants.WizardType, StringComparison.OrdinalIgnoreCase) ||

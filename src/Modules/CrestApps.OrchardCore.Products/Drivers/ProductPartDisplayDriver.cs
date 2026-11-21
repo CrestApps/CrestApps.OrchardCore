@@ -88,6 +88,7 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
             model.IsPurchasable = part.IsPurchasable;
             model.PriceDisplay = part.PriceDisplay;
             model.Featured = part.Featured;
+            model.DeliverBeforePayment = part.DeliverBeforePayment;
             model.Position = part.Position;
             model.ShowPurchasable = settings.SalesMode == ProductSalesMode.PerItem;
             model.ShowPriceDisplay = settings.AllowPriceDisplayOverride;
@@ -255,6 +256,7 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
         part.Currency = normalizedCurrency;
         part.Sku = model.Sku?.Trim();
         part.Featured = model.Featured;
+        part.DeliverBeforePayment = model.DeliverBeforePayment;
         part.Position = model.Position;
 
         return Edit(part, context);

@@ -163,7 +163,7 @@ public sealed class CommerceEmailSender : ICommerceEmailSender
             // A mail server that's down never undoes what the email is about.
             _logger.LogError(exception, "The email about '{Reference}' ({Kind}) failed.", email.Reference.SanitizeLogValue(), email.Kind);
 
-            return CommerceEmailResult.Failed(exception.Message);
+            return CommerceEmailResult.Failed(S["The email couldn't be sent. The error was logged for the site administrator."]);
         }
         finally
         {

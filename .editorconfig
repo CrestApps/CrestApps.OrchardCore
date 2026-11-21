@@ -306,4 +306,17 @@ dotnet_diagnostic.SA1651.severity = none            # Do not use placeholder ele
 
 # IDE0290: Use primary constructor
 dotnet_diagnostic.IDE0290.severity = none
-dotnet_diagnostic.IDE0060.severity = warning        # Remove unused parameter
+dotnet_diagnostic.IDE0060.severity = suggestion     # Remove unused parameter (59 hits when EnforceCodeStyleInBuild came on; raise it once they are fixed)
+
+# Rules raised folder by folder (CQ-8 step 3 of docs/engineering/review-2026-11/04-code-quality.md).
+# CA1001: a type that owns a disposable field (a CancellationTokenSource, a timer) is disposable itself.
+# CA1305: format and parse with an explicit culture, so a value reads the same on every server.
+# CA2016: pass the CancellationToken you were given on to the methods that take one.
+[*.cs]
+dotnet_diagnostic.CA1001.severity = none
+dotnet_diagnostic.CA1305.severity = none
+
+[src/{Core,Abstractions}/**.cs]
+dotnet_diagnostic.CA1001.severity = warning
+dotnet_diagnostic.CA1305.severity = warning
+dotnet_diagnostic.CA2016.severity = warning

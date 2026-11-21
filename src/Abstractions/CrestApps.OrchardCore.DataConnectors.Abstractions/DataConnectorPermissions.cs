@@ -1,3 +1,4 @@
+using System.Globalization;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
@@ -42,8 +43,8 @@ public static class DataConnectorPermissions
         // The description is the template's text with a name filled in at run time, so it cannot be extracted.
 #pragma warning disable OCLOC103 // The value of the localization source is not a compile-time constant
         return new Permission(
-            string.Format(_readDataSetTemplate.Name, dataSetName),
-            LocalizationSource.Create(string.Format(_readDataSetTemplate.Description?.Value, dataSetName), typeof(DataConnectorPermissions)),
+            string.Format(CultureInfo.InvariantCulture, _readDataSetTemplate.Name, dataSetName),
+            LocalizationSource.Create(string.Format(CultureInfo.CurrentCulture, _readDataSetTemplate.Description?.Value, dataSetName), typeof(DataConnectorPermissions)),
             _readDataSetTemplate.ImpliedBy ?? []);
 #pragma warning restore OCLOC103
     }

@@ -45,6 +45,7 @@ When creating an SFTP resource in the admin UI, you can configure:
 | **Host** | The SFTP server hostname or IP address |
 | **Port** | The SSH port (default: 22) |
 | **Username** | SSH authentication username |
+| **Host key fingerprint** | Required. The server's host key fingerprint as `ssh-keygen -lf` prints it: `SHA256:...` (the prefix and the padding are optional), or the older MD5 form (`MD5:16:27:...`, or 32 hexadecimal digits). Separate several with commas, semicolons or spaces, such as while a key is being replaced. The editor accepts exactly the forms the connection matches. The connection is refused when it is missing or the server shows another key. |
 | **Password** | SSH authentication password (encrypted in storage) |
 | **Private Key** | SSH private key for key-based authentication (encrypted in storage) |
 
@@ -84,6 +85,7 @@ When creating an SFTP resource in the admin UI, you can configure:
               "Host": "ssh.example.com",
               "Port": 22,
               "Username": "user",
+              "HostKeyFingerprint": "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU",
               "Password": "",
               "PrivateKey": ""
             }
@@ -96,6 +98,8 @@ When creating an SFTP resource in the admin UI, you can configure:
 ```
 
 > **Note**: Passwords and private keys are not exported for security reasons. You must manually set them after importing.
+
+A stored password, private key or passphrase is kept when the field is left blank only while the resource signs in to the same account on the same server: changing the host, the port, the user name or the host key fingerprint, in the editor or in a recipe, drops them, and they must be entered again. The proxy password is kept while the proxy's type, host, port and user name are the same.
 
 ## Authentication Methods
 
@@ -119,6 +123,7 @@ For keys with a passphrase, include the passphrase in the password field.
 - **Export Safety**: Sensitive credentials are automatically removed during deployment/recipe export
 - **Key-Based Auth**: Prefer private key authentication over passwords when possible
 - **Key Protection**: Keep private keys secure and consider using passphrase-protected keys
+- **Host key**: The connection trusts the server only when it shows the configured host key fingerprint, so a DNS change or someone on the network path can't stand in for it. A resource saved before the fingerprint existed fails until one is added.
 - **Firewall**: Ensure your server can reach the SFTP host on the configured port (typically 22)
 
 ## Extending

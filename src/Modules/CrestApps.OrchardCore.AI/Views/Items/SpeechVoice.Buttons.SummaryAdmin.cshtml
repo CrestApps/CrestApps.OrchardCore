@@ -7,4 +7,4 @@
 {
     <audio controls preload="none" src="@Model.Value.VoiceSampleUrl" style="height: 2rem; max-width: 14rem;"></audio>
 }
-<button type="button" class="btn btn-sm btn-secondary" onclick="navigator.clipboard.writeText('@Model.Value.Id')">@T["Copy id"]</button>
+<button type="button" class="btn btn-sm btn-secondary" data-copy="@Model.Value.Id" onclick="navigator.clipboard.writeText(this.dataset.copy)">@T["Copy id"]</button>

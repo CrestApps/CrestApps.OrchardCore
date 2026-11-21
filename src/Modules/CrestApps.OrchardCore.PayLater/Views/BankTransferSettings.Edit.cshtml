@@ -30,3 +30,22 @@
         <span class="hint">@T["When the transfer is due, which drives the reminders. Use 0 for no due date."]</span>
     </div>
 </div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="RequireSignedIn" type="checkbox" class="form-check-input" />
+            <label asp-for="RequireSignedIn" class="form-check-label">@T["Only for signed-in buyers"]</label>
+            <span class="hint dashed">@T["A guest who never pays can't be followed up. Downloads, memberships and sites wait for the money either way."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MaxOrderAmount">
+    <label asp-for="MaxOrderAmount" class="ocat-label">@T["Largest order"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxOrderAmount" type="number" min="0" step="any" class="form-control" style="max-width: 10rem" />
+        <span asp-validation-for="MaxOrderAmount"></span>
+        <span class="hint">@T["Bank transfer is not offered for a larger order total. Leave blank for no limit."]</span>
+    </div>
+</div>

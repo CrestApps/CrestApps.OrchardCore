@@ -1,3 +1,4 @@
+@using System.Globalization
 @using CrestApps.OrchardCore.Products.Core.Models
 @using CrestApps.OrchardCore.Subscriptions.Extensions
 @using CrestApps.OrchardCore.Subscriptions.ViewModels
@@ -6,10 +7,14 @@
 
 @if (!Model.RequiresChoice)
 {
-    <a asp-route="SubscriptionSignup"
-       asp-route-contentItemId="@Model.ContentItemId"
-       asp-route-priceId="@Model.DefaultPrice?.PriceId"
-       class="btn btn-primary">@T["Sign up"]</a>
+    @* A post, not a link: link scanners and crawlers follow links, and each sign-up starts a checkout. *@
+    <form method="post" asp-route="SubscriptionSignup" asp-route-contentItemId="@Model.ContentItemId" class="d-inline">
+        @if (!string.IsNullOrEmpty(Model.DefaultPrice?.PriceId))
+        {
+            <input type="hidden" name="priceId" value="@Model.DefaultPrice.PriceId" />
+        }
+        <button type="submit" class="btn btn-primary">@T["Sign up"]</button>
+    </form>
 
     return;
 }
@@ -19,7 +24,7 @@
     var formId = "signup-" + Model.ContentItemId;
 }
 
-<form method="get" asp-route="SubscriptionSignup" asp-route-contentItemId="@Model.ContentItemId" class="w-100" id="@formId">
+<form method="post" asp-route="SubscriptionSignup" asp-route-contentItemId="@Model.ContentItemId" class="w-100" id="@formId">
     @if (Model.Prices.Count > 1)
     {
         <div class="mb-2">
@@ -44,15 +49,16 @@
         <input type="hidden" name="priceId" value="@selected.PriceId" />
     }
 
+    @* A number input takes and posts its numbers with a dot, whatever the page's culture, so they are written invariantly. *@
     <div class="mb-2 @(selected?.AllowCustomAmount == true ? string.Empty : "d-none")" data-signup-custom>
         <label class="form-label small text-body-secondary" for="@(formId)-amount">@T["Amount"]</label>
         <input type="number"
                step="0.01"
-               min="@(selected?.MinimumAmount?.ToString() ?? "0")"
-               max="@(selected?.MaximumAmount?.ToString() ?? string.Empty)"
+               min="@(selected?.MinimumAmount?.ToString(CultureInfo.InvariantCulture) ?? "0")"
+               max="@(selected?.MaximumAmount?.ToString(CultureInfo.InvariantCulture) ?? string.Empty)"
                name="customAmount"
                id="@(formId)-amount"
-               value="@(selected?.Amount)"
+               value="@(selected?.Amount.ToString(CultureInfo.InvariantCulture))"
                class="form-control form-control-sm" />
     </div>
 

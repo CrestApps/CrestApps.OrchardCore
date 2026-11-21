@@ -46,6 +46,8 @@ public sealed class BankTransferSettingsDisplayDriver : SiteDisplayDriver<BankTr
             model.Enabled = settings.Enabled;
             model.Instructions = settings.Instructions;
             model.NetTermDays = settings.NetTermDays;
+            model.RequireSignedIn = settings.RequireSignedIn;
+            model.MaxOrderAmount = settings.MaxOrderAmount;
         }).Location("Content:5")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TransactionsPermissions.ManageTransactionSettings))
         .OnGroup(SettingsGroupId);
@@ -73,11 +75,17 @@ public sealed class BankTransferSettingsDisplayDriver : SiteDisplayDriver<BankTr
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Instructions), S["Keep the instructions under {0} characters.", MaxInstructionsLength]);
         }
+        else if (model.MaxOrderAmount is < 0m)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaxOrderAmount), S["The largest order can't be negative."]);
+        }
         else
         {
             settings.Enabled = model.Enabled;
             settings.Instructions = instructions;
             settings.NetTermDays = Math.Clamp(model.NetTermDays, 0, 365);
+            settings.RequireSignedIn = model.RequireSignedIn;
+            settings.MaxOrderAmount = model.MaxOrderAmount;
         }
 
         return Edit(site, settings, context);
@@ -92,10 +100,16 @@ public sealed class CashOnDeliverySettingsDisplayDriver : SiteDisplayDriver<Cash
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
-    public CashOnDeliverySettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService)
+    internal readonly IStringLocalizer S;
+
+    public CashOnDeliverySettingsDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
+        IStringLocalizer<CashOnDeliverySettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -108,6 +122,8 @@ public sealed class CashOnDeliverySettingsDisplayDriver : SiteDisplayDriver<Cash
         {
             model.Enabled = settings.Enabled;
             model.Instructions = settings.Instructions;
+            model.RequireSignedIn = settings.RequireSignedIn;
+            model.MaxOrderAmount = settings.MaxOrderAmount;
         }).Location("Content:10")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TransactionsPermissions.ManageTransactionSettings))
         .OnGroup(SettingsGroupId);
@@ -126,6 +142,16 @@ public sealed class CashOnDeliverySettingsDisplayDriver : SiteDisplayDriver<Cash
 
         settings.Enabled = model.Enabled;
         settings.Instructions = string.IsNullOrWhiteSpace(model.Instructions) ? null : model.Instructions.Trim()[..Math.Min(model.Instructions.Trim().Length, 1000)];
+        settings.RequireSignedIn = model.RequireSignedIn;
+
+        if (model.MaxOrderAmount is < 0m)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaxOrderAmount), S["The largest order can't be negative."]);
+        }
+        else
+        {
+            settings.MaxOrderAmount = model.MaxOrderAmount;
+        }
 
         return Edit(site, settings, context);
     }

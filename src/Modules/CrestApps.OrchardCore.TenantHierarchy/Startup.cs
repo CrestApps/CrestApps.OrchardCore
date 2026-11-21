@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
@@ -47,6 +48,8 @@ public sealed class PlatformStartup : StartupBase
         services.AddScoped<TenantHierarchyPlatformService>();
         services.AddPermissionProvider<PlatformPermissionProvider>();
         services.AddNavigationProvider<PlatformAdminMenu>();
+        services.AddDisplayDriver<HierarchyParentListItem, HierarchyParentListItemDisplayDriver>();
+        services.AddDisplayDriver<HierarchyChildListItem, HierarchyChildListItemDisplayDriver>();
     }
 }
 
@@ -94,6 +97,8 @@ public sealed class ParentStartup : StartupBase
         services.AddDisplayDriver<Navbar, ParentSwitcherNavbarDisplayDriver>();
         services.AddDisplayDriver<AuditTrailEvent, HierarchyAuditTrailEventDisplayDriver>();
         services.AddDisplayDriver<ChildTenantListItem, ChildTenantListItemDisplayDriver>();
+        services.AddDisplayDriver<ChildFeatureListItem, ChildFeatureListItemDisplayDriver>();
+        services.AddDisplayDriver<AccessGrantListItem, AccessGrantListItemDisplayDriver>();
         services.AddTransient<IConfigureOptions<AuditTrailOptions>, TenantHierarchyAuditTrailEventConfiguration>();
 
         services.AddRecipeExecutionStep<AccessGrantsStep>();
@@ -120,6 +125,7 @@ public sealed class ChildStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         ParentStartup.AddCommonServices(services);
+        services.AddSignedLinks();
 
         services
             .AddScoped<UserLinkStore>()

@@ -77,7 +77,7 @@ internal sealed class InMemoryTenantProvisioningJobStore : ITenantProvisioningJo
         => Task.FromResult(_jobs.Values.FirstOrDefault(job => job.CheckoutSessionId == checkoutSessionId));
 
     public Task<TenantProvisioningJob> GetByTenantNameAsync(string tenantName, CancellationToken cancellationToken = default)
-        => Task.FromResult(_jobs.Values.FirstOrDefault(job => job.TenantName == tenantName));
+        => Task.FromResult(_jobs.Values.Where(job => job.TenantName == tenantName && job.Status == TenantProvisioningStatus.Succeeded).OrderByDescending(job => job.CreatedUtc).FirstOrDefault());
 
     public Task<IReadOnlyList<TenantProvisioningJob>> GetDueAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<TenantProvisioningJob>>(

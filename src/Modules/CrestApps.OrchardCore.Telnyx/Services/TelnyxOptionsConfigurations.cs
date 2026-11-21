@@ -71,17 +71,9 @@ internal sealed class TelnyxOptionsConfigurations : IConfigureOptions<TelnyxOpti
         options.ApiBaseUrl = ResolveApiBaseUrl(settings.ApiBaseUrl);
     }
 
+    // Only an https address on telnyx.com: the API key goes to it as a bearer token.
     private static string ResolveApiBaseUrl(string configuredBaseUrl)
-    {
-        if (string.IsNullOrWhiteSpace(configuredBaseUrl))
-        {
-            return TelnyxConstants.DefaultApiBaseUrl;
-        }
-
-        var trimmed = configuredBaseUrl.Trim();
-
-        return trimmed.EndsWith('/') ? trimmed : trimmed + '/';
-    }
+        => TelnyxApiAddress.Resolve(configuredBaseUrl);
 
     private string Unprotect(IDataProtector protector, string value)
     {

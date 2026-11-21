@@ -237,6 +237,7 @@
     }
 </div>
 
+<script asp-name="crestapps-browser" at="Foot"></script>
 <script at="Foot">
     (function () {
         var messages = {
@@ -317,7 +318,7 @@
                 });
         }
 
-        container.addEventListener('click', function (event) {
+        container.addEventListener('click', async function (event) {
             var connectButton = event.target.closest('[data-telnyx-connect-button]');
 
             if (connectButton) {
@@ -331,7 +332,7 @@
             if (disconnectButton) {
                 var confirmMessage = disconnectButton.getAttribute('data-confirm-message');
 
-                if (confirmMessage && !window.confirm(confirmMessage)) {
+                if (confirmMessage && !(await crestapps.confirm(disconnectButton.textContent.trim(), confirmMessage))) {
                     return;
                 }
 

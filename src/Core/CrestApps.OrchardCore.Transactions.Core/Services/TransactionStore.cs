@@ -81,6 +81,11 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
             records = records.Where(x => x.ReferenceId == query.ReferenceId);
         }
 
+        if (!string.IsNullOrEmpty(query.CheckoutSessionId))
+        {
+            records = records.Where(x => x.CheckoutSessionId == query.CheckoutSessionId);
+        }
+
         if (query.OutstandingOnly)
         {
             records = records.Where(x => x.Status == TransactionStatus.Outstanding || x.Status == TransactionStatus.PartiallyPaid);

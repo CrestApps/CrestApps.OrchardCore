@@ -293,7 +293,7 @@
 
             return fetch(config.snapshotUrl, {
                 credentials: 'same-origin',
-                headers: { 'Accept': 'application/json' }
+                headers: { 'Accept': 'application/json', 'X-Asterisk-Web-Key': config.apiKey || '' }
             })
                 .then(function (response) { return response.ok ? response.json() : null; })
                 .then(function (snapshot) {
@@ -351,7 +351,8 @@
                 credentials: 'same-origin',
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-Asterisk-Web-Key': config.apiKey || ''
                 },
                 body: JSON.stringify(payload)
             })
@@ -401,7 +402,8 @@
 
             return fetch('/api/asterisk/channels/' + encodeURIComponent(channelId), {
                 method: 'DELETE',
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                headers: { 'X-Asterisk-Web-Key': config.apiKey || '' }
             })
                 .then(function (response) {
                     if (!response.ok) {
@@ -423,7 +425,8 @@
 
             return fetch('/api/asterisk/bridges/' + encodeURIComponent(bridgeId), {
                 method: 'DELETE',
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                headers: { 'X-Asterisk-Web-Key': config.apiKey || '' }
             })
                 .then(function (response) {
                     if (!response.ok) {

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Indexes;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
+using CrestApps.OrchardCore.Inventory.Models;
 using CrestApps.OrchardCore.Inventory.Services;
 using CrestApps.OrchardCore.Inventory.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -440,7 +441,8 @@ public sealed class InventoryAdminController : Controller
             }
         }
 
-        return new StockItemViewModel
+        var pagerShape = await _shapeFactory.PagerAsync(pager, count, new RouteData(new RouteValueDictionary { { "stockItemId", item.ItemId } }));
+        var model = new StockItemViewModel
         {
             Item = item,
             Locations = locations,
@@ -450,8 +452,23 @@ public sealed class InventoryAdminController : Controller
             MovementCount = count,
             WaitingAlerts = HttpContext.RequestServices.GetService(typeof(StockAlertService)) is StockAlertService alerts ? await alerts.CountWaitingAsync(item.ItemId, HttpContext.RequestAborted) : null,
             CanManage = await _authorizationService.AuthorizeAsync(User, InventoryPermissions.ManageInventory),
-            Pager = await _shapeFactory.PagerAsync(pager, count, new RouteData(new RouteValueDictionary { { "stockItemId", item.ItemId } })),
+            Pager = pagerShape,
         };
+
+        // The admin-list tag renders a row per change, its count and its pager, in the layout (List or Grid) the site
+        // or the user picked. A row names its location only when the store counts its stock in more than one place.
+        model.MovementList = new AdminListContext<StockMovementRow>
+        {
+            Source = movements.Select(movement => new StockMovementRow
+            {
+                Movement = movement,
+                LocationName = model.HasLocations ? model.LocationName(movement.LocationId) : null,
+            }).ToList(),
+            Pager = pagerShape,
+            ShowSelectAll = false,
+        };
+
+        return model;
     }
 
     // The change is committed here, so a checkout that changed the same stock at the same moment can't be overwritten:

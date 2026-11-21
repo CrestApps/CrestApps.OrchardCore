@@ -1,4 +1,3 @@
-using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.BusinessDocuments.Services;
 using CrestApps.OrchardCore.Invoicing.Core;
 using CrestApps.OrchardCore.Invoicing.Endpoints;
@@ -115,7 +114,7 @@ public sealed class StatementsAdminController : Controller
             }
             else
             {
-                await _notifier.WarningAsync(new LocalizedHtmlString(error, HtmlEncoder.Default.Encode(error)));
+                await _notifier.WarningAsync(new LocalizedHtmlString(error, "{0}", false, error));
             }
         }
 

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Calendars.Drivers;
 using CrestApps.OrchardCore.Calendars.External;
 using CrestApps.OrchardCore.Calendars.HealthChecks;
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Core.Http;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.DisplayManagement.Handlers;
@@ -20,7 +21,10 @@ public sealed class ExternalStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddHttpClient(nameof(ICalendarUrlProvider));
+        // The address is a calendar manager's, so the client never reaches the site's own network, whatever the host
+        // resolves to when the sync task calls it. Feeds commonly redirect (an old calendar address, http:// moved to
+        // https://), so redirects are followed, and every hop is checked at connect.
+        services.AddEgressGuardedHttpClient(nameof(ICalendarUrlProvider), allowRedirects: true);
         services.AddCalendarProvider<ICalendarUrlProvider>();
         services.AddSingleton<IBackgroundTask, CalendarSyncBackgroundTask>();
         services.AddDisplayDriver<Calendar, CalendarSubscriptionDisplayDriver>();

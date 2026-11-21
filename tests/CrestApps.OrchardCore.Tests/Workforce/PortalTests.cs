@@ -173,6 +173,142 @@ public sealed class PortalTests
         Assert.NotNull(kept.LastSentUtc);
     }
 
+    [Theory]
+    [InlineData("https://127.0.0.1/push")]
+    [InlineData("https://localhost/push")]
+    [InlineData("https://10.0.0.5/push")]
+    [InlineData("https://192.168.1.10/push")]
+    [InlineData("https://169.254.169.254/latest/meta-data")]
+    [InlineData("https://[::1]/push")]
+    [InlineData("https://[fe80::1]/push")]
+    [InlineData("http://push.example/plain-text")]
+    [InlineData("https://user:secret@push.example/credentials")]
+    public async Task WebPush_RefusesAnEndpointOnTheSitesOwnNetwork(string endpoint)
+    {
+        await using var harness = await CreateAsync();
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var (p256dh, auth) = DeviceKeys();
+
+        var subscription = await harness.RunAsync(services => services.GetRequiredService<IWebPushService>().SubscribeAsync(ana.ItemId, endpoint, p256dh, auth, "Test browser"));
+        var devices = await harness.RunAsync(services => services.GetRequiredService<IWebPushService>().ListAsync(ana.ItemId), commit: false);
+
+        Assert.Null(subscription);
+        Assert.Empty(devices);
+    }
+
+    [Fact]
+    public async Task WebPush_RefusesAHostOutsideTheAllowedPushServices_WhenTheyAreListed()
+    {
+        await using var harness = await CreateAsync(configure: options => options.AllowedHosts = ["fcm.googleapis.com", "*.push.apple.com"]);
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var (p256dh, auth) = DeviceKeys();
+
+        await harness.RunAsync(async services =>
+        {
+            var push = services.GetRequiredService<IWebPushService>();
+
+            Assert.Null(await push.SubscribeAsync(ana.ItemId, "https://push.example/device", p256dh, auth, "Test browser"));
+            Assert.NotNull(await push.SubscribeAsync(ana.ItemId, "https://fcm.googleapis.com/fcm/send/device", p256dh, auth, "Test browser"));
+            Assert.NotNull(await push.SubscribeAsync(ana.ItemId, "https://web.push.apple.com/device", p256dh, auth, "Test browser"));
+        });
+    }
+
+    [Fact]
+    public async Task WebPush_TheEleventhDevice_ReplacesTheOldest()
+    {
+        var clock = new MovableClock();
+        await using var harness = await CreateAsync(clock: clock);
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var (p256dh, auth) = DeviceKeys();
+
+        for (var i = 1; i <= 11; i++)
+        {
+            clock.UtcNow = clock.UtcNow.AddMinutes(1);
+            var endpoint = "https://push.example/device-" + i;
+
+            await harness.RunAsync(services => services.GetRequiredService<IWebPushService>().SubscribeAsync(ana.ItemId, endpoint, p256dh, auth, "Test browser"));
+        }
+
+        var devices = await harness.RunAsync(services => services.GetRequiredService<IWebPushService>().ListAsync(ana.ItemId), commit: false);
+
+        Assert.Equal(10, devices.Count);
+        Assert.DoesNotContain(devices, device => device.Endpoint == "https://push.example/device-1");
+        Assert.Contains(devices, device => device.Endpoint == "https://push.example/device-11");
+    }
+
+    [Fact]
+    public async Task WebPush_ParallelSubscribes_StayWithinTheCap()
+    {
+        // Arrange: one worker fires many subscribes at once, each with its own endpoint.
+        await using var harness = await CreateAsync(distributedLock: new global::OrchardCore.Locking.LocalLock(NullLogger<global::OrchardCore.Locking.LocalLock>.Instance));
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var (p256dh, auth) = DeviceKeys();
+
+        // Act
+        await Task.WhenAll(Enumerable.Range(1, 25).Select(i => Task.Run(
+            () => harness.RunAsync(services => services.GetRequiredService<IWebPushService>().SubscribeAsync(ana.ItemId, "https://push.example/parallel-" + i, p256dh, auth, "Test browser")),
+            TestContext.Current.CancellationToken)));
+
+        var devices = await harness.RunAsync(services => services.GetRequiredService<IWebPushService>().ListAsync(ana.ItemId), commit: false);
+
+        // Assert
+        Assert.Equal(10, devices.Count);
+    }
+
+    [Fact]
+    public async Task WebPush_ANotification_GoesToTheNewestDevicesUpToTheCap_AndOnlyToAllowedHosts()
+    {
+        // Arrange: devices stored before the cap existed, or before the allowed hosts were tightened, are still there.
+        var handler = new PushHandler();
+        var clock = new MovableClock();
+        await using var harness = await CreateAsync(handler: handler, clock: clock, configure: options => options.AllowedHosts = ["push.example"]);
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var (p256dh, auth) = DeviceKeys();
+
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<WebPushSubscriptionStore>();
+
+            for (var i = 1; i <= 15; i++)
+            {
+                await store.CreateAsync(new WebPushSubscription
+                {
+                    ItemId = UniqueId.GenerateId(),
+                    WorkerId = ana.ItemId,
+                    Endpoint = (i == 15 ? "https://elsewhere.example/device-" : "https://push.example/device-") + i,
+                    P256dh = p256dh,
+                    Auth = auth,
+                    CreatedUtc = clock.UtcNow.AddMinutes(i),
+                });
+            }
+        });
+
+        // Act
+        await NotifyAsync(harness, ana, WorkforceNotificationKind.ShiftChanged, "Your shift moved");
+
+        // Assert: the ten newest, less the one whose host is no longer allowed.
+        Assert.Equal(9, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task WebPush_TheClientRefusesAHostOnTheSitesOwnNetwork_AtConnect()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddWorkforcePortalCore();
+        using var provider = services.BuildServiceProvider();
+        using var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(WorkforceConstants.WebPushHttpClient);
+
+        var refused = await Assert.ThrowsAsync<HttpRequestException>(() => client.GetAsync("https://127.0.0.1:9/push", TestContext.Current.CancellationToken));
+
+        Assert.Contains(global::CrestApps.OrchardCore.Core.Http.EgressNetwork.RefusedMessage, refused.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task PushKey_IsMadeOnce()
     {
@@ -217,6 +353,40 @@ public sealed class PortalTests
         Assert.Null(old);
         Assert.NotNull(current);
         Assert.Null(await harness.RunAsync(services => services.GetRequiredService<IWorkerFeedService>().WriteAsync("not-a-real-secret-at-all"), commit: false));
+    }
+
+    // SEC-P10i: the feed secret was stored in the worker's document in plain text, so anyone who could read the database
+    // or a backup could open every worker's schedule.
+    [Fact]
+    public async Task Feed_SecretIsNotStoredInPlainText_AndStillShownAndOpened()
+    {
+        await using var harness = await CreateAsync();
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+
+        var token = await harness.RunAsync(async services => await services.GetRequiredService<IWorkerFeedService>().GetTokenAsync(await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(ana.ItemId), true));
+        var shownAgain = await harness.RunAsync(async services => await services.GetRequiredService<IWorkerFeedService>().GetTokenAsync(await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(ana.ItemId), false));
+        var document = await harness.RunAsync(async services => System.Text.Json.JsonSerializer.Serialize(await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(ana.ItemId)), commit: false);
+        var feed = await harness.RunAsync(services => services.GetRequiredService<IWorkerFeedService>().WriteAsync(token), commit: false);
+
+        Assert.Equal(token, shownAgain);
+        Assert.DoesNotContain(token, document, StringComparison.Ordinal);
+        Assert.NotNull(feed);
+    }
+
+    [Fact]
+    public async Task Feed_AnAddressGivenBeforeTheSecretWasHashed_StillOpens()
+    {
+        await using var harness = await CreateAsync();
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        const string legacy = "legacy-plain-feed-secret-0123456789abcdef";
+
+        await SettingsAsync(harness, ana, settings => settings.FeedToken = legacy);
+
+        var feed = await harness.RunAsync(services => services.GetRequiredService<IWorkerFeedService>().WriteAsync(legacy), commit: false);
+
+        Assert.NotNull(feed);
     }
 
     [Fact]
@@ -352,10 +522,15 @@ public sealed class PortalTests
         Assert.False(new WorkerPortalSettings { QuietStart = new TimeOnly(12, 0), QuietEnd = new TimeOnly(13, 0) }.IsQuiet(new TimeOnly(13, 0)));
     }
 
-    private static Task<CalendarTestHarness> CreateAsync(RecordingChannel channel = null, PushHandler handler = null, MovableClock clock = null, IDistributedLock distributedLock = null, bool cachePerRun = false)
+    private static Task<CalendarTestHarness> CreateAsync(RecordingChannel channel = null, PushHandler handler = null, MovableClock clock = null, IDistributedLock distributedLock = null, bool cachePerRun = false, Action<WebPushOptions> configure = null)
     {
         return WorkforceTests.CreateAsync(services =>
         {
+            if (configure is not null)
+            {
+                services.Configure(configure);
+            }
+
             if (clock is not null)
             {
                 services.AddSingleton<global::OrchardCore.Modules.IClock>(clock);

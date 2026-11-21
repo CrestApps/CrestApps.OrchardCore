@@ -1,0 +1,3 @@
+@model ShapeViewModel<StockMovementRow>
+
+<span class="badge ta-badge fw-normal" title="@T["On hand"]"><i class="fa-solid fa-boxes-stacked text-info" aria-hidden="true"></i> @T["{0} on hand", Model.Value.Movement.OnHandAfter]</span>

@@ -56,17 +56,34 @@ A sweep runs every thirty minutes and invoices the next period once the current 
 
 Each cycle is created exactly once. The sweep takes a lock on the one commitment it advances, marks the cycle it came from as spawned before committing, and gives the new period its own obligation id, so a retry, a second node, or a restart cannot invoice the same period twice. A cancelled agreement, and one that has billed every cycle it was sold for, stop producing new periods.
 
+The sweep also asks the module that owns the agreement (`ITransactionRenewalFilter`). With Subscriptions enabled, a subscription that is still waiting for its first payment, or is paused, holds its next period until it is current again, and one that is canceled, set to cancel at the end of its period, or expired stops the schedule for good.
+
 ### Configuring the payment term
 
 A Pay Later balance falls due the way an invoice does, and the way B2B checkouts and accounting systems set terms: the most specific term wins. `PayLaterDueDateResolver` decides, for the first balance and for every renewal cycle:
 
 1. **The payer's own payment term**, from their billing profile (`PartyBillingProfile.PaymentTermId`, such as an account that buys on Net 60). A guest has none.
 2. **The payment term chosen for Pay Later** (`PayLaterSettings.PaymentTermId`), under **Settings → Commerce → Offline payments → Payment term**. The field is shown when the [Payment Terms](transactions#payment-terms) feature is on, which Invoicing turns on.
-3. **The net term (days)** (`PayLaterSettings.NetTermDays`, 30 by default): how many days after checkout, or after the start of the cycle, the balance is due. `0` records it with no due date.
+3. **The net term (days)** (`PayLaterSettings.NetTermDays`, 30 by default): how many days after checkout, or after the start of the cycle, the balance is due. `0` records the first balance with no due date; a later billing period of a recurring commitment is then due on the first day of the period, so an unpaid renewal still becomes overdue and its subscription past due.
 
 A payment term gives a date (Net 15, the end of the month, a day of the next month), so the balance is due at the end of that day in the site's time zone, as an invoice is. A disabled or deleted term is skipped. Without the Payment Terms feature only the number of days applies, as before. A trial or a delayed start counts from the day its first real cycle begins. The due date drives the reminder cadence configured in the [Transactions](transactions) settings.
 
 `OfflineCheckoutPaymentProvider.GetDueUtcAsync(DateTime now, PartyRef payer, CancellationToken)` is what the checkout handler asks; Pay Later overrides it, and Bank transfer and Cash on delivery keep their own number of days. `PayLaterSettings.Enabled` (off by default) offers the option at checkout; until it's on, enabling the feature adds nothing to checkout.
+
+### Who may promise, and what they get before paying
+
+A promise to pay is not money, so Pay Later and the two methods below are limited:
+
+- **Signed-in buyers only.** `PayLaterSettings.RequireSignedIn` is on by default, so guests are not offered Pay Later; untick it to offer it to them. Bank transfer and cash on delivery have the same option, off by default.
+- **Largest order.** `MaxOrderAmount` on each method leaves it out of a checkout whose total is higher. Empty means no limit.
+- **Nothing instant before the money.** What a product delivers instantly (a download, a membership, a site) is handed over only once the balance is paid, unless the product ticks **Deliver before payment** (`ProductPart.DeliverBeforePayment`). Goods ship when the store records the payment.
+- **Subscriptions.** A subscription bought this way starts `Incomplete` and grants nothing until a transaction of its checkout is paid, unless the plan delivers before payment; a period left unpaid past its due date makes the subscription past due, and it lapses at the end of the grace window. A trial still grants access during the trial, since nothing is owed yet.
+
+These rules are checked when the payment step lists the methods (`IsAvailableAsync`) and again when the checkout engine begins the payment.
+
+:::note Upgrading
+Before this release Pay Later was offered to guests and delivered at once. A store that wants that back unticks **Only for signed-in buyers** and ticks **Deliver before payment** on the products concerned.
+:::
 
 ### With Invoicing
 

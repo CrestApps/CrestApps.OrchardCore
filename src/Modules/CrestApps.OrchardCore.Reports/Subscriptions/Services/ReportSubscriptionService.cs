@@ -151,7 +151,7 @@ public sealed class ReportSubscriptionService
 
             subscription.LastRunUtc = runUtc;
 
-            if (reschedule)
+            if (reschedule && subscription.IsEnabled)
             {
                 subscription.NextRunUtc = ReportSubscriptionSchedule.GetNextRunUtc(subscription, runUtc, timeZone);
             }
@@ -194,12 +194,33 @@ public sealed class ReportSubscriptionService
             return (S["The report {0} isn't available; its feature may be off.", subscription.ReportName], "report_unavailable");
         }
 
-        // The report is sent only while the person who saved the subscription may still view it, and runs as them.
-        var owner = await _owners.ResolveByUserNameAsync(subscription.ModifiedBy ?? subscription.CreatedBy);
+        // The report goes out with the access of the person who last saved the subscription, and runs as them, so that
+        // person must still exist, be enabled, and hold both the report's permission and the subscription permission.
+        // Otherwise the subscription is turned off and says why, rather than keep mailing a report its author can no
+        // longer see.
+        var author = subscription.ModifiedBy ?? subscription.CreatedBy;
+        var owner = await _owners.ResolveByUserNameAsync(author);
+        string denied = null;
 
-        if (owner is null || (descriptor.Permission is not null && !await _authorizationService.AuthorizeAsync(owner, descriptor.Permission)))
+        if (owner is null)
         {
-            return (S["The report can't be sent, because {0} may no longer view it.", subscription.ModifiedBy ?? subscription.CreatedBy], "view_denied");
+            denied = S["The subscription was turned off because {0}, who last saved it, no longer exists or is disabled. Save it again as someone who may view this report, then turn it back on.", author ?? "-"];
+        }
+        else if (descriptor.Permission is not null && !await _authorizationService.AuthorizeAsync(owner, descriptor.Permission))
+        {
+            denied = S["The report can't be sent, because {0} may no longer view it. The subscription was turned off: save it again as someone who may, then turn it back on.", author];
+        }
+        else if (!await _authorizationService.AuthorizeAsync(owner, ReportSubscriptionPermissions.ManageReportSubscriptions))
+        {
+            denied = S["The subscription was turned off because {0}, who last saved it, may no longer manage report subscriptions. Save it again as someone who may, then turn it back on.", author];
+        }
+
+        if (denied is not null)
+        {
+            subscription.IsEnabled = false;
+            subscription.NextRunUtc = null;
+
+            return (denied, "view_denied");
         }
 
         var format = string.IsNullOrWhiteSpace(subscription.AttachmentFormat) ? null : _exports.GetDescriptor(subscription.AttachmentFormat);

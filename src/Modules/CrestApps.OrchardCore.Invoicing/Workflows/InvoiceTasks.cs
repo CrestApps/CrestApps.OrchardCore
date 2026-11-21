@@ -100,7 +100,8 @@ public abstract class InvoiceTaskActivityBase<TActivity> : TaskActivity<TActivit
     {
         var value = await EvaluateAsync(expression, workflowContext);
 
-        return decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) ? amount : null;
+        // No group separators: with them "12,50" would be read as 1250.
+        return decimal.TryParse(value?.Trim(), NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var amount) ? amount : null;
     }
 }
 

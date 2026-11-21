@@ -1,4 +1,3 @@
-using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Models;
@@ -389,7 +388,7 @@ public sealed class RecurringPlansAdminController : Controller
         {
             foreach (var error in result.Errors)
             {
-                await _notifier.WarningAsync(new LocalizedHtmlString(error, HtmlEncoder.Default.Encode(error)));
+                await _notifier.WarningAsync(new LocalizedHtmlString(error, "{0}", false, error));
             }
         }
 

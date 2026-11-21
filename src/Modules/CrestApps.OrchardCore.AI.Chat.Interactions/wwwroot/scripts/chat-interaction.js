@@ -5,9 +5,13 @@
 (function() {
 	//#region src/Resources/CrestApps.AI.Resources/Assets/js/chat-interaction.js
 	window.chatInteractionManager = function() {
+		const isPageMarkup = (element) => !window.CoreAIChatSurface.isInsideRenderedMessage(element);
+		const queryPageElements = (selector) => window.CoreAIChatSurface.queryPageElements(selector);
+		const queryPageElement = (selector) => window.CoreAIChatSurface.queryPageElement(selector);
 		var defaultConfig = {
 			generatedImageAltText: "Generated Image",
 			generatedImageMaxWidth: 400,
+			allowedImageHosts: [],
 			downloadImageTitle: "Download image",
 			downloadChartTitle: "Download chart as image",
 			downloadChartButtonText: "Download",
@@ -261,6 +265,7 @@
 		renderer.image = function(data) {
 			const src = sanitizeUrl(data.href);
 			if (!src) return "";
+			if (!window.CoreAIImages.isAllowedSource(src, { allowedHosts: defaultConfig.allowedImageHosts })) return window.CoreAIImages.linkHtml(src, data.text);
 			const alt = data.text || defaultConfig.generatedImageAltText;
 			return `<span class="generated-image-container">
             <img src="${src}" alt="${alt}" class="img-thumbnail" style="max-width: ${defaultConfig.generatedImageMaxWidth}px; height: auto;" />
@@ -273,7 +278,7 @@
 		let _pendingCharts = [];
 		window.__chartConfigs = window.__chartConfigs || {};
 		function createChartHtml(chartId) {
-			return `<div class="chart-container" style="position: relative; width: 100%; max-width: 560px; min-height: 420px;"><canvas id="${chartId}"></canvas></div><div class="mt-2"><button type="button" class="btn btn-sm btn-outline-secondary download-chart-btn" data-chart-id="${chartId}" title="${defaultConfig.downloadChartTitle}"><i class="fa-solid fa-download"></i> ${defaultConfig.downloadChartButtonText}</button></div>`;
+			return `<div class="chart-container" style="width: 100%; max-width: 560px; min-height: 420px;"><canvas id="${chartId}"></canvas></div><div class="mt-2"><button type="button" class="btn btn-sm btn-outline-secondary download-chart-btn" data-chart-id="${chartId}" title="${defaultConfig.downloadChartTitle}"><i class="fa-solid fa-download"></i> ${defaultConfig.downloadChartButtonText}</button></div>`;
 		}
 		const findChartMarker = window.CoreAIChatMarkers.findChartMarker;
 		marked.use({ extensions: [{
@@ -358,6 +363,7 @@
 						cfg.options.responsive = true;
 						cfg.options.maintainAspectRatio = true;
 						cfg.options.aspectRatio ??= 4 / 3;
+						if (canvas.parentElement) canvas.parentElement.style.position = "relative";
 						canvas._chartInstance = new Chart(canvas, cfg);
 					} catch (e) {
 						console.error("Error creating chart:", e);
@@ -372,10 +378,10 @@
 			_pendingCharts = [];
 			const html = styleMarkdownTables(marked.parse(content, { renderer }));
 			message._pendingCharts = _pendingCharts.length > 0 ? [..._pendingCharts] : [];
-			const sanitizedHtml = DOMPurify.sanitize(html, {
+			const sanitizedHtml = window.CoreAIImages.sanitize(DOMPurify, html, {
 				ADD_TAGS: ["canvas"],
 				ADD_ATTR: ["target"]
-			});
+			}, { allowedHosts: defaultConfig.allowedImageHosts });
 			return window.CoreAIChatImageCarousel ? window.CoreAIChatImageCarousel.stackAdjacentImages(sanitizedHtml) : sanitizedHtml;
 		}
 		function compactObject(source) {
@@ -416,6 +422,7 @@
 				console.error("The sendButtonElementSelector is required.");
 				return;
 			}
+			window.CoreAIChatSurface.registerRoot(document.querySelector(config.appElementSelector));
 			return Vue.createApp({
 				data() {
 					return {
@@ -481,7 +488,7 @@
 						this.connection.on("LoadInteraction", (data) => {
 							this.initializeInteraction(data.itemId, true);
 							this.messages = [];
-							const titleInput = document.querySelector("[data-chat-interaction-title], .setting-input[data-setting=\"title\"], input[name=\"ChatInteraction.Title\"], input[name=\"Title\"]");
+							const titleInput = queryPageElement("[data-chat-interaction-title], .setting-input[data-setting=\"title\"], input[name=\"ChatInteraction.Title\"], input[name=\"Title\"]");
 							if (titleInput && data.title) titleInput.value = data.title;
 							(data.messages ?? []).forEach((msg) => {
 								this.addMessage(msg);
@@ -491,9 +498,9 @@
 							});
 						});
 						this.connection.on("SettingsSaved", (itemId, title) => {
-							const historyItem = document.querySelector(`.chat-interaction-history-item[data-interaction-id="${itemId}"]`);
+							const historyItem = queryPageElement(`.chat-interaction-history-item[data-interaction-id="${CSS.escape(String(itemId))}"]`);
 							if (historyItem) historyItem.textContent = title || config.untitledText;
-							const titleInput = document.querySelector("[data-chat-interaction-title], .setting-input[data-setting=\"title\"], input[name=\"ChatInteraction.Title\"], input[name=\"Title\"]");
+							const titleInput = queryPageElement("[data-chat-interaction-title], .setting-input[data-setting=\"title\"], input[name=\"ChatInteraction.Title\"], input[name=\"Title\"]");
 							if (titleInput && title) titleInput.value = title;
 							this.showSaveIndicator("Saved", "text-success");
 						});
@@ -1268,12 +1275,12 @@
 						this.debouncedSaveSettings();
 					},
 					getSettingInputs() {
-						const explicitInputs = document.querySelectorAll(".setting-input[data-setting]");
+						const explicitInputs = queryPageElements(".setting-input[data-setting]");
 						if (explicitInputs.length > 0) return explicitInputs;
-						return document.querySelectorAll("input[name^=\"ChatInteraction.\"]:not([name*=\".Tools[\"]):not([name*=\".Connections[\"]):not([name*=\".Instances[\"]), select[name^=\"ChatInteraction.\"]:not([name*=\".Tools[\"]):not([name*=\".Connections[\"]):not([name*=\".Instances[\"]), textarea[name^=\"ChatInteraction.\"]:not([name*=\".Tools[\"]):not([name*=\".Connections[\"]):not([name*=\".Instances[\"])");
+						return queryPageElements("input[name^=\"ChatInteraction.\"]:not([name*=\".Tools[\"]):not([name*=\".Connections[\"]):not([name*=\".Instances[\"]), select[name^=\"ChatInteraction.\"]:not([name*=\".Tools[\"]):not([name*=\".Connections[\"]):not([name*=\".Instances[\"]), textarea[name^=\"ChatInteraction.\"]:not([name*=\".Tools[\"]):not([name*=\".Connections[\"]):not([name*=\".Instances[\"])");
 					},
 					getSelectedGroupValues(groupName, fallbackSelector) {
-						const explicitSelections = document.querySelectorAll(`.capability-checkbox[data-save-group="${groupName}"]:checked, .capability-checkbox[data-group="${groupName}"]:checked`);
+						const explicitSelections = queryPageElements(`.capability-checkbox[data-save-group="${groupName}"]:checked, .capability-checkbox[data-group="${groupName}"]:checked`);
 						if (explicitSelections.length > 0) {
 							const values = [];
 							explicitSelections.forEach((checkbox) => {
@@ -1284,16 +1291,16 @@
 						}
 						if (!fallbackSelector) return [];
 						const values = [];
-						document.querySelectorAll(fallbackSelector).forEach((checkbox) => {
+						queryPageElements(fallbackSelector).forEach((checkbox) => {
 							const baseName = checkbox.name.replace(".IsSelected", ".ItemId");
-							const hiddenInput = document.querySelector(`input[type="hidden"][name="${baseName}"]`);
+							const hiddenInput = queryPageElement(`input[type="hidden"][name="${CSS.escape(baseName)}"]`);
 							if (hiddenInput && hiddenInput.value) values.push(hiddenInput.value);
 						});
 						return values;
 					},
 					getPromptTemplateSelections() {
 						const promptTemplates = [];
-						document.querySelectorAll(".prompt-template-card").forEach((card) => {
+						queryPageElements(".prompt-template-card").forEach((card) => {
 							const templateIdInput = card.querySelector(".prompt-template-id-input");
 							const promptParametersInput = card.querySelector(".prompt-template-parameters-input");
 							const templateId = templateIdInput ? templateIdInput.value : card.getAttribute("data-template-id");
@@ -1428,12 +1435,14 @@
 							}
 						});
 						document.addEventListener("input", (event) => {
+							if (!isPageMarkup(event.target)) return;
 							if (event.target.matches(".setting-input[data-setting]")) {
 								this.validateSettingInput(event.target);
 								this.queueSettingsSave();
 							}
 						});
 						document.addEventListener("change", (event) => {
+							if (!isPageMarkup(event.target)) return;
 							if (event.target.matches(".setting-input[data-setting], .capability-checkbox[data-save-group], .capability-checkbox[data-group], .group-toggle, .ci-agent-global-toggle")) {
 								if (event.target.matches(".setting-input[data-setting]")) this.validateSettingInput(event.target);
 								this.queueSettingsSave();
@@ -1442,7 +1451,8 @@
 							if (event.target.closest(".prompt-template-parameters-input, .prompt-template-id-input")) this.queueSettingsSave();
 						});
 						document.addEventListener("click", (event) => {
-							if (!event.target.closest(".prompt-template-add-btn, .remove-prompt-template-btn")) return;
+							const button = event.target.closest(".prompt-template-add-btn, .remove-prompt-template-btn");
+							if (!button || !isPageMarkup(button)) return;
 							setTimeout(() => {
 								this.queueSettingsSave();
 							}, 0);
@@ -1652,7 +1662,7 @@
 						return this.getSelectedGroupValues("agentNames", "input[type=\"checkbox\"][name$=\"].IsSelected\"][name^=\"ChatInteraction.Agents[\"]:checked");
 					},
 					hasToolInstanceSelector() {
-						return document.querySelector(".capability-checkbox[data-save-group=\"toolInstanceNames\"], .capability-checkbox[data-group=\"toolInstanceNames\"]") !== null;
+						return queryPageElement(".capability-checkbox[data-save-group=\"toolInstanceNames\"], .capability-checkbox[data-group=\"toolInstanceNames\"]") !== null;
 					},
 					getSelectedToolInstanceNames() {
 						return this.getSelectedGroupValues("toolInstanceNames");
@@ -1855,8 +1865,10 @@
 		}
 		function scanForAutoInitialization(root) {
 			if (!root || typeof root.querySelectorAll !== "function") return;
-			if (typeof root.matches === "function" && root.matches(autoInitializeSelector)) initializeFromElement(root);
-			root.querySelectorAll(autoInitializeSelector).forEach(initializeFromElement);
+			if (typeof root.matches === "function" && root.matches(autoInitializeSelector) && isPageMarkup(root)) initializeFromElement(root);
+			root.querySelectorAll(autoInitializeSelector).forEach((element) => {
+				if (isPageMarkup(element)) initializeFromElement(element);
+			});
 		}
 		function startAutoInitialization() {
 			scanForAutoInitialization(document);
@@ -2087,6 +2099,7 @@
 					formData.append("files", file);
 					const xhr = new XMLHttpRequest();
 					xhr.open("POST", config.uploadDocumentUrl, true);
+					window.CoreAIAntiforgery.apply(xhr, config, config.uploadDocumentUrl);
 					xhr.upload.addEventListener("progress", (event) => {
 						if (!event.lengthComputable) return;
 						updateUploadItem(itemIdToUpdate, {
@@ -2227,7 +2240,7 @@
 				try {
 					const response = await fetch(config.removeDocumentUrl, {
 						method: "POST",
-						headers: { "Content-Type": "application/json" },
+						headers: window.CoreAIAntiforgery.headers(config, { "Content-Type": "application/json" }, config.removeDocumentUrl),
 						body: JSON.stringify({
 							itemId: config.itemId,
 							documentId

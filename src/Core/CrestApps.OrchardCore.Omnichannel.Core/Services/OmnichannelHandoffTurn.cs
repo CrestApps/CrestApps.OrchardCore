@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 /// The scoped <see cref="IOmnichannelHandoffTurn"/>: one instance per scope, holding whatever the transfer tool
 /// recorded during that scope's completion.
 /// </summary>
-public sealed class OmnichannelHandoffTurn : IOmnichannelHandoffTurn
+public sealed class OmnichannelHandoffTurn : IOmnichannelHandoffTurn, IDisposable
 {
     private CancellationTokenSource _requested = new();
 
@@ -39,4 +39,7 @@ public sealed class OmnichannelHandoffTurn : IOmnichannelHandoffTurn
         _requested = new CancellationTokenSource();
         previous.Dispose();
     }
+
+    /// <inheritdoc/>
+    public void Dispose() => _requested.Dispose();
 }

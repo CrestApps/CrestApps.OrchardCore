@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.TenantHierarchy.Services;
-using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.TenantHierarchy.ViewModels;
 
@@ -14,9 +14,9 @@ public class ParentDetailViewModel
     public HierarchyTreeNode Parent { get; set; }
 
     /// <summary>
-    /// Gets or sets the other parents a child can be moved to.
+    /// Gets or sets the list of the child tenants of the parent.
     /// </summary>
-    public List<SelectListItem> OtherParents { get; set; } = [];
+    public AdminListContext Children { get; set; }
 
     /// <summary>
     /// Gets or sets the name the user typed to confirm the removal of the parent.

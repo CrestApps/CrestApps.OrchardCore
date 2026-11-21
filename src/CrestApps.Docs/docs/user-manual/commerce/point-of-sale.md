@@ -16,7 +16,7 @@ At each store you set up one or more **registers**. A member of staff opens a **
 | | |
 | --- | --- |
 | **Menu** | Commerce > Point of sale > Web register; Registers; Shifts; Departments |
-| **Permission** | **Sell at a register** for staff at the till; **Manage registers and shifts** to set up registers and departments, and read every shift |
+| **Permission** | **Sell at a register** for staff at the till; **Refund at a register** for staff who take returns; **Manage registers and shifts** to set up registers and departments, and read every shift |
 | **Feature** | Point of Sale (it needs Orders, Inventory and the Checkout API). Point of Sale Web Register, to sell in the browser. Receipts, to print and email branded receipts. Stripe, to take cards on Stripe Terminal readers. |
 
 <AskYourAdmin />
@@ -165,7 +165,7 @@ Cash put in the drawer or taken out outside a sale, such as more change from the
 
 ### 6. Returns at the till
 
-The staff member finds the sale, enters a reason such as *Wrong size*, and refunds all of it or part of it.
+The staff member finds the sale, enters a reason such as *Wrong size*, and refunds all of it or part of it. Taking a return needs the **Refund at a register** permission, not just **Sell at a register**, and covers the sales of the register's own store; a sale of another store, or an online order, is returned only by staff who also have **Manage orders**.
 
 - The items go back on the shelf at the register's store, unless staff choose not to restock them.
 - **A return needs an open shift**: what the sale paid in cash is handed back from the drawer and recorded as cash taken out of the register's open shift. The site works out how much cash to hand back.

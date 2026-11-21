@@ -84,8 +84,8 @@ public sealed class WorkerFeedIndexProvider : IndexProvider<StaffMember>
         context.For<WorkerFeedIndex>()
             .ExclusiveToDocumentType()
             .SingleRecordPerDocument()
-            .Map(worker => worker.TryGet<WorkerPortalSettings>(out var settings) && !string.IsNullOrEmpty(settings.FeedToken)
-                ? new WorkerFeedIndex { WorkerId = worker.ItemId, TokenHash = PortalSecrets.Hash(settings.FeedToken) }
+            .Map(worker => worker.TryGet<WorkerPortalSettings>(out var settings) && DefaultWorkerFeedService.GetHash(settings) is { } hash
+                ? new WorkerFeedIndex { WorkerId = worker.ItemId, TokenHash = hash }
                 : null);
     }
 }

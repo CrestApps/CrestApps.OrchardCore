@@ -56,4 +56,26 @@ public sealed class TimestampedHmacSignatureTests
         Assert.False(TimestampedHmacSignature.Verify(header, "whsec_other", Body, 1_700_000_000));
         Assert.False(TimestampedHmacSignature.Verify(header, null, Body, 1_700_000_000));
     }
+    [Fact]
+    public void Verify_ARotatedSecret_MatchesAnyOfAFewSignatures()
+    {
+        // Arrange: a sender rotating its secret sends the old and the new signature.
+        var header = TimestampedHmacSignature.Sign(Secret, 1_700_000_000, Body);
+        var rotated = "t=1700000000,v1=" + new string('0', 64) + "," + header[(header.IndexOf(',') + 1)..];
+
+        // Act and Assert
+        Assert.True(TimestampedHmacSignature.Verify(rotated, Secret, Body, 1_700_000_000));
+    }
+
+    [Fact]
+    public void Verify_AHeaderWithManySignatures_IsRefusedWithoutHashingEach()
+    {
+        // Arrange: DRY-7. Hundreds of v1 members would make the store hash the body once per member for an
+        // unauthenticated request; a header with more than a sender ever needs is refused, valid member or not.
+        var header = TimestampedHmacSignature.Sign(Secret, 1_700_000_000, Body);
+        var padded = "t=1700000000," + string.Concat(Enumerable.Repeat("v1=" + new string('0', 64) + ",", 200)) + header[(header.IndexOf(',') + 1)..];
+
+        // Act and Assert
+        Assert.False(TimestampedHmacSignature.Verify(padded, Secret, Body, 1_700_000_000));
+    }
 }

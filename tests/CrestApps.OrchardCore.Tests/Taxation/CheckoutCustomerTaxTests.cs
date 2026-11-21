@@ -49,7 +49,7 @@ public sealed class CheckoutCustomerTaxTests
     {
         var customers = new Mock<ICustomerStore>();
         customers.Setup(value => value.FindByUserIdAsync("user-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Customer { ItemId = "c1", UserId = "user-1", Kind = CustomerKind.Business, TaxId = "DE123", IsTaxExempt = false });
+            .ReturnsAsync(new Customer { ItemId = "c1", UserId = "user-1", Kind = CustomerKind.Business, TaxId = "DE123", TaxIdVerified = true, IsTaxExempt = false });
 
         var site = new Mock<ISite>();
         site.Setup(value => value.GetOrCreate<TaxOriginSettings>()).Returns(new TaxOriginSettings { Origin = new Address { Country = "US", Region = "WA", City = "Seattle", PostalCode = "98101" } });
@@ -72,6 +72,33 @@ public sealed class CheckoutCustomerTaxTests
         Assert.Equal("US", guest.Origin.Country);
     }
 
+    /// <summary>
+    /// SEC-C4 (review): the shopper sets their own kind through PUT me, and tax rules are scoped by customer type. A store
+    /// whose sales tax applies to consumers only charged a self-declared business nothing. Only a verified business number
+    /// makes the buyer a business for tax.
+    /// </summary>
+    [Fact]
+    public async Task ASelfDeclaredBusiness_IsStillTaxedByAConsumerOnlyRule_UntilItsNumberIsVerified()
+    {
+        var harness = new TaxTestHarness(new TestClock(TaxTestData.TransactionDate));
+        var washington = await TaxTestData.AddJurisdictionAsync(harness, "Washington", "US", "WA");
+
+        await TaxTestData.AddRuleAsync(harness, new TaxRule
+        {
+            Name = "Washington sales tax, consumers",
+            TaxType = TaxTypeNames.SalesTax,
+            Source = "Percentage",
+            JurisdictionId = washington,
+            Rate = 0.10m,
+            CustomerType = CustomerTaxType.B2C,
+        });
+
+        var declared = await TaxAsync(harness, new Customer { ItemId = "c1", UserId = "user-1", Kind = CustomerKind.Business, CompanyName = "Contoso", TaxId = "WA-1" });
+        var verified = await TaxAsync(harness, new Customer { ItemId = "c2", UserId = "user-1", Kind = CustomerKind.Business, CompanyName = "Contoso", TaxId = "WA-1", TaxIdVerified = true });
+
+        Assert.Equal(10m, declared.TaxAmount);
+        Assert.Equal(0m, verified.TaxAmount);
+    }
     private static async Task<TaxHarnessResult> TaxAsync(TaxTestHarness harness, Customer customer, IExemptionCertificateStore certificates = null)
     {
         var customers = new Mock<ICustomerStore>();

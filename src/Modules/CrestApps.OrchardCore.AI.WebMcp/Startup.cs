@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.WebMcp;
 using CrestApps.Core.AI.WebMcp.Endpoints;
@@ -80,12 +81,11 @@ public sealed class RateLimitsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.Configure<RateLimitsOptions>(options => options.AddGroupRateLimit(
+        services.Configure<RateLimitsOptions>(options => options.AddClientGroupRateLimit(
             WebMcpConstants.StorefrontRateLimitGroup,
-            RateLimitPartitionHelpers.CreateFixedWindowPerIpPolicy(
-                policyName: WebMcpConstants.StorefrontRateLimitGroup,
-                permitLimit: WebMcpConstants.StorefrontRequestsPerMinute,
-                window: TimeSpan.FromMinutes(1))));
+            WebMcpConstants.StorefrontRequestsPerMinute,
+            TimeSpan.FromMinutes(1),
+            networkOnly: true));
     }
 }
 

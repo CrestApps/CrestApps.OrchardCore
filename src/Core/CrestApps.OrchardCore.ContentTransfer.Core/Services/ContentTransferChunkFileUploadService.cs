@@ -90,13 +90,50 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
 
         var formFile = request.Form.Files[0];
 
-        await using (var fileStream = GetOrCreateTemporaryFile(uploadId, formFile, range.Length.Value))
+        // The bytes sent must be the range declared, inside the declared length: a chunk larger than its range would
+        // reach temporary storage past the chunk limit, and a shorter one would complete a short file.
+        if (chunkSize <= 0 || formFile.Length != chunkSize || range.To.Value >= range.Length.Value)
         {
+            RecordChunk(ChunkResultRejected);
+
+            return await invalidAsync(ContentTransferUploadError.InvalidRequest);
+        }
+
+        long assembledLength;
+
+        await using (var fileStream = GetOrCreateTemporaryFile(uploadId, formFile))
+        {
+            // Chunks arrive in order (a chunk may be sent again). A chunk that starts past what was received would make the
+            // file system allocate the gap, which is how a declared size used to take disk space before any byte came.
+            if (range.From.Value > fileStream.Length)
+            {
+                RecordChunk(ChunkResultRejected);
+
+                return await invalidAsync(ContentTransferUploadError.InvalidRequest);
+            }
+
             fileStream.Seek(range.From.Value, SeekOrigin.Begin);
-            await formFile.CopyToAsync(fileStream, request.HttpContext.RequestAborted);
+
+            if (!await CopyChunkAsync(formFile, fileStream, chunkSize, request.HttpContext.RequestAborted))
+            {
+                RecordChunk(ChunkResultRejected);
+
+                return await invalidAsync(ContentTransferUploadError.InvalidRequest);
+            }
+
+            assembledLength = fileStream.Length;
         }
 
         var isLastChunk = range.To.Value + 1 >= range.Length.Value;
+
+        // The upload is complete only when the file assembled is the length declared.
+        if (isLastChunk && assembledLength != range.Length.Value)
+        {
+            DeleteTemporaryFile(GetTempFilePath(uploadId, formFile));
+            RecordChunk(ChunkResultRejected);
+
+            return await invalidAsync(ContentTransferUploadError.InvalidRequest);
+        }
 
         RecordChunk(isLastChunk ? ChunkResultCompleted : ChunkResultStored);
         ContentTransferDiagnostics.Record(ContentTransferDiagnostics.UploadChunkSize, chunkSize);
@@ -146,6 +183,29 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
         }
     }
 
+    // Copies exactly the chunk's declared size, never reading past it. Returns false when the chunk had fewer or more bytes.
+    private static async Task<bool> CopyChunkAsync(IFormFile formFile, FileStream target, long chunkSize, CancellationToken cancellationToken)
+    {
+        await using var source = formFile.OpenReadStream();
+        var buffer = new byte[(int)Math.Min(chunkSize + 1, 81920)];
+        var remaining = chunkSize;
+
+        while (remaining > 0)
+        {
+            var read = await source.ReadAsync(buffer.AsMemory(0, (int)Math.Min(remaining, buffer.Length)), cancellationToken);
+
+            if (read == 0)
+            {
+                return false;
+            }
+
+            await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            remaining -= read;
+        }
+
+        return await source.ReadAsync(buffer.AsMemory(0, 1), cancellationToken) == 0;
+    }
+
     private static void RecordChunk(string result)
     {
         ContentTransferDiagnostics.Add(ContentTransferDiagnostics.UploadChunks, 1, CrestAppsOrchardCoreTelemetry.ResultTag, result);
@@ -167,7 +227,7 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
         return false;
     }
 
-    private FileStream GetOrCreateTemporaryFile(Guid uploadId, IFormFile formFile, long size)
+    private FileStream GetOrCreateTemporaryFile(Guid uploadId, IFormFile formFile)
     {
         var tempFolderPath = GetTempFolderPath();
 
@@ -183,7 +243,7 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
             return File.Open(tempFilePath, FileMode.Open, FileAccess.ReadWrite);
         }
 
-        return CreateTemporaryFile(tempFilePath, size);
+        return CreateTemporaryFile(tempFilePath);
     }
 
     private ChunkedFormFile GetTemporaryFileForRead(Guid uploadId, IFormFile formFile)
@@ -202,10 +262,10 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
     private string GetTempFilePath(Guid uploadId, IFormFile formFile)
         => Path.Combine(GetTempFolderPath(), _tempFileNamePrefix + CalculateHash(uploadId.ToString("N"), formFile.FileName, formFile.Name));
 
-    private static FileStream CreateTemporaryFile(string tempPath, long size)
+    private static FileStream CreateTemporaryFile(string tempPath)
     {
+        // The file grows as chunks arrive; it is never sized up front from the length the client declares.
         var fileStream = File.Create(tempPath);
-        fileStream.SetLength(size);
         new FileInfo(tempPath).Attributes |= FileAttributes.Temporary;
 
         return fileStream;

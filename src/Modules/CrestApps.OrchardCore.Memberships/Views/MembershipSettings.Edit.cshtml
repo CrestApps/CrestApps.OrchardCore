@@ -1,0 +1,17 @@
+@model CrestApps.OrchardCore.Memberships.ViewModels.MembershipSettingsViewModel
+
+<div class="ocat-wrapper">
+    <span class="ocat-label">@T["Roles a membership may grant"]</span>
+    <div class="ocat-end">
+        @foreach (var role in Model.AvailableRoles)
+        {
+            var id = Html.IdFor(model => model.GrantableRoles) + "-" + role;
+
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="@id" name="@Html.NameFor(model => model.GrantableRoles)" value="@role" checked="@Model.GrantableRoles.Contains(role, StringComparer.OrdinalIgnoreCase)" />
+                <label class="form-check-label" for="@id">@role</label>
+            </div>
+        }
+        <span class="hint">@T["When any are checked, a membership product puts its buyer in these roles only, whatever else it names. When none are, any role but Administrator may be granted. Administrator is never granted by a purchase."]</span>
+    </div>
+</div>

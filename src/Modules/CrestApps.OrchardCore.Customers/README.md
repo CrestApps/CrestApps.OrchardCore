@@ -21,6 +21,7 @@ Enabling a feature of this module enables the features it depends on:
 
 - [`CrestApps.OrchardCore.Commerce.Foundation`](../CrestApps.OrchardCore.Commerce/README.md)
 - `OrchardCore.Users`
+- [`CrestApps.OrchardCore.Users.EmailOwnership`](../CrestApps.OrchardCore.Users/README.md) (and through it `OrchardCore.Email`)
 - [`CrestApps.OrchardCore.Addresses`](../CrestApps.OrchardCore.Addresses/README.md)
 - [`CrestApps.OrchardCore.Orders`](../CrestApps.OrchardCore.Orders/README.md)
 - `OrchardCore.Contents`

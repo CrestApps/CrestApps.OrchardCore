@@ -10,6 +10,12 @@ public static class McpPermissions
 {
     public static readonly Permission ManageMcpConnections = new("ManageMcpConnections", LocalizationSource.Create("Manage MCP Connections", typeof(McpPermissions)));
 
+    /// <summary>
+    /// Creating or changing a local (stdio) connection chooses a process the server starts, so it is its own permission,
+    /// marked security-critical, and only ever granted on the default tenant.
+    /// </summary>
+    public static readonly Permission ManageMcpStdioConnections = new("ManageMcpStdioConnections", LocalizationSource.Create("Manage local (stdio) MCP connections, which start processes on the server", typeof(McpPermissions)), isSecurityCritical: true);
+
     public static readonly Permission ManageMcpPrompts = new("ManageMcpPrompts", LocalizationSource.Create("Manage MCP Prompts", typeof(McpPermissions)));
 
     public static readonly Permission ManageMcpResources = new("ManageMcpResources", LocalizationSource.Create("Manage MCP Resources", typeof(McpPermissions)));

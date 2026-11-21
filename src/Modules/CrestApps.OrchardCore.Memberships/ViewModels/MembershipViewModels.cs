@@ -12,6 +12,17 @@ public class MembershipPartViewModel
 
     [BindNever]
     public IReadOnlyList<string> AvailableRoles { get; set; } = [];
+
+    [BindNever]
+    public bool CanChangeRoles { get; set; }
+}
+
+public class MembershipSettingsViewModel
+{
+    public string[] GrantableRoles { get; set; } = [];
+
+    [BindNever]
+    public IReadOnlyList<string> AvailableRoles { get; set; } = [];
 }
 
 public class MembershipsIndexViewModel

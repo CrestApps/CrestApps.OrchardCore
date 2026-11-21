@@ -1,5 +1,7 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Sftp;
+using CrestApps.Core.AI.Sftp.Models;
+using CrestApps.OrchardCore.AI.Core.Recipes;
 using CrestApps.OrchardCore.AI.FileSources.Sftp.Drivers;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Handlers;
@@ -19,5 +21,6 @@ public sealed class Startup : StartupBase
         services.AddCoreSftpIngestionConnector();
 
         services.AddDisplayDriver<FileSource, SftpFileSourceDisplayDriver>();
+        services.Configure<IngestionSourceSecretOptions>(options => options.Protect<FileSource>(nameof(SftpConnectionMetadata), SftpResourceConstants.DataProtectionPurpose));
     }
 }

@@ -41,8 +41,8 @@ internal sealed class SkillsMigrations : DataMigration
             {
                 var session = scope.ServiceProvider.GetRequiredService<ISession>();
 
-                await CatalogIndexBackfill.ReindexAsync<SkillAssignment, SkillAssignmentIndex>(session, SkillsConstants.CollectionName);
-                await CatalogIndexBackfill.ReindexAsync<CertificationRecord, CertificationRecordIndex>(session, SkillsConstants.CollectionName);
+                await CatalogIndexBackfill.ReindexAsync<SkillAssignment, SkillAssignmentIndex>(session, SkillsConstants.CollectionName, logger: logger);
+                await CatalogIndexBackfill.ReindexAsync<CertificationRecord, CertificationRecordIndex>(session, SkillsConstants.CollectionName, logger: logger);
             }
             catch (Exception ex)
             {
@@ -68,8 +68,8 @@ internal sealed class SkillsMigrations : DataMigration
             {
                 var session = scope.ServiceProvider.GetRequiredService<ISession>();
 
-                await CatalogIndexBackfill.ReindexAsync<SkillAssignment, SkillAssignmentIndex>(session, SkillsConstants.CollectionName);
-                await CatalogIndexBackfill.ReindexAsync<CertificationRecord, CertificationRecordIndex>(session, SkillsConstants.CollectionName);
+                await CatalogIndexBackfill.ReindexAsync<SkillAssignment, SkillAssignmentIndex>(session, SkillsConstants.CollectionName, logger: logger);
+                await CatalogIndexBackfill.ReindexAsync<CertificationRecord, CertificationRecordIndex>(session, SkillsConstants.CollectionName, logger: logger);
             }
             catch (Exception ex)
             {

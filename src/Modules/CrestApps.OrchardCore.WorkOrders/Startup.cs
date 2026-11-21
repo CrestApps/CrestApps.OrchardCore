@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Assets;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Geo.Services;
 using CrestApps.OrchardCore.Geo;
 using CrestApps.OrchardCore.Inventory.Core;
@@ -39,23 +40,13 @@ namespace CrestApps.OrchardCore.WorkOrders;
 /// <summary>
 /// Registers work orders, their settings records, their service level scope and the pages.
 /// </summary>
-/// <summary>
-/// Picks the technicians a job should or must not go to from staff.
-/// </summary>
-[RequireFeatures(CrestApps.OrchardCore.Staff.StaffConstants.Features.Staff)]
-public sealed class StaffTechniciansStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-    }
-}
-
 public sealed class Startup : StartupBase
 {
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.AddPartyDirectory();
         services.AddScoped<Integrations.WorkOrderCustomers>();
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(WorkOrdersConstants.CollectionName));

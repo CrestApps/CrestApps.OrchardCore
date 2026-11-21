@@ -54,6 +54,7 @@ public sealed class UcpStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddEgressGuardedHttpClient(UcpProfileClient.HttpClientName);
+        services.AddSingleton<UcpProfileCache>();
         services.AddScoped<UcpProfileClient>();
         services.AddScoped<UcpProfileBuilder>();
         services.AddScoped<UcpNegotiator>();

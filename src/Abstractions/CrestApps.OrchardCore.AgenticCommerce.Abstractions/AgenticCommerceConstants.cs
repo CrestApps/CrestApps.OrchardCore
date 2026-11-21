@@ -6,6 +6,23 @@ namespace CrestApps.OrchardCore.AgenticCommerce;
 public static class AgenticCommerceConstants
 {
     /// <summary>
+    /// The request groups of Orchard Core's Rate Limits the agent protocols' routes are tagged with.
+    /// </summary>
+    public static class RateLimitGroups
+    {
+        /// <summary>
+        /// Creating, reading, updating and canceling an agent's checkout or cart, and the MCP and A2A routes: 120 a
+        /// minute per network.
+        /// </summary>
+        public const string Checkout = "agent-checkout";
+
+        /// <summary>
+        /// Completing an agent's checkout, which charges the payment credential: 30 per 5 minutes per network.
+        /// </summary>
+        public const string CheckoutComplete = "agent-checkout-complete";
+    }
+
+    /// <summary>
     /// The feature IDs of the Agentic Commerce module.
     /// </summary>
     public static class Features

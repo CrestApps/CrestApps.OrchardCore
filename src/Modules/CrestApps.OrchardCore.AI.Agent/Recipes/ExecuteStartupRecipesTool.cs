@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -51,6 +52,13 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        // The tool runs a recipe of the site and restarts the tenant, for whoever drives the chat, a public visitor
+        // included, so the caller must be allowed to run recipes.
+        if (!await AIToolCallerAuthorization.IsAuthorizedAsync(arguments.Services, OrchardCorePermissions.ManageRecipes))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var recipeHarvesters = arguments.Services.GetRequiredService<IEnumerable<IRecipeHarvester>>();
         var recipeEnvironmentProviders = arguments.Services.GetRequiredService<IEnumerable<IRecipeEnvironmentProvider>>();

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using A2A;
 using A2A.AspNetCore;
 using CrestApps.Core.AI.A2A;
@@ -12,6 +13,7 @@ using CrestApps.OrchardCore.AI.A2A.Migrations;
 using CrestApps.OrchardCore.AI.A2A.Recipes;
 using CrestApps.OrchardCore.AI.A2A.Services;
 using CrestApps.OrchardCore.AI.Core.Workflows;
+using CrestApps.OrchardCore.Core.Throttling;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -21,6 +23,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.RateLimits;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
@@ -35,6 +38,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddCoreAIA2AClient()
+            .AddAIEgressGuards()
             .AddCoreAIA2AClientStoresYesSql()
             .AddDataMigration<A2AConnectionMigrations>();
 
@@ -67,6 +71,12 @@ public sealed class RecipesStartup : StartupBase
 [Feature(A2AConstants.Feature.Host)]
 public sealed class A2AHostStartup : StartupBase
 {
+    /// <summary>
+    /// The rate-limit group of the A2A host's routes, applied when Orchard Core's Rate Limits feature is enabled. Every
+    /// call to an agent runs a model.
+    /// </summary>
+    public const string RateLimitGroup = "a2a-host";
+
     private const string A2AHostPolicyName = "A2AHostPolicy";
 
     public override void ConfigureServices(IServiceCollection services)
@@ -96,13 +106,29 @@ public sealed class A2AHostStartup : StartupBase
         var requestHandler = serviceProvider.GetRequiredService<IA2ARequestHandler>();
 
         // The well-known endpoint is always public so clients can discover agents and auth requirements.
-        routes.MapGet("/.well-known/agent-card.json", A2AWellKnownEndpointHandler.HandleAsync);
+        routes.MapGet("/.well-known/agent-card.json", A2AWellKnownEndpointHandler.HandleAsync)
+            .WithRateLimitGroup(RateLimitGroup);
 
         // Always apply the authorization policy. The A2AHostAuthorizationHandler dynamically
         // checks A2AHostOptions.AuthenticationType on every request, allowing the "None" mode
         // to pass through without credentials.
         routes.MapA2A(requestHandler, "a2a")
-            .RequireAuthorization(A2AHostPolicyName);
+            .RequireAuthorization(A2AHostPolicyName)
+            .WithRateLimitGroup(RateLimitGroup);
+    }
+}
+
+/// <summary>
+/// Holds each caller of the A2A host to a number of requests a minute when Orchard Core's Rate Limits feature is
+/// enabled.
+/// </summary>
+[Feature(A2AConstants.Feature.Host)]
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class A2AHostRateLimitsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<RateLimitsOptions>(options => options.AddClientGroupRateLimit(A2AHostStartup.RateLimitGroup, 60, TimeSpan.FromMinutes(1)));
     }
 }
 

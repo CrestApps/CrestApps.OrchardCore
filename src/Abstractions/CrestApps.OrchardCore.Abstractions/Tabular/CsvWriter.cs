@@ -44,7 +44,7 @@ public static class CsvWriter
             return string.Empty;
         }
 
-        if (guardFormula && StartsLikeAFormula(value))
+        if (guardFormula && NeedsFormulaGuard(value))
         {
             value = "'" + value;
         }
@@ -95,6 +95,15 @@ public static class CsvWriter
     /// Returns whether a value starts like a spreadsheet formula and is not a number.
     /// </summary>
     /// <param name="value">The cell value.</param>
+    /// <summary>
+    /// Gets whether a cell gets the formula guard: it starts like a formula, possibly behind apostrophes. A value that
+    /// itself starts with an apostrophe and a formula character, such as <c>'@home</c>, is guarded too, so
+    /// <see cref="CsvReader.RemoveFormulaGuard"/> always takes off exactly the apostrophe the writer added.
+    /// </summary>
+    /// <param name="value">The cell value.</param>
+    internal static bool NeedsFormulaGuard(string value)
+        => StartsLikeAFormula(value?.TrimStart('\''));
+
     public static bool StartsLikeAFormula(string value)
     {
         if (string.IsNullOrEmpty(value) || value[0] is not ('=' or '+' or '-' or '@' or '\t' or '\r'))

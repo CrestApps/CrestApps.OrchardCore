@@ -29,6 +29,7 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="CrestApps.Core.AI" />
+    <PackageReference Include="CrestApps.Core.AI.Sftp" />
     <PackageReference Include="OrchardCore.Admin.Abstractions" />
     <PackageReference Include="JsonSchema.Net" />
     <PackageReference Include="OrchardCore.Data.Abstractions" />
@@ -51,6 +52,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AgenticCommerce.Core\CrestApps.OrchardCore.AgenticCommerce.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.FileTransfer.Core\CrestApps.OrchardCore.AI.FileTransfer.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Carts.Core\CrestApps.OrchardCore.Carts.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Checkout.Core\CrestApps.OrchardCore.Checkout.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Commerce.Api.Core\CrestApps.OrchardCore.Commerce.Api.Core.csproj" />

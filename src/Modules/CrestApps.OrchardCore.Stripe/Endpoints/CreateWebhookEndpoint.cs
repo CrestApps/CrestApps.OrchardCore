@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using System.Diagnostics;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Core.Http;
@@ -34,6 +35,9 @@ public static class CreateWebhookEndpoint
     /// <summary>
     /// The Stripe event types accepted by the webhook dispatcher.
     /// </summary>
+    // Stripe's events are a few kilobytes; nothing it sends comes near this.
+    private const int MaxBodyBytes = 512 * 1024;
+
     public static readonly string[] SupportedEvents =
     [
         EventTypes.InvoicePaymentSucceeded,
@@ -54,6 +58,26 @@ public static class CreateWebhookEndpoint
         EventTypes.ChargeDisputeClosed,
     ];
 
+    // Reads the body as UTF-8 text, or returns null as soon as it is longer than MaxBodyBytes.
+    private static async Task<string> ReadBoundedAsync(Stream body, CancellationToken cancellationToken)
+    {
+        using var buffer = new MemoryStream();
+        var chunk = new byte[16 * 1024];
+        int read;
+
+        while ((read = await body.ReadAsync(chunk, cancellationToken)) > 0)
+        {
+            if (buffer.Length + read > MaxBodyBytes)
+            {
+                return null;
+            }
+
+            buffer.Write(chunk, 0, read);
+        }
+
+        return System.Text.Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length);
+    }
+
     /// <summary>
     /// Adds the Stripe webhook endpoint to the endpoint route builder.
     /// </summary>
@@ -65,7 +89,9 @@ public static class CreateWebhookEndpoint
         builder.MapPost("stripe/webhook", HandleAsync<T>)
             .AllowAnonymous()
             .WithName(StripeConstants.RouteName.CreateWebhookEndpoint)
-            .DisableAntiforgery();
+            .WithRateLimitGroup(PaymentConstants.RateLimitGroups.Webhook)
+            .DisableAntiforgery()
+            .WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(MaxBodyBytes));
 
         return builder;
     }
@@ -81,12 +107,19 @@ public static class CreateWebhookEndpoint
         CancellationToken cancellationToken)
     {
         var request = httpContextAccessor.HttpContext.Request;
-        var json = await new StreamReader(request.Body).ReadToEndAsync(cancellationToken);
 
+        // Nothing is read for a request that isn't signed, and at most MaxBodyBytes of one that is.
         if (!request.Headers.TryGetValue("Stripe-Signature", out var signature) ||
             string.IsNullOrEmpty(signature))
         {
             return Respond(TypedResults.BadRequest(), eventType: null, StripeTelemetry.WebhookInvalidSignature);
+        }
+
+        var json = await ReadBoundedAsync(request.Body, cancellationToken);
+
+        if (json is null)
+        {
+            return Respond(TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge), eventType: null, StripeTelemetry.WebhookInvalidSignature);
         }
 
         var webhookSecret = stripeOptions.CurrentValue.WebhookSecret;
@@ -319,9 +352,8 @@ public static class CreateWebhookEndpoint
         }
     }
 
-    // Dispatches the event to every payment handler directly (rather than the swallow-and-log
-    // InvokeAsync helper) so that a handler failure surfaces to the caller and triggers a Stripe retry. It is the
-    // one path of both the inline webhook and the inbox, so the handlers' time is measured here.
+    // Calls every payment handler directly, not through the swallow-and-log InvokeAsync helper, so a handler failure
+    // makes Stripe retry. The inline webhook and the inbox both come through here, so the handlers' time is measured here.
     internal static async Task DispatchAsync(Event stripeEvent, IEnumerable<IPaymentEvent> paymentEvents, CancellationToken cancellationToken = default)
     {
         using var telemetry = StripeTelemetry.StartWebhookDispatch(GetEventTypeTag(stripeEvent.Type), stripeEvent.Id);
@@ -410,9 +442,7 @@ public static class CreateWebhookEndpoint
                     break;
                 }
 
-                // Only a renewal of an existing subscription is reported here. A failed first payment is not a
-                // subscription at risk: the checkout simply never completes, and the existing payment-failure
-                // path already covers it.
+                // Any subscription invoice: a renewal starts dunning, a declined first invoice counts for card testing.
                 var failedSubscriptionDetails = failedInvoice.Parent?.SubscriptionDetails;
                 var failedSubscriptionId = failedSubscriptionDetails?.SubscriptionId ?? failedSubscriptionDetails?.Subscription?.Id;
 
@@ -429,6 +459,7 @@ public static class CreateWebhookEndpoint
                     Currency = failedInvoice.Currency,
                     GatewayMode = failedInvoice.Livemode ? GatewayMode.Live : GatewayMode.Testing,
                     GatewayId = StripeConstants.ProcessorKey,
+                    EventId = stripeEvent.Id,
                     AttemptCount = (int?)failedInvoice.AttemptCount,
                     NextAttemptUtc = failedInvoice.NextPaymentAttempt?.ToUniversalTime(),
                 };
@@ -559,6 +590,7 @@ public static class CreateWebhookEndpoint
                     TransactionId = failedIntent.Id,
                     GatewayMode = failedIntent.Livemode ? GatewayMode.Live : GatewayMode.Testing,
                     GatewayId = StripeConstants.ProcessorKey,
+                    EventId = stripeEvent.Id,
                     Currency = failedIntent.Currency,
                     Amount = StripeCurrency.FromMinorUnits(failedIntent.Amount, failedIntent.Currency),
                     FailureCode = failedIntent.LastPaymentError?.Code,

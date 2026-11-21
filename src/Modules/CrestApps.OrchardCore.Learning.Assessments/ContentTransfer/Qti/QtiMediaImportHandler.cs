@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.FileStorage;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Qti;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Media;
@@ -37,6 +38,7 @@ internal sealed class QtiMediaImportHandler : IContentImportHandler
     private readonly ShellSettings _shellSettings;
     private readonly MediaOptions _mediaOptions;
     private readonly IEnumerable<IContentTransferFileFormatProvider> _formats;
+    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
@@ -46,7 +48,8 @@ internal sealed class QtiMediaImportHandler : IContentImportHandler
         ShellSettings shellSettings,
         IOptions<MediaOptions> mediaOptions,
         IEnumerable<IContentTransferFileFormatProvider> formats,
-        IStringLocalizer<QtiMediaImportHandler> stringLocalizer)
+        IStringLocalizer<QtiMediaImportHandler> stringLocalizer,
+        ILogger<QtiMediaImportHandler> logger)
     {
         _mediaFileStore = mediaFileStore;
         _feedbackImages = feedbackImages;
@@ -54,6 +57,7 @@ internal sealed class QtiMediaImportHandler : IContentImportHandler
         _mediaOptions = mediaOptions.Value;
         _formats = formats;
         S = stringLocalizer;
+        _logger = logger;
     }
 
     /// <summary>
@@ -150,7 +154,9 @@ internal sealed class QtiMediaImportHandler : IContentImportHandler
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                context.Fail(S["The image {0} could not be stored: {1}", file.Path, exception.Message], S["Not imported from QTI"]);
+                // The store's own message can name server paths, so it goes to the log and the row says what failed.
+                _logger.LogWarning(exception, "An image of an imported QTI item could not be stored.");
+                context.Fail(S["The image {0} could not be stored.", file.Path], S["Not imported from QTI"]);
 
                 return;
             }

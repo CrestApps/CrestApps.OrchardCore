@@ -382,6 +382,30 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         Assert.Equal("voicemail-entitled", row[ContactCenterReportDataSets.ItemIdField]);
     }
 
+    /// <summary>
+    /// SEC-A12: shared voicemails are narrowed to the reader's queues, so even an all-queues read is marked as
+    /// restricted. A scheduled view refreshed by an all-queues supervisor then never serves its stored rows to a reader
+    /// limited to one queue. Interactions give every reader the same rows and are not marked.
+    /// </summary>
+    [Fact]
+    public async Task SharedVoicemails_AreMarkedRestricted_EvenForAnAllQueuesReader_AndInteractionsAreNot()
+    {
+        await using var session = _store.CreateSession();
+        var source = Source(
+            session,
+            [ContactCenterPermissions.ViewReports, ContactCenterPermissions.AccessSharedVoicemail],
+            new SharedVoicemailAccess { CanAccess = true, AllQueues = true });
+        var voicemails = Query(ContactCenterReportDataSets.SharedVoicemails, ContactCenterReportDataSets.ItemIdField);
+        var interactions = Query(ContactCenterReportDataSets.Interactions, ContactCenterReportDataSets.ItemIdField);
+
+        var voicemailRows = await ReportDesignerTestServices.ReadAsync(source, voicemails, TestContext.Current.CancellationToken);
+        await ReportDesignerTestServices.ReadAsync(source, interactions, TestContext.Current.CancellationToken);
+
+        Assert.True(voicemailRows.Rows.Count > 1);
+        Assert.True(CrestApps.OrchardCore.Reports.DataSources.ReportRowScope.IsRestricted(voicemails.Context));
+        Assert.False(CrestApps.OrchardCore.Reports.DataSources.ReportRowScope.IsRestricted(interactions.Context));
+    }
+
     [Fact]
     public async Task Registration_ListsOnlyTheDataSetsOfTheEnabledFeatures()
     {

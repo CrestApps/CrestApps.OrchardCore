@@ -17,6 +17,11 @@
 @inject ISiteService SiteService
 @inject IAIDeploymentManager AIDeploymentManager
 @inject IAIDeploymentCapabilityService CapabilityService
+@inject CrestApps.OrchardCore.AI.Core.Services.ChatImageContentSecurityPolicy ChatImageContentSecurityPolicy
+@{
+    // Model output is rendered as Markdown here; images may load only from the site and the configured sources.
+    ChatImageContentSecurityPolicy.Apply(Context);
+}
 @{
     var baseId = Html.IdForModel();
     var chatAppHtmlId = $"{baseId}_ChatApp";
@@ -123,7 +128,7 @@
                         <i class="fa-solid fa-microphone"></i>
                     </button>
                     @* Send sits with the message box it belongs to. *@
-                    <button class="btn btn-dark" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                    <button class="btn btn-dark" type="button" id="@buttonHtmlId" aria-label="@T["Send"]" title="@T["Send"]" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
                 </div>

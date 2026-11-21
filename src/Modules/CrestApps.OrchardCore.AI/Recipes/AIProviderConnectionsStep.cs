@@ -3,6 +3,8 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Recipes;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -22,6 +24,7 @@ internal sealed class AIProviderConnectionsStep : CatalogRecipeStepBase<AIProvid
 
     private readonly INamedSourceCatalogManager<AIProviderConnection> _manager;
     private readonly AIOptions _aiOptions;
+    private readonly IAIEndpointPolicy _endpointPolicy;
 
     internal readonly IStringLocalizer S;
 
@@ -34,11 +37,13 @@ internal sealed class AIProviderConnectionsStep : CatalogRecipeStepBase<AIProvid
     public AIProviderConnectionsStep(
         INamedSourceCatalogManager<AIProviderConnection> manager,
         IOptions<AIOptions> aiOptions,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<AIProfileStep> stringLocalizer)
         : base(StepKey, "Connections")
     {
         _manager = manager;
         _aiOptions = aiOptions.Value;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -62,7 +67,11 @@ internal sealed class AIProviderConnectionsStep : CatalogRecipeStepBase<AIProvid
     }
 
     protected override ValueTask UpdateAsync(AIProviderConnection entry, JsonObject token)
-        => _manager.UpdateAsync(entry, token);
+    {
+        // A recipe that leaves a secret out keeps the stored one; when it also changes where the entry sends it, the
+        // kept secret is dropped, as the editor drops it.
+        return RecipeSecretDestinations.UpdateAsync(entry, token, data => _manager.UpdateAsync(entry, data));
+    }
 
     protected override async ValueTask<AIProviderConnection> NewAsync(JsonObject token, RecipeExecutionContext context)
     {
@@ -78,8 +87,18 @@ internal sealed class AIProviderConnectionsStep : CatalogRecipeStepBase<AIProvid
         return await _manager.NewAsync(source, token);
     }
 
-    protected override ValueTask<ValidationResultDetails> ValidateAsync(AIProviderConnection entry)
-        => _manager.ValidateAsync(entry);
+    protected override async ValueTask<ValidationResultDetails> ValidateAsync(AIProviderConnection entry)
+    {
+        var result = await _manager.ValidateAsync(entry);
+
+        // The editor refuses an endpoint on the site's own network; a recipe is held to the same rule.
+        if (AIRecipeEndpoints.FindRefused(entry, _endpointPolicy) is { } refused)
+        {
+            result.Fail(new System.ComponentModel.DataAnnotations.ValidationResult(S["The endpoint '{0}' is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections.", refused]));
+        }
+
+        return result;
+    }
 
     protected override ValueTask CreateAsync(AIProviderConnection entry)
         => _manager.CreateAsync(entry);

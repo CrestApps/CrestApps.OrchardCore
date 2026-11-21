@@ -114,7 +114,7 @@ public sealed class ExternalToolsController : CatalogAdminController<ExternalToo
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             _logger.LogError(exception, "The OpenID application of an external tool could not be saved.");
-            await Notifier.ErrorAsync(H["The tool was saved, but its OpenID application could not be: {0}", exception.Message]);
+            await Notifier.ErrorAsync(H["The tool was saved, but its OpenID application could not be. The reason was written to the log."]);
         }
     }
 }

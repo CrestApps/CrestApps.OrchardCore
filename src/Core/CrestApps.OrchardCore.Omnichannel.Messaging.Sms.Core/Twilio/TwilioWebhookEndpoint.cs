@@ -269,9 +269,16 @@ internal static class TwilioWebhookEndpoint
             return false;
         }
 
-        var form = context.Request.HasFormContentType
-            ? context.Request.Form.ToDictionary(entry => entry.Key, entry => entry.Value.ToString())
-            : [];
+        // The SMS webhook is always a form post, whose fields the signature covers. Any other body (JSON) is signed only
+        // through a hash in the URL, which would leave the body itself unchecked, so it is refused.
+        if (!context.Request.HasFormContentType)
+        {
+            logger.LogWarning("A Twilio request that is not a form post was refused.");
+
+            return false;
+        }
+
+        var form = context.Request.Form.ToDictionary(entry => entry.Key, entry => entry.Value.ToString());
 
         var validator = new TwilioRequestValidator(authToken);
 

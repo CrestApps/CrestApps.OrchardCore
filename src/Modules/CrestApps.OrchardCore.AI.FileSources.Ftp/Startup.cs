@@ -1,4 +1,7 @@
+using CrestApps.OrchardCore.AI.Core.Recipes;
+using CrestApps.OrchardCore.AI.FileTransfer.Core;
 using CrestApps.Core.AI.Ftp;
+using CrestApps.Core.AI.Ftp.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.FileSources.Ftp.Drivers;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,5 +22,7 @@ public sealed class Startup : StartupBase
         services.AddCoreFtpIngestionConnector();
 
         services.AddDisplayDriver<FileSource, FtpFileSourceDisplayDriver>();
+        services.Configure<IngestionSourceSecretOptions>(options => options.Protect<FileSource>(nameof(FtpConnectionMetadata), FtpResourceConstants.DataProtectionPurpose));
+        services.AddFileTransferHostOptions();
     }
 }

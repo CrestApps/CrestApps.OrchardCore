@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Services;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.AI.Tooling.Instances.DataSources;
 using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Workflows;
@@ -74,7 +75,10 @@ public sealed class Startup : StartupBase
         services.RemoveAll<IAIDataSourceIndexingService>()
             .AddScoped<DataSourceIndexingService>()
             .AddScoped<IAIDataSourceIndexingService, OrchardAIDataSourceIndexingServiceAdapter>();
-        services.AddKeyedScoped<IAIDataSourceSourceHandler, SearchIndexProfileAIDataSourceSourceHandler>(AIDataSourceSourceTypes.SearchIndexProfile);
+        services.AddAIDataSourceSourceHandler<SearchIndexProfileAIDataSourceSourceHandler>(AIDataSourceSourceTypes.SearchIndexProfile);
+
+        // The API and the recipe step validate through the catalog, so the catalog applies each source's own checks.
+        services.AddScoped<ICatalogEntryHandler<AIDataSource>, AIDataSourceSourceValidationHandler>();
 
         // This source reads an index it did not shape, so it has to ask which field carries the content.
         services.Configure<AIDataSourceFieldMappingOptions>(options => options.Require(AIDataSourceSourceTypes.SearchIndexProfile));

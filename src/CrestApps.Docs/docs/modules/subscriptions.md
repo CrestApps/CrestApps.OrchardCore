@@ -84,7 +84,7 @@ their purchase completed by a provider notification with no browser involved, an
 charged the terms they chose.
 
 
-A plan is bought through the shared [Checkout](checkout), started from the **Sign up** link on any published plan (`Subscription/Signup/{contentItemId}`). The checkout resolves the plan, records what is being bought, and hands the customer to the ordinary checkout experience.
+A plan is bought through the shared [Checkout](checkout), started from the **Sign up** button on any published plan. The button posts to `Subscription/Signup/{contentItemId}` with the antiforgery token, and only that post starts a checkout; each post counts against the same per-network limit as an order's pay link (`checkout-start-network`). Opening `Subscription/Signup/{contentItemId}` as a link, from an e-mail, a bookmark or a link scanner, starts nothing: it shows the plan and its price with a **Continue to checkout** button, so a sign-up link sent before buttons were posts still works. For a price where the buyer names the amount, the posted amount is read with a dot as its decimal point, the way a number input always sends it, whatever the store's culture, or with the culture's decimal comma; an amount with a group separator, or anything else that is not a plain number, is refused with *400 Bad Request* and starts no checkout. The checkout resolves the plan, records what is being bought, and hands the customer to the ordinary checkout experience.
 
 The plan itself contributes the charges: the recurring price and, when configured, a one-time setup fee. Those sit on a step that is never drawn — the customer already chose the plan, so there is nothing to ask them — but the charges are still billed. Other handlers contribute the steps that do ask for something:
 
@@ -134,6 +134,8 @@ An agreement carries who owns it, what it bills and on what cycle, the gateway's
 
 The status is one of `Active`, `Trialing`, `PastDue`, `Canceled`, `Expired`, `Paused`, or `Incomplete`. Whether a subscriber currently has access is a separate question from the status, and the agreement answers it: a cancelled agreement is still current until the paid period runs out, and a past-due one is current through its grace window.
 
+A subscription bought with a promise to pay ([Pay Later](pay-later), a bank transfer) starts `Incomplete` and grants nothing until a transaction of its checkout is paid (`SubscriptionFirstPaymentTransactionHandler` then resumes it), unless the plan's product ticks **Deliver before payment**. A period of such a subscription left unpaid past its due date marks it `PastDue` (`SubscriptionOverdueTransactionHandler`, which finds the subscription by its checkout first). Both handlers hold one rule: a subscription is past due while any transaction of its checkout is overdue and unpaid, a sign-up fee or a one-time item bought with it included, and paying one brings it back once none is. A subscription a payment provider bills (one with a provider subscription id) is not brought back this way: it fell past due because the provider's renewal failed, and only the provider's payment brings it back.
+
 ### Transitions
 
 Subscription state is edited from four directions at once: a gateway webhook, a nightly sweep, an administrator, and the customer. Every transition therefore goes through one service, takes a lock on the single agreement it changes, re-reads it inside that lock, and is idempotent.
@@ -143,14 +145,14 @@ Subscription state is edited from four directions at once: a gateway webhook, a 
 | Record renewal | Advances to the next period and schedules the next bill. Reporting the same cycle twice advances it once, so a webhook and the sweep cannot skip a payment between them. |
 | Mark past due | Starts the dunning window. A second failure inside the same window does not restart the grace clock. |
 | Cancel | Stops future billing. At period end it keeps the paid-through date; immediately it ends access now. |
-| Resume | Returns a paused or past-due agreement to active. |
+| Resume | Returns a paused or past-due agreement to active, and an expired offline agreement the customer did not cancel. Paying the overdue invoice of a past-due Pay Later agreement resumes it once no other invoice of it is overdue. |
 | Pause | Suspends billing without ending the agreement. |
 | Expire | Ends the agreement when the grace window elapses or the agreed cycles are all billed. |
 | Sync from provider | Adopts the gateway's period, pending cancellation, and status. It will not revive an agreement cancelled locally, because that would start billing a customer who already left. |
 
 The dunning grace period is 7 days by default. It is not a field of **Settings > Subscriptions**, which has only **Allow guest sign-up**, **Currency** and the roles a plan may give. A failed renewal is usually an expired card rather than a customer who left, so cutting access off the same night loses subscribers who would have paid, while never cutting it off gives the plan away.
 
-A background sweep runs every thirty minutes. It expires agreements whose grace window has elapsed and closes those that have billed every cycle they were sold for. It never charges anyone: a gateway-backed agreement is billed by the gateway, and an offline one is invoiced by its own provider's renewal path.
+A background sweep runs every thirty minutes. It expires agreements whose grace window has elapsed, canceled agreements whose paid period has ended, and closes those that have billed every cycle they were sold for. It never charges anyone: a gateway-backed agreement is billed by the gateway, and an offline one is invoiced by its own provider's renewal path.
 
 ## Renewals and cancellation
 
@@ -274,6 +276,18 @@ Instead the checkout only records a **provisioning job**, and a sweep builds the
 - A failure is recorded on the job **and logged**, with a growing back-off. After enough failures the job is **abandoned** rather than retried forever, because at that point the honest answer is that a person needs to look at it. The job keeps only the newest message, so the log is where the first attempt's reason — usually the real one — survives.
 - A retry is judged on its own merits. Setup registers the tenant before it creates anything, so a failed attempt leaves the name behind in the running process; that residue is not treated as a name collision, or a job that failed once could never succeed.
 
+- A failed setup leaves nothing open. The site is saved as uninitialized, with its prefix or host, a random setup secret and the plan's recipe, **before** Orchard's setup runs, so the tenant Orchard reloads after an error answers only on its own address and its setup screen asks for a token only the host has. The administrator's user name, e-mail address and password are held to the store's identity rules in the step, while the buyer can still change them.
+
+### Where a sold site answers
+
+**Subscriptions → Tenant onboarding** decides it, and the step checks it before payment, again before payment begins, and again before the site is set up:
+
+- **On a base domain** (`BaseDomain`): each site gets `{name}.{base domain}`. A separate registrable domain (for example `sites-example.net` for a store on `example.com`) keeps the sites out of the store's cookies entirely.
+- **On the buyer's own domains** (**Buyers may use their own domains**): at most five per site. IP addresses and public suffixes (`co.uk`, `github.io`, `azurewebsites.net`, `foo.ck`) are refused, by the whole [Public Suffix List](https://publicsuffix.org) (ICANN and private sections, a copy shipped with the module) with its wildcard and exception rules (`www.ck` can be taken), and so is any name under, or a parent of, a host another buyer's site already has (`www.v.com` next to `v.com`), or under another site's wildcard host (`a.v.com` beside `*.v.com`). The names around the buyer's own sites are theirs to take; the exact host never is. The store's own hosts are reserved with every name under them and every name above them. The platform does not prove that the buyer controls the domain, so only turn this on if you check that yourself.
+- **On a prefix of the store's own address** (**Sell sites on a prefix of this site's own address**, `AllowPrefixOnStoreHost`): `store.com/shop1`. Such a site runs in the store's origin: script its owner adds can read the store's pages, the admin included, with the session of anybody who opens it, and it receives the store's cookies. It is off for new stores; with it off and no base domain or own domain, a site on a prefix is refused with *Enter a domain for your site*.
+
+A prefix is refused when it is reserved (**Reserved prefixes**, the admin prefix, and the built-in list, which covers the storefront's own segments such as `account`, `subscription`, `products` and `checkout`), and also whenever the store already answers on it: the first literal segment of any route the store registers, the first segment of any of its pages' Autoroute paths (compared without case; on a database that compares text exactly, such as PostgreSQL, the path is looked up as typed, in lower and upper case, capitalized, and with each word capitalized), the id of any module or theme, whose static files are served under `/{id}/` (`TheAdmin`, for instance), any top-level entry of the host's web root, the first segment of every path an authentication scheme answers on before routing (a remote sign-in's callback such as `signin-google`, read from the scheme's options, so a changed callback path counts as changed), and any segment that starts with `signin-` or `signout-`, the names ASP.NET Core gives those callbacks, so a provider turned on later finds its callback free (`StoreRouteSegments`).
+
 ### The database new sites are created on
 
 Every site sold is created on the database configured under **Subscriptions → Tenant onboarding**. The buyer
@@ -288,7 +302,21 @@ The providers offered are the ones Orchard Core registers (`IEnumerable<Database
 
 Customers watch progress under **My Sites**. Administrators see every job under **Subscriptions → Site provisioning**, including the abandoned ones. A waiting or failed job can be retried once the cause is fixed. An abandoned job has already dropped the administrator password, so it can't be retried: the administrator creates the site by hand and closes the job with **Mark as created** (`TenantProvisioningAdminController.MarkCreated`). That sets it to `Succeeded`, optionally with the site's URL. `TenantProvisioningJobActions` holds the rules for both buttons, and the screen and the actions share them.
 
+### What a sold site may enable
+
+A sold site runs in the same process as the store, so its administrator must not be able to turn on features that reach the host, such as the MCP local client, data connectors, or tenant management. Every plan that sells a site names a **feature profile** (Orchard Core's **Tenants › Feature Profiles**, which needs the `OrchardCore.Tenants.FeatureProfiles` feature on the default tenant), and the site is created with it.
+
+- Create one profile for sold sites before selling, for example **Sold site**, that excludes the Tenants features, the MCP clients, data connectors, Subscriptions, and anything else you keep to the host, and choose it on each plan's tenant onboarding.
+- The profile is checked by its id against the profiles that exist, when the buyer fills in the new-site step, again before payment (`TenantProvisioningPaymentGate`) and again before the site is set up. Orchard Core treats a tenant whose profile it can't find as allowed every feature, so a profile that was renamed or deleted, or a plan that arrived by recipe, import or API naming one that doesn't exist, stops the sale instead of creating an unrestricted site. Without the Feature Profiles feature no site is sold (`ITenantFeatureProfileCatalog`).
+- **Upgrading:** a plan that has no feature profile, or names one that no longer exists, can't be bought until one is chosen; a job already recorded with a missing profile fails with `FeatureProfileNotFound` on Site provisioning and can be retried once a profile with that id exists again.
+
+The recipe is the plan's: the setup recipe recorded on the checkout when the plan was bought, never one named by the buyer or carried on the job.
+
 A site sold this way carries a `Tenant` entitlement naming it, so the site runs for as long as the subscription is current and is **disabled** when it is not. Disabled, never deleted: a disabled tenant stops serving immediately but keeps every byte of the customer's data, so somebody who pays a late invoice gets their site back exactly as it was.
+
+- Only a site the subscription itself disabled comes back with it (it is marked `SuspendedBySubscription` in the tenant's settings). A site an operator disabled under **Tenants** stays disabled whatever the subscriber does. When the subscription finds its site running with the mark (an operator switched it back on by hand), the mark is cleared. Billing also records on the site's provisioning job the version the tenant's settings had when it disabled the site (`SuspendedTenantVersionId`); Orchard Core gives the settings a new version on every change, so billing switches the site back on only while nobody has changed the tenant since. A site an operator switched on and later disabled again, or edited while it was disabled, stays disabled until the operator enables it.
+- The entitlement names the job that created the site and the site's tenant id, so after a site is removed and its name sold again, the old subscription can't reach the new site.
+- A subscription canceled at period end is expired by the lifecycle sweep once the paid period ends, which disables the site. Canceling a suspended (paused) subscription ends access at once. The sweep reads the lapsed subscriptions a hundred at a time, up to a thousand per run. One whose paid period ended more than seven days before the sweep found it, such as the backlog from before the sweep looked for canceled subscriptions, is expired without the **Subscription Expired** workflow event (its lifecycle source is `lapsed-backlog`), so an "expired" e-mail doesn't reach everyone who ever canceled.
 
 ## Installment plans
 

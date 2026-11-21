@@ -26,7 +26,7 @@
                         <i class="fas fa-check-circle"></i>
                         @T["Connected as"] <strong id="ci-github-username">@Model.GitHubUsername</strong>
                     </span>
-                    <a href="#" class="btn btn-sm btn-outline-danger ms-2" id="ci-disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]" title="@T["Disconnect from GitHub"]">
+                    <a href="#" class="btn btn-sm btn-outline-danger ms-2" id="ci-disconnect-github" aria-label="@T["Disconnect from GitHub"]" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]" title="@T["Disconnect from GitHub"]">
                         <i class="fa-solid fa-power-off"></i>
                     </a>
                 </div>
@@ -132,6 +132,7 @@
 
 @if (Model.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
 {
+<script asp-name="crestapps-browser" at="Foot"></script>
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
         const connectButton = document.getElementById('ci-connect-github');
@@ -265,7 +266,7 @@
             const confirmMessage = disconnectButton.getAttribute('data-confirm-message');
             disconnectButton.addEventListener('click', async function (e) {
                 e.preventDefault();
-                if (!confirm(confirmMessage)) return;
+                if (!(await crestapps.confirm(disconnectButton.getAttribute('aria-label'), confirmMessage))) return;
 
                 showState('loading');
                 try {

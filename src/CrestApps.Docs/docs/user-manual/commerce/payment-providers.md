@@ -131,7 +131,7 @@ Open **Settings > Commerce > Offline payments**, change what you need, and click
 | --- | --- |
 | **Offer Pay Later at checkout** | Whether Pay Later is offered. Off until you tick it. |
 | **Payment term** | Shown when payment terms are on (Invoicing turns them on). When a Pay Later balance falls due, such as *Net 30* or *End of month*: at the end of that day. A customer whose billing profile has a payment term of their own gets theirs instead. Choose *A number of days* to use the net term below. |
-| **Net term (days)** | How many days after the purchase a Pay Later balance falls due, when no payment term applies. The due date drives the reminders. Enter 0 to record the balance without a due date. The default is 30. |
+| **Net term (days)** | How many days after the purchase a Pay Later balance falls due, when no payment term applies. The due date drives the reminders. Enter 0 to record the balance without a due date; each later billing period of a subscription is then due on the day the period starts. The default is 30. |
 | **Offer Bank transfer at checkout** | Whether Bank transfer is offered. It can't be turned on without bank details. |
 | **Bank details** | The account name, bank, account number or IBAN, and anything else buyers need to transfer the money. Shown exactly as you type it, line by line. |
 | **Due within (days)** | When a transfer falls due, which drives the reminders. 0 for no due date. The default is 7. |

@@ -75,6 +75,6 @@ internal sealed class ChatInteractionMcpConnectionsDisplayDriver : DisplayDriver
                 .ToList();
         }
 
-        return Edit(interaction, context);
+        return await EditAsync(interaction, context);
     }
 }

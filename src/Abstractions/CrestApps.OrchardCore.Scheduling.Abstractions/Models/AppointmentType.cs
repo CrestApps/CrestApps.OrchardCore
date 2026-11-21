@@ -110,6 +110,13 @@ public sealed class AppointmentType : CatalogItem
     public bool RequiresConfirmation { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a customer who books it on the public booking page must confirm the
+    /// booking from the link e-mailed to them. Until they do, the time is only held, for <see cref="HoldMinutes"/>, and
+    /// the hold expires on its own.
+    /// </summary>
+    public bool RequireEmailConfirmation { get; set; }
+
+    /// <summary>
     /// Gets or sets how long a held time stays held.
     /// </summary>
     public int HoldMinutes { get; set; } = 10;

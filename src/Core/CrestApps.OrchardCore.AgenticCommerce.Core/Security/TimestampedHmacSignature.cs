@@ -1,6 +1,5 @@
 using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
+using CrestApps.OrchardCore.Webhooks.Core.Signatures;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 
@@ -11,6 +10,9 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 public static class TimestampedHmacSignature
 {
     private const int SignatureHexLength = 64;
+
+    // A sender rotating its secret sends two or three signatures; a header with more isn't from a real sender.
+    private const int MaxSignatures = 8;
 
     /// <summary>
     /// Signs a body.
@@ -25,11 +27,12 @@ public static class TimestampedHmacSignature
 
         var timestamp = unixTimestamp.ToString(CultureInfo.InvariantCulture);
 
-        return "t=" + timestamp + ",v1=" + Convert.ToHexStringLower(Compute(secret, timestamp, body ?? string.Empty));
+        return "t=" + timestamp + ",v1=" + HmacWebhookSignatureValidator.Sha256Hex.Compute(secret, SignedContent(timestamp, body));
     }
 
     /// <summary>
-    /// Verifies a header value against a body. Any <c>v1</c> member may match; the comparison runs in fixed time.
+    /// Verifies a header value against a body. Any <c>v1</c> member may match; the comparison runs in fixed time. The
+    /// HMAC is computed once, and a header with more than a few <c>v1</c> members is refused.
     /// </summary>
     /// <param name="header">The header value.</param>
     /// <param name="secret">The shared secret.</param>
@@ -45,7 +48,7 @@ public static class TimestampedHmacSignature
         }
 
         string timestamp = null;
-        var signatures = new List<byte[]>();
+        var signatures = new List<string>();
 
         foreach (var part in header.Split(','))
         {
@@ -75,7 +78,12 @@ public static class TimestampedHmacSignature
                     return false;
                 }
 
-                signatures.Add(Convert.FromHexString(value));
+                signatures.Add(value);
+
+                if (signatures.Count > MaxSignatures)
+                {
+                    return false;
+                }
             }
         }
 
@@ -90,19 +98,18 @@ public static class TimestampedHmacSignature
             return false;
         }
 
-        var expected = Compute(secret, timestamp, body ?? string.Empty);
+        var expected = HmacWebhookSignatureValidator.Sha256Hex.Compute(secret, SignedContent(timestamp, body));
         var matched = false;
 
+        // Every member is compared, so the time taken doesn't tell which one matched.
         foreach (var signature in signatures)
         {
-            matched |= CryptographicOperations.FixedTimeEquals(expected, signature);
+            matched |= WebhookSignatures.FixedTimeEquals(expected, signature.ToLowerInvariant());
         }
 
         return matched;
     }
 
-    private static byte[] Compute(string secret, string timestamp, string body)
-    {
-        return HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(timestamp + "." + body));
-    }
+    private static string SignedContent(string timestamp, string body)
+        => timestamp + "." + (body ?? string.Empty);
 }

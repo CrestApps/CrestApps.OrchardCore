@@ -117,13 +117,15 @@ TTS playback can be enabled at two levels:
 
 #### Behavior
 
-When a user clicks the playback button on a message, the text is sent to the configured TTS provider and audio is streamed back to the browser. Starting another message's playback stops the current one. See [Listen to an answer](../user-manual/ai/chat.md#listen-to-an-answer) for what the user sees.
+When a user clicks the playback button on a message, the text is sent to the configured TTS provider and audio is streamed back to the browser. Starting another message's playback stops the current one. The chat hub reads aloud only for a profile with **Enable text-to-speech playback** on or in Conversation mode, counts each read-aloud against the profile's message limit, and refuses a text longer than 10,000 characters. See [Listen to an answer](../user-manual/ai/chat.md#listen-to-an-answer) for what the user sees.
 
 ### Session document uploads
 
 Session uploads require the **AI Documents for Chat Sessions** feature (`CrestApps.OrchardCore.AI.Documents.ChatSessions`) and are opted in per profile with **Allow session document uploads** and **Allow session image uploads**. Image uploads also need a vision deployment. How users attach files is described in [Attach files to a chat](../user-manual/ai/chat.md#attach-files-to-a-chat).
 
 If a profile allows session document uploads or session image uploads, the chat UI keeps restored widget sessions aligned with the current profile before uploading files. This avoids sending attachment requests through a different profile.
+
+Session uploads are not offered in a chat embedded in a frame on another site. The upload and remove routes need Orchard Core's antiforgery cookie, which is `SameSite=Strict`, and a browser never stores such a cookie in a cross-site frame. So a page the browser loads into a frame of another site (its `Sec-Fetch-Site` is `cross-site` and its `Sec-Fetch-Dest` is `iframe`) gets a chat with no attachment bar, and no antiforgery cookie is issued there, which would also add `X-Frame-Options: SAMEORIGIN` to the page. The same chat served on the site itself, or framed by a page of the same site, keeps its uploads.
 
 The admin and frontend chat widgets restore their saved toggle and panel positions before the chat app finishes initializing.
 
@@ -346,7 +348,7 @@ The **Remote address storage mode** supports the following values:
 - **Encrypted** &mdash; store the remote address encrypted at rest with Data Protection while still using a salted hash for throttling keys.
 
 :::info
-The remote-address value is read from the `X-Forwarded-For` header when present, otherwise from the connection remote IP address. When running behind a reverse proxy, make sure forwarded headers are configured so the correct visitor address is captured.
+The remote address is the connection's remote IP address; a client's `X-Forwarded-For` header is never read, so a visitor cannot pick the address the chat limits count. An IPv6 visitor is counted by its /64 network. When running behind a reverse proxy, enable Orchard Core's **Reverse Proxy** feature and list only your own proxies, so the connection carries the visitor's address instead of the proxy's.
 :::
 
 ---

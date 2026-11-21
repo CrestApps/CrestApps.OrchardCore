@@ -75,6 +75,6 @@ internal sealed class ChatInteractionA2AConnectionsDisplayDriver : DisplayDriver
                 .ToList();
         }
 
-        return Edit(interaction, context);
+        return await EditAsync(interaction, context);
     }
 }

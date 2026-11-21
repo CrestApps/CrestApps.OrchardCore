@@ -14,10 +14,12 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 /// <remarks>
 /// ACP says a client signs "over canonical JSON" and sends a timestamp checked against a clock-skew window, and leaves
 /// the algorithm, the canonical form and the key to an agreement with the merchant. This class settles them as
-/// follows: the signed bytes are the RFC 8785 (JCS) canonical JSON of the request body, or nothing for a request
-/// without a body; the algorithm is ES256 (ECDSA on P-256 with SHA-256), whose signature is the 64-byte IEEE P1363
-/// <c>r || s</c> form JOSE uses (a DER signature is accepted too); the timestamp isn't part of the signed bytes, it is
-/// only checked against the skew window.
+/// follows: the algorithm is ES256 (ECDSA on P-256 with SHA-256), whose signature is the 64-byte IEEE P1363
+/// <c>r || s</c> form JOSE uses (a DER signature is accepted too). What is signed depends on the platform's signature
+/// version: version 1 (<see cref="BodyOnlyVersion"/>, platforms set up before versions existed) signs only the RFC 8785
+/// (JCS) canonical JSON of the request body, or nothing for a request without a body, and checks the timestamp against
+/// the skew window; version 2 (<see cref="BoundVersion"/>) signs <c>timestamp.METHOD.path.</c> followed by that
+/// canonical JSON, so a captured signature can't be sent with another timestamp or to another path.
 /// </remarks>
 public static partial class AcpRequestSignature
 {
@@ -47,6 +49,37 @@ public static partial class AcpRequestSignature
     public static readonly IReadOnlyList<string> Algorithms = [ES256];
 
     /// <summary>
+    /// The signature version that signs only the body: what platforms set up before versions existed sign.
+    /// </summary>
+    public const int BodyOnlyVersion = 1;
+
+    /// <summary>
+    /// The signature version that signs the timestamp, the method and the path with the body.
+    /// </summary>
+    public const int BoundVersion = 2;
+
+    /// <summary>
+    /// Returns the bytes a version 2 signature is made over: <c>timestamp.METHOD.path.</c> (UTF-8) followed by the
+    /// signing input of the body.
+    /// </summary>
+    /// <param name="timestamp">The <c>Timestamp</c> header, as sent.</param>
+    /// <param name="method">The HTTP method, such as <c>POST</c>; upper-cased.</param>
+    /// <param name="path">The request's path, such as <c>/acp/checkout_sessions/cs_1/complete</c>.</param>
+    /// <param name="body">The signing input of the body, from <see cref="TryGetSigningInput"/>.</param>
+    public static byte[] GetBoundSigningInput(string timestamp, string method, string path, byte[] body)
+    {
+        ArgumentNullException.ThrowIfNull(body);
+
+        var prefix = System.Text.Encoding.UTF8.GetBytes($"{timestamp?.Trim()}.{method?.Trim().ToUpperInvariant()}.{path}.");
+        var input = new byte[prefix.Length + body.Length];
+
+        prefix.CopyTo(input, 0);
+        body.CopyTo(input, prefix.Length);
+
+        return input;
+    }
+
+    /// <summary>
     /// Returns the bytes a request body is signed over: its RFC 8785 canonical JSON, or nothing for an empty body.
     /// </summary>
     /// <param name="body">The raw body.</param>
@@ -63,7 +96,8 @@ public static partial class AcpRequestSignature
 
         try
         {
-            input = GetSigningInput(JsonNode.Parse(body));
+            // A property named twice isn't JSON that can be canonicalized.
+            input = GetSigningInput(JsonNode.Parse(body, documentOptions: new JsonDocumentOptions { AllowDuplicateProperties = false }));
 
             return true;
         }

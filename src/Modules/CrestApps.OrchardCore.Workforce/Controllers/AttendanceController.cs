@@ -157,7 +157,9 @@ public sealed class AttendanceController : Controller
             // Each exception is read by its id, so one the user manages is never refused for being past a list's first page.
             var exception = await _attendance.FindByIdAsync(id, HttpContext.RequestAborted);
 
-            if (exception is null || !scope.Covers(exception.TeamId))
+            // The caller's own exception is skipped: it is someone else's to decide.
+            if (exception is null || !scope.Covers(exception.TeamId) ||
+                !await _scopeService.CanDecideForWorkerAsync(User, exception.WorkerId, HttpContext.RequestAborted))
             {
                 continue;
             }
@@ -205,6 +207,11 @@ public sealed class AttendanceController : Controller
         if (exception is null || !scope.Covers(exception.TeamId))
         {
             return NotFound();
+        }
+
+        if (!await _scopeService.CanDecideForWorkerAsync(User, exception.WorkerId, HttpContext.RequestAborted))
+        {
+            return Forbid();
         }
 
         var result = decision == "Excuse"

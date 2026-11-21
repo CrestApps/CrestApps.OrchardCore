@@ -96,6 +96,11 @@
 		if (!source || !source.dialHoldReservationId || !source.userId || !ownUserId) return "";
 		return String(source.userId) === String(ownUserId) ? String(source.dialHoldReservationId) : "";
 	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
+	function escapeHtml(value) {
+		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+	}
 	function text(labels, key, fallback) {
 		return labels && labels[key] || fallback;
 	}
@@ -104,9 +109,6 @@
 		return String(template).replace(/\{(\d+)\}/g, function(match, index) {
 			return args[index] !== void 0 ? args[index] : match;
 		});
-	}
-	function escapeHtml(value) {
-		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 	}
 	function supervisorMessageHtml(notification, labels) {
 		if (!notification || !notification.text) return "";

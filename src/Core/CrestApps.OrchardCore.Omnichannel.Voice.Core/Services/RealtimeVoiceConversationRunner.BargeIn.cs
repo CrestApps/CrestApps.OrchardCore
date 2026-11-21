@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.OrchardCore.ContactCenter;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// Split from the pumps because it is the one place both of them meet, and because the pump file is near the size
 /// the architecture guard allows.
 /// </remarks>
+[SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "The call session lock (_callSessionLock) is only awaited, never asked for its wait handle, so disposing it would free nothing.")]
 public sealed partial class RealtimeVoiceConversationRunner
 {
     /// <summary>

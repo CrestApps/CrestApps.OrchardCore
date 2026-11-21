@@ -81,13 +81,14 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
     public override IDisplayResult Edit(FundraisingCampaignPart part, BuildPartEditorContext context)
         => Initialize<FundraisingCampaignPartViewModel>(GetEditorShapeType(context), async model =>
         {
-            model.Goal = part.Goal == 0m ? null : part.Goal.ToString(CultureInfo.InvariantCulture);
+            model.Goal = part.Goal == 0m ? null : part.Goal;
             model.Ends = part.EndsUtc is { } endsUtc
                 ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(endsUtc, DateTimeKind.Utc))).DateTime
                 : null;
             model.SuggestedAmounts = string.Join(", ", (part.SuggestedAmounts ?? []).Select(amount => amount.ToString(CultureInfo.InvariantCulture)));
-            model.MinimumAmount = part.MinimumAmount.ToString(CultureInfo.InvariantCulture);
+            model.MinimumAmount = part.MinimumAmount;
             model.TaxDeductible = part.TaxDeductible;
+            model.Currency = part.ContentItem.TryGet<ProductPart>(out var product) ? product.Currency : null;
         });
 
     public override async Task<IDisplayResult> UpdateAsync(FundraisingCampaignPart part, UpdatePartEditorContext context)
@@ -96,12 +97,16 @@ internal sealed class FundraisingCampaignPartDisplayDriver : ContentPartDisplayD
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (!TryParse(model.Goal, out var goal) || goal < 0m)
+        // A goal or least donation that can't be read is a model error from the binder, which keeps the part from being saved.
+        var goal = model.Goal ?? 0m;
+        var minimum = model.MinimumAmount ?? 0m;
+
+        if (goal < 0m)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Goal), S["Enter the goal as a number, such as 10000, or leave it empty for none."]);
         }
 
-        if (!TryParse(model.MinimumAmount, out var minimum) || minimum < 0m)
+        if (minimum < 0m)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.MinimumAmount), S["Enter the least a donor can give, such as 5."]);
         }

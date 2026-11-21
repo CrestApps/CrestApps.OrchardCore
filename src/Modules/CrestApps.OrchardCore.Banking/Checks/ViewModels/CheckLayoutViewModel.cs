@@ -84,9 +84,9 @@ public class CheckLayoutViewModel
 
 
     /// <summary>
-    /// Gets or sets the amount above which a second signature prints, as text.
+    /// Gets or sets the amount above which a second signature prints, bound by the invariant number binder.
     /// </summary>
-    public string SecondSignatureAbove { get; set; }
+    public decimal? SecondSignatureAbove { get; set; }
 
     /// <summary>
     /// Gets or sets the field places.

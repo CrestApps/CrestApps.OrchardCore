@@ -39,7 +39,10 @@ public sealed class WorkflowSubscriptionLifecycleHandler : SubscriptionLifecycle
     /// <inheritdoc/>
     public override async Task ChangedAsync(SubscriptionLifecycleContext context)
     {
-        if (context is null || !context.StatusChanged)
+        // The backlog of canceled subscriptions expired once after the upgrade is not news: an "expired" e-mail would reach
+        // everyone who ever canceled.
+        if (context is null || !context.StatusChanged ||
+            string.Equals(context.Source, SubscriptionConstants.LapsedBacklogSource, StringComparison.Ordinal))
         {
             return;
         }

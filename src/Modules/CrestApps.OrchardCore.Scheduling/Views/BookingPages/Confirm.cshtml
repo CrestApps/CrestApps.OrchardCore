@@ -1,0 +1,20 @@
+@model BookingConfirmationViewModel
+
+@{
+    ViewData["Title"] = T["Confirm your booking"];
+}
+
+<div class="container my-4" style="max-width: 48rem">
+    @* The breadcrumb also gives the browser tab its title. *@
+    <div class="product-breadcrumb">
+        <breadcrumb name="SchedulingConfirmBooking" title="@T["Confirm your booking"]">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
+    <h1 class="h3">@T["Confirm your booking"]</h1>
+    <p>@T["Confirm your booking of {0}.", Model.AppointmentType.Name]</p>
+    @* Opening the link changes nothing; the button confirms. *@
+    <form method="post" class="no-multisubmit">
+        <button type="submit" class="btn btn-primary">@T["Confirm"]</button>
+    </form>
+</div>

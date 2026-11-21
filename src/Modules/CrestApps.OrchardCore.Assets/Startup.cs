@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Assets.Migrations;
 using CrestApps.OrchardCore.Assets.Navigation;
 using CrestApps.OrchardCore.Assets.Owners;
 using CrestApps.OrchardCore.Assets.ViewModels;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -38,6 +39,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(AssetsConstants.CollectionName));
         services.AddAssetsCore();
         services.AddRecordSource<AssetRecordSource>();
@@ -102,20 +105,6 @@ public sealed class FleetStartup : StartupBase
     {
         services.TryAddSingleton<FleetFeature>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Asset>, FleetCalendarHandler>());
-    }
-}
-
-/// <summary>
-/// Picks the staff member who drives a fleet vehicle by default.
-/// </summary>
-[Feature(AssetsConstants.Features.Fleet)]
-[RequireFeatures(CrestApps.OrchardCore.Staff.StaffConstants.Features.Staff)]
-public sealed class FleetDriverStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDisplayDriver<Asset, Drivers.FleetDriverDisplayDriver>();
     }
 }
 

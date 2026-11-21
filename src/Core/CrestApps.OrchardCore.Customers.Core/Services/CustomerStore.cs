@@ -15,7 +15,8 @@ public interface ICustomerStore
     Task<(int Count, IReadOnlyList<Customer> Customers)> PageAsync(CustomerQuery query, int skip, int take, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// The active guest customers who bought with <paramref name="email"/>, ignoring case.
+    /// The active guest customers who bought with <paramref name="email"/>, ignoring case and nothing else, whatever
+    /// the database's collation treats as equal.
     /// </summary>
     Task<IReadOnlyList<Customer>> ListGuestsByEmailAsync(string email, CancellationToken cancellationToken = default);
 
@@ -99,7 +100,11 @@ public sealed class CustomerStore : DocumentCatalog<Customer, CustomerIndex>, IC
                 collection: CollectionName)
             .ListAsync(cancellationToken);
 
-        return guests.ToArray();
+        // A database that compares text loosely (SQL Server's default collation treats AE as Æ, TH as Þ and SS as ß)
+        // also answers with look-alike addresses, whose guests belong to somebody else: only the exact address is kept.
+        return guests
+            .Where(guest => string.Equals(CustomerIndexProvider.Normalize(guest.Email), normalized, StringComparison.Ordinal))
+            .ToArray();
     }
 
     public async Task<(int Count, IReadOnlyList<Customer> Customers)> PageAsync(CustomerQuery query, int skip, int take, CancellationToken cancellationToken = default)

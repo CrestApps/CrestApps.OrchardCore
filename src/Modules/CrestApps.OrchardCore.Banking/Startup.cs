@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Banking.Recipes;
 using CrestApps.OrchardCore.Banking.Reports;
 using CrestApps.OrchardCore.Banking.Services;
 using CrestApps.OrchardCore.Banking.Workflows;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
@@ -46,6 +47,8 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<BankAccountIndexProvider>();
 
         services.AddBankingCore();
+        // The disbursement, check and check layout editors post amounts from number inputs.
+        services.AddInvariantNumberInputs();
         services.AddPartyDirectory();
         services.AddHttpContextAccessor();
         services.AddDisplayDriver<BankAccount, BankAccountDisplayDriver>();

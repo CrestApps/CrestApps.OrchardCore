@@ -39,6 +39,37 @@ The data source editor is described in the User Manual under [Data sources](../.
 
 ## Use a data connection
 
-When the **Data Connectors** feature is on, the external source editor also offers **Data connection**: pick an **HTTP API** connection whose URL is the search service endpoint (`https://<service>.search.windows.net`) and whose authentication is an **API key** (the header name, usually `api-key`, doesn't matter). The data source then reads the endpoint and the key from the connection, where the key stays protected; the connection's key is never written to the data source or to a deployment plan. The data source's own endpoint and key stay stored, unused, so switching back to its own settings loses nothing, and a deployment plan leaves its own key out while the connection is used. A connection without authentication uses the default Azure credential, such as the site's managed identity.
+When the **Data Connectors** feature is on, the external source editor also offers **Data connection**: pick an **HTTP API** connection whose URL is the search service endpoint (`https://<service>.search.windows.net`) and whose authentication is an **API key** (the header name, usually `api-key`, doesn't matter). The data source then reads the endpoint and the key from the connection, where the key stays protected; the connection's key is never written to the data source or to a deployment plan. The data source's own endpoint and key stay stored, unused, so switching back to its own settings loses nothing, and a deployment plan leaves its own key out while the connection is used. A connection without authentication uses the default Azure credential, such as the site's managed identity, and needs the host's approval on a tenant other than the default one (see [Signing in as the host](#signing-in-as-the-host)).
 
 Only people who may **Manage data connections and their credentials** see the picker; for anyone else, a data source that uses a connection keeps it when they save. A data source without a connection keeps its own endpoint and credentials, so existing data sources are unchanged.
+
+## Signing in as the host
+
+**Managed identity** and **Default credential**, and a data connection without authentication, sign in with the host's Azure identity, not with a credential the tenant entered. On a host that serves several tenants, that identity may read every tenant's index, so it works only:
+
+- on the default tenant, as the SQL Server connector's host sign-in does; or
+- on another tenant, for a search service, index and identity the host's operator approved for that tenant.
+
+The operator approves them in the tenant's own configuration (for example `App_Data/Sites/<tenant>/appsettings.json`, or the `OrchardCore:<tenant>` section of the host's configuration), which tenant administrators can't change:
+
+```json
+{
+  "CrestApps": {
+    "AI": {
+      "DataSources": {
+        "AzureAISearch": {
+          "HostIdentityIndexes": [
+            {
+              "Endpoint": "https://contoso.search.windows.net",
+              "IndexName": "tenant-a-policies",
+              "IdentityClientId": "00000000-0000-0000-0000-000000000000"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+An entry matches a data source with the same service (scheme, host and port), the same index name and the same managed identity client ID; leave `IdentityClientId` out for the system-assigned identity, the default credential, or a data connection without authentication. The check runs when the data source is saved (editor, API and recipe) and again before every sync, so removing an entry stops the data source from reading the index. An API key needs no approval.

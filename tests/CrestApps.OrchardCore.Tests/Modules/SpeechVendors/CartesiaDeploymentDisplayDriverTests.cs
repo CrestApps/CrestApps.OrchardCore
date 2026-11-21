@@ -63,7 +63,7 @@ public sealed class CartesiaDeploymentDisplayDriverTests
 
     private CartesiaDeploymentDisplayDriver CreateDriver()
     {
-        return new CartesiaDeploymentDisplayDriver(_dataProtectionProvider, new PassThroughLocalizer<CartesiaDeploymentDisplayDriver>());
+        return new CartesiaDeploymentDisplayDriver(_dataProtectionProvider, new CrestApps.OrchardCore.AI.Core.AIEndpointPolicy(null, Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions { AllowPrivateNetwork = true })), new PassThroughLocalizer<CartesiaDeploymentDisplayDriver>());
     }
 
     private static UpdateEditorContext CreateContext(CartesiaDeploymentViewModel posted)

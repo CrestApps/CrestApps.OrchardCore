@@ -215,7 +215,7 @@ public sealed class OmnichannelActivityStoreTests
         }
     }
 
-    private static OmnichannelActivityStore CreateActivityStore(
+    internal static OmnichannelActivityStore CreateActivityStore(
         ISession session,
         IStore store,
         string connectionString,
@@ -229,7 +229,7 @@ public sealed class OmnichannelActivityStoreTests
             new SqliteDbConnectionAccessor(connectionString));
     }
 
-    private static async Task<IStore> CreateStoreAsync(string connectionString, IConnectionFactory connectionFactory = null)
+    internal static async Task<IStore> CreateStoreAsync(string connectionString, IConnectionFactory connectionFactory = null)
     {
         var store = StoreFactory.Create(configuration =>
         {
@@ -285,7 +285,7 @@ public sealed class OmnichannelActivityStoreTests
         return store;
     }
 
-    private static async Task<string> SaveActivityAsync(
+    internal static async Task<string> SaveActivityAsync(
         ISession session,
         ActivityStatus status,
         ActivityInteractionType interactionType = ActivityInteractionType.Manual,
@@ -348,7 +348,7 @@ public sealed class OmnichannelActivityStoreTests
         return (storageClass, value);
     }
 
-    private static string DatabasePath(string suffix)
+    internal static string DatabasePath(string suffix)
     {
         return Path.Combine(
             AppContext.BaseDirectory,

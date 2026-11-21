@@ -66,7 +66,30 @@ public sealed class PartyTaxProfileServiceTests
     }
 
     [Fact]
-    public async Task ABusinessCustomer_IsTaxedAsABusiness_WithTheirTaxId()
+    public async Task ABusinessCustomer_WithAVerifiedTaxId_IsTaxedAsABusiness_WithTheirTaxId()
+    {
+        var customers = new InMemoryCustomerStore();
+        customers.Customers.Add(new Customer { ItemId = "c1", Kind = CustomerKind.Business, CompanyName = "Fabrikam", TaxId = "DE123", TaxIdVerified = true });
+
+        var service = CreateService(
+            [new CustomerBillingProfileSource(customers)],
+            new CustomerPartyTaxProfileProvider(customers, new ServiceCollection().BuildServiceProvider()));
+
+        var profile = await service.GetAsync(new PartyRef(PartyKinds.Customer, "c1"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(CustomerTaxType.B2B, profile.CustomerType);
+        Assert.True(profile.TaxRegistrationVerified);
+        Assert.Equal("DE123", profile.TaxRegistrationNumber);
+        Assert.Equal("DE123", profile.VatNumber);
+        Assert.False(profile.IsTaxExempt);
+    }
+
+    /// <summary>
+    /// SEC-C4, carried into the party tax profile when PR #1319 merged main's #1331: a customer sets their own kind and
+    /// types their own number, so a business customer whose number the store never verified is taxed as a consumer.
+    /// </summary>
+    [Fact]
+    public async Task ABusinessCustomer_WithAnUnverifiedTaxId_IsTaxedAsAConsumer()
     {
         var customers = new InMemoryCustomerStore();
         customers.Customers.Add(new Customer { ItemId = "c1", Kind = CustomerKind.Business, CompanyName = "Fabrikam", TaxId = "DE123" });
@@ -77,10 +100,8 @@ public sealed class PartyTaxProfileServiceTests
 
         var profile = await service.GetAsync(new PartyRef(PartyKinds.Customer, "c1"), TestContext.Current.CancellationToken);
 
-        Assert.Equal(CustomerTaxType.B2B, profile.CustomerType);
-        Assert.Equal("DE123", profile.TaxRegistrationNumber);
-        Assert.Equal("DE123", profile.VatNumber);
-        Assert.False(profile.IsTaxExempt);
+        Assert.Equal(CustomerTaxType.B2C, profile.CustomerType);
+        Assert.False(profile.TaxRegistrationVerified);
     }
 
     [Fact]
@@ -110,6 +131,9 @@ public sealed class PartyTaxProfileServiceTests
         Assert.Equal(CustomerTaxType.B2B, profile.CustomerType);
         Assert.Equal("GB123456789", profile.TaxRegistrationNumber);
         Assert.Equal("GB123456789", profile.VatNumber);
+
+        // The store set the account's number up, so reverse charge may apply.
+        Assert.True(profile.TaxRegistrationVerified);
         Assert.False(profile.IsTaxExempt);
         Assert.Equal("Seattle", profile.BusinessAddress.City);
         Assert.Null(profile.ResidenceAddress);

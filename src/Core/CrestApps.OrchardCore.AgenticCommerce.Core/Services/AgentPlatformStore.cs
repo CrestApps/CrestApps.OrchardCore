@@ -46,4 +46,23 @@ public sealed class AgentPlatformStore : DocumentCatalog<AgentPlatform, AgentPla
         return Session.Query<AgentPlatform, AgentPlatformIndex>(index => index.ProfileUrl == profileUrl, collection: AgenticCommerceStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task<AgentPlatform> FindByProfileHostAsync(string host, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(host);
+
+        // The index keeps each profile's host in the same form (punycode, lower case, no trailing dot, which names the
+        // same host and HttpClient fetches alike), so a profile saved with capitals or in Unicode is found on every
+        // database, and another host that contains this one never matches.
+        host = AgentPlatformAddress.NormalizeHost(host);
+
+        if (host.Length == 0)
+        {
+            return null;
+        }
+
+        return await Session.Query<AgentPlatform, AgentPlatformIndex>(index => index.ProfileHost == host, collection: AgenticCommerceStorage.CollectionName)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }

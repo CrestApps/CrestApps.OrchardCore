@@ -1,0 +1,10 @@
+@using OrchardCore.DisplayManagement
+@model IShape
+
+<zone Name="Title">
+    <breadcrumb name="SubscriptionsSignup" title="@T["Sign up"]" />
+</zone>
+
+<div class="container my-4" style="max-width: 640px;">
+    @await DisplayAsync(Model)
+</div>

@@ -1,5 +1,8 @@
 @model InvoiceDetailViewModel
 
+@* The void question names the invoice and its form has a required reason, so it is asked with data-confirm (the crestapps-browser helpers), which escapes it and lets the browser check the field first. *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
 @{
     var invoice = Model.Invoice;
     var number = string.IsNullOrEmpty(invoice.Number) ? T["this draft"].Value : invoice.Number;
@@ -147,7 +150,7 @@
                     <input id="void-reason" name="reason" class="form-control" required maxlength="500" />
                 </div>
                 <button type="submit" class="btn btn-outline-danger"
-                        data-url-af="RemoveUrl" data-title="@T["Void invoice"]" data-message="@T["Void {0}? This can't be undone.", number]" data-ok-text="@T["Void"]" data-cancel-text="@T["Cancel"]">
+                        data-confirm-title="@T["Void invoice"]" data-confirm="@T["Void {0}? This can't be undone.", number]" data-confirm-ok="@T["Void"]" data-confirm-cancel="@T["Cancel"]">
                     @T["Void"]
                 </button>
             </form>

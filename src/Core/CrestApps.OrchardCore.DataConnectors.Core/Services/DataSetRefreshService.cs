@@ -150,7 +150,9 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
 
                 if (exception is DataConnectorException || timedOut || canceled)
                 {
-                    _logger.LogWarning("The refresh of the data set '{DataSet}' failed: {Error}", dataSet.Name, run.Error);
+                    // The exception goes to the log with its inner exception: the database's own message is kept there,
+                    // since the run's error, which people see, leaves it out.
+                    _logger.LogWarning(exception, "The refresh of the data set '{DataSet}' failed: {Error}", dataSet.Name, run.Error);
                 }
                 else
                 {

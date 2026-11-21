@@ -63,9 +63,10 @@
 			var checked = document.querySelector("input[name=\"checkout-payment-method\"]:checked");
 			var deferred = !!checked && checked.getAttribute("data-defers-payment") === "true";
 			var label = document.querySelector("#checkout-submit .checkout-submit-label");
-			if (label && config.deferredSubmitLabel) {
+			var deferredText = label && (label.getAttribute("data-deferred-text") || config.deferredSubmitLabel);
+			if (label && deferredText) {
 				if (!label.hasAttribute("data-default-text")) label.setAttribute("data-default-text", label.textContent);
-				label.textContent = deferred ? config.deferredSubmitLabel : label.getAttribute("data-default-text");
+				label.textContent = deferred ? deferredText : label.getAttribute("data-default-text");
 			}
 			var dueLabels = document.querySelectorAll("[data-checkout-due-label]");
 			for (var i = 0; i < dueLabels.length; i++) {
@@ -92,12 +93,19 @@
 			return {
 				ok: response.ok,
 				status: response.status,
+				retryAfter: Number(response.headers.get("Retry-After")) || 0,
 				payload
 			};
 		}
 		async function pollUntilSettled() {
 			for (var attempt = 0; attempt < config.maxStatusAttempts; attempt++) {
 				var result = await postJson(config.statusEndpoint, {});
+				if (result.status === 429) {
+					await new Promise(function(resolve) {
+						setTimeout(resolve, Math.max(result.retryAfter * 1e3, config.statusIntervalMs));
+					});
+					continue;
+				}
 				if (!result.ok) {
 					showError(result.payload && result.payload.errorMessage);
 					return false;

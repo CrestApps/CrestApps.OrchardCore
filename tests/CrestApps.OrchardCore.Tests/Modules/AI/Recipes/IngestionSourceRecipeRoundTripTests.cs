@@ -13,7 +13,9 @@ using CrestApps.OrchardCore.AI.FileSources.Recipes;
 using CrestApps.OrchardCore.AI.WebCrawlers.Deployments;
 using CrestApps.OrchardCore.AI.WebCrawlers.Recipes;
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Tests.Doubles;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -54,7 +56,7 @@ public sealed class IngestionSourceRecipeRoundTripTests
         source.Entries.Add(fileSource);
 
         var target = new InMemorySourceManager<FileSource>();
-        var step = new FileSourcesStep(target, ConnectorOptions(), RecipeRoundTrip.Localizer<FileSourcesStep>());
+        var step = FileSources(target);
 
         // Act
         var exported = await RecipeRoundTrip.ExportAsync(new FileSourcesDeploymentSource(source), new FileSourcesDeploymentStep());
@@ -87,13 +89,13 @@ public sealed class IngestionSourceRecipeRoundTripTests
         var target = new InMemorySourceManager<FileSource>();
         var stored = new FileSource { ItemId = SourceId, Source = FileSystemIngestionConnector.ConnectorName, DisplayText = "Policies" };
 
-        stored.Properties["FtpConnectionMetadata"] = new JsonObject { ["Host"] = "old.example.test", ["Password"] = "kept" };
+        stored.Properties["FtpConnectionMetadata"] = new JsonObject { ["Host"] = "ftp.example.test", ["Username"] = "deploy", ["Password"] = "kept" };
         target.Entries.Add(stored);
 
-        var step = new FileSourcesStep(target, ConnectorOptions(), RecipeRoundTrip.Localizer<FileSourcesStep>());
+        var step = FileSources(target);
         var recipe = JsonNode.Parse($$"""
             { "name": "FileSources", "Sources": [ { "ItemId": "{{SourceId}}", "Source": "{{FileSystemIngestionConnector.ConnectorName}}", "DisplayText": "Policies",
-              "Properties": { "FtpConnectionMetadata": { "Host": "new.example.test" } } } ] }
+              "Properties": { "FtpConnectionMetadata": { "Host": "FTP.example.test", "Username": "deploy", "ConnectTimeout": 5000 } } } ] }
             """).AsObject();
 
         // Act
@@ -104,8 +106,153 @@ public sealed class IngestionSourceRecipeRoundTripTests
 
         var metadata = JsonSerializerNode(Assert.Single(target.Entries).Properties["FtpConnectionMetadata"]);
 
-        Assert.Equal("new.example.test", metadata["Host"].GetValue<string>());
+        Assert.Equal(5000, metadata["ConnectTimeout"].GetValue<int>());
         Assert.Equal("kept", metadata["Password"].GetValue<string>());
+    }
+
+    /// <summary>
+    /// MD5 (fix verification, round 6): a recipe that kept the stored FTP or SFTP password also kept it when it pointed
+    /// the source at another server or account, which then received it with the next listing.
+    /// </summary>
+    [Theory]
+    [InlineData("FtpConnectionMetadata", "Host", "attacker.example.test")]
+    [InlineData("FtpConnectionMetadata", "Username", "root")]
+    [InlineData("FtpConnectionMetadata", "Port", 2121)]
+    [InlineData("SftpConnectionMetadata", "HostKeyFingerprint", "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8")]
+    public async Task FileSources_AnUpdateThatMovesTheConnection_DropsTheKeptSecrets(string metadataName, string member, object value)
+    {
+        // Arrange
+        var target = new InMemorySourceManager<FileSource>();
+        var stored = new FileSource { ItemId = SourceId, Source = FileSystemIngestionConnector.ConnectorName, DisplayText = "Policies" };
+
+        stored.Properties[metadataName] = new JsonObject
+        {
+            ["Host"] = "ftp.example.test",
+            ["Port"] = 21,
+            ["Username"] = "deploy",
+            ["HostKeyFingerprint"] = "SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU",
+            ["Password"] = "kept",
+            ["PrivateKey"] = "kept-key",
+        };
+        target.Entries.Add(stored);
+
+        var connection = JsonSerializerNode(stored.Properties[metadataName]);
+        connection.Remove("Password");
+        connection.Remove("PrivateKey");
+        connection[member] = JsonValue.Create(value);
+
+        var step = FileSources(target);
+        var recipe = new JsonObject
+        {
+            ["name"] = "FileSources",
+            ["Sources"] = new JsonArray(new JsonObject
+            {
+                ["ItemId"] = SourceId,
+                ["Source"] = FileSystemIngestionConnector.ConnectorName,
+                ["DisplayText"] = "Policies",
+                ["Properties"] = new JsonObject { [metadataName] = connection },
+            }),
+        };
+
+        // Act
+        var errors = await RecipeRoundTrip.RunAsync(step, recipe);
+
+        // Assert
+        Assert.Empty(errors);
+
+        var metadata = JsonSerializerNode(Assert.Single(target.Entries).Properties[metadataName]);
+
+        Assert.Null(metadata["Password"]);
+        Assert.Null(metadata["PrivateKey"]);
+    }
+
+    /// <summary>
+    /// Found while fixing F9 (third fix verification): the FileSources recipe step stored an FTP or SFTP password given in
+    /// clear text as it was given, while the source's editor, the API and the AIDataSource step protect it.
+    /// </summary>
+    [Theory]
+    [InlineData("FtpConnectionMetadata", "Password")]
+    [InlineData("SftpConnectionMetadata", "Password")]
+    [InlineData("SftpConnectionMetadata", "PrivateKeyPassphrase")]
+    public async Task FileSources_ANewSourceWithAPlainSecret_StoresItProtected(string metadataName, string member)
+    {
+        // Arrange
+        var target = new InMemorySourceManager<FileSource>();
+        var protection = new EphemeralDataProtectionProvider();
+        var secretOptions = FileSourceSecretOptions();
+        var step = FileSources(target, protection, secretOptions);
+        var recipe = Recipe(metadataName, new JsonObject { ["Host"] = "ftp.example.test", ["Username"] = "deploy", [member] = "plain-secret" });
+
+        // Act
+        var errors = await RecipeRoundTrip.RunAsync(step, recipe);
+
+        // Assert
+        Assert.Empty(errors);
+
+        var stored = JsonSerializerNode(Assert.Single(target.Entries).Properties[metadataName])[member].GetValue<string>();
+
+        Assert.NotEqual("plain-secret", stored);
+        Assert.Equal("plain-secret", protection.UnprotectSetting(secretOptions.GetPurpose(typeof(FileSource), metadataName), stored));
+    }
+
+    [Fact]
+    public async Task FileSources_AnUpdateWithAPlainSecret_StoresItProtected()
+    {
+        // Arrange
+        var target = new InMemorySourceManager<FileSource>();
+        var protection = new EphemeralDataProtectionProvider();
+        var secretOptions = FileSourceSecretOptions();
+        var purpose = secretOptions.GetPurpose(typeof(FileSource), "FtpConnectionMetadata");
+        var stored = new FileSource { ItemId = SourceId, Source = FileSystemIngestionConnector.ConnectorName, DisplayText = "Policies" };
+
+        stored.Properties["FtpConnectionMetadata"] = new JsonObject { ["Host"] = "ftp.example.test", ["Username"] = "deploy", ["Password"] = protection.ProtectSetting(purpose, "old") };
+        target.Entries.Add(stored);
+
+        var step = FileSources(target, protection, secretOptions);
+        var recipe = Recipe("FtpConnectionMetadata", new JsonObject { ["Host"] = "ftp.example.test", ["Username"] = "deploy", ["Password"] = "new-password" });
+
+        // Act
+        var errors = await RecipeRoundTrip.RunAsync(step, recipe);
+
+        // Assert
+        Assert.Empty(errors);
+
+        var password = JsonSerializerNode(Assert.Single(target.Entries).Properties["FtpConnectionMetadata"])["Password"].GetValue<string>();
+
+        Assert.Equal("new-password", protection.UnprotectSetting(purpose, password));
+    }
+
+    // A recipe is trusted, and one made on this site may carry the protected value, which is kept as it is.
+    [Fact]
+    public async Task FileSources_ASecretThatIsAlreadyProtected_IsKept()
+    {
+        // Arrange
+        var target = new InMemorySourceManager<FileSource>();
+        var protection = new EphemeralDataProtectionProvider();
+        var secretOptions = FileSourceSecretOptions();
+        var password = protection.ProtectSetting(secretOptions.GetPurpose(typeof(FileSource), "FtpConnectionMetadata"), "the-password");
+        var step = FileSources(target, protection, secretOptions);
+        var recipe = Recipe("FtpConnectionMetadata", new JsonObject { ["Host"] = "ftp.example.test", ["Password"] = password });
+
+        // Act
+        var errors = await RecipeRoundTrip.RunAsync(step, recipe);
+
+        // Assert
+        Assert.Empty(errors);
+        Assert.Equal(password, JsonSerializerNode(Assert.Single(target.Entries).Properties["FtpConnectionMetadata"])["Password"].GetValue<string>());
+    }
+
+    [Fact]
+    public void RecipeRule_ComparesUserNamesOnlyForAConnectionAddressedByHost()
+    {
+        // An HTTP connection is addressed by its URL: a new basic user name with the same URL keeps the password, as the
+        // connection editors keep it.
+        var dataSource = new AIDataSource();
+        dataSource.Properties["ElasticsearchSourceMetadata"] = new JsonObject { ["Url"] = "https://search.example.test/", ["Username"] = "reader", ["Password"] = "kept" };
+        var before = RecipeSecretDestinations.Snapshot(dataSource);
+        ((JsonObject)dataSource.Properties["ElasticsearchSourceMetadata"])["Username"] = "writer";
+
+        Assert.False(RecipeSecretDestinations.DropKeptSecrets(dataSource, before));
     }
 
     [Fact]
@@ -113,7 +260,7 @@ public sealed class IngestionSourceRecipeRoundTripTests
     {
         // Arrange
         var target = new InMemorySourceManager<FileSource>();
-        var step = new FileSourcesStep(target, ConnectorOptions(), RecipeRoundTrip.Localizer<FileSourcesStep>());
+        var step = FileSources(target);
         var recipe = JsonNode.Parse("""{ "name": "FileSources", "Sources": [ { "Source": "Dropbox", "DisplayText": "Shared" } ] }""").AsObject();
 
         // Act
@@ -144,7 +291,7 @@ public sealed class IngestionSourceRecipeRoundTripTests
 
         var target = new InMemorySourceManager<WebCrawler>();
         var strategies = StrategyOptions();
-        var step = new WebCrawlersStep(target, strategies, RecipeRoundTrip.Localizer<WebCrawlersStep>());
+        var step = new WebCrawlersStep(target, strategies, new EphemeralDataProtectionProvider(), Options.Create(new IngestionSourceSecretOptions()), RecipeRoundTrip.Localizer<WebCrawlersStep>());
 
         // Act
         var exported = await RecipeRoundTrip.ExportAsync(new WebCrawlersDeploymentSource(source, strategies), new WebCrawlersDeploymentStep());
@@ -172,7 +319,7 @@ public sealed class IngestionSourceRecipeRoundTripTests
 
         target.Entries.Add(new WebCrawler { ItemId = CrawlerId, Source = WebCrawlerConstants.Strategies.Sitemap, DisplayText = "Help center" });
 
-        var step = new WebCrawlersStep(target, StrategyOptions(), RecipeRoundTrip.Localizer<WebCrawlersStep>());
+        var step = new WebCrawlersStep(target, StrategyOptions(), new EphemeralDataProtectionProvider(), Options.Create(new IngestionSourceSecretOptions()), RecipeRoundTrip.Localizer<WebCrawlersStep>());
         var recipe = JsonNode.Parse($$"""
             { "name": "WebCrawlers", "Crawlers": [ { "Source": "{{WebCrawlerConstants.Strategies.Sitemap}}", "DisplayText": "help center", "ReindexIntervalMinutes": 30 } ] }
             """).AsObject();
@@ -194,6 +341,33 @@ public sealed class IngestionSourceRecipeRoundTripTests
     [InlineData("MaxTokens", false)]
     public void Secrets_AreFoundByName(string name, bool expected)
         => Assert.Equal(expected, IngestionSourceSecrets.IsSecret(name));
+
+    private static FileSourcesStep FileSources(ISourceCatalogManager<FileSource> target, IDataProtectionProvider protection = null, IngestionSourceSecretOptions secretOptions = null)
+        => new(target, ConnectorOptions(), protection ?? new EphemeralDataProtectionProvider(), Options.Create(secretOptions ?? new IngestionSourceSecretOptions()), RecipeRoundTrip.Localizer<FileSourcesStep>());
+
+    // The purposes the FTP and SFTP file source modules register for their connection settings.
+    private static IngestionSourceSecretOptions FileSourceSecretOptions()
+    {
+        var services = new ServiceCollection();
+
+        new CrestApps.OrchardCore.AI.FileSources.Ftp.Startup().ConfigureServices(services);
+        new CrestApps.OrchardCore.AI.FileSources.Sftp.Startup().ConfigureServices(services);
+
+        return services.BuildServiceProvider().GetRequiredService<IOptions<IngestionSourceSecretOptions>>().Value;
+    }
+
+    private static JsonObject Recipe(string metadataName, JsonObject connection)
+        => new()
+        {
+            ["name"] = "FileSources",
+            ["Sources"] = new JsonArray(new JsonObject
+            {
+                ["ItemId"] = SourceId,
+                ["Source"] = FileSystemIngestionConnector.ConnectorName,
+                ["DisplayText"] = "Policies",
+                ["Properties"] = new JsonObject { [metadataName] = connection },
+            }),
+        };
 
     private static JsonObject JsonSerializerNode(object value)
         => System.Text.Json.JsonSerializer.SerializeToNode(value, CatalogDeploymentSerializer.Options).AsObject();

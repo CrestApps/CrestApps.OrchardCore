@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CrestApps Accounts configuration",
+  "description": "The settings of the Accounts module read from appsettings.json, in the OrchardCore section of the host or a tenant.",
+  "type": "object",
+  "properties": {
+    "OrchardCore": {
+      "type": "object",
+      "properties": {
+        "CrestApps": {
+          "type": "object",
+          "properties": {
+            "Accounts": {
+              "type": "object",
+              "properties": {
+                "EmailDomains": {
+                  "type": "object",
+                  "description": "The e-mail domains accounts can't claim (the Account E-mail Domains feature).",
+                  "additionalProperties": false,
+                  "properties": {
+                    "PublicDomains": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": [],
+                      "description": "More public mail providers this tenant refuses, beside the built-in ones (gmail.com, outlook.com...), such as a regional provider."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

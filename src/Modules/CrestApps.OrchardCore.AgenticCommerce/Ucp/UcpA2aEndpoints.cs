@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -24,14 +25,14 @@ public static class UcpA2aEndpoints
     {
         routes.MapGet(UcpA2a.AgentCardRoute, AgentCardAsync)
             .AllowAnonymous()
-            .WithName("UcpA2aAgentCard");
+            .WithName("UcpA2aAgentCard").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
 
         routes.MapPost(UcpA2a.Route, (HttpContext httpContext, UcpA2aMessageHandler handler) => handler.HandleAsync(httpContext))
             .AllowAnonymous()
             .DisableAntiforgery()
             .WithMetadata(UcpJsonRpc.Errors)
             .AddEndpointFilter<UcpRequestFilter>()
-            .WithName("UcpA2a");
+            .WithName("UcpA2a").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
 
         return routes;
     }

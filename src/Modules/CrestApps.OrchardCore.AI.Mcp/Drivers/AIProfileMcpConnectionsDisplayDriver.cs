@@ -82,6 +82,6 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
 
         profile.Put(metadata);
 
-        return Edit(profile, context);
+        return await EditAsync(profile, context);
     }
 }

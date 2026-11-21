@@ -4,6 +4,7 @@ using CrestApps.Core.AI.WebCrawlers.Strategies;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Recipes;
 using CrestApps.OrchardCore.AI.WebCrawlers.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 
@@ -33,8 +34,10 @@ internal sealed class WebCrawlersStep : IngestionSourceRecipeStep<WebCrawler>
     public WebCrawlersStep(
         ISourceCatalogManager<WebCrawler> manager,
         IOptions<WebCrawlerStrategyOptions> strategyOptions,
+        IDataProtectionProvider dataProtectionProvider,
+        IOptions<IngestionSourceSecretOptions> secretOptions,
         IStringLocalizer<WebCrawlersStep> stringLocalizer)
-        : base(StepKey, EntriesName, manager)
+        : base(StepKey, EntriesName, manager, dataProtectionProvider, secretOptions)
     {
         _strategyOptions = strategyOptions.Value;
         S = stringLocalizer;

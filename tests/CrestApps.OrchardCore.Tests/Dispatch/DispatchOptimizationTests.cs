@@ -147,6 +147,11 @@ public sealed class DispatchOptimizationTests
         kit.Now = DispatchKit.Monday(9, 30);
 
         var enRoute = await kit.MoveAsync(visit, VisitStatus.EnRoute);
+
+        // The time-limited protector also checks a token's expiry against the system clock, so the scenario's
+        // clock moves to now before the link is made; the notices above keep the scenario's date.
+        kit.Now = DateTime.UtcNow;
+
         var token = await kit.Harness.RunAsync(async services => services.GetRequiredService<IVisitTrackingLinks>().CreateToken(await services.GetRequiredService<IDispatchService>().FindAsync(visit.ItemId)), commit: false);
         var tracked = await kit.Harness.RunAsync(services => services.GetRequiredService<IVisitTrackingLinks>().ReadAsync(token), commit: false);
 

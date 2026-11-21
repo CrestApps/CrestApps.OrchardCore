@@ -1,0 +1,11 @@
+@model ShapeViewModel<HierarchyChildListItem>
+
+@{
+    var child = Model.Value.Child;
+}
+
+<div class="admin-list-secondary text-muted text-break">@child.Settings.Name</div>
+@foreach (var warning in child.Warnings)
+{
+    <div class="admin-list-secondary text-warning-emphasis"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@warning</div>
+}

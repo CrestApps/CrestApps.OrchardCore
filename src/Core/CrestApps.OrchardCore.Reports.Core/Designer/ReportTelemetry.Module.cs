@@ -99,7 +99,7 @@ public static partial class ReportTelemetry
     /// Gets the counter of report subscription runs, tagged with the <see cref="CrestAppsOrchardCoreTelemetry.TriggerTag"/>,
     /// the outcome (<c>ok</c>, <c>skipped</c> or <c>error</c>) and the <see cref="CrestAppsOrchardCoreTelemetry.ReasonTag"/>
     /// of a run that sent nothing: <c>no_email</c>, <c>no_recipients</c>, <c>report_unavailable</c>,
-    /// <c>export_denied</c>, <c>send_failed</c> or <c>exception</c>.
+    /// <c>view_denied</c>, <c>export_denied</c>, <c>send_failed</c> or <c>exception</c>.
     /// </summary>
     public static Counter<long> SubscriptionSends { get; } = ReportTelemetrySource.Meter.CreateCounter<long>(
         "crestapps.report.subscription.sends",

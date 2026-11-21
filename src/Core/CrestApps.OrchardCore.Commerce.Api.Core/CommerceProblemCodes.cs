@@ -20,4 +20,10 @@ public static class CommerceProblemCodes
     /// The invoice changed since the caller read it.
     /// </summary>
     public const string InvoiceChanged = "invoice-changed";
+
+    /// <summary>
+    /// A payment begun for the old total can't be canceled at the provider (it was taken, or the provider refused), so
+    /// the change that would alter the total is refused.
+    /// </summary>
+    public const string PaymentInProgress = "payment-in-progress";
 }

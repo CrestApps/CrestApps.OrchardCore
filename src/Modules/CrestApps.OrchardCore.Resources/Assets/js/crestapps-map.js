@@ -41,6 +41,20 @@ window.crestappsMap = (function () {
         return map;
     };
 
+    // Leaflet sets a string popup or tooltip with innerHTML, so a label is never handed to it as a string: a string is
+    // text (a work-order summary or a territory name can carry markup), and a caller that wants a link or a line break
+    // builds the element itself and passes it.
+    const content = (label) => {
+        if (label && typeof label === 'object' && label.nodeType) {
+            return label;
+        }
+
+        const node = document.createElement('span');
+        node.textContent = String(label);
+
+        return node;
+    };
+
     const parse = (text) => {
         if (!text || !text.trim()) {
             return null;
@@ -53,7 +67,7 @@ window.crestappsMap = (function () {
         }
     };
 
-    // Shows GeoJSON shapes, each with an optional popup, and fits the map to them.
+    // Shows GeoJSON shapes, each with an optional tooltip (text, or an element), and fits the map to them.
     const showShapes = (map, shapes, style) => {
         const group = L.featureGroup().addTo(map);
 
@@ -68,7 +82,7 @@ window.crestappsMap = (function () {
             const layer = L.geoJSON(geoJson, { pmIgnore: true, style: Object.assign({ weight: 2, fillOpacity: 0.15 }, style || {}, shape.style || {}) });
 
             if (shape.label) {
-                layer.bindTooltip(shape.label, { sticky: true });
+                layer.bindTooltip(content(shape.label), { sticky: true });
             }
 
             group.addLayer(layer);
@@ -81,7 +95,8 @@ window.crestappsMap = (function () {
         return group;
     };
 
-    // Adds markers ({ latitude, longitude, label }) and, unless options.fit is false, fits the map to them.
+    // Adds markers ({ latitude, longitude, label }) and, unless options.fit is false, fits the map to them. The label is
+    // text, or an element the caller built.
     const addMarkers = (map, markers, options) => {
         const group = typeof L.markerClusterGroup === 'function' ? L.markerClusterGroup() : L.featureGroup();
 
@@ -89,7 +104,7 @@ window.crestappsMap = (function () {
             const layer = L.marker([marker.latitude, marker.longitude]);
 
             if (marker.label) {
-                layer.bindPopup(marker.label);
+                layer.bindPopup(content(marker.label));
             }
 
             group.addLayer(layer);

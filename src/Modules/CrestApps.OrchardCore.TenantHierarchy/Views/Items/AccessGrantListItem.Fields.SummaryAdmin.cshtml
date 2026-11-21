@@ -1,0 +1,15 @@
+@model ShapeViewModel<AccessGrantListItem>
+
+@{
+    var grant = Model.Value.Grant;
+}
+
+@* Who in the parent the rule is for, as plain text: a rule has no edit page. *@
+@if (grant.PrincipalType == AccessGrantPrincipalType.Role)
+{
+    <span><i class="fa-solid fa-users fa-fw text-muted me-1" aria-hidden="true"></i>@T["Everyone with the <strong>{0}</strong> role", grant.PrincipalName]</span>
+}
+else
+{
+    <span class="text-break"><i class="fa-solid fa-user fa-fw text-muted me-1" aria-hidden="true"></i>@grant.PrincipalName</span>
+}

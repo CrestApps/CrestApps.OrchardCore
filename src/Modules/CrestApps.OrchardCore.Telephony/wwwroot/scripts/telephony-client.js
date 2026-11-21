@@ -54,8 +54,13 @@
 		return international ? formatInternationalNumber(digits) : digits;
 	}
 	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
+	function escapeHtml(value) {
+		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/telephony-client.js
-	(function(window, document) {
+	(function(window) {
 		"use strict";
 		var CALL_STATE_NAMES = [
 			"Idle",
@@ -66,11 +71,6 @@
 			"Disconnected",
 			"Failed"
 		];
-		function escapeHtml(value) {
-			var node = document.createElement("div");
-			node.textContent = value == null ? "" : String(value);
-			return node.innerHTML;
-		}
 		function normalizeCallState(state) {
 			if (typeof state === "number") return CALL_STATE_NAMES[state] || "Idle";
 			if (typeof state === "string" && state.length) return state;
@@ -83,6 +83,6 @@
 			formatPhoneNumber,
 			normalizeCallState
 		};
-	})(window, document);
+	})(window);
 	//#endregion
 })();

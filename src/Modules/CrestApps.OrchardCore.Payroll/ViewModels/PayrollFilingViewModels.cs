@@ -16,6 +16,10 @@ public class PayrollLiabilitiesViewModel
 
     public TaxDepositViewModel NewDeposit { get; set; } = new();
 
+    // The employer's currency, when known, which sets the deposit amount's step.
+    [BindNever]
+    public string Currency { get; set; }
+
     [BindNever]
     public IList<SelectListItem> Employers { get; set; } = [];
 
@@ -47,7 +51,8 @@ public class TaxDepositViewModel
 
     public DateOnly? PeriodEnd { get; set; }
 
-    public string Amount { get; set; }
+    // Bound by the invariant number binder; null when empty or unreadable.
+    public decimal? Amount { get; set; }
 
     public DateOnly? PaidOn { get; set; }
 

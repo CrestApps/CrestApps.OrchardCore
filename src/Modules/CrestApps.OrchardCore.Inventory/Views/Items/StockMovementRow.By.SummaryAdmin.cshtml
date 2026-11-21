@@ -1,0 +1,3 @@
+@model ShapeViewModel<StockMovementRow>
+
+<span class="badge ta-badge fw-normal" title="@T["By"]"><i class="fa-solid fa-user text-info" aria-hidden="true"></i> @(Model.Value.Movement.ActorName ?? T["The store"].Value)</span>

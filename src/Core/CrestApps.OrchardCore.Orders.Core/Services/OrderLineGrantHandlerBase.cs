@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using OrchardCore.ContentManagement;
 
@@ -47,6 +48,13 @@ public abstract class OrderLineGrantHandlerBase<TPart> : OrderGrantHandlerBase
             var item = await _contentManager.GetPurchasedAsync(line);
 
             if (item is null || !item.TryGet<TPart>(out var part))
+            {
+                continue;
+            }
+
+            // Paid by a promise (Pay Later, a bank transfer): what delivers instantly waits for the money, unless the
+            // product is set to be delivered before payment.
+            if (!order.IsPaymentCollected && !(item.TryGet<ProductPart>(out var product) && product.DeliverBeforePayment))
             {
                 continue;
             }

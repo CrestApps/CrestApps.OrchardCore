@@ -1,4 +1,3 @@
-using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Invoicing.Core;
 using CrestApps.OrchardCore.Invoicing.Core.Services;
@@ -346,7 +345,7 @@ public sealed class CreditNotesAdminController : Controller
     {
         foreach (var error in errors)
         {
-            await _notifier.WarningAsync(new LocalizedHtmlString(error, HtmlEncoder.Default.Encode(error)));
+            await _notifier.WarningAsync(new LocalizedHtmlString(error, "{0}", false, error));
         }
     }
 }

@@ -1,9 +1,9 @@
-using System.Globalization;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
@@ -81,6 +81,7 @@ public sealed class PayrollFilingsController : Controller
             EmployerId = employer?.ItemId,
             Year = chosenYear,
             Employers = Options(employers, employer?.ItemId),
+            Currency = employer?.Currency,
             Periods = periods,
             Deposits = deposits,
             PeriodList = new AdminListContext<TaxLiabilityPeriod> { Source = periods },
@@ -102,6 +103,14 @@ public sealed class PayrollFilingsController : Controller
             return Forbid();
         }
 
+        // An amount that can't be read is refused as such, never recorded as 0 or another number.
+        if (ModelState.GetFieldValidationState(nameof(PayrollLiabilitiesViewModel.NewDeposit) + "." + nameof(model.Amount)) == ModelValidationState.Invalid)
+        {
+            await _notifier.ErrorAsync(H["Enter the amount as a number, such as 1250.00."]);
+
+            return RedirectToAction(nameof(Liabilities), new { employerId = employer.ItemId });
+        }
+
         var deposit = await _deposits.NewAsync();
 
         deposit.EmployerId = employer.ItemId;
@@ -109,7 +118,7 @@ public sealed class PayrollFilingsController : Controller
         deposit.Group = model.Group is TaxLiabilityGroups.Unemployment or TaxLiabilityGroups.NonPayrollWithholding ? model.Group : TaxLiabilityGroups.Withholding;
         deposit.PeriodStart = model.PeriodStart ?? default;
         deposit.PeriodEnd = model.PeriodEnd ?? default;
-        deposit.Amount = decimal.TryParse(model.Amount?.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var amount) ? amount : 0;
+        deposit.Amount = model.Amount ?? 0;
         deposit.PaidOn = model.PaidOn ?? default;
         deposit.Reference = string.IsNullOrWhiteSpace(model.Reference) ? null : model.Reference.Trim();
         deposit.RecordedBy = User.Identity?.Name;

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
@@ -170,16 +171,14 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
             }
         }
 
-        var selectedToolKeys = model.PostSessionTools?.Values?.SelectMany(x => x)?.Where(x => x.IsSelected).Select(x => x.ItemId);
+        var selectedToolKeys = model.PostSessionTools?.Values?.SelectMany(x => x)?.Where(x => x.IsSelected).Select(x => x.ItemId) ?? [];
 
-        var toolNames = Array.Empty<string>();
-
-        if (selectedToolKeys is not null && selectedToolKeys.Any())
-        {
-            toolNames = _toolDefinitions.GetSelectableTools().Keys
-                .Intersect(selectedToolKeys)
-                .ToArray();
-        }
+        // Filtered on save as on render; tools already on the template that the user can't see are kept.
+        var toolNames = await AIToolSelectionFilter.FilterAsync(
+            selectedToolKeys,
+            template.GetOrCreate<AIProfilePostSessionSettings>().ToolNames,
+            _toolDefinitions.GetSelectableTools().Keys,
+            tool => _toolAccessEvaluator.IsAuthorizedAsync(_httpContextAccessor.HttpContext?.User, tool));
 
         var toolInstanceNames = await GetSelectedInstanceNamesAsync(model);
 

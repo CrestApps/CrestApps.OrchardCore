@@ -52,33 +52,12 @@ public class TenantProvisioningStepViewModel
     public bool HasPassword { get; set; }
 
     /// <summary>
-    /// Gets or sets the chosen site template.
+    /// Gets or sets a value indicating whether the buyer may choose the URL prefix; otherwise it is the site name.
     /// </summary>
-    public string RecipeName { get; set; }
+    public bool AllowCustomPrefix { get; set; }
 
     /// <summary>
-    /// Gets or sets the site templates on offer.
+    /// Gets or sets a value indicating whether the buyer may name domains of their own.
     /// </summary>
-    public IList<TenantRecipeOption> Recipes { get; set; } = [];
-}
-
-/// <summary>
-/// One site template a customer can choose.
-/// </summary>
-public sealed class TenantRecipeOption
-{
-    /// <summary>
-    /// Gets or sets the recipe name.
-    /// </summary>
-    public string Name { get; set; }
-
-    /// <summary>
-    /// Gets or sets the name shown to the customer.
-    /// </summary>
-    public string DisplayName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the description shown to the customer.
-    /// </summary>
-    public string Description { get; set; }
+    public bool AllowCustomDomains { get; set; }
 }

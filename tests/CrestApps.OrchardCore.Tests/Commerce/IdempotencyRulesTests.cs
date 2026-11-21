@@ -115,8 +115,9 @@ public sealed class IdempotencyRulesTests
         var requestKey = IdempotencyEndpointFilter.GetCacheKey(context, "key-1");
         var operationKey = IdempotentOperation.GetCacheKey("scope", "key-1");
 
-        // Assert: answers kept before an upgrade are still found, and apps keep their route, scheme and headers.
-        Assert.Equal("commerce-api-idempotency:" + Hash("|POST|/api/commerce/v1/cart/checkout|cart-1|key-1"), requestKey);
+        // Assert: the key keeps its prefix, with each kind of caller in a scope of its own (a guest's token never shares a
+        // user's scope), and apps keep their route, scheme and headers.
+        Assert.Equal("commerce-api-idempotency:" + Hash("|POST|/api/commerce/v1/cart/checkout|guest:cart-1|key-1"), requestKey);
         Assert.Equal("commerce-idempotent-operation:" + Hash("scope|key-1"), operationKey);
         Assert.Equal("api/commerce/v1", CommerceApi.RoutePrefix);
         Assert.Equal("Api", CommerceApi.AuthenticationScheme);

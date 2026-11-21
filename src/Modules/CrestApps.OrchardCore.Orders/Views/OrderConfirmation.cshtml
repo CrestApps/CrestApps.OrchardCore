@@ -28,23 +28,12 @@
     <div class="card mb-4">
         <div class="card-body">
             <h2 class="h6 mb-1">@T["Save your details for next time"]</h2>
-            <p class="small text-muted mb-3">@T["Choose a password to make an account with {0}. This order goes into it, and next time you check out faster.", Model.Email]</p>
-            <form action="@Url.RouteUrl("OrderCreateAccount")" method="post" class="row g-2 align-items-end">
+            <p class="small text-muted mb-3">@T["Make an account with {0}. We'll email that address a link to choose your password; this order goes into the account then, and next time you check out faster.", Model.Email]</p>
+            <form action="@Url.RouteUrl("OrderCreateAccount")" method="post" class="no-multisubmit">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="Token" value="@Model.AccountToken" />
                 <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-                <input type="text" name="username" value="@Model.Email" autocomplete="username" hidden />
-                <div class="col-sm">
-                    <label for="order-account-password" class="form-label small ocat-label-required">@T["Password"]</label>
-                    <input id="order-account-password" name="Password" type="password" class="form-control" autocomplete="new-password" data-account-password required />
-                </div>
-                <div class="col-sm">
-                    <label for="order-account-confirm" class="form-label small ocat-label-required">@T["Confirm password"]</label>
-                    <input id="order-account-confirm" name="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" data-account-password required />
-                </div>
-                <div class="col-sm-auto">
-                    <button type="submit" class="btn btn-primary w-100 px-4">@T["Create account"]</button>
-                </div>
+                <button type="submit" class="btn btn-primary px-4">@T["Create account"]</button>
             </form>
         </div>
     </div>

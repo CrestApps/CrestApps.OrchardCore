@@ -31,7 +31,7 @@ namespace CrestApps.OrchardCore.ContentTransfer.BackgroundTasks;
     Description = "Regularly check for imported files and process them, and resume imports that a restart interrupted.",
     LockTimeout = 3_000,
     LockExpiration = 30_000)]
-public sealed class ImportFilesBackgroundTask : IBackgroundTask
+public sealed partial class ImportFilesBackgroundTask : IBackgroundTask
 {
     private static readonly TimeSpan _importLockTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan _importLockExpiration = TimeSpan.FromMinutes(30);
@@ -1152,60 +1152,19 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             return definition;
         }
 
-        if (existingRows.Count > 0)
-        {
-            var existingContentItems = (await contentManager.GetAsync(existingRows.Keys, VersionOptions.DraftRequired))
-                .ToDictionary(x => x.ContentItemId);
-
-            foreach (var existingRow in existingRows)
-            {
-                monitor.BeginRow(existingRow.Value.Key);
-
-                try
-                {
-                    var rowDefinition = await RowDefinitionAsync(existingRow.Value.Key, existingRow.Value.Value);
-
-                    if (rowDefinition is null)
-                    {
-                        continue;
-                    }
-
-                    var isNew = false;
-
-                    if (!existingContentItems.TryGetValue(existingRow.Key, out var contentItem))
-                    {
-                        contentItem = await contentManager.NewAsync(rowDefinition.Name);
-                        isNew = true;
-                    }
-                    else if (!string.Equals(contentItem.ContentType, rowDefinition.Name, StringComparison.Ordinal))
-                    {
-                        // The handlers of one type would write their parts onto an item of another.
-                        AddRowError(progressPart, existingRow.Value.Key, localizer["The content item '{0}' is a '{1}', not a '{2}'.", existingRow.Key, contentItem.ContentType, rowDefinition.Name], localizer["Did not pass validation"]);
-                        runTelemetry.AddError(ContentTransferDiagnostics.ReasonValidation);
-
-                        continue;
-                    }
-
-                    await ProcessRowAsync(
-                        entry,
-                        contentItem,
-                        existingRow.Value.Key,
-                        existingRow.Value.Value,
-                        dataTable.Columns,
-                        rowDefinition,
-                        contentManager,
-                        contentImportManager,
-                        progressPart,
-                        localizer,
-                        runTelemetry,
-                        isNew);
-                }
-                finally
-                {
-                    monitor.EndRow();
-                }
-            }
-        }
+        // A row that names an item is checked against the type its own row names before the item is changed.
+        await ImportExistingRowsAsync(
+            entry,
+            dataTable,
+            existingRows,
+            contentTypeDefinition,
+            contentManager,
+            contentImportManager,
+            progressPart,
+            monitor,
+            localizer,
+            runTelemetry,
+            RowDefinitionAsync);
 
         foreach (var record in newRecords)
         {
@@ -1377,6 +1336,33 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             ? null
             : value;
 
+    /// <summary>
+    /// Whether an existing item an import row names is of the content type the import is for.
+    /// </summary>
+    internal static bool IsSameContentType(ContentItem contentItem, ContentTransferEntry entry)
+        => string.Equals(contentItem?.ContentType, entry?.ContentType, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Whether an existing item an import row names is of the content type that row is imported as.
+    /// </summary>
+    internal static bool IsSameContentType(ContentItem contentItem, string contentType)
+        => string.Equals(contentItem?.ContentType, contentType, StringComparison.Ordinal);
+
+    /// <summary>
+    /// A new item belongs to the uploader. An item that already exists keeps its owner and author: an import that
+    /// updates it must not take it over.
+    /// </summary>
+    internal static void ApplyOwnership(ContentItem contentItem, ContentTransferEntry entry, bool isNew)
+    {
+        if (!isNew)
+        {
+            return;
+        }
+
+        contentItem.Owner = entry.Owner;
+        contentItem.Author = entry.Author;
+    }
+
     internal static string GetImportContentItemId(DataRow dataRow, int indexOfKeyColumn)
         => indexOfKeyColumn > -1
             ? dataRow[indexOfKeyColumn]?.ToString()?.Trim()
@@ -1429,8 +1415,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 return;
             }
 
-            mapContext.ContentItem.Owner = entry.Owner;
-            mapContext.ContentItem.Author = entry.Author;
+            ApplyOwnership(mapContext.ContentItem, entry, isNew);
 
             if (isNew)
             {

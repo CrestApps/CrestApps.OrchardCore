@@ -109,7 +109,10 @@ public sealed class SalesSummaryPartDisplayDriver : ContentPartDisplayDriver<Sal
         var now = _clock.UtcNow;
         var site = await _siteService.GetSiteSettingsAsync();
         var timeZone = !string.IsNullOrEmpty(site.TimeZoneId) && TimeZoneInfo.TryFindSystemTimeZoneById(site.TimeZoneId, out var zone) ? zone : TimeZoneInfo.Utc;
+        // Listed in DuplicatePatternRatchetTests: move to CalendarTime, which also handles a zone that skips midnight.
+#pragma warning disable RS0030
         var today = TimeZoneInfo.ConvertTimeToUtc(TimeZoneInfo.ConvertTimeFromUtc(now, timeZone).Date, timeZone);
+#pragma warning restore RS0030
         var currency = (await _siteService.GetSettingsAsync<Checkout.Models.CheckoutSettings>()).Currency;
 
         model.Currency = currency;

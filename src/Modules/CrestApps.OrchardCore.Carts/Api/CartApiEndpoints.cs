@@ -26,6 +26,7 @@ internal static class CartApiEndpoints
 
         group.MapGet("cart", GetAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CartConstants.RateLimitGroup)
             .WithName("GetCart")
             .WithSummary("Gets the caller's cart, priced now. A caller without one gets an empty cart.");
 
@@ -54,6 +55,7 @@ internal static class CartApiEndpoints
 
         group.MapDelete("cart", ClearAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CartConstants.RateLimitGroup)
             .WithName("DeleteCart")
             .WithSummary("Deletes the caller's cart.");
 

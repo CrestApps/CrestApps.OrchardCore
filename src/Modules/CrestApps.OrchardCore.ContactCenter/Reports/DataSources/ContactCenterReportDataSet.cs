@@ -30,6 +30,8 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : RecordDataSe
     // than the record never falls outside a bound the record itself is inside. The consumer filters every row again.
     private static readonly TimeSpan _boundSlack = TimeSpan.FromSeconds(1);
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> _restrictsRows = new();
+
     // YesSql's IN operator, found from a sample expression so it can be applied to any key column.
     private static readonly MethodInfo _isIn = ((MethodCallExpression)((Expression<Func<string, bool>>)(value => value.IsIn(Array.Empty<string>()))).Body).Method;
 
@@ -130,6 +132,14 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : RecordDataSe
     {
         var restrict = await RestrictAsync(query.Context, cancellationToken);
 
+        if (_restrictsRows.GetOrAdd(GetType(), static type => ReportRowScope.Overrides(type, nameof(RestrictAsync))))
+        {
+            // The rows depend on the reader (shared voicemails are narrowed to the reader's queues), so a stored result
+            // of this read belongs to this reader only. An all-queues reader is marked too: the stored rows would
+            // otherwise reach a reader limited to one queue.
+            ReportRowScope.MarkRestricted(query.Context);
+        }
+
         if (restrict is null)
         {
             yield break;
@@ -218,7 +228,8 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : RecordDataSe
 
     /// <summary>
     /// Decides which records the principal may read, when the data set's permission alone does not decide it. The
-    /// default reads every record.
+    /// default reads every record. A data set that overrides it is treated as returning rows that depend on the reader:
+    /// a scheduled report view keeps a stored result of it for its owner only.
     /// </summary>
     /// <param name="context">The context of the run.</param>
     /// <param name="cancellationToken">The cancellation token.</param>

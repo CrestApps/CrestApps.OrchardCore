@@ -1,0 +1,11 @@
+@model ShapeViewModel<ChildFeatureListItem>
+
+@{
+    var feature = Model.Value.Feature;
+}
+
+@if (!string.IsNullOrEmpty(feature.Description))
+{
+    <div class="admin-list-secondary text-break">@feature.Description</div>
+}
+<div class="admin-list-secondary"><code>@feature.Id</code></div>

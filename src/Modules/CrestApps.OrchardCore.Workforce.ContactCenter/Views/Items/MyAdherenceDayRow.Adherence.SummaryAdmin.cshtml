@@ -1,0 +1,8 @@
+@model ShapeViewModel<MyAdherenceDayRow>
+
+@{
+    var adherence = Model.Value.Day.Adherence;
+    var color = adherence is >= 0.9 ? "text-success" : adherence is >= 0.8 ? "text-warning" : "text-danger";
+}
+
+<span class="badge ta-badge fw-normal" title="@T["Adherence"]"><i class="fa-solid fa-circle @color" aria-hidden="true"></i> @T["Adherence {0}", adherence is { } value ? value.ToString("P0", CultureInfo.CurrentCulture) : "–"]</span>

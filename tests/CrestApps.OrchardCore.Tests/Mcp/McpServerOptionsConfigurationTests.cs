@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using OrchardCore.Environment.Shell.Configuration;
 
@@ -9,6 +10,42 @@ namespace CrestApps.OrchardCore.Tests.Mcp;
 
 public sealed class McpServerOptionsConfigurationTests
 {
+    private static readonly EphemeralDataProtectionProvider _dataProtection = new();
+
+    // SEC-A20 e: the MCP server API key was stored in clear text in site settings.
+    [Fact]
+    public void Configure_ReadsTheProtectedApiKey()
+    {
+        var stored = McpServerApiKeyProtection.Apply(_dataProtection, stored: null, posted: "mcp-key-123");
+
+        var options = Configure(new McpServerSettings { ApiKey = stored }, []);
+
+        Assert.NotEqual("mcp-key-123", stored);
+        Assert.Equal("mcp-key-123", options.ApiKey);
+    }
+
+    [Fact]
+    public void Configure_StillReadsAKeyStoredBeforeItWasProtected()
+    {
+        var options = Configure(new McpServerSettings { ApiKey = "legacy-key" }, []);
+
+        Assert.Equal("legacy-key", options.ApiKey);
+    }
+
+    /// <summary>
+    /// A key protected with keys the site no longer has (a lost key ring) can't be read. Its ciphertext must not become
+    /// the accepted key: the server then has no key until one is entered again.
+    /// </summary>
+    [Fact]
+    public void Configure_AKeyProtectedWithLostKeys_IsNotAccepted()
+    {
+        var stored = McpServerApiKeyProtection.Apply(new EphemeralDataProtectionProvider(), stored: null, posted: "mcp-key-123");
+
+        var options = Configure(new McpServerSettings { ApiKey = stored }, []);
+
+        Assert.Null(options.ApiKey);
+    }
+
     [Fact]
     public void Configure_DefaultsAuthenticationTypeToOpenId_WhenNotConfigured()
     {
@@ -102,7 +139,8 @@ public sealed class McpServerOptionsConfigurationTests
 
         new McpServerOptionsConfiguration(
             SiteServiceFactory.Create(settings),
-            new MockShellConfiguration(configuration)).Configure(options);
+            new MockShellConfiguration(configuration),
+            _dataProtection).Configure(options);
 
         return options;
     }

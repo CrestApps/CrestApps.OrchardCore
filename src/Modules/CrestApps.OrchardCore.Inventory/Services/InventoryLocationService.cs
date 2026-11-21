@@ -41,6 +41,7 @@ public sealed class InventoryLocationService : IInventoryLocationService, IFulfi
                 Address = location.Address,
                 OwnerKind = location.OwnerKind,
                 OwnerId = location.OwnerId,
+                ShowToShoppers = location.ShowToShoppers,
             })
             .ToList();
         var known = locations.Select(location => location.LocationId).ToHashSet(StringComparer.Ordinal);

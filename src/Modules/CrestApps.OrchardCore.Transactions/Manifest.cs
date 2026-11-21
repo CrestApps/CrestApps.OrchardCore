@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Receipts.Core;
+using CrestApps.OrchardCore.Resources;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
@@ -23,6 +24,9 @@ using OrchardCore.Modules.Manifest;
 
         // Registers the display-name provider the transaction list and the ledger commands use to name people.
         UsersConstants.Feature.Area,
+
+        // The crestapps-browser helpers that ask before a payment is recorded, an amount adjusted or a refund sent.
+        ResourcesConstants.Feature.Area,
     ]
 )]
 

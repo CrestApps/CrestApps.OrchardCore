@@ -176,9 +176,36 @@ public sealed class RelationalDataConnectorTests : IDisposable
         Assert.Throws<DataConnectorException>(() => RelationalDataConnector.ValidateQuery(query));
     }
 
+    // SEC-A11: SQL Server and PostgreSQL nest block comments, so a validator that ends a comment at the first "*/" sees
+    // a quote the database treats as comment text, and hides from itself the statements that follow. Comments are
+    // refused outright.
+    [Theory]
+    [InlineData("SELECT 1 /* /* */ ' */ ) AS q; DELETE FROM t; SELECT * FROM (SELECT '")]
+    [InlineData("SELECT 1 /* nested /* comment */ still comment */ FROM t")]
+    [InlineData("SELECT * FROM t /* ; ) */")]
+    [InlineData("SELECT /**/ 1")]
+    public void ValidateQuery_RefusesBlockComments(string query)
+    {
+        Assert.Throws<DataConnectorException>(() => RelationalDataConnector.ValidateQuery(query));
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenTheDatabaseRefusesTheQuery_DoesNotRepeatTheDatabasesMessage()
+    {
+        var dataSet = DataConnectorTestData.DataSet();
+        dataSet.Resource = null;
+        dataSet.Put(new RelationalDataSetSettings { Query = "SELECT secret_column FROM NoSuchTable" });
+        var context = new DataConnectorReadContext(DataConnectorTestData.Connection(), new FakeSecrets(), dataSet);
+
+        var exception = await Assert.ThrowsAsync<DataConnectorException>(() => ReadAsync(context));
+
+        Assert.DoesNotContain("NoSuchTable", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsAssignableFrom<DbException>(exception.InnerException);
+    }
+
     [Theory]
     [InlineData("SELECT * FROM t;", "SELECT * FROM t")]
-    [InlineData("SELECT 'a;b)' AS x, [weird;)name] FROM t /* ; ) */", "SELECT 'a;b)' AS x, [weird;)name] FROM t /* ; ) */")]
+    [InlineData("SELECT 'a;b)' AS x, [weird;)name] FROM t", "SELECT 'a;b)' AS x, [weird;)name] FROM t")]
     [InlineData("select it's = 'it''s' from t", null)]
     [InlineData("SELECT*FROM t", "SELECT*FROM t")]
     public void ValidateQuery_AcceptsASingleSelect_WithSeparatorsInsideQuotesAndComments(string query, string expected)

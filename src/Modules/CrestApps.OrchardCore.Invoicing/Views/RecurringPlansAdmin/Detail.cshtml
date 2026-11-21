@@ -239,7 +239,7 @@
                     else
                     {
                         <form asp-action="Cancel" asp-route-itemId="@plan.ItemId" method="post" class="d-grid">
-                            <button type="submit" class="btn btn-outline-danger" data-url-af="UnsafeUrl" data-message="@T["The plan stops for good and makes no more invoices. The invoices it made stay as they are."]">@T["Cancel the plan"]</button>
+                            <button type="submit" class="btn btn-outline-danger" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Cancel the plan"]" data-message="@T["The plan stops for good and makes no more invoices. The invoices it made stay as they are."]">@T["Cancel the plan"]</button>
                         </form>
                     }
                 </div>

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.FileTransfer.Core.ViewModels;
 using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -12,24 +13,29 @@ namespace CrestApps.OrchardCore.AI.FileTransfer.Core.Drivers;
 /// <summary>
 /// The base of a driver that edits an FTP or FTPS connection stored as <see cref="FtpConnectionMetadata"/>, such as an
 /// FTP file source or an FTP MCP resource. Both editors validate the connection the same way: a host is required and
-/// a port, when given, is a valid port. The password is protected, never shown, and kept when left blank.
+/// a port, when given, is a valid port. The password is protected, never shown, and kept when left blank while the
+/// connection signs in to the same account on the same server: a change of host, port or user name drops it.
 /// </summary>
 /// <typeparam name="TModel">The record type the driver edits.</typeparam>
 public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TModel>
     where TModel : class
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly FileTransferHostOptions _hostOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FtpConnectionDisplayDriverBase{TModel}"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The provider the password is protected with.</param>
     /// <param name="stringLocalizer">The localizer of the derived driver, which owns the validation messages.</param>
+    /// <param name="hostOptions">What the host's operator allows, such as accepting any FTP server certificate.</param>
     protected FtpConnectionDisplayDriverBase(
         IDataProtectionProvider dataProtectionProvider,
-        IStringLocalizer stringLocalizer)
+        IStringLocalizer stringLocalizer,
+        IOptions<FileTransferHostOptions> hostOptions)
     {
         _dataProtectionProvider = dataProtectionProvider;
+        _hostOptions = hostOptions?.Value ?? new FileTransferHostOptions();
         S = stringLocalizer;
     }
 
@@ -64,7 +70,8 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
     /// </summary>
     /// <param name="context">The editor update context the validation errors are added to.</param>
     /// <param name="model">The posted editor model.</param>
-    /// <param name="existing">The stored connection, whose password is kept when none is posted.</param>
+    /// <param name="existing">The stored connection, whose password is kept when none is posted and the host, port and
+    /// user name are unchanged.</param>
     /// <returns>The connection to store.</returns>
     protected FtpConnectionMetadata ApplyConnectionFields(UpdateEditorContext context, FtpConnectionFieldsViewModel model, FtpConnectionMetadata existing)
     {
@@ -81,12 +88,41 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Port), S["The port must be between 1 and 65535."]);
         }
 
+        // Accepting any certificate lets anyone on the network path read the credentials and the files, so only the
+        // host's operator can allow it (CrestApps_AI:FileTransfer:AllowAnyFtpCertificate).
+        if (model.ValidateAnyCertificate && !_hostOptions.AllowAnyFtpCertificate)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ValidateAnyCertificate), S["Accepting any server certificate is turned off on this site. Use a server with a trusted certificate."]);
+        }
+
+        // A user name and password sent without TLS can be read on the network path, and the FTP client refuses such a
+        // connection unless the host's operator allows it (CrestApps_AI:FileTransfer:AllowUnencryptedFtp).
+        if (!string.IsNullOrWhiteSpace(model.Username) && !_hostOptions.AllowUnencryptedFtp && !IsEncrypted(model.EncryptionMode))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.EncryptionMode), S["Sending a user name without TLS is turned off on this site. Choose Explicit or Implicit encryption."]);
+        }
+
+        var host = model.Host?.Trim();
+        var username = FileTransferFields.Trimmed(model.Username);
+
+        // The stored password was given for one account on one server. A user who may edit the connection, but never saw
+        // the password, must not be able to send it to a server of their own, so another host, port or user name drops it.
+        var storedPassword = SecretDestination.Keep(existing?.Password, FileTransferFields.SameAccount(existing?.Host, existing?.Port, existing?.Username, host, model.Port, username));
+
+        if (username is not null &&
+            storedPassword is null &&
+            ProtectedSettingExtensions.HasSecret(existing?.Password) &&
+            string.IsNullOrWhiteSpace(model.Password))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Password), S["The server or the user name changed, so enter the password again."]);
+        }
+
         return new FtpConnectionMetadata
         {
-            Host = model.Host?.Trim(),
+            Host = host,
             Port = model.Port,
-            Username = FileTransferFields.Trimmed(model.Username),
-            Password = _dataProtectionProvider.ApplySecret(FtpResourceConstants.DataProtectionPurpose, existing?.Password, model.Password),
+            Username = username,
+            Password = _dataProtectionProvider.ApplySecret(FtpResourceConstants.DataProtectionPurpose, storedPassword, model.Password),
             EncryptionMode = FileTransferFields.Trimmed(model.EncryptionMode),
             DataConnectionType = FileTransferFields.Trimmed(model.DataConnectionType),
             ValidateAnyCertificate = model.ValidateAnyCertificate,
@@ -95,4 +131,9 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
             RetryAttempts = model.RetryAttempts,
         };
     }
+
+    // The FTP client's own rule: only Explicit and Implicit send the credentials over TLS.
+    private static bool IsEncrypted(string encryptionMode)
+        => string.Equals(encryptionMode?.Trim(), "Explicit", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(encryptionMode?.Trim(), "Implicit", StringComparison.OrdinalIgnoreCase);
 }

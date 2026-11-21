@@ -36,10 +36,14 @@
     <PackageReference Include="OrchardCore.Media" />
     <PackageReference Include="OrchardCore.Email.Abstractions" />
     <PackageReference Include="OrchardCore.Notifications.Core" />
+
+    <!-- Only for revoking OpenID tokens when the OpenID server is on; the Users module does not depend on it. -->
+    <PackageReference Include="OpenIddict.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Users.Core/CrestApps.OrchardCore.Users.Core.csproj" />
   </ItemGroup>

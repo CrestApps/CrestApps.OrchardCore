@@ -246,7 +246,7 @@ Coded reports, exports, views and subscriptions:
 | `crestapps.report.view.snapshot.age` | Gauge | s | | Age of the oldest stored rows of a scheduled view, at each run of the background task. Alert when it grows well past the longest refresh interval. |
 | `crestapps.report.view.reads` | Counter | `{read}` | `crestapps.report.view.mode` (`snapshot`, `live`, `stale_snapshot`, `first_run`) | Reads of views by other reports |
 | `crestapps.report.view.rejected` | Counter | `{read}` | `reason` (`loop`, `depth`) | View reads refused |
-| `crestapps.report.subscription.sends` | Counter | `{email}` | `trigger`, `outcome` (`ok`, `skipped`, `error`), `reason` (`no_email`, `no_recipients`, `report_unavailable`, `export_denied`, `send_failed`, `exception`) | Subscription runs |
+| `crestapps.report.subscription.sends` | Counter | `{email}` | `trigger`, `outcome` (`ok`, `skipped`, `error`), `reason` (`no_email`, `no_recipients`, `report_unavailable`, `view_denied`, `export_denied`, `send_failed`, `exception`) | Subscription runs |
 | `crestapps.report.subscription.duration` | Histogram | s | `trigger`, `outcome` | Subscription runs, from running the report to sending the email |
 
 The builder and the widgets:

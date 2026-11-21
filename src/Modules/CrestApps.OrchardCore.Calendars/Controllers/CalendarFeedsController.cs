@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Calendars.Core.Services;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Calendars.ViewModels;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -29,6 +30,7 @@ public sealed class CalendarFeedsController : Controller
     private readonly ICalendarEventStore _eventStore;
     private readonly ICalendarImporter _importer;
     private readonly INotifier _notifier;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IClock _clock;
 
     internal readonly IHtmlLocalizer H;
@@ -42,6 +44,7 @@ public sealed class CalendarFeedsController : Controller
     /// <param name="eventStore">The event store.</param>
     /// <param name="importer">The iCalendar importer.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="dataProtectionProvider">The data protection provider, for the protected feed secret.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -51,6 +54,7 @@ public sealed class CalendarFeedsController : Controller
         ICalendarEventStore eventStore,
         ICalendarImporter importer,
         INotifier notifier,
+        IDataProtectionProvider dataProtectionProvider,
         IClock clock,
         IHtmlLocalizer<CalendarFeedsController> htmlLocalizer,
         IStringLocalizer<CalendarFeedsController> stringLocalizer)
@@ -58,6 +62,7 @@ public sealed class CalendarFeedsController : Controller
         _calendarService = calendarService;
         _accessService = accessService;
         _eventStore = eventStore;
+        _dataProtectionProvider = dataProtectionProvider;
         _importer = importer;
         _notifier = notifier;
         _clock = clock;
@@ -89,7 +94,7 @@ public sealed class CalendarFeedsController : Controller
         {
             Id = calendar.ItemId,
             Name = calendar.Name,
-            FeedUrl = string.IsNullOrEmpty(calendar.FeedToken) ? null : Url.RouteUrl("CalendarsFeed", new { token = calendar.FeedToken }, Request.Scheme),
+            FeedUrl = CalendarFeedTokens.Read(calendar, _dataProtectionProvider) is { } token ? Url.RouteUrl("CalendarsFeed", new { token }, Request.Scheme) : null,
         });
     }
 
@@ -116,7 +121,15 @@ public sealed class CalendarFeedsController : Controller
             return Forbid();
         }
 
-        calendar.FeedToken = remove ? null : Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
+        // Only the secret's hash and the secret protected with the tenant's keys are stored.
+        if (remove)
+        {
+            CalendarFeedTokens.Remove(calendar);
+        }
+        else
+        {
+            CalendarFeedTokens.Issue(calendar, _dataProtectionProvider);
+        }
 
         await _calendarService.UpdateAsync(calendar, new CalendarChangeOptions { Actor = CalendarUser.GetId(User) });
         await _notifier.SuccessAsync(remove ? H["The subscription address has been removed."] : H["A new subscription address has been made. The old one no longer works."]);

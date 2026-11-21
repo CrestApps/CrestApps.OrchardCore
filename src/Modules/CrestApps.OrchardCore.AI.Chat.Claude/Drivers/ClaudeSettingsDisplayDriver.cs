@@ -24,10 +24,13 @@ public sealed class ClaudeSettingsDisplayDriver : SiteDisplayDriver<ClaudeSettin
 {
     private const string ProtectorPurpose = "CrestApps.OrchardCore.AI.Chat.Claude.Settings";
 
+    private const string DefaultBaseUrl = "https://api.anthropic.com";
+
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ClaudeClientService _claudeClientService;
+    private readonly IAIEndpointPolicy _endpointPolicy;
 
     internal readonly IStringLocalizer S;
 
@@ -38,18 +41,21 @@ public sealed class ClaudeSettingsDisplayDriver : SiteDisplayDriver<ClaudeSettin
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="claudeClientService">The claude client service.</param>
+    /// <param name="endpointPolicy">The policy that keeps the base URL off the site's own network.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ClaudeSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
         ClaudeClientService claudeClientService,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<ClaudeSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
         _claudeClientService = claudeClientService;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -87,12 +93,32 @@ public sealed class ClaudeSettingsDisplayDriver : SiteDisplayDriver<ClaudeSettin
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, ClaudeSettings settings, UpdateEditorContext context)
     {
+        // The editor is shown only to those who may manage the settings; the AI settings group can be posted by others.
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ClaudePermissionProvider.ManageClaudeSettings))
+        {
+            return null;
+        }
+
         var model = new ClaudeSettingsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        var baseUrl = string.IsNullOrWhiteSpace(model.BaseUrl) ? DefaultBaseUrl : model.BaseUrl.Trim();
+
+        // The Anthropic SDK builds its own transport, which the connect-time egress guard does not cover, so the base URL is
+        // checked here, as every other AI endpoint is when it is saved.
+        if (!_endpointPolicy.IsAllowed(baseUrl))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
+        }
+
+        // The stored key was given for the stored base URL, blank being Anthropic's own; another scheme, host or port drops
+        // it in any mode, so a user who never saw it can't send it to a host of their own.
+        settings.ProtectedApiKey = SecretDestination.Keep(
+            settings.ProtectedApiKey,
+            SecretDestination.SameOrigin(string.IsNullOrWhiteSpace(settings.BaseUrl) ? DefaultBaseUrl : settings.BaseUrl, baseUrl));
         settings.AuthenticationType = model.AuthenticationType;
-        settings.BaseUrl = string.IsNullOrWhiteSpace(model.BaseUrl) ? "https://api.anthropic.com" : model.BaseUrl.Trim();
+        settings.BaseUrl = baseUrl;
         settings.DefaultModel = model.DefaultModel?.Trim();
 
         if (settings.AuthenticationType == ClaudeAuthenticationType.ApiKey)

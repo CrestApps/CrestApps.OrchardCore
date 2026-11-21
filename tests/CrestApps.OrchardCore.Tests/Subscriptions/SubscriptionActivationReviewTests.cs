@@ -130,6 +130,7 @@ public sealed class SubscriptionActivationReviewTests
             Mock.Of<IContentManager>(),
             [],
             new TestClock(_now),
-            NullLogger<SubscriptionActivationCheckoutHandler>.Instance);
+            NullLogger<SubscriptionActivationCheckoutHandler>.Instance,
+            Mock.Of<ICheckoutPaymentProviderResolver>());
     }
 }

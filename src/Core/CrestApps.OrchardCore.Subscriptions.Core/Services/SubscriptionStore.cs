@@ -96,12 +96,16 @@ public sealed class SubscriptionStore : DocumentCatalog<Subscription, Subscripti
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<Subscription>> GetLapsedAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Subscription>> GetLapsedAsync(DateTime asOfUtc, int skip, int take, CancellationToken cancellationToken = default)
     {
         var records = await Session
             .Query<Subscription, SubscriptionRecordIndex>(
-                x => x.Status == SubscriptionStatus.PastDue && x.GraceEndsUtc != null && x.GraceEndsUtc <= asOfUtc,
+                x => (x.Status == SubscriptionStatus.PastDue && x.GraceEndsUtc != null && x.GraceEndsUtc <= asOfUtc) ||
+                    (x.Status == SubscriptionStatus.Canceled && x.CurrentPeriodEndUtc <= asOfUtc),
                 collection: CollectionName)
+            .OrderBy(x => x.Id)
+            .Skip(Math.Max(0, skip))
+            .Take(Math.Max(1, take))
             .ListAsync(cancellationToken);
 
         return records.ToArray();

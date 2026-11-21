@@ -1,8 +1,10 @@
 using CrestApps.OrchardCore.Bookings.Models;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Bookings.Services;
@@ -16,10 +18,13 @@ namespace CrestApps.OrchardCore.Bookings.Services;
 /// </summary>
 public sealed class BookingBalanceCharger
 {
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
+
     private readonly IBookingBalanceStore _balances;
     private readonly IBookingStore _bookings;
     private readonly ITransactionManager _transactions;
     private readonly ISavedPaymentMethodChargeService _charges;
+    private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly IEnumerable<IBookingPaymentHandler> _paymentHandlers;
@@ -31,6 +36,7 @@ public sealed class BookingBalanceCharger
         IBookingBalanceStore balances,
         IBookingStore bookings,
         ITransactionManager transactions,
+        IDistributedLock distributedLock,
         IClock clock,
         ILogger<BookingBalanceCharger> logger,
         IStringLocalizer<BookingBalanceCharger> stringLocalizer,
@@ -43,6 +49,7 @@ public sealed class BookingBalanceCharger
         _bookings = bookings;
         _transactions = transactions;
         _charges = charges;
+        _distributedLock = distributedLock;
         _clock = clock;
         _logger = logger;
         _paymentHandlers = paymentHandlers;
@@ -80,6 +87,48 @@ public sealed class BookingBalanceCharger
     {
         ArgumentNullException.ThrowIfNull(balance);
 
+        // One charge of a balance at a time, on every node: two at once (a double click, or a click while the background
+        // task runs) would each schedule and charge its invoice, and the one that came second would record the balance the
+        // first just paid as failed.
+        var (locker, locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync($"BOOKING_BALANCE_{balance.ItemId}", _lockExpiration);
+
+        if (!locked)
+        {
+            return S["The balance is being charged already. Check it again in a moment."];
+        }
+
+        await using (locker)
+        {
+            // Read again inside the lock: the copy the caller has may be from before another charge paid it.
+            if (await _balances.FindByIdAsync(balance.ItemId, cancellationToken) is { } stored && !ReferenceEquals(stored, balance))
+            {
+                if (stored.Status is BookingBalanceStatus.Paid or BookingBalanceStatus.Canceled)
+                {
+                    return null;
+                }
+
+                // The store's "Charge now" on a balance that failed for good starts it over.
+                if (balance.Status == BookingBalanceStatus.Scheduled && stored.Status == BookingBalanceStatus.Failed)
+                {
+                    stored.Status = BookingBalanceStatus.Scheduled;
+                    stored.Attempts = balance.Attempts;
+                }
+
+                balance = stored;
+            }
+
+            // The same check when the caller's instance is the one the session tracks, and reading it again returned it.
+            if (balance.Status is BookingBalanceStatus.Paid or BookingBalanceStatus.Canceled)
+            {
+                return null;
+            }
+
+            return await ChargeLockedAsync(balance, cancellationToken);
+        }
+    }
+
+    private async Task<string> ChargeLockedAsync(BookingBalance balance, CancellationToken cancellationToken)
+    {
         var transaction = await _transactions.FindByIdAsync(balance.TransactionId, cancellationToken);
 
         if (transaction is null)

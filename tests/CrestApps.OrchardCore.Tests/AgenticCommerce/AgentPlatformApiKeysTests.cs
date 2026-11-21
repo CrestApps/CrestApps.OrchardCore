@@ -16,7 +16,7 @@ public sealed class AgentPlatformApiKeysTests
 
         // Assert
         Assert.StartsWith(AgentPlatformApiKeys.Prefix, first, StringComparison.Ordinal);
-        Assert.Equal(AgentPlatformApiKeys.Prefix.Length + 64, first.Length);
+        Assert.Equal(AgentPlatformApiKeys.Prefix.Length + 43, first.Length);
         Assert.NotEqual(first, second);
     }
 

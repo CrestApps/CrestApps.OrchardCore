@@ -10,6 +10,10 @@ public class BankTransferSettingsViewModel
     public string Instructions { get; set; }
 
     public int NetTermDays { get; set; }
+
+    public bool RequireSignedIn { get; set; }
+
+    public decimal? MaxOrderAmount { get; set; }
 }
 
 /// <summary>
@@ -20,4 +24,8 @@ public class CashOnDeliverySettingsViewModel
     public bool Enabled { get; set; }
 
     public string Instructions { get; set; }
+
+    public bool RequireSignedIn { get; set; }
+
+    public decimal? MaxOrderAmount { get; set; }
 }

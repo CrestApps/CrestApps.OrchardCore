@@ -209,78 +209,27 @@
                 </ul>
             </div>
         }
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>@T.Plural(Model.MovementCount, "1 change", "{0} changes")</span>
-                @if (Model.CanManage)
-                {
-                    <form asp-action="Rebuild" asp-route-stockItemId="@item.ItemId" method="post" class="no-multisubmit">
-                        <button type="submit" class="btn btn-sm btn-link" title="@T["Recompute the units on hand from this history."]">@T["Recount from history"]</button>
-                    </form>
-                }
-            </div>
-            @if (Model.Movements.Count == 0)
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h2 class="h5 mb-0">@T["Stock history"]</h2>
+            @if (Model.CanManage)
             {
-                <div class="card-body text-muted">@T["No changes yet. Record stock received or a count to start."]</div>
-            }
-            else
-            {
-                <table class="table table-sm align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th scope="col">@T["When"]</th>
-                            <th scope="col">@T["What"]</th>
-                            <th scope="col" class="text-end">@T["Change"]</th>
-                            <th scope="col" class="text-end">@T["On hand"]</th>
-                            <th scope="col">@T["By"]</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var movement in Model.Movements)
-                        {
-                            <tr>
-                                <td class="text-nowrap">@((await LocalAsync(movement.Utc)).ToString("g"))</td>
-                                <td>
-                                    @switch (movement.Kind)
-                                    {
-                                        case StockMovementKind.Received:
-                                            @T["Received"]
-                                            break;
-                                        case StockMovementKind.Adjusted:
-                                            @T["Adjusted"]
-                                            break;
-                                        case StockMovementKind.Counted:
-                                            @T["Counted"]
-                                            break;
-                                        case StockMovementKind.Sold:
-                                            @T["Sold"]
-                                            break;
-                                        case StockMovementKind.Transferred:
-                                            @(movement.Quantity < 0 ? T["Moved out"] : T["Moved in"])
-                                            break;
-                                        default:
-                                            @T["Returned"]
-                                            break;
-                                    }
-                                    @if (Model.HasLocations)
-                                    {
-                                        <span class="badge text-bg-light border fw-normal ms-1">@Model.LocationName(movement.LocationId)</span>
-                                    }
-                                    @if (!string.IsNullOrEmpty(movement.Reason))
-                                    {
-                                        <div class="small text-muted">@movement.Reason</div>
-                                    }
-                                </td>
-                                <td class="text-end">@(movement.Quantity > 0 ? "+" + movement.Quantity : movement.Quantity.ToString())</td>
-                                <td class="text-end">@movement.OnHandAfter</td>
-                                <td>@(movement.ActorName ?? T["The store"].Value)</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                <form asp-action="Rebuild" asp-route-stockItemId="@item.ItemId" method="post" class="no-multisubmit">
+                    <button type="submit" class="btn btn-sm btn-link" title="@T["Recompute the units on hand from this history."]">@T["Recount from history"]</button>
+                </form>
             }
         </div>
-
-        @await DisplayAsync(Model.Pager)
+        @* The changes, their count and the pager are rendered by the AdminList shape, in the layout (List or Grid) the
+           site or the user picked. *@
+        <admin-list name="InventoryStockMovements" context="Model.MovementList" show-select-all="false"
+                    empty-message="@T["No changes yet. Record stock received or a count to start."]">
+            <admin-list-list item-css-class="list-group-item" />
+            <admin-list-grid>
+                <admin-list-column name="When" position="10" title="@T["When"]" width="auto" no-wrap="true" />
+                <admin-list-column name="What" position="20" title="@T["What"]" />
+                <admin-list-column name="Change" position="30" title="@T["Change"]" width="auto" alignment="End" />
+                <admin-list-column name="OnHand" position="40" title="@T["On hand"]" width="auto" alignment="End" />
+                <admin-list-column name="By" position="50" title="@T["By"]" width="auto" />
+            </admin-list-grid>
+        </admin-list>
     </div>
 </div>

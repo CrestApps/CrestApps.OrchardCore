@@ -310,6 +310,65 @@ public sealed class DefaultSubscriptionLifecycleServiceTests
         Assert.Null(await service.CancelAsync("missing", atPeriodEnd: true, "n/a", cancellationToken: TestContext.Current.CancellationToken));
     }
 
+    /// <summary>
+    /// Final security review (Lows): canceling a suspended agreement "at period end" made it current again until then, so
+    /// the subscriber undid an operator's suspension, and switched their sold site back on, by pressing Cancel.
+    /// </summary>
+    [Fact]
+    public async Task CancelAsync_AtPeriodEndOnAPausedSubscription_EndsAccessNow()
+    {
+        var seed = CreateSubscription();
+        seed.Status = SubscriptionStatus.Paused;
+        var (service, _) = CreateService(seed);
+
+        var subscription = await service.CancelAsync("sub-1", atPeriodEnd: true, "Canceled by the subscriber.", "owner-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(SubscriptionStatus.Canceled, subscription.Status);
+        Assert.False(subscription.CancelAtPeriodEnd);
+        Assert.Equal(_now, subscription.CurrentPeriodEndUtc);
+        Assert.False(subscription.IsCurrent(_now.AddSeconds(1)));
+    }
+
+    /// <summary>
+    /// M11 (final security review): an offline agreement the sweep expired, whose overdue invoice was paid late, could not
+    /// be restored by anybody.
+    /// </summary>
+    [Fact]
+    public async Task ResumeAsync_AnExpiredOfflineSubscription_ReturnsItToActive()
+    {
+        var seed = CreateSubscription();
+        seed.ProviderKey = "PayLater";
+        seed.ProviderSubscriptionId = null;
+        seed.Status = SubscriptionStatus.Expired;
+        seed.NextBillingUtc = null;
+        var (service, _) = CreateService(seed);
+
+        var subscription = await service.ResumeAsync("sub-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(SubscriptionStatus.Active, subscription.Status);
+        Assert.Equal(subscription.CurrentPeriodEndUtc, subscription.NextBillingUtc);
+    }
+
+    /// <summary>
+    /// A gateway owns the schedule of the agreements it bills, so one it no longer bills is not made active here, and an
+    /// agreement the customer canceled stays over.
+    /// </summary>
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task ResumeAsync_AnExpiredGatewayOrCanceledSubscription_IsRefused(bool gateway, bool canceled)
+    {
+        var seed = CreateSubscription();
+        seed.ProviderSubscriptionId = gateway ? "sub_stripe_1" : null;
+        seed.CanceledUtc = canceled ? _now.AddDays(-30) : null;
+        seed.Status = SubscriptionStatus.Expired;
+        var (service, _) = CreateService(seed);
+
+        var subscription = await service.ResumeAsync("sub-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(SubscriptionStatus.Expired, subscription.Status);
+    }
+
     private static Subscription CreateSubscription()
         => new()
         {

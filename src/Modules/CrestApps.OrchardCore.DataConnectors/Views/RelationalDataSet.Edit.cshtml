@@ -8,8 +8,8 @@
         <div class="ocat-end">
             <textarea asp-for="Query" class="form-control font-monospace" rows="5" placeholder="SELECT Id, Name, ModifiedUtc FROM dbo.Customers WHERE IsActive = 1"></textarea>
             <span asp-validation-for="Query" class="text-danger"></span>
-            <span class="hint">@T["Leave empty to read the table or view picked above. A query must be one SELECT, without ORDER BY, WITH or a second statement: it runs as a subquery, in a transaction that is always rolled back. Values a data pipeline passes are bound as @Name parameters."]</span>
-            <span class="hint">@T["Give the connection a database login that can only read: the data set reads with the connection's rights."]</span>
+            <span class="hint">@T["Leave empty to read the table or view picked above. A query must be one SELECT, without ORDER BY, WITH, comments or a second statement: it runs as a subquery, in a transaction that is always rolled back. Values a data pipeline passes are bound as @Name parameters."]</span>
+            <span class="hint">@T["Give the connection a read-only database login that can read only what its data sets need: the query runs with the connection's rights, and these checks can't take any of them away."]</span>
         </div>
     </div>
 

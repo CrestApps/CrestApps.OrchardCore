@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -33,6 +34,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
     private readonly IAIToolAccessEvaluator _toolAccessEvaluator;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -55,8 +57,10 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
         IAIToolAccessEvaluator toolAccessEvaluator,
         IHttpContextAccessor httpContextAccessor,
         IOptionsUpdateNotifier optionsUpdateNotifier,
+        IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<McpServerSettingsDisplayDriver> stringLocalizer)
     {
+        _dataProtectionProvider = dataProtectionProvider;
         _toolDefinitions = toolDefinitions.Value;
         _instanceAccessor = instanceAccessor;
         _authorizationService = authorizationService;
@@ -182,9 +186,8 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
             .Select(instance => instance.Name)
             .Intersect(selectedInstanceNames, StringComparer.OrdinalIgnoreCase));
 
-        var apiKey = string.IsNullOrWhiteSpace(model.ApiKey)
-            ? settings.ApiKey
-            : model.ApiKey.Trim();
+        // The key is stored protected; a blank field keeps the stored one.
+        var apiKey = McpServerApiKeyProtection.Apply(_dataProtectionProvider, settings.ApiKey, model.ApiKey);
 
         settings.AuthenticationType = model.AuthenticationType;
         settings.ApiKey = apiKey;

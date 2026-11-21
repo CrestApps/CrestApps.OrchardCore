@@ -1,0 +1,30 @@
+@model CrestApps.OrchardCore.Users.Controllers.EmailSignInViewModel
+
+<zone Name="Title">
+    <breadcrumb name="EmailSignInTakeBack" title="@T["Use your email instead?"]" />
+</zone>
+
+<div class="container my-5" style="max-width: 480px">
+    <h1 class="h3 mb-2">@T["Use your email instead?"]</h1>
+    <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+    @if (Model.Passkeys > 0)
+    {
+        <p>@T["This account signs in with {0}. Remove it and use your email instead?", Model.SignInMethods]</p>
+        <p class="text-muted">@T["If it's yours, sign in with it instead and nothing changes. If you remove it, this account's other sessions are signed out, and you sign in with a code from now on. You can add a passkey again later from your account's security settings."]</p>
+    }
+    else
+    {
+        <p>@T["This account signs in with {0}. Remove it and use your email instead?", Model.LoginProviders]</p>
+        <p class="text-muted">@T["If this is your {0} account, sign in with {0} instead and nothing changes. If you remove it, this account's other sessions are signed out, and you sign in with a code from now on. You can link {0} again later from your account.", Model.LoginProviders]</p>
+    }
+
+    <form action="@Url.RouteUrl("EmailSignInTakeBack")" method="post" class="card">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Token" value="@Model.Token" />
+        <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+        <div class="card-footer d-grid gap-2">
+            <button type="submit" class="btn btn-danger">@T["Remove {0} and sign in", Model.SignInMethods ?? Model.LoginProviders]</button>
+            <a class="btn btn-outline-secondary" href="@Url.Action("Login", "Account", new { area = "OrchardCore.Users", returnUrl = Model.ReturnUrl })">@T["Cancel and sign in with {0}", Model.SignInMethods ?? Model.LoginProviders]</a>
+        </div>
+    </form>
+</div>

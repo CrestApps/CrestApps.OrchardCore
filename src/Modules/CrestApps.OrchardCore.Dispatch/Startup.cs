@@ -187,16 +187,3 @@ public sealed class SchedulingStartup : StartupBase
         services.AddScoped<CrestApps.OrchardCore.Scheduling.Services.IAppointmentSlotFilter, Integrations.DispatchCapacitySlotFilter>();
     }
 }
-
-/// <summary>
-/// Puts the field service KPIs in the Reports menu while the Reports module is on.
-/// </summary>
-[RequireFeatures(ReportsConstants.Feature)]
-public sealed class ReportsMenuStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddNavigationProvider<FieldServiceReportsAdminMenu>();
-    }
-}

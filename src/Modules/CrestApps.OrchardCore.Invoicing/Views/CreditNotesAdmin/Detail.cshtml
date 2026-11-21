@@ -2,6 +2,9 @@
 @inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
 @inject OrchardCore.Modules.ILocalClock LocalClock
 
+@* The issue question names the amount, so it is asked with data-confirm (the crestapps-browser helpers), which escapes it. *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
 @functions {
     // Stored times are UTC; people read them in the site time zone.
     private async Task<DateTime> LocalAsync(DateTime utc)
@@ -122,7 +125,7 @@
                             <form asp-action="Issue" method="post">
                                 <input type="hidden" name="itemId" value="@creditNote.ItemId" />
                                 <button type="submit" class="btn btn-primary"
-                                        data-url-af="RemoveUrl" data-title="@T["Issue credit note"]" data-message="@T["Issue the credit note for {0}? It gets its number and the credit is given; it can't be changed after.", Money(creditNote.Totals?.Total ?? 0m)]" data-ok-text="@T["Issue"]" data-cancel-text="@T["Cancel"]">
+                                        data-url-af="RemoveUrl" data-title="@T["Issue credit note"]" data-confirm="@T["Issue the credit note for {0}? It gets its number and the credit is given; it can't be changed after.", Money(creditNote.Totals?.Total ?? 0m)]" data-ok-text="@T["Issue"]" data-cancel-text="@T["Cancel"]">
                                     @T["Issue"]
                                 </button>
                             </form>

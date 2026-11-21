@@ -73,6 +73,109 @@ public sealed class EgressNetworkTests
         Assert.Contains(EgressNetwork.RefusedMessage, exception.Message, StringComparison.Ordinal);
     }
 
+    // DRY-7: the stricter rules the tenant hierarchy guard had are now the one guard's rules.
+    [Theory]
+    [InlineData("192.0.0.8", true)]
+    [InlineData("198.18.0.1", true)]
+    [InlineData("198.19.255.254", true)]
+    [InlineData("255.255.255.255", true)]
+    [InlineData("224.0.0.1", true)]
+    [InlineData("64:ff9b::a00:1", true)]
+    [InlineData("64:ff9b::7f00:1", true)]
+    [InlineData("64:ff9b::808:808", false)]
+    [InlineData("168.63.129.16", true)]
+    [InlineData("2002:a9fe:a9fe::1", true)]
+    [InlineData("2002:a00:1::1", true)]
+    [InlineData("2002:808:808::1", false)]
+    [InlineData("198.20.0.1", false)]
+    [InlineData("192.0.2.1", false)]
+    [InlineData("2001:4860:4860::8888", false)]
+    public void TheStricterRules_AreTheGuardsRules(string address, bool isInternal)
+        => Assert.Equal(isInternal, EgressNetwork.IsInternal(IPAddress.Parse(address)));
+
+    [Fact]
+    public void TheGuardedHandler_NeverGoesThroughAProxy()
+    {
+        // Through a proxy, the connect check would see the proxy's address and never the destination's.
+        Assert.False(EgressNetwork.CreateHandler(allowLoopback: false).UseProxy);
+        Assert.False(EgressNetwork.CreateHandler(allowLoopback: false, allowPrivateNetwork: true, allowRedirects: true).UseProxy);
+    }
+
+    [Fact]
+    public void A6to4AddressOfTheMetadataService_IsLinkLocal_AndRefusedEvenOnAPrivateNetwork()
+    {
+        var address = IPAddress.Parse("2002:a9fe:a9fe::1");
+
+        Assert.True(EgressNetwork.IsLinkLocal(address));
+        Assert.True(EgressNetwork.IsRefused(address, allowLoopback: true, allowPrivateNetwork: true));
+    }
+
+    [Theory]
+    [InlineData("http://example.com/feed", true)]
+    [InlineData("https://example.com/feed", true)]
+    [InlineData("http://10.0.0.5/feed", false)]
+    [InlineData("http://localhost/feed", false)]
+    [InlineData("ftp://example.com/feed", false)]
+    [InlineData("https://user:secret@example.com/feed", false)]
+    public void IsExternalUrl_IsTheNetworkRule_WithoutTheHttpsRule(string url, bool external)
+        => Assert.Equal(external, EgressNetwork.IsExternalUrl(url, isDevelopment: false));
+
+    [Fact]
+    public async Task AResilientGuardedClient_HasTheStandardResilienceHandler_AndRefusesThisMachine()
+    {
+        // Arrange
+        using var services = new ServiceCollection()
+            .AddLogging()
+            .AddSingleton<IHostEnvironment>(new TestHostEnvironment(Environments.Production))
+            .AddEgressGuardedHttpClient("resilient", client => client.Timeout = TimeSpan.FromSeconds(10), resilience => resilience.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5))
+            .Services
+            .BuildServiceProvider();
+
+        var handler = services.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler("resilient");
+        var client = services.GetRequiredService<IHttpClientFactory>().CreateClient("resilient");
+
+        // Act
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(() => client.GetAsync("http://127.0.0.1:1/hook", TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Contains(HandlerChain(handler), link => link is Microsoft.Extensions.Http.Resilience.ResilienceHandler);
+        Assert.Contains(EgressNetwork.RefusedMessage, exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AGuardedClientThatAllowsThePrivateNetwork_StillRefusesLinkLocal()
+    {
+        // Arrange: a self-hosted service on the site's network, opted in by the host.
+        using var services = new ServiceCollection()
+            .AddLogging()
+            .AddSingleton<IHostEnvironment>(new TestHostEnvironment(Environments.Production))
+            .AddEgressGuardedHttpClient("private", null, resilience => resilience.Retry.Delay = TimeSpan.Zero, allowPrivateNetwork: _ => true)
+            .Services
+            .BuildServiceProvider();
+
+        var client = services.GetRequiredService<IHttpClientFactory>().CreateClient("private");
+
+        // Act
+        var metadata = await Assert.ThrowsAsync<HttpRequestException>(() => client.GetAsync("http://169.254.169.254/latest/meta-data", TestContext.Current.CancellationToken));
+        var loopback = await Record.ExceptionAsync(() => client.GetAsync("http://127.0.0.1:1/osrm", TestContext.Current.CancellationToken));
+
+        // Assert: the metadata service is refused by the guard; the private address is tried (and nothing listens).
+        Assert.Contains(EgressNetwork.RefusedMessage, metadata.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(EgressNetwork.RefusedMessage, loopback?.Message ?? string.Empty, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The handlers a client's requests go through, outermost first.
+    /// </summary>
+    /// <param name="handler">The outermost handler.</param>
+    internal static IEnumerable<HttpMessageHandler> HandlerChain(HttpMessageHandler handler)
+    {
+        for (var current = handler; current is not null; current = (current as DelegatingHandler)?.InnerHandler)
+        {
+            yield return current;
+        }
+    }
+
     private sealed class TestHostEnvironment : IHostEnvironment
     {
         public TestHostEnvironment(string environmentName)

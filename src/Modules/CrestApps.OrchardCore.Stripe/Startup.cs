@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -261,4 +263,16 @@ public sealed class ProviderInboxStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
         => services.AddScoped<IProviderWebhookInboxHandler, StripeWebhookInboxHandler>();
+}
+
+/// <summary>
+/// The built-in limit of the Stripe webhook, listed read-only under Tools &gt; Rate Limits.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(PaymentConstants.RateLimitGroups.Webhook, PaymentConstants.RateLimitGroups.WebhookRequestsPerMinute, TimeSpan.FromMinutes(1), networkOnly: true));
 }

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OrchardCore.DataSources;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.DataConnectors.SqlServer;
@@ -100,13 +101,17 @@ internal sealed class SqlServerDataConnector : RelationalDataConnector, IDataCon
     public const string PasswordSecret = "Password";
 
     private readonly DataConnectorNetworkOptions _networkOptions;
+    private readonly bool _allowHostIdentity;
     private readonly ILogger _logger;
 
     public SqlServerDataConnector(
         IOptions<DataConnectorNetworkOptions> networkOptions,
+        ShellSettings shellSettings,
+        IOptions<SqlServerHostIdentityOptions> hostIdentityOptions,
         ILogger<SqlServerDataConnector> logger = null)
     {
         _networkOptions = networkOptions.Value;
+        _allowHostIdentity = SqlServerHostIdentity.IsAllowed(shellSettings, hostIdentityOptions.Value);
         _logger = logger ?? NullLogger<SqlServerDataConnector>.Instance;
     }
 
@@ -132,9 +137,16 @@ internal sealed class SqlServerDataConnector : RelationalDataConnector, IDataCon
     /// <summary>
     /// Builds the connection string of a connection. The password never comes from the settings, only from the secret.
     /// </summary>
-    internal static SqlConnectionStringBuilder BuildConnectionString(SqlServerConnectionSettings settings, string password)
+    internal static SqlConnectionStringBuilder BuildConnectionString(SqlServerConnectionSettings settings, string password, bool allowHostIdentity)
     {
         ArgumentNullException.ThrowIfNull(settings);
+
+        // The host-identity modes sign in as the host process. A tenant's administrator who could use them would reach
+        // the host's own databases, other tenants' tables included, so they work only where the host allows them.
+        if (!allowHostIdentity && SqlServerHostIdentity.IsHostIdentity(settings.Authentication))
+        {
+            throw new DataConnectorException("Signing in as the site's host is only available on the default tenant, or where the host allows it.");
+        }
 
         if (string.IsNullOrWhiteSpace(settings.Server))
         {
@@ -217,7 +229,7 @@ internal sealed class SqlServerDataConnector : RelationalDataConnector, IDataCon
     protected override async Task<DbConnection> OpenConnectionAsync(DataConnectorContext context, CancellationToken cancellationToken)
     {
         var settings = context.Connection.GetOrCreate<SqlServerConnectionSettings>();
-        var builder = BuildConnectionString(settings, context.Secrets.Get(PasswordSecret));
+        var builder = BuildConnectionString(settings, context.Secrets.Get(PasswordSecret), _allowHostIdentity);
 
         // The server goes through the same network rule as any other connector, so a connection can't reach the
         // site's own network unless the configuration allows it.

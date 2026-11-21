@@ -42,6 +42,11 @@ public class AgentPlatformViewModel
 
     public int? AcpSignatureClockSkewSeconds { get; set; }
 
+    public int? AcpSignatureVersion { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> SignatureVersionOptions { get; set; } = [];
+
     [BindNever]
     public IList<SelectListItem> SignatureAlgorithmOptions { get; set; } = [];
 

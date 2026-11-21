@@ -1,7 +1,4 @@
 @model CrestApps.OrchardCore.Workforce.ContactCenter.Controllers.MyAdherenceViewModel
-@{
-    string Percent(double? share) => share is { } value ? value.ToString("P0", CultureInfo.CurrentCulture) : "–";
-}
 <zone Name="Title">
     <breadcrumb name="MyWorkAdherence" title="@T["Adherence"]">
         <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
@@ -11,34 +8,15 @@
 
 <p class="text-muted">@T["How closely you kept to your schedule on your latest days: adherence is the share of your scheduled time you were in the state the schedule asked for, not counting approved exceptions; conformance is the time you worked against the time you were scheduled to work."]</p>
 
-@if (Model.Days.Count == 0)
-{
-    <div class="alert alert-info">@T["No days have been saved for you yet."]</div>
-}
-else
-{
-    <div class="table-responsive">
-        <table class="table table-sm align-middle">
-            <thead>
-                <tr>
-                    <th scope="col">@T["Day"]</th>
-                    <th scope="col" class="text-end">@T["Adherence"]</th>
-                    <th scope="col" class="text-end">@T["Conformance"]</th>
-                    <th scope="col" class="text-end">@T["Out of adherence"]</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var day in Model.Days)
-                {
-                    var outMinutes = Math.Max(0, Math.Round((day.ScheduledSeconds - day.ExceptionSeconds - day.InAdherenceSeconds) / 60));
-                    <tr>
-                        <td>@day.Date.ToString("ddd d MMM", CultureInfo.CurrentCulture)</td>
-                        <td class="text-end"><span class="badge @(day.Adherence is >= 0.9 ? "text-bg-success" : day.Adherence is >= 0.8 ? "text-bg-warning" : "text-bg-danger")">@Percent(day.Adherence)</span></td>
-                        <td class="text-end">@Percent(day.Conformance)</td>
-                        <td class="text-end">@T["{0} min", outMinutes]</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
+@* The days, their count and the layout selector are rendered by the AdminList shape, in the layout (List or Grid) the
+   site or the user picked. *@
+<admin-list name="WorkforceMyAdherence" context="Model.List" show-select-all="false"
+            empty-message="@T["No days have been saved for you yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Day"]" />
+        <admin-list-column name="Adherence" position="30" title="@T["Adherence"]" width="auto" />
+        <admin-list-column name="Conformance" position="40" title="@T["Conformance"]" width="auto" />
+        <admin-list-column name="OutOfAdherence" position="50" title="@T["Out of adherence"]" width="auto" />
+    </admin-list-grid>
+</admin-list>

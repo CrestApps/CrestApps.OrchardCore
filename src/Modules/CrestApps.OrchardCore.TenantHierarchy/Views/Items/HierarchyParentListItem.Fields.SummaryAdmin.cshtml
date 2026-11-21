@@ -1,0 +1,7 @@
+@model ShapeViewModel<HierarchyParentListItem>
+
+@{
+    var parent = Model.Value.Parent;
+}
+
+<a class="text-break" asp-controller="Platform" asp-action="Parent" asp-route-id="@parent.Settings.Name">@parent.DisplayName</a>

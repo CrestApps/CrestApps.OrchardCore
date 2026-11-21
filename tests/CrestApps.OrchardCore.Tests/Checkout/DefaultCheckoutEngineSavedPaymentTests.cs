@@ -48,6 +48,35 @@ public sealed class DefaultCheckoutEngineSavedPaymentTests
         Assert.Equal("pi_declined", attempt.ProviderReference);
     }
 
+    /// <summary>
+    /// RL-4 (review): a renewal or a staff charge of a saved card that declines was counted against the customer and the
+    /// store, so a batch of renewal declines raised a decline spike and could pause guest cards. Only a payer trying a card
+    /// is counted.
+    /// </summary>
+    [Theory]
+    [InlineData(true, 0)]
+    [InlineData(false, 1)]
+    public async Task BeginPaymentAsync_ADeclinedChargeWithoutThePayer_IsNotCountedAsCardTesting(bool offSession, int counted)
+    {
+        // Arrange
+        var recorder = new Mock<IPaymentDeclineRecorder>();
+        var provider = new ScriptedProvider { Result = PaymentBeginResult.Decline("Declined.", "pi_declined") };
+        var (engine, sessions) = CreateEngine(new InMemoryPaymentAttemptStore(), provider, declineRecorder: recorder.Object);
+        sessions.Seed(CreateSession());
+
+        var options = new BeginPaymentOptions { ProviderKey = ProviderKey };
+
+        if (offSession)
+        {
+            options.ProviderData = new Dictionary<string, string> { [CheckoutPaymentDataKeys.OffSession] = "true" };
+        }
+
+        // Act
+        await engine.BeginPaymentAsync("session-1", options, TestContext.Current.CancellationToken);
+
+        // Assert
+        recorder.Verify(value => value.RecordAsync(It.IsAny<CheckoutSession>(), It.IsAny<PaymentAttempt>(), It.IsAny<CancellationToken>()), Times.Exactly(counted));
+    }
     [Fact]
     public async Task BeginPaymentAsync_WhenTheCardholderMustApprove_ReportsItAsADeclineThatNeedsAuthentication()
     {
@@ -272,7 +301,8 @@ public sealed class DefaultCheckoutEngineSavedPaymentTests
     private static (DefaultCheckoutEngine Engine, InMemoryCheckoutSessionStore Sessions) CreateEngine(
         InMemoryPaymentAttemptStore attempts,
         ScriptedProvider provider,
-        ICheckoutSessionStore sessionStore = null)
+        ICheckoutSessionStore sessionStore = null,
+        IPaymentDeclineRecorder declineRecorder = null)
     {
         var sessions = new InMemoryCheckoutSessionStore();
 
@@ -295,7 +325,8 @@ public sealed class DefaultCheckoutEngineSavedPaymentTests
             distributedLock.Object,
             new Mock<ISession>().Object,
             new TestClock(DateTime.UtcNow),
-            NullLogger<DefaultCheckoutEngine>.Instance);
+            NullLogger<DefaultCheckoutEngine>.Instance,
+            declineRecorder: declineRecorder);
 
         return (engine, sessions);
     }

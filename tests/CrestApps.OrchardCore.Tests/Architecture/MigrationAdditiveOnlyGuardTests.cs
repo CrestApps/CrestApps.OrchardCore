@@ -909,9 +909,15 @@ public sealed class MigrationAdditiveOnlyGuardTests
         new ReviewedDynamicSqlEntry(
             "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/CatalogIndexBackfill.cs",
             "CatalogIndexBackfill",
-            "ReindexAsync",
-            "90c96eb10c72e6a4",
-            "Not SQL text at all: a YesSql LINQ query that pages through a catalog's documents and saves each one again through the session, so YesSql maps its index rows again. It only reads documents and rewrites index rows for them; it never creates, alters or drops a schema object."),
+            "ReindexPageAsync",
+            "35388fe22a2084bf",
+            "Not SQL text at all: a YesSql LINQ query that reads one page of a catalog's documents, after the last item ID of the page before and optionally narrowed by an index predicate, and saves each one again with its version check through a new session, so YesSql maps its index rows again. It only reads documents and rewrites index rows for them; it never creates, alters or drops a schema object."),
+        new ReviewedDynamicSqlEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/CatalogIndexBackfill.cs",
+            "CatalogIndexBackfill",
+            "ReindexOneAsync",
+            "35388fe22a2084bf",
+            "Not SQL text at all: a YesSql LINQ query that reads one catalog document by its item ID and saves it again through a new session, after its page failed, so YesSql maps its index rows again. It only reads a document and rewrites its index rows; it never creates, alters or drops a schema object."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",
             "OmnichannelIndexMigration",
@@ -924,6 +930,12 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "TableExistsAsync",
             "64cd2bd40c01ec80",
             "Read-only table existence probe. Both branches only read metadata to test whether a table is present: SQLite runs a parameterized 'SELECT COUNT(1) FROM sqlite_master' and every other dialect runs a parameterized 'SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES'. Neither statement can create, alter, or drop any object."),
+        new ReviewedDynamicSqlEntry(
+            "src/Modules/CrestApps.OrchardCore.Subscriptions/Migrations/TenantOnboardingMigrations.cs",
+            "TenantOnboardingMigrations",
+            "UpdateFrom1",
+            "4c99b64503848adf",
+            "Not SQL text at all: a YesSql LINQ query, in a deferred task, that reads the tenant provisioning jobs once to decide whether an existing store keeps offering custom prefixes and domains. It only reads documents and saves the site settings; it never creates, alters or drops a schema object."),
     ];
 
     /// <summary>

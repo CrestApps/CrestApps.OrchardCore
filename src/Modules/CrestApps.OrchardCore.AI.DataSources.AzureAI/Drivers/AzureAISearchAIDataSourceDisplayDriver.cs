@@ -1,10 +1,13 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.ViewModels;
 using CrestApps.OrchardCore.Core.Security;
+using CrestApps.OrchardCore.DataConnectors;
+using CrestApps.OrchardCore.DataConnectors.Http;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -17,6 +20,9 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly AIDataSourceConnectionPicker _connectionPicker;
+    private readonly IAIEndpointPolicy _endpointPolicy;
+    private readonly AzureAISearchHostIdentity _hostIdentity;
+    private readonly IDataConnectionResolver _dataConnectionResolver;
 
     internal readonly IStringLocalizer S;
 
@@ -25,15 +31,24 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="connectionPicker">The data connection picker.</param>
+    /// <param name="endpointPolicy">The policy for the endpoints AI features call.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="hostIdentity">Where the data source may sign in as the host; <see langword="null"/> refuses it everywhere.</param>
+    /// <param name="dataConnectionResolver">Resolves the picked data connection; <see langword="null"/> while the Data Connectors feature is off.</param>
     public AzureAISearchAIDataSourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         AIDataSourceConnectionPicker connectionPicker,
-        IStringLocalizer<AzureAISearchAIDataSourceDisplayDriver> stringLocalizer)
+        IAIEndpointPolicy endpointPolicy,
+        IStringLocalizer<AzureAISearchAIDataSourceDisplayDriver> stringLocalizer,
+        AzureAISearchHostIdentity hostIdentity = null,
+        IDataConnectionResolver dataConnectionResolver = null)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _connectionPicker = connectionPicker;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
+        _hostIdentity = hostIdentity;
+        _dataConnectionResolver = dataConnectionResolver;
     }
 
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
@@ -91,6 +106,11 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["Azure AI Search index name is required."]);
             }
 
+            if (await ConnectionSignsInAsHostAsync(connectionId, model.IndexName?.Trim()))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.DataConnectionId), S["Signing in as the site's host is only available on the default tenant, or for a search service and index the host approved for this tenant. Use an API key, or ask the host to approve this index."]);
+            }
+
             var storedMetadata = dataSource.GetOrCreate<AzureAISearchSourceMetadata>();
             storedMetadata.IndexName = model.IndexName?.Trim();
             dataSource.Put(storedMetadata);
@@ -109,11 +129,21 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
                 StringComparison.OrdinalIgnoreCase)
                 ? AzureAISearchSourceMetadata.DefaultAuthenticationType
                 : AzureAISearchSourceMetadata.ApiKeyAuthenticationType;
-        var existingMetadata = dataSource.GetOrCreate<AzureAISearchSourceMetadata>();
+        var previousMetadata = dataSource.GetOrCreate<AzureAISearchSourceMetadata>();
+
+        // The stored key was given for one endpoint and one way of signing in; changing either drops it.
+        var existingMetadata = SecretDestination.SameOrigin(previousMetadata.Endpoint, model.Endpoint) &&
+            string.Equals(previousMetadata.GetAuthenticationType(), authenticationType, StringComparison.OrdinalIgnoreCase)
+            ? previousMetadata
+            : new AzureAISearchSourceMetadata();
 
         if (string.IsNullOrWhiteSpace(model.Endpoint))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Azure AI Search endpoint is required."]);
+        }
+        else if (!_endpointPolicy.IsAllowed(model.Endpoint.Trim()))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
 
         if (string.IsNullOrWhiteSpace(model.IndexName))
@@ -126,6 +156,15 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
             string.IsNullOrWhiteSpace(model.ApiKey))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["Azure AI Search API key is required."]);
+        }
+
+        // A managed identity or the default credential signs in as the host, which reads other tenants' indexes too
+        // (review 10, B1).
+        if (!string.Equals(authenticationType, AzureAISearchSourceMetadata.ApiKeyAuthenticationType, StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(model.Endpoint) &&
+            _hostIdentity?.IsApproved(model.Endpoint.Trim(), model.IndexName?.Trim(), model.IdentityClientId?.Trim()) != true)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AuthenticationType), S["Signing in as the site's host is only available on the default tenant, or for a search service and index the host approved for this tenant. Use an API key, or ask the host to approve this index."]);
         }
 
         dataSource.Put(new AzureAISearchSourceMetadata
@@ -142,5 +181,21 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
         });
 
         return Edit(dataSource, context);
+    }
+
+    // A data connection without authentication signs in with the default Azure credential, which is the host's.
+    private async Task<bool> ConnectionSignsInAsHostAsync(string connectionId, string indexName)
+    {
+        if (_dataConnectionResolver is null)
+        {
+            return false;
+        }
+
+        var resolution = await _dataConnectionResolver.ResolveForAsync(connectionId, AzureAISearchDataConnectionClient.ConnectorNames);
+
+        return resolution.Succeeded &&
+            resolution.Context.Connection.GetOrCreate<HttpConnectionSettings>() is { } settings &&
+            AzureAISearchHostIdentity.SignsInAsHost(settings) &&
+            _hostIdentity?.IsApproved(settings.BaseUrl, indexName, identityClientId: null) != true;
     }
 }

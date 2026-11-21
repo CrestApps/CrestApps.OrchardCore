@@ -10,7 +10,8 @@ using OrchardCore.Security;
 namespace CrestApps.OrchardCore.ContentAccessControl.Handlers;
 
 /// <summary>
-/// Handles events for role based content item authorization.
+/// Refuses a restricted content item to whoever isn't in one of its roles: viewing it, listing it, previewing it and
+/// cloning it (a preview or a clone shows everything the item holds).
 /// </summary>
 public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
@@ -87,9 +88,9 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
     }
 
     /// <summary>
-    /// Whether a permission reads content: viewing, previewing or listing it, whether one's own or anyone's, in general
-    /// or for a securable type (<c>ViewContent_Handbook</c>). Compared by name, so a type's own permission meets the
-    /// restriction too.
+    /// Whether a permission reads content: viewing, previewing, listing or cloning it (a clone copies everything the item
+    /// holds), whether one's own or anyone's, in general or for a securable type (<c>ViewContent_Handbook</c>). Compared
+    /// by name, so a type's own permission meets the restriction too.
     /// </summary>
     /// <param name="name">The permission's name.</param>
     /// <returns>Whether it reads content.</returns>
@@ -115,5 +116,7 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
         CommonPermissions.PreviewContent.Name,
         CommonPermissions.PreviewOwnContent.Name,
         CommonPermissions.ListContent.Name,
+        CommonPermissions.CloneContent.Name,
+        CommonPermissions.CloneOwnContent.Name,
     };
 }

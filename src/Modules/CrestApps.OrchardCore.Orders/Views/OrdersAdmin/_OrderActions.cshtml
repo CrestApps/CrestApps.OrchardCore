@@ -9,6 +9,9 @@
     var canCancel = order.Status != OrderStatus.Canceled;
 }
 
+@* The buttons below ask with data-confirm (the crestapps-browser helpers), which lets the browser check the fields first. *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
 @if (canRefund || canCancel || Model.CanResendConfirmation)
 {
     <div class="card mb-4">
@@ -21,7 +24,7 @@
 
             @if (canRefund)
             {
-                <form asp-action="Refund" asp-route-orderId="@order.ItemId" method="post" class="mb-4">
+                <form asp-action="Refund" asp-route-orderId="@order.ItemId" method="post" class="mb-4 no-multisubmit">
                     <h6>@T["Refund"]</h6>
                     <div class="mb-2">
                         <label class="form-label" for="refund-amount">@T["Amount"]</label>
@@ -46,13 +49,13 @@
                             <span class="hint dashed">@T["Added to the buyer's store credit to spend later, instead of going back to how they paid."]</span>
                         </div>
                     }
-                    <button type="submit" class="btn btn-outline-primary">@T["Refund"]</button>
+                    <button type="submit" class="btn btn-outline-primary" data-confirm-title="@T["Refund"]" data-confirm="@T["Refund this amount now? The money goes back the way the buyer paid, or to their store credit."]" data-confirm-ok="@T["Refund"]" data-confirm-cancel="@T["Cancel"]">@T["Refund"]</button>
                 </form>
             }
 
             @if (canCancel)
             {
-                <form asp-action="Cancel" asp-route-orderId="@order.ItemId" method="post" class="mb-4" onsubmit="return confirm('@T["Cancel this order? This can't be undone."]');">
+                <form asp-action="Cancel" asp-route-orderId="@order.ItemId" method="post" class="mb-4 no-multisubmit">
                     <h6>@T["Cancel the order"]</h6>
                     <div class="mb-2">
                         <label class="form-label" for="cancel-note">@T["Why"]</label>
@@ -72,7 +75,7 @@
                             <label class="form-check-label" for="cancel-restock">@T["Put the items back in stock"]</label>
                         </div>
                     }
-                    <button type="submit" class="btn btn-outline-danger">@T["Cancel order"]</button>
+                    <button type="submit" class="btn btn-outline-danger" data-confirm-title="@T["Cancel the order"]" data-confirm="@T["Cancel this order? This can't be undone."]" data-confirm-ok="@T["Cancel order"]" data-confirm-cancel="@T["Keep it"]">@T["Cancel order"]</button>
                 </form>
             }
 

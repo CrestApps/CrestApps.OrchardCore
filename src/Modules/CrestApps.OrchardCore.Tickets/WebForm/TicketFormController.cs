@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Tickets.Categories;
 using CrestApps.OrchardCore.Tickets.Models;
@@ -98,8 +99,9 @@ public sealed class TicketFormController : Controller
         }
 
         // A last line on this node, per visitor address; Orchard's Rate Limits feature, when on, holds the form across
-        // nodes by the visitor (their user, or their address as Reverse Proxy gives it).
-        if (!_guard.TryTake(HttpContext.Connection.RemoteIpAddress?.ToString()))
+        // nodes by the visitor (their user, or their address as Reverse Proxy gives it). The address is the visitor's network
+        // (an IPv6 address masked to its /64), so one visitor can't step past the limit by rotating addresses.
+        if (!_guard.TryTake(ClientNetworkKey.NetworkOnly(HttpContext)))
         {
             return Back(back, widgetId, ErrorQueryName, "busy");
         }

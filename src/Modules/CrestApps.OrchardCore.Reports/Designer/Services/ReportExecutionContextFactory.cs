@@ -71,6 +71,9 @@ public sealed class ReportExecutionContextFactory
             local = local.AddHours(1);
         }
 
+        // A skipped time was moved an hour on above, so the conversion cannot throw.
+#pragma warning disable RS0030
         return DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeToUtc(local, zone), DateTimeKind.Utc);
+#pragma warning restore RS0030
     }
 }

@@ -1,0 +1,15 @@
+@model ShapeViewModel<AccessGrantListItem>
+
+@{
+    var item = Model.Value;
+}
+
+@* A rule for every child tenant is changed on its own screen, not on the screen of one child tenant. *@
+@if (item.Inherited)
+{
+    <a class="btn btn-sm btn-secondary" asp-controller="Access" asp-action="Index">@T["Edit"]</a>
+}
+else
+{
+    <a class="btn btn-sm btn-danger" asp-controller="Access" asp-action="Remove" asp-route-grantId="@item.Grant.GrantId" asp-route-id="@item.ChildEntryId" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Remove access"]" data-message="@T["Remove this rule? Open sessions that depend on it end at their next check."]">@T["Remove"]</a>
+}

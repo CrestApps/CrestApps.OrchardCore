@@ -74,7 +74,7 @@ internal sealed class BookingPartDisplayDriver : ContentPartDisplayDriver<Bookin
                 Id = occupancy.Id,
                 Label = occupancy.Label,
                 People = occupancy.People,
-                PriceAdjustment = occupancy.PriceAdjustment == 0m ? null : occupancy.PriceAdjustment.ToString(CultureInfo.InvariantCulture),
+                PriceAdjustment = occupancy.PriceAdjustment == 0m ? null : occupancy.PriceAdjustment,
             })];
 
             while (model.Occupancies.Count < OccupancyRows)
@@ -84,18 +84,18 @@ internal sealed class BookingPartDisplayDriver : ContentPartDisplayDriver<Bookin
 
             model.MinNights = part.MinNights;
             model.MaxNights = part.MaxNights;
-            model.WeekendPrice = part.WeekendPrice?.ToString(CultureInfo.InvariantCulture);
+            model.WeekendPrice = part.WeekendPrice;
             model.Hours = [.. Enum.GetValues<DayOfWeek>().Select(day => (part.Hours ?? []).FirstOrDefault(hours => hours.Day == day) is { } hours
                 ? new BookingHoursViewModel { Day = day, Open = true, Opens = hours.Opens, Closes = hours.Closes }
                 : new BookingHoursViewModel { Day = day, Opens = "09:00", Closes = "17:00" })];
             model.SlotMinutes = part.SlotMinutes;
             model.DaysAhead = part.DaysAhead;
-            model.DepositPercent = part.DepositPercent == 0m ? null : part.DepositPercent.ToString(CultureInfo.InvariantCulture);
+            model.DepositPercent = part.DepositPercent == 0m ? null : part.DepositPercent;
             model.BalanceDueDaysBefore = part.BalanceDueDaysBefore;
             model.CancellationTiers = [.. (part.CancellationTiers ?? []).OrderByDescending(tier => tier.DaysBefore).Select(tier => new BookingCancellationTierViewModel
             {
                 DaysBefore = tier.DaysBefore,
-                FeePercent = tier.FeePercent.ToString(CultureInfo.InvariantCulture),
+                FeePercent = tier.FeePercent,
             })];
 
             while (model.CancellationTiers.Count < TierRows)
@@ -126,35 +126,33 @@ internal sealed class BookingPartDisplayDriver : ContentPartDisplayDriver<Bookin
         part.RequestToBook = model.RequestToBook;
         part.AskForTravelers = model.AskForTravelers;
 
-        // An occupancy keeps its id, so carts holding it still match.
+        // An occupancy keeps its id, so carts holding it still match. A number that can't be read is a model error from
+        // the binder, which keeps the part from being saved.
         var occupancies = new List<BookingOccupancy>();
 
         foreach (var row in (model.Occupancies ?? []).Where(row => !string.IsNullOrWhiteSpace(row.Label)))
         {
-            if (!TryParse(row.PriceAdjustment, out var adjustment, allowNegative: true))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Occupancies), S["Enter an option's price change as a number, such as 300 or -150."]);
-            }
-
             occupancies.Add(new BookingOccupancy
             {
                 Id = string.IsNullOrEmpty(row.Id) ? global::OrchardCore.IdGenerator.GenerateId() : row.Id,
                 Label = row.Label.Trim(),
                 People = Math.Clamp(row.People ?? 1, 1, 50),
-                PriceAdjustment = adjustment,
+                PriceAdjustment = row.PriceAdjustment ?? 0m,
             });
         }
 
         part.Occupancies = occupancies;
 
-        if (!TryParse(model.WeekendPrice, out var weekend, allowNegative: false))
+        if (model.WeekendPrice < 0m)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.WeekendPrice), S["Enter the weekend price as a number, such as 140."]);
         }
 
-        part.WeekendPrice = string.IsNullOrWhiteSpace(model.WeekendPrice) ? null : weekend;
+        part.WeekendPrice = model.WeekendPrice;
 
-        if (!TryParse(model.DepositPercent, out var deposit, allowNegative: false) || deposit >= 100m)
+        var deposit = model.DepositPercent ?? 0m;
+
+        if (deposit is < 0m or >= 100m)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DepositPercent), S["Enter the deposit as a percent below 100, such as 15, or leave it empty to be paid in full."]);
         }
@@ -172,16 +170,16 @@ internal sealed class BookingPartDisplayDriver : ContentPartDisplayDriver<Bookin
 
         var tiers = new List<BookingCancellationTier>();
 
-        foreach (var row in (model.CancellationTiers ?? []).Where(row => row.DaysBefore is not null || !string.IsNullOrWhiteSpace(row.FeePercent)))
+        foreach (var row in (model.CancellationTiers ?? []).Where(row => row.DaysBefore is not null || row.FeePercent is not null))
         {
-            if (row.DaysBefore is not >= 0 || !TryParse(row.FeePercent, out var fee, allowNegative: false) || fee > 100m)
+            if (row.DaysBefore is not >= 0 || row.FeePercent is not (>= 0m and <= 100m))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.CancellationTiers), S["Give each cancellation rule its days before the date and a fee from 0 to 100 percent."]);
 
                 continue;
             }
 
-            tiers.Add(new BookingCancellationTier { DaysBefore = row.DaysBefore.Value, FeePercent = fee });
+            tiers.Add(new BookingCancellationTier { DaysBefore = row.DaysBefore.Value, FeePercent = row.FeePercent.Value });
         }
 
         part.CancellationTiers = [.. tiers.OrderByDescending(tier => tier.DaysBefore)];
@@ -251,18 +249,6 @@ internal sealed class BookingPartDisplayDriver : ContentPartDisplayDriver<Bookin
                 .GroupBy(entry => DateOnly.FromDateTime(entry.Start))
                 .Select(group => (group.Key.ToDateTime(TimeOnly.MinValue).ToString("D", culture), (IList<BookingPickerOption>)[.. group.Select(entry => new BookingPickerOption(entry.Key, entry.Start.ToString("t", culture), entry.Remaining, null))]))];
         }
-    }
-
-    private static bool TryParse(string value, out decimal amount, bool allowNegative)
-    {
-        amount = 0m;
-
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return true;
-        }
-
-        return decimal.TryParse(value.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out amount) && (allowNegative || amount >= 0m);
     }
 
     private static bool IsTime(string value)

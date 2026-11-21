@@ -1,7 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Invoicing.Core.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using System.Text.Encodings.Web;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Core.Controllers;
@@ -234,7 +233,7 @@ public sealed class UsageMetersController : CatalogAdminController<UsageMeter>
         {
             foreach (var error in result.Errors)
             {
-                await Notifier.ErrorAsync(new LocalizedHtmlString(error, HtmlEncoder.Default.Encode(error)));
+                await Notifier.ErrorAsync(new LocalizedHtmlString(error, "{0}", false, error));
             }
         }
         else if (result.AlreadyRecorded)

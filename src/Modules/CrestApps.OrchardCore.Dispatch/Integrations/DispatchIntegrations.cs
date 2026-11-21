@@ -130,7 +130,7 @@ internal sealed class FleetDispatchEquipmentService : IDispatchEquipmentService
 /// <summary>
 /// Flags the visits at risk every five minutes.
 /// </summary>
-[BackgroundTask(Title = "Dispatch: visits at risk", Schedule = "*/5 * * * *", Description = "Flags visits running over, not started, arriving after their window, or with a technician on time off.")]
+[BackgroundTask(Title = "Dispatch: visits at risk", Schedule = "*/5 * * * *", Description = "Flags visits running over, not started, arriving after their window, or with a technician on time off.", LockTimeout = 3_000, LockExpiration = 120_000)]
 public sealed class VisitRiskBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
@@ -141,7 +141,7 @@ public sealed class VisitRiskBackgroundTask : IBackgroundTask
 /// <summary>
 /// Sends the reminders of tomorrow's visits, every fifteen minutes from the reminder hour.
 /// </summary>
-[BackgroundTask(Title = "Dispatch: visit reminders", Schedule = "*/15 * * * *", Description = "Reminds customers of tomorrow's visits once it is the reminder hour.")]
+[BackgroundTask(Title = "Dispatch: visit reminders", Schedule = "*/15 * * * *", Description = "Reminds customers of tomorrow's visits once it is the reminder hour.", LockTimeout = 3_000, LockExpiration = 300_000)]
 public sealed class VisitReminderBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>

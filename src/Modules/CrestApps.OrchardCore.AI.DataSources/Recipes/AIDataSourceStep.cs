@@ -2,7 +2,9 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Recipes;
 using CrestApps.OrchardCore.Core.Recipes;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
@@ -18,6 +20,8 @@ internal sealed class AIDataSourceStep : CatalogRecipeStepBase<AIDataSource>
 
     private readonly ISourceCatalogManager<AIDataSource> _dataManager;
     private readonly AIDataSourceSourceOptions _sourceOptions;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly IngestionSourceSecretOptions _secretOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -26,15 +30,21 @@ internal sealed class AIDataSourceStep : CatalogRecipeStepBase<AIDataSource>
     /// </summary>
     /// <param name="dataManager">The data manager.</param>
     /// <param name="sourceOptions">The source options.</param>
+    /// <param name="dataProtectionProvider">The data protection provider a secret given in clear text is protected with.</param>
+    /// <param name="secretOptions">The purposes the secrets of each source's settings are protected with.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AIDataSourceStep(
         ISourceCatalogManager<AIDataSource> dataManager,
         IOptions<AIDataSourceSourceOptions> sourceOptions,
+        IDataProtectionProvider dataProtectionProvider,
+        IOptions<IngestionSourceSecretOptions> secretOptions,
         IStringLocalizer<AIDataSourceStep> stringLocalizer)
         : base(StepKey, "DataSources")
     {
         _dataManager = dataManager;
         _sourceOptions = sourceOptions.Value;
+        _dataProtectionProvider = dataProtectionProvider;
+        _secretOptions = secretOptions.Value;
         S = stringLocalizer;
     }
 
@@ -56,10 +66,35 @@ internal sealed class AIDataSourceStep : CatalogRecipeStepBase<AIDataSource>
         => _dataManager.FindByIdAsync(id);
 
     protected override ValueTask UpdateAsync(AIDataSource entry, JsonObject token)
-        => _dataManager.UpdateAsync(entry, token);
+    {
+        ProtectSecrets(token, RecipeSecretDestinations.Snapshot(entry));
+
+        // A recipe that leaves a secret out keeps the stored one; when it also changes where the entry sends it, the
+        // kept secret is dropped, as the editor drops it, before the one save that queues the data source's sync.
+        return RecipeSecretDestinations.UpdateAsync(
+            entry,
+            token,
+            async data => await _dataManager.NewAsync(entry.Source, data),
+            data => _dataManager.UpdateAsync(entry, data));
+    }
 
     protected override ValueTask<AIDataSource> NewAsync(JsonObject token, RecipeExecutionContext context)
-        => _dataManager.NewAsync(GetSource(token), token);
+    {
+        ProtectSecrets(token, stored: null);
+
+        return _dataManager.NewAsync(GetSource(token), token);
+    }
+
+    // A secret the recipe gives in clear text is protected, as the editor protects it; one that is already protected (a
+    // recipe made on this site) is kept as it is.
+    private void ProtectSecrets(JsonObject token, JsonObject stored)
+        => IngestionSourceSecretProtection.Protect(
+            typeof(AIDataSource),
+            token[nameof(AIDataSource.Properties)] as JsonObject,
+            stored?[nameof(AIDataSource.Properties)] as JsonObject,
+            _secretOptions,
+            _dataProtectionProvider,
+            refuseProtected: false);
 
     protected override ValueTask<ValidationResultDetails> ValidateAsync(AIDataSource entry)
         => _dataManager.ValidateAsync(entry);

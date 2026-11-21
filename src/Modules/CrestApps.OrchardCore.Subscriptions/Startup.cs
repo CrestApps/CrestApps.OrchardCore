@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Core.ModelBinding;
+using CrestApps.OrchardCore.Core.Throttling;
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -30,6 +33,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentTypes.Events;
 using OrchardCore.Localization;
 using OrchardCore.Navigation;
@@ -62,6 +66,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         services.AddDataMigration<SubscriptionPartMigrations>()
             .AddContentPart<SubscriptionPart>()
             .UseDisplayDriver<SubscriptionPartDisplayDriver>();
@@ -173,6 +179,15 @@ public sealed class CheckoutStartup : StartupBase
         services.AddScoped<ICheckoutHandler, ContentCheckoutHandler>();
         services.AddScoped<ICheckoutHandler, SubscriptionActivationCheckoutHandler>();
 
+        // A subscription whose payment is overdue becomes past due.
+        services.AddScoped<ITransactionEventHandler, SubscriptionOverdueTransactionHandler>();
+
+        // A subscription bought with a promise to pay starts once its first transaction is paid.
+        services.AddScoped<ITransactionEventHandler, SubscriptionFirstPaymentTransactionHandler>();
+
+        // An offline agreement's next period is invoiced only while its subscription is current.
+        services.AddScoped<ITransactionRenewalFilter, SubscriptionTransactionRenewalFilter>();
+
         services.AddDisplayDriver<CheckoutFlow, UserRegistrationCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<CheckoutFlow, ContentStepCheckoutFlowDisplayDriver>();
     }
@@ -247,7 +262,18 @@ public sealed class TenantProvisioningStartup : StartupBase
 
         services.AddScoped<ITenantProvisioningJobStore, TenantProvisioningJobStore>();
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+        services.AddScoped<ITenantPurchaseRulesProvider, TenantPurchaseRulesProvider>();
+        services.AddScoped<StoreRouteSegments>();
+
+        // Without Orchard Core's Feature Profiles no profile can be confirmed, so no site is sold (SEC-C18).
+        services.TryAddScoped<ITenantFeatureProfileCatalog, UnavailableTenantFeatureProfileCatalog>();
         services.AddScoped<ICheckoutHandler, TenantProvisioningCheckoutHandler>();
+
+        // A purchase saved before a rule existed, or edited around the step, is checked again before it is paid for.
+        services.AddScoped<ICheckoutPaymentGate, TenantProvisioningPaymentGate>();
+
+        // A site bought with a promise to pay is created once its transaction is paid.
+        services.AddScoped<ITransactionEventHandler, TenantProvisioningPaymentReceivedHandler>();
         services.AddDisplayDriver<CheckoutFlow, TenantProvisioningStepDisplayDriver>();
 
         // A site that keeps serving after the customer stops paying costs the owner money indefinitely, so
@@ -279,6 +305,9 @@ public sealed class FeatureProfileTenantProvisioningStartup : StartupBase
     {
         services.AddContentPart<TenantOnboardingPart>()
             .UseDisplayDriver<FeatureProfilesTenantOnboardingPartDisplayDriver>();
+
+        // Registered after the unavailable default, so it is the one resolved.
+        services.AddScoped<ITenantFeatureProfileCatalog, FeatureProfilesTenantFeatureProfileCatalog>();
     }
 }
 
@@ -332,4 +361,17 @@ public sealed class InstallmentPlansStartup : StartupBase
     /// <inheritdoc/>
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.AddInstallmentPlanPaymentEndpoints();
+}
+
+/// <summary>
+/// The built-in limit of the installment down payment routes, listed read-only under Tools &gt; Rate Limits.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(SubscriptionConstants.RateLimitGroups.InstallmentPayment, 60, TimeSpan.FromMinutes(1))
+            .AddJsonRejectionHandler(SubscriptionConstants.InstallmentPlans.BeginPaymentRouteName, SubscriptionConstants.InstallmentPlans.PaymentStatusRouteName));
 }

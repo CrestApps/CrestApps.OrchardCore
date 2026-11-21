@@ -3,6 +3,7 @@ using System.Globalization;
 using CrestApps.OrchardCore.Classifieds.Models;
 using CrestApps.OrchardCore.Classifieds.Services;
 using CrestApps.OrchardCore.Classifieds.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
@@ -28,6 +29,7 @@ namespace CrestApps.OrchardCore.Classifieds.Drivers;
 internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<ClassifiedPart>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAuthorizationService _authorizationService;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
 
@@ -35,11 +37,13 @@ internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<Cla
 
     public ClassifiedPartDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
         IStringLocalizer<ClassifiedPartDisplayDriver> stringLocalizer,
         IClock clock,
         ILocalClock localClock)
     {
         _httpContextAccessor = httpContextAccessor;
+        _authorizationService = authorizationService;
         _clock = clock;
         _localClock = localClock;
         S = stringLocalizer;
@@ -54,7 +58,7 @@ internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<Cla
         => Initialize<ClassifiedPartViewModel>(GetEditorShapeType(context), async model =>
         {
             Fill(model, part);
-            model.IsAdmin = IsAdmin();
+            model.IsAdmin = await CanModerateAsync();
             model.Expires = await ToLocalAsync(part.ExpiresUtc);
             model.FeaturedUntil = await ToLocalAsync(part.FeaturedUntilUtc);
         });
@@ -80,8 +84,9 @@ internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<Cla
             part.Longitude = hasLongitude ? longitude : null;
         }
 
-        // Only staff set a listing's status and dates; a poster's own form leaves them as the moderation made them.
-        if (IsAdmin())
+        // Only moderators set a listing's status and dates; a poster's own form, even on an admin page, leaves them as the
+        // moderation made them.
+        if (await CanModerateAsync())
         {
             part.Status = Enum.IsDefined(model.Status) ? model.Status : part.Status;
             // Staff enter the dates in the site's time zone.
@@ -107,8 +112,10 @@ internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<Cla
             ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(value, DateTimeKind.Utc))).DateTime
             : null;
 
-    private bool IsAdmin()
-        => _httpContextAccessor.HttpContext is { } httpContext && AdminAttribute.IsApplied(httpContext);
+    private async Task<bool> CanModerateAsync()
+        => _httpContextAccessor.HttpContext is { } httpContext &&
+            AdminAttribute.IsApplied(httpContext) &&
+            await _authorizationService.AuthorizeAsync(httpContext.User, ClassifiedsPermissions.ModerateClassifieds);
 
     private static bool TryParse(string value, out double number)
     {

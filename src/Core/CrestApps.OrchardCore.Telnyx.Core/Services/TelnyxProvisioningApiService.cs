@@ -455,9 +455,7 @@ public sealed class TelnyxProvisioningApiService : ITelnyxProvisioningApiService
     private HttpClient CreateClient(string apiKey, string apiBaseUrl)
     {
         var client = _httpClientFactory.CreateClient(TelnyxConstants.ProviderTechnicalName);
-        var resolved = string.IsNullOrWhiteSpace(apiBaseUrl)
-            ? TelnyxConstants.DefaultApiBaseUrl
-            : apiBaseUrl.EndsWith('/') ? apiBaseUrl : apiBaseUrl + '/';
+        var resolved = TelnyxApiAddress.Resolve(apiBaseUrl);
 
         client.BaseAddress = new Uri(resolved);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);

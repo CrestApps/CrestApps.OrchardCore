@@ -69,11 +69,28 @@ public sealed class PlatformController : Controller
         }
 
         var overview = _platformService.GetOverview();
+        var parents = overview.Parents.Where(parent => Matches(parent, search)).ToList();
 
+        // The parents and the orphaned child tenants are rendered by the admin-list tag, in the layout (List or Grid)
+        // the site or the user picked. A parent's row names its first child tenants; its own screen lists them all.
         return View(new PlatformIndexViewModel
         {
             Overview = overview,
-            Parents = overview.Parents.Where(parent => Matches(parent, search)).ToList(),
+            Parents = parents,
+            ParentList = new AdminListContext<HierarchyParentListItem>
+            {
+                Source = parents.Select(parent => new HierarchyParentListItem { Parent = parent }).ToList(),
+                ShowSelectAll = false,
+            },
+            OrphanList = new AdminListContext<HierarchyChildListItem>
+            {
+                Source = overview.Orphans.Select(orphan => new HierarchyChildListItem
+                {
+                    Child = orphan,
+                    MoveTargets = overview.Parents,
+                }).ToList(),
+                ShowSelectAll = false,
+            },
             Search = search,
             HostGuardInstalled = _platformService.IsHostGuardInstalled,
             PlatformDomain = _platformService.GetPlatformDomain(),
@@ -176,13 +193,23 @@ public sealed class PlatformController : Controller
             return NotFound();
         }
 
+        var otherParents = _platformService.GetOverview().Parents
+            .Where(parent => parent.Settings.Name != node.Settings.Name)
+            .ToList();
+
         return View(new ParentDetailViewModel
         {
             Parent = node,
-            OtherParents = _platformService.GetOverview().Parents
-                .Where(parent => parent.Settings.Name != node.Settings.Name)
-                .Select(parent => new SelectListItem(parent.DisplayName, parent.Settings.Name))
-                .ToList(),
+            Children = new AdminListContext<HierarchyChildListItem>
+            {
+                Source = node.Children.Select(child => new HierarchyChildListItem
+                {
+                    Child = child,
+                    ParentTenantName = node.Settings.Name,
+                    MoveTargets = otherParents,
+                }).ToList(),
+                ShowSelectAll = false,
+            },
         });
     }
 

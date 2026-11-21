@@ -14,11 +14,12 @@
 		var MAX_TABLES = 10;
 		var MAX_TABLE_ROWS = 50;
 		var MAX_CELL_LENGTH = 300;
+		var MAX_FIELD_TEXT_LENGTH = 500;
 		var selectors = {
 			description: "meta[name=\"description\"]",
 			headings: "h1, h2",
 			main: "main, [role=\"main\"]",
-			ignored: "script, style, noscript, template, svg, nav, aside, select, textarea, datalist, dialog:not([open]), [hidden], [aria-hidden=\"true\"], [role=\"navigation\"], [data-webmcp-ignore], [class*=\"ai-chat-widget\"]",
+			ignored: "script, style, noscript, template, svg, nav, aside, datalist, dialog:not([open]), [hidden], [aria-hidden=\"true\"], [role=\"navigation\"], [data-webmcp-ignore], [class*=\"ai-chat-widget\"]",
 			links: "nav a[href], header a[href], aside a[href], [role=\"navigation\"] a[href]",
 			fields: "form input, form select, form textarea"
 		};
@@ -71,6 +72,27 @@
 			if (node.hidden || typeof node.matches === "function" && node.matches(selectors.ignored)) return true;
 			return typeof node.checkVisibility === "function" && !node.checkVisibility();
 		}
+		var FIELD_TAGS = [
+			"INPUT",
+			"SELECT",
+			"TEXTAREA"
+		];
+		/**
+		* The text page_read_content shows for a form field, where the page shows it: its value, the chosen option of a
+		* list, or [x] / [ ] for a check box. Fields an agent never reads (hidden, password, file, buttons, disabled, the
+		* antiforgery token) and empty fields show nothing.
+		*/
+		function fieldText(field) {
+			if (!isListed(field)) return "";
+			var type = fieldType(field);
+			if (type === "checkbox" || type === "radio") return field.checked ? "[x]" : "[ ]";
+			var text = type === "select" ? Array.prototype.filter.call(field.options || [], function(option) {
+				return option.selected;
+			}).map(function(option) {
+				return cleanText(option.text);
+			}).join(", ") : cleanText(field.value);
+			return text.length > MAX_FIELD_TEXT_LENGTH ? text.slice(0, MAX_FIELD_TEXT_LENGTH) + "…" : text;
+		}
 		function cellText(cell) {
 			var text = cleanText(cell.textContent);
 			return text.length > MAX_CELL_LENGTH ? text.slice(0, MAX_CELL_LENGTH) + "…" : text;
@@ -112,6 +134,10 @@
 				}
 				if (node.nodeType !== 1 || isIgnored(node)) return;
 				var tag = (node.tagName || "").toUpperCase();
+				if (FIELD_TAGS.indexOf(tag) >= 0) {
+					line.push(fieldText(node));
+					return;
+				}
 				if (tag === "TABLE") {
 					endLine();
 					tableCount++;
@@ -276,7 +302,7 @@
 				{
 					name: "page_read_content",
 					title: "Read page content",
-					description: "Reads what the page shows in its main area: its text, and its tables as headers and rows (for example the records a list page shows). Menus, forms and hidden parts are left out; use page_list_links and page_list_form_fields for those.",
+					description: "Reads what the page shows in its main area: its text, what its form fields hold (next to their labels), and its tables as headers and rows (for example the records a list page shows). Menus and hidden parts are left out. Use page_list_form_fields for the fields' names and choices before filling them, and page_list_links for the menus.",
 					inputSchema: {
 						type: "object",
 						properties: {}
@@ -357,7 +383,7 @@
 				{
 					name: "page_set_form_field",
 					title: "Set form field",
-					description: "Puts a value into one form field on the page, found by its name, id or label. It does not save or submit the form: the user reviews the change and saves it.",
+					description: "Puts a value into one form field on the page, found by its name, id or label. It does not save or submit the form: the user reviews the change and saves it. The result has the field's value before the change (previousValue), so the change can be undone by setting it back.",
 					inputSchema: {
 						type: "object",
 						properties: {
@@ -374,6 +400,7 @@
 						if (!field) throw new Error("No editable field on the page is named \"" + cleanText(input && input.field) + "\".");
 						var type = fieldType(field);
 						var value = input.value;
+						var previousValue = describeField(field).value;
 						if (type === "checkbox" || type === "radio") field.checked = value === true || String(value).toLowerCase() === "true";
 						else if (type === "select") {
 							var wanted = cleanText(value).toLowerCase();
@@ -385,7 +412,10 @@
 						} else field.value = value == null ? "" : String(value);
 						raise(field, "input");
 						raise(field, "change");
-						return { field: describeField(field) };
+						return {
+							field: describeField(field),
+							previousValue
+						};
 					}
 				}
 			];

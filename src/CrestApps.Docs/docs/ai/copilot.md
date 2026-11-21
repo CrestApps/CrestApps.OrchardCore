@@ -105,7 +105,7 @@ You only need to define “Bring your own key” once—after configuration, thi
 
 - **Provider Type** — which provider the API key targets
 - **Base URL** — provider endpoint
-- **API Key** — stored encrypted (optional for local providers like Ollama)
+- **API Key** — stored encrypted (optional for local providers like Ollama). It is kept when the field is left blank only while the base URL keeps its scheme, host and port; changing any of them drops it, so it must be entered again.
 - **Default Model** — model/deployment name used for sessions
 - **Wire API Format** — `completions` or `responses`
 - **Azure API Version** — required when Provider Type is Azure OpenAI

@@ -22,6 +22,14 @@ public interface IOrderEventHandler
     Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// The money promised for an order paid later arrived. What was held until then is delivered now.
+    /// </summary>
+    /// <param name="context">The order.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task PaymentSettledAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <summary>
     /// Runs after an order was canceled, in the same unit of work: an unpaid one whose checkout ended, or any one the
     /// store canceled.
     /// </summary>
@@ -53,6 +61,9 @@ public abstract class OrderEventHandlerBase : IOrderEventHandler
         => Task.CompletedTask;
 
     public virtual Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    public virtual Task PaymentSettledAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
     public virtual Task CanceledAsync(OrderCanceledContext context, CancellationToken cancellationToken = default)

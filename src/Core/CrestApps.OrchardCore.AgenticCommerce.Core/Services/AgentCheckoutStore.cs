@@ -58,7 +58,23 @@ public sealed class AgentCheckoutStore : DocumentCatalog<AgentCheckout, AgentChe
     {
         ArgumentException.ThrowIfNullOrEmpty(platformId);
 
+        // Unregistered platforms share one allowance: what any of them has open counts for all of them.
+        if (platformId.StartsWith(AgentPlatform.UnregisteredIdPrefix, StringComparison.Ordinal))
+        {
+            return Session.QueryIndex<AgentCheckoutIndex>(index => index.PlatformId.StartsWith(AgentPlatform.UnregisteredIdPrefix) && !index.IsTerminal, collection: AgenticCommerceStorage.CollectionName)
+                .CountAsync(cancellationToken);
+        }
+
         return Session.QueryIndex<AgentCheckoutIndex>(index => index.PlatformId == platformId && !index.IsTerminal, collection: AgenticCommerceStorage.CollectionName)
+            .CountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<int> CountOpenFromSameOriginAsync(string platformOrigin, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(platformOrigin);
+
+        return Session.QueryIndex<AgentCheckoutIndex>(index => index.PlatformOrigin == platformOrigin && !index.IsTerminal, collection: AgenticCommerceStorage.CollectionName)
             .CountAsync(cancellationToken);
     }
 }

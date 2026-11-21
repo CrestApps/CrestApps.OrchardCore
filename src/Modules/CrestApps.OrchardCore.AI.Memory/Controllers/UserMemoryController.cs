@@ -2,7 +2,7 @@ using System.Security.Claims;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Memory.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -63,7 +63,7 @@ public sealed class UserMemoryController : Controller
     [Admin("ai/memory/user/{userId}/clear", "AIUserMemoryClear")]
     public async Task<IActionResult> Clear(string userId, string returnUrl = null)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ClearAIMemory, (object)userId))
+        if (!await _authorizationService.AuthorizeAsync(User, ClearAIMemoryPermission.For(User, userId)))
         {
             return Forbid();
         }

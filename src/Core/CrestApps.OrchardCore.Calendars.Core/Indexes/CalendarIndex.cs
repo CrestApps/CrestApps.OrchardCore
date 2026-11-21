@@ -46,6 +46,7 @@ public sealed class CalendarIndex : CatalogItemIndex
     /// <summary>
     /// Gets or sets the secret part of the calendar's feed address.
     /// </summary>
+    /// <remarks>The SHA-256 (lower-case hex) of the feed secret; never the secret.</remarks>
     public string FeedToken { get; set; }
 
     /// <summary>

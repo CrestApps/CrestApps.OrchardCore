@@ -202,7 +202,8 @@ public sealed class B2BAccountsTests
         var orders = new Mock<IOrderStore>();
         IReadOnlyList<Order> paid = total > 0m ? [new Order { ItemId = "paid-1", Currency = "USD", Subtotal = total, Total = total, Status = OrderStatus.Paid }] : [];
         orders.Setup(store => store.PageAsync(It.IsAny<OrderQuery>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((paid.Count, paid));
+            .ReturnsAsync((OrderQuery query, int _, int _, CancellationToken _) =>
+                query.Statuses.Contains(OrderStatus.Paid) ? (paid.Count, paid) : (0, Array.Empty<Order>()));
 
         return orders;
     }

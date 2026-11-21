@@ -20,12 +20,13 @@
 			}
 			return "";
 		}
-		function createButton() {
+		function createButton(placeholder) {
 			var button = document.createElement("button");
 			button.type = "button";
 			button.className = "btn btn-sm btn-outline-success telephony-phone-dial-btn ms-1";
-			button.title = "Call with the soft phone";
-			button.innerHTML = "<i class=\"fa-solid fa-phone\"></i>";
+			button.title = placeholder.getAttribute("data-dial-title") || "";
+			button.setAttribute("aria-label", button.title);
+			button.innerHTML = "<i class=\"fa-solid fa-phone\" aria-hidden=\"true\"></i>";
 			return button;
 		}
 		function flash(button, iconClass, revertMs) {
@@ -60,7 +61,7 @@
 		function enhance(placeholder) {
 			if (placeholder.__telephonyEnhanced) return;
 			placeholder.__telephonyEnhanced = true;
-			var button = createButton();
+			var button = createButton(placeholder);
 			button.addEventListener("click", function() {
 				var number = getNumber(placeholder);
 				if (number) dial(button, number);

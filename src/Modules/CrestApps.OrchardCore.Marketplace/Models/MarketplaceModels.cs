@@ -195,12 +195,25 @@ public sealed class VendorPayout : CatalogItem
     public string Failure { get; set; }
 
     public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the provider was first asked for this pending payout's transfer and had none. Not found proves
+    /// nothing (the provider may still be making it), so the payout stays pending under its key until the transfer
+    /// appears, or staff confirm none was made after <see cref="Services.MarketplaceService.UnconfirmedPayoutReviewAfter"/>.
+    /// </summary>
+    public DateTime? UnconfirmedSinceUtc { get; set; }
 }
 
 public enum VendorPayoutStatus
 {
     Paid = 0,
     Failed = 1,
+
+    /// <summary>
+    /// Recorded, with its idempotency key, before the transfer was asked for; not known to be paid yet. A payout run
+    /// that finds it sends the same earnings again with the same key, so the provider answers with the transfer it made.
+    /// </summary>
+    Pending = 2,
 }
 
 /// <summary>

@@ -18,6 +18,10 @@ public class PayLaterSettingsViewModel
     /// </summary>
     public int NetTermDays { get; set; }
 
+    public bool RequireSignedIn { get; set; }
+
+    public decimal? MaxOrderAmount { get; set; }
+
     /// <summary>
     /// Gets or sets the identifier of the payment term a Pay Later balance follows when the payer has none.
     /// </summary>

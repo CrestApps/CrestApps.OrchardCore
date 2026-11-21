@@ -64,6 +64,8 @@ public static class OrchardCoreFeatureIds
 
     public const string Features = "OrchardCore.Features";
 
+    public const string Feeds = "OrchardCore.Feeds";
+
     public const string Flows = "OrchardCore.Flows";
 
     public const string Forms = "OrchardCore.Forms";

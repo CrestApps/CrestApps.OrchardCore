@@ -9,6 +9,7 @@ internal sealed class PosPermissionProvider : IPermissionProvider
     private readonly IEnumerable<Permission> _allPermissions =
     [
         PosPermissions.SellAtRegister,
+        PosPermissions.RefundAtRegister,
         PosPermissions.ManageRegisters,
     ];
 
@@ -30,6 +31,7 @@ internal sealed class PosPermissionProvider : IPermissionProvider
                 [
                     PosPermissions.ManageRegisters,
                     PosPermissions.SellAtRegister,
+                    PosPermissions.RefundAtRegister,
                 ],
             },
         ];

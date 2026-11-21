@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Security;
@@ -80,12 +81,12 @@ public static class AcpMcpEndpoints
         routes.MapPost(Route, HandleAsync)
             .AllowAnonymous()
             .DisableAntiforgery()
-            .WithName("AcpMcp");
+            .WithName("AcpMcp").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
 
         return routes;
     }
 
-    private static async Task<IResult> HandleAsync(HttpContext httpContext, AcpCheckoutOperations operations, AcpMcpIdempotency idempotency)
+    internal static async Task<IResult> HandleAsync(HttpContext httpContext, AcpCheckoutOperations operations, AcpMcpIdempotency idempotency)
     {
         var body = await AgentRequestBody.ReadAsync(httpContext.Request);
 
@@ -97,6 +98,12 @@ public static class AcpMcpEndpoints
         }
 
         var message = AgentRequestBody.Parse(body) as JsonObject;
+
+        if (message is null && body.Length > 0)
+        {
+            return Results.Json(Error(null, -32700, "Send a JSON-RPC request as JSON, with each property named once."), statusCode: StatusCodes.Status400BadRequest);
+        }
+
         var id = message?["id"]?.DeepClone();
 
         // The connection signs in, as the REST binding does; authorization isn't part of a tool's arguments.
@@ -163,16 +170,28 @@ public static class AcpMcpEndpoints
         }
 
         // The payload is signed as the REST body is, so one signature serves both bindings.
+        // Version 2 binds the signature to the tool and the checkout, as the method "MCP" and the path "tool/id".
         var signatureError = AcpSignatureCheck.Check(
             request.Platform,
             AcpRequestSignature.GetSigningInput(call.Payload),
             call.Signature,
             call.Timestamp,
-            AcpRequestFilter.GetNow(httpContext));
+            AcpSignatureCheck.McpMethod,
+            GetSignedPath(call),
+            AcpRequestFilter.GetNow(httpContext),
+            out var verified);
 
         if (signatureError is not null)
         {
             return AcpError(id, AcpResults.ErrorBody(StatusCodes.Status401Unauthorized, AcpSignatureCheck.ErrorCode, signatureError));
+        }
+
+        // Only a call that changes a checkout runs through the idempotency layer, so only its key may let a signature again.
+        if (await AcpSignatureCheck.UseAsync(httpContext, request.Platform, verified, call.IsMutating ? call.IdempotencyKey : null) is not AgentSignatureUse.Accepted and var use)
+        {
+            var refused = AcpSignatureCheck.RefusedUse(httpContext, use);
+
+            return AcpError(id, refused.Body);
         }
 
         var version = call.ApiVersion.Trim();
@@ -201,6 +220,18 @@ public static class AcpMcpEndpoints
         var (result, replayed) = await idempotency.RunAsync(request.Platform.ItemId, call.Tool, call.Id, call.IdempotencyKey, call.Payload, RunAsync, cancellationToken);
 
         return ToResponse(id, result, call.RequestId, replayed);
+    }
+
+    /// <summary>
+    /// Returns the path a version 2 signature of a tool call is made with: the tool's name, then <c>/</c> and the
+    /// checkout's id for a tool that acts on one, so a signature can't be used on another checkout.
+    /// </summary>
+    /// <param name="call">The call.</param>
+    public static string GetSignedPath(AcpMcpCall call)
+    {
+        ArgumentNullException.ThrowIfNull(call);
+
+        return string.IsNullOrEmpty(call.Id) ? call.Tool : $"{call.Tool}/{call.Id}";
     }
 
     /// <summary>

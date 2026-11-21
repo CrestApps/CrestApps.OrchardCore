@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.PayLater.Drivers;
@@ -28,6 +29,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         // When a Pay Later balance is due: the payer's own payment term, the one chosen for Pay Later, or a number of days.
         services.AddScoped<PayLaterDueDateResolver>();
         services.AddScoped<PayLaterCheckoutPaymentProvider>();

@@ -98,7 +98,7 @@ public sealed partial class ContactCenterHub
 
         if (principal is null || !await services.AuthorizationService.AuthorizeAsync(principal, ContactCenterPermissions.MonitorContactCenter))
         {
-            throw new HubException($"The current user is not authorized for '{ContactCenterPermissions.MonitorContactCenter.Name}'.");
+            throw new HubException(S["The current user is not authorized for '{0}'.", ContactCenterPermissions.MonitorContactCenter.Name].Value);
         }
 
         if (services.MonitoringService is null)

@@ -2,24 +2,42 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.OrchardCore.AI.Mcp.Services;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 
 internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnection>
 {
+    private readonly ShellSettings _shellSettings;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StdioMcpConnectionDisplayDriver"/> class.
     /// </summary>
+    /// <param name="shellSettings">The settings of the current tenant.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public StdioMcpConnectionDisplayDriver(IStringLocalizer<StdioMcpConnectionDisplayDriver> stringLocalizer)
+    public StdioMcpConnectionDisplayDriver(
+        ShellSettings shellSettings,
+        IAuthorizationService authorizationService,
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<StdioMcpConnectionDisplayDriver> stringLocalizer)
     {
+        _shellSettings = shellSettings;
+        _authorizationService = authorizationService;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -83,6 +101,14 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
         if (connection.Source != McpConstants.TransportTypes.StdIo)
         {
             return null;
+        }
+
+        // The controller checks this too; the editor refuses on its own so no other caller can save a command.
+        if (!await McpStdioAccess.CanManageAsync(_shellSettings, _authorizationService, _httpContextAccessor.HttpContext?.User))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(StdioConnectionFieldsViewModel.Command), S["You are not allowed to manage local (stdio) connections."]);
+
+            return Edit(connection, context);
         }
 
         var model = new StdioConnectionFieldsViewModel();

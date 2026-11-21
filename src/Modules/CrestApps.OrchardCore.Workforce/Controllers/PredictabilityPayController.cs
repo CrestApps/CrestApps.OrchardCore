@@ -167,7 +167,9 @@ public sealed class PredictabilityPayController : Controller
             return NotFound();
         }
 
-        if (!(await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted)).Covers(entry.TeamId))
+        // A manager doesn't decide their own premium on the strength of managing their own team.
+        if (!(await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted)).Covers(entry.TeamId) ||
+            !await _scopeService.CanDecideForWorkerAsync(User, entry.WorkerId, HttpContext.RequestAborted))
         {
             return Forbid();
         }

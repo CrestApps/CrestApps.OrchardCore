@@ -2,6 +2,8 @@ using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.AI.Tooling.Instances;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
@@ -23,6 +25,8 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
     private static readonly string[] _httpMethods = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly IAIEndpointPolicy _endpointPolicy;
+    private readonly HttpApiRequestSecretPlace _secretPlace;
 
     internal readonly IStringLocalizer S;
 
@@ -30,12 +34,18 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
     /// Initializes a new instance of the <see cref="HttpApiRequestToolInstanceDisplayDriver"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider used to protect stored credentials.</param>
+    /// <param name="endpointPolicy">The policy that keeps the base URL and token endpoint off the site's own network.</param>
+    /// <param name="secretPlace">Decides, for this post, whether the stored secrets still go to the place they were given for.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public HttpApiRequestToolInstanceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
+        IAIEndpointPolicy endpointPolicy,
+        HttpApiRequestSecretPlace secretPlace,
         IStringLocalizer<HttpApiRequestToolInstanceDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
+        _endpointPolicy = endpointPolicy;
+        _secretPlace = secretPlace;
         S = stringLocalizer;
     }
 
@@ -92,6 +102,10 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["The base URL must be an absolute HTTP or HTTPS URL."]);
         }
+        else if (!string.IsNullOrWhiteSpace(model.BaseUrl) && !_endpointPolicy.IsAllowed(model.BaseUrl))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
+        }
 
         if (model.TimeoutSeconds.HasValue && model.TimeoutSeconds.Value <= 0)
         {
@@ -103,7 +117,19 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DefaultHeaders), S["The default headers must be a valid JSON object of header names and values."]);
         }
 
-        var existing = instance.GetOrCreate<HttpApiRequestToolSettings>();
+        var stored = instance.GetOrCreate<HttpApiRequestToolSettings>();
+
+        // The stored secrets were given for one base URL, token endpoint and way of signing in; when any of them changes
+        // they are dropped and must be entered again, so an editor cannot send them to a host of their own. The cached
+        // OAuth2 tokens go with them, and the parameters driver drops the secret parameters on the same answer.
+        var samePlace = _secretPlace.IsSamePlace(instance, model);
+        var existing = samePlace ? stored : new HttpApiRequestToolSettings();
+
+        if (!samePlace)
+        {
+            instance.Remove<HttpApiRequestTokenState>();
+        }
+
         var settings = new HttpApiRequestToolSettings
         {
             BaseUrl = model.BaseUrl?.Trim(),
@@ -165,6 +191,10 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
                 if (string.IsNullOrEmpty(settings.TokenEndpoint))
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(model.TokenEndpoint), S["The token endpoint is required."]);
+                }
+                else if (!_endpointPolicy.IsAllowed(settings.TokenEndpoint))
+                {
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.TokenEndpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
                 }
 
                 if (string.IsNullOrEmpty(settings.ClientId))

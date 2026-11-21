@@ -238,6 +238,16 @@
     </div>
 </div>
 
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="DeliverBeforePayment" />
+            <label class="form-check-label" asp-for="DeliverBeforePayment">@T["Deliver before payment"]</label>
+            <span class="hint dashed">@T["When the buyer pays later (Pay Later, a bank transfer, cash on delivery), hand over what this product delivers instantly, such as a download or a membership, before the money arrives. Unchecked, it is delivered once the payment is received."]</span>
+        </div>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="Position">
     <label asp-for="Position" class="ocat-label">@T["Position"]</label>
     <div class="ocat-end">

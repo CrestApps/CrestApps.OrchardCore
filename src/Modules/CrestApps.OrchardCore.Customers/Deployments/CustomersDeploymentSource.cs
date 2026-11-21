@@ -67,6 +67,7 @@ internal sealed class CustomersDeploymentSource : DeploymentSourceBase<Customers
             [nameof(Customer.LastName)] = customer.LastName,
             [nameof(Customer.CompanyName)] = customer.CompanyName,
             [nameof(Customer.TaxId)] = customer.TaxId,
+            [nameof(Customer.TaxIdVerified)] = customer.TaxIdVerified,
             [nameof(Customer.IsTaxExempt)] = customer.IsTaxExempt,
             [nameof(Customer.TaxExemptionReason)] = customer.TaxExemptionReason,
             [nameof(Customer.Email)] = customer.Email,

@@ -4,6 +4,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Services;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
@@ -55,7 +56,7 @@ public sealed class AIChatAGUITests
         var provider = CreateContentItemProvider(contentItem);
         var context = CreateContext(new { area = "OrchardCore.Contents", controller = "Admin", action = "Edit", contentItemId = "item-1" });
 
-        await provider.PopulateAsync(context);
+        await provider.PopulateAsync(context, TestContext.Current.CancellationToken);
 
         var entry = Assert.Single(context.Entries);
         Assert.Equal("Content item being edited", entry.Description);
@@ -68,7 +69,7 @@ public sealed class AIChatAGUITests
         var provider = CreateContentItemProvider(contentItem: null);
         var context = CreateContext(new { area = "OrchardCore.Contents", controller = "Admin", action = "Create", id = "BlogPost" });
 
-        await provider.PopulateAsync(context);
+        await provider.PopulateAsync(context, TestContext.Current.CancellationToken);
 
         var entry = Assert.Single(context.Entries);
         Assert.Equal("Content item being created", entry.Description);
@@ -82,8 +83,8 @@ public sealed class AIChatAGUITests
         var otherPage = CreateContext(new { area = "OrchardCore.Users", controller = "Admin", action = "Edit", contentItemId = "item-1" });
         var missingItem = CreateContext(new { area = "OrchardCore.Contents", controller = "Admin", action = "Edit", contentItemId = "gone" });
 
-        await provider.PopulateAsync(otherPage);
-        await provider.PopulateAsync(missingItem);
+        await provider.PopulateAsync(otherPage, TestContext.Current.CancellationToken);
+        await provider.PopulateAsync(missingItem, TestContext.Current.CancellationToken);
 
         Assert.Empty(otherPage.Entries);
         Assert.Empty(missingItem.Entries);
@@ -169,7 +170,7 @@ public sealed class AIChatAGUITests
 
         using var provider = services.BuildServiceProvider();
 
-        return new AIChatUIConfiguration(provider.GetRequiredService<IOptions<AIToolDefinitionOptions>>(), new PassThroughLocalizer<AIChatUIConfiguration>());
+        return new AIChatUIConfiguration(provider.GetRequiredService<IOptions<AIToolDefinitionOptions>>(), new HttpContextAccessor(), Mock.Of<IAntiforgery>(), new PassThroughLocalizer<AIChatUIConfiguration>());
     }
 
     private sealed class TestTool : AIFunction

@@ -115,7 +115,10 @@ public sealed record ApiPosReceiptPayment(string Method, ApiMoney Amount);
 /// What a return at the till came to.
 /// </summary>
 /// <param name="CashBack">The cash handed back from the drawer.</param>
-public sealed record ApiPosReturn(string OrderId, string OrderNumber, ApiMoney Refunded, ApiMoney CashBack, IReadOnlyList<string> Messages);
+/// <param name="Incomplete">Whether part of the return failed while the cash in <paramref name="CashBack"/> went back: part
+/// of the refund, such as the card's, or the record of the cash, when the register's shift was closed while the refund ran
+/// and the cash paid out isn't in any count; <paramref name="Messages"/> says what failed.</param>
+public sealed record ApiPosReturn(string OrderId, string OrderNumber, ApiMoney Refunded, ApiMoney CashBack, IReadOnlyList<string> Messages, bool Incomplete);
 
 public sealed class ApiOpenShiftRequest
 {

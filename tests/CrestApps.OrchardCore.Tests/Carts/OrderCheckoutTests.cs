@@ -382,7 +382,7 @@ public sealed class OrderCheckoutTests
     }
 
     private OrderCheckoutHandler CreateHandler()
-        => new(_orders, CreateService(), [], _carts, Clock(), NullLogger<OrderCheckoutHandler>.Instance, new PassThroughStringLocalizer<OrderCheckoutHandler>());
+        => new(_orders, CreateService(), [], _carts, Mock.Of<CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentProviderResolver>(), Clock(), NullLogger<OrderCheckoutHandler>.Instance, new PassThroughStringLocalizer<OrderCheckoutHandler>());
 
     private static IClock Clock()
     {

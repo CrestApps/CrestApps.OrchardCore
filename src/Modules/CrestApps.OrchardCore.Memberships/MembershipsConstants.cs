@@ -9,6 +9,11 @@ public static class MembershipsConstants
     /// </summary>
     public const string CollectionName = "Memberships";
 
+    /// <summary>
+    /// The site settings group of the membership settings (Settings › Commerce › Memberships).
+    /// </summary>
+    public const string SettingsGroupId = "memberships";
+
     public static class Recipes
     {
         /// <summary>

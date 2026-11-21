@@ -8,9 +8,10 @@
     <button type="submit" class="btn btn-secondary btn-sm text-nowrap"
             data-url-af="RemoveUrl"
             data-title="@T["Mark as created"]"
-            data-message="@T["Did you create the site {0} by hand? The customer will see it as ready.", Model.Value.TenantName]"
+            data-confirm="@T["Did you create the site {0} by hand? The customer will see it as ready.", Model.Value.TenantName]"
             data-ok-text="@T["Mark as created"]"
             data-cancel-text="@T["Cancel"]">
         @T["Mark as created"]
     </button>
 </form>
+<script asp-name="crestapps-browser" at="Foot"></script>

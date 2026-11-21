@@ -2,6 +2,11 @@ namespace CrestApps.OrchardCore.Downloads;
 
 public static class DownloadsConstants
 {
+    /// <summary>
+    /// The request group of Orchard Core's Rate Limits the download links are tagged with: 60 a minute per client.
+    /// </summary>
+    public const string RateLimitGroup = "download";
+
     public const string Feature = "CrestApps.OrchardCore.Downloads";
 
     /// <summary>

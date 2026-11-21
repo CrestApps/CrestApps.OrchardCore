@@ -40,6 +40,7 @@ internal sealed class MembershipsStep : CatalogStoreRecipeStep<Membership>
     private readonly IMembershipStore _store;
     private readonly IUserService _userService;
     private readonly IRoleGrantService _roleGrantService;
+    private readonly MembershipService _membershipService;
 
     internal readonly IStringLocalizer S;
 
@@ -47,12 +48,14 @@ internal sealed class MembershipsStep : CatalogStoreRecipeStep<Membership>
         IMembershipStore store,
         IUserService userService,
         IRoleGrantService roleGrantService,
+        MembershipService membershipService,
         IStringLocalizer<MembershipsStep> stringLocalizer)
         : base(MembershipsConstants.Recipes.Memberships, EntriesName, store)
     {
         _store = store;
         _userService = userService;
         _roleGrantService = roleGrantService;
+        _membershipService = membershipService;
         S = stringLocalizer;
     }
 
@@ -141,7 +144,9 @@ internal sealed class MembershipsStep : CatalogStoreRecipeStep<Membership>
             return;
         }
 
-        foreach (var role in membership.RoleNames.Where(role => !string.IsNullOrWhiteSpace(role)))
+        // A recipe grants what a purchase may: never an excluded role, and only the store's grantable roles when it names
+        // any. An import can't make its member an administrator.
+        foreach (var role in await _membershipService.GetGrantableRolesAsync(membership.RoleNames))
         {
             await _roleGrantService.GrantAsync(membership.UserId, role, MembershipRoleGrantSource.SourceName, membership.ItemId);
         }

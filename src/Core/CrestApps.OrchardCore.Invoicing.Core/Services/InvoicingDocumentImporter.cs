@@ -116,7 +116,7 @@ public sealed class InvoicingDocumentImporter
             }
             catch (JsonException ex)
             {
-                result.Errors.Add(S["A {0} could not be read: {1}", kind, ex.Message].Value);
+                result.Errors.Add(S["A {0} could not be read: its value at {1} is not what it should be.", kind, ex.Path ?? "$"].Value);
 
                 continue;
             }

@@ -37,10 +37,13 @@ public sealed class OrchardSignInClient
 
         var baseUri = NormalizeBaseUri(input.OrchardBaseUrl);
         var handler = CreateHandler();
+        // Each sign-in keeps its own cookies in its own handler, which a factory-managed client cannot give it.
+#pragma warning disable RS0030
         var client = new HttpClient(handler)
         {
             BaseAddress = baseUri,
         };
+#pragma warning restore RS0030
 
         try
         {

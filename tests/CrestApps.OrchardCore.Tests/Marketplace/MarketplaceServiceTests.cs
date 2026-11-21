@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Tests.Disbursements;
 using CrestApps.OrchardCore.Tests.Doubles;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -21,7 +20,7 @@ namespace CrestApps.OrchardCore.Tests.Marketplace;
 /// A vendor's sale is recorded once, less the commission, held until released; a refund takes back its share; and a
 /// payout sends what's released, order by order, as a disbursement through the Disbursements building block.
 /// </summary>
-public sealed class MarketplaceServiceTests
+public sealed partial class MarketplaceServiceTests
 {
     private static readonly DateTime _now = new(2026, 10, 20, 12, 0, 0, DateTimeKind.Utc);
 
@@ -32,6 +31,7 @@ public sealed class MarketplaceServiceTests
     private DisbursementsTestContext _disbursements;
     private Order _order;
     private bool _failNextPayoutSave;
+    private bool _failNextPayoutUpdate;
 
     [Fact]
     public async Task ASale_IsRecordedOnce_LessTheCommission_AndHeld()
@@ -98,8 +98,8 @@ public sealed class MarketplaceServiceTests
         await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
         await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
 
-        // The transfer goes through, then saving the payout fails, so the earnings are still ready to pay out.
-        _failNextPayoutSave = true;
+        // The transfer goes through, then recording that it was paid fails, so the earnings are still ready to pay out.
+        _failNextPayoutUpdate = true;
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.PayOutAsync(_vendor, TestContext.Current.CancellationToken));
 
@@ -113,6 +113,195 @@ public sealed class MarketplaceServiceTests
         Assert.Single(_disbursements.Store.Entries);
         Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
         Assert.Equal("tr_1", _payouts[0].TransferId);
+    }
+
+    [Fact]
+    public async Task APayout_IsRecordedPendingWithItsKey_BeforeTheTransfer()
+    {
+        // Arrange
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        VendorPayout recordedBeforeTransfer = null;
+
+        _provider.OnPay = key => recordedBeforeTransfer = _payouts.SingleOrDefault(payout => payout.IdempotencyKey == key);
+
+        // Act
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(recordedBeforeTransfer);
+        Assert.True(_commits > 0);
+        Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
+    }
+
+    [Fact]
+    public async Task ARefundAfterThePayout_IsTakenOffTheNextPayout()
+    {
+        // Arrange
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Half of the order comes back after the vendor was paid its 48.60: 24.30 is owed back.
+        await service.RecordRefundAsync(_order, new OrderRefund { RefundId = "r1", Amount = 45m }, TestContext.Current.CancellationToken);
+
+        // Then the vendor sells the same again on another order.
+        var firstOrder = _order;
+
+        _order = new Order
+        {
+            ItemId = "o2",
+            OrderNumber = "261021-TEST",
+            Currency = "EUR",
+            Subtotal = firstOrder.Subtotal,
+            Total = firstOrder.Total,
+            PaidUtc = _now,
+            Discounts = firstOrder.Discounts,
+            Lines = firstOrder.Lines,
+        };
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        // Act
+        var (paid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(failures);
+        Assert.Equal(24.3m, paid);
+        Assert.Equal(24.3m, _provider.Amount);
+        Assert.All(_earnings, earning => Assert.Equal(VendorEarningStatus.PaidOut, earning.Status));
+    }
+
+    /// <summary>
+    /// SEC-C11: a debt was taken off a later payout only when that payout covered it whole, so a refund larger than any
+    /// single later order was never recovered and the vendor kept both. Later payouts are now held back until it is.
+    /// </summary>
+    [Fact]
+    public async Task ARefundLargerThanTheNextPayout_HoldsPayoutsBackUntilItIsCovered()
+    {
+        // Arrange: the 48.60 the vendor earned on the first order is paid out, then the whole order is refunded.
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+        await service.RecordRefundAsync(_order, new OrderRefund { RefundId = "r1", Amount = 90m }, TestContext.Current.CancellationToken);
+
+        // Act: a smaller order (the vendor nets 27) does not cover the 48.60 owed.
+        await SellAsync("o2", lineTotal: 30m);
+        var (secondPaid, _) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Then another one does: 27 + 27 - 48.60.
+        await SellAsync("o3", lineTotal: 30m);
+        var (thirdPaid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0m, secondPaid);
+        Assert.Empty(failures);
+        Assert.Equal(5.4m, thirdPaid);
+        Assert.Equal(5.4m, _provider.Amount);
+        Assert.All(_earnings, earning => Assert.Equal(VendorEarningStatus.PaidOut, earning.Status));
+    }
+
+    /// <summary>
+    /// SEC-C11: a payout whose transfer went through but was never marked paid (the run stopped in between) was matched
+    /// again only when the next run planned exactly the same earnings, so a refund arriving meanwhile made it send a new
+    /// transfer under a new key. A pending payout is now sent again as it was, with its own key, before anything new.
+    /// </summary>
+    [Fact]
+    public async Task APendingPayout_IsSettledWithItsOwnKey_BeforeARefundThatArrivedMeanwhileIsPlanned()
+    {
+        // Arrange: the transfer of 48.60 goes through, then recording that it was paid fails.
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        _failNextPayoutUpdate = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.PayOutAsync(_vendor, TestContext.Current.CancellationToken));
+
+        var firstKey = _provider.IdempotencyKey;
+
+        // A refund of the same order arrives before the next run.
+        await service.RecordRefundAsync(_order, new OrderRefund { RefundId = "r1", Amount = 45m }, TestContext.Current.CancellationToken);
+
+        // Act
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert: the same transfer was asked for again, and nothing new was sent; the refund is owed back.
+        Assert.Equal(firstKey, _provider.IdempotencyKey);
+        Assert.Equal(48.6m, _provider.Amount);
+        Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
+        Assert.Equal(VendorEarningStatus.Available, _earnings.Single(earning => earning.Kind == VendorEarningKind.Refund).Status);
+    }
+
+    // Records and releases a sale of the vendor's mug on a new order.
+    private async Task SellAsync(string orderId, decimal lineTotal)
+    {
+        var service = _service;
+
+        _order = new Order
+        {
+            ItemId = orderId,
+            OrderNumber = orderId.ToUpperInvariant(),
+            Currency = "EUR",
+            Subtotal = lineTotal,
+            Total = lineTotal,
+            PaidUtc = _now,
+            Lines = [new OrderLine { LineId = "l1", ContentItemId = "mug", Title = "Mug", Quantity = 1, UnitPrice = lineTotal, LineTotal = lineTotal, ProductType = ProductType.Good }],
+        };
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task TwoPayoutsOfTheSameVendorAtOnce_PayOnce()
+    {
+        // Arrange
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        var transferStarted = new TaskCompletionSource();
+        var finishTransfer = new TaskCompletionSource();
+
+        // Only the first transfer waits, so a second one, if any were sent, would not hang the test.
+        _provider.Gate = async () =>
+        {
+            if (_provider.Calls == 1)
+            {
+                transferStarted.TrySetResult();
+                await finishTransfer.Task;
+            }
+        };
+
+        // Act: the second starts while the first is in the middle of its transfer.
+        var first = service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        await transferStarted.Task;
+
+        var second = Task.Run(() => service.PayOutAsync(_vendor, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken);
+
+        finishTransfer.SetResult();
+
+        var results = await Task.WhenAll(first, second);
+
+        // Assert: the second waited for the first, then found nothing left to pay.
+        Assert.Equal(48.6m, results[0].Paid);
+        Assert.Equal(0m, results[1].Paid);
+        Assert.All(results, result => Assert.Empty(result.Failures));
+        Assert.Equal(1, _provider.Calls);
+        Assert.Single(_disbursements.Store.Entries);
+        Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
     }
 
     [Fact]
@@ -140,26 +329,129 @@ public sealed class MarketplaceServiceTests
         Assert.Equal([DisbursementStatus.Failed, DisbursementStatus.Settled], _disbursements.Store.Entries.Select(entry => entry.Status));
     }
 
+    /// <summary>
+    /// SEC-C11 on disbursements: a transfer whose outcome the provider didn't say leaves its disbursement submitted and the
+    /// payout pending with its key. The next run asks the provider before giving up on it, and finds the transfer it made.
+    /// </summary>
     [Fact]
-    public async Task TwoPayoutsOfTheSameVendorAndOrderAtOnce_SendOneTransfer()
+    public async Task APayoutWhoseOutcomeIsUnknown_StaysPending_AndIsFoundAtTheProvider_NotSentAgain()
     {
+        // Arrange
         var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
 
         await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
         await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
 
-        _provider.Delay = TimeSpan.FromMilliseconds(200);
+        _provider.OutcomeUnknown = true;
+        _provider.MadeWhenUnknown = true;
 
-        var results = await Task.WhenAll(
-            Task.Run(() => service.PayOutAsync(_vendor, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken),
-            Task.Run(() => service.PayOutAsync(_vendor, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken));
+        var (firstPaid, firstFailures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
 
-        // The second waits for the first, then finds nothing left to pay.
+        Assert.Equal(0m, firstPaid);
+        Assert.Single(firstFailures);
+        Assert.Equal(VendorPayoutStatus.Pending, Assert.Single(_payouts).Status);
+        Assert.Equal(DisbursementStatus.Submitted, Assert.Single(_disbursements.Store.Entries).Status);
+        Assert.All(_earnings, earning => Assert.Equal(VendorEarningStatus.Available, earning.Status));
+
+        _provider.OutcomeUnknown = false;
+
+        // Act
+        var (paid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(failures);
+        Assert.Equal(48.6m, paid);
         Assert.Equal(1, _provider.Calls);
-        Assert.Single(_disbursements.Store.Entries);
+        Assert.Equal(1, _provider.FindCalls);
         Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
-        Assert.Equal([0m, 48.6m], results.Select(result => result.Paid).Order());
-        Assert.All(results, result => Assert.Empty(result.Failures));
+        Assert.Equal(DisbursementStatus.Settled, Assert.Single(_disbursements.Store.Entries).Status);
+        Assert.All(_earnings, earning => Assert.Equal(VendorEarningStatus.PaidOut, earning.Status));
+    }
+
+    /// <summary>
+    /// When the provider has no transfer for a payout whose outcome was unknown, that proves nothing (review 10, A2): the
+    /// payout stays pending under its key. Only once staff confirm, after the review time, that no transfer was made is
+    /// the disbursement failed, and the next try made under a new key.
+    /// </summary>
+    [Fact]
+    public async Task APayoutWhoseOutcomeIsUnknown_AndThatTheProviderNeverMade_StaysPending_UntilStaffConfirmIt_ThenIsSentWithANewKey()
+    {
+        // Arrange
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        _provider.OutcomeUnknown = true;
+
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        var firstKey = _provider.IdempotencyKey;
+
+        _provider.OutcomeUnknown = false;
+
+        // Act: the next runs find no transfer and keep the payout pending.
+        var (secondPaid, secondFailures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        _utcNow = _now.AddDays(1);
+
+        var (thirdPaid, _) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+        var tooSoon = await service.ConfirmNoTransferAsync(_vendor, _payouts[0].ItemId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0m, secondPaid + thirdPaid);
+        Assert.Single(secondFailures);
+        Assert.NotNull(tooSoon);
+        Assert.Equal(1, _provider.Calls);
+        Assert.Equal(VendorPayoutStatus.Pending, Assert.Single(_payouts).Status);
+        Assert.Equal(_now, _payouts[0].UnconfirmedSinceUtc);
+        Assert.Equal(DisbursementStatus.Submitted, Assert.Single(_disbursements.Store.Entries).Status);
+
+        _utcNow = _now.Add(MarketplaceService.UnconfirmedPayoutReviewAfter);
+
+        var confirmed = await service.ConfirmNoTransferAsync(_vendor, _payouts[0].ItemId, TestContext.Current.CancellationToken);
+        var (paid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(confirmed);
+        Assert.Empty(failures);
+        Assert.Equal(48.6m, paid);
+        Assert.NotEqual(firstKey, _provider.IdempotencyKey);
+        Assert.Equal(2, _provider.Calls);
+        Assert.Equal([VendorPayoutStatus.Failed, VendorPayoutStatus.Paid], _payouts.Select(payout => payout.Status));
+        Assert.Equal([DisbursementStatus.Failed, DisbursementStatus.Settled], _disbursements.Store.Entries.Select(entry => entry.Status));
+    }
+
+    /// <summary>
+    /// Staff can't mark a payout as not made while the provider shows its transfer: the next run records it paid instead.
+    /// </summary>
+    [Fact]
+    public async Task ConfirmingNoTransfer_ForAPayoutTheProviderNowHas_ChangesNothing()
+    {
+        // Arrange
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        _provider.OutcomeUnknown = true;
+
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // The transfer turns up at the provider later, as when it finishes a request during incident recovery.
+        _provider.MarkTransferred(_provider.IdempotencyKey);
+        _utcNow = _now.Add(MarketplaceService.UnconfirmedPayoutReviewAfter);
+
+        // Act
+        var refused = await service.ConfirmNoTransferAsync(_vendor, _payouts[0].ItemId, TestContext.Current.CancellationToken);
+        var (paid, _) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(refused);
+        Assert.Equal(48.6m, paid);
+        Assert.Equal(1, _provider.Calls);
+        Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
+        Assert.Equal(DisbursementStatus.Settled, Assert.Single(_disbursements.Store.Entries).Status);
     }
 
     [Fact]
@@ -287,6 +579,26 @@ public sealed class MarketplaceServiceTests
 
                 return ValueTask.CompletedTask;
             });
+        payouts.Setup(store => store.UpdateAsync(It.IsAny<VendorPayout>(), It.IsAny<CancellationToken>()))
+            .Returns((VendorPayout payout, CancellationToken _) =>
+            {
+                if (_failNextPayoutUpdate)
+                {
+                    _failNextPayoutUpdate = false;
+
+                    // The payout stays as it was stored, pending, as a rolled-back save would leave it.
+                    payout.Status = VendorPayoutStatus.Pending;
+                    payout.TransferId = null;
+
+                    throw new InvalidOperationException("The save failed.");
+                }
+
+                return ValueTask.CompletedTask;
+            });
+        payouts.Setup(store => store.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string id, CancellationToken _) => _payouts.FirstOrDefault(payout => payout.ItemId == id));
+        payouts.Setup(store => store.ListByVendorAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string vendorId, int _, CancellationToken _) => [.. _payouts.Where(payout => payout.VendorId == vendorId)]);
 
         var content = new Mock<IContentManager>();
         content.Setup(manager => manager.GetAsync(It.IsAny<string>(), It.IsAny<VersionOptions>()))
@@ -302,9 +614,18 @@ public sealed class MarketplaceServiceTests
         site.Setup(service => service.GetSiteSettingsAsync()).ReturnsAsync(siteSettings.Object);
 
         var clock = new Mock<IClock>();
-        clock.Setup(c => c.UtcNow).Returns(_now);
+        clock.Setup(c => c.UtcNow).Returns(() => _utcNow);
 
-        return new MarketplaceService(
+        var session = new Mock<global::YesSql.ISession>();
+        session.Setup(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                _commits++;
+
+                return Task.CompletedTask;
+            });
+
+        return _service = new MarketplaceService(
             vendors.Object,
             earnings.Object,
             payouts.Object,
@@ -312,12 +633,21 @@ public sealed class MarketplaceServiceTests
             orders.Object,
             site.Object,
             [_provider, .. otherProviders],
-            withDisbursements ? _disbursements.Services : new ServiceCollection().BuildServiceProvider(),
-            new FixedOffsetLocalClock(() => _now, TimeSpan.Zero),
+            new MarketplacePayoutServices(
+                withDisbursements ? [_disbursements.Service] : [],
+                withDisbursements ? [_disbursements.Manager] : [],
+                withDisbursements ? [_disbursements.Batches] : [],
+                _disbursements.Locks,
+                session.Object),
+            new FixedOffsetLocalClock(() => _utcNow, TimeSpan.Zero),
             clock.Object,
             NullLogger<MarketplaceService>.Instance,
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<MarketplaceService>());
     }
+
+    private int _commits;
+    private DateTime _utcNow = _now;
+    private MarketplaceService _service;
 
     private sealed class FakePayoutProvider : IVendorPayoutProvider
     {
@@ -344,16 +674,19 @@ public sealed class MarketplaceServiceTests
 
         public string Failure { get; set; }
 
-        public TimeSpan Delay { get; set; }
+        public Action<string> OnPay { get; set; }
+
+        public Func<Task> Gate { get; set; }
+
+        // Answers that whether the transfer was made isn't known, as a provider does on a timeout or a server error.
+        public bool OutcomeUnknown { get; set; }
+
+        // With OutcomeUnknown: the transfer was made all the same, and only the answer was lost.
+        public bool MadeWhenUnknown { get; set; }
 
         public async Task<DisbursementSubmitResult> SubmitAsync(DisbursementBatch batch, IReadOnlyList<Disbursement> disbursements, CancellationToken cancellationToken = default)
         {
             var result = new DisbursementSubmitResult { Succeeded = true };
-
-            if (Delay > TimeSpan.Zero)
-            {
-                await Task.Delay(Delay, cancellationToken);
-            }
 
             foreach (var disbursement in disbursements)
             {
@@ -361,9 +694,25 @@ public sealed class MarketplaceServiceTests
                 Amount = disbursement.Amount;
                 Currency = disbursement.Currency;
                 IdempotencyKey = disbursement.IdempotencyKey;
+                OnPay?.Invoke(disbursement.IdempotencyKey);
 
-                if (Failure is null)
+                if (Gate is not null)
                 {
+                    await Gate();
+                }
+
+                if (OutcomeUnknown)
+                {
+                    if (MadeWhenUnknown)
+                    {
+                        _transferred.Add(disbursement.IdempotencyKey);
+                    }
+
+                    result.Statuses[disbursement.ItemId] = DisbursementStatus.Submitted;
+                }
+                else if (Failure is null)
+                {
+                    _transferred.Add(disbursement.IdempotencyKey);
                     result.Statuses[disbursement.ItemId] = DisbursementStatus.Settled;
                     result.TraceNumbers[disbursement.ItemId] = "tr_1";
                 }
@@ -376,5 +725,20 @@ public sealed class MarketplaceServiceTests
 
             return result;
         }
+
+        // Like a provider's own records: the transfers made, by the key that asked for them.
+        public Task<VendorPayoutResult> FindTransferAsync(Disbursement disbursement, CancellationToken cancellationToken = default)
+        {
+            FindCalls++;
+
+            return Task.FromResult(_transferred.Contains(disbursement.IdempotencyKey) ? VendorPayoutResult.Paid("tr_1") : null);
+        }
+
+        public int FindCalls { get; private set; }
+
+        public void MarkTransferred(string idempotencyKey)
+            => _transferred.Add(idempotencyKey);
+
+        private readonly HashSet<string> _transferred = new(StringComparer.Ordinal);
     }
 }

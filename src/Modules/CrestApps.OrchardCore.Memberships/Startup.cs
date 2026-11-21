@@ -28,6 +28,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Memberships;
 
@@ -55,6 +56,9 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<MembershipsPermissionProvider>();
         services.AddNavigationProvider<MembershipsAdminMenu>();
         services.AddNavigationProvider<MembershipsAccountMenu>();
+        services.AddSiteDisplayDriver<MembershipSettingsDisplayDriver>();
+        services.AddNavigationProvider<MembershipSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(MembershipsConstants.SettingsGroupId, MembershipsPermissions.ManageMemberships);
 
         services.AddRecipeExecutionStep<MembershipsStep>();
         services.AddScoped<IRecipeStep, MembershipsRecipeStepSchema>();

@@ -1,0 +1,11 @@
+@model IShape
+
+<zone Name="Title">
+    <breadcrumb name="OrderAccountActivate" title="@T["Finish your account"]" />
+</zone>
+
+<div class="container my-4" style="max-width: 640px;">
+    <h1 class="h3 mb-3">@T["Finish your account"]</h1>
+
+    @await DisplayAsync(Model)
+</div>

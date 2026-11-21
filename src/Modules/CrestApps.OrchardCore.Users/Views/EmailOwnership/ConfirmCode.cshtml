@@ -1,0 +1,35 @@
+@model CrestApps.OrchardCore.Users.Controllers.EmailSignInViewModel
+
+<zone Name="Title">
+    <breadcrumb name="EmailSignInConfirmCode" title="@T["Enter your code"]" />
+</zone>
+
+<div class="container my-5" style="max-width: 440px">
+    <h1 class="h3 mb-2">@T["Enter your code"]</h1>
+    <p class="text-muted">@T["A six-digit code is on its way to {0}. It works for 10 minutes.", Model.Email]</p>
+
+    <form action="@Url.RouteUrl("EmailSignInConfirmCode")" method="post" class="card">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+        <input type="hidden" name="Token" value="@Model.Token" />
+        <div class="card-body">
+            <label for="email-confirm-code" class="form-label ocat-label-required">@T["Code"]</label>
+            <input id="email-confirm-code" name="Code" class="form-control form-control-lg text-center font-monospace" inputmode="numeric" pattern="[0-9 ]*" maxlength="7" autocomplete="one-time-code" autofocus required style="letter-spacing: .4em" />
+            <span asp-validation-for="Code" class="text-danger small"></span>
+            @if (Model.AsksPassword)
+            {
+                <label for="email-confirm-password" class="form-label mt-3">@T["Password (optional)"]</label>
+                <input id="email-confirm-password" name="Password" type="password" class="form-control" autocomplete="current-password" data-account-password />
+                <span class="hint">@T["Enter this account's password to keep it, even if you signed in with it. Leave it empty if you don't know it: the password is removed."]</span>
+                <span asp-validation-for="Password" class="text-danger small"></span>
+            }
+        </div>
+        <div class="card-footer d-grid">
+            <button type="submit" class="btn btn-primary">@T["Confirm"]</button>
+        </div>
+    </form>
+
+    <p class="small text-muted mt-3 text-center">
+        @T["No email?"] <a href="@Url.RouteUrl("EmailSignInConfirm", new { returnUrl = Model.ReturnUrl })">@T["Ask for a new code"]</a>
+    </p>
+</div>

@@ -4,6 +4,9 @@
     ViewData["Title"] = T["Your appointment"];
 }
 
+@* Asks before data-confirm forms and buttons submit (the crestapps-browser helpers). *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
 <div class="container my-4" style="max-width: 48rem">
     @* The breadcrumb also gives the browser tab its title. *@
     <div class="product-breadcrumb">
@@ -28,7 +31,7 @@
         {
             if (Model.CustomerCanCancel)
             {
-                <button type="submit" name="operation" value="Cancel" class="btn btn-danger mb-3" onclick="return confirm('@T["Cancel your appointment?"]')">@T["Cancel my appointment"]</button>
+                <button type="submit" name="operation" value="Cancel" class="btn btn-danger mb-3" data-confirm="@T["Cancel your appointment?"]">@T["Cancel my appointment"]</button>
             }
             else
             {

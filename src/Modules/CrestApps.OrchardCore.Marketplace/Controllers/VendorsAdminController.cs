@@ -1,4 +1,3 @@
-using System.Globalization;
 using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Marketplace.Services;
@@ -146,7 +145,7 @@ public sealed class VendorsAdminController : Controller
             Name = vendor.Name,
             Email = vendor.Email,
             UserNames = string.Join(Environment.NewLine, vendor.UserNames),
-            CommissionPercent = vendor.CommissionPercent?.ToString(CultureInfo.InvariantCulture),
+            CommissionPercent = vendor.CommissionPercent,
             Country = vendor.Country,
             Status = vendor.Status,
         });
@@ -195,13 +194,15 @@ public sealed class VendorsAdminController : Controller
         }
 
         var earnings = await _earnings.ListByVendorAsync(vendor.ItemId, 500, HttpContext.RequestAborted);
+        var payouts = await _payouts.ListByVendorAsync(vendor.ItemId, 100, HttpContext.RequestAborted);
         var model = new VendorDashboardViewModel
         {
             Vendor = vendor,
             Earnings = [.. earnings],
-            Payouts = [.. await _payouts.ListByVendorAsync(vendor.ItemId, 100, HttpContext.RequestAborted)],
+            Payouts = [.. payouts],
             Totals = MarketplaceService.GetTotals(earnings),
             CanPayOut = _marketplace.CanPayOut && vendor.PayoutsEnabled && vendor.Status == VendorStatus.Active,
+            PayoutsToCheck = [.. payouts.Where(payout => MarketplaceService.IsAwaitingReview(payout, _clock.UtcNow))],
         };
 
         // The same dashboard the vendor sees on its own page.
@@ -259,6 +260,35 @@ public sealed class VendorsAdminController : Controller
         return RedirectToAction(nameof(Detail), new { itemId });
     }
 
+    /// <summary>
+    /// Records that staff checked the vendor's account at the payout provider and no transfer was made for a payout whose
+    /// transfer hasn't been found for the review time, so the next payout pays its earnings again under a new key.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> ConfirmNoTransfer(string itemId, string payoutId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, MarketplacePermissions.ManageMarketplace))
+        {
+            return Forbid();
+        }
+
+        if (await _vendors.FindByIdAsync(itemId) is not { } vendor)
+        {
+            return NotFound();
+        }
+
+        if (await _marketplace.ConfirmNoTransferAsync(vendor, payoutId, HttpContext.RequestAborted) is { } problem)
+        {
+            await _notifier.ErrorAsync(H["{0}", problem]);
+        }
+        else
+        {
+            await _notifier.SuccessAsync(H["The payout is marked as not made. The next payout pays its earnings again."]);
+        }
+
+        return RedirectToAction(nameof(Detail), new { itemId });
+    }
+
     private async Task<bool> ApplyAsync(VendorEditViewModel model, Vendor vendor)
     {
         if (string.IsNullOrWhiteSpace(model.Name))
@@ -266,18 +296,10 @@ public sealed class VendorsAdminController : Controller
             ModelState.AddModelError(nameof(model.Name), S["Enter the vendor's name."]);
         }
 
-        decimal? commission = null;
-
-        if (!string.IsNullOrWhiteSpace(model.CommissionPercent))
+        // A commission that can't be read is a model error from the binder, which keeps the vendor from being saved.
+        if (model.CommissionPercent is < 0m or > 100m)
         {
-            if (!decimal.TryParse(model.CommissionPercent.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) || parsed is < 0m or > 100m)
-            {
-                ModelState.AddModelError(nameof(model.CommissionPercent), S["Enter the commission as a percent from 0 to 100, or leave it empty for the store's."]);
-            }
-            else
-            {
-                commission = parsed;
-            }
+            ModelState.AddModelError(nameof(model.CommissionPercent), S["Enter the commission as a percent from 0 to 100, or leave it empty for the store's."]);
         }
 
         var userIds = new List<string>();
@@ -305,7 +327,7 @@ public sealed class VendorsAdminController : Controller
         vendor.Email = string.IsNullOrWhiteSpace(model.Email) ? null : model.Email.Trim();
         vendor.UserIds = userIds;
         vendor.UserNames = userNames;
-        vendor.CommissionPercent = commission;
+        vendor.CommissionPercent = model.CommissionPercent;
         vendor.Country = CountryCodeUtility.IsCountryCode(model.Country) ? CountryCodeUtility.Normalize(model.Country) : null;
         vendor.Status = Enum.IsDefined(model.Status) ? model.Status : VendorStatus.Active;
         vendor.ModifiedUtc = _clock.UtcNow;

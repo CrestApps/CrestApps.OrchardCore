@@ -25,4 +25,11 @@ public sealed class InventoryLocation
     /// Gets or sets the record that owns the location.
     /// </summary>
     public string OwnerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether shoppers see whether products are in stock here, with the location's name and address, such
+    /// as a shop they can visit or pick up from. A warehouse is left unticked. Off by default, so a location is staff
+    /// information until the store shows it.
+    /// </summary>
+    public bool ShowToShoppers { get; set; }
 }

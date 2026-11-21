@@ -91,6 +91,7 @@ internal sealed class CustomersStep : NamedRecipeStepHandler
             customer.LastName = Trim(entry.LastName);
             customer.CompanyName = Trim(entry.CompanyName);
             customer.TaxId = Trim(entry.TaxId);
+            customer.TaxIdVerified = entry.TaxIdVerified && !string.IsNullOrWhiteSpace(customer.TaxId);
             customer.IsTaxExempt = entry.IsTaxExempt;
             customer.TaxExemptionReason = Trim(entry.TaxExemptionReason);
             customer.Email = email;
@@ -160,6 +161,8 @@ internal sealed class CustomersStep : NamedRecipeStepHandler
         public string CompanyName { get; set; }
 
         public string TaxId { get; set; }
+
+        public bool TaxIdVerified { get; set; }
 
         public bool IsTaxExempt { get; set; }
 

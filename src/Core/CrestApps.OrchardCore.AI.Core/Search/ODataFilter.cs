@@ -24,4 +24,35 @@ public static class ODataFilter
 
         return $"{field} eq {Quote(value)}";
     }
+
+    /// <summary>
+    /// Returns whether a filter, put in parentheses after <c>and</c>, stays inside them: every string literal it opens
+    /// is closed, and no parenthesis outside a literal closes before it was opened or stays open. Such a filter can only
+    /// narrow the clause before it; one that is not could close the group and add an <c>or</c> of its own.
+    /// </summary>
+    /// <param name="filter">The filter.</param>
+    public static bool IsSelfContained(string filter)
+    {
+        var depth = 0;
+        var inLiteral = false;
+
+        foreach (var character in filter ?? string.Empty)
+        {
+            if (character == '\'')
+            {
+                // A doubled quote inside a literal closes and reopens it, which leaves the state as it was.
+                inLiteral = !inLiteral;
+            }
+            else if (!inLiteral && character == '(')
+            {
+                depth++;
+            }
+            else if (!inLiteral && character == ')' && --depth < 0)
+            {
+                return false;
+            }
+        }
+
+        return !inLiteral && depth == 0;
+    }
 }

@@ -75,6 +75,7 @@ public sealed class QtiMediaRound9Tests
             }))
             .AddSingleton(Options.Create(new QuestionTypeOptions()))
             .AddSingleton(typeof(IStringLocalizer<>), typeof(PassThroughLocalizer<>))
+            .AddLogging()
             .AddSingleton<IContentTransferFileFormatProvider, QtiPackageFileFormatProvider>()
             .BuildServiceProvider();
 

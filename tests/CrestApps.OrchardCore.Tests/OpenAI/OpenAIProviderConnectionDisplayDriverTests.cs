@@ -38,7 +38,7 @@ public sealed class OpenAIProviderConnectionDisplayDriverTests
     {
         // Arrange
         var connection = new AIProviderConnection { ClientName = OpenAIConstants.ClientName };
-        connection.Put(new OpenAIConnectionMetadata { ApiKey = "stored-key" });
+        connection.Put(new OpenAIConnectionMetadata { Endpoint = new Uri("https://api.openai.com/v1"), ApiKey = "stored-key" });
 
         var context = PostedFormUpdateModel.CreateContext(new OpenAIConnectionViewModel { Endpoint = "https://api.openai.com/v1" });
 
@@ -53,5 +53,6 @@ public sealed class OpenAIProviderConnectionDisplayDriverTests
     private static OpenAIProviderConnectionDisplayDriver CreateDriver()
         => new(
             new EphemeralDataProtectionProvider(),
+            new CrestApps.OrchardCore.AI.Core.AIEndpointPolicy(null, Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions { AllowPrivateNetwork = true })),
             DataSourceRetrievalTestServices.Localizer<OpenAIProviderConnectionDisplayDriver>());
 }

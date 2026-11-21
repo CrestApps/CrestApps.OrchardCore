@@ -26,7 +26,8 @@
     }
     else if (Model.CanManage)
     {
-        <form asp-controller="LoyaltyAdmin" asp-action="Change" asp-route-customerId="@Model.CustomerId" method="post" class="row g-2 align-items-end mb-3">
+        <script asp-name="crestapps-browser" at="Foot"></script>
+        <form asp-controller="LoyaltyAdmin" asp-action="Change" asp-route-customerId="@Model.CustomerId" method="post" class="row g-2 align-items-end mb-3 no-multisubmit" data-confirm-title="@T["Loyalty points"]" data-confirm="@T["Change this customer's loyalty points?"]" data-confirm-ok="@T["Change"]" data-confirm-cancel="@T["Cancel"]">
             <div class="col-6 col-sm-3">
                 <label class="form-label ocat-label-required" for="loyalty-points">@T["Points"]</label>
                 <input id="loyalty-points" name="points" type="number" step="1" class="form-control" required />

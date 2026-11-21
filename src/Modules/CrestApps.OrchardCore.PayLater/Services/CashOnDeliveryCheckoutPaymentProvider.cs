@@ -52,7 +52,7 @@ public sealed class CashOnDeliveryCheckoutPaymentProvider : OfflineCheckoutPayme
 
         // Only an order with somewhere to deliver it to: the shipping step has saved where it goes.
         return settings.Enabled &&
-            session is not null &&
+            MeetsBuyerRules(settings.RequireSignedIn, settings.MaxOrderAmount, session) &&
             session.TryGet<CheckoutShippingInfo>(out var shipping) &&
             shipping?.Address is not null;
     }

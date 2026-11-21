@@ -1,4 +1,3 @@
-using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Invoicing.Core;
 using CrestApps.OrchardCore.Invoicing.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -87,7 +86,7 @@ public sealed class InvoiceDepositsController : Controller
     {
         foreach (var error in errors)
         {
-            await _notifier.WarningAsync(new LocalizedHtmlString(error, HtmlEncoder.Default.Encode(error)));
+            await _notifier.WarningAsync(new LocalizedHtmlString(error, "{0}", false, error));
         }
     }
 }

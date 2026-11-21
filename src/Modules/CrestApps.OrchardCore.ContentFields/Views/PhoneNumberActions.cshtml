@@ -13,5 +13,5 @@
 
 @if (!string.IsNullOrWhiteSpace(phoneNumber))
 {
-    <span class="phone-field-dial" data-phone-dial data-phone-number="@phoneNumber" data-phone-sms="@(canText ? null : "false")"></span>
+    <span class="phone-field-dial" data-phone-dial data-dial-title="@T["Call with the soft phone"]" data-phone-number="@phoneNumber" data-phone-sms="@(canText ? null : "false")"></span>
 }

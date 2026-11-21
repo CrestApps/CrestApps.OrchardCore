@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Checkout.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -39,7 +41,7 @@ public static class PaymentEndpoints
             .AllowAnonymous()
             .WithName(CheckoutConstants.RouteNames.PaymentStatus)
             .DisableAntiforgery()
-            .WithMetadata(new RateLimitGroupAttribute(CheckoutConstants.RateLimitGroups.Payment));
+            .WithMetadata(new RateLimitGroupAttribute(CheckoutConstants.RateLimitGroups.PaymentStatus));
 
         return builder;
     }
@@ -50,7 +52,7 @@ public static class PaymentEndpoints
         HttpContext httpContext,
         ICheckoutSessionStore sessionStore,
         ICheckoutEngine engine,
-        IPaymentAttemptLimiter limiter,
+        IAttemptLimiter limiter,
         CancellationToken cancellationToken)
     {
         if (!IsSameOrigin(httpContext))
@@ -65,8 +67,10 @@ public static class PaymentEndpoints
             return Error("The payment request was incomplete.", StatusCodes.Status400BadRequest);
         }
 
-        if (!await limiter.AcquireAsync("checkout-begin", BuildDiscriminator(httpContext, sessionId)))
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentBeginNetwork, GetBeginPaymentKey(httpContext), cancellationToken) is { Allowed: false } begun)
         {
+            SetRetryAfter(httpContext, begun.RetryAfter);
+
             return Error("Too many payment attempts. Please wait a moment and try again.", StatusCodes.Status429TooManyRequests);
         }
 
@@ -90,6 +94,7 @@ public static class PaymentEndpoints
                 ReturnUrl = model.ReturnUrl,
                 CancelUrl = model.CancelUrl,
                 ProviderData = SanitizeProviderData(model.ProviderData),
+                ClientNetworkKey = GetBeginPaymentKey(httpContext),
             },
             cancellationToken);
 
@@ -119,7 +124,7 @@ public static class PaymentEndpoints
         HttpContext httpContext,
         ICheckoutEngine engine,
         ICheckoutSessionStore sessionStore,
-        IPaymentAttemptLimiter limiter,
+        IAttemptLimiter limiter,
         CancellationToken cancellationToken)
     {
         if (!IsSameOrigin(httpContext))
@@ -134,8 +139,10 @@ public static class PaymentEndpoints
 
         // Polling is throttled too. Without a limit a stuck page could hammer the provider's API through the
         // verification path for as long as the tab stayed open.
-        if (!await limiter.AcquireAsync("checkout-status", BuildDiscriminator(httpContext, sessionId)))
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentStatus, GetStatusKey(httpContext, sessionId), cancellationToken) is { Allowed: false } polled)
         {
+            SetRetryAfter(httpContext, polled.RetryAfter);
+
             return Error("Too many status checks. Please wait a moment and try again.", StatusCodes.Status429TooManyRequests);
         }
 
@@ -209,10 +216,18 @@ public static class PaymentEndpoints
         return sanitized.Count == 0 ? null : sanitized;
     }
 
-    // Combines the caller and the checkout so abuse is throttled per visitor per checkout, rather than one
-    // busy customer throttling everyone.
-    private static string BuildDiscriminator(HttpContext httpContext, string sessionId)
-        => $"{httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown"}:{sessionId}";
+    // Beginning a payment is counted per caller across every checkout. Counting it per checkout gave a card tester a
+    // fresh budget with each checkout they started, so they were never throttled.
+    internal static string GetBeginPaymentKey(HttpContext httpContext)
+        => ClientNetworkKey.NetworkOnly(httpContext);
+
+    // Tells the buyer's page when to try again.
+    internal static void SetRetryAfter(HttpContext httpContext, TimeSpan retryAfter)
+        => httpContext.Response.Headers.RetryAfter = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    // Status polling is counted per caller per checkout, so a buyer polling one checkout is never throttled by another.
+    internal static string GetStatusKey(HttpContext httpContext, string sessionId)
+        => $"{GetBeginPaymentKey(httpContext)}:{sessionId}";
 
     // A cross-site page can send a JSON POST without a preflight only in narrow cases, so this is defense in
     // depth rather than the only guard: the ownership check on the session is the primary one.

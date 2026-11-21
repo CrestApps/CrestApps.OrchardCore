@@ -102,6 +102,8 @@ public class CustomerEditViewModel
 
     public string TaxId { get; set; }
 
+    public bool TaxIdVerified { get; set; }
+
     public bool IsTaxExempt { get; set; }
 
     public string TaxExemptionReason { get; set; }

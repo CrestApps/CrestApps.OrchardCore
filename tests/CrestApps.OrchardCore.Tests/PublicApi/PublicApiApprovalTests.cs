@@ -168,7 +168,8 @@ public sealed class PublicApiApprovalTests
     /// </remarks>
     private static bool IsDeliberatelyInheritable(Type type)
     {
-        if (type.Namespace?.EndsWith(".ViewModels", StringComparison.Ordinal) == true)
+        if (type.Namespace?.EndsWith(".ViewModels", StringComparison.Ordinal) == true ||
+            _deliberateBaseClasses.ContainsKey(type.FullName))
         {
             return true;
         }
@@ -460,8 +461,34 @@ public sealed class PublicApiApprovalTests
             "Every project in the governed families counted as a contract, which means the rule stopped telling contracts " +
             $"apart from leaf modules. Families: {string.Join(", ", family.OrderBy(name => name, StringComparer.Ordinal))}.");
 
-        return governed;
+        return governed.Union(_commerceContracts, StringComparer.Ordinal).ToList();
     }
+
+    /// <summary>
+    /// The commerce contracts governed by name, outside the derived families.
+    /// </summary>
+    /// <remarks>
+    /// Payment rate limits and the cancellation work of the November 2026 review change these surfaces, and other
+    /// packages implement and call them, so each change has to arrive as a reviewed diff of the baseline (CQ-8, step 5,
+    /// in <c>docs/engineering/review-2026-11/04-code-quality.md</c>).
+    /// </remarks>
+    /// <summary>
+    /// Public classes that are bases of stored data types without declaring an overridable member, with the reason.
+    /// </summary>
+    private static readonly Dictionary<string, string> _deliberateBaseClasses = new(StringComparer.Ordinal)
+    {
+        ["CrestApps.OrchardCore.Payments.BalanceLedgerEntry"] =
+            "Each stored balance (gift card, store credit) derives its own entry type from it, so its stored shape stays its own; BalanceLedger<TEntry> works on any of them.",
+    };
+
+    private static readonly string[] _commerceContracts =
+    [
+        "CrestApps.OrchardCore.Checkout.Abstractions",
+        "CrestApps.OrchardCore.Inventory.Core",
+        "CrestApps.OrchardCore.Orders.Core",
+        "CrestApps.OrchardCore.Payments.Abstractions",
+        "CrestApps.OrchardCore.Transactions.Abstractions",
+    ];
 
     private static string GetRepositoryRoot()
     {

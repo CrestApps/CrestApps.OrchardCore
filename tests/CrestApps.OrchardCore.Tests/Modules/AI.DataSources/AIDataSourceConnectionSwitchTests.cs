@@ -51,7 +51,7 @@ public sealed class AIDataSourceConnectionSwitchTests
             Authentication = new HttpAuthenticationSettings { Type = HttpAuthenticationType.ApiKey, ApiKeyName = "api-key" },
         });
 
-        var driver = new AzureAISearchAIDataSourceDisplayDriver(_protection, CreatePicker(connection), new PassThroughStringLocalizer<AzureAISearchAIDataSourceDisplayDriver>());
+        var driver = new AzureAISearchAIDataSourceDisplayDriver(_protection, CreatePicker(connection), new CrestApps.OrchardCore.AI.Core.AIEndpointPolicy(Moq.Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(), Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions())), new PassThroughStringLocalizer<AzureAISearchAIDataSourceDisplayDriver>());
         var protectedKey = _protection.ProtectSetting(AIDataSourceProtectionConstants.SourceSecretPurpose, "own-key");
         var dataSource = new AIDataSource { ItemId = "ds-1", Source = AIDataSourceSourceTypes.AzureAISearch };
         dataSource.Put(new AzureAISearchSourceMetadata
@@ -105,7 +105,7 @@ public sealed class AIDataSourceConnectionSwitchTests
             Authentication = new HttpAuthenticationSettings { Type = HttpAuthenticationType.Basic, UserName = "elastic" },
         });
 
-        var driver = new ElasticsearchAIDataSourceDisplayDriver(_protection, Options.Create(new ElasticsearchDataSourceOptions()), CreatePicker(connection), new PassThroughStringLocalizer<ElasticsearchAIDataSourceDisplayDriver>());
+        var driver = new ElasticsearchAIDataSourceDisplayDriver(_protection, Options.Create(new ElasticsearchDataSourceOptions()), CreatePicker(connection), EndpointPolicy(), new PassThroughStringLocalizer<ElasticsearchAIDataSourceDisplayDriver>());
         var protectedPassword = _protection.ProtectSetting(AIDataSourceProtectionConstants.SourceSecretPurpose, "own-pass");
         var dataSource = new AIDataSource { ItemId = "ds-2", Source = AIDataSourceSourceTypes.Elasticsearch };
         dataSource.Put(new ElasticsearchSourceMetadata
@@ -147,6 +147,104 @@ public sealed class AIDataSourceConnectionSwitchTests
         Assert.True(useOwn.Updater.ModelState.IsValid);
         Assert.Equal(protectedPassword, dataSource.GetOrCreate<ElasticsearchSourceMetadata>().Password);
     }
+
+    [Theory]
+    [InlineData("http://10.0.0.5:9200")]
+    [InlineData("http://127.0.0.1:9200")]
+    public async Task Elasticsearch_RefusesAUrlOnTheSitesOwnNetwork(string url)
+    {
+        // Arrange (review 7, Mild): the Azure AI Search editor checked its endpoint; the Elasticsearch editor saved any URL.
+        var connection = new DataConnection { ItemId = ConnectionId, Name = "search", Connector = DataConnectorConstants.Connectors.Elasticsearch };
+        var driver = new ElasticsearchAIDataSourceDisplayDriver(_protection, Options.Create(new ElasticsearchDataSourceOptions()), CreatePicker(connection), EndpointPolicy(), new PassThroughStringLocalizer<ElasticsearchAIDataSourceDisplayDriver>());
+        var dataSource = new AIDataSource { ItemId = "ds-2", Source = AIDataSourceSourceTypes.Elasticsearch };
+        var context = Context(new EditElasticsearchAIDataSourceViewModel
+        {
+            EnvironmentType = ElasticsearchSourceMetadata.SelfManagedEnvironmentType,
+            Url = url,
+            AuthenticationType = ElasticsearchSourceMetadata.NoneAuthenticationType,
+            IndexName = "articles",
+        });
+
+        // Act
+        await driver.UpdateAsync(dataSource, context);
+
+        // Assert
+        Assert.False(context.Updater.ModelState.IsValid);
+        Assert.Contains(context.Updater.ModelState.Keys, key => key.EndsWith(nameof(EditElasticsearchAIDataSourceViewModel.Url), StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("http://10.0.0.5:9200", true)]
+    [InlineData("http://10.0.0.6:9200", false)]
+    public async Task Elasticsearch_ChecksTheUrl_OnlyWhenItChanges(string url, bool isValid)
+    {
+        // Arrange (review 8, G7): a cluster on a private network, saved before the check, could not be edited any more.
+        var connection = new DataConnection { ItemId = ConnectionId, Name = "search", Connector = DataConnectorConstants.Connectors.Elasticsearch };
+        var driver = new ElasticsearchAIDataSourceDisplayDriver(_protection, Options.Create(new ElasticsearchDataSourceOptions()), CreatePicker(connection), EndpointPolicy(), new PassThroughStringLocalizer<ElasticsearchAIDataSourceDisplayDriver>());
+        var dataSource = new AIDataSource { ItemId = "ds-2", Source = AIDataSourceSourceTypes.Elasticsearch };
+        dataSource.Put(new ElasticsearchSourceMetadata
+        {
+            EnvironmentType = ElasticsearchSourceMetadata.SelfManagedEnvironmentType,
+            Url = "http://10.0.0.5:9200",
+            AuthenticationType = ElasticsearchSourceMetadata.NoneAuthenticationType,
+            IndexName = "articles",
+        });
+        var context = Context(new EditElasticsearchAIDataSourceViewModel
+        {
+            EnvironmentType = ElasticsearchSourceMetadata.SelfManagedEnvironmentType,
+            Url = url,
+            AuthenticationType = ElasticsearchSourceMetadata.NoneAuthenticationType,
+            IndexName = "articles-v2",
+        });
+
+        // Act
+        await driver.UpdateAsync(dataSource, context);
+
+        // Assert
+        Assert.Equal(isValid, context.Updater.ModelState.IsValid);
+    }
+
+    [Theory]
+    [InlineData("cloud")]
+    [InlineData("connection")]
+    public async Task Elasticsearch_ChecksAUrlStoredWhileItWasNotUsed(string storedAs)
+    {
+        // Arrange (review 9, K6): the API can store a URL unchecked while the source is in Cloud mode or uses a data
+        // connection; switching to its own self-managed settings with that URL must check it.
+        var connection = new DataConnection { ItemId = ConnectionId, Name = "search", Connector = DataConnectorConstants.Connectors.Elasticsearch };
+        var driver = new ElasticsearchAIDataSourceDisplayDriver(_protection, Options.Create(new ElasticsearchDataSourceOptions()), CreatePicker(connection), EndpointPolicy(), new PassThroughStringLocalizer<ElasticsearchAIDataSourceDisplayDriver>());
+        var dataSource = new AIDataSource { ItemId = "ds-2", Source = AIDataSourceSourceTypes.Elasticsearch };
+        dataSource.Put(new ElasticsearchSourceMetadata
+        {
+            EnvironmentType = storedAs == "cloud" ? ElasticsearchSourceMetadata.CloudHostedEnvironmentType : ElasticsearchSourceMetadata.SelfManagedEnvironmentType,
+            Url = "http://10.0.0.5:9200",
+            CloudId = storedAs == "cloud" ? "deployment:abc" : null,
+            AuthenticationType = ElasticsearchSourceMetadata.NoneAuthenticationType,
+            IndexName = "articles",
+        });
+
+        if (storedAs == "connection")
+        {
+            dataSource.Put(new DataConnectionReference { ConnectionId = ConnectionId });
+        }
+
+        var context = Context(new EditElasticsearchAIDataSourceViewModel
+        {
+            EnvironmentType = ElasticsearchSourceMetadata.SelfManagedEnvironmentType,
+            Url = "http://10.0.0.5:9200",
+            AuthenticationType = ElasticsearchSourceMetadata.NoneAuthenticationType,
+            IndexName = "articles",
+        });
+
+        // Act
+        await driver.UpdateAsync(dataSource, context);
+
+        // Assert
+        Assert.Contains(context.Updater.ModelState, entry => entry.Key.EndsWith(nameof(EditElasticsearchAIDataSourceViewModel.Url), StringComparison.Ordinal) && entry.Value.Errors.Count > 0);
+    }
+
+    private static CrestApps.OrchardCore.AI.Core.AIEndpointPolicy EndpointPolicy()
+        => new(Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(), Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions()));
 
     private static UpdateEditorContext Context(object model)
         => new(null, string.Empty, false, string.Empty, null, null, new FakeUpdateModel(model));

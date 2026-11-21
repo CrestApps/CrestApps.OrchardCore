@@ -1,6 +1,8 @@
 using System.Data.Common;
 using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Settings;
 
@@ -10,16 +12,19 @@ internal sealed class AsteriskPjsipRealtimeCredentialStore : IAsteriskPjsipRealt
 {
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly ILogger _logger;
     private readonly DefaultAsteriskOptions _defaultOptions;
 
     public AsteriskPjsipRealtimeCredentialStore(
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
-        IOptions<DefaultAsteriskOptions> defaultOptions)
+        IOptions<DefaultAsteriskOptions> defaultOptions,
+        ILogger<AsteriskPjsipRealtimeCredentialStore> logger)
     {
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
         _defaultOptions = defaultOptions.Value;
+        _logger = logger;
     }
 
     public async Task UpsertAsync(
@@ -172,20 +177,10 @@ internal sealed class AsteriskPjsipRealtimeCredentialStore : IAsteriskPjsipRealt
             : prefix + tableName;
     }
 
+    // A value this site can't read is treated as not entered, never used as it is: the stored text is the protected
+    // connection string, not the connection string.
     private string Unprotect(string protectedValue)
-    {
-        if (string.IsNullOrWhiteSpace(protectedValue))
-        {
-            return null;
-        }
-
-        try
-        {
-            return _dataProtectionProvider.CreateProtector(AsteriskConstants.ProtectorName).Unprotect(protectedValue);
-        }
-        catch
-        {
-            return protectedValue;
-        }
-    }
+        => string.IsNullOrWhiteSpace(protectedValue)
+            ? null
+            : _dataProtectionProvider.UnprotectSettingOrDefault(AsteriskConstants.ProtectorName, protectedValue, _logger, "PJSIP realtime connection string");
 }

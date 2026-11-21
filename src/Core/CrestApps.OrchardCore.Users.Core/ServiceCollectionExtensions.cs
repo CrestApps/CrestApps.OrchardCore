@@ -1,7 +1,9 @@
 ﻿using CrestApps.OrchardCore.Users.Core.Handlers;
 using CrestApps.OrchardCore.Users.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OrchardCore.Users.Handlers;
 
 namespace CrestApps.OrchardCore.Users.Core;
@@ -80,6 +82,23 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddRoleGrants(this IServiceCollection services)
     {
         services.TryAddScoped<IRoleGrantService, DefaultRoleGrantService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Records an address as proved (<see cref="UserEmailOwnership"/>) when the user follows the link e-mailed to
+    /// confirm it, and binds that link to the address it was sent to, so an old link does not confirm an address the user
+    /// changed to afterwards. Call it from every feature that relies on the marker, before registering a user event
+    /// handler that reads it on <c>ConfirmedAsync</c>; it adds each service once. The feature must depend on Orchard
+    /// Core's Users feature, whose token configuration this replaces.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddEmailOwnershipConfirmation(this IServiceCollection services)
+    {
+        services.TryAddTransient<EmailBoundConfirmationTokenProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<IdentityOptions>, EmailBoundConfirmationIdentityOptions>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IUserEventHandler, EmailOwnershipConfirmationHandler>());
 
         return services;
     }

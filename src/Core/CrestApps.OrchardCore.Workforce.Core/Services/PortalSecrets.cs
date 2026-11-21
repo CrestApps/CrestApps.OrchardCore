@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using CrestApps.OrchardCore.Core.Security;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
 
@@ -10,9 +11,10 @@ internal static class PortalSecrets
 {
     public static string NewToken()
     {
-        return Base64Url(RandomNumberGenerator.GetBytes(32));
+        return SecretTokens.Create();
     }
 
+    // Upper-case hex, as the stored hashes already are.
     public static string Hash(string value)
     {
         return string.IsNullOrEmpty(value) ? null : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));

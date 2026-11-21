@@ -1,52 +1,95 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using CrestApps.OrchardCore.Throttling;
 using Microsoft.Extensions.Caching.Distributed;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Users.Services;
 
 /// <summary>
 /// The six-digit codes emailed for signing in without a password. A code lives ten minutes and five tries; only its
-/// hash is kept, in the distributed cache, per tenant. Sending is limited per email and per client address.
+/// hash is kept, in the distributed cache, per tenant, under a key that holds a hash of the account's id. A code is for
+/// one account and the address it was mailed to: it is keyed on the account, not on what was typed, because a database
+/// that compares text loosely (SQL Server's default collation treats <c>AE</c> as <c>Æ</c>) finds an account for a
+/// look-alike address; and its hash holds the address, so it stops working if the account's address changes.
+/// Sending is limited per client network and per email, and checking per client network, by the shared attempt
+/// limiter's policies, which an operator can change under <c>CrestApps_Throttling:AttemptPolicies</c>.
 /// </summary>
 public sealed class EmailSignInCodes
 {
     public const int MaxAttempts = 5;
 
+    /// <summary>
+    /// The attempt policy that limits the codes sent to one email.
+    /// </summary>
+    public const string SendEmailPolicy = "email-signin-send-email";
+
+    /// <summary>
+    /// The attempt policy that limits the codes asked for from one client network.
+    /// </summary>
+    public const string SendNetworkPolicy = "email-signin-send-network";
+
+    /// <summary>
+    /// The attempt policy that limits the codes checked from one client network.
+    /// </summary>
+    public const string VerifyNetworkPolicy = "email-signin-verify-network";
+
+    /// <summary>
+    /// The rate-limit group of the sign-in code pages.
+    /// </summary>
+    public const string RateLimitGroup = "sign-in-code";
+
     private static readonly TimeSpan _lifetime = TimeSpan.FromMinutes(10);
-    private static readonly TimeSpan _sendWindow = TimeSpan.FromMinutes(15);
-    private const int MaxSendsPerEmail = 3;
-    private const int MaxSendsPerAddress = 10;
+
+    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
 
     private readonly IDistributedCache _cache;
+    private readonly IAttemptLimiter _attemptLimiter;
     private readonly ShellSettings _shellSettings;
     private readonly IClock _clock;
+    private readonly IDistributedLock _distributedLock;
 
-    public EmailSignInCodes(IDistributedCache cache, ShellSettings shellSettings, IClock clock)
+    public EmailSignInCodes(IDistributedCache cache, IAttemptLimiter attemptLimiter, ShellSettings shellSettings, IClock clock, IDistributedLock distributedLock)
     {
         _cache = cache;
+        _attemptLimiter = attemptLimiter;
         _shellSettings = shellSettings;
         _clock = clock;
+        _distributedLock = distributedLock;
     }
 
     /// <summary>
-    /// Counts a send for the email and the address, and returns <see langword="false"/> when either is over its limit.
+    /// Counts a send for the client network and then the email, and returns <see langword="false"/> when either is over
+    /// its limit. The network is counted first, so a network already over its limit spends none of an email's sends.
     /// </summary>
-    public async Task<bool> TryCountSendAsync(string email, string address, CancellationToken cancellationToken = default)
-        => await CountAsync("email:" + Normalize(email), MaxSendsPerEmail, cancellationToken) &&
-           await CountAsync("address:" + (address ?? "unknown"), MaxSendsPerAddress, cancellationToken);
+    public async Task<bool> TryCountSendAsync(string email, string network, CancellationToken cancellationToken = default)
+        => (await _attemptLimiter.AcquireAsync(SendNetworkPolicy, network ?? "unknown", cancellationToken)).Allowed &&
+           (await _attemptLimiter.AcquireAsync(SendEmailPolicy, Normalize(email), cancellationToken)).Allowed;
 
     /// <summary>
-    /// Makes a new code for the email, replacing any earlier one, and returns it.
+    /// Counts a code check for the client network, and returns <see langword="false"/> when it is over its limit.
     /// </summary>
-    public async Task<string> IssueAsync(string email, CancellationToken cancellationToken = default)
-    {
-        var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
-        var entry = new CodeEntry(Hash(email, code), _clock.UtcNow + _lifetime, 0);
+    public async Task<bool> TryCountVerifyAsync(string network, CancellationToken cancellationToken = default)
+        => (await _attemptLimiter.AcquireAsync(VerifyNetworkPolicy, network ?? "unknown", cancellationToken)).Allowed;
 
-        await _cache.SetStringAsync(Key("code:" + Normalize(email)), JsonSerializer.Serialize(entry), new DistributedCacheEntryOptions
+    /// <summary>
+    /// Makes a new code for the account, replacing any earlier one, and returns it.
+    /// </summary>
+    /// <param name="userId">The account's id.</param>
+    /// <param name="email">The account's own address, which the code is mailed to.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public async Task<string> IssueAsync(string userId, string email, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+
+        var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
+        var entry = new CodeEntry(Hash(userId, email, code), _clock.UtcNow + _lifetime, 0);
+
+        await _cache.SetStringAsync(CodeKey(userId), JsonSerializer.Serialize(entry), new DistributedCacheEntryOptions
         {
             AbsoluteExpiration = entry.ExpiresUtc,
         }, cancellationToken);
@@ -57,71 +100,79 @@ public sealed class EmailSignInCodes
     /// <summary>
     /// Checks a code, counting the try. A right code is used up.
     /// </summary>
-    public async Task<bool> VerifyAsync(string email, string code, CancellationToken cancellationToken = default)
+    /// <param name="userId">The account's id.</param>
+    /// <param name="email">The account's own address now.</param>
+    /// <param name="code">The code that was typed.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public async Task<bool> VerifyAsync(string userId, string email, string code, CancellationToken cancellationToken = default)
+        => await CheckAsync(userId, email, code, cancellationToken) == EmailSignInCodeCheck.Right;
+
+    /// <summary>
+    /// Checks a code, counting the try, and tells a wrong code apart from no code to compare it with (none was sent, it
+    /// expired or its tries are used up). A right code is used up. A code mailed to an address the account no longer
+    /// has is wrong.
+    /// </summary>
+    /// <param name="userId">The account's id.</param>
+    /// <param name="email">The account's own address now.</param>
+    /// <param name="code">The code that was typed.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public async Task<EmailSignInCodeCheck> CheckAsync(string userId, string email, string code, CancellationToken cancellationToken = default)
     {
-        var key = Key("code:" + Normalize(email));
-        var json = await _cache.GetStringAsync(key, cancellationToken);
-
-        if (string.IsNullOrEmpty(json) || JsonSerializer.Deserialize<CodeEntry>(json) is not { } entry || entry.ExpiresUtc <= _clock.UtcNow || entry.Attempts >= MaxAttempts)
+        if (string.IsNullOrEmpty(userId))
         {
-            return false;
+            return EmailSignInCodeCheck.NoCode;
         }
 
-        var digits = new string([.. (code ?? string.Empty).Where(char.IsAsciiDigit)]);
-        var match = digits.Length == 6 && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(entry.Hash), Encoding.ASCII.GetBytes(Hash(email, digits)));
+        var key = CodeKey(userId);
 
-        if (match)
+        // The read, the count and the write happen under one lock per tenant and email, and the attempt is counted before
+        // the code is compared. Without both, parallel guesses all saw fewer than five attempts and a six-digit code could
+        // be brute-forced. A lock that can't be taken refuses the guess rather than counting it without one.
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(key + ":lock", _lockTimeout, _lockExpiration);
+
+        if (!locked)
         {
-            await _cache.RemoveAsync(key, cancellationToken);
-
-            return true;
+            return EmailSignInCodeCheck.NoCode;
         }
 
-        await _cache.SetStringAsync(key, JsonSerializer.Serialize(entry with { Attempts = entry.Attempts + 1 }), new DistributedCacheEntryOptions
+        await using (locker)
         {
-            AbsoluteExpiration = entry.ExpiresUtc,
-        }, cancellationToken);
+            var json = await _cache.GetStringAsync(key, cancellationToken);
 
-        return false;
+            if (string.IsNullOrEmpty(json) || JsonSerializer.Deserialize<CodeEntry>(json) is not { } entry || entry.ExpiresUtc <= _clock.UtcNow || entry.Attempts >= MaxAttempts)
+            {
+                return EmailSignInCodeCheck.NoCode;
+            }
+
+            await _cache.SetStringAsync(key, JsonSerializer.Serialize(entry with { Attempts = entry.Attempts + 1 }), new DistributedCacheEntryOptions
+            {
+                AbsoluteExpiration = entry.ExpiresUtc,
+            }, cancellationToken);
+
+            var digits = new string([.. (code ?? string.Empty).Where(char.IsAsciiDigit)]);
+            var match = digits.Length == 6 && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(entry.Hash), Encoding.ASCII.GetBytes(Hash(userId, email, digits)));
+
+            if (match)
+            {
+                await _cache.RemoveAsync(key, cancellationToken);
+            }
+
+            return match ? EmailSignInCodeCheck.Right : EmailSignInCodeCheck.Wrong;
+        }
     }
 
-    private async Task<bool> CountAsync(string name, int limit, CancellationToken cancellationToken)
-    {
-        var key = Key("sends:" + name);
-        var json = await _cache.GetStringAsync(key, cancellationToken);
-        var now = _clock.UtcNow;
-        var window = string.IsNullOrEmpty(json) ? null : JsonSerializer.Deserialize<SendWindow>(json);
+    // The key holds a hash of the account's id, compared exactly; nothing typed goes into it.
+    private string CodeKey(string userId)
+        => $"CrestApps.EmailSignIn:{_shellSettings.Name}:code:{Sha256Hex($"{_shellSettings.Name}|user|{userId}")}";
 
-        if (window is null || window.EndsUtc <= now)
-        {
-            window = new SendWindow(now + _sendWindow, 0);
-        }
+    private string Hash(string userId, string email, string code)
+        => Sha256Hex($"{_shellSettings.Name}|{userId}|{Normalize(email)}|{code}");
 
-        if (window.Count >= limit)
-        {
-            return false;
-        }
-
-        window = window with { Count = window.Count + 1 };
-
-        await _cache.SetStringAsync(key, JsonSerializer.Serialize(window), new DistributedCacheEntryOptions
-        {
-            AbsoluteExpiration = window.EndsUtc,
-        }, cancellationToken);
-
-        return true;
-    }
-
-    private string Key(string name)
-        => $"CrestApps.EmailSignIn:{_shellSettings.Name}:{name}";
-
-    private string Hash(string email, string code)
-        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{_shellSettings.Name}|{Normalize(email)}|{code}")));
+    private static string Sha256Hex(string value)
+        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
     private static string Normalize(string email)
         => (email ?? string.Empty).Trim().ToUpperInvariant();
 
     private sealed record CodeEntry(string Hash, DateTime ExpiresUtc, int Attempts);
-
-    private sealed record SendWindow(DateTime EndsUtc, int Count);
 }

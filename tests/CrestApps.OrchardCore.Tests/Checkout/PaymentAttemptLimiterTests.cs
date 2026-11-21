@@ -1,131 +1,39 @@
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Memory;
+using CrestApps.OrchardCore.Throttling;
 using Microsoft.Extensions.Options;
 using Moq;
-using OrchardCore.Environment.Shell;
-using OrchardCore.Locking;
-using OrchardCore.Locking.Distributed;
-using OrchardCore.Modules;
+using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Checkout;
 
-public class PaymentAttemptLimiterTests
+#pragma warning disable CS0618 // The obsolete limiter is kept for one release; these tests pin what it still does.
+
+/// <summary>
+/// RL-1: the old payment attempt limiter is now an adapter over the platform attempt limiter, kept for one release.
+/// The limiter's own behavior is covered by <c>DistributedAttemptLimiterTests</c>.
+/// </summary>
+public sealed class PaymentAttemptLimiterTests
 {
     [Fact]
-    public async Task AcquireAsync_AllowsUpToLimitThenThrottles()
+    public async Task AcquireAsync_CountsTheScopeAndDiscriminatorAgainstTheLegacyPolicy()
     {
-        var limiter = CreateLimiter(permitLimit: 3, window: TimeSpan.FromMinutes(1), out _);
+        var limiter = new Mock<IAttemptLimiter>();
+        limiter.Setup(l => l.AcquireAsync(PaymentAttemptLimiter.LegacyPolicyName, "setup-intent:1.2.3.4", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AttemptLimitResult(false, 0, TimeSpan.FromMinutes(1)));
 
-        Assert.True(await limiter.AcquireAsync("setup-intent", "1.2.3.4:session"));
-        Assert.True(await limiter.AcquireAsync("setup-intent", "1.2.3.4:session"));
-        Assert.True(await limiter.AcquireAsync("setup-intent", "1.2.3.4:session"));
+        var adapter = new PaymentAttemptLimiter(limiter.Object, Options.Create(new PaymentRateLimitOptions()));
 
-        // Fourth attempt within the window is throttled.
-        Assert.False(await limiter.AcquireAsync("setup-intent", "1.2.3.4:session"));
+        Assert.False(await adapter.AcquireAsync("setup-intent", "1.2.3.4"));
     }
 
     [Fact]
-    public async Task AcquireAsync_ResetsAfterWindowElapses()
+    public async Task AcquireAsync_WithANonPositiveLimit_AllowsEverything()
     {
-        var now = DateTime.UtcNow;
-        var limiter = CreateLimiter(permitLimit: 1, window: TimeSpan.FromMinutes(1), out var clock);
-        clock.Setup(c => c.UtcNow).Returns(() => now);
+        var adapter = new PaymentAttemptLimiter(Mock.Of<IAttemptLimiter>(), Options.Create(new PaymentRateLimitOptions { PermitLimit = 0 }));
 
-        Assert.True(await limiter.AcquireAsync("payment-intent", "ip:s"));
-        Assert.False(await limiter.AcquireAsync("payment-intent", "ip:s"));
-
-        // Advance beyond the window; a fresh window begins.
-        now = now.AddMinutes(2);
-
-        Assert.True(await limiter.AcquireAsync("payment-intent", "ip:s"));
-    }
-
-    [Fact]
-    public async Task AcquireAsync_CountsDiscriminatorsIndependently()
-    {
-        var limiter = CreateLimiter(permitLimit: 1, window: TimeSpan.FromMinutes(1), out _);
-
-        Assert.True(await limiter.AcquireAsync("subscription", "ipA:s"));
-        Assert.False(await limiter.AcquireAsync("subscription", "ipA:s"));
-
-        // A different caller/session has its own budget.
-        Assert.True(await limiter.AcquireAsync("subscription", "ipB:s"));
-    }
-
-    [Fact]
-    public async Task AcquireAsync_CountsScopesIndependently()
-    {
-        var limiter = CreateLimiter(permitLimit: 1, window: TimeSpan.FromMinutes(1), out _);
-
-        Assert.True(await limiter.AcquireAsync("setup-intent", "ip:s"));
-        Assert.False(await limiter.AcquireAsync("setup-intent", "ip:s"));
-
-        // A different endpoint scope is independent.
-        Assert.True(await limiter.AcquireAsync("payment-intent", "ip:s"));
-    }
-
-    [Fact]
-    public async Task AcquireAsync_NonPositiveLimit_DisablesThrottling()
-    {
-        var limiter = CreateLimiter(permitLimit: 0, window: TimeSpan.FromMinutes(1), out _);
-
-        for (var i = 0; i < 50; i++)
-        {
-            Assert.True(await limiter.AcquireAsync("setup-intent", "ip:s"));
-        }
-    }
-
-    [Fact]
-    public async Task AcquireAsync_LockNotAcquired_FailsClosed()
-    {
-        var cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
-
-        var distributedLock = new Mock<IDistributedLock>();
-        distributedLock
-            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
-            .ReturnsAsync((new NoopLocker(), false));
-
-        var clock = new Mock<IClock>();
-        clock.Setup(c => c.UtcNow).Returns(DateTime.UtcNow);
-
-        var limiter = new PaymentAttemptLimiter(
-            cache,
-            distributedLock.Object,
-            new ShellSettings { Name = "Default" },
-            clock.Object,
-            Options.Create(new PaymentRateLimitOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
-
-        Assert.False(await limiter.AcquireAsync("setup-intent", "ip:s"));
-    }
-
-    private static PaymentAttemptLimiter CreateLimiter(int permitLimit, TimeSpan window, out Mock<IClock> clock)
-    {
-        var cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
-
-        var distributedLock = new Mock<IDistributedLock>();
-        distributedLock
-            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
-            .ReturnsAsync((new NoopLocker(), true));
-
-        clock = new Mock<IClock>();
-        clock.Setup(c => c.UtcNow).Returns(DateTime.UtcNow);
-
-        return new PaymentAttemptLimiter(
-            cache,
-            distributedLock.Object,
-            new ShellSettings { Name = "Default" },
-            clock.Object,
-            Options.Create(new PaymentRateLimitOptions { PermitLimit = permitLimit, Window = window }));
-    }
-
-    private sealed class NoopLocker : ILocker
-    {
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-        public void Dispose()
-        {
-        }
+        Assert.True(await adapter.AcquireAsync("setup-intent", "1.2.3.4"));
     }
 }
+
+#pragma warning restore CS0618

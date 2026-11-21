@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Commerce;
@@ -14,6 +15,7 @@ using CrestApps.OrchardCore.Inventory.Deployments;
 using CrestApps.OrchardCore.Inventory.Drivers;
 using CrestApps.OrchardCore.Inventory.Endpoints;
 using CrestApps.OrchardCore.Inventory.Migrations;
+using CrestApps.OrchardCore.Inventory.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Inventory.Navigation;
 using CrestApps.OrchardCore.Inventory.Recipes;
@@ -57,6 +59,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         // Stock items and movements live in their own YesSql collection, which has to be declared for them to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(InventoryConstants.CollectionName));
         services.AddDataMigration<InventoryMigrations>()
@@ -94,6 +98,7 @@ public sealed class Startup : StartupBase
 
         // The rows of the inventory admin list.
         services.AddDisplayDriver<StockItem, StockItemDisplayDriver>();
+        services.AddDisplayDriver<StockMovementRow, StockMovementRowDisplayDriver>();
 
         services.AddSiteDisplayDriver<InventorySettingsDisplayDriver>();
 
@@ -113,6 +118,7 @@ public sealed class OrdersStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IOrderEventHandler, InventoryOrderEventHandler>();
+        services.AddScoped<global::CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentGate, InventoryPaymentGate>();
         services.AddSingleton<IBackgroundTask, ExpiredStockHoldsBackgroundTask>();
     }
 }

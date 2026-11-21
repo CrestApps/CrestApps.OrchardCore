@@ -1,0 +1,7 @@
+@model ShapeViewModel<MyAdherenceDayRow>
+
+@{
+    var conformance = Model.Value.Day.Conformance;
+}
+
+<span class="badge ta-badge fw-normal" title="@T["Conformance"]"><i class="fa-solid fa-scale-balanced text-info" aria-hidden="true"></i> @T["Conformance {0}", conformance is { } value ? value.ToString("P0", CultureInfo.CurrentCulture) : "–"]</span>

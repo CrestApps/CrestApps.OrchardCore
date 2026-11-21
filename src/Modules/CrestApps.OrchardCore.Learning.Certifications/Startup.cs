@@ -1,5 +1,6 @@
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.FileStorage;
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Certifications.BackgroundTasks;
@@ -53,6 +54,7 @@ public sealed class Startup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
         services.Configure<StoreCollectionOptions>(options =>
         {
             options.Collections.Add(CertificationsConstants.CollectionName);

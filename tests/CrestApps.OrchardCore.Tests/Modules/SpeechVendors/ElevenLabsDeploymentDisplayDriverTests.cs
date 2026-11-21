@@ -116,7 +116,7 @@ public sealed class ElevenLabsDeploymentDisplayDriverTests
 
     private ElevenLabsDeploymentDisplayDriver CreateDriver()
     {
-        return new ElevenLabsDeploymentDisplayDriver(_dataProtectionProvider, new PassThroughLocalizer<ElevenLabsDeploymentDisplayDriver>());
+        return new ElevenLabsDeploymentDisplayDriver(_dataProtectionProvider, new CrestApps.OrchardCore.AI.Core.AIEndpointPolicy(null, Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions { AllowPrivateNetwork = true })), new PassThroughLocalizer<ElevenLabsDeploymentDisplayDriver>());
     }
 
     private static UpdateEditorContext CreateContext(ElevenLabsDeploymentViewModel posted)

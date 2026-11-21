@@ -15,7 +15,7 @@
             <div class="row gx-2">
                 <div class="col">
                     <div class="input-group">
-                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <input id="search-box" aria-label="@T["Search"]" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
                         <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
@@ -46,7 +46,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="available-calculation-methods-title">@T["Select a calculation method"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
             </div>
             <div class="modal-body">
                 @if (!(Model.Sources?.Any() ?? false))

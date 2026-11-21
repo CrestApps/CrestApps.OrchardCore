@@ -62,7 +62,9 @@ internal sealed class DataConnectorHttpClient
         => $"{connection.ItemId}:{(connection.ModifiedUtc ?? connection.CreatedUtc).Ticks.ToString(CultureInfo.InvariantCulture)}";
 
     /// <summary>
-    /// Resolves a path or URL against a connection's base URL. An absolute URL must be on the base URL's origin.
+    /// Resolves a path or URL against a connection's base URL. The result must be an http or https address on the base
+    /// URL's origin, whatever the value looked like, and a backslash in the path is refused: <c>\/host/x</c> resolved to
+    /// <c>https://host/x</c> and took the connection's credentials there.
     /// </summary>
     public static Uri Resolve(HttpConnectionSettings settings, string pathOrUrl)
     {
@@ -74,21 +76,47 @@ internal sealed class DataConnectorHttpClient
         }
 
         var value = pathOrUrl.Trim();
+        var pathEnd = value.IndexOfAny(['?', '#']);
+
+        if ((pathEnd < 0 ? value : value[..pathEnd]).Contains('\\', StringComparison.Ordinal))
+        {
+            throw new DataConnectorException("The address can't hold a backslash; use forward slashes.");
+        }
+
+        Uri resolved;
 
         if (Uri.TryCreate(value, UriKind.Absolute, out var absolute) && absolute.Scheme is "http" or "https")
         {
-            if (!IsSameOrigin(baseUri, absolute))
-            {
-                throw new DataConnectorException($"The address {absolute.GetLeftPart(UriPartial.Authority)} isn't on the connection's server {baseUri.GetLeftPart(UriPartial.Authority)}.");
-            }
+            resolved = absolute;
+        }
+        else
+        {
+            // A relative path is appended to the base URL's path, as a client library would.
+            var root = baseUri.AbsoluteUri.EndsWith('/') ? baseUri : new Uri(baseUri.AbsoluteUri + "/");
 
-            return absolute;
+            resolved = new Uri(root, value.TrimStart('/'));
         }
 
-        // A relative path is appended to the base URL's path, as a client library would.
-        var root = baseUri.AbsoluteUri.EndsWith('/') ? baseUri : new Uri(baseUri.AbsoluteUri + "/");
+        EnsureOnConnectionServer(baseUri, resolved);
 
-        return new Uri(root, value.TrimStart('/'));
+        return resolved;
+    }
+
+    /// <summary>
+    /// Throws unless an address is http or https on the base URL's origin, the only place the connection's credentials
+    /// and headers may be sent.
+    /// </summary>
+    public static void EnsureOnConnectionServer(Uri baseUri, Uri uri)
+    {
+        ArgumentNullException.ThrowIfNull(baseUri);
+        ArgumentNullException.ThrowIfNull(uri);
+
+        if (!uri.IsAbsoluteUri || uri.Scheme is not ("http" or "https") || !IsSameOrigin(baseUri, uri))
+        {
+            var authority = uri.IsAbsoluteUri ? uri.GetLeftPart(UriPartial.Authority) : "a relative address";
+
+            throw new DataConnectorException($"The address {authority} isn't on the connection's server {baseUri.GetLeftPart(UriPartial.Authority)}.");
+        }
     }
 
     /// <summary>
@@ -135,6 +163,9 @@ internal sealed class DataConnectorHttpClient
         ArgumentNullException.ThrowIfNull(secrets);
         ArgumentNullException.ThrowIfNull(method);
         ArgumentNullException.ThrowIfNull(uri);
+
+        // Checked again here, so no caller can send the connection's credentials and headers to another server.
+        EnsureOnConnectionServer(GetBaseUri(settings), uri);
 
         return await SendWithRetriesAsync(settings, secrets, cacheKey, method, uri, createContent, new HttpCall(), ensureSuccess, cancellationToken);
     }

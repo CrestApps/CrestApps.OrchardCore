@@ -104,13 +104,26 @@ Both connectors share the remote folder fields:
 | **Files per listing** | host default | The most files one listing will take on. |
 
 **FTP** adds the host, port (21 when empty), username, password, encryption mode, data connection type, an
-*accept any certificate* switch, connect and read timeouts in milliseconds, and a retry count.
+*accept any certificate* switch, connect and read timeouts in milliseconds, and a retry count. Accepting any
+certificate, and a user name sent without TLS (an encryption mode other than Explicit or Implicit), are refused unless
+the host allows them with `CrestApps_AI:FileTransfer:AllowAnyFtpCertificate` and
+`CrestApps_AI:FileTransfer:AllowUnencryptedFtp` in the tenant's configuration; the FTP client checks the same settings
+when it connects.
 
-**SFTP** adds the host, port, username, and either a password or a private key with an optional passphrase,
-plus optional proxy settings, a connection timeout, and a keep-alive interval.
+**SFTP** adds the host, port, username, the server's **host key fingerprint**, and either a password or a private
+key with an optional passphrase, plus optional proxy settings, a connection timeout, and a keep-alive interval. The
+fingerprint is the server's host key fingerprint as `ssh-keygen -lf` prints it (`SHA256:...`, or the older `MD5:...`
+form), and several can be given separated by commas, such as while a key is being replaced; the connection
+trusts the server only when it shows that key, and a connection without one is refused. An SFTP source saved before
+the fingerprint existed fails to connect until one is added.
 
 A stored password, private key, or passphrase is never sent back to the editor. Leaving the field blank on
-save keeps the stored value; type a new one to replace it.
+save keeps the stored value while the connection signs in to the same account on the same server; type a new one to
+replace it. Changing the host, the port or the user name, or for SFTP the host key fingerprint, drops the stored
+password, private key and passphrase, so they must be entered again: a user who may edit the source but never saw them
+can't send them to a server of their own, or sign in with the key somewhere else. The SFTP proxy password is kept while
+the proxy's type, host, port and user name are the same. The `FileSources` recipe step and the `file-sources` API apply
+the same rule.
 
 Both feed the same ingestion pipeline as the local connector, so the shared fields above behave identically.
 
@@ -196,7 +209,7 @@ The `FileSources` recipe step creates or updates file sources. A file source is 
 }
 ```
 
-The **File sources** deployment step (Artificial Intelligence category) exports every file source. Passwords, private keys, passphrases, tokens and other secrets are never exported: they are protected with the keys of the site that stored them. When a recipe updates a file source and leaves a secret out, the stored secret is kept; after importing a new FTP or SFTP file source, open it and enter its password or key.
+The **File sources** deployment step (Artificial Intelligence category) exports every file source. Passwords, private keys, passphrases, tokens and other secrets are never exported: they are protected with the keys of the site that stored them. When a recipe updates a file source and leaves a secret out, the stored secret is kept, unless the same update changes the connection's host, port, user name or host key fingerprint; after importing a new FTP or SFTP file source, open it and enter its password or key.
 
 ## Related
 

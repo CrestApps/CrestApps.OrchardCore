@@ -120,6 +120,24 @@ public sealed class RoleGrantServiceTests
         Assert.Empty(await service.ListAsync("u1"));
     }
 
+    [Theory]
+    [InlineData("Administrator")]
+    [InlineData("administrator")]
+    [InlineData("Authenticated")]
+    public async Task GrantAsync_ARoleNoGrantMayGive_IsRefused(string roleName)
+    {
+        // Arrange
+        var service = CreateService();
+
+        // Act
+        var granted = await service.GrantAsync("u1", roleName, MembershipRoleGrantSource.SourceName, "m1");
+
+        // Assert
+        Assert.False(granted);
+        Assert.DoesNotContain(roleName, _user.RoleNames, StringComparer.OrdinalIgnoreCase);
+        Assert.Empty(await service.ListAsync("u1"));
+    }
+
     private DefaultRoleGrantService CreateService(params IRoleGrantSource[] sources)
     {
         var userManager = new Mock<UserManager<IUser>>(Mock.Of<IUserStore<IUser>>(), null, null, null, null, null, null, null, null);

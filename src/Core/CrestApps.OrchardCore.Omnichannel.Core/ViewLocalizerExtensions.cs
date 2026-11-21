@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Mvc.Localization;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core;
@@ -17,7 +18,7 @@ public static class ViewLocalizerExtensions
     {
         if (number <= 0)
         {
-            var numStr = number.ToString();
+            var numStr = number.ToString(CultureInfo.CurrentCulture);
 
             return new LocalizedHtmlString(numStr, numStr);
         }

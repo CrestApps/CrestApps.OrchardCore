@@ -14,7 +14,7 @@
 
 @if (!string.IsNullOrEmpty(suggestUrl))
 {
-    <div id="@id" class="small mb-3" hidden aria-live="polite">
+    <div id="@id" class="small mb-3" hidden aria-live="polite" data-insert-label="@T["Add the link"]">
         <div class="text-body-secondary mb-1">@T["Help articles that may answer it:"]</div>
         <ul class="list-unstyled mb-0" data-list></ul>
     </div>
@@ -26,7 +26,7 @@
             const target = document.getElementById('@Model.Target');
             const list = box && box.querySelector('[data-list]');
             const insert = @(Model.Insert ? "true" : "false");
-            const insertLabel = '@T["Add the link"]';
+            const insertLabel = box ? box.dataset.insertLabel : '';
             let timer = null;
             let last = '';
             if (!box || !source || !list) {

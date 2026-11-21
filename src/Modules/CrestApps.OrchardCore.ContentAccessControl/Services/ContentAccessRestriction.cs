@@ -1,11 +1,13 @@
 using CrestApps.OrchardCore.Roles.Core.Models;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 
 namespace CrestApps.OrchardCore.ContentAccessControl.Services;
 
 /// <summary>
-/// Reads the roles a content item is restricted to, for the authorization handler and the index alike.
+/// Reads the roles a content item is restricted to, for the authorization handler, the indexes, the sitemaps and the
+/// search documents alike.
 /// </summary>
 internal static class ContentAccessRestriction
 {
@@ -50,6 +52,23 @@ internal static class ContentAccessRestriction
         }
 
         return roleNames;
+    }
+
+    /// <summary>
+    /// The roles picked on an item, read with its content type from the definition manager. Empty when none is picked or
+    /// the type is unknown: the item is open to everyone.
+    /// </summary>
+    /// <param name="contentItem">The item.</param>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <returns>The role names.</returns>
+    public static async Task<HashSet<string>> GetRoleNamesAsync(ContentItem contentItem, IContentDefinitionManager contentDefinitionManager)
+    {
+        if (contentItem is null || contentDefinitionManager is null)
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return GetRoleNames(await contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType), contentItem);
     }
 
     private static bool IsRestricting(ContentTypePartDefinition partDefinition)

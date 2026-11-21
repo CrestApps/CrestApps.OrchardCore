@@ -33,4 +33,27 @@ public sealed class AIChatProfileAccessEvaluator
 
         return _authorizationService.AuthorizeAsync(user, AIPermissions.QueryAnyAIProfile, profile);
     }
+
+    /// <summary>
+    /// Returns the profiles the caller can access, in their original order. Use it before a view lists profiles
+    /// (template prompts, for example) to a caller, so a profile the caller may not use is never named.
+    /// </summary>
+    /// <param name="user">The current caller.</param>
+    /// <param name="profiles">The candidate profiles.</param>
+    public async Task<IReadOnlyList<AIProfile>> GetAccessibleProfilesAsync(ClaimsPrincipal user, IEnumerable<AIProfile> profiles)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        var accessible = new List<AIProfile>();
+
+        foreach (var profile in profiles ?? [])
+        {
+            if (profile is not null && await CanAccessProfileAsync(user, profile))
+            {
+                accessible.Add(profile);
+            }
+        }
+
+        return accessible;
+    }
 }

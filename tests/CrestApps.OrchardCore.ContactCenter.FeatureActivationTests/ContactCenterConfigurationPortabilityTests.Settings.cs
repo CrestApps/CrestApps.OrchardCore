@@ -224,6 +224,16 @@ public sealed partial class ContactCenterConfigurationPortabilityTests
             secrets[member] = DestinationSecret(settings.SettingsType, member);
         }
 
+        // The destination's credentials are for the same addresses the plan carries (the ARI address, for one): a plan
+        // that moves an address to another host drops the secret kept for the old one, so it is not sent to the new host.
+        foreach (var (settingsType, propertyName, value) in _settingsOverrides)
+        {
+            if (settingsType == settings.SettingsType)
+            {
+                secrets[propertyName] = value.DeepClone();
+            }
+        }
+
         return new JsonObject
         {
             ["name"] = settings.ProviderStepName,

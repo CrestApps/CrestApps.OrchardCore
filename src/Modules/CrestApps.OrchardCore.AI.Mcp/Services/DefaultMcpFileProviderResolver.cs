@@ -1,5 +1,7 @@
 ﻿using CrestApps.Core.AI.Mcp;
+using CrestApps.OrchardCore.Core.FileStorage;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Primitives;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
@@ -12,7 +14,9 @@ namespace CrestApps.OrchardCore.AI.Mcp.Services;
 /// <remarks>
 /// <para>
 /// Without a provider name, files come from the tenant's own <c>McpFiles</c> folder
-/// (<c>App_Data/Sites/{tenant}/McpFiles</c>); while that folder does not exist, no file is found. A provider name
+/// (<c>App_Data/Sites/{tenant}/McpFiles</c>); while that folder does not exist, no file is found. A path that leaves the
+/// folder, by <c>..</c>, an absolute path or a link that points outside it, and a dot-prefixed file or folder, are not
+/// found. A provider name
 /// selects a provider registered in <see cref="McpFileProviderOptions"/>; an unknown name resolves to nothing.
 /// </para>
 /// <para>
@@ -60,13 +64,9 @@ public sealed class DefaultMcpFileProviderResolver : IMcpFileProviderResolver
     {
         if (string.IsNullOrWhiteSpace(providerName))
         {
-            var root = GetTenantFolder();
-
-            // PhysicalFileProvider refuses paths that leave its root and, by default, dot-prefixed, hidden and
-            // system files.
-            return Directory.Exists(root)
-                ? new PhysicalFileProvider(root)
-                : new NullFileProvider();
+            // The tenant folder's own rule refuses an absolute path, a path that climbs out with .. and a link that
+            // leaves the folder, which PhysicalFileProvider would follow; dot-prefixed names are refused on top.
+            return new NoDotFilesProvider(new TenantFolderFileProvider(new TenantFolder(_shellSettings, _shellOptions, TenantFolderName)));
         }
 
         return _options.Providers.TryGetValue(providerName.Trim(), out var factory)
@@ -83,4 +83,29 @@ public sealed class DefaultMcpFileProviderResolver : IMcpFileProviderResolver
             _shellOptions.ShellsContainerName,
             _shellSettings.Name,
             TenantFolderName));
+
+    private sealed class NoDotFilesProvider : IFileProvider
+    {
+        private readonly IFileProvider _inner;
+
+        public NoDotFilesProvider(IFileProvider inner)
+        {
+            _inner = inner;
+        }
+
+        public IFileInfo GetFileInfo(string subpath)
+            => HasDotSegment(subpath) ? new NotFoundFileInfo(subpath ?? string.Empty) : _inner.GetFileInfo(subpath);
+
+        public IDirectoryContents GetDirectoryContents(string subpath)
+            => HasDotSegment(subpath) ? NotFoundDirectoryContents.Singleton : _inner.GetDirectoryContents(subpath);
+
+        public IChangeToken Watch(string filter)
+            => NullChangeToken.Singleton;
+
+        // A "." or ".." segment is left to the tenant folder's rule; any other segment that starts with a dot is hidden.
+        private static bool HasDotSegment(string subpath)
+            => !string.IsNullOrEmpty(subpath) &&
+                subpath.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries)
+                    .Any(segment => segment.Length > 1 && segment[0] == '.' && segment != "..");
+    }
 }

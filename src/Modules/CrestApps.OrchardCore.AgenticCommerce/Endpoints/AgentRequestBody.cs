@@ -15,6 +15,10 @@ public static class AgentRequestBody
     /// </summary>
     public const int MaxLength = 1024 * 1024;
 
+    // A property named twice is refused when the body is read, as invalid JSON. Allowed, it made the first read of the
+    // object throw, past every JsonException handler, and the request failed with a 500 before the caller signed in.
+    private static readonly JsonDocumentOptions _documentOptions = new() { AllowDuplicateProperties = false };
+
     /// <summary>
     /// Returns the body's bytes, or <see langword="null"/> when it is too large.
     /// </summary>
@@ -46,7 +50,8 @@ public static class AgentRequestBody
     }
 
     /// <summary>
-    /// Parses a body as JSON, or returns <see langword="null"/> when it is empty or isn't JSON.
+    /// Parses a body as JSON, or returns <see langword="null"/> when it is empty or isn't JSON, a property named twice
+    /// included.
     /// </summary>
     /// <param name="body">The body.</param>
     public static JsonNode Parse(byte[] body)
@@ -58,7 +63,7 @@ public static class AgentRequestBody
 
         try
         {
-            return JsonNode.Parse(body);
+            return JsonNode.Parse(body, documentOptions: _documentOptions);
         }
         catch (JsonException)
         {

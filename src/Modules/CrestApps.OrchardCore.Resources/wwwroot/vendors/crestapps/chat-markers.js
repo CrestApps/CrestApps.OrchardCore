@@ -191,6 +191,285 @@
 			citationMarkerHtml
 		};
 	})();
+	window.CoreAIAntiforgery = window.CoreAIAntiforgery || (function() {
+		"use strict";
+		const headerName = "RequestVerificationToken";
+		function readFromPage() {
+			if (typeof document === "undefined" || !document || typeof document.querySelector !== "function") return null;
+			const meta = document.querySelector("meta[name=\"" + headerName + "\"]");
+			if (meta && meta.content) return meta.content;
+			const field = document.querySelector("input[name=\"__RequestVerificationToken\"]");
+			return field && field.value ? field.value : null;
+		}
+		function findToken(config) {
+			if (config && typeof config.antiforgeryToken === "string" && config.antiforgeryToken) return config.antiforgeryToken;
+			return readFromPage();
+		}
+		function isSameOrigin(url) {
+			if (url === void 0 || url === null) return true;
+			try {
+				const base = typeof document !== "undefined" && document && document.baseURI ? document.baseURI : window.location.href;
+				return new URL(url, base).origin === new URL(base).origin;
+			} catch (error) {
+				return false;
+			}
+		}
+		function headers(config, extra, url) {
+			const result = Object.assign({}, extra);
+			const token = isSameOrigin(url) ? findToken(config) : null;
+			if (token) result[headerName] = token;
+			return result;
+		}
+		function apply(request, config, url) {
+			const token = isSameOrigin(url) ? findToken(config) : null;
+			if (token && request && typeof request.setRequestHeader === "function") request.setRequestHeader(headerName, token);
+		}
+		return {
+			headerName,
+			findToken,
+			headers,
+			apply
+		};
+	})();
+	window.CoreAIImages = window.CoreAIImages || (function() {
+		"use strict";
+		const rawImageHook = "afterSanitizeAttributes";
+		const fetchingTags = [
+			"style",
+			"video",
+			"audio",
+			"source",
+			"track",
+			"svg",
+			"math"
+		];
+		const fetchingAttributes = [
+			"background",
+			"poster",
+			"srcset",
+			"lowsrc",
+			"dynsrc"
+		];
+		const chartCanvasId = /^(?:chat|ci)_chart_\d+$/;
+		const safeStyle = /^[\w\s:;.%#,-]*$/;
+		const allowedStyleProperties = /* @__PURE__ */ new Set([
+			"width",
+			"height",
+			"min-width",
+			"min-height",
+			"max-width",
+			"max-height",
+			"margin",
+			"margin-top",
+			"margin-right",
+			"margin-bottom",
+			"margin-left",
+			"padding",
+			"padding-top",
+			"padding-right",
+			"padding-bottom",
+			"padding-left",
+			"display",
+			"text-align",
+			"vertical-align",
+			"white-space",
+			"word-break",
+			"overflow-wrap",
+			"color",
+			"background-color",
+			"font-size",
+			"font-weight",
+			"font-style",
+			"line-height",
+			"text-decoration"
+		]);
+		const spacingProperty = /^(?:margin|padding)(?:-(?:top|right|bottom|left))?$/;
+		function safeStyleOf(style) {
+			if (typeof style !== "string" || !safeStyle.test(style)) return "";
+			const kept = [];
+			for (const declaration of style.split(";")) {
+				const colon = declaration.indexOf(":");
+				if (colon < 0) continue;
+				const name = declaration.slice(0, colon).trim().toLowerCase();
+				const value = declaration.slice(colon + 1).trim();
+				if (!value || !allowedStyleProperties.has(name)) continue;
+				if (spacingProperty.test(name) && value.indexOf("-") >= 0) continue;
+				kept.push(name + ": " + value + ";");
+			}
+			return kept.join(" ");
+		}
+		const pageReferenceAttributes = [
+			"for",
+			"form",
+			"formaction",
+			"list",
+			"popovertarget",
+			"popovertargetaction",
+			"commandfor",
+			"command"
+		];
+		const formControlTags = [
+			"INPUT",
+			"BUTTON",
+			"SELECT",
+			"TEXTAREA"
+		];
+		function withFetcherLimits(config) {
+			const limited = Object.assign({}, config);
+			limited.FORBID_TAGS = (config && config.FORBID_TAGS ? config.FORBID_TAGS : []).concat(fetchingTags);
+			limited.FORBID_ATTR = (config && config.FORBID_ATTR ? config.FORBID_ATTR : []).concat(fetchingAttributes);
+			return limited;
+		}
+		function escapeHtml(text) {
+			return String(text == null ? "" : text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+		}
+		function normalizeHost(entry) {
+			if (typeof entry !== "string") return "";
+			return entry.trim().toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, "").split(/[/?#]/)[0];
+		}
+		function defaultPort(url) {
+			return url.protocol === "https:" ? "443" : "80";
+		}
+		function hostMatches(url, entry) {
+			const host = normalizeHost(entry);
+			if (!host) return false;
+			const separator = host.lastIndexOf(":");
+			const entryPort = separator > 0 ? host.slice(separator + 1) : null;
+			const entryHost = separator > 0 ? host.slice(0, separator) : host;
+			const candidate = url.hostname.toLowerCase();
+			if (entryPort !== null && entryPort !== (url.port || defaultPort(url))) return false;
+			if (entryHost.startsWith("*.")) return candidate.endsWith(entryHost.slice(1)) && candidate.length > entryHost.length - 1;
+			return candidate === entryHost;
+		}
+		function pageAddress(options) {
+			if (options && options.baseUrl) return options.baseUrl;
+			if (typeof document !== "undefined" && document && document.baseURI) return document.baseURI;
+			return window.location && window.location.href ? window.location.href : null;
+		}
+		function isAllowedSource(src, options) {
+			if (typeof src !== "string") return false;
+			const address = src.trim();
+			if (!address) return false;
+			if (/^data:image\//i.test(address)) return true;
+			const base = pageAddress(options);
+			if (!base) return false;
+			let url;
+			let page;
+			try {
+				url = new URL(address, base);
+				page = new URL(base);
+			} catch (error) {
+				return false;
+			}
+			if (url.protocol === "blob:") return url.origin === page.origin;
+			if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+			if (url.origin === page.origin) return true;
+			return (options && Array.isArray(options.allowedHosts) ? options.allowedHosts : []).some(function(entry) {
+				return hostMatches(url, entry);
+			});
+		}
+		function isSafeLinkTarget(href) {
+			return typeof href === "string" && /^(https?:\/\/|\/(?!\/)|[^:]*$)/i.test(href.trim()) && !/^\s*(javascript|vbscript|data):/i.test(href);
+		}
+		function linkHtml(href, label) {
+			const text = typeof label === "string" && label.trim() ? label.trim() : href || "";
+			if (!isSafeLinkTarget(href) || !href) return escapeHtml(text);
+			return "<a href=\"" + escapeHtml(href) + "\" target=\"_blank\" rel=\"noopener noreferrer\">" + escapeHtml(text) + "</a>";
+		}
+		function linkElement(href, label) {
+			const text = typeof label === "string" && label.trim() ? label.trim() : href || "";
+			const linkable = isSafeLinkTarget(href) && !!href;
+			const element = document.createElement(linkable ? "a" : "span");
+			if (linkable) {
+				element.setAttribute("href", href);
+				element.setAttribute("target", "_blank");
+				element.setAttribute("rel", "noopener noreferrer");
+			}
+			element.textContent = text;
+			return element;
+		}
+		function sanitize(purify, html, purifyConfig, options) {
+			const hook = function(node) {
+				if (!node || typeof node.tagName !== "string") return;
+				const tagName = node.tagName.toUpperCase();
+				if (typeof node.getAttribute === "function" && node.getAttribute("style") !== null) {
+					const style = safeStyleOf(node.getAttribute("style"));
+					if (style) node.setAttribute("style", style);
+					else node.removeAttribute("style");
+				}
+				if (typeof node.removeAttribute === "function") pageReferenceAttributes.forEach(function(name) {
+					node.removeAttribute(name);
+				});
+				if (formControlTags.indexOf(tagName) >= 0) node.removeAttribute("name");
+				if (tagName === "BUTTON") node.setAttribute("type", "button");
+				if (tagName === "INPUT") {
+					if ((node.getAttribute("type") || "").toLowerCase() !== "checkbox") {
+						node.remove();
+						return;
+					}
+					node.removeAttribute("src");
+					node.setAttribute("disabled", "");
+					return;
+				}
+				if (tagName !== "IMG") return;
+				node.removeAttribute("srcset");
+				const src = node.getAttribute("src");
+				if (!isAllowedSource(src, options)) node.replaceWith(linkElement(src, node.getAttribute("alt")));
+			};
+			const attributeHook = function(node, data) {
+				const name = data && data.attrName;
+				if (typeof name !== "string") return;
+				if (name === "id") {
+					if (!(node && typeof node.tagName === "string" && node.tagName.toUpperCase() === "CANVAS" && chartCanvasId.test(data.attrValue))) data.keepAttr = false;
+					return;
+				}
+				if (name.startsWith("data-coreai-") || name.startsWith("data-chat-interaction-") || name.startsWith("data-agui-")) data.keepAttr = false;
+			};
+			purify.addHook(rawImageHook, hook);
+			purify.addHook("uponSanitizeAttribute", attributeHook);
+			try {
+				return purify.sanitize(html, withFetcherLimits(purifyConfig));
+			} finally {
+				purify.removeHook(rawImageHook, hook);
+				purify.removeHook("uponSanitizeAttribute", attributeHook);
+			}
+		}
+		return {
+			isAllowedSource,
+			linkHtml,
+			sanitize
+		};
+	})();
+	window.CoreAIChatSurface = window.CoreAIChatSurface || (function() {
+		"use strict";
+		const renderedMessageSelector = ".ai-chat-messages, .ai-chat-message-item, .ai-chat-message-body";
+		const mountedRoots = [];
+		function registerRoot(element) {
+			if (element && typeof element.contains === "function" && mountedRoots.indexOf(element) < 0) mountedRoots.push(element);
+		}
+		function isInsideRenderedMessage(element) {
+			if (!element) return false;
+			if (typeof element.closest === "function" && element.closest(renderedMessageSelector)) return true;
+			return mountedRoots.some(function(root) {
+				return root !== element && root.contains(element);
+			});
+		}
+		function queryPageElements(selector, scope) {
+			const root = scope || document;
+			return Array.prototype.filter.call(root.querySelectorAll(selector), function(element) {
+				return !isInsideRenderedMessage(element);
+			});
+		}
+		function queryPageElement(selector, scope) {
+			return queryPageElements(selector, scope)[0] || null;
+		}
+		return {
+			registerRoot,
+			isInsideRenderedMessage,
+			queryPageElements,
+			queryPageElement
+		};
+	})();
 	//#endregion
 })();
 //# sourceMappingURL=chat-markers.js.map

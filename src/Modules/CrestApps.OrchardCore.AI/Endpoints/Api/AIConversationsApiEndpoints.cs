@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -275,7 +276,10 @@ internal static class AIConversationsApiEndpoints
 
         try
         {
-            await postCloseProcessor.ProcessAsync(profile, conversation, await promptStore.GetPromptsAsync(conversation.SessionId), httpContext.RequestAborted);
+            var prompts = await promptStore.GetPromptsAsync(conversation.SessionId);
+
+            // The analysis's tools act on what a visitor wrote, so they never run with the API caller's rights.
+            await PostSessionCaller.RunAsNoOneAsync(httpContext, () => postCloseProcessor.ProcessAsync(profile, conversation, prompts, httpContext.RequestAborted));
         }
         finally
         {

@@ -194,7 +194,7 @@ internal sealed class AssetsFieldAssetSource : IFieldAssetSource
 /// <summary>
 /// Removes technicians' positions and the records of their commands once they are kept long enough.
 /// </summary>
-[BackgroundTask(Title = "Dispatch: location retention", Schedule = "15 * * * *", Description = "Removes technicians' positions and the records of their app's commands after their retention.")]
+[BackgroundTask(Title = "Dispatch: location retention", Schedule = "15 * * * *", Description = "Removes technicians' positions and the records of their app's commands after their retention.", LockTimeout = 3_000, LockExpiration = 600_000)]
 internal sealed class FieldRetentionBackgroundTask : IBackgroundTask
 {
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)

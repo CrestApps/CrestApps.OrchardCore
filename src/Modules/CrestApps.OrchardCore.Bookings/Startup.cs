@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.PersonalData.Core;
@@ -52,6 +53,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<IBookingBalanceStore, BookingBalanceStore>();
         services.AddPersonalDataContributor<BookingPersonalDataContributor>();
         services.AddScoped<BookingCapacityService>();
+
+        // Prices, refunds and percentages are posted from number inputs, which write a dot in every language.
+        services.AddInvariantNumberInputs();
         services.AddScoped<BookingService>();
         services.AddScoped<BookingEmailSender>();
         services.AddCommerceEmailSender()

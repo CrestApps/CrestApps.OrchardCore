@@ -85,6 +85,27 @@ internal sealed class DefaultWorkforceScopeService : IWorkforceScopeService
         return scope;
     }
 
+    public async Task<bool> CanDecideForWorkerAsync(ClaimsPrincipal user, string workerId, CancellationToken cancellationToken = default)
+    {
+        if (user?.Identity?.IsAuthenticated != true || string.IsNullOrEmpty(workerId))
+        {
+            return false;
+        }
+
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        var own = string.IsNullOrEmpty(userId) ? null : await _workerStore.FindByUserIdAsync(userId, cancellationToken);
+
+        // Someone else's record: the caller's permission and scope decide, as before.
+        if (own is null || !string.Equals(own.ItemId, workerId, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        // A manager never approves their own timesheet, punches or leave on the strength of managing their own team.
+        return await _authorizationService.AuthorizeAsync(user, WorkforcePermissions.ManageAllWorkforce) ||
+            await _authorizationService.AuthorizeAsync(user, WorkforcePermissions.ApproveOwnRecords);
+    }
+
     public async Task<bool> ManagesWorkerAsync(ClaimsPrincipal user, StaffMember worker, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);

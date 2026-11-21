@@ -1,4 +1,5 @@
 ﻿using CrestApps.OrchardCore.Omnichannel.EventGrid.Models;
+using CrestApps.OrchardCore.Omnichannel.EventGrid.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,9 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.Configure<EventGridOptions>(_shellConfiguration.GetSection("CrestApps:Omnichannel:EventGrid"));
+
+        // The cached OpenID configuration of each metadata address, kept for the tenant's life rather than the process's.
+        services.AddSingleton<EventGridAadTokenValidator>();
     }
 
     public override void Configure(IApplicationBuilder builder, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

@@ -18,6 +18,8 @@ internal sealed class BankTransferSettingsSchema : SiteSettingsSchemaBase
             .Properties(
                 ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether Bank transfer is offered at checkout. Off until the store adds its bank details.")),
                 ("Instructions", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("How to pay, shown at checkout, on the confirmation and on the order's page: the store's bank account details, for example.")),
-                ("NetTermDays", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Default(7).Description("How many days after checkout the transfer is due. 0 records the balance without a due date.")))
+                ("NetTermDays", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Default(7).Description("How many days after checkout the transfer is due. 0 records the balance without a due date.")),
+                ("RequireSignedIn", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(false).Description("Whether only a signed-in buyer may use this method. Defaults to false.")),
+                ("MaxOrderAmount", new JsonSchemaBuilder().Type(SchemaValueType.Number | SchemaValueType.Null).Minimum(0).Description("The largest order total that may use this method, or null for no limit.")))
             .AdditionalProperties(true);
 }

@@ -168,7 +168,9 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
             ProviderCallId = callEvent.CallControlId,
             ProviderLegId = callEvent.CallLegId,
             State = state,
-            FromAddress = callEvent.From,
+
+            // The caller id is chosen by whoever places the call; only what a number or a SIP address can contain goes on.
+            FromAddress = Telephony.CallerNumbers.Sanitize(callEvent.From),
             ToAddress = callEvent.To,
             OccurredUtc = occurredUtc,
             IdempotencyKey = TelnyxWebhookDelivery.GetDeliveryId(callEvent),

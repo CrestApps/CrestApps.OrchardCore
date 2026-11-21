@@ -179,22 +179,6 @@ public sealed class InvitationWorkflowsSchemaStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the account team part and its editor.
-/// </summary>
-[Feature(AccountsConstants.TeamFeature)]
-public sealed class TeamStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddContentPart<AccountTeamPart>()
-            .UseDisplayDriver<AccountTeamPartDisplayDriver>();
-
-        services.AddDataMigration<AccountTeamMigrations>();
-    }
-}
-
-/// <summary>
 /// Adds the Notes tab to the account page: the account's timeline.
 /// </summary>
 [RequireFeatures(TimelineConstants.Features.Timeline)]
@@ -208,23 +192,6 @@ public sealed class TimelineStartup : StartupBase
     }
 }
 
-/// <summary>
-/// Describes the account team part to CrestApps Recipes.
-/// </summary>
-[Feature(AccountsConstants.TeamFeature)]
-[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
-public sealed class TeamRecipesSchemaStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IContentSchemaDefinition, AccountTeamPartSchemaDefinition>();
-    }
-}
-
-/// <summary>
-/// Registers the locations part and its editor.
-/// </summary>
 /// <summary>
 /// Registers the accounts' e-mail domains.
 /// </summary>
@@ -250,6 +217,9 @@ public sealed class EmailDomainsStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Registers the locations part and its editor.
+/// </summary>
 [Feature(AccountsConstants.LocationsFeature)]
 public sealed class LocationsStartup : StartupBase
 {

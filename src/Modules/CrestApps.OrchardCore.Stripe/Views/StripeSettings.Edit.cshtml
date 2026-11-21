@@ -89,7 +89,7 @@
             }
             else
             {
-                <input asp-for="LivePrivateSecret" class="form-control" type="text" placeholder="@(Model.HasLivePrivateSecret ? T["A secret key is stored. Provide a new value to replace it."].Value : "sk_live_...")" data-stripe-secret />
+                <input asp-for="LivePrivateSecret" class="form-control" secret-input secret-saved="@Model.HasLivePrivateSecret" placeholder="@(Model.HasLivePrivateSecret ? T["A secret key is stored. Provide a new value to replace it."].Value : "sk_live_...")" data-stripe-secret />
                 <span asp-validation-for="LivePrivateSecret"></span>
             }
         </div>
@@ -136,7 +136,7 @@
                 }
                 else
                 {
-                    <input asp-for="LiveWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasLiveWebhookSecret ? T["A signing secret is stored. Provide a new value to replace it."].Value : "whsec_...")" />
+                    <input asp-for="LiveWebhookSecret" class="form-control" secret-input secret-saved="@Model.HasLiveWebhookSecret" placeholder="@(Model.HasLiveWebhookSecret ? T["A signing secret is stored. Provide a new value to replace it."].Value : "whsec_...")" />
                     <span asp-validation-for="LiveWebhookSecret"></span>
                     <span class="hint">@T["Filled in automatically when you connect. Set it manually only for local development with the Stripe CLI."]</span>
                 }
@@ -176,7 +176,7 @@
             }
             else
             {
-                <input asp-for="TestPrivateSecret" class="form-control" type="text" placeholder="@(Model.HasTestPrivateSecret ? T["A secret key is stored. Provide a new value to replace it."].Value : "sk_test_...")" data-stripe-secret />
+                <input asp-for="TestPrivateSecret" class="form-control" secret-input secret-saved="@Model.HasTestPrivateSecret" placeholder="@(Model.HasTestPrivateSecret ? T["A secret key is stored. Provide a new value to replace it."].Value : "sk_test_...")" data-stripe-secret />
                 <span asp-validation-for="TestPrivateSecret"></span>
             }
         </div>
@@ -223,7 +223,7 @@
                 }
                 else
                 {
-                    <input asp-for="TestWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasTestWebhookSecret ? T["A signing secret is stored. Provide a new value to replace it."].Value : "whsec_...")" />
+                    <input asp-for="TestWebhookSecret" class="form-control" secret-input secret-saved="@Model.HasTestWebhookSecret" placeholder="@(Model.HasTestWebhookSecret ? T["A signing secret is stored. Provide a new value to replace it."].Value : "whsec_...")" />
                     <span asp-validation-for="TestWebhookSecret"></span>
                     <span class="hint">@T["Filled in automatically when you connect. Set it manually only for local development with the Stripe CLI."]</span>
                 }

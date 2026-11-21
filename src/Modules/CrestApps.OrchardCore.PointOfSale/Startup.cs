@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Core.ModelBinding;
+using CrestApps.OrchardCore.Core.Throttling;
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Core.Deployments;
@@ -33,6 +36,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddInvariantNumberInputs();
+
         // Registers and shifts live in their own YesSql collection, which has to be declared to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(PosConstants.CollectionName));
         services.AddDataMigration<PosMigrations>()
@@ -74,4 +79,16 @@ public sealed class Startup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.MapPosApi();
+}
+
+/// <summary>
+/// The built-in limit of the till's payment and return routes, listed read-only under Tools &gt; Rate Limits.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(PosConstants.PaymentRateLimitGroup, 60, TimeSpan.FromMinutes(1)));
 }

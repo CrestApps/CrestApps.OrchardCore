@@ -23,12 +23,18 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
     private readonly IPaymentAttemptStore _attemptStore;
     private readonly ICheckoutPaymentProviderResolver _providerResolver;
     private readonly ILogger<CheckoutReconciliationService> _logger;
+    private readonly IPaymentDeclineRecorder _declineRecorder;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CheckoutReconciliationService"/> class.
+    /// </summary>
     public CheckoutReconciliationService(
         IPaymentAttemptStore attemptStore,
         ICheckoutPaymentProviderResolver providerResolver,
-        ILogger<CheckoutReconciliationService> logger)
+        ILogger<CheckoutReconciliationService> logger,
+        IPaymentDeclineRecorder declineRecorder = null)
     {
+        _declineRecorder = declineRecorder;
         _attemptStore = attemptStore;
         _providerResolver = providerResolver;
         _logger = logger;
@@ -88,7 +94,7 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
                 throw;
             }
 
-            CheckoutTelemetry.RecordReconcileAttempt(providerTag, await ApplyVerificationAsync(attempt, verification, cancellationToken));
+            CheckoutTelemetry.RecordReconcileAttempt(providerTag, await ApplyVerificationAsync(session, attempt, verification, cancellationToken));
         }
 
         RebuildPaymentsMetadata(session, attempts);
@@ -142,6 +148,7 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
 
     // Applies what the provider said to the attempt, and returns the reconciliation result for the telemetry.
     private async Task<string> ApplyVerificationAsync(
+        CheckoutSession session,
         PaymentAttempt attempt,
         PaymentVerificationResult verification,
         CancellationToken cancellationToken)
@@ -176,8 +183,16 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
                 return CheckoutTelemetry.ReconcileSettled;
 
             case PaymentStatus.Failed:
+                var previousState = attempt.State;
+
                 attempt.State = PaymentAttemptState.Failed;
                 await _attemptStore.UpdateAsync(attempt, cancellationToken);
+
+                // Only non-terminal attempts are verified, so this is the attempt's one transition to failed.
+                if (_declineRecorder is not null && PaymentDeclineRecorder.IsNewDecline(previousState, attempt.State))
+                {
+                    await _declineRecorder.RecordAsync(session, attempt, cancellationToken);
+                }
 
                 return CheckoutTelemetry.ReconcileFailed;
 

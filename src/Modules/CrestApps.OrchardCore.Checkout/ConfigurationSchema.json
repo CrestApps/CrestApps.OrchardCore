@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CrestApps attempt policies configuration",
+  "description": "Overrides of the attempt policies that count payments, declined cards, wrong codes and lookups (IAttemptLimiter), read from appsettings.json in the OrchardCore section of the host or a tenant. Each policy is named; see the Rate limits and card-testing protection page of the docs for the list and defaults.",
+  "type": "object",
+  "properties": {
+    "OrchardCore": {
+      "type": "object",
+      "properties": {
+        "CrestApps_Throttling": {
+          "type": "object",
+          "properties": {
+            "AttemptPolicies": {
+              "type": "object",
+              "description": "One entry per policy name, such as payment-decline-network, payment-begin-checkout or coupon-code. Only the values given change.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "PermitLimit": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "How many attempts a key may have in a window. 0 turns the policy off."
+                  },
+                  "Window": {
+                    "type": "string",
+                    "description": "The window, as a time span such as 00:10:00."
+                  },
+                  "BlockDuration": {
+                    "type": "string",
+                    "description": "How long a key that reached the limit with failures stays blocked, as a time span such as 00:30:00. Empty or 00:00:00 for none."
+                  },
+                  "ResetOnSuccess": {
+                    "type": "boolean",
+                    "description": "Whether a success clears the key's counter."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

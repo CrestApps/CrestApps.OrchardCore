@@ -64,6 +64,24 @@ public static class CurrencyScale
     }
 
     /// <summary>
+    /// Returns the <c>step</c> of a number input for an amount in the supplied currency: its smallest unit, such as
+    /// <c>0.01</c> for USD, <c>0.001</c> for KWD or <c>1</c> for JPY, so the browser accepts every amount the currency can
+    /// hold. Returns <c>any</c> when the currency isn't known, since the amount may be in a currency with more decimals.
+    /// </summary>
+    /// <param name="currency">The ISO-4217 currency code, or <see langword="null"/> when it isn't known.</param>
+    public static string GetInputStep(string currency)
+    {
+        if (string.IsNullOrEmpty(currency))
+        {
+            return "any";
+        }
+
+        var decimals = GetDecimalPlaces(currency);
+
+        return decimals == 0 ? "1" : "0." + new string('0', decimals - 1) + "1";
+    }
+
+    /// <summary>
     /// Converts an amount expressed in major units to the integer minor units for the supplied currency.
     /// Rounding is performed away from zero at the currency's precision.
     /// </summary>

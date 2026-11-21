@@ -122,6 +122,16 @@ public sealed class TenantProvisioningJob : CatalogItem, ITimestampedModel
     public string SiteUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets the version the site's tenant settings had right after billing disabled it; <see langword="null"/> while
+    /// billing has not disabled it.
+    /// </summary>
+    /// <remarks>
+    /// Orchard Core gives a tenant's settings a new version on every change, so billing switches the site back on only
+    /// while the version is still this one. A site an operator switched on and disabled again since stays disabled.
+    /// </remarks>
+    public string SuspendedTenantVersionId { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the job was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
@@ -173,4 +183,9 @@ public enum TenantProvisioningStatus
     /// person has to resolve rather than one the site can clear on its own.
     /// </summary>
     Abandoned = 4,
+
+    /// <summary>
+    /// The site was bought with a promise to pay (Pay Later, a bank transfer) and is created once the payment arrives.
+    /// </summary>
+    AwaitingPayment = 5,
 }

@@ -107,7 +107,9 @@ public sealed class CommerceEmailAttachmentsTests
         Assert.False(sent);
         Assert.True(stream.IsDisposed);
         Assert.False(result.Succeeded);
-        Assert.Equal("The mail server is down.", result.Error);
+        // The exception's own text is for the log, not for whoever reads the result.
+        Assert.DoesNotContain("The mail server is down.", result.Error);
+        Assert.False(string.IsNullOrEmpty(result.Error));
     }
 
     [Fact]

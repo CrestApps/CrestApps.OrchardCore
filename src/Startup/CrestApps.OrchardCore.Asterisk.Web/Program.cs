@@ -12,6 +12,7 @@ builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<AsteriskWebApiKey>();
 builder.Services.Configure<AsteriskWebOptions>(builder.Configuration.GetSection("AsteriskWeb"));
 builder.Services.AddSingleton<OrchardSignInClient>();
 builder.Services.AddSingleton<AsteriskInboundSimulationCoordinator>();
@@ -23,6 +24,22 @@ builder.Services.AddHostedService(static serviceProvider => serviceProvider.GetR
 builder.Services.AddHostedService<AsteriskStasisEventForwarderService>();
 
 var app = builder.Build();
+
+// Only this machine, addressed as this machine, and the API only with the dashboard page's key: the sample drives real
+// calls on the developer's Asterisk.
+var apiKey = app.Services.GetRequiredService<AsteriskWebApiKey>().Value;
+
+app.Use(async (context, next) =>
+{
+    if (!AsteriskWebSecurity.IsAllowedRequest(context, apiKey))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+
+        return;
+    }
+
+    await next(context);
+});
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

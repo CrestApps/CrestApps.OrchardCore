@@ -1,0 +1,22 @@
+@model OrderAccountActivateViewModel
+
+@* The page an account made from an order opens from its emailed link: the owner of the address chooses its password. *@
+
+<p>@T["Choose the password you'll sign in with."]</p>
+
+<form asp-action="Activate" asp-controller="OrderAccount" method="post" class="no-multisubmit">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="UserId" type="hidden" />
+    <input asp-for="Code" type="hidden" />
+    <div class="mb-3">
+        <label asp-for="Password" class="form-label ocat-label-required">@T["Password"]</label>
+        <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" data-account-password required />
+        <span asp-validation-for="Password" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="ConfirmPassword" class="form-label ocat-label-required">@T["Confirm password"]</label>
+        <input asp-for="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" data-account-password required />
+        <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">@T["Finish my account"]</button>
+</form>

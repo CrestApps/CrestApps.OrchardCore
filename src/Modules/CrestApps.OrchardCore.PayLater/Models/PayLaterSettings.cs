@@ -19,6 +19,17 @@ public sealed class PayLaterSettings
     public int NetTermDays { get; set; } = 30;
 
     /// <summary>
+    /// Gets or sets a value indicating whether only a signed-in buyer may pay later. On by default: a guest who never pays
+    /// can't be followed up.
+    /// </summary>
+    public bool RequireSignedIn { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the largest order total that may be paid later, or <see langword="null"/> for no limit.
+    /// </summary>
+    public decimal? MaxOrderAmount { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the payment term (from the Payment Terms feature) a Pay Later balance follows when
     /// the payer has no term of their own, such as Net 30 or the end of the month. When set it replaces
     /// <see cref="NetTermDays"/>; when empty, or when the term is gone or disabled, the number of days applies.

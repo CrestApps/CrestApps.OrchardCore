@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.PointOfSale.Indexes;
 using CrestApps.OrchardCore.PointOfSale.Models;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
 using YesSql;
@@ -103,7 +104,8 @@ internal sealed class PosMigrations : DataMigration
 
         ShellScope.AddDeferredTask(scope => CatalogIndexBackfill.ReindexAsync<RegisterShift, RegisterShiftIndex>(
             scope.ServiceProvider.GetRequiredService<ISession>(),
-            PosConstants.CollectionName));
+            PosConstants.CollectionName,
+            logger: scope.ServiceProvider.GetRequiredService<ILogger<PosMigrations>>()));
 
         return 3;
     }

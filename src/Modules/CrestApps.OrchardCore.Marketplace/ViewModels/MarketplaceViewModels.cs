@@ -14,7 +14,7 @@ public class VendorPartViewModel
 
 public class MarketplaceSettingsViewModel
 {
-    public string CommissionPercent { get; set; }
+    public decimal? CommissionPercent { get; set; }
 
     public int HoldDays { get; set; }
 
@@ -39,7 +39,7 @@ public class VendorsIndexViewModel
 }
 
 /// <summary>
-/// A vendor's editor. The commission is text, read in the invariant culture.
+/// A vendor's editor. The commission is bound by the invariant number binder; empty means the store's.
 /// </summary>
 public class VendorEditViewModel
 {
@@ -52,7 +52,7 @@ public class VendorEditViewModel
     /// </summary>
     public string UserNames { get; set; }
 
-    public string CommissionPercent { get; set; }
+    public decimal? CommissionPercent { get; set; }
 
     public string Country { get; set; }
 
@@ -76,6 +76,12 @@ public class VendorDashboardViewModel
     public IList<(string Currency, decimal Held, decimal Available, decimal PaidOut)> Totals { get; set; } = [];
 
     public bool CanPayOut { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pending payouts whose transfer the provider hasn't shown for the review time, which staff check
+    /// at the provider and mark as not made when none was.
+    /// </summary>
+    public IList<VendorPayout> PayoutsToCheck { get; set; } = [];
 
     public bool CanConnectStripe { get; set; }
 }

@@ -128,9 +128,9 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             _logger.LogInformation(
                 "Queued local DNC list {ListId} named '{Name}' ({CountryCode}) from uploaded file '{UploadedFileName}'.",
                 list.ListId,
-                list.Name,
-                list.CountryCode,
-                list.UploadedFileName);
+                list.Name.SanitizeLogValue(),
+                list.CountryCode.SanitizeLogValue(),
+                list.UploadedFileName.SanitizeLogValue());
         }
 
         return list;
@@ -387,8 +387,8 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         {
             _logger.LogInformation(
                 "Imported local DNC list '{Name}' ({CountryCode}) with {Count} phone numbers and {ErrorCount} row errors.",
-                list.Name,
-                list.CountryCode,
+                list.Name.SanitizeLogValue(),
+                list.CountryCode.SanitizeLogValue(),
                 list.ImportedCount,
                 list.ErrorMessages?.Count ?? 0);
         }
@@ -592,7 +592,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         {
             _logger.LogInformation(
                 "Deleting local DNC list '{Name}' ({ListId}) with up to {PhoneNumberCount} entries.",
-                list.Name,
+                list.Name.SanitizeLogValue(),
                 list.ListId,
                 list.PhoneNumberCount);
         }
@@ -691,7 +691,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         {
             _logger.LogInformation(
                 "Deleted local DNC list '{Name}' ({ListId}) with all its {DeletedCount} entries.",
-                list.Name,
+                list.Name.SanitizeLogValue(),
                 list.ListId,
                 deletedCount);
         }

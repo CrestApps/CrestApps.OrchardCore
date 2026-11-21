@@ -68,7 +68,7 @@
                     </p>
                 }
                 <table class="table table-sm mb-2" style="max-width: 32rem">
-                    <thead><tr><th>@T["Day"]</th><th class="text-end">@T["Counts"]</th></tr></thead>
+                    <thead><tr><th scope="col">@T["Day"]</th><th scope="col" class="text-end">@T["Counts"]</th></tr></thead>
                     <tbody>
                         @foreach (var day in preview.Days)
                         {
@@ -78,7 +78,7 @@
                             </tr>
                         }
                     </tbody>
-                    <tfoot><tr><th>@T["In all"]</th><th class="text-end"><partial name="_TimeOffAmount" model="(preview.Amount, preview.Type?.Unit ?? TimeOffUnit.Hours)" /></th></tr></tfoot>
+                    <tfoot><tr><th scope="row">@T["In all"]</th><th scope="row" class="text-end"><partial name="_TimeOffAmount" model="(preview.Amount, preview.Type?.Unit ?? TimeOffUnit.Hours)" /></th></tr></tfoot>
                 </table>
                 @if (preview.Balance is not null)
                 {

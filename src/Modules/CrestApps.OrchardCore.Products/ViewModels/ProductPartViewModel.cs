@@ -66,6 +66,8 @@ public class ProductPartViewModel
 
     public bool Featured { get; set; }
 
+    public bool DeliverBeforePayment { get; set; }
+
     public int? Position { get; set; }
 
     [BindNever]

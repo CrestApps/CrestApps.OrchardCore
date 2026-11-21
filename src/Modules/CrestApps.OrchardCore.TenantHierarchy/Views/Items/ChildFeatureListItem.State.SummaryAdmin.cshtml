@@ -1,0 +1,18 @@
+@model ShapeViewModel<ChildFeatureListItem>
+
+@{
+    var feature = Model.Value.Feature;
+}
+
+@if (feature.IsAlwaysEnabled)
+{
+    <span class="badge ta-badge fw-normal" title="@T["This feature is always on."]"><i class="fa-solid fa-lock text-muted" aria-hidden="true"></i> @T["Always on"]</span>
+}
+else if (feature.IsEnabled)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-check text-success" aria-hidden="true"></i> @T["Enabled"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-power-off text-muted" aria-hidden="true"></i> @T["Disabled"]</span>
+}
