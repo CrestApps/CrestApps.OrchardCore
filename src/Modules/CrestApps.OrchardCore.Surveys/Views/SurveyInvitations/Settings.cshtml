@@ -1,0 +1,78 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyInvitationSettingsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyInvitationsSettings" title="@T["Invitation settings"]">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="SurveysCollectors" action="Index" controller="SurveyCollectors" area="CrestApps.OrchardCore.Surveys" route-id="@Model.SurveyId">@Model.SurveyTitle</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Invitations"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Subject" class="ocat-label">@T["Subject"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Subject" class="form-control" />
+                    <span class="hint">@T["Leave empty for a default subject. Liquid: {{ Survey.Title }}."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Message" class="ocat-label">@T["Message"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Message" class="form-control" rows="6"></textarea>
+                    <span class="hint">@T["Liquid with {{ Survey.Title }}, {{ Invitation.DisplayName }} and {{ Link }}. The personal link is added when the message does not include it."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ExpiresAfterDays" class="ocat-label">@T["Links expire after (days)"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ExpiresAfterDays" type="number" min="1" class="form-control" />
+                    <span class="hint">@T["Leave empty for links that never expire."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Reminders"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="ReminderCount" class="ocat-label">@T["Number of reminders"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ReminderCount" type="number" min="0" max="10" class="form-control" />
+                    <span class="hint">@T["Reminders go to people who have not completed the survey; 0 sends none."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ReminderEveryDays" class="ocat-label">@T["Days between reminders"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ReminderEveryDays" type="number" min="1" max="90" class="form-control" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        @if (string.IsNullOrEmpty(Model.CollectorId))
+        {
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-controller="SurveyCollectors" asp-route-id="@Model.SurveyId">@T["Cancel"]</a>
+        }
+        else
+        {
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-collectorId="@Model.CollectorId">@T["Cancel"]</a>
+        }
+    </div>
+</form>

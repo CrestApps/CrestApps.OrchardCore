@@ -257,6 +257,11 @@ public sealed class SurveyResponseService : ISurveyResponseService
             }
 
             var definition = version.Definition;
+            if (definition.Pages?.Any(page => page.Pools?.Any(pool => pool.EvenlyPresent) == true) == true)
+            {
+                await _poolCounter.PrepareAsync(survey.ItemId, cancellationToken);
+            }
+
             var plan = _planBuilder.Build(survey.ItemId, definition);
             var response = new SurveyResponse
             {
@@ -483,6 +488,17 @@ public sealed class SurveyResponseService : ISurveyResponseService
             }
 
             var errors = await ValidateScreenAsync(definition, response, state, readErrors);
+
+            if (errors.Count > 0 && SurveyPageTimer.PageTimeIsUp(definition, response, now))
+            {
+                // The page's time ran out: what is valid is kept, the rest is dropped, and the respondent moves on.
+                foreach (var questionId in errors.Keys)
+                {
+                    response.Answers.Remove(questionId);
+                }
+
+                errors.Clear();
+            }
 
             if (errors.Count > 0)
             {
@@ -1186,9 +1202,24 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 response.Grading = GradingStatus.NotScored;
             }
 
-            ending ??= _endings.Choose(definition, response, _logic.Evaluate(definition, response, SurveyRuntimeVersions.CacheKey(version)), SurveyRuntimeVersions.CacheKey(version));
+            var logicState = _logic.Evaluate(definition, response, SurveyRuntimeVersions.CacheKey(version));
+            var quotas = response.IsTest || definition.Quotas is not { Count: > 0 } ? null : _serviceProvider.GetService<ISurveyQuotaService>();
+            var screenedByQuota = false;
+
+            ending ??= _endings.Choose(definition, response, logicState, SurveyRuntimeVersions.CacheKey(version));
+
+            if (quotas is not null && ending?.Outcome != EndingOutcome.ScreenedOut
+                && await quotas.FindFullAsync(survey, version, response, logicState, cancellationToken) is { } fullQuota)
+            {
+                // A respondent whose group is full is screened out with the quota's ending.
+                screenedByQuota = true;
+                ending = definition.Endings?.FirstOrDefault(candidate => candidate.Id == fullQuota.EndingId)
+                    ?? definition.Endings?.FirstOrDefault(candidate => candidate.Outcome == EndingOutcome.ScreenedOut)
+                    ?? ending;
+            }
+
             response.EndingId = ending?.Id;
-            response.Status = ending?.Outcome == EndingOutcome.ScreenedOut ? SurveyResponseStatus.ScreenedOut : SurveyResponseStatus.Completed;
+            response.Status = screenedByQuota || ending?.Outcome == EndingOutcome.ScreenedOut ? SurveyResponseStatus.ScreenedOut : SurveyResponseStatus.Completed;
             response.CompletedUtc = now;
             response.AutoSubmitted = autoSubmitted;
             response.LastActivityUtc = now;
@@ -1199,6 +1230,16 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 if (response.Status == SurveyResponseStatus.Completed)
                 {
                     await _participation.RecordCompletedAsync(survey, respondentKey, response.Context, now);
+
+                    if (quotas is not null)
+                    {
+                        var reached = await quotas.RecordAsync(survey, version, response, logicState, cancellationToken);
+
+                        if (reached.Count > 0)
+                        {
+                            notifications.Add(() => quotas.NotifyReachedAsync(survey, reached, CancellationToken.None));
+                        }
+                    }
                 }
 
                 if (invitation is not null)
