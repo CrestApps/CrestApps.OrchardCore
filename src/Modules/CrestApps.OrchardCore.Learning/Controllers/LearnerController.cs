@@ -75,16 +75,23 @@ public sealed class LearnerController : Controller
     /// <summary>
     /// Shows the learner's courses.
     /// </summary>
+    /// <param name="status">The state to show: <c>inprogress</c>, <c>notstarted</c>, <c>completed</c>, or all.</param>
+    /// <param name="q">The text to find in the course titles and codes.</param>
+    /// <param name="view">The view: <c>list</c>, or cards.</param>
     /// <returns>The page.</returns>
     [HttpGet("learning", Name = "LearningMyLearning")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string status, string q, string view)
     {
         if (!await _authorizationService.AuthorizeAsync(User, LearningPermissions.AccessLearning))
         {
             return User.Identity?.IsAuthenticated == true ? Forbid() : Challenge();
         }
 
-        return View(await _pageService.BuildMyLearningAsync(CurrentUserId()));
+        var model = await _pageService.BuildMyLearningAsync(CurrentUserId(), status, q);
+
+        model.View = string.Equals(view, "list", StringComparison.OrdinalIgnoreCase) ? "list" : "cards";
+
+        return View(model);
     }
 
     /// <summary>
@@ -125,6 +132,40 @@ public sealed class LearnerController : Controller
         }
 
         return View(model);
+    }
+
+    /// <summary>
+    /// Shows the course completion panel in the player, for a learner who completed the course.
+    /// </summary>
+    /// <param name="courseId">The course.</param>
+    /// <param name="updateModelAccessor">The model updater of the request.</param>
+    /// <returns>The player with the panel, or the player when the course is not completed.</returns>
+    [HttpGet("learning/courses/{courseId}/completed", Name = "LearningCourseCompleted")]
+    public async Task<IActionResult> Completed(string courseId, [FromServices] IUpdateModelAccessor updateModelAccessor)
+    {
+        if (User.Identity?.IsAuthenticated != true)
+        {
+            return Challenge();
+        }
+
+        var model = await _pageService.BuildPlayerAsync(User, courseId, null, updateModelAccessor.ModelUpdater);
+
+        if (model is null)
+        {
+            return NotFound();
+        }
+
+        if (model.Enrollment is not { Status: EnrollmentStatus.Completed })
+        {
+            return RedirectToRoute("LearningPlayer", new { courseId });
+        }
+
+        model.ShowCompletion = true;
+        model.Current = null;
+        model.CurrentShape = null;
+        model.CompletionLinks = await _pageService.GetCompletionLinksAsync(model.Enrollment);
+
+        return View("Play", model);
     }
 
     /// <summary>
@@ -244,6 +285,8 @@ public sealed class LearnerController : Controller
         }
 
         var update = await record(enrollment, itemId);
+        var course = await _courseStructure.GetCourseAsync(enrollment.CourseId);
+        var required = course is null ? new List<CourseOutlineEntry>() : (await _courseStructure.GetOutlineAsync(course)).RequiredEntries.ToList();
 
         return Json(new
         {
@@ -255,6 +298,10 @@ public sealed class LearnerController : Controller
             itemCompleted = update.ItemCompleted,
             courseCompleted = update.CourseCompleted,
             progressPercent = update.Enrollment?.ProgressPercent ?? 0,
+
+            // The player shows "3 of 7 complete" beside the bar.
+            completedItems = required.Count(entry => update.Progress?.Find(entry.Item.ContentItemId)?.State == CourseItemState.Completed),
+            requiredItems = required.Count,
         });
     }
 
@@ -275,7 +322,8 @@ public sealed class LearnerController : Controller
         }
         else if (update.CourseCompleted)
         {
-            await _notifier.SuccessAsync(H["You completed the course."]);
+            // The step that completes the course leads to the completion panel.
+            return RedirectToRoute("LearningCourseCompleted", new { courseId = enrollment.CourseId });
         }
 
         return RedirectToRoute("LearningPlayer", new { courseId = enrollment.CourseId, itemId });

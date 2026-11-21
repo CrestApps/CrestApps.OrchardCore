@@ -1,3 +1,4 @@
+@inject CrestApps.OrchardCore.Learning.Services.LearningTimeText TimeText
 @model IReadOnlyList<Enrollment>
 @using Microsoft.AspNetCore.Html
 
@@ -39,7 +40,7 @@
                             </td>
                             <td>@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completion.CompletedUtc, DateTimeKind.Utc), Format: "d"))</td>
                             <td>@(completion.Grade is { } grade ? T.GetString("{0}%", grade.ToString("0.##")).Value : T["No grade"].Value)</td>
-                            <td>@TimeSpan.FromSeconds(completion.SecondsSpent).ToString(@"h\:mm")</td>
+                            <td>@TimeText.Format(completion.SecondsSpent)</td>
                             <td class="small">@enrollment.Number</td>
                         </tr>
                     }

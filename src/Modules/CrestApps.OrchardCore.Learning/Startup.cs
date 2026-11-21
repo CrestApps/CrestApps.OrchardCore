@@ -128,6 +128,8 @@ public sealed class LearnerPagesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<LearnerPageService>();
+        services.AddScoped<CourseItemConditionText>();
+        services.AddScoped<LearningTimeText>();
         services.AddScoped<CourseCatalogService>();
         services.AddContentPart<CoursePart>()
             .UseDisplayDriver<CourseLearnerDisplayDriver>();

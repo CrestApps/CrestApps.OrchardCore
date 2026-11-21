@@ -33,9 +33,30 @@
                 <i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["You answered on"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(response.UpdatedUtc ?? response.SubmittedUtc, DateTimeKind.Utc), Format: "g")).
             </div>
         }
-        else if (Model.Closed && Model.Enrolled)
+
+        @switch (Model.CannotAnswerReason)
         {
-            <p class="text-secondary small"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["This survey no longer takes answers."]</p>
+            case "Closed":
+                if (response is null)
+                {
+                    <p class="text-secondary small mb-0" data-learning-survey-reason><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["This survey no longer takes answers."]</p>
+                }
+                break;
+            case "Answered":
+                <p class="text-secondary small mb-0" data-learning-survey-reason>@T["Your answers are in. This survey does not let you change them."]</p>
+                break;
+            case "Pending":
+                <p class="text-secondary small mb-0" data-learning-survey-reason><i class="fa-solid fa-hourglass-half me-1" aria-hidden="true"></i>@T["You can answer once your request to enroll is approved."]</p>
+                break;
+            case "Suspended":
+                <p class="text-secondary small mb-0" data-learning-survey-reason>@T["Your enrollment is paused, so you cannot answer now. Contact the course staff."]</p>
+                break;
+            case "AccessEnded":
+                <p class="text-secondary small mb-0" data-learning-survey-reason>@T["Your access to this course has ended, so you cannot answer."]</p>
+                break;
+            case "NotOpen":
+                <p class="text-secondary small mb-0" data-learning-survey-reason><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["This survey is not open to you yet."]</p>
+                break;
         }
 
         @if (Model.CanAnswer)

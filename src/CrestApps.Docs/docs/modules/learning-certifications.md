@@ -67,6 +67,8 @@ When a completed enrollment is flagged for review (an attempt voided or regraded
 | My competencies | `/learning/competencies` | Signed in, with the Learning Competencies feature; an entry of the storefront account menu, framed by it |
 | Verification page and certificate PDF | `/certificates/verify/{code}` (Skills) | Public, rate limited |
 
+The course completion panel (Learning's `ICourseCompletionLinkProvider`) lists each certification path the completed course is a requirement of: *Your certificate: ...* once the learner holds it, otherwise *Counts toward ...*, both linking to My certifications.
+
 ## Education credits
 
 Education credits are kept in the module too. An **education credit type** (`EducationCreditType`), such as CEU, CPD hours or PDU, has a name, a unit and whether people can record external learning of it. **Learning > Education Credits** lists and edits them (`ManageEducationCredits`).

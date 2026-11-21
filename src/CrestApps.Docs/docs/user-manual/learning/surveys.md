@@ -34,7 +34,7 @@ Create a **Choice** instead. It has one question, answered with one choice or se
 
 ## What learners see
 
-The learner opens the survey in the course, answers and selects **Send my answers**. A required question left out, or a survey that has closed, is refused with a message. After answering, the learner sees the date they answered, and the totals when the survey shows them. When the survey lets them, they can change their answers until it closes.
+The learner opens the survey in the course, answers and selects **Send my answers**. A required question left out, or a survey that has closed, is refused with a message. After answering, the learner sees the date they answered, and the totals when the survey shows them. When the survey lets them, they can change their answers until it closes. A learner who has completed the course can still answer, for example the feedback survey at the end of the course, as long as they may review the course. When a learner cannot answer, the survey says why: the survey has closed, their answers are in and cannot change, their enrollment waits for approval or is paused, their access has ended, or the survey is not open to them yet.
 
 An anonymous survey tells learners that the course staff see their answers without their name.
 

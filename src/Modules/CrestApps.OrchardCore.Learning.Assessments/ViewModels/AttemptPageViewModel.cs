@@ -33,6 +33,23 @@ public class AttemptPageViewModel
 
     /// <summary>Gets or sets the course of the quiz, to go back to the player.</summary>
     public string CourseId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many questions on the attempt's other pages have no saved answer.
+    /// </summary>
+    public int UnansweredElsewhere { get; set; }
+
+    /// <summary>
+    /// Gets or sets the course item after the quiz in the outline, for the result page's Continue.
+    /// </summary>
+    public string NextItemId { get; set; }
+
+    public string NextItemTitle { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the learner completed the course, so Continue opens the completion panel.
+    /// </summary>
+    public bool CourseCompleted { get; set; }
 }
 
 /// <summary>

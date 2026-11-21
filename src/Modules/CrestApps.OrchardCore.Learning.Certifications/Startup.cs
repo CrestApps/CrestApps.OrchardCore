@@ -68,6 +68,7 @@ public sealed class Startup : StartupBase
         services.AddLearningCertificationsCore();
 
         services.TryAddScoped<PendingCertificationPath>();
+        services.AddScoped<ICourseCompletionLinkProvider, CertificationCompletionLinkProvider>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Certification>, CertificationPathCatalogHandler>());
         services.AddDisplayDriver<Certification, CertificationPathDisplayDriver>();
         services.AddDisplayDriver<CertificationPathProgress, CertificationPathProgressRowDisplayDriver>();

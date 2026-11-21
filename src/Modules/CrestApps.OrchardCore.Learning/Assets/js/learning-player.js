@@ -1,6 +1,8 @@
 // The course player reports what the learner does; the server decides what is completed.
-// It records the time on the open item (a call when the item opens, then one every half minute while the page is
-// visible) and, for a video lesson, how much of the video has been watched.
+// It records the time on the open item (a call when the item opens, one every half minute while the page is visible,
+// and one when the learner leaves it) and, for a video lesson, how much of the video has been watched.
+
+import { createActiveTimer, progressText } from './learning-player-helpers.js';
 
 const heartbeatSeconds = 30;
 const viewedReportSeconds = 10;
@@ -42,17 +44,81 @@ function showCompleted(root, result) {
         state.append(Object.assign(document.createElement('span'), { className: 'visually-hidden', textContent: root.dataset.completedText }));
     }
 
+    // The item's condition turns from "To do: ..." into "Done: ...".
+    document.querySelectorAll('.learning-item-header [data-learning-condition-state="todo"]').forEach(badge => {
+        badge.classList.remove('text-bg-light', 'border');
+        badge.classList.add('text-bg-success');
+        badge.dataset.learningConditionState = 'done';
+        badge.textContent = badge.dataset.doneText ?? badge.textContent;
+        badge.prepend(Object.assign(document.createElement('i'), { className: 'fa-solid fa-check me-1', ariaHidden: 'true' }));
+    });
+
+    showProgress(result);
+
+    if (result.courseCompleted) {
+        document.querySelector('[data-learning-course-done]')?.classList.remove('d-none');
+    }
+}
+
+// The bar and "3 of 7 complete · 43%" beside it.
+function showProgress(result) {
     const progress = document.querySelector('[data-learning-progress]');
 
-    if (progress && typeof result.progressPercent === 'number') {
-        progress.setAttribute('aria-valuenow', String(result.progressPercent));
-        const bar = progress.querySelector('.progress-bar');
-
-        if (bar) {
-            bar.style.width = `${result.progressPercent}%`;
-            bar.textContent = `${result.progressPercent}%`;
-        }
+    if (!progress || typeof result.progressPercent !== 'number') {
+        return;
     }
+
+    const bar = progress.querySelector('[role="progressbar"]');
+    const fill = progress.querySelector('.progress-bar');
+    const label = progress.querySelector('[data-learning-progress-text]');
+    const required = typeof result.requiredItems === 'number' ? result.requiredItems : Number(progress.dataset.required);
+    const completed = typeof result.completedItems === 'number' ? result.completedItems : Number(progress.dataset.completed);
+    const text = progressText(progress.dataset.textTemplate ?? '{2}%', completed, required, result.progressPercent);
+
+    bar?.setAttribute('aria-valuenow', String(result.progressPercent));
+    bar?.setAttribute('aria-valuetext', text);
+
+    if (fill) {
+        fill.style.width = `${result.progressPercent}%`;
+        fill.classList.toggle('bg-success', result.progressPercent >= 100);
+    }
+
+    if (label) {
+        label.textContent = text;
+    }
+}
+
+// "Collapse all" / "Expand all" for the sections of the player's outline, as Moodle's course index.
+function toggleSections(button) {
+    const sections = () => [...document.querySelectorAll('#learning-player-outline [data-learning-section]')];
+    const isCurrent = section => section.querySelector('[aria-current="step"]') !== null;
+
+    // The section of the open item stays open when collapsing, so it does not count.
+    const others = () => {
+        const all = sections();
+        const rest = all.filter(section => !isCurrent(section));
+
+        return rest.length > 0 ? rest : all;
+    };
+
+    const update = () => {
+        const anyOpen = others().some(section => section.open);
+
+        button.textContent = anyOpen ? button.dataset.collapseText : button.dataset.expandText;
+        button.setAttribute('aria-expanded', String(anyOpen));
+    };
+
+    button.addEventListener('click', () => {
+        const open = !others().some(section => section.open);
+
+        sections().forEach(section => {
+            section.open = open || isCurrent(section);
+        });
+        update();
+    });
+
+    sections().forEach(section => section.addEventListener('toggle', update));
+    update();
 }
 
 // The share of the video's length covered by the ranges the learner played.
@@ -109,14 +175,31 @@ function trackVideo(root) {
 }
 
 function trackTime(root) {
-    let last = Date.now();
+    const timer = createActiveTimer(Date.now());
 
     const beat = async () => {
-        const now = Date.now();
-        const seconds = Math.round((now - last) / 1000);
+        const seconds = timer.take(Date.now());
 
-        last = now;
         showCompleted(root, await post(root, root.dataset.heartbeatUrl, { seconds: String(seconds) }));
+    };
+
+    // When the learner leaves the item (another item, another tab, closing the page), the seconds since the last call
+    // are sent at once: most items take less than the half minute between calls, and their time was lost.
+    const leave = () => {
+        const seconds = timer.hide(Date.now());
+
+        if (seconds <= 0) {
+            return;
+        }
+
+        const body = new FormData();
+
+        body.append('seconds', String(seconds));
+        body.append('__RequestVerificationToken', token(root));
+
+        if (!navigator.sendBeacon?.(root.dataset.heartbeatUrl, body)) {
+            fetch(root.dataset.heartbeatUrl, { method: 'POST', body, credentials: 'same-origin', keepalive: true });
+        }
     };
 
     // The first call records that the item was opened, which completes an item completed by viewing it. When the
@@ -137,11 +220,20 @@ function trackTime(root) {
     setInterval(() => {
         if (document.visibilityState === 'visible') {
             beat();
-        } else {
-            last = Date.now();
         }
     }, heartbeatSeconds * 1000);
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            leave();
+        } else {
+            timer.show(Date.now());
+        }
+    });
+    window.addEventListener('pagehide', leave);
 }
+
+document.querySelectorAll('[data-learning-toggle-sections]').forEach(toggleSections);
 
 document.querySelectorAll('[data-learning-player]').forEach(root => {
     trackTime(root);

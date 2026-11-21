@@ -3,6 +3,32 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
+	//#region src/Modules/CrestApps.OrchardCore.Learning/Assets/js/learning-player-helpers.js
+	function progressText(template, completed, required, percent) {
+		return template.replace("{0}", String(completed)).replace("{1}", String(required)).replace("{2}", String(percent));
+	}
+	function createActiveTimer(startedAt) {
+		let last = startedAt;
+		let visible = true;
+		const take = (at) => {
+			const seconds = visible ? Math.max(0, Math.round((at - last) / 1e3)) : 0;
+			last = at;
+			return seconds;
+		};
+		return {
+			take,
+			hide(at) {
+				const seconds = take(at);
+				visible = false;
+				return seconds;
+			},
+			show(at) {
+				visible = true;
+				last = at;
+			}
+		};
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Learning/Assets/js/learning-player.js
 	var heartbeatSeconds = 30;
 	var viewedReportSeconds = 10;
@@ -32,15 +58,58 @@
 				textContent: root.dataset.completedText
 			}));
 		}
+		document.querySelectorAll(".learning-item-header [data-learning-condition-state=\"todo\"]").forEach((badge) => {
+			badge.classList.remove("text-bg-light", "border");
+			badge.classList.add("text-bg-success");
+			badge.dataset.learningConditionState = "done";
+			badge.textContent = badge.dataset.doneText ?? badge.textContent;
+			badge.prepend(Object.assign(document.createElement("i"), {
+				className: "fa-solid fa-check me-1",
+				ariaHidden: "true"
+			}));
+		});
+		showProgress(result);
+		if (result.courseCompleted) document.querySelector("[data-learning-course-done]")?.classList.remove("d-none");
+	}
+	function showProgress(result) {
 		const progress = document.querySelector("[data-learning-progress]");
-		if (progress && typeof result.progressPercent === "number") {
-			progress.setAttribute("aria-valuenow", String(result.progressPercent));
-			const bar = progress.querySelector(".progress-bar");
-			if (bar) {
-				bar.style.width = `${result.progressPercent}%`;
-				bar.textContent = `${result.progressPercent}%`;
-			}
+		if (!progress || typeof result.progressPercent !== "number") return;
+		const bar = progress.querySelector("[role=\"progressbar\"]");
+		const fill = progress.querySelector(".progress-bar");
+		const label = progress.querySelector("[data-learning-progress-text]");
+		const required = typeof result.requiredItems === "number" ? result.requiredItems : Number(progress.dataset.required);
+		const completed = typeof result.completedItems === "number" ? result.completedItems : Number(progress.dataset.completed);
+		const text = progressText(progress.dataset.textTemplate ?? "{2}%", completed, required, result.progressPercent);
+		bar?.setAttribute("aria-valuenow", String(result.progressPercent));
+		bar?.setAttribute("aria-valuetext", text);
+		if (fill) {
+			fill.style.width = `${result.progressPercent}%`;
+			fill.classList.toggle("bg-success", result.progressPercent >= 100);
 		}
+		if (label) label.textContent = text;
+	}
+	function toggleSections(button) {
+		const sections = () => [...document.querySelectorAll("#learning-player-outline [data-learning-section]")];
+		const isCurrent = (section) => section.querySelector("[aria-current=\"step\"]") !== null;
+		const others = () => {
+			const all = sections();
+			const rest = all.filter((section) => !isCurrent(section));
+			return rest.length > 0 ? rest : all;
+		};
+		const update = () => {
+			const anyOpen = others().some((section) => section.open);
+			button.textContent = anyOpen ? button.dataset.collapseText : button.dataset.expandText;
+			button.setAttribute("aria-expanded", String(anyOpen));
+		};
+		button.addEventListener("click", () => {
+			const open = !others().some((section) => section.open);
+			sections().forEach((section) => {
+				section.open = open || isCurrent(section);
+			});
+			update();
+		});
+		sections().forEach((section) => section.addEventListener("toggle", update));
+		update();
 	}
 	function watchedPercent(video) {
 		if (!video.duration || !Number.isFinite(video.duration)) return 0;
@@ -69,12 +138,23 @@
 		video.addEventListener("ended", () => report(true));
 	}
 	function trackTime(root) {
-		let last = Date.now();
+		const timer = createActiveTimer(Date.now());
 		const beat = async () => {
-			const now = Date.now();
-			const seconds = Math.round((now - last) / 1e3);
-			last = now;
+			const seconds = timer.take(Date.now());
 			showCompleted(root, await post(root, root.dataset.heartbeatUrl, { seconds: String(seconds) }));
+		};
+		const leave = () => {
+			const seconds = timer.hide(Date.now());
+			if (seconds <= 0) return;
+			const body = new FormData();
+			body.append("seconds", String(seconds));
+			body.append("__RequestVerificationToken", token(root));
+			if (!navigator.sendBeacon?.(root.dataset.heartbeatUrl, body)) fetch(root.dataset.heartbeatUrl, {
+				method: "POST",
+				body,
+				credentials: "same-origin",
+				keepalive: true
+			});
 		};
 		const open = (attempt) => post(root, root.dataset.heartbeatUrl, { seconds: "0" }).then((result) => {
 			if (result?.retry && attempt < 3) {
@@ -86,9 +166,14 @@
 		open(1);
 		setInterval(() => {
 			if (document.visibilityState === "visible") beat();
-			else last = Date.now();
 		}, heartbeatSeconds * 1e3);
+		document.addEventListener("visibilitychange", () => {
+			if (document.visibilityState === "hidden") leave();
+			else timer.show(Date.now());
+		});
+		window.addEventListener("pagehide", leave);
 	}
+	document.querySelectorAll("[data-learning-toggle-sections]").forEach(toggleSections);
 	document.querySelectorAll("[data-learning-player]").forEach((root) => {
 		trackTime(root);
 		trackVideo(root);

@@ -31,6 +31,33 @@ public class CourseLearnerViewModel
 
     public IDictionary<string, string> KindIcons { get; set; } = new Dictionary<string, string>();
 
+    public IDictionary<string, string> KindNames { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets the links of the course completion panel, for a completed enrollment.
+    /// </summary>
+    public IReadOnlyList<CourseCompletionLink> CompletionLinks { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the public address of the course's cover picture, or <see langword="null"/> without one.
+    /// </summary>
+    public string CoverUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many items count toward completion.
+    /// </summary>
+    public int RequiredCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many of the items that count toward completion the learner completed.
+    /// </summary>
+    public int CompletedCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the item the learner continues with: the first one neither completed nor locked.
+    /// </summary>
+    public CourseOutlineEntry NextItem { get; set; }
+
     /// <summary>
     /// Gets or sets where the course is between its start and end dates.
     /// </summary>

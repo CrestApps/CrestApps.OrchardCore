@@ -18,10 +18,14 @@
     <style asp-name="product-listing"></style>
 
     <section class="product-summary row g-4 g-xl-5 mb-4" aria-label="@T["Product summary"]">
-        <div class="col-lg-7">
-            @await DisplayAsync(product.GalleryShape)
-        </div>
-        <div class="col-lg-5">
+        @* A product without pictures shows no empty picture frame: the price and the actions stand alone. *@
+        @if (product.Images.Count > 0)
+        {
+            <div class="col-lg-7">
+                @await DisplayAsync(product.GalleryShape)
+            </div>
+        }
+        <div class="@(product.Images.Count > 0 ? "col-lg-5" : "col-lg-6 col-xl-5")">
             <div class="product-summary-panel">
                 <div class="product-summary-price">
                     @await DisplayAsync(product.Price)

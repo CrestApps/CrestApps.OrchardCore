@@ -92,6 +92,7 @@ The base address is the site's **Base URL**. Without it nothing is awarded (`NoI
 ## Pages
 
 - **My credentials** (`/learning/credentials`, permission Access learning): the learner's awards with downloads of the JSON-LD and the JWT, the share link (the verification page) and **Show my name** / **Hide my name**. It is an entry of the storefront account menu, or of the user menu when the storefront account is off. Both entries are registered only when Learner Pages (`CrestApps.OrchardCore.Learning.LearnerPages`) is on (`LearnerPagesStartup`, `[RequireFeatures]`); without it, no menu links to the page.
+- **The course completion panel** (Learning's `ICourseCompletionLinkProvider`): a course completion lists *Your credential: ...* for each award, not revoked, whose source is that enrollment, linking to My credentials.
 - **Learning → Credential Awards** (permission **View digital credential awards**, `ViewCredentialAwards`, implied by **Award and revoke digital credentials**, `AwardCredentials`, security critical): an admin list with search by the recipient's user name and filters by credential, status and issue dates (days in your time zone); an award's page with the check and the credential as issued; **Award a credential** (by hand, with a reason) and **Revoke** (with a reason). A revocation shows on the verification page and in the status list at once.
 
 ## Data portability, personal data and integrations

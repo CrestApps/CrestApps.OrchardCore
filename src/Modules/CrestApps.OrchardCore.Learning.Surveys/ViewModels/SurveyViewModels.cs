@@ -106,6 +106,12 @@ public class SurveyPanelViewModel
     /// <summary>Gets or sets whether the learner may answer now.</summary>
     public bool CanAnswer { get; set; }
 
+    /// <summary>
+    /// Gets or sets why the learner cannot answer, when they cannot: <c>Pending</c>, <c>Suspended</c>,
+    /// <c>AccessEnded</c>, <c>Closed</c>, <c>Answered</c> or <c>NotOpen</c>.
+    /// </summary>
+    public string CannotAnswerReason { get; set; }
+
     /// <summary>Gets or sets the totals, when the learner may see them.</summary>
     public SurveySummary Summary { get; set; }
 }

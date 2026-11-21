@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Media;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Learning.Drivers;
@@ -28,6 +29,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
     private readonly CourseItemKindOptions _kindOptions;
     private readonly CourseCategoryService _categories;
     private readonly LearnerPageService _pageService;
+    private readonly IMediaFileStore _mediaFileStore;
     private readonly IClock _clock;
 
     public CourseLearnerDisplayDriver(
@@ -40,6 +42,7 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
         IOptions<CourseItemKindOptions> kindOptions,
         CourseCategoryService categories,
         LearnerPageService pageService,
+        IMediaFileStore mediaFileStore,
         IClock clock)
     {
         _httpContextAccessor = httpContextAccessor;
@@ -51,12 +54,16 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
         _kindOptions = kindOptions.Value;
         _categories = categories;
         _pageService = pageService;
+        _mediaFileStore = mediaFileStore;
         _clock = clock;
     }
 
     public override IDisplayResult Display(CoursePart part, BuildPartDisplayContext context)
     {
+        // The top of the course page (under its title) holds the summary, the facts and the one thing to do next; the
+        // outline follows the description.
         return Combine(
+            Initialize<CourseLearnerViewModel>("CoursePart_Hero", model => PopulateAsync(model, part)).Location("Detail", "Header:after"),
             Initialize<CourseLearnerViewModel>("CoursePart_Learner", model => PopulateAsync(model, part)).Location("Detail", "Content:20"),
             Initialize<CourseLearnerViewModel>("CoursePart_Summary", model =>
             {
@@ -77,8 +84,11 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
         model.SignedIn = user?.Identity?.IsAuthenticated == true;
         model.CanSelfEnroll = _selfEnrollment.Any() && part.EnrollmentMode != EnrollmentMode.Closed;
         model.KindIcons = _kindOptions.Kinds.ToDictionary(kind => kind.Name, kind => kind.Icon, StringComparer.OrdinalIgnoreCase);
+        model.KindNames = _pageService.KindNames();
         model.Outline = await _courseStructure.GetOutlineAsync(part.ContentItem);
         model.Schedule = CourseSchedules.Of(part, _clock.UtcNow);
+        model.CoverUrl = CourseCovers.GetPath(part.ContentItem) is { } cover ? _mediaFileStore.MapPathToPublicUrl(cover) : null;
+        model.RequiredCount = model.Outline.RequiredEntries.Count();
 
         var tree = await _categories.GetTreeAsync();
 
@@ -107,6 +117,13 @@ internal sealed class CourseLearnerDisplayDriver : ContentPartDisplayDriver<Cour
 
             // The same decision as the player's, so the course page shows which items are still locked.
             model.LockedItems = await _pageService.GetLocksAsync(part.ContentItem, model.Outline, model.Enrollment, model.Progress);
+            model.CompletionLinks = await _pageService.GetCompletionLinksAsync(model.Enrollment);
+            model.CompletedCount = model.Outline.RequiredEntries.Count(entry => model.Progress.Find(entry.Item.ContentItemId)?.State == CourseItemState.Completed);
+
+            // "Continue where you left off": the first item learners step through that is neither completed nor locked.
+            model.NextItem = model.Outline.Entries.FirstOrDefault(entry => !entry.Inline
+                && model.Progress.Find(entry.Item.ContentItemId)?.State != CourseItemState.Completed
+                && !model.LockedItems.ContainsKey(entry.Item.ContentItemId));
         }
     }
 }

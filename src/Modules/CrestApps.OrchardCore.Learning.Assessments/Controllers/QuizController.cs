@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Assessments.ViewModels;
+using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -22,6 +23,7 @@ public sealed class QuizController : Controller
     private readonly IAssessmentContentSource _contentSource;
     private readonly AttemptReviewPolicy _reviewPolicy;
     private readonly ICourseStructureService _courseStructure;
+    private readonly IEnrollmentStore _enrollmentStore;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -35,6 +37,7 @@ public sealed class QuizController : Controller
         IAssessmentContentSource contentSource,
         AttemptReviewPolicy reviewPolicy,
         ICourseStructureService courseStructure,
+        IEnrollmentStore enrollmentStore,
         INotifier notifier,
         IHtmlLocalizer<QuizController> htmlLocalizer)
     {
@@ -43,6 +46,7 @@ public sealed class QuizController : Controller
         _contentSource = contentSource;
         _reviewPolicy = reviewPolicy;
         _courseStructure = courseStructure;
+        _enrollmentStore = enrollmentStore;
         _notifier = notifier;
         H = htmlLocalizer;
     }
@@ -102,6 +106,12 @@ public sealed class QuizController : Controller
     [HttpGet("learning/attempts/{attemptId}", Name = "LearningAttempt")]
     public async Task<IActionResult> Attempt(string attemptId, int? page)
     {
+        // Someone whose sign-in has ended is asked to sign in again, rather than told the attempt does not exist.
+        if (User.Identity?.IsAuthenticated != true)
+        {
+            return Challenge();
+        }
+
         var attempt = await FindOwnAsync(attemptId);
 
         if (attempt is null)
@@ -150,8 +160,59 @@ public sealed class QuizController : Controller
             };
         }).ToList();
 
+        if (attempt.IsOpen)
+        {
+            // The submit button says how many questions are still unanswered: those of the other pages from the saved
+            // answers; the page counts its own as the learner answers.
+            var onPage = model.Questions.Select(question => question.Item.Index).ToHashSet();
+
+            model.UnansweredElsewhere = attempt.Items.Count(item => !onPage.Contains(item.Index) && numbers.GetValueOrDefault(item.Index) is not null && !IsAnswered(item.Response));
+        }
+        else
+        {
+            await SetNextAsync(model, attempt);
+        }
+
         return View(attempt.IsOpen ? "Attempt" : "Result", model);
     }
+
+    // The result page continues to the item after the quiz in the course outline, or to the completion panel once the
+    // course is completed.
+    private async Task SetNextAsync(AttemptPageViewModel model, AssessmentAttempt attempt)
+    {
+        if (string.IsNullOrEmpty(attempt.CourseId))
+        {
+            return;
+        }
+
+        var enrollments = await _enrollmentStore.ListByCourseForUserAsync(attempt.UserId, attempt.CourseId);
+
+        if (enrollments.Any(enrollment => enrollment.Status == EnrollmentStatus.Completed) && !enrollments.Any(enrollment => enrollment.IsOpen))
+        {
+            model.CourseCompleted = true;
+
+            return;
+        }
+
+        var course = await _courseStructure.GetCourseAsync(attempt.CourseId);
+
+        if (course is null)
+        {
+            return;
+        }
+
+        var steps = (await _courseStructure.GetOutlineAsync(course)).Entries.Where(entry => !entry.Inline).ToList();
+        var index = steps.FindIndex(entry => string.Equals(entry.Item.ContentItemId, attempt.QuizId, StringComparison.Ordinal));
+
+        if (index >= 0 && index < steps.Count - 1)
+        {
+            model.NextItemId = steps[index + 1].Item.ContentItemId;
+            model.NextItemTitle = steps[index + 1].Item.DisplayText;
+        }
+    }
+
+    private static bool IsAnswered(AttemptResponse response)
+        => response is not null && (response.ChoiceIds.Count > 0 || response.Texts.Any(text => !string.IsNullOrWhiteSpace(text)) || response.Number is not null || response.Pairs.Count > 0);
 
     /// <summary>
     /// Saves the answers posted and checks one question, for a quiz with immediate feedback: it is scored now and its

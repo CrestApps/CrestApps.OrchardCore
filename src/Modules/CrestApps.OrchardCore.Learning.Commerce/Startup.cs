@@ -20,6 +20,7 @@ using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DataSources;
+using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -51,6 +52,7 @@ public sealed class Startup : StartupBase
         services.AddContentPart<LearningProductPart>()
             .UseDisplayDriver<LearningProductPartDisplayDriver>();
         services.AddScoped<ICartLineHandler, LearningCartLineHandler>();
+        services.AddScoped<IShapePlacementProvider, CourseProductPlacementProvider>();
         services.AddScoped<IOrderEventHandler, LearningOrderEventHandler>();
         services.AddScoped<LearningPurchaseFulfillment>();
         services.AddScoped<LearningPurchaseProcessor>();
