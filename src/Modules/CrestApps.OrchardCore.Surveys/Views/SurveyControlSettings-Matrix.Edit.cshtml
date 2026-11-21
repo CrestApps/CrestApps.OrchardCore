@@ -1,0 +1,26 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.Matrix.MatrixSettings>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Matrix settings"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Mode" class="ocat-label">@T["Each row takes"]</label>
+            <div class="ocat-end">
+                <select asp-for="Settings.Mode" class="form-select">
+                    <option value="Single">@T["One column"]</option>
+                    <option value="Multiple">@T["Several columns"]</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Settings.AllRowsRequired" class="form-check-input" />
+                    <label asp-for="Settings.AllRowsRequired" class="form-check-label">@T["Every row must be answered"]</label>
+                    <span class="hint dashed">@T["Applies when the question is required."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

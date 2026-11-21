@@ -1,0 +1,38 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.Slider
+
+@using System.Globalization
+@{
+    var settings = Model.GetSettings<SliderSettings>();
+    var value = (Model.Answer?.Number ?? Math.Round((settings.Min + settings.Max) / 2 / settings.Step) * settings.Step).ToString(CultureInfo.InvariantCulture);
+}
+<div class="survey-slider" data-survey-slider data-question-id="@Model.Question.Id" style="max-width: 32rem">
+    <label class="visually-hidden" for="@Model.InputId">@Model.Question.Title</label>
+    <div class="d-flex align-items-center gap-2">
+        <input type="range" class="form-range" id="@Model.InputId" name="@Model.Prefix" value="@value" min="@settings.Min.ToString(CultureInfo.InvariantCulture)" max="@settings.Max.ToString(CultureInfo.InvariantCulture)" step="@settings.Step.ToString(CultureInfo.InvariantCulture)" disabled="@Model.ReadOnly" aria-describedby="@Model.DescribedBy()" aria-invalid="@(Model.HasErrors ? "true" : null)" />
+        <output for="@Model.InputId" class="fw-semibold" style="min-width: 3rem">@value</output>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(settings.MinLabel) || !string.IsNullOrWhiteSpace(settings.MaxLabel))
+    {
+        <div class="d-flex justify-content-between form-text">
+            <span>@settings.MinLabel</span>
+            <span>@settings.MaxLabel</span>
+        </div>
+    }
+    <div class="form-check mt-1">
+        <input class="form-check-input" type="checkbox" name="@(Model.Prefix).set" id="@(Model.InputId)-set" value="1" checked="@(Model.Answer?.Number is not null)" disabled="@Model.ReadOnly" data-slider-set />
+        <label class="form-check-label" for="@(Model.InputId)-set">@T["Use this value as my answer"]</label>
+    </div>
+</div>
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}
+
+<script asp-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-controls.min.js" debug-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-controls.js" at="Foot"></script>

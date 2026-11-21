@@ -1,0 +1,32 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.Date.DateSettings>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Date and time settings"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Mode" class="ocat-label">@T["Ask for"]</label>
+            <div class="ocat-end">
+                <select asp-for="Settings.Mode" class="form-select">
+                    <option value="Date">@T["A date"]</option>
+                    <option value="Time">@T["A time"]</option>
+                    <option value="DateTime">@T["A date and a time"]</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Min" class="ocat-label">@T["Earliest"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.Min" class="form-control" type="datetime-local" />
+                <span class="hint">@T["The respondent's own date and time, as entered."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Max" class="ocat-label">@T["Latest"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.Max" class="form-control" type="datetime-local" />
+            </div>
+        </div>
+    </div>
+</div>

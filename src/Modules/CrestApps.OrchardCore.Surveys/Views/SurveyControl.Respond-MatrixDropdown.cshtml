@@ -1,0 +1,56 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.MatrixDropdown
+
+@{
+    var settings = Model.GetSettings<MatrixDropdownSettings>();
+    var columns = settings.Columns.Where(column => column is not null && !column.Retired).ToList();
+}
+<fieldset aria-describedby="@Model.DescribedBy()">
+    <legend class="visually-hidden">@Model.Question.Title</legend>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle survey-matrix">
+            <thead>
+                <tr>
+                    <th scope="col"><span class="visually-hidden">@T["Row"]</span></th>
+                    @foreach (var column in columns)
+                    {
+                        <th scope="col" class="fw-normal">@column.Text</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.Question.Rows)
+                {
+                    <tr>
+                        <th scope="row" class="fw-normal">@row.Text</th>
+                        @foreach (var column in columns)
+                        {
+                            var id = $"{Model.InputId}-{row.Id}-{column.Id}";
+                            var current = Model.RowValue(MatrixDropdownControlHandler.CellKey(row.Id, column.Id));
+                            <td>
+                                <label class="visually-hidden" for="@id">@row.Text: @column.Text</label>
+                                <select class="form-select form-select-sm" id="@id" name="@(Model.Prefix).@(row.Id).@(column.Id)" disabled="@Model.ReadOnly">
+                                    <option value=""></option>
+                                    @foreach (var choice in Model.Choices)
+                                    {
+                                        <option value="@choice.Id" selected="@(current == choice.Id)">@choice.Text</option>
+                                    }
+                                </select>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</fieldset>
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}

@@ -1,0 +1,5 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@if (Model.Summary is { } summary)
+{
+    <div class="survey-summary small text-body-secondary">@T["{0} of {1} responses answered.", summary.Answered, summary.Responses]</div>
+}

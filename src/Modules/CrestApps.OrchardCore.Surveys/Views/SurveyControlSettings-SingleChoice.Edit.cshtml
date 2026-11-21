@@ -1,0 +1,26 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.SingleChoice.SingleChoiceSettings>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Single choice settings"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Display" class="ocat-label">@T["Show the options as"]</label>
+            <div class="ocat-end">
+                <select asp-for="Settings.Display" class="form-select">
+                    <option value="Radio">@T["Radio buttons"]</option>
+                    <option value="Buttons">@T["Buttons"]</option>
+                    <option value="Dropdown">@T["A drop-down list"]</option>
+                    <option value="ImageTiles">@T["Image tiles"]</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Columns" class="ocat-label">@T["Columns"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.Columns" class="form-control" type="number" min="1" max="4" />
+                <span class="hint">@T["How many columns radio buttons show in on wide screens, from 1 to 4."]</span>
+            </div>
+        </div>
+    </div>
+</div>

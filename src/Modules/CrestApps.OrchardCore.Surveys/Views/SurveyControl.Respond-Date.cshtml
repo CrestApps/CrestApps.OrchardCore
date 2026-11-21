@@ -1,0 +1,24 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.Date
+
+@{
+    var settings = Model.GetSettings<DateSettings>();
+    var type = settings.Mode switch
+    {
+        DateMode.Time => "time",
+        DateMode.DateTime => "datetime-local",
+        _ => "date",
+    };
+}
+<label class="visually-hidden" for="@Model.InputId">@Model.Question.Title</label>
+<input type="@type" class="form-control @(Model.HasErrors ? "is-invalid" : null)" style="max-width: 16rem" id="@Model.InputId" name="@Model.Prefix" value="@(Model.Answer?.Date is { } date ? DateControlHandler.InputValue(date, settings.Mode) : null)" min="@(settings.Min is { } min ? DateControlHandler.InputValue(min, settings.Mode) : null)" max="@(settings.Max is { } max ? DateControlHandler.InputValue(max, settings.Mode) : null)" readonly="@Model.ReadOnly" aria-required="@(Model.Question.Required ? "true" : null)" aria-describedby="@Model.DescribedBy()" aria-invalid="@(Model.HasErrors ? "true" : null)" />
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}

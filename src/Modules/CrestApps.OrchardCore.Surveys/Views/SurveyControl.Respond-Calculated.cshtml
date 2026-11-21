@@ -1,0 +1,9 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.Calculated
+@{
+    var settings = Model.GetSettings<CalculatedSettings>();
+}
+@if (settings.Display == CalculatedDisplay.ShowValue)
+{
+    <output class="survey-calculated fs-5" id="@Model.InputId" aria-live="polite" data-survey-calculated="@Model.Question.Id">@Model.AnswerText</output>
+}

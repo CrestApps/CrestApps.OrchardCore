@@ -1,0 +1,33 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.MatrixDropdown.MatrixDropdownSettings>
+
+@{
+    var columns = Model.Settings.Columns.Concat(Enumerable.Range(0, 2).Select(_ => new CrestApps.OrchardCore.Surveys.Models.SurveySubQuestion())).ToList();
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Drop-down matrix settings"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Columns"]</label>
+            <div class="ocat-end">
+                @for (var i = 0; i < columns.Count; i++)
+                {
+                    <input type="hidden" name="@($"{Html.NameFor(m => m.Settings.Columns)}[{i}].Id")" value="@columns[i].Id" />
+                    <input type="hidden" name="@($"{Html.NameFor(m => m.Settings.Columns)}[{i}].Name")" value="@columns[i].Name" />
+                    <input type="text" name="@($"{Html.NameFor(m => m.Settings.Columns)}[{i}].Text")" value="@columns[i].Text" class="form-control mb-1" aria-label="@T["Column {0}", i + 1]" />
+                }
+                <span class="hint">@T["Each cell offers the question's options. Clear a column's text to remove it."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Settings.AllCellsRequired" class="form-check-input" />
+                    <label asp-for="Settings.AllCellsRequired" class="form-check-label">@T["Every cell must be answered"]</label>
+                    <span class="hint dashed">@T["Applies when the question is required."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
