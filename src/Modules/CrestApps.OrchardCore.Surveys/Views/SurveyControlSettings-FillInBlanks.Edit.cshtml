@@ -1,0 +1,23 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.FillInBlanks.FillInBlanksSettings>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Fill in the blanks settings"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Text" class="ocat-label">@T["Text"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Settings.Text" class="form-control" rows="5"></textarea>
+                <span class="hint">@T["Write each blank as [[answer]]; separate other accepted answers with |, such as [[colour|color]]. Respondents never see the answers."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Settings.CaseSensitive" class="form-check-input" />
+                    <label asp-for="Settings.CaseSensitive" class="form-check-label">@T["Answers must match case"]</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

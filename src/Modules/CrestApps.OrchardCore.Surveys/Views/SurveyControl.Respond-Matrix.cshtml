@@ -1,0 +1,50 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.Matrix
+
+@{
+    var settings = Model.GetSettings<MatrixSettings>();
+    var type = settings.Mode == MatrixMode.Multiple ? "checkbox" : "radio";
+}
+<fieldset aria-describedby="@Model.DescribedBy()">
+    <legend class="visually-hidden">@Model.Question.Title</legend>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle text-center survey-matrix">
+            <thead>
+                <tr>
+                    <th scope="col"><span class="visually-hidden">@T["Row"]</span></th>
+                    @foreach (var column in Model.Choices)
+                    {
+                        <th scope="col" class="fw-normal">@column.Text</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.Question.Rows)
+                {
+                    var rowName = $"{Model.Prefix}.{row.Id}";
+                    <tr>
+                        <th scope="row" class="text-start fw-normal" id="@(Model.InputId)-@row.Id">@row.Text</th>
+                        @foreach (var column in Model.Choices)
+                        {
+                            var id = $"{Model.InputId}-{row.Id}-{column.Id}";
+                            <td>
+                                <input class="form-check-input" type="@type" name="@rowName" id="@id" value="@column.Id" checked="@Model.IsSelected(row.Id, column.Id)" disabled="@Model.ReadOnly" aria-invalid="@(Model.HasErrors ? "true" : null)" />
+                                <label class="visually-hidden" for="@id">@row.Text: @column.Text</label>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</fieldset>
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}

@@ -1,0 +1,32 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.FileUpload.FileUploadSettings>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["File upload settings"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.MaxFiles" class="ocat-label">@T["Most files"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.MaxFiles" class="form-control" type="number" min="1" max="20" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.MaxMegabytes" class="ocat-label">@T["Largest file (MB)"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.MaxMegabytes" class="form-control" type="number" min="1" max="200" />
+                <span class="hint">@T["Empty for 10 MB."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Allowed file types"]</label>
+            <div class="ocat-end">
+                @foreach (var item in Model.Settings.AllowedFormats.Concat(Enumerable.Repeat(string.Empty, 3)))
+                {
+                    <input type="text" name="@Html.NameFor(m => m.Settings.AllowedFormats)" value="@item" class="form-control mb-1" aria-label="@T["Allowed file types"]" />
+                }
+                <span class="hint">@T["Extensions such as .pdf or .png; empty allows what attachments allow."]</span>
+            </div>
+        </div>
+    </div>
+</div>

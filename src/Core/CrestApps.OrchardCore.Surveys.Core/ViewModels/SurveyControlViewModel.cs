@@ -144,9 +144,25 @@ public class SurveyControlViewModel
         => Answer?.Values is { } values && index >= 0 && index < values.Count ? values[index] : null;
 
     /// <summary>
-    /// Gets the <c>aria-describedby</c> value: the hint and, when there are errors, the errors.
+    /// Gets the <c>aria-describedby</c> value: the description when the question has one, and the errors when there are
+    /// some. The question wrapper renders the description with the id <see cref="HintId"/>; the control renders its
+    /// errors with the id <see cref="ErrorId"/>.
     /// </summary>
-    /// <returns>The ids.</returns>
+    /// <returns>The ids, or <see langword="null"/>.</returns>
     public string DescribedBy()
-        => HasErrors ? $"{HintId} {ErrorId}" : HintId;
+    {
+        var ids = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(Question?.Description))
+        {
+            ids.Add(HintId);
+        }
+
+        if (HasErrors)
+        {
+            ids.Add(ErrorId);
+        }
+
+        return ids.Count == 0 ? null : string.Join(' ', ids);
+    }
 }

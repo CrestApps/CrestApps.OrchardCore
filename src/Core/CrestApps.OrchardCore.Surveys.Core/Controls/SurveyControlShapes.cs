@@ -36,8 +36,8 @@ public static class SurveyControlShapes
     public const string Summary = "Summary";
 
     /// <summary>
-    /// Gets the alternates of a question shape, most specific last: <c>SurveyControl_{DisplayType}__{ControlType}</c>,
-    /// then the survey and question overrides.
+    /// Gets the alternates of a question shape, most specific last: <c>SurveyControl_{DisplayType}</c> (the fallback of
+    /// every type), <c>SurveyControl_{DisplayType}__{ControlType}</c>, then the survey and question overrides.
     /// </summary>
     /// <param name="displayType">The display type.</param>
     /// <param name="controlType">The question type.</param>
@@ -47,7 +47,7 @@ public static class SurveyControlShapes
     public static IReadOnlyList<string> GetAlternates(string displayType, string controlType, string surveyName, string questionName)
     {
         var baseName = $"{Control}_{displayType}__{Encode(controlType)}";
-        var alternates = new List<string> { baseName };
+        var alternates = new List<string> { $"{Control}_{displayType}", baseName };
 
         if (!string.IsNullOrEmpty(surveyName))
         {

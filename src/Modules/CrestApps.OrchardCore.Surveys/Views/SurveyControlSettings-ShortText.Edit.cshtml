@@ -1,0 +1,34 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.ShortText.ShortTextSettings>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Short text settings"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.InputType" class="ocat-label">@T["Expect"]</label>
+            <div class="ocat-end">
+                <select asp-for="Settings.InputType" class="form-select">
+                    <option value="Text">@T["Any text"]</option>
+                    <option value="Email">@T["An e-mail address"]</option>
+                    <option value="Url">@T["A web address"]</option>
+                    <option value="Phone">@T["A phone number"]</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.MaxLength" class="ocat-label">@T["Most characters"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.MaxLength" class="form-control" type="number" min="1" max="4000" />
+                <span class="hint">@T["Empty for 500."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Mask" class="ocat-label">@T["Pattern"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.Mask" class="form-control" type="text" />
+                <span class="hint">@T["A regular expression the browser checks while the respondent types. Use validation rules for checks on the server."]</span>
+            </div>
+        </div>
+    </div>
+</div>
