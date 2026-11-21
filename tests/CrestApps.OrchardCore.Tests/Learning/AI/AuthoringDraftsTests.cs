@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.Learning.AI.Services;
-using CrestApps.OrchardCore.Learning.Assessments;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Coursework.Models;
+using CrestApps.OrchardCore.Surveys;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Tests.Learning.AI;
@@ -98,37 +97,40 @@ public sealed class AuthoringDraftsTests
     }
 
     [Fact]
-    public void Questions_AreWrittenIntoTheirTypesWithTheTextEncoded()
+    public void Questions_BecomeSurveyQuestionsWithTheirKey()
     {
         var choice = new DraftQuestion { Type = "SingleChoice", Prompt = "Pick <script>x</script>", Feedback = "Because." };
         choice.Options.Add(new DraftOption { Text = "A", Correct = true });
         choice.Options.Add(new DraftOption { Text = "B" });
-        var item = new ContentItem { ContentType = AuthoringDraftBuilder.QuestionContentType(choice.Type) };
 
-        AuthoringDraftBuilder.ApplyQuestion(item, choice);
+        var question = AuthoringDraftBuilder.BuildQuestion(choice);
 
-        Assert.Equal(AssessmentsConstants.ContentTypes.SingleChoiceQuestion, item.ContentType);
-        var question = item.Get<QuestionPart>(nameof(QuestionPart));
-        Assert.Equal("<p>Pick &lt;script&gt;x&lt;/script&gt;</p>", question.Prompt);
-        Assert.Equal("Because.", question.GeneralFeedback);
-        var options = item.Get<ChoiceQuestionPart>(nameof(ChoiceQuestionPart)).Options;
-        Assert.Equal(["A", "B"], options.Select(option => option.Text));
-        Assert.True(options[0].Correct);
-        Assert.Equal(2, options.Select(option => option.Id).Distinct().Count());
+        Assert.Equal(SurveyControlNames.SingleChoice, question.ControlType);
+
+        // The title is plain text: Surveys encodes it when it shows it, so markup never runs.
+        Assert.Equal("Pick <script>x</script>", question.Title);
+        Assert.Equal("Because.", question.Scoring.GeneralFeedback);
+        Assert.Equal(["A", "B"], question.Choices.Select(option => option.Text));
+        Assert.Equal([question.Choices[0].Id], question.Scoring.CorrectChoiceIds);
+        Assert.Equal(2, question.Choices.Select(option => option.Id).Distinct().Count());
     }
 
     [Fact]
     public void Essay_GetsTheFeedbackAsGraderGuidance()
     {
         var essay = new DraftQuestion { Type = "Essay", Prompt = "Explain", Feedback = "Mentions the angle", Points = 5 };
-        var item = new ContentItem { ContentType = AuthoringDraftBuilder.QuestionContentType(essay.Type) };
 
-        AuthoringDraftBuilder.ApplyQuestion(item, essay);
+        var question = AuthoringDraftBuilder.BuildQuestion(essay);
 
-        Assert.Equal(AssessmentsConstants.ContentTypes.EssayQuestion, item.ContentType);
-        Assert.Equal("Mentions the angle", item.Get<EssayQuestionPart>(nameof(EssayQuestionPart)).GraderGuidance);
-        Assert.Null(item.Get<QuestionPart>(nameof(QuestionPart)).GeneralFeedback);
+        Assert.Equal(SurveyControlNames.LongText, question.ControlType);
+        Assert.Equal("Mentions the angle", question.Scoring.GraderGuidance);
+        Assert.Null(question.Scoring.GeneralFeedback);
+        Assert.Equal(5m, question.Scoring.Points);
     }
+
+    [Fact]
+    public void AnUnknownType_BuildsNoQuestion()
+        => Assert.Null(AuthoringDraftBuilder.BuildQuestion(new DraftQuestion { Type = "Hotspot", Prompt = "Where?" }));
 
     [Fact]
     public void Rubric_IsWrittenWithUniqueCriterionAndLevelIds()

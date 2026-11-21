@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+
+@model SurveyEventActivityViewModel
+
+<partial name="_SurveyEventActivityFields" model="Model" />
+
+<div class="mb-3">
+    <label asp-for="RuleJson" class="form-label">@T["Rule"]</label>
+    <textarea asp-for="RuleJson" class="form-control code" rows="10"></textarea>
+    <span class="hint">@T["The rule as JSON: Match (All or Any), Conditions with Source (a question name or id, or question.row), Operator (such as Is, IsOneOf, LessThan, Between) and Values (choice values or ids, or text), and nested Groups. Leave it empty to start for every completed response."]</span>
+</div>

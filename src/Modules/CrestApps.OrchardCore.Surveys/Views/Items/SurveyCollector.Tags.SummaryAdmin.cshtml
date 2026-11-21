@@ -1,0 +1,28 @@
+@model ShapeViewModel<SurveyCollector>
+
+@{
+    var collector = Model.Value;
+    var kind = collector.Kind switch
+    {
+        SurveyCollectorKinds.Kiosk => T["Kiosk"],
+        SurveyCollectorKinds.Invitation => T["Invitations"],
+        SurveyCollectorKinds.Embed => T["Embed"],
+        SurveyCollectorKinds.WebLink => T["Web link"],
+        _ => new Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString(collector.Kind ?? string.Empty, collector.Kind ?? string.Empty),
+    };
+}
+
+<span class="badge @(collector.Status == CollectorStatus.Open ? "text-bg-success" : "text-bg-secondary") fw-normal" title="@T["Status"]">@(collector.Status == CollectorStatus.Open ? T["Open"] : T["Closed"])</span>
+<span class="badge ta-badge fw-normal" title="@T["Kind"]"><i class="fa-solid fa-link" aria-hidden="true"></i> @kind</span>
+@if (collector.IsDefault)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Made on the first publish"]">@T["Default"]</span>
+}
+@if (!string.IsNullOrEmpty(collector.PasswordHash))
+{
+    <span class="badge ta-badge fw-normal" title="@T["Respondents enter a password"]"><i class="fa-solid fa-lock" aria-hidden="true"></i> @T["Password"]</span>
+}
+@if (collector.MaxResponses is { } max)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Most responses"]"><i class="fa-solid fa-gauge" aria-hidden="true"></i> @max</span>
+}

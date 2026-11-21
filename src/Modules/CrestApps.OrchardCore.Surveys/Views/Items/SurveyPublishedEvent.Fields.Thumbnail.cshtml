@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SurveyPublishedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-upload" aria-hidden="true"></i>
+    @T["Survey Published"]
+</h4>
+<p>@T["Starts when a survey version is published."]</p>

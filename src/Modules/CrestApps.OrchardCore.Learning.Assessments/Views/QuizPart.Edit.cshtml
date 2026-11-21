@@ -1,309 +1,62 @@
 @model QuizPartViewModel
-@using System.Globalization
 
 @{
-    var drawPrefix = Html.NameFor(m => m.DrawRules).ToString();
+    var survey = Model.Survey;
 }
 
-<style asp-name="bootstrap-select"></style>
-<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
-<script asp-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-draw-rules.min.js" debug-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-draw-rules.js" depends-on="bootstrap-select" at="Foot"></script>
-<script asp-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-question-order.min.js" debug-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-question-order.js" depends-on="bootstrap-select" at="Foot"></script>
-
 <div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Questions"]</div>
+    <div class="card-header">@T["Quiz"]</div>
     <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="QuestionIds">
-            <label asp-for="QuestionIds" class="ocat-label">@T["Every attempt includes"]</label>
-            <div class="ocat-end">
-                @await Component.InvokeAsync("ItemSelector", new { id = Html.IdFor(m => m.QuestionIds).ToString(), inputName = Html.NameFor(m => m.QuestionIds).ToString(), endpoint = Url.RouteUrl("LearningQuestionSearch"), initialItemsJson = Model.InitialQuestionsJson, multiple = true, buttonText = T["Choose questions"].Value, searchPlaceholder = T["Search questions by title"].Value, emptyResultsText = T["No published question has this title."].Value, smallButton = false })
-                <span asp-validation-for="QuestionIds"></span>
-                <span class="hint">@T["Published questions, searched by title. New ones go after the others; set the order below."]</span>
+        @if (survey is null)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <span class="hint">@T["Save the quiz first: saving creates its survey, where you add the questions, the time limit, the attempts and the pass mark."]</span>
+                </div>
             </div>
-        </div>
-
-        <div class="ocat-wrapper" data-question-order data-select="@Html.IdFor(m => m.QuestionIds)">
-            <span class="ocat-label">@T["Order"]</span>
-            <div class="ocat-end">
-                <ol class="list-group mb-1" data-question-order-list aria-live="polite"></ol>
-                <p class="text-muted small mb-0" data-question-order-empty>@T["No question chosen yet."]</p>
-                <template data-question-order-template>
-                    <li class="list-group-item d-flex justify-content-between align-items-center gap-2 py-1">
-                        <span data-question-order-title></span>
-                        <span class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-secondary" data-question-order-up title="@T["Move up"]" aria-label="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
-                            <button type="button" class="btn btn-outline-secondary" data-question-order-down title="@T["Move down"]" aria-label="@T["Move down"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
-                        </span>
-                    </li>
-                </template>
-                <span class="hint">@T["Every attempt asks the questions in this order, unless they are shuffled."]</span>
+        }
+        else
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Questions"]</span>
+                <div class="ocat-end">
+                    <span class="badge ta-badge fw-normal" title="@T["Status"]"><i class="fa-solid fa-circle-info me-1" aria-hidden="true"></i>@survey.Status</span>
+                    <span class="badge ta-badge fw-normal" title="@T["Questions each attempt shows"]"><i class="fa-solid fa-list-ol me-1" aria-hidden="true"></i>@T["{0} questions", Model.QuestionCount]</span>
+                    @if (survey.PublishedVersionNumber > 0)
+                    {
+                        <span class="badge ta-badge fw-normal" title="@T["Published version"]"><i class="fa-solid fa-code-branch me-1" aria-hidden="true"></i>@T["Version {0}", survey.PublishedVersionNumber]</span>
+                    }
+                    @if (survey.HasUnpublishedChanges)
+                    {
+                        <span class="badge text-bg-warning fw-normal">@T["Unpublished changes"]</span>
+                    }
+                </div>
             </div>
-        </div>
-
-        <div class="form-check mt-3">
-            <input asp-for="ShuffleQuestions" type="checkbox" class="form-check-input" />
-            <label asp-for="ShuffleQuestions" class="form-check-label">@T["Shuffle the questions in each attempt"]</label>
-        </div>
-    </div>
-</div>
-
-<div class="card text-bg-theme mb-3" data-draw-rules data-prefix="@drawPrefix" data-summary-url="@Url.RouteUrl("LearningQuestionBankDrawSummary", new { bankId = "__bank__" })" data-available-text="@T["of {0} available"].Value" data-too-many-text="@T["The bank has only {0} questions that match this rule."].Value">
-    <div class="card-header">@T["Draw at random"]</div>
-    <div class="card-body">
-        <span class="hint d-block mb-2">@T["Each attempt draws its own questions. A question is never drawn twice in one attempt."]</span>
-        <span asp-validation-for="DrawRules"></span>
-        @{
-            // A rule row; the template renders it with __index__, which the script renumbers.
-            async Task DrawRule(string index, DrawRuleRowViewModel rule)
+            @if (survey.PublishedVersionNumber == 0)
             {
-                var name = drawPrefix + "[" + index + "].";
-
-                <div class="list-group-item" data-draw-rule>
-                    <div class="row g-2 align-items-start">
-                        <div class="col-md-4">
-                            <span class="form-label small d-block mb-1">@T["Question bank"]</span>
-                            <select name="@(name)BankId" class="selectpicker" title="@T["Choose a bank"]" data-live-search="true" data-width="100%" data-live-search-placeholder="@T["Search banks"]" aria-label="@T["Question bank"]" data-draw-bank>
-                                <option value="" data-hidden="true">@T["Choose a bank"]</option>
-                                @foreach (var bank in Model.BankOptions)
-                                {
-                                    <option value="@bank.Value" selected="@(bank.Value == rule.BankId)">@bank.Text</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <span class="form-label small d-block mb-1">@T["With the tag"]</span>
-                            <select name="@(name)Tag" class="selectpicker" data-live-search="true" data-width="100%" data-live-search-placeholder="@T["Search tags"]" aria-label="@T["With the tag"]" data-draw-tag>
-                                <option value="">@T["Any tag"]</option>
-                                @if (!string.IsNullOrEmpty(rule.Tag))
-                                {
-                                    <option value="@rule.Tag" selected="selected">@rule.Tag</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <span class="form-label small d-block mb-1">@T["Difficulty"]</span>
-                            <select name="@(name)Difficulty" class="selectpicker" data-width="100%" aria-label="@T["Difficulty"]" data-draw-difficulty>
-                                <option value="">@T["Any difficulty"]</option>
-                                @for (var level = 1; level <= 5; level++)
-                                {
-                                    var text = level switch
-                                    {
-                                        1 => T["1 (easy)"].Value,
-                                        5 => T["5 (hard)"].Value,
-                                        _ => level.ToString(CultureInfo.InvariantCulture),
-                                    };
-
-                                    <option value="@level" selected="@(rule.Difficulty == level)">@text</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <span class="form-label small d-block mb-1">@T["How many"]</span>
-                            <input type="number" min="1" name="@(name)Count" value="@(rule.Count > 0 ? rule.Count : 1)" class="form-control" aria-label="@T["How many"]" data-draw-count />
-                            <span class="form-text small d-block" data-draw-available aria-live="polite"></span>
-                        </div>
-                        <div class="col-md-1 text-md-end">
-                            <span class="form-label small d-block mb-1 d-none d-md-block">&nbsp;</span>
-                            <button type="button" class="btn btn-sm btn-outline-danger" data-draw-remove title="@T["Remove the rule"]" aria-label="@T["Remove the rule"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-                        </div>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <div class="alert alert-warning mb-0">@T["Learners can attempt the quiz once its survey is published. Add the questions, then publish them in the designer."]</div>
                     </div>
                 </div>
             }
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <a class="btn btn-secondary btn-sm" href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/design")"><i class="fa-solid fa-pen-ruler me-1" aria-hidden="true"></i>@T["Edit questions"]</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/access")"><i class="fa-solid fa-sliders me-1" aria-hidden="true"></i>@T["Attempts and window"]</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/overrides")"><i class="fa-solid fa-user-clock me-1" aria-hidden="true"></i>@T["Accommodations"]</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/responses")"><i class="fa-solid fa-list-check me-1" aria-hidden="true"></i>@T["Attempts"]</a>
+                    <span class="hint">@T["The time limit, pass mark, review options and question pools are the survey's own settings; the attempt limit and window are on its access page."]</span>
+                </div>
+            </div>
         }
-        <div class="list-group mb-2" data-draw-rule-rows>
-            @for (var i = 0; i < Model.DrawRules.Count; i++)
-            {
-                await DrawRule(i.ToString(CultureInfo.InvariantCulture), Model.DrawRules[i]);
-            }
-        </div>
-        <p class="text-muted small mb-2" data-draw-empty hidden="@(Model.DrawRules.Count > 0)">@T["No rule yet. Add one to draw questions from a bank."]</p>
-        <template data-draw-rule-template>
-            @{ await DrawRule("__index__", new DrawRuleRowViewModel()); }
-        </template>
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-draw-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add rule"]</button>
-    </div>
-</div>
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Attempts and timing"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="TimeLimitMinutes" class="ocat-label">@T["Time limit (minutes)"]</label>
-            <div class="ocat-end ocat-end-sm">
-                <input asp-for="TimeLimitMinutes" type="number" min="1" class="form-control" />
-                <span class="hint">@T["The server submits the attempt when the time is up. Leave empty for no limit."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="MaxAttempts" class="ocat-label">@T["Attempts allowed"]</label>
-            <div class="ocat-end ocat-end-sm">
-                <input asp-for="MaxAttempts" type="number" min="1" class="form-control" />
-                <span class="hint">@T["Leave empty for no limit."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="DelayMinutes" class="ocat-label">@T["Wait between attempts (minutes)"]</label>
-            <div class="ocat-end ocat-end-sm">
-                <input asp-for="DelayMinutes" type="number" min="0" class="form-control" />
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="GradingMethod" class="ocat-label">@T["Score from"]</label>
+        <div class="ocat-wrapper" asp-validation-class-for="GradingMethod">
+            <label asp-for="GradingMethod" class="ocat-label">@T["The quiz grade is"]</label>
             <div class="ocat-end">
-                <select asp-for="GradingMethod" class="form-select">
-                    <option value="Highest">@T["The best attempt"]</option>
-                    <option value="Latest">@T["The last attempt"]</option>
-                    <option value="Average">@T["The average of the attempts"]</option>
-                    <option value="First">@T["The first attempt"]</option>
-                </select>
+                <select asp-for="GradingMethod" asp-items="Model.GradingMethods" class="form-select"></select>
+                <span class="hint">@T["How the scores of a learner's attempts combine into their grade for the quiz."]</span>
             </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="PassMark" class="ocat-label">@T["Pass mark (%)"]</label>
-            <div class="ocat-end ocat-end-sm">
-                <input asp-for="PassMark" type="number" min="0" max="100" step="0.01" class="form-control" />
-                <span class="hint">@T["Leave empty to use the pass mark of the course item."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Navigation" class="ocat-label">@T["Navigation"]</label>
-            <div class="ocat-end">
-                <select asp-for="Navigation" class="form-select">
-                    <option value="Free">@T["Any order, and come back to any question"]</option>
-                    <option value="Sequential">@T["One after another, without going back"]</option>
-                </select>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="QuestionsPerPage" class="ocat-label">@T["Questions per page"]</label>
-            <div class="ocat-end ocat-end-sm">
-                <input asp-for="QuestionsPerPage" type="number" min="0" max="100" class="form-control" />
-                <span class="hint">@T["0 shows every question on one page (one a page with the one after another navigation)."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="FeedbackMode" class="ocat-label">@T["Feedback"]</label>
-            <div class="ocat-end">
-                <select asp-for="FeedbackMode" class="form-select">
-                    <option value="Deferred">@T["After the attempt is submitted"]</option>
-                    <option value="Immediate">@T["Immediately: learners check each answer, which then cannot change"]</option>
-                </select>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Opens" class="ocat-label">@T["Opens"]</label>
-            <div class="ocat-end">
-                <input asp-for="Opens" type="datetime-local" class="form-control" />
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Closes">
-            <label asp-for="Closes" class="ocat-label">@T["Closes"]</label>
-            <div class="ocat-end">
-                <input asp-for="Closes" type="datetime-local" class="form-control" />
-                <span asp-validation-for="Closes"></span>
-                <span class="hint">@T["In your time zone. An attempt in progress ends when the quiz closes."]</span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Integrity and review"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="NewAccessCode" class="ocat-label">@T["Access code"]</label>
-            <div class="ocat-end">
-                <input asp-for="NewAccessCode" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore />
-                <span class="hint">@(Model.HasAccessCode ? T["A code is set. Type a new one to replace it; it is stored only as a hash."] : T["The learner types it to start, such as a code given in the exam room."])</span>
-                @if (Model.HasAccessCode)
-                {
-                    <div class="form-check mt-1">
-                        <input asp-for="ClearAccessCode" type="checkbox" class="form-check-input" />
-                        <label asp-for="ClearAccessCode" class="form-check-label">@T["Remove the access code"]</label>
-                    </div>
-                }
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="HonorStatement" class="ocat-label">@T["Honor statement"]</label>
-            <div class="ocat-end">
-                <textarea asp-for="HonorStatement" class="form-control" rows="2" maxlength="1000"></textarea>
-                <span class="hint">@T["The learner confirms it before starting. It is kept on the attempt."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="ReviewMode" class="ocat-label">@T["After an attempt, learners see"]</label>
-            <div class="ocat-end">
-                <select asp-for="ReviewMode" class="form-select">
-                    <option value="AfterGraded">@T["Their answers, the right answers and the feedback, once graded"]</option>
-                    <option value="AfterClose">@T["Their answers and the right answers once the quiz closes"]</option>
-                    <option value="ScoreOnly">@T["Their score only"]</option>
-                    <option value="Hidden">@T["Nothing"]</option>
-                    <option value="@QuizPartViewModel.CustomReview">@T["What the table below allows at each moment"]</option>
-                </select>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Review options"]</div>
-    <div class="card-body">
-        <span class="hint d-block mb-2">@T["Used when \"What the table below allows at each moment\" is chosen above. During the attempt applies to questions checked with immediate feedback; after the submit, a review opens once the attempt is graded."]</span>
-        <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th scope="col">@T["Learners see"]</th>
-                        @for (var m = 0; m < Model.ReviewMoments.Count; m++)
-                        {
-                            var moment = Model.ReviewMoments[m].Moment;
-                            <th scope="col" class="text-center">
-                                @(moment switch
-                                {
-                                    ReviewMoment.During => T["During the attempt"],
-                                    ReviewMoment.ImmediatelyAfter => T["Right after the attempt"],
-                                    ReviewMoment.LaterWhileOpen => T["Later, while the quiz is open"],
-                                    _ => T["After the quiz closes"],
-                                })
-                                <input type="hidden" asp-for="ReviewMoments[m].Moment" />
-                            </th>
-                        }
-                    </tr>
-                </thead>
-                <tbody>
-                    @{
-                        var rows = new (string Field, Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString Label)[]
-                        {
-                            (nameof(ReviewMomentViewModel.Score), T["The score"]),
-                            (nameof(ReviewMomentViewModel.RightAnswers), T["The right answers"]),
-                            (nameof(ReviewMomentViewModel.Feedback), T["The feedback of their answers"]),
-                            (nameof(ReviewMomentViewModel.GeneralFeedback), T["The general feedback"]),
-                        };
-                    }
-                    @foreach (var (field, label) in rows)
-                    {
-                        <tr>
-                            <th scope="row" class="fw-normal">@label</th>
-                            @for (var m = 0; m < Model.ReviewMoments.Count; m++)
-                            {
-                                var row = Model.ReviewMoments[m];
-                                var name = Html.NameFor(x => x.ReviewMoments[m]).ToString() + "." + field;
-                                var isChecked = field switch
-                                {
-                                    nameof(ReviewMomentViewModel.Score) => row.Score,
-                                    nameof(ReviewMomentViewModel.RightAnswers) => row.RightAnswers,
-                                    nameof(ReviewMomentViewModel.Feedback) => row.Feedback,
-                                    _ => row.GeneralFeedback,
-                                };
-                                <td class="text-center">
-                                    <input type="checkbox" class="form-check-input" name="@name" value="true" checked="@isChecked" aria-label="@label" />
-                                </td>
-                            }
-                        </tr>
-                    }
-                </tbody>
-            </table>
         </div>
     </div>
 </div>

@@ -6,9 +6,8 @@
     <Description>
       $(CrestAppsDescription)
 
-      Surveys for the Learning module: the feedback survey and choice course items, with rating, single choice,
-      multiple choice and written questions, anonymous answers, a close date, totals learners may see, and the totals
-      page for staff.
+      Surveys for the Learning module: the feedback survey and choice course items. Each item owns a survey of the
+      Surveys module that learners answer through their enrollment.
     </Description>
     <PackageTags>$(PackageTags) Learning LMS Surveys Feedback Choice Polls</PackageTags>
   </PropertyGroup>
@@ -34,20 +33,19 @@
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Html" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.Recipes.Abstractions" />
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Title" />
-    <PackageReference Include="OrchardCore.Users.Core" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Calendars.Abstractions\CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Surveys.Abstractions\CrestApps.OrchardCore.Learning.Surveys.Abstractions.csproj" />
-    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Surveys.Abstractions\CrestApps.OrchardCore.Surveys.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Surveys.Core\CrestApps.OrchardCore.Learning.Surveys.Core.csproj" />
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.PersonalData.Core\CrestApps.OrchardCore.PersonalData.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Learning\CrestApps.OrchardCore.Learning.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Surveys\CrestApps.OrchardCore.Surveys.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CloseSurveyTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-lock" aria-hidden="true"></i>
+    @T["Close Survey"]
+</h4>
+<p>@T["Closes a survey so it collects no more responses."]</p>

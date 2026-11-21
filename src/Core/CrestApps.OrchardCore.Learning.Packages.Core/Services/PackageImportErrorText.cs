@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Learning.Core.Archives;
+using CrestApps.OrchardCore.Archives;
 using CrestApps.OrchardCore.Learning.Packages.Core.Cmi5;
 using CrestApps.OrchardCore.Learning.Packages.Core.Scorm;
 using Microsoft.Extensions.Localization;

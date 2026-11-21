@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.Surveys.Deployments
+
+@model ShapeViewModel<SurveyQuestionBanksDeploymentStep>
+
+<h5>@T["Question banks"]</h5>
+
+@if (Model.Value.IncludeAll)
+{
+    <span class="badge text-bg-success">@T["All question banks"]</span>
+}
+else
+{
+    foreach (var name in Model.Value.BankNames)
+    {
+        <span class="badge text-bg-secondary">@name</span>
+    }
+}

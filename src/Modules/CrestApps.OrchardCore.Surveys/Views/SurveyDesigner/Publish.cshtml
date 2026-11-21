@@ -1,0 +1,96 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyPublishViewModel
+
+@{
+    var survey = Model.Survey;
+    var preview = Model.Preview;
+    var errors = preview.Messages.Where(message => message.IsError).ToList();
+    var warnings = preview.Messages.Where(message => !message.IsError).ToList();
+    var firstPublish = string.IsNullOrEmpty(survey.PublishedVersionId);
+}
+
+<zone Name="Title">
+    <breadcrumb name="SurveysPublish" title="@T["Publish"]">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="SurveysDesign" action="Design" controller="SurveyDesigner" area="CrestApps.OrchardCore.Surveys" route-id="@survey.ItemId">@survey.Title</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="Publish" asp-route-id="@survey.ItemId" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    @if (errors.Count > 0)
+    {
+        <div class="card mb-3 border-danger">
+            <div class="card-header">@T["Fix these problems before publishing"]</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var message in errors)
+                {
+                    <li class="list-group-item"><i class="fa-solid fa-circle-xmark text-danger me-1" aria-hidden="true"></i>@message.Message</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (warnings.Count > 0)
+    {
+        <div class="card mb-3 border-warning">
+            <div class="card-header">@T["Check these before publishing"]</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var message in warnings)
+                {
+                    <li class="list-group-item"><i class="fa-solid fa-triangle-exclamation text-warning me-1" aria-hidden="true"></i>@message.Message</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <div class="card mb-3">
+        <div class="card-header">@(firstPublish ? T["First version"] : T["Changes since version {0}", survey.PublishedVersionNumber])</div>
+        <div class="card-body">
+            @if (firstPublish)
+            {
+                <p class="mb-0">@T["Publishing makes the first version. The survey opens and gets a public link."]</p>
+            }
+            else if (preview.Diff.Changes.Count == 0)
+            {
+                <p class="mb-0">@T["The draft is the same as the published version."]</p>
+            }
+            else
+            {
+                <partial name="_SurveyChanges" model="preview.Diff" />
+            }
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Version"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+                    <span class="hint">@T["What changed, for the versions list."]</span>
+                </div>
+            </div>
+            @if (!firstPublish && preview.Diff.HasDestructiveChanges)
+            {
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <div class="form-check">
+                            <input asp-for="ConfirmDestructive" type="checkbox" class="form-check-input" />
+                            <label asp-for="ConfirmDestructive" class="form-check-label">@T["I understand that some changes affect existing answers and comparisons"]</label>
+                        </div>
+                        <span asp-validation-for="ConfirmDestructive" class="text-danger"></span>
+                        <span class="hint dashed">@T["Responses keep the version they started on; results join versions by question."]</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-success" type="submit" disabled="@(!preview.CanPublish)">@T["Publish version {0}", survey.PublishedVersionNumber + 1]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Design" asp-route-id="@survey.ItemId">@T["Back"]</a>
+    </div>
+</form>

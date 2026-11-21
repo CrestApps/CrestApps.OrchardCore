@@ -1,0 +1,138 @@
+using System.Globalization;
+using System.Security.Claims;
+using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
+
+namespace CrestApps.OrchardCore.Surveys.AI.Services;
+
+/// <summary>
+/// Reads the results of a survey for AI tools, through each question type's analyzer, for people who may read its
+/// responses. Anonymous surveys with fewer responses than their minimum group size show no results.
+/// </summary>
+public sealed class SurveyResultsReader
+{
+    private const int MaxTextSamples = 10;
+
+    private readonly ISurveyManager _surveys;
+    private readonly ISurveyVersionCache _versions;
+    private readonly ISurveyAuthorizationService _authorization;
+    private readonly ISurveyAnswerAggregates _aggregates;
+    private readonly ISurveyControlRegistry _registry;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SurveyResultsReader"/> class.
+    /// </summary>
+    /// <param name="surveys">The survey manager.</param>
+    /// <param name="versions">The version cache.</param>
+    /// <param name="authorization">The survey authorization service.</param>
+    /// <param name="aggregates">The answer aggregates.</param>
+    /// <param name="registry">The question type registry.</param>
+    public SurveyResultsReader(
+        ISurveyManager surveys,
+        ISurveyVersionCache versions,
+        ISurveyAuthorizationService authorization,
+        ISurveyAnswerAggregates aggregates,
+        ISurveyControlRegistry registry)
+    {
+        _surveys = surveys;
+        _versions = versions;
+        _authorization = authorization;
+        _aggregates = aggregates;
+        _registry = registry;
+    }
+
+    /// <summary>
+    /// Finds a survey by id or technical name.
+    /// </summary>
+    /// <param name="reference">The id or name.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The survey, or <see langword="null"/>.</returns>
+    public async Task<Survey> FindAsync(string reference, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(reference))
+        {
+            return null;
+        }
+
+        return await _surveys.FindByIdAsync(reference.Trim(), cancellationToken)
+            ?? await _surveys.FindByNameAsync(reference.Trim(), cancellationToken);
+    }
+
+    /// <summary>
+    /// Reads the results of a survey's published version.
+    /// </summary>
+    /// <param name="user">The user.</param>
+    /// <param name="survey">The survey.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The results, or a sentence that says why there are none.</returns>
+    public async Task<object> ReadAsync(ClaimsPrincipal user, Survey survey, CancellationToken cancellationToken)
+    {
+        if (survey is null || !await _authorization.AuthorizeAsync(user, survey, SurveyOperation.ViewResponses, cancellationToken))
+        {
+            return "The survey was not found, or the user isn't allowed to read its results.";
+        }
+
+        var version = await _versions.GetPublishedAsync(survey, cancellationToken);
+
+        if (version is null)
+        {
+            return "The survey has not been published, so it has no results.";
+        }
+
+        var filter = new SurveyAnswerFilter { SurveyId = survey.ItemId };
+        var responses = await _aggregates.CountResponsesAsync(filter, cancellationToken);
+        var minimum = survey.Access?.Anonymity == AnonymityMode.Anonymous ? Math.Max(0, survey.Access.MinimumGroupSize) : 0;
+
+        if (minimum > 0 && responses < minimum)
+        {
+            return "The survey is anonymous and has fewer responses than its minimum group size, so its results are not shown yet.";
+        }
+
+        var format = new SurveyFormatContext { Definition = version.Definition, Culture = CultureInfo.CurrentUICulture };
+        var context = new SurveyAnalysisContext
+        {
+            Survey = survey,
+            Filter = filter,
+            Aggregates = _aggregates,
+            Culture = CultureInfo.CurrentUICulture,
+            Format = format,
+            MinimumGroupSize = minimum,
+        };
+
+        var questions = new List<object>();
+
+        foreach (var question in version.Definition.Pages?.SelectMany(page => page.Questions ?? []) ?? [])
+        {
+            var analyzer = question is null ? null : _registry.GetAnalyzer(question.ControlType);
+
+            if (analyzer is null)
+            {
+                continue;
+            }
+
+            var summary = await analyzer.SummarizeAsync(question, context, cancellationToken);
+            var choices = (question.Choices ?? []).Where(choice => choice is not null).ToDictionary(choice => choice.Id ?? string.Empty, choice => choice.Text, StringComparer.Ordinal);
+
+            questions.Add(new
+            {
+                name = question.Name,
+                title = question.Title,
+                type = question.ControlType,
+                answered = summary.Answered,
+                choices = summary.ChoiceCounts.Select(pair => new { text = choices.TryGetValue(pair.Key, out var text) ? text : pair.Key, count = pair.Value }),
+                numbers = summary.Numbers is null ? null : new { count = summary.Numbers.Count, average = summary.Numbers.Average, min = summary.Numbers.Min, max = summary.Numbers.Max, median = summary.Numbers.Median },
+                samples = summary.TextSamples.Take(MaxTextSamples),
+            });
+        }
+
+        return new
+        {
+            survey = survey.Title,
+            name = survey.Name,
+            version = version.Number,
+            responses,
+            questions,
+        };
+    }
+}

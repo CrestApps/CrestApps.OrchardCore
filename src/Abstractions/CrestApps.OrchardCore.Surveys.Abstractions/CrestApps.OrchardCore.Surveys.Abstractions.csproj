@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Surveys</RootNamespace>
+    <Title>CrestApps OrchardCore Surveys Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts of Surveys: surveys, versions, questions and their extensible control types, question banks,
+      collectors, responses, scoring, access rules, observers and the permissions.
+    </Description>
+    <PackageTags>$(PackageTags) Surveys Forms Polls Quizzes Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.DataSources.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Parties.Abstractions\CrestApps.OrchardCore.Parties.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Reports.Abstractions\CrestApps.OrchardCore.Reports.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

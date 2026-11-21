@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SurveyResponseAbandonedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-hourglass-end" aria-hidden="true"></i>
+    @T["Survey Response Abandoned"]
+</h4>
+<p>@T["Starts when an unfinished survey response is abandoned."]</p>

@@ -55,8 +55,8 @@ internal static class MoodleCourseRows
         ["page"] = LearningConstants.ContentTypes.PageLesson,
         ["label"] = LearningConstants.ContentTypes.TextBlock,
         ["assign"] = CourseworkConstants.ContentTypes.Coursework,
-        ["feedback"] = SurveysConstants.ContentTypes.FeedbackSurvey,
-        ["choice"] = SurveysConstants.ContentTypes.Choice,
+        ["feedback"] = LearningSurveysConstants.ContentTypes.FeedbackSurvey,
+        ["choice"] = LearningSurveysConstants.ContentTypes.Choice,
     };
 
     /// <summary>
@@ -72,8 +72,8 @@ internal static class MoodleCourseRows
         ["page"] = LearningConstants.CourseItemKinds.Page,
         ["label"] = LearningConstants.CourseItemKinds.Text,
         ["assign"] = CourseworkConstants.CourseworkKind,
-        ["feedback"] = SurveysConstants.SurveyKind,
-        ["choice"] = SurveysConstants.SurveyKind,
+        ["feedback"] = LearningSurveysConstants.SurveyKind,
+        ["choice"] = LearningSurveysConstants.SurveyKind,
     };
 
     /// <summary>
@@ -104,15 +104,13 @@ internal static class MoodleCourseRows
     /// </summary>
     /// <param name="backup">The backup.</param>
     /// <param name="token">The token of the extracted backup.</param>
-    /// <param name="questionTypes">The question types, to tell which questions are imported.</param>
     /// <param name="S">The localizer of the reasons.</param>
     /// <param name="hasKind">Tells whether a course item kind is registered, that is whether its feature is on; every
     /// kind when <see langword="null"/>.</param>
     /// <returns>The rows.</returns>
-    public static IReadOnlyList<string[]> Write(MoodleBackup backup, string token, QuestionTypeOptions questionTypes, IStringLocalizer S, Func<string, bool> hasKind = null)
+    public static IReadOnlyList<string[]> Write(MoodleBackup backup, string token, IStringLocalizer S, Func<string, bool> hasKind = null)
     {
         ArgumentNullException.ThrowIfNull(backup);
-        ArgumentNullException.ThrowIfNull(questionTypes);
         ArgumentNullException.ThrowIfNull(S);
 
         hasKind ??= _ => true;
@@ -310,7 +308,7 @@ internal static class MoodleCourseRows
                         Attention(S["{0}: the quiz \"{1}\" has a password in Moodle, which is not imported; set an access code on the quiz.", title, name]);
                     }
 
-                    foreach (var refusal in QuestionRefusals(backup, activity, questionTypes))
+                    foreach (var refusal in QuestionRefusals(backup, activity))
                     {
                         if (reported.Add(refusal.Key))
                         {
@@ -448,7 +446,7 @@ internal static class MoodleCourseRows
         }
     }
 
-    private static IEnumerable<(string Key, string Name, MoodleQuestionMapping Mapping)> QuestionRefusals(MoodleBackup backup, MoodleActivity quiz, QuestionTypeOptions questionTypes)
+    private static IEnumerable<(string Key, string Name, MoodleQuestionMapping Mapping)> QuestionRefusals(MoodleBackup backup, MoodleActivity quiz)
     {
         foreach (var slot in quiz.Slots.Where(slot => !string.IsNullOrEmpty(slot.BankEntryId) && backup.FindQuestion(slot.BankEntryId) is null))
         {
@@ -459,11 +457,6 @@ internal static class MoodleCourseRows
         {
             var mapping = MoodleQuestionMapper.Map(question, backup.QuestionSource(question.BankEntryId), backup.Name + "/questions.xml");
 
-            if (mapping.Refusal is null && !questionTypes.Types.Any(type => type.Name == mapping.Item.Question.QuestionType && !string.IsNullOrEmpty(type.ContentType)))
-            {
-                mapping = mapping with { Refusal = Disabled, Detail = mapping.Item.Question.QuestionType };
-            }
-
             if (mapping.Refusal is not null)
             {
                 yield return (question.BankEntryId, string.IsNullOrWhiteSpace(question.Name) ? question.BankEntryId : question.Name.Trim(), mapping);
@@ -472,13 +465,11 @@ internal static class MoodleCourseRows
     }
 
     private const string Missing = "Missing";
-    private const string Disabled = "Disabled";
 
     private static string Reason(MoodleQuestionMapping mapping, IStringLocalizer S)
         => mapping.Refusal switch
         {
             Missing => S["the backup does not have it"],
-            Disabled => S["the question type {0} is not enabled", mapping.Detail],
             MoodleQuestionRefusals.UnsupportedType => S["it is a {0} question, which the site has no question type for", QuestionKind(mapping.Detail, S)],
             MoodleQuestionRefusals.Picture => S["its text shows a picture or media, which the import does not bring yet"],
             MoodleQuestionRefusals.MarkupInAnswer => S["an answer shows a picture or media, where the question type keeps plain text"],

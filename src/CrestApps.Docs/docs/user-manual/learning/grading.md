@@ -1,35 +1,34 @@
 ---
 sidebar_label: Grading
 title: Grading
-description: "Grade essays, regrade or void an attempt with a reason, see the gradebook, and read the quiz results and item analysis report."
+description: "Grade quiz answers and coursework from one list, regrade or void a quiz attempt with a reason, see the gradebook, and read the quiz reports."
 technical_manual:
   - modules/learning-assessments
 ---
 
-Most questions are scored automatically. Essays need a person, and any graded attempt can be regraded or voided with a reason.
+Most quiz questions are scored automatically. Essays and coursework need a person. Quiz attempts are responses to the quiz's survey, so they are graded on the Surveys grading page; the course grading list gathers quiz answers and coursework in one place.
 
 | | |
 | --- | --- |
 | **Menu** | Learning > Grading; Learning > Gradebook. Course staff with Manage the courses you teach see both, for their own courses. |
-| **Permission** | Grade assessments, or Manage the courses you teach for a course's graders, instructors and assistants |
+| **Permission** | Grade the work of every course, or Manage the courses you teach for a course's graders, instructors and assistants; Grade survey responses (or the course staff grading scope) to grade quiz answers |
 | **Feature** | Learning Assessments; Learning Gradebook for the gradebook |
 
 <AskYourAdmin />
 
-## Grade an attempt
+## Grade a quiz attempt
 
-1. Go to **Learning > Grading**. The list shows the attempts that need grading in the courses you may grade.
-2. Open an attempt. Each question shows the learner's answer, the right answer and, for an essay, the grader guidance.
-3. Enter the score of each open question (between 0 and its points) and an optional comment, then **Save**. When every question has a score, the attempt is graded and the learner gets a notification.
+1. Go to **Learning > Grading**. The list shows the quiz attempts and coursework that wait for a grader in the courses you may grade.
+2. Open a quiz attempt. The Surveys grading page shows each question with the learner's answer.
+3. Enter the points of each question that needs a grader and an optional comment, add overall feedback if you like, then select **Save grades**. When every question has a score, the attempt is graded and the course records the quiz grade.
 
-You cannot grade your own attempt.
+## Regrade or void a quiz attempt
 
-## Regrade or void
+- **Score again** scores the attempt with the key of its version, such as after a key was found wrong. Give the reason.
+- **Change score** sets the total score, with a reason.
+- To void an attempt, open the survey's **Responses**, choose the response and void it with a reason. A voided attempt does not count in the quiz grade.
 
-- **Regrade** scores the attempt again with the key it kept, such as after a question's key was found wrong. Give the reason.
-- **Void** removes the attempt from the quiz result, such as for cheating. Give the reason.
-
-Both are kept in the attempt's score history and the Audit Trail. If the course was already completed and the change lowers the result, the enrollment stays completed and shows **Needs review**: a training manager opens it, decides what follows and clears the review with a note.
+Each change is kept in the attempt's score history and the Audit Trail. If the course was already completed and the change lowers the result, the enrollment stays completed and shows **Needs review**: a training manager opens it, decides what follows and clears the review with a note.
 
 ## Sign off coursework with nothing handed in
 
@@ -43,6 +42,6 @@ Coursework takes up to 20 files a hand-in unless your administrator changes it.
 
 The course grade is the weighted mean of the graded items. On the course editor, the **Pass mark (%)** under **Completion and grade** is the course grade a learner needs to pass; leave it empty for a course without a grade. To weigh groups of items, such as homework and exams, add rows to the **Grade categories** card: a **Category**, its **Weight** and how many of its lowest scores to **Drop lowest**. Choose each graded item's **Grade category** on its **Course item** card. A category's score is the mean of its items after the lowest are dropped, and the course grade is the weighted mean of the categories. See [Grade categories](./courses.md#grade-categories).
 
-## Quiz results and item analysis
+## Quiz reports
 
-Under **Reports**, **Quiz results and item analysis** shows each quiz's pass rate and mean score, then every question with its **Difficulty** (the share of the points learners got; higher is easier) and **Discrimination** (how much better the strongest attempts did than the weakest). A question below 0.20 tells strong and weak learners apart poorly; below 0 its key may be wrong.
+Quiz reports are the Surveys reports under **Reports**: **Quiz Results** shows how scores spread, how many passed and each person's best and latest score; **Item Analysis** shows each scored question's difficulty (higher is easier) and how well it tells strong learners from weak ones. A question that tells them apart poorly, or the wrong way round, may have a wrong key.

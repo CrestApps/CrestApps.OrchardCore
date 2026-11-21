@@ -1,12 +1,13 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.FileStorage;
-using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Certifications;
 using CrestApps.OrchardCore.Learning.Certifications.Core.Services;
 using CrestApps.OrchardCore.Learning.Certifications.Models;
 using CrestApps.OrchardCore.Learning.Certifications.Recipes;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
+using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.PersonalData;
+using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.Recipes.Models;
@@ -41,9 +42,9 @@ public sealed class CertificationModuleTests
         async Task<IReadOnlyList<(CertificationPathProgress Progress, string RecordId)>> RestingOn(CrestApps.OrchardCore.Learning.Models.Enrollment enrollment)
             => await h.RunAsync(services =>
             {
-                var attempts = services.GetRequiredService<AssessmentAttemptStore>();
+                var responses = services.GetRequiredService<ISurveyResponseQueries>();
 
-                return services.GetRequiredService<DefaultCertificationPathService>().ListRestingOnAsync(enrollment, async id => (await attempts.FindByIdAsync(id))?.EnrollmentId);
+                return services.GetRequiredService<DefaultCertificationPathService>().ListRestingOnAsync(enrollment, async id => LearningSurveyContexts.EnrollmentIdOf(await responses.FindByIdAsync(id)));
             });
 
         var fromCourse = await RestingOn(course);

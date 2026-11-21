@@ -1,0 +1,26 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.Number
+
+@using System.Globalization
+@{
+    var settings = Model.GetSettings<NumberSettings>();
+    var value = Model.Answer?.Number?.ToString(CultureInfo.InvariantCulture);
+}
+<label class="visually-hidden" for="@Model.InputId">@Model.Question.Title</label>
+<div class="input-group" style="max-width: 20rem">
+    <input type="@(settings.Display == NumberDisplay.Slider ? "range" : "number")" class="@(settings.Display == NumberDisplay.Slider ? "form-range" : "form-control")@(Model.HasErrors ? " is-invalid" : null)" id="@Model.InputId" name="@Model.Prefix" value="@value" min="@settings.Min?.ToString(CultureInfo.InvariantCulture)" max="@settings.Max?.ToString(CultureInfo.InvariantCulture)" step="@(settings.Step?.ToString(CultureInfo.InvariantCulture) ?? "any")" placeholder="@Model.Question.Placeholder" readonly="@Model.ReadOnly" aria-required="@(Model.Question.Required ? "true" : null)" aria-describedby="@Model.DescribedBy()" aria-invalid="@(Model.HasErrors ? "true" : null)" />
+    @if (!string.IsNullOrWhiteSpace(settings.Unit))
+    {
+        <span class="input-group-text">@settings.Unit</span>
+    }
+</div>
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}

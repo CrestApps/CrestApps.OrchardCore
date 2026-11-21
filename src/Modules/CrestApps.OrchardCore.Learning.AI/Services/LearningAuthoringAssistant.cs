@@ -1,8 +1,9 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Coursework;
 using CrestApps.OrchardCore.Learning.Models;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 using OrchardCore.ContentManagement;
 using OrchardCore.Html.Models;
 using OrchardCore.Infrastructure.Html;
@@ -64,18 +65,25 @@ public sealed class LearningAuthoringAssistant
     private readonly ILearningAICompleter _completer;
     private readonly IContentManager _contentManager;
     private readonly IHtmlSanitizerService _htmlSanitizer;
+    private readonly IQuestionBankManager _bankManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningAuthoringAssistant"/> class.
     /// </summary>
+    /// <param name="completer">The AI completer.</param>
+    /// <param name="contentManager">The content manager.</param>
+    /// <param name="htmlSanitizer">The HTML sanitizer.</param>
+    /// <param name="bankManagers">The question bank manager of Surveys, when Surveys is on.</param>
     public LearningAuthoringAssistant(
         ILearningAICompleter completer,
         IContentManager contentManager,
-        IHtmlSanitizerService htmlSanitizer)
+        IHtmlSanitizerService htmlSanitizer,
+        IEnumerable<IQuestionBankManager> bankManagers)
     {
         _completer = completer;
         _contentManager = contentManager;
         _htmlSanitizer = htmlSanitizer;
+        _bankManager = bankManagers.FirstOrDefault();
     }
 
     /// <summary>
@@ -151,9 +159,9 @@ public sealed class LearningAuthoringAssistant
     /// <summary>
     /// Drafts questions about a lesson in a question bank.
     /// </summary>
-    public async Task<AuthoringResult> DraftQuestionsAsync(ContentItem lesson, ContentItem bank, int count, CancellationToken cancellationToken)
+    public async Task<AuthoringResult> DraftQuestionsAsync(ContentItem lesson, QuestionBank bank, int count, CancellationToken cancellationToken)
     {
-        if (lesson is null || bank is null || bank.ContentType != AssessmentsConstants.ContentTypes.QuestionBank)
+        if (lesson is null || bank is null || _bankManager is null)
         {
             return AuthoringResult.Fail(AuthoringResult.NotFound);
         }
@@ -185,20 +193,31 @@ public sealed class LearningAuthoringAssistant
             return AuthoringResult.Fail(AuthoringResult.NoDraft);
         }
 
-        var ids = new List<string>();
+        var drafts = new List<BankQuestion>();
 
         foreach (var question in questions)
         {
-            var item = await _contentManager.NewAsync(AuthoringDraftBuilder.QuestionContentType(question.Type));
-            AuthoringDraftBuilder.ApplyQuestion(item, question);
-            item.Alter<ContainedPart>(part =>
+            if (AuthoringDraftBuilder.BuildQuestion(question) is not { } built)
             {
-                part.ListContentItemId = bank.ContentItemId;
-                part.ListContentType = bank.ContentType;
-            });
-            await _contentManager.CreateAsync(item, VersionOptions.Draft);
-            ids.Add(item.ContentItemId);
+                continue;
+            }
+
+            var draft = await _bankManager.NewQuestionAsync(bank.ItemId, built.ControlType, cancellationToken);
+
+            draft.Question = built;
+            draft.Retired = true;
+            drafts.Add(draft);
         }
+
+        // Drafted questions are retired until an author reviews them, so no pool draws them before then.
+        var summary = await _bankManager.ImportAsync(bank.ItemId, drafts, cancellationToken);
+
+        if (summary.Created + summary.Updated == 0)
+        {
+            return AuthoringResult.Fail(AuthoringResult.NoDraft);
+        }
+
+        var ids = drafts.Select(draft => draft.ItemId).ToList();
 
         return new AuthoringResult { ContentItemIds = ids };
     }

@@ -1,0 +1,3 @@
+@model ShapeViewModel<BankQuestion>
+
+<a asp-action="EditQuestion" asp-controller="QuestionBanks" asp-route-area="CrestApps.OrchardCore.Surveys" asp-route-questionId="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>

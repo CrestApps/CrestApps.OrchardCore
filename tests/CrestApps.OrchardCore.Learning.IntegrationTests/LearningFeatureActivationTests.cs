@@ -34,7 +34,6 @@ public sealed class LearningFeatureActivationTests
         "CrestApps.OrchardCore.Learning.AI.Authoring",
         "CrestApps.OrchardCore.Learning.Assessments",
         "CrestApps.OrchardCore.Learning.Assessments.Gradebook",
-        "CrestApps.OrchardCore.Learning.Assessments.QtiImport",
         "CrestApps.OrchardCore.Learning.Certifications",
         "CrestApps.OrchardCore.Learning.Classes",
         "CrestApps.OrchardCore.Learning.Commerce",

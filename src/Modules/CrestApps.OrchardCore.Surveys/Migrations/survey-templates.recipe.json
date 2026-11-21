@@ -1,0 +1,1658 @@
+{
+  "name": "SurveyTemplates",
+  "displayName": "Survey templates",
+  "description": "Adds the default survey templates offered when a survey is created.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [],
+  "tags": [],
+  "steps": [
+    {
+      "name": "SurveyTemplates",
+      "Templates": [
+        {
+          "ItemId": "4bhp5n40baqpaaqspp7ft4y5m9",
+          "Name": "customer-satisfaction",
+          "Title": "Customer satisfaction",
+          "Description": "Measure how satisfied customers are with a CSAT question and follow-ups.",
+          "Kind": "Survey",
+          "Icon": "fa-regular fa-face-smile",
+          "Position": 10,
+          "Definition": {
+            "SchemaVersion": 1,
+            "Title": "Customer satisfaction",
+            "Introduction": null,
+            "Pages": [
+              {
+                "Id": "40v3nthhre0gkyxy2wz8rb7ych",
+                "Name": "page_1",
+                "Title": null,
+                "Description": null,
+                "Visibility": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "Questions": [
+                  {
+                    "Id": "45gzqk7bjbdkb1cjqhzfya80n4",
+                    "Name": "q1",
+                    "ControlType": "Rating",
+                    "Title": "How satisfied are you with our service?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": true,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Min": 1,
+                      "Max": 5,
+                      "Style": "Smileys",
+                      "Metric": "Csat"
+                    },
+                    "Properties": {}
+                  },
+                  {
+                    "Id": "4pnqtyfd670t9yp5vbxkmargw2",
+                    "Name": "q2",
+                    "ControlType": "SingleChoice",
+                    "Title": "How likely are you to use our service again?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": false,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [
+                      {
+                        "Id": "4zy6fyfpdwgyw21p8pdxdnmt4h",
+                        "Value": "1",
+                        "Text": "Very likely",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4m4h2yt0scj76yh68tp88ndaxd",
+                        "Value": "2",
+                        "Text": "Likely",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4mka7h8bv6nxsw2n238eyj85nm",
+                        "Value": "3",
+                        "Text": "Not sure",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4hat6fj5hfzk07qcp1zmz1wenn",
+                        "Value": "4",
+                        "Text": "Unlikely",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4crw8v4gehqfj0zdve4j6m84w9",
+                        "Value": "5",
+                        "Text": "Very unlikely",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      }
+                    ],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Display": "Radio",
+                      "Columns": 1
+                    },
+                    "Properties": {}
+                  },
+                  {
+                    "Id": "4gce8v9k9rzay3t4ttm3syy5c8",
+                    "Name": "q3",
+                    "ControlType": "LongText",
+                    "Title": "What could we do better?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": false,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Rows": 5
+                    },
+                    "Properties": {}
+                  }
+                ],
+                "Pools": [],
+                "QuestionOrder": "AsDefined",
+                "Branches": [],
+                "AllowBack": true,
+                "TimeLimitSeconds": null
+              }
+            ],
+            "Variables": [],
+            "Endings": [
+              {
+                "Id": "4a081tsnznfd3wnzj2aqeh2v5q",
+                "Name": "thank_you",
+                "Title": "Thank you",
+                "Message": "<p>Thank you for your response.</p>",
+                "RedirectUrl": null,
+                "Outcome": "Completed",
+                "Condition": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "IsDefault": true
+              }
+            ],
+            "ScoreCategories": [],
+            "ScoreBands": [],
+            "Quotas": [],
+            "Presentation": {
+              "ShowTitle": true,
+              "ShowQuestionNumbers": true,
+              "ShowPageTitles": true,
+              "ShowProgressBar": true,
+              "ProgressBasis": "Pages",
+              "QuestionsPerPage": 0,
+              "PageOrder": "AsDefined",
+              "SkipLanding": false,
+              "CssClass": null,
+              "CompletedRedirectUrl": null
+            },
+            "Navigation": {
+              "AllowBack": true,
+              "Sequential": false,
+              "AutoAdvance": false,
+              "AllowResume": true,
+              "AllowEditAfterSubmit": false,
+              "ConfirmBeforeSubmit": false
+            },
+            "Scoring": {
+              "Enabled": false,
+              "PassMarkPercent": null,
+              "DefaultPoints": 1,
+              "NegativeMarking": false,
+              "ShowScoreToRespondent": true,
+              "FeedbackMode": "Deferred",
+              "RoundingDecimals": 2,
+              "ScoreFormula": null
+            },
+            "Review": {
+              "During": "None",
+              "ImmediatelyAfter": "Score, Responses",
+              "LaterWhileOpen": "Score, Responses",
+              "AfterClose": "All",
+              "ResultsVisibility": "Never"
+            },
+            "Timing": {
+              "TimeLimitMinutes": null,
+              "GraceSeconds": 5,
+              "AutoSubmitAtDeadline": true
+            },
+            "Translations": {},
+            "Properties": {}
+          }
+        },
+        {
+          "ItemId": "45edq0pv1dcb8gqqrvxvg1efxy",
+          "Name": "nps",
+          "Title": "Net Promoter Score",
+          "Description": "Ask how likely people are to recommend you, and why.",
+          "Kind": "Survey",
+          "Icon": "fa-solid fa-gauge",
+          "Position": 20,
+          "Definition": {
+            "SchemaVersion": 1,
+            "Title": "Net Promoter Score",
+            "Introduction": null,
+            "Pages": [
+              {
+                "Id": "4rhybzyvm6ypp7nzmwgt5yq54n",
+                "Name": "page_1",
+                "Title": null,
+                "Description": null,
+                "Visibility": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "Questions": [
+                  {
+                    "Id": "4phv7fpks5za9td0nehae7xdn1",
+                    "Name": "q1",
+                    "ControlType": "Rating",
+                    "Title": "How likely are you to recommend us to a friend or colleague?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": true,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Min": 0,
+                      "Max": 10,
+                      "Style": "Numbers",
+                      "Metric": "Nps"
+                    },
+                    "Properties": {}
+                  },
+                  {
+                    "Id": "4g0w7e9v5dsf6t9s0bftv41q55",
+                    "Name": "q2",
+                    "ControlType": "LongText",
+                    "Title": "What is the main reason for your score?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": false,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Rows": 5
+                    },
+                    "Properties": {}
+                  }
+                ],
+                "Pools": [],
+                "QuestionOrder": "AsDefined",
+                "Branches": [],
+                "AllowBack": true,
+                "TimeLimitSeconds": null
+              }
+            ],
+            "Variables": [],
+            "Endings": [
+              {
+                "Id": "44c1b2pwg0xgk78f9t86502j4c",
+                "Name": "thank_you",
+                "Title": "Thank you",
+                "Message": "<p>Thank you for your response.</p>",
+                "RedirectUrl": null,
+                "Outcome": "Completed",
+                "Condition": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "IsDefault": true
+              }
+            ],
+            "ScoreCategories": [],
+            "ScoreBands": [],
+            "Quotas": [],
+            "Presentation": {
+              "ShowTitle": true,
+              "ShowQuestionNumbers": true,
+              "ShowPageTitles": true,
+              "ShowProgressBar": true,
+              "ProgressBasis": "Pages",
+              "QuestionsPerPage": 0,
+              "PageOrder": "AsDefined",
+              "SkipLanding": false,
+              "CssClass": null,
+              "CompletedRedirectUrl": null
+            },
+            "Navigation": {
+              "AllowBack": true,
+              "Sequential": false,
+              "AutoAdvance": false,
+              "AllowResume": true,
+              "AllowEditAfterSubmit": false,
+              "ConfirmBeforeSubmit": false
+            },
+            "Scoring": {
+              "Enabled": false,
+              "PassMarkPercent": null,
+              "DefaultPoints": 1,
+              "NegativeMarking": false,
+              "ShowScoreToRespondent": true,
+              "FeedbackMode": "Deferred",
+              "RoundingDecimals": 2,
+              "ScoreFormula": null
+            },
+            "Review": {
+              "During": "None",
+              "ImmediatelyAfter": "Score, Responses",
+              "LaterWhileOpen": "Score, Responses",
+              "AfterClose": "All",
+              "ResultsVisibility": "Never"
+            },
+            "Timing": {
+              "TimeLimitMinutes": null,
+              "GraceSeconds": 5,
+              "AutoSubmitAtDeadline": true
+            },
+            "Translations": {},
+            "Properties": {}
+          }
+        },
+        {
+          "ItemId": "4syx7zq4s7xnk6bkcg0sqykm1y",
+          "Name": "employee-engagement",
+          "Title": "Employee engagement",
+          "Description": "A grid of agreement statements about work and the team.",
+          "Kind": "Survey",
+          "Icon": "fa-solid fa-people-group",
+          "Position": 30,
+          "Definition": {
+            "SchemaVersion": 1,
+            "Title": "Employee engagement",
+            "Introduction": null,
+            "Pages": [
+              {
+                "Id": "4g2mq3xa525gyy6jxnjh3pjbx5",
+                "Name": "page_1",
+                "Title": null,
+                "Description": null,
+                "Visibility": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "Questions": [
+                  {
+                    "Id": "4q2w8p6qmsk8f3y5n1bsqdggw0",
+                    "Name": "q1",
+                    "ControlType": "Matrix",
+                    "Title": "How much do you agree with each statement?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": false,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [
+                      {
+                        "Id": "4jdejqmfnmvznsfxqh7wbqrdde",
+                        "Value": "1",
+                        "Text": "Strongly disagree",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4r4v3hrr06jtyy872er28g81c2",
+                        "Value": "2",
+                        "Text": "Disagree",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4144y94pkt1g46f6tzqq4sbzns",
+                        "Value": "3",
+                        "Text": "Neutral",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4b9p3dghpapda4xwynrvm7sq5s",
+                        "Value": "4",
+                        "Text": "Agree",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4rfc90ptqby20yzknpnz9wm643",
+                        "Value": "5",
+                        "Text": "Strongly agree",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      }
+                    ],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [
+                      {
+                        "Id": "4n6qw5wdtjv7f6e1cwgv90n8wn",
+                        "Name": "proud",
+                        "Text": "I am proud to work here.",
+                        "Retired": false
+                      },
+                      {
+                        "Id": "46c29p1xmgbnw36frfc28dr9wc",
+                        "Name": "growth",
+                        "Text": "I have opportunities to learn and grow.",
+                        "Retired": false
+                      },
+                      {
+                        "Id": "4dv6tk00vyasdz5058gmsmqp4m",
+                        "Name": "recognition",
+                        "Text": "I receive recognition for good work.",
+                        "Retired": false
+                      },
+                      {
+                        "Id": "43q9pvm7snent0xk2wz4bkh2c7",
+                        "Name": "manager",
+                        "Text": "My manager supports me.",
+                        "Retired": false
+                      }
+                    ],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Mode": "Single",
+                      "AllRowsRequired": true
+                    },
+                    "Properties": {}
+                  },
+                  {
+                    "Id": "4eendwtm6zrrt2mqwrx1e8cmws",
+                    "Name": "q2",
+                    "ControlType": "LongText",
+                    "Title": "What one change would make this a better place to work?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": false,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Rows": 5
+                    },
+                    "Properties": {}
+                  }
+                ],
+                "Pools": [],
+                "QuestionOrder": "AsDefined",
+                "Branches": [],
+                "AllowBack": true,
+                "TimeLimitSeconds": null
+              }
+            ],
+            "Variables": [],
+            "Endings": [
+              {
+                "Id": "47xxhtfmscyfw3x9yww5amq7cz",
+                "Name": "thank_you",
+                "Title": "Thank you",
+                "Message": "<p>Thank you for your response.</p>",
+                "RedirectUrl": null,
+                "Outcome": "Completed",
+                "Condition": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "IsDefault": true
+              }
+            ],
+            "ScoreCategories": [],
+            "ScoreBands": [],
+            "Quotas": [],
+            "Presentation": {
+              "ShowTitle": true,
+              "ShowQuestionNumbers": true,
+              "ShowPageTitles": true,
+              "ShowProgressBar": true,
+              "ProgressBasis": "Pages",
+              "QuestionsPerPage": 0,
+              "PageOrder": "AsDefined",
+              "SkipLanding": false,
+              "CssClass": null,
+              "CompletedRedirectUrl": null
+            },
+            "Navigation": {
+              "AllowBack": true,
+              "Sequential": false,
+              "AutoAdvance": false,
+              "AllowResume": true,
+              "AllowEditAfterSubmit": false,
+              "ConfirmBeforeSubmit": false
+            },
+            "Scoring": {
+              "Enabled": false,
+              "PassMarkPercent": null,
+              "DefaultPoints": 1,
+              "NegativeMarking": false,
+              "ShowScoreToRespondent": true,
+              "FeedbackMode": "Deferred",
+              "RoundingDecimals": 2,
+              "ScoreFormula": null
+            },
+            "Review": {
+              "During": "None",
+              "ImmediatelyAfter": "Score, Responses",
+              "LaterWhileOpen": "Score, Responses",
+              "AfterClose": "All",
+              "ResultsVisibility": "Never"
+            },
+            "Timing": {
+              "TimeLimitMinutes": null,
+              "GraceSeconds": 5,
+              "AutoSubmitAtDeadline": true
+            },
+            "Translations": {},
+            "Properties": {}
+          }
+        },
+        {
+          "ItemId": "48t8yez6p4rkfg12fax7yzkk3g",
+          "Name": "event-feedback",
+          "Title": "Event feedback",
+          "Description": "Rate an event and say what to keep and change.",
+          "Kind": "Survey",
+          "Icon": "fa-regular fa-calendar-check",
+          "Position": 40,
+          "Definition": {
+            "SchemaVersion": 1,
+            "Title": "Event feedback",
+            "Introduction": null,
+            "Pages": [
+              {
+                "Id": "4kpr26tkjn94qrwp1e1mzfxbnf",
+                "Name": "page_1",
+                "Title": null,
+                "Description": null,
+                "Visibility": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "Questions": [
+                  {
+                    "Id": "4yj3q4t5tkfyh1vd3vjhzmnkxr",
+                    "Name": "q1",
+                    "ControlType": "Rating",
+                    "Title": "How would you rate the event overall?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": true,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Min": 1,
+                      "Max": 5,
+                      "Style": "Stars",
+                      "Metric": "None"
+                    },
+                    "Properties": {}
+                  },
+                  {
+                    "Id": "4ysv49ky930fv1va39m81cd6ca",
+                    "Name": "q2",
+                    "ControlType": "MultipleChoice",
+                    "Title": "What did you enjoy?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": false,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [
+                      {
+                        "Id": "4n6f06tjnfk4nxqyg3fbtkb658",
+                        "Value": "1",
+                        "Text": "Speakers",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4tqxt3frb2kdc7emy5mc5caa4j",
+                        "Value": "2",
+                        "Text": "Content",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4hngf6d9705z67mxhq9jek30x8",
+                        "Value": "3",
+                        "Text": "Networking",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4jrpxz57htajp7y7n9rwxnjvna",
+                        "Value": "4",
+                        "Text": "Venue",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4b56yj29btvwfspaar6gdvr15n",
+                        "Value": "5",
+                        "Text": "Organization",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      }
+                    ],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Display": "Checkboxes",
+                      "Columns": 1
+                    },
+                    "Properties": {}
+                  },
+                  {
+                    "Id": "49m4xsxbnjrc973w5064amy34a",
+                    "Name": "q3",
+                    "ControlType": "LongText",
+                    "Title": "What should we change next time?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": false,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Rows": 5
+                    },
+                    "Properties": {}
+                  }
+                ],
+                "Pools": [],
+                "QuestionOrder": "AsDefined",
+                "Branches": [],
+                "AllowBack": true,
+                "TimeLimitSeconds": null
+              }
+            ],
+            "Variables": [],
+            "Endings": [
+              {
+                "Id": "4jxwzsmasdv1cr47jyrd3pd05q",
+                "Name": "thank_you",
+                "Title": "Thank you",
+                "Message": "<p>Thank you for your response.</p>",
+                "RedirectUrl": null,
+                "Outcome": "Completed",
+                "Condition": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "IsDefault": true
+              }
+            ],
+            "ScoreCategories": [],
+            "ScoreBands": [],
+            "Quotas": [],
+            "Presentation": {
+              "ShowTitle": true,
+              "ShowQuestionNumbers": true,
+              "ShowPageTitles": true,
+              "ShowProgressBar": true,
+              "ProgressBasis": "Pages",
+              "QuestionsPerPage": 0,
+              "PageOrder": "AsDefined",
+              "SkipLanding": false,
+              "CssClass": null,
+              "CompletedRedirectUrl": null
+            },
+            "Navigation": {
+              "AllowBack": true,
+              "Sequential": false,
+              "AutoAdvance": false,
+              "AllowResume": true,
+              "AllowEditAfterSubmit": false,
+              "ConfirmBeforeSubmit": false
+            },
+            "Scoring": {
+              "Enabled": false,
+              "PassMarkPercent": null,
+              "DefaultPoints": 1,
+              "NegativeMarking": false,
+              "ShowScoreToRespondent": true,
+              "FeedbackMode": "Deferred",
+              "RoundingDecimals": 2,
+              "ScoreFormula": null
+            },
+            "Review": {
+              "During": "None",
+              "ImmediatelyAfter": "Score, Responses",
+              "LaterWhileOpen": "Score, Responses",
+              "AfterClose": "All",
+              "ResultsVisibility": "Never"
+            },
+            "Timing": {
+              "TimeLimitMinutes": null,
+              "GraceSeconds": 5,
+              "AutoSubmitAtDeadline": true
+            },
+            "Translations": {},
+            "Properties": {}
+          }
+        },
+        {
+          "ItemId": "4z42k3c3d22credaakjhb57yhm",
+          "Name": "quiz",
+          "Title": "Quiz",
+          "Description": "A scored quiz with a pass mark and right answers.",
+          "Kind": "Quiz",
+          "Icon": "fa-solid fa-list-check",
+          "Position": 60,
+          "Definition": {
+            "SchemaVersion": 1,
+            "Title": "Quiz",
+            "Introduction": null,
+            "Pages": [
+              {
+                "Id": "4vdw0cehj8rhes3bf4qv02mrcf",
+                "Name": "page_1",
+                "Title": null,
+                "Description": null,
+                "Visibility": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "Questions": [
+                  {
+                    "Id": "4gv0vapmsrx0ws3evmmh94p3x5",
+                    "Name": "q1",
+                    "ControlType": "SingleChoice",
+                    "Title": "Which planet is known as the red planet?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": true,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [
+                      {
+                        "Id": "417dqqf65gtv4wna6m1xjczrcd",
+                        "Value": "1",
+                        "Text": "Venus",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4t6vabg42n0c85tv8a1j0eb74n",
+                        "Value": "2",
+                        "Text": "Mars",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "45s013cd1rxna32mvfqzmyahcj",
+                        "Value": "3",
+                        "Text": "Jupiter",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4bdcxp3bpbkqn1628xnwhbm1nm",
+                        "Value": "4",
+                        "Text": "Saturn",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      }
+                    ],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [
+                        "4t6vabg42n0c85tv8a1j0eb74n"
+                      ],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Display": "Radio",
+                      "Columns": 1
+                    },
+                    "Properties": {}
+                  },
+                  {
+                    "Id": "4s6c12ypp13x5ryt4vm9gqtw54",
+                    "Name": "q2",
+                    "ControlType": "MultipleChoice",
+                    "Title": "Which of these are prime numbers?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": true,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [
+                      {
+                        "Id": "4rxz32ef3bxakxx7jrpbzjb1cq",
+                        "Value": "1",
+                        "Text": "2",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4rq1h3zy9zsp24e9tvghv0tccf",
+                        "Value": "2",
+                        "Text": "4",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4ycwq0brfxn3txz75gsq60j8d8",
+                        "Value": "3",
+                        "Text": "7",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4r8qstj1sgqjf17dyjypx2xed8",
+                        "Value": "4",
+                        "Text": "9",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      }
+                    ],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": true,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [
+                        "4rxz32ef3bxakxx7jrpbzjb1cq",
+                        "4ycwq0brfxn3txz75gsq60j8d8"
+                      ],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Display": "Checkboxes",
+                      "Columns": 1
+                    },
+                    "Properties": {}
+                  }
+                ],
+                "Pools": [],
+                "QuestionOrder": "AsDefined",
+                "Branches": [],
+                "AllowBack": true,
+                "TimeLimitSeconds": null
+              }
+            ],
+            "Variables": [],
+            "Endings": [
+              {
+                "Id": "49n6yxdnjx6wryqbvanfjq9sd0",
+                "Name": "thank_you",
+                "Title": "Thank you",
+                "Message": "<p>Thank you for your response.</p>",
+                "RedirectUrl": null,
+                "Outcome": "Completed",
+                "Condition": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "IsDefault": true
+              }
+            ],
+            "ScoreCategories": [],
+            "ScoreBands": [],
+            "Quotas": [],
+            "Presentation": {
+              "ShowTitle": true,
+              "ShowQuestionNumbers": true,
+              "ShowPageTitles": true,
+              "ShowProgressBar": true,
+              "ProgressBasis": "Pages",
+              "QuestionsPerPage": 0,
+              "PageOrder": "AsDefined",
+              "SkipLanding": false,
+              "CssClass": null,
+              "CompletedRedirectUrl": null
+            },
+            "Navigation": {
+              "AllowBack": true,
+              "Sequential": false,
+              "AutoAdvance": false,
+              "AllowResume": true,
+              "AllowEditAfterSubmit": false,
+              "ConfirmBeforeSubmit": false
+            },
+            "Scoring": {
+              "Enabled": true,
+              "PassMarkPercent": 70,
+              "DefaultPoints": 1,
+              "NegativeMarking": false,
+              "ShowScoreToRespondent": true,
+              "FeedbackMode": "Deferred",
+              "RoundingDecimals": 2,
+              "ScoreFormula": null
+            },
+            "Review": {
+              "During": "None",
+              "ImmediatelyAfter": "Score, Responses",
+              "LaterWhileOpen": "Score, Responses",
+              "AfterClose": "All",
+              "ResultsVisibility": "Never"
+            },
+            "Timing": {
+              "TimeLimitMinutes": null,
+              "GraceSeconds": 5,
+              "AutoSubmitAtDeadline": true
+            },
+            "Translations": {},
+            "Properties": {}
+          }
+        },
+        {
+          "ItemId": "4dwecgv6e0bfjemhdrq318fvqh",
+          "Name": "poll",
+          "Title": "Poll",
+          "Description": "One question whose totals respondents see after they answer.",
+          "Kind": "Poll",
+          "Icon": "fa-solid fa-square-poll-vertical",
+          "Position": 70,
+          "Definition": {
+            "SchemaVersion": 1,
+            "Title": "Poll",
+            "Introduction": null,
+            "Pages": [
+              {
+                "Id": "499gvye14ds35t6y7afed6sact",
+                "Name": "page_1",
+                "Title": null,
+                "Description": null,
+                "Visibility": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "Questions": [
+                  {
+                    "Id": "4tf2sec4mqq13637k9hkycwsdg",
+                    "Name": "q1",
+                    "ControlType": "SingleChoice",
+                    "Title": "What should we work on next?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": true,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [
+                      {
+                        "Id": "4cay8vjk9tnmm78r2tzzzrhqxe",
+                        "Value": "1",
+                        "Text": "Option A",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "43vcjpbv02y3m3p85mq15kgecb",
+                        "Value": "2",
+                        "Text": "Option B",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      },
+                      {
+                        "Id": "4hdvny91mh7sjzzxvdzdvw0axp",
+                        "Value": "3",
+                        "Text": "Option C",
+                        "ImageUrl": null,
+                        "IsOther": false,
+                        "IsExclusive": false,
+                        "Pinned": false,
+                        "Retired": false,
+                        "Visibility": {
+                          "Mode": "Always",
+                          "Rule": null,
+                          "Formula": null
+                        }
+                      }
+                    ],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Display": "Radio",
+                      "Columns": 1
+                    },
+                    "Properties": {}
+                  }
+                ],
+                "Pools": [],
+                "QuestionOrder": "AsDefined",
+                "Branches": [],
+                "AllowBack": true,
+                "TimeLimitSeconds": null
+              }
+            ],
+            "Variables": [],
+            "Endings": [
+              {
+                "Id": "4xpqh7fwtdycnywqa0vqcpnnwz",
+                "Name": "thank_you",
+                "Title": "Thank you",
+                "Message": "<p>Thank you for your response.</p>",
+                "RedirectUrl": null,
+                "Outcome": "Completed",
+                "Condition": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "IsDefault": true
+              }
+            ],
+            "ScoreCategories": [],
+            "ScoreBands": [],
+            "Quotas": [],
+            "Presentation": {
+              "ShowTitle": true,
+              "ShowQuestionNumbers": true,
+              "ShowPageTitles": true,
+              "ShowProgressBar": true,
+              "ProgressBasis": "Pages",
+              "QuestionsPerPage": 0,
+              "PageOrder": "AsDefined",
+              "SkipLanding": false,
+              "CssClass": null,
+              "CompletedRedirectUrl": null
+            },
+            "Navigation": {
+              "AllowBack": true,
+              "Sequential": false,
+              "AutoAdvance": false,
+              "AllowResume": true,
+              "AllowEditAfterSubmit": false,
+              "ConfirmBeforeSubmit": false
+            },
+            "Scoring": {
+              "Enabled": false,
+              "PassMarkPercent": null,
+              "DefaultPoints": 1,
+              "NegativeMarking": false,
+              "ShowScoreToRespondent": true,
+              "FeedbackMode": "Deferred",
+              "RoundingDecimals": 2,
+              "ScoreFormula": null
+            },
+            "Review": {
+              "During": "None",
+              "ImmediatelyAfter": "Score, Responses",
+              "LaterWhileOpen": "Score, Responses",
+              "AfterClose": "All",
+              "ResultsVisibility": "AfterAnswer"
+            },
+            "Timing": {
+              "TimeLimitMinutes": null,
+              "GraceSeconds": 5,
+              "AutoSubmitAtDeadline": true
+            },
+            "Translations": {},
+            "Properties": {}
+          }
+        }
+      ]
+    }
+  ]
+}

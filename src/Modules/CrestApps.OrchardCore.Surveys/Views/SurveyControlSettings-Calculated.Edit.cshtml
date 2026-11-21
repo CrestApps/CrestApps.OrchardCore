@@ -1,0 +1,32 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.Calculated.CalculatedSettings>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Calculated value settings"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Formula" class="ocat-label">@T["Formula"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Settings.Formula" class="form-control" rows="5"></textarea>
+                <span class="hint">@T["A formula over questions and variables, such as [q_price] * [q_quantity]."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Display" class="ocat-label">@T["Respondents"]</label>
+            <div class="ocat-end">
+                <select asp-for="Settings.Display" class="form-select">
+                    <option value="Hidden">@T["Do not see the value"]</option>
+                    <option value="ShowValue">@T["See the value"]</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Settings.Format" class="ocat-label">@T["Format"]</label>
+            <div class="ocat-end">
+                <input asp-for="Settings.Format" class="form-control" type="text" />
+                <span class="hint">@T["A number format such as N2; empty shows the plain value."]</span>
+            </div>
+        </div>
+    </div>
+</div>

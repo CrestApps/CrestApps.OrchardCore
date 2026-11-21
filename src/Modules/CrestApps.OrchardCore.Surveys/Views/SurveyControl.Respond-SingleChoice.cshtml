@@ -1,0 +1,77 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.SingleChoice
+
+@{
+    var settings = Model.GetSettings<SingleChoiceSettings>();
+}
+@if (settings.Display == SingleChoiceDisplay.Dropdown)
+{
+    <label class="visually-hidden" for="@Model.InputId">@Model.Question.Title</label>
+    <select class="form-select" id="@Model.InputId" name="@Model.Prefix" aria-required="@(Model.Question.Required ? "true" : null)" aria-describedby="@Model.DescribedBy()" aria-invalid="@(Model.HasErrors ? "true" : null)" disabled="@Model.ReadOnly">
+        <option value="">@T["Select an option"]</option>
+        @foreach (var choice in Model.Choices)
+        {
+            <option value="@choice.Id" selected="@Model.IsSelected(choice.Id)">@choice.Text</option>
+        }
+    </select>
+    @foreach (var choice in Model.Choices.Where(choice => choice.IsOther))
+    {
+        <input type="text" class="form-control mt-1" name="@(Model.Prefix).other" value="@Model.Answer?.OtherText" maxlength="1000" aria-label="@T["Other answer"]" disabled="@Model.ReadOnly" />
+    }
+}
+else
+{
+    <fieldset class="survey-choices" role="radiogroup" aria-required="@(Model.Question.Required ? "true" : null)" aria-describedby="@Model.DescribedBy()">
+        <legend class="visually-hidden">@Model.Question.Title</legend>
+        <div class="@(settings.Display == SingleChoiceDisplay.Radio ? "row row-cols-1 row-cols-md-" + Math.Clamp(settings.Columns, 1, 4) : "d-flex flex-wrap gap-2")">
+            @foreach (var choice in Model.Choices)
+            {
+                var id = $"{Model.InputId}-{choice.Id}";
+                if (settings.Display == SingleChoiceDisplay.Radio)
+                {
+                    <div class="col">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="@Model.Prefix" id="@id" value="@choice.Id" checked="@Model.IsSelected(choice.Id)" disabled="@Model.ReadOnly" aria-invalid="@(Model.HasErrors ? "true" : null)" />
+                            <label class="form-check-label" for="@id">@choice.Text</label>
+                        </div>
+
+        @if (choice.IsOther)
+        {
+            <input type="text" class="form-control form-control-sm mt-1" name="@(Model.Prefix).other" value="@Model.Answer?.OtherText" maxlength="1000" aria-label="@T["Other answer"]" disabled="@Model.ReadOnly" />
+        }
+
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        <input class="btn-check" type="radio" name="@Model.Prefix" id="@id" value="@choice.Id" checked="@Model.IsSelected(choice.Id)" disabled="@Model.ReadOnly" autocomplete="off" />
+                        <label class="btn btn-outline-primary @(settings.Display == SingleChoiceDisplay.ImageTiles ? "p-1" : null)" for="@id">
+                            @if (settings.Display == SingleChoiceDisplay.ImageTiles && !string.IsNullOrEmpty(choice.ImageUrl))
+                            {
+                                <img src="@choice.ImageUrl" alt="" class="d-block mb-1" style="max-width: 10rem; max-height: 8rem" />
+                            }
+                            @choice.Text
+                        </label>
+
+        @if (choice.IsOther)
+        {
+            <input type="text" class="form-control form-control-sm mt-1" name="@(Model.Prefix).other" value="@Model.Answer?.OtherText" maxlength="1000" aria-label="@T["Other answer"]" disabled="@Model.ReadOnly" />
+        }
+
+                    </div>
+                }
+            }
+        </div>
+    </fieldset>
+}
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}

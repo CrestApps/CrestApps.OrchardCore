@@ -73,4 +73,47 @@ public sealed class ConditionalVisibilityTests
         Assert.Equal(["a", "b"], cycle.Order());
         Assert.Empty(ConditionalVisibility.FindCycle(new Dictionary<string, ConditionRule> { ["c"] = When("d", "x") }));
     }
+
+    [Fact]
+    public void Sources_WalkNestedGroups()
+    {
+        // Arrange
+        var rule = new ConditionRule
+        {
+            Conditions = [new Condition { Source = "a", Operator = ConditionOperator.IsNotEmpty }],
+            Groups =
+            [
+                new ConditionRule
+                {
+                    Conditions = [new Condition { Source = "b", Operator = ConditionOperator.IsNotEmpty }],
+                    Groups = [new ConditionRule { Conditions = [new Condition { Source = "c", Operator = ConditionOperator.IsNotEmpty }, new Condition { Source = "a", Operator = ConditionOperator.IsEmpty }] }],
+                },
+            ],
+        };
+
+        // Act
+        var sources = ConditionalVisibility.Sources(rule).ToArray();
+
+        // Assert
+        Assert.Equal(["a", "b", "c"], sources);
+    }
+
+    [Fact]
+    public void FindCycle_FollowsSourcesInNestedGroups()
+    {
+        // Arrange: a reads b only through a nested group.
+        var rules = new Dictionary<string, ConditionRule>
+        {
+            ["a"] = new ConditionRule { Groups = [When("b", "x")] },
+            ["b"] = When("a", "x"),
+        };
+
+        // Act
+        var cycle = ConditionalVisibility.FindCycle(rules);
+        var hidden = ConditionalVisibility.GetHidden(rules, _ => ConditionValue.Empty);
+
+        // Assert
+        Assert.Equal(["a", "b"], cycle.Order());
+        Assert.Empty(hidden);
+    }
 }

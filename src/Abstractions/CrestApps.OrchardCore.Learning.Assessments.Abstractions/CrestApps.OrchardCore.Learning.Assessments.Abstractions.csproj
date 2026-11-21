@@ -6,8 +6,8 @@
     <Description>
       $(CrestAppsDescription)
 
-      Public contracts of Learning assessments: question parts and question types, the quiz course item, self-contained
-      assessment attempts with their drawn items and responses, overrides, grade scales, scorers and the permissions.
+      Public contracts of Learning assessments: the quiz course item part, which names the Surveys survey the quiz owns and
+      how attempts combine into the quiz grade, grade scales, the grading list extension point and the permissions.
     </Description>
     <PackageTags>$(PackageTags) Learning LMS Assessments Quiz Exam Abstractions</PackageTags>
   </PropertyGroup>

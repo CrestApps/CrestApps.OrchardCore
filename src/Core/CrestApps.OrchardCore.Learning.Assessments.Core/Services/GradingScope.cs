@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Authorization;
 
@@ -61,14 +60,6 @@ public sealed class GradingScope
         return string.IsNullOrEmpty(userId) ? [] : await _courseStructure.GetStaffCourseIdsAsync(userId, _gradingRoles);
     }
 
-    /// <summary>
-    /// Gets whether a person may grade an attempt.
-    /// </summary>
-    /// <param name="user">The person.</param>
-    /// <param name="attempt">The attempt.</param>
-    /// <returns><see langword="true"/> when allowed.</returns>
-    public Task<bool> CanGradeAsync(ClaimsPrincipal user, AssessmentAttempt attempt)
-        => attempt is null ? Task.FromResult(false) : CanGradeAsync(user, attempt.UserId, attempt.CourseId);
 
     /// <summary>
     /// Gets whether a person may grade the work of a learner in a course.

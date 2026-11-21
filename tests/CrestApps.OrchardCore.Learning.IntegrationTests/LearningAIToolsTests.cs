@@ -3,9 +3,9 @@ using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.Learning.AI;
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
-using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
+using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
@@ -68,7 +68,7 @@ public sealed class LearningAIToolsTests
     [Fact]
     public async Task MyProgressAndNextLesson_ReadOnlyTheLearnersOwnCourses()
     {
-        var setup = await _site.InTenantAsync(SetUpAsync);
+        var setup = await SetUpAsync();
 
         var progress = await _site.InTenantAsync(services => InvokeAsync(services, setup.LearnerName, LearningAIConstants.Tools.MyProgress));
         var next = await _site.InTenantAsync(services => InvokeAsync(services, setup.LearnerName, LearningAIConstants.Tools.MyNextLesson));
@@ -83,7 +83,7 @@ public sealed class LearningAIToolsTests
     [Fact]
     public async Task ExplainMyResult_GivesTheRightAnswerOnlyWhenTheReviewPolicyAllows()
     {
-        var setup = await _site.InTenantAsync(SetUpAsync);
+        var setup = await SetUpAsync();
 
         var scoreOnly = await _site.InTenantAsync(services => InvokeAsync(services, setup.LearnerName, LearningAIConstants.Tools.ExplainMyResult, ("quiz", setup.ScoreOnlyQuizId)));
         var reviewed = await _site.InTenantAsync(services => InvokeAsync(services, setup.LearnerName, LearningAIConstants.Tools.ExplainMyResult, ("quiz", setup.ReviewedQuizId)));
@@ -98,7 +98,7 @@ public sealed class LearningAIToolsTests
     [Fact]
     public async Task OverdueAndExpiring_ListOnlyLearnersInTheCallersScope()
     {
-        var setup = await _site.InTenantAsync(SetUpAsync);
+        var setup = await SetUpAsync();
 
         var instructor = await _site.InTenantAsync(services => InvokeAsync(services, "instructor1", LearningAIConstants.Tools.OverdueLearners, ("take", "50")));
         var admin = await _site.InTenantAsync(services => InvokeAsync(services, "admin", LearningAIConstants.Tools.OverdueLearners, ("take", "50")));
@@ -136,7 +136,26 @@ public sealed class LearningAIToolsTests
         return result?.ToString() ?? string.Empty;
     }
 
-    private async Task<ToolsSetup> SetUpAsync(IServiceProvider services)
+    // The courses and quizzes are saved in one scope; the learner then answers each quiz in a scope of its own, as a
+    // request would, so a response never waits on the set-up's open transaction.
+    private async Task<ToolsSetup> SetUpAsync()
+    {
+        var setup = await _site.InTenantAsync(CreateAsync);
+
+        foreach (var quizId in new[] { setup.ScoreOnlyQuizId, setup.ReviewedQuizId })
+        {
+            await _site.InTenantAsync(async services =>
+            {
+                var quiz = await services.GetRequiredService<IContentManager>().GetAsync(quizId, VersionOptions.Published);
+
+                await LearningSurveyTestSupport.AnswerAsync(services, setup.LearnerName, quiz, new Dictionary<string, string> { ["q.fire"] = "w" });
+            });
+        }
+
+        return setup;
+    }
+
+    private async Task<ToolsSetup> CreateAsync(IServiceProvider services)
     {
         var suffix = Guid.NewGuid().ToString("n")[..8];
         var contentManager = services.GetRequiredService<IContentManager>();
@@ -152,37 +171,21 @@ public sealed class LearningAIToolsTests
         var second = await ItemAsync(contentManager, taught, LearningConstants.ContentTypes.PageLesson, "Second lesson " + suffix, null);
         var untaughtLesson = await ItemAsync(contentManager, untaught, LearningConstants.ContentTypes.PageLesson, "Other lesson " + suffix, null);
 
-        var question = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.SingleChoiceQuestion);
-        question.DisplayText = "Electrical fires " + suffix;
-        question.Alter<TitlePart>(part => part.Title = question.DisplayText);
-        question.Alter<QuestionPart>(part =>
-        {
-            part.Prompt = "<p>Which extinguisher for electrical fires?</p>";
-            part.Points = 1;
-        });
-        question.Alter<ChoiceQuestionPart>(part =>
-        {
-            part.ShuffleOptions = false;
-            part.Options =
-            [
-                new ChoiceOption { Id = "w", Text = "Water" },
-                new ChoiceOption { Id = "c", Text = RightAnswer, Correct = true },
-            ];
-        });
-        await contentManager.CreateAsync(question, VersionOptions.Published);
+        var scoreOnly = await ItemAsync(contentManager, taught, AssessmentsConstants.ContentTypes.Quiz, "Score only quiz " + suffix, quiz => quiz.Alter<QuizPart>(_ => { }));
+        var reviewed = await ItemAsync(contentManager, taught, AssessmentsConstants.ContentTypes.Quiz, "Reviewed quiz " + suffix, quiz => quiz.Alter<QuizPart>(_ => { }));
 
-        var scoreOnly = await ItemAsync(contentManager, taught, AssessmentsConstants.ContentTypes.Quiz, "Score only quiz " + suffix, quiz => quiz.Alter<QuizPart>(part =>
+        foreach (var (quiz, shows) in new[] { (scoreOnly, ReviewShows.Score), (reviewed, ReviewShows.All) })
         {
-            part.QuestionIds = [question.ContentItemId];
-            part.MaxAttempts = null;
-            part.ReviewPolicy = ReviewPolicy.ScoreOnly;
-        }));
-        var reviewed = await ItemAsync(contentManager, taught, AssessmentsConstants.ContentTypes.Quiz, "Reviewed quiz " + suffix, quiz => quiz.Alter<QuizPart>(part =>
-        {
-            part.QuestionIds = [question.ContentItemId];
-            part.MaxAttempts = null;
-            part.ReviewPolicy = ReviewPolicy.AfterGraded;
-        }));
+            var definition = LearningSurveyTestSupport.Definition(
+                quiz.DisplayText,
+                LearningSurveyTestSupport.SingleChoice("fire", "Which extinguisher for electrical fires?", ("w", "Water"), ("c", RightAnswer)));
+            definition.Pages[0].Questions[0].Scoring = new SurveyQuestionScoring { Points = 1, CorrectChoiceIds = ["c"] };
+            definition.Scoring.Enabled = true;
+            definition.Review.ImmediatelyAfter = shows;
+            definition.Review.LaterWhileOpen = shows;
+            definition.Review.AfterClose = shows;
+            await LearningSurveyTestSupport.PublishAsync(services, LearningSurveyTestSupport.SurveyIdOf(quiz), definition);
+        }
 
         await OutlineAsync(contentManager, taught, first, second, scoreOnly, reviewed);
         await OutlineAsync(contentManager, untaught, untaughtLesson);
@@ -203,22 +206,6 @@ public sealed class LearningAIToolsTests
             });
 
             Assert.True(result.Succeeded, result.ErrorCode);
-        }
-
-        var userManager = services.GetRequiredService<UserManager<IUser>>();
-        var principal = await services.GetRequiredService<IUserClaimsPrincipalFactory<IUser>>().CreateAsync(await userManager.FindByNameAsync(learnerName));
-        var attempts = services.GetRequiredService<IAssessmentAttemptService>();
-
-        foreach (var quizId in new[] { scoreOnly.ContentItemId, reviewed.ContentItemId })
-        {
-            var started = await attempts.StartAsync(new StartAttemptRequest { UserId = learnerId, User = principal, QuizId = quizId, HonorConfirmed = true });
-
-            Assert.True(started.Succeeded, started.ErrorCode);
-
-            await attempts.SaveResponseAsync(started.Attempt.ItemId, learnerId, 0, new AttemptResponse { ChoiceIds = ["w"] });
-            var submitted = await attempts.SubmitAsync(started.Attempt.ItemId, learnerId);
-
-            Assert.True(submitted.Succeeded, submitted.ErrorCode);
         }
 
         return new ToolsSetup(suffix, learnerName, otherName, taught.ContentItemId, taught.DisplayText, scoreOnly.ContentItemId, reviewed.ContentItemId);

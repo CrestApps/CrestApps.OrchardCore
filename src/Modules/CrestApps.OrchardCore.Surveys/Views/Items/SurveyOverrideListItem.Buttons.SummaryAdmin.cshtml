@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model ShapeViewModel<SurveyOverrideListItem>
+
+<form asp-action="Revoke" asp-controller="SurveyOverrides" asp-route-surveyId="@Model.Value.Override.SurveyId" asp-route-overrideId="@Model.Value.Override.ItemId" method="post" class="d-inline">
+    <button type="submit" class="btn btn-danger btn-sm" data-url-af="RemoveUrl" data-title="@T["Revoke"]" data-message="@T["Are you sure you want to revoke this accommodation?"]">@T["Revoke"]</button>
+</form>

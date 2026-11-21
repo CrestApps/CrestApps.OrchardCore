@@ -1,0 +1,12 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyMessageViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyRunnerMessage" title="@Html.Raw(Html.Encode(Model.Title))">
+        <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="survey-message">
+    <h1 class="h3 mb-3">@Model.Title</h1>
+    <div class="alert alert-info" role="status">@Model.Message</div>
+</div>

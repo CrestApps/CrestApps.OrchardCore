@@ -1,0 +1,64 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyQuestionRespondViewModel
+
+@{
+    var question = Model.Question;
+    var hintId = (CrestApps.OrchardCore.Surveys.SurveysConstants.AnswerPrefix + "." + question.Id).Replace('.', '-') + "-hint";
+    var css = "survey-question mb-4" + (Model.Errors.Count > 0 ? " has-errors" : string.Empty);
+}
+
+<div class="@css" data-question-id="@question.Id" data-control-type="@question.ControlType" hidden="@Model.Hidden">
+    @if (Model.Answerable)
+    {
+        <div class="survey-question-title fw-semibold mb-1" id="q-@question.Id-title">
+            @if (question.Number is not null)
+            {
+                <span class="survey-question-number">@question.Number.</span>
+            }
+            <span data-survey-text="title:@question.Id">@Html.Raw(question.Title)</span>
+            @if (question.Required)
+            {
+                <span class="text-danger" aria-hidden="true">*</span>
+                <span class="visually-hidden">@T["(required)"]</span>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(question.Description))
+    {
+        <div class="survey-question-description text-muted mb-2" id="@hintId" data-survey-text="description:@question.Id">@Html.Raw(question.Description)</div>
+    }
+
+    @await DisplayAsync(Model.Control)
+
+    @if (Model.Feedback is { } feedback)
+    {
+        <div class="survey-feedback mt-2 small">
+            @if (feedback.Correct is true)
+            {
+                <div class="text-success"><i class="fa-solid fa-check" aria-hidden="true"></i> @T["Correct"]</div>
+            }
+            else if (feedback.Correct is false)
+            {
+                <div class="text-danger"><i class="fa-solid fa-xmark" aria-hidden="true"></i> @T["Incorrect"]</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(feedback.RightAnswer))
+            {
+                <div>@T["Right answer:"] @feedback.RightAnswer</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(feedback.Feedback))
+            {
+                <div>@Html.Raw(feedback.Feedback)</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(feedback.GeneralFeedback))
+            {
+                <div>@Html.Raw(feedback.GeneralFeedback)</div>
+            }
+        </div>
+    }
+
+    @if (Model.CanCheck && Model.Answerable)
+    {
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-survey-check="@question.Id">@T["Check answer"]</button>
+        <div class="survey-check-result mt-2 small" data-survey-check-result="@question.Id" aria-live="polite"></div>
+    }
+</div>

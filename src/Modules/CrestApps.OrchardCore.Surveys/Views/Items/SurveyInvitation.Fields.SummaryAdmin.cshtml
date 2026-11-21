@@ -1,0 +1,12 @@
+@model ShapeViewModel<SurveyInvitation>
+
+@{
+    var invitation = Model.Value;
+    var name = string.IsNullOrWhiteSpace(invitation.DisplayName) ? (invitation.Email ?? invitation.UserId ?? T["Personal link"].Value) : invitation.DisplayName;
+}
+
+<span>@name</span>
+@if (!string.IsNullOrEmpty(invitation.Email) && invitation.Email != name)
+{
+    <div class="admin-list-secondary">@invitation.Email</div>
+}

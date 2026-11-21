@@ -1,0 +1,4 @@
+@model ShapeViewModel<Survey>
+
+<a href="@Url.Content("~/Admin/surveys/" + Model.Value.ItemId + "/ai/summarize")" class="dropdown-item">@T["Summarize answers with AI"]</a>
+<a href="@Url.Content("~/Admin/surveys/" + Model.Value.ItemId + "/ai/translate")" class="dropdown-item">@T["Translate with AI"]</a>

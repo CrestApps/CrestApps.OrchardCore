@@ -1,0 +1,49 @@
+@model SurveyAITranslateViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveysAITranslate" title="@T["Translate with AI"]">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="SurveysDesign" action="Design" controller="SurveyDesigner" area="CrestApps.OrchardCore.Surveys" route-id="@Model.Survey.ItemId">@Model.Survey.Title</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (!Model.ModelAvailable)
+{
+    <div class="alert alert-warning" role="alert">@T["No AI model is set up for this site. Ask your administrator to add an AI deployment."]</div>
+}
+
+@if (Model.Cultures.Count == 0)
+{
+    <div class="alert alert-info" role="alert">@T["The site has only one culture. Add cultures in Configuration, Settings, Localization to translate this survey."]</div>
+}
+else
+{
+    <form method="post" asp-action="Translate" asp-route-id="@Model.Survey.ItemId" class="no-multisubmit">
+        <div class="card mb-3">
+            <div class="card-header">@T["Translation"]</div>
+            <div class="card-body">
+                <div class="ocat-wrapper">
+                    <label asp-for="Culture" class="ocat-label">@T["Translate into"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="Culture" class="form-select" asp-items="Model.Cultures"></select>
+                        <span class="hint">@T["AI translates the draft's texts into this culture. You review the translation on the translations page, then publish the survey."]</span>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <div class="form-check">
+                            <input asp-for="Overwrite" type="checkbox" class="form-check-input" />
+                            <label asp-for="Overwrite" class="form-check-label">@T["Replace existing translations"]</label>
+                            <span class="hint dashed">@T["Leave this off to translate only the texts that have no translation yet."]</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-bar-bottom">
+            <button type="submit" class="btn btn-primary" disabled="@(!Model.ModelAvailable)">@T["Translate"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-controller="Surveys" asp-area="CrestApps.OrchardCore.Surveys">@T["Cancel"]</a>
+        </div>
+    </form>
+}

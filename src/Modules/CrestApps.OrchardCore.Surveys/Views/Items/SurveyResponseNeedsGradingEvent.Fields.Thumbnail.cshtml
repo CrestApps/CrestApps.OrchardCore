@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SurveyResponseNeedsGradingEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-marker" aria-hidden="true"></i>
+    @T["Survey Response Needs Grading"]
+</h4>
+<p>@T["Starts when a completed response has answers a person must grade."]</p>

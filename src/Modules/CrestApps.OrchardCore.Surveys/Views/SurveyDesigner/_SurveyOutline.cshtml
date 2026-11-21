@@ -1,0 +1,94 @@
+@using CrestApps.OrchardCore.Surveys.Controls
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyOutlineViewModel
+
+@{
+    var survey = Model.Survey;
+    var definition = survey.Draft;
+    var questionUrl = Url.Action("Question", "SurveyDesigner", new { area = "CrestApps.OrchardCore.Surveys", id = survey.ItemId, questionId = "__question__" });
+    var pageUrl = Url.Action("Page", "SurveyDesigner", new { area = "CrestApps.OrchardCore.Surveys", id = survey.ItemId, pageId = "__page__" });
+    var commandsUrl = Url.Action("Commands", "SurveyDesigner", new { area = "CrestApps.OrchardCore.Surveys", id = survey.ItemId });
+    var number = 0;
+}
+
+<div data-survey-outline data-commands-url="@commandsUrl" data-question-url="@questionUrl" data-page-url="@pageUrl">
+    @for (var p = 0; p < definition.Pages.Count; p++)
+    {
+        var surveyPage = definition.Pages[p];
+        var pageTitle = string.IsNullOrWhiteSpace(surveyPage.Title) ? T.GetString("Page {0}", p + 1).Value : surveyPage.Title;
+
+        <div class="card mb-2" data-page-id="@surveyPage.Id">
+            <div class="card-header d-flex align-items-center gap-1 py-1">
+                <button type="button" class="btn btn-link p-0 me-auto text-start text-decoration-none" data-survey-edit-page="@surveyPage.Id">
+                    <i class="fa-regular fa-file-lines me-1" aria-hidden="true"></i>@pageTitle
+                    @if (surveyPage.Visibility?.Mode is VisibilityMode.ShowWhen or VisibilityMode.HideWhen)
+                    {
+                        <i class="fa-solid fa-code-branch ms-1 text-body-secondary" title="@T["Shows only when its rule holds"]" aria-hidden="true"></i>
+                    }
+                    @if (surveyPage.Pools.Count > 0)
+                    {
+                        <span class="badge ta-badge fw-normal ms-1" title="@T["Question pools"]"><i class="fa-solid fa-shuffle" aria-hidden="true"></i> @surveyPage.Pools.Count</span>
+                    }
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-survey-open-picker="@surveyPage.Id" title="@T["Add a question to this page"]" aria-label="@T["Add a question to this page"]"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-survey-command="movePage" data-page-id="@surveyPage.Id" data-index="@(p - 1)" disabled="@(p == 0)" title="@T["Move up"]" aria-label="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-survey-command="movePage" data-page-id="@surveyPage.Id" data-index="@(p + 1)" disabled="@(p == definition.Pages.Count - 1)" title="@T["Move down"]" aria-label="@T["Move down"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-survey-command="duplicatePage" data-page-id="@surveyPage.Id" title="@T["Duplicate"]" aria-label="@T["Duplicate"]"><i class="fa-regular fa-copy" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-survey-command="deletePage" data-page-id="@surveyPage.Id" data-confirm="page" disabled="@(definition.Pages.Count == 1)" title="@T["Delete"]" aria-label="@T["Delete"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+            </div>
+            <ul class="list-group list-group-flush" data-survey-question-list data-page-id="@surveyPage.Id">
+                @if (surveyPage.Questions.Count == 0)
+                {
+                    <li class="list-group-item text-body-secondary small" data-survey-empty>@T["No questions yet. Use the plus button to add one."]</li>
+                }
+                @for (var q = 0; q < surveyPage.Questions.Count; q++)
+                {
+                    var question = surveyPage.Questions[q];
+                    Model.Controls.TryGetValue(question.ControlType ?? string.Empty, out var descriptor);
+                    var answerable = descriptor?.Has(SurveyControlCapabilities.Answerable) ?? false;
+
+                    if (answerable)
+                    {
+                        number++;
+                    }
+
+                    <li class="list-group-item d-flex align-items-center gap-1 py-1" draggable="true" data-question-id="@question.Id" data-page-id="@surveyPage.Id" data-index="@q">
+                        <i class="fa-solid fa-grip-vertical text-body-secondary me-1" aria-hidden="true" title="@T["Drag to move"]"></i>
+                        <button type="button" class="btn btn-link p-0 me-auto text-start text-decoration-none text-truncate" data-survey-edit-question="@question.Id">
+                            <i class="@(descriptor?.Icon ?? "fa-solid fa-circle-question") me-1" aria-hidden="true"></i>
+                            @if (answerable)
+                            {
+                                <span class="text-body-secondary">@number.</span>
+                            }
+                            @(string.IsNullOrWhiteSpace(question.Title) ? question.Name : question.Title)
+                        </button>
+                        @if (descriptor is null)
+                        {
+                            <span class="badge text-bg-danger fw-normal" title="@T["This question type is not available."]">@question.ControlType</span>
+                        }
+                        else
+                        {
+                            <span class="badge ta-badge fw-normal d-none d-xl-inline" title="@T["Question type"]">@(Model.ControlNames.TryGetValue(question.ControlType, out var name) ? name : question.ControlType)</span>
+                        }
+                        @if (question.Required)
+                        {
+                            <span class="badge ta-badge fw-normal" title="@T["Required"]">*</span>
+                        }
+                        @if (question.Visibility?.Mode is VisibilityMode.ShowWhen or VisibilityMode.HideWhen)
+                        {
+                            <i class="fa-solid fa-code-branch text-body-secondary" title="@T["Shows only when its rule holds"]" aria-hidden="true"></i>
+                        }
+                        @if (!string.IsNullOrEmpty(question.PoolId))
+                        {
+                            <i class="fa-solid fa-shuffle text-body-secondary" title="@T["In a question pool"]" aria-hidden="true"></i>
+                        }
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-survey-command="move" data-question-id="@question.Id" data-to-page-id="@surveyPage.Id" data-index="@(q - 1)" disabled="@(q == 0)" title="@T["Move up"]" aria-label="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-survey-command="move" data-question-id="@question.Id" data-to-page-id="@surveyPage.Id" data-index="@(q + 1)" disabled="@(q == surveyPage.Questions.Count - 1)" title="@T["Move down"]" aria-label="@T["Move down"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-survey-command="duplicate" data-question-id="@question.Id" title="@T["Duplicate"]" aria-label="@T["Duplicate"]"><i class="fa-regular fa-copy" aria-hidden="true"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-survey-command="delete" data-question-id="@question.Id" data-confirm="question" title="@T["Delete"]" aria-label="@T["Delete"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+</div>

@@ -1,0 +1,51 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.ContactInfo
+
+@{
+    var settings = Model.GetSettings<ContactInfoSettings>();
+}
+<fieldset aria-describedby="@Model.DescribedBy()">
+    <legend class="visually-hidden">@Model.Question.Title</legend>
+    @foreach (var field in settings.Fields)
+    {
+        var key = ContactInfoControlHandler.Key(field.Kind);
+        var id = $"{Model.InputId}-{key}";
+        var label = !string.IsNullOrWhiteSpace(field.Label) ? field.Label : field.Kind switch
+        {
+            ContactInfoFieldKind.Email => T["E-mail"].Value,
+            ContactInfoFieldKind.Phone => T["Phone"].Value,
+            ContactInfoFieldKind.Company => T["Company"].Value,
+            ContactInfoFieldKind.Address => T["Address"].Value,
+            _ => T["Name"].Value,
+        };
+        var (type, autocomplete) = field.Kind switch
+        {
+            ContactInfoFieldKind.Email => ("email", "email"),
+            ContactInfoFieldKind.Phone => ("tel", "tel"),
+            ContactInfoFieldKind.Company => ("text", "organization"),
+            ContactInfoFieldKind.Address => ("text", "street-address"),
+            _ => ("text", "name"),
+        };
+        <div class="mb-2">
+            <label class="form-label" for="@id">@label@(field.Required ? " *" : null)</label>
+            @if (field.Kind == ContactInfoFieldKind.Address)
+            {
+                <textarea class="form-control" id="@id" name="@(Model.Prefix).@key" rows="3" maxlength="1000" autocomplete="@autocomplete" required="@field.Required" readonly="@Model.ReadOnly">@Model.RowValue(key)</textarea>
+            }
+            else
+            {
+                <input type="@type" class="form-control" id="@id" name="@(Model.Prefix).@key" value="@Model.RowValue(key)" maxlength="255" autocomplete="@autocomplete" required="@field.Required" readonly="@Model.ReadOnly" />
+            }
+        </div>
+    }
+</fieldset>
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}

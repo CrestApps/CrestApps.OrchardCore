@@ -1,0 +1,43 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.MySurveyResponsesViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyRunnerMy" title="@T["My surveys"]">
+        <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<h1 class="h3 mb-3">@T["My surveys"]</h1>
+
+@if (Model.Items.Count == 0)
+{
+    <p class="text-muted">@T["You have not responded to any survey yet."]</p>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var (response, survey) in Model.Items)
+        {
+            <div class="list-group-item d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    <div class="fw-semibold">@(survey.Draft?.Title ?? survey.Title)</div>
+                    <div class="small text-muted">
+                        @response.Number &middot; @T["Started"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(response.StartedUtc, DateTimeKind.Utc), Format: "g"))
+                    </div>
+                </div>
+                @if (response.Status == SurveyResponseStatus.InProgress)
+                {
+                    <a class="btn btn-sm btn-primary" href="@Url.Content("~/s/r/" + response.ItemId)">@T["Continue"]</a>
+                }
+                else if (response.Status == SurveyResponseStatus.Completed)
+                {
+                    <span class="badge text-bg-success">@T["Completed"]</span>
+                    <a class="btn btn-sm btn-secondary" href="@Url.Content("~/s/r/" + response.ItemId + "/review")">@T["Review"]</a>
+                }
+                else
+                {
+                    <span class="badge text-bg-light border">@response.Status</span>
+                }
+            </div>
+        }
+    </div>
+}

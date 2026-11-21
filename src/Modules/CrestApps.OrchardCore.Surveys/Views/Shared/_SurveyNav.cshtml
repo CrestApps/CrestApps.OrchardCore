@@ -1,0 +1,44 @@
+@model Survey
+@inject IEnumerable<CrestApps.OrchardCore.Surveys.Services.ISurveyOwnerLinkProvider> OwnerLinkProviders
+@* The links between the pages of one survey. *@
+
+@{
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+
+    string Active(string c, string a)
+        => string.Equals(controller, c, StringComparison.OrdinalIgnoreCase) && (a is null || string.Equals(action, a, StringComparison.OrdinalIgnoreCase)) ? "active" : null;
+
+    // An owned survey (a course item's quiz, say) links back to its owner's page.
+    CrestApps.OrchardCore.Surveys.Services.SurveyOwnerLink ownerLink = null;
+
+    if (Model.Owner is { } owner && !owner.IsEmpty)
+    {
+        foreach (var provider in OwnerLinkProviders)
+        {
+            ownerLink = await provider.GetLinkAsync(owner);
+
+            if (ownerLink is not null)
+            {
+                break;
+            }
+        }
+    }
+}
+
+@if (ownerLink is not null && Url.IsLocalUrl(ownerLink.Url))
+{
+    <p class="mb-2"><a href="@ownerLink.Url"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> @T["Back to {0}", ownerLink.Text]</a></p>
+}
+
+<ul class="nav nav-tabs flex-column flex-md-row mb-3">
+    <li class="nav-item pe-md-2"><a class="nav-link @Active("SurveyDesigner", null)" asp-action="Design" asp-controller="SurveyDesigner" asp-route-id="@Model.ItemId">@T["Design"]</a></li>
+    <li class="nav-item pe-md-2"><a class="nav-link @Active("Surveys", "Logic")" asp-action="Logic" asp-controller="Surveys" asp-route-id="@Model.ItemId">@T["Logic"]</a></li>
+    <li class="nav-item pe-md-2"><a class="nav-link @Active("Surveys", "Access")" asp-action="Access" asp-controller="Surveys" asp-route-id="@Model.ItemId">@T["Access and settings"]</a></li>
+    <li class="nav-item pe-md-2"><a class="nav-link @Active("SurveyCollectors", null)" asp-action="Index" asp-controller="SurveyCollectors" asp-route-id="@Model.ItemId">@T["Collect"]</a></li>
+    <li class="nav-item pe-md-2"><a class="nav-link @Active("SurveyTranslations", null)" asp-action="Index" asp-controller="SurveyTranslations" asp-route-id="@Model.ItemId">@T["Translations"]</a></li>
+    <li class="nav-item pe-md-2"><a class="nav-link @Active("SurveyVersions", null)" asp-action="Index" asp-controller="SurveyVersions" asp-route-id="@Model.ItemId">@T["Versions"]</a></li>
+    <li class="nav-item pe-md-2"><a class="nav-link" href="@Url.Content("~/Admin/surveys/" + Model.ItemId + "/responses")">@T["Responses"]</a></li>
+    <li class="nav-item pe-md-2"><a class="nav-link" href="@(Url.RouteUrl("ReportsDisplay", new { id = "survey-results" }) + "?ReportFilter.SurveyId=" + Uri.EscapeDataString(Model.ItemId))">@T["Results"]</a></li>
+    <li class="nav-item pe-md-2"><a class="nav-link" href="@Url.Content("~/Admin/surveys/" + Model.ItemId + "/overrides")">@T["Accommodations"]</a></li>
+</ul>

@@ -1,0 +1,21 @@
+@model ShapeViewModel<SurveyInvitation>
+
+@{
+    var status = Model.Value.Status switch
+    {
+        SurveyInvitationStatus.Pending => T["Not sent"],
+        SurveyInvitationStatus.Sent => T["Sent"],
+        SurveyInvitationStatus.Opened => T["Opened"],
+        SurveyInvitationStatus.Started => T["Started"],
+        SurveyInvitationStatus.Completed => T["Completed"],
+        SurveyInvitationStatus.Bounced => T["Not delivered"],
+        SurveyInvitationStatus.OptedOut => T["Opted out"],
+        _ => T["Expired"],
+    };
+}
+
+<span class="badge ta-badge fw-normal" title="@T["Status"]"><i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i> @status</span>
+@if (Model.Value.RemindersSent > 0)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Reminders sent"]"><i class="fa-solid fa-bell" aria-hidden="true"></i> @Model.Value.RemindersSent</span>
+}

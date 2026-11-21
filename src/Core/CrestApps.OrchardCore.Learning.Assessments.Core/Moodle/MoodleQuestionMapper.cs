@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
-using CrestApps.OrchardCore.Learning.Assessments.Core.Qti;
+using CrestApps.OrchardCore.Surveys.Core.Qti;
 using CrestApps.OrchardCore.Learning.Core.Moodle;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Core.Moodle;
@@ -88,8 +88,8 @@ public static partial class MoodleQuestionMapper
             "numerical" => Numerical(question, mapped),
             "essay" => Essay(question, mapped),
             "match" => Matching(question, mapped),
-            "ddwtos" => Blanks(question, mapped, AssessmentsConstants.QuestionTypes.DragIntoText),
-            "gapselect" => Blanks(question, mapped, AssessmentsConstants.QuestionTypes.GapSelect),
+            "ddwtos" => Blanks(question, mapped, QtiQuestionTypes.DragIntoText),
+            "gapselect" => Blanks(question, mapped, QtiQuestionTypes.GapSelect),
             "description" => Description(mapped),
             _ => (MoodleQuestionRefusals.UnsupportedType, question.Type),
         };
@@ -122,14 +122,15 @@ public static partial class MoodleQuestionMapper
         // No answer worth points: Moodle's way of asking an opinion. Every answer is accepted.
         if (best <= 0)
         {
-            mapped.QuestionType = AssessmentsConstants.QuestionTypes.Survey;
+            mapped.QuestionType = single ? QtiQuestionTypes.SingleChoice : QtiQuestionTypes.MultipleChoice;
             mapped.Multiple = !single;
+            mapped.Points = 0;
             mapped.Options = [.. question.Answers.Select(answer => new QtiOption { Identifier = answer.Id, Text = Plain(answer.Text) })];
 
             return default;
         }
 
-        mapped.QuestionType = single ? AssessmentsConstants.QuestionTypes.SingleChoice : AssessmentsConstants.QuestionTypes.MultipleChoice;
+        mapped.QuestionType = single ? QtiQuestionTypes.SingleChoice : QtiQuestionTypes.MultipleChoice;
         mapped.Shuffle = question.Option("shuffleanswers") == "1";
 
         foreach (var answer in question.Answers)
@@ -158,7 +159,7 @@ public static partial class MoodleQuestionMapper
             return (MoodleQuestionRefusals.NoRightAnswer, null);
         }
 
-        mapped.QuestionType = AssessmentsConstants.QuestionTypes.TrueFalse;
+        mapped.QuestionType = QtiQuestionTypes.TrueFalse;
         mapped.TrueFalseAnswer = question.Option("trueanswer") is { } trueAnswer
             ? right.Id == trueAnswer
             : string.Equals(Plain(right.Text), "True", StringComparison.OrdinalIgnoreCase);
@@ -181,7 +182,7 @@ public static partial class MoodleQuestionMapper
             return (MoodleQuestionRefusals.UnsupportedAnswer, wildcard);
         }
 
-        mapped.QuestionType = AssessmentsConstants.QuestionTypes.ShortText;
+        mapped.QuestionType = QtiQuestionTypes.ShortText;
         mapped.AcceptedAnswers = accepted;
         mapped.CaseSensitive = question.Option("usecase") == "1";
 
@@ -202,7 +203,7 @@ public static partial class MoodleQuestionMapper
             return (MoodleQuestionRefusals.UnsupportedAnswer, Plain(right.Text));
         }
 
-        mapped.QuestionType = AssessmentsConstants.QuestionTypes.Numeric;
+        mapped.QuestionType = QtiQuestionTypes.Numeric;
         mapped.NumericAnswer = value;
         mapped.Tolerance = right.Id is not null && question.Tolerances.TryGetValue(right.Id, out var tolerance) ? Math.Abs(tolerance) : 0;
 
@@ -211,7 +212,7 @@ public static partial class MoodleQuestionMapper
 
     private static (string Code, string Detail) Essay(MoodleQuestion question, QtiQuestion mapped)
     {
-        mapped.QuestionType = AssessmentsConstants.QuestionTypes.Essay;
+        mapped.QuestionType = QtiQuestionTypes.Essay;
         mapped.GraderGuidance = string.IsNullOrWhiteSpace(question.Option("graderinfo")) ? null : Plain(question.Option("graderinfo"));
 
         return default;
@@ -234,7 +235,7 @@ public static partial class MoodleQuestionMapper
             return (MoodleQuestionRefusals.MarkupInAnswer, null);
         }
 
-        mapped.QuestionType = AssessmentsConstants.QuestionTypes.Matching;
+        mapped.QuestionType = QtiQuestionTypes.Matching;
         mapped.Pairs = [.. question.Matches.Select(match => (Plain(match.Question), Plain(match.Answer)))];
         mapped.PartialCredit = true;
 
@@ -244,7 +245,7 @@ public static partial class MoodleQuestionMapper
     // A description has nothing to answer and is worth no points; its text is the prompt.
     private static (string Code, string Detail) Description(QtiQuestion mapped)
     {
-        mapped.QuestionType = AssessmentsConstants.QuestionTypes.Description;
+        mapped.QuestionType = QtiQuestionTypes.Description;
         mapped.Points = 0;
 
         return default;

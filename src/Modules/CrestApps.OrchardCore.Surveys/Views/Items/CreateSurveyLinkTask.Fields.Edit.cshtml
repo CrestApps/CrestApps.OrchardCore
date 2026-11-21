@@ -1,0 +1,45 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+
+@model SurveyTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="SurveyId" class="form-label">@T["Survey id"]</label>
+    <input asp-for="SurveyId" class="form-control code" />
+    <span class="hint">@T["The id of the survey, a Liquid expression such as Workflow.Input.SurveyId between double braces."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="UserId" class="form-label">@T["User id"]</label>
+    <input asp-for="UserId" class="form-control code" />
+    <span class="hint">@T["The id of the user. Supports Liquid."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Email" class="form-label">@T["E-mail"]</label>
+    <input asp-for="Email" class="form-control code" />
+    <span class="hint">@T["The e-mail address. Supports Liquid."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ContextKind" class="form-label">@T["Context kind"]</label>
+    <input asp-for="ContextKind" class="form-control code" />
+    <span class="hint">@T["The kind of record the response will belong to, such as Ticket. Supports Liquid."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ContextId" class="form-label">@T["Context id"]</label>
+    <input asp-for="ContextId" class="form-control code" />
+    <span class="hint">@T["The id of the record the response will belong to. Supports Liquid."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ExpiresInDays" class="form-label">@T["Expires in days"]</label>
+    <input asp-for="ExpiresInDays" class="form-control code" />
+    <span class="hint">@T["In how many days the link expires. Leave it empty for a link that does not expire."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="OutputName" class="form-label">@T["Output name"]</label>
+    <input asp-for="OutputName" class="form-control code" />
+    <span class="hint">@T["The workflow output that holds the result."]</span>
+</div>

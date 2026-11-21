@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SurveyResponseNeedsGradingEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-marker" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Survey Response Needs Grading"])
+    </h4>
+</header>

@@ -54,6 +54,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Staff.Abstractions/CrestApps.OrchardCore.Staff.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.ServiceLevels.Abstractions/CrestApps.OrchardCore.ServiceLevels.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Attachments.Abstractions/CrestApps.OrchardCore.Attachments.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Surveys.Abstractions/CrestApps.OrchardCore.Surveys.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Timeline.Abstractions/CrestApps.OrchardCore.Timeline.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Tickets.Abstractions/CrestApps.OrchardCore.Tickets.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Teams.Abstractions/CrestApps.OrchardCore.Teams.Abstractions.csproj" />
@@ -118,6 +119,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Learning.Programs.Core/CrestApps.OrchardCore.Learning.Programs.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Learning.Commerce.Core/CrestApps.OrchardCore.Learning.Commerce.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Payroll.Core/CrestApps.OrchardCore.Payroll.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Surveys.Core/CrestApps.OrchardCore.Surveys.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Webhooks.Core/CrestApps.OrchardCore.Webhooks.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.ContentTransfer.Core/CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
@@ -198,6 +200,8 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.OrTools/CrestApps.OrchardCore.OrTools.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Outreach/CrestApps.OrchardCore.Outreach.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Payroll/CrestApps.OrchardCore.Payroll.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Surveys/CrestApps.OrchardCore.Surveys.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Surveys.AI/CrestApps.OrchardCore.Surveys.AI.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.TimeTracker/CrestApps.OrchardCore.TimeTracker.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.WorkOrders/CrestApps.OrchardCore.WorkOrders.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" />
@@ -353,6 +357,7 @@
     <Project Path="tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.Commerce.IntegrationTests/CrestApps.OrchardCore.Commerce.IntegrationTests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.Learning.IntegrationTests/CrestApps.OrchardCore.Learning.IntegrationTests.csproj" />
+    <Project Path="tests/CrestApps.OrchardCore.Surveys.IntegrationTests/CrestApps.OrchardCore.Surveys.IntegrationTests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.Telephony.PlaywrightTests/CrestApps.OrchardCore.Telephony.PlaywrightTests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj" />

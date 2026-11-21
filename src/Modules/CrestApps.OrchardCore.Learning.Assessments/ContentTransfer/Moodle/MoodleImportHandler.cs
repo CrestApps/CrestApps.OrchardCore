@@ -1,26 +1,27 @@
-using System.Data;
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json.Nodes;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Models;
 using CrestApps.OrchardCore.ContentTransfer.Services;
-using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer.Qti;
-using CrestApps.OrchardCore.Learning.Assessments.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Moodle;
-using CrestApps.OrchardCore.Learning.Assessments.Core.Qti;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Core.Moodle;
 using CrestApps.OrchardCore.Learning.Core.Services;
+using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Coursework.Models;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Packages.Core.Services;
 using CrestApps.OrchardCore.Learning.Packages.Models;
 using CrestApps.OrchardCore.Learning.Services;
-using CrestApps.OrchardCore.Learning.Surveys;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
+using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Core.Qti;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -37,7 +38,6 @@ using OrchardCore.Infrastructure.Html;
 using OrchardCore.Lists.Models;
 using OrchardCore.Media;
 using OrchardCore.Modules;
-using OrchardCore.Title.Models;
 using OrchardCore.Users;
 using YesSql;
 using YesSql.Services;
@@ -74,7 +74,11 @@ internal sealed class MoodleImportHandler : IContentImportHandler
     private readonly IHtmlSanitizerService _htmlSanitizer;
     private readonly IMediaFileStore _mediaFileStore;
     private readonly MediaOptions _mediaOptions;
-    private readonly QuestionTypeOptions _questionTypes;
+    private readonly ILearningSurveyService _learningSurveys;
+    private readonly ISurveyManager _surveyManager;
+    private readonly ISurveyPublisher _publisher;
+    private readonly IQuestionBankManager _bankManager;
+    private readonly INamedCatalog<QuestionBank> _bankCatalog;
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly Dictionary<string, string> _banks = new(StringComparer.Ordinal);
@@ -92,7 +96,11 @@ internal sealed class MoodleImportHandler : IContentImportHandler
         IHtmlSanitizerService htmlSanitizer,
         IMediaFileStore mediaFileStore,
         IOptions<MediaOptions> mediaOptions,
-        IOptions<QuestionTypeOptions> questionTypes,
+        ILearningSurveyService learningSurveys,
+        ISurveyManager surveyManager,
+        ISurveyPublisher publisher,
+        IQuestionBankManager bankManager,
+        INamedCatalog<QuestionBank> bankCatalog,
         IClock clock,
         ILogger<MoodleImportHandler> logger,
         IStringLocalizer<MoodleImportHandler> stringLocalizer)
@@ -107,7 +115,11 @@ internal sealed class MoodleImportHandler : IContentImportHandler
         _htmlSanitizer = htmlSanitizer;
         _mediaFileStore = mediaFileStore;
         _mediaOptions = mediaOptions.Value;
-        _questionTypes = questionTypes.Value;
+        _learningSurveys = learningSurveys;
+        _surveyManager = surveyManager;
+        _publisher = publisher;
+        _bankManager = bankManager;
+        _bankCatalog = bankCatalog;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
@@ -636,7 +648,8 @@ internal sealed class MoodleImportHandler : IContentImportHandler
         return true;
     }
 
-    // A feedback or a choice is a survey of the Learning Surveys module; it completes when the learner answers.
+    // A feedback or a choice is a course survey: its questions go to the survey the item owns; it completes when the
+    // learner answers.
     private async Task<bool> ImportSurveyAsync(ContentImportContext context, MoodleBackup backup, MoodleActivity activity, MoodleSurvey survey, bool withBody)
     {
         if (survey.Questions.Count == 0 || survey.Questions.Any(question => question.Kind != MoodleSurveyQuestionKind.Text && question.Options.Count == 0))
@@ -645,34 +658,69 @@ internal sealed class MoodleImportHandler : IContentImportHandler
         }
 
         var item = context.ContentItem;
-
-        item.Alter<SurveyPart>(part =>
+        var page = new SurveyPage
         {
-            part.Questions = [.. survey.Questions.Take(SurveysConstants.MaxQuestions).Select((question, index) => new SurveyQuestion
+            Id = "moodle-page",
+            Name = "page_1",
+        };
+
+        for (var index = 0; index < survey.Questions.Count; index++)
+        {
+            var question = survey.Questions[index];
+            var number = (index + 1).ToString(CultureInfo.InvariantCulture);
+
+            // Stable ids, so importing the backup again keeps the answers given.
+            var mapped = new SurveyQuestion
             {
-                // Stable ids, so importing the backup again keeps the answers given.
-                Id = "moodle-" + (index + 1).ToString(CultureInfo.InvariantCulture),
-                Text = Shorten(question.Text, 500),
-                Type = question.Kind switch
-                {
-                    MoodleSurveyQuestionKind.MultipleChoice => SurveyQuestionType.MultipleChoice,
-                    MoodleSurveyQuestionKind.Text => SurveyQuestionType.Text,
-                    _ => SurveyQuestionType.SingleChoice,
-                },
-                Options = [.. question.Options.Take(SurveysConstants.MaxOptions).Select(option => Shorten(option, 200))],
+                Id = "moodle-q" + number,
+                Name = "q_" + number,
+                Title = Shorten(question.Text, 500),
                 Required = question.Required,
-            })];
-            part.Anonymous = survey.Anonymous;
-            part.AllowChangeAnswer = survey.AllowChangeAnswer;
-            part.CloseUtc = survey.CloseUtc;
-            part.ResultsVisibility = survey.Results switch
-            {
-                MoodleSurveyResults.AfterAnswer => SurveyResultsVisibility.AfterAnswer,
-                MoodleSurveyResults.AfterClose => SurveyResultsVisibility.AfterClose,
-                MoodleSurveyResults.Always => SurveyResultsVisibility.Always,
-                _ => SurveyResultsVisibility.Never,
+                ControlType = question.Kind switch
+                {
+                    MoodleSurveyQuestionKind.MultipleChoice => SurveyControlNames.MultipleChoice,
+                    MoodleSurveyQuestionKind.Text => SurveyControlNames.LongText,
+                    _ => SurveyControlNames.SingleChoice,
+                },
             };
-        });
+
+            if (question.Kind != MoodleSurveyQuestionKind.Text)
+            {
+                mapped.Choices = [.. question.Options.Select((option, position) => new SurveyChoice
+                {
+                    Id = "moodle-q" + number + "-c" + (position + 1).ToString(CultureInfo.InvariantCulture),
+                    Value = (position + 1).ToString(CultureInfo.InvariantCulture),
+                    Text = Shorten(option, 200),
+                })];
+            }
+
+            page.Questions.Add(mapped);
+        }
+
+        var target = await OwnedSurveyAsync(item, SurveyKinds.Survey, () => item.TryGet<CourseSurveyPart>(out var part) ? part.SurveyId : null, id => item.Alter<CourseSurveyPart>(part => part.SurveyId = id));
+        var definition = target.Draft ?? new SurveyDefinition();
+
+        definition.Title = item.DisplayText;
+        definition.Pages = [page];
+        definition.Navigation.AllowEditAfterSubmit = survey.AllowChangeAnswer;
+        definition.Review.ResultsVisibility = survey.Results switch
+        {
+            MoodleSurveyResults.AfterAnswer => ResultsVisibility.AfterAnswer,
+            MoodleSurveyResults.AfterClose => ResultsVisibility.AfterClose,
+            MoodleSurveyResults.Always => ResultsVisibility.Always,
+            _ => ResultsVisibility.Never,
+        };
+
+        target.Access.Anonymity = survey.Anonymous ? AnonymityMode.Anonymous : AnonymityMode.Identified;
+        target.Access.Audience = SurveyAudienceMode.SignedIn;
+        target.Access.ClosesUtc = survey.CloseUtc;
+        target.Access.Limits.Total = 1;
+        target.Access.Limits.Uniqueness = UniquenessMode.SignedInUser;
+
+        if (!await SaveSurveyAsync(context, target, definition, activity))
+        {
+            return false;
+        }
 
         ApplyItem(item, backup, activity, CompletionModes.Submitted, null);
 
@@ -684,34 +732,29 @@ internal sealed class MoodleImportHandler : IContentImportHandler
         return true;
     }
 
+    // A quiz is a scored survey: the fixed questions in slot order, and a pool for each random slot that draws from the
+    // question bank of its category.
     private async Task<bool> ImportQuizAsync(ContentImportContext context, MoodleBackup backup, MoodleActivity activity)
     {
-        var questionIds = new List<string>();
-        var publish = context.Entry?.GetOrCreate<ImportContentOptionsPart>().PublishImportedContent ?? false;
+        var page = new SurveyPage
+        {
+            Id = "moodle-page",
+            Name = "page_1",
+        };
 
-        // The fixed questions, in slot order.
         foreach (var slot in activity.Slots.Where(slot => !string.IsNullOrEmpty(slot.BankEntryId)))
         {
-            if (backup.FindQuestion(slot.BankEntryId) is not { } question)
+            if (backup.FindQuestion(slot.BankEntryId) is not { } question || MapQuestion(backup, question) is not { } mapped)
             {
                 continue;
             }
 
-            var (id, error) = await ImportQuestionAsync(context, backup, question, publish);
-
-            if (error is not null)
+            if (page.Questions.All(existing => existing.Id != mapped.Id))
             {
-                return Fail(context, error);
-            }
-
-            if (id is not null && !questionIds.Contains(id, StringComparer.Ordinal))
-            {
-                questionIds.Add(id);
+                mapped.Name = "q_" + (page.Questions.Count + 1).ToString(CultureInfo.InvariantCulture);
+                page.Questions.Add(mapped);
             }
         }
-
-        // A random slot draws from its category's bank, which gets every question of the category.
-        var draws = new List<QuizDrawRule>();
 
         foreach (var group in activity.Slots.Where(slot => !string.IsNullOrEmpty(slot.RandomCategoryId)).GroupBy(slot => slot.RandomCategoryId, StringComparer.Ordinal))
         {
@@ -720,49 +763,64 @@ internal sealed class MoodleImportHandler : IContentImportHandler
                 continue;
             }
 
-            foreach (var question in category.Questions)
-            {
-                var (_, error) = await ImportQuestionAsync(context, backup, question, publish);
+            var bankId = await BankAsync(backup, category);
 
-                if (error is not null)
-                {
-                    return Fail(context, error);
-                }
+            if (bankId is null)
+            {
+                return Fail(context, S["The question bank of \"{0}\" could not be saved.", category.Name]);
             }
 
-            draws.Add(new QuizDrawRule
+            var number = (page.Pools.Count + 1).ToString(CultureInfo.InvariantCulture);
+
+            page.Pools.Add(new QuestionPool
             {
-                BankId = await BankAsync(context, backup, category),
-                Count = group.Count(),
+                Id = "moodle-pool-" + group.Key,
+                Name = "pool_" + number,
+                Title = category.Name,
+                DrawCount = group.Count(),
+                BankDraws = [new BankDraw { BankId = bankId }],
             });
         }
 
         var item = context.ContentItem;
+        var target = await OwnedSurveyAsync(item, SurveyKinds.Quiz, () => item.TryGet<QuizPart>(out var part) ? part.SurveyId : null, id => item.Alter<QuizPart>(part => part.SurveyId = id));
+        var definition = target.Draft ?? new SurveyDefinition();
 
-        item.Alter<QuizPart>(part =>
+        definition.Title = item.DisplayText;
+        definition.Pages = [page];
+        definition.Scoring.Enabled = true;
+        definition.Scoring.PassMarkPercent = MoodleCompletion.QuizPassMark(activity);
+        definition.Scoring.FeedbackMode = MoodleQuizSettings.FeedbackMode(activity);
+        definition.Timing.TimeLimitMinutes = Integer(activity.Get("timelimit")) is { } seconds && seconds > 0 ? (int)Math.Ceiling(seconds / 60d) : null;
+        definition.Navigation.Sequential = activity.Get("navmethod") == "sequential";
+        definition.Navigation.AllowBack = !definition.Navigation.Sequential;
+        definition.Presentation.QuestionsPerPage = MoodleQuizSettings.QuestionsPerPage(activity);
+
+        if (MoodleQuizSettings.HasReviewOptions(activity))
         {
-            part.QuestionIds = questionIds;
-            part.DrawRules = draws;
-            part.TimeLimitMinutes = Integer(activity.Get("timelimit")) is { } seconds && seconds > 0 ? (int)Math.Ceiling(seconds / 60d) : null;
-            part.MaxAttempts = Integer(activity.Get("attempts_number")) is { } attempts && attempts > 0 ? (int)attempts : null;
-            part.GradingMethod = activity.Get("grademethod") switch
-            {
-                "2" => GradingMethod.Average,
-                "3" => GradingMethod.First,
-                "4" => GradingMethod.Latest,
-                _ => GradingMethod.Highest,
-            };
-            part.Navigation = activity.Get("navmethod") == "sequential" ? QuizNavigation.Sequential : QuizNavigation.Free;
-            part.OpensUtc = Time(activity.Get("timeopen"));
-            part.ClosesUtc = Time(activity.Get("timeclose"));
-            part.PassMark = MoodleCompletion.QuizPassMark(activity);
-            part.QuestionsPerPage = MoodleQuizSettings.QuestionsPerPage(activity);
-            part.FeedbackMode = MoodleQuizSettings.FeedbackMode(activity);
+            var review = MoodleQuizSettings.ReviewOptions(activity);
 
-            if (MoodleQuizSettings.HasReviewOptions(activity))
-            {
-                part.ReviewOptions = MoodleQuizSettings.ReviewOptions(activity);
-            }
+            review.ResultsVisibility = definition.Review.ResultsVisibility;
+            definition.Review = review;
+        }
+
+        target.Access.Audience = SurveyAudienceMode.SignedIn;
+        target.Access.OpensUtc = Time(activity.Get("timeopen"));
+        target.Access.ClosesUtc = Time(activity.Get("timeclose"));
+        target.Access.Limits.Total = Integer(activity.Get("attempts_number")) is { } attempts && attempts > 0 ? (int)attempts : null;
+        target.Access.Limits.Uniqueness = UniquenessMode.SignedInUser;
+
+        if (!await SaveSurveyAsync(context, target, definition, activity))
+        {
+            return false;
+        }
+
+        item.Alter<QuizPart>(part => part.GradingMethod = activity.Get("grademethod") switch
+        {
+            "2" => GradingMethod.Average,
+            "3" => GradingMethod.First,
+            "4" => GradingMethod.Latest,
+            _ => GradingMethod.Highest,
         });
 
         var mode = MoodleCompletion.ForQuiz(activity);
@@ -772,110 +830,72 @@ internal sealed class MoodleImportHandler : IContentImportHandler
         return true;
     }
 
-    // A question is imported through the question columns of the QTI import, so it is checked and stored as a QTI item
-    // is; one imported before (by its source identifier) is updated where it is.
-    private async Task<(string Id, string Error)> ImportQuestionAsync(ContentImportContext context, MoodleBackup backup, MoodleQuestion question, bool publish)
+    // A Moodle question as a survey question, through the QTI mapping the question bank import uses; its id comes from
+    // its source, so importing the backup again keeps the answers given. Questions the import cannot keep are reported
+    // by the row writer.
+    private static SurveyQuestion MapQuestion(MoodleBackup backup, MoodleQuestion question)
     {
-        var mapping = MoodleQuestionMapper.Map(question, backup.QuestionSource(question.BankEntryId), backup.Name + "/questions.xml");
+        var source = backup.QuestionSource(question.BankEntryId);
+        var mapping = MoodleQuestionMapper.Map(question, source, backup.Name + "/questions.xml");
 
-        if (mapping.Refusal is not null)
+        if (mapping.Refusal is not null || mapping.Item?.Question is null)
         {
-            return (null, null);
+            return null;
         }
 
-        var values = QtiQuestionRows.Write(new QtiReadResult { Items = [mapping.Item] }, _questionTypes, S)[0];
-        var columns = QtiQuestionRows.Columns;
-        var contentType = values[IndexOf(columns, ContentTransferColumns.ContentType)];
+        var mapped = QtiQuestionMapper.Map(mapping.Item)?.Question;
 
-        if (string.IsNullOrEmpty(contentType) || !string.IsNullOrEmpty(values[IndexOf(columns, QtiColumns.Error)]))
+        if (mapped is not null)
         {
-            return (null, null);
+            mapped.Id = StableId(source);
         }
 
-        var identifier = QuestionSourceIndexProvider.Truncate(mapping.Item.Identifier);
-        var existingId = (await _session.QueryIndex<QuestionSourceIndex>(index => index.SourceIdentifier == identifier).FirstOrDefaultAsync())?.ContentItemId;
-        var item = existingId is null ? null : await _contentManager.GetAsync(existingId, VersionOptions.DraftRequired);
-        var isNew = item is null || item.ContentType != contentType;
-
-        if (isNew)
-        {
-            item = await _contentManager.NewAsync(contentType);
-
-            var category = backup.QuestionCategories.FirstOrDefault(candidate => candidate.Id == question.CategoryId);
-            var bankId = category is null ? null : await BankAsync(context, backup, category);
-
-            item.Alter<ContainedPart>(part =>
-            {
-                part.ListContentItemId = bankId;
-                part.ListContentType = AssessmentsConstants.ContentTypes.QuestionBank;
-            });
-        }
-
-        using var table = new DataTable();
-
-        foreach (var column in columns)
-        {
-            table.Columns.Add(column);
-        }
-
-        var row = table.NewRow();
-
-        for (var i = 0; i < columns.Count; i++)
-        {
-            row[i] = (object)values[i] ?? DBNull.Value;
-        }
-
-        table.Rows.Add(row);
-
-        var nested = new ContentImportContext
-        {
-            ContentItem = item,
-            ContentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentType),
-            Entry = context.Entry,
-            Columns = table.Columns,
-            Row = row,
-        };
-
-        await _services.GetRequiredService<IContentImportManager>().ImportAsync(nested);
-
-        if (nested.Errors.Count > 0)
-        {
-            return (null, S["The question \"{0}\" was not imported: {1}", question.Name, string.Join(" ", nested.Errors)]);
-        }
-
-        var validation = await _contentManager.ValidateAsync(item);
-
-        if (!validation.Succeeded)
-        {
-            return (null, S["The question \"{0}\" was not imported: {1}", question.Name, string.Join(" ", validation.Errors.Select(error => error.ErrorMessage))]);
-        }
-
-        item.Owner = context.Entry?.Owner;
-        item.Author = context.Entry?.Author;
-
-        if (isNew)
-        {
-            await _contentManager.CreateAsync(item, VersionOptions.DraftRequired);
-        }
-        else
-        {
-            await _contentManager.UpdateAsync(item);
-        }
-
-        if (publish)
-        {
-            await _contentManager.PublishAsync(item);
-        }
-        else if (!isNew)
-        {
-            await _contentManager.SaveDraftAsync(item);
-        }
-
-        return (item.ContentItemId, null);
+        return mapped;
     }
 
-    // The bank of a question category: the bank its questions went to before, a bank of the same title, or a new one.
-    private async Task<string> BankAsync(ContentImportContext context, MoodleBackup backup, MoodleQuestionCategory category)
+    // The survey the item owns, created when the item has none yet.
+    private async Task<Survey> OwnedSurveyAsync(ContentItem item, string kind, Func<string> readId, Action<string> writeId)
+    {
+        var surveyId = readId();
+        var survey = string.IsNullOrEmpty(surveyId) ? null : await _surveyManager.FindByIdAsync(surveyId);
+
+        if (survey is null)
+        {
+            survey = await _learningSurveys.CreateOwnedSurveyAsync(item, kind, null);
+            writeId(survey.ItemId);
+        }
+
+        return survey;
+    }
+
+    // Saves the draft and the access settings of an imported survey, and publishes it when the import publishes.
+    private async Task<bool> SaveSurveyAsync(ContentImportContext context, Survey survey, SurveyDefinition definition, MoodleActivity activity)
+    {
+        var saved = await _surveyManager.SaveDraftAsync(survey, definition);
+
+        if (saved != SurveyErrorCode.None)
+        {
+            return Fail(context, S["The questions of \"{0}\" could not be saved.", activity.Name]);
+        }
+
+        await _surveyManager.UpdateAsync(survey);
+
+        if (context.Entry?.GetOrCreate<ImportContentOptionsPart>().PublishImportedContent == true)
+        {
+            var published = await _publisher.PublishAsync(survey.ItemId, S["Imported from Moodle"], context.Entry?.Owner);
+
+            if (!published.Succeeded)
+            {
+                return Fail(context, S["The questions of \"{0}\" were saved but could not be published: {1}", activity.Name, string.Join(" ", published.Messages.Where(message => message.IsError).Select(message => message.Message))]);
+            }
+        }
+
+        return true;
+    }
+
+    // The question bank of a question category, holding every question of the category (matched by source, so a later
+    // import updates them).
+    private async Task<string> BankAsync(MoodleBackup backup, MoodleQuestionCategory category)
     {
         var key = backup.SiteKey + ":" + category.Id;
 
@@ -884,33 +904,44 @@ internal sealed class MoodleImportHandler : IContentImportHandler
             return cached;
         }
 
-        var sources = category.Questions.Select(question => QuestionSourceIndexProvider.Truncate(backup.QuestionSource(question.BankEntryId))).ToArray();
+        var name = "moodle-" + StableId(key).ToLowerInvariant();
+        var bank = await _bankCatalog.FindByNameAsync(name);
 
-        if (sources.Length > 0 &&
-            await _session.QueryIndex<QuestionSourceIndex>(index => index.SourceIdentifier.IsIn(sources) && index.QuestionBankId != null).FirstOrDefaultAsync() is { } imported)
+        if (bank is null)
         {
-            return _banks[key] = imported.QuestionBankId;
+            bank = await _bankManager.NewBankAsync();
+            bank.Name = name;
+            bank.Title = Shorten($"{backup.Course.FullName}: {category.Name}", 200);
+
+            if (!(await _bankManager.SaveBankAsync(bank, isNew: true)).Succeeded)
+            {
+                return null;
+            }
         }
 
-        var title = Shorten($"{backup.Course.FullName}: {category.Name}", 200);
-        var existing = await _session.Query<ContentItem, ContentItemIndex>(index =>
-                index.ContentType == AssessmentsConstants.ContentTypes.QuestionBank && index.Latest && index.DisplayText == title)
-            .FirstOrDefaultAsync();
+        var questions = new List<BankQuestion>();
 
-        if (existing is not null)
+        foreach (var question in category.Questions)
         {
-            return _banks[key] = existing.ContentItemId;
+            if (MapQuestion(backup, question) is not { } mapped)
+            {
+                continue;
+            }
+
+            var bankQuestion = await _bankManager.NewQuestionAsync(bank.ItemId, mapped.ControlType);
+
+            bankQuestion.Question = mapped;
+            bankQuestion.SourceIdentifier = backup.QuestionSource(question.BankEntryId);
+            questions.Add(bankQuestion);
         }
 
-        var bank = await _contentManager.NewAsync(AssessmentsConstants.ContentTypes.QuestionBank);
-        bank.DisplayText = title;
-        bank.Alter<TitlePart>(part => part.Title = title);
-        bank.Owner = context.Entry?.Owner;
-        bank.Author = context.Entry?.Author;
-        await _contentManager.CreateAsync(bank, VersionOptions.Published);
+        await _bankManager.ImportAsync(bank.ItemId, questions);
 
-        return _banks[key] = bank.ContentItemId;
+        return _banks[key] = bank.ItemId;
     }
+
+    private static string StableId(string source)
+        => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(source ?? string.Empty))).Substring(0, 26);
 
     // An item imported in a later row than its course: it joins the course and its place in the section.
     private async Task AttachAsync(ContentItem item, MoodleBackup backup, MoodleActivity activity)
@@ -1160,19 +1191,6 @@ internal sealed class MoodleImportHandler : IContentImportHandler
 
     private static string Cell(ContentImportContext context, string column)
         => context.Columns.Contains(column) ? context.Row[column]?.ToString()?.Trim() : null;
-
-    private static int IndexOf(IReadOnlyList<string> columns, string column)
-    {
-        for (var i = 0; i < columns.Count; i++)
-        {
-            if (columns[i] == column)
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
 
     private static string SafeFileName(string name)
     {

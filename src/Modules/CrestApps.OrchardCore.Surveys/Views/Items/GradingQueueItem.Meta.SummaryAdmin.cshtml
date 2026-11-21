@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model ShapeViewModel<GradingQueueItem>
+
+@if (Model.Value.Response.CompletedUtc is { } completed)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Completed"]"><i class="fa-regular fa-clock" aria-hidden="true"></i> @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: "g"))</span>
+}

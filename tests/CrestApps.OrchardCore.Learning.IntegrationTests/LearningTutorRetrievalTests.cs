@@ -6,7 +6,6 @@ using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.OrchardCore.AI.Core.DataSources;
 using CrestApps.OrchardCore.Learning.AI.Models;
 using CrestApps.OrchardCore.Learning.Assessments;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Http;
@@ -23,7 +22,7 @@ namespace CrestApps.OrchardCore.Learning.IntegrationTests;
 /// <summary>
 /// The tutor's retrieval on a real site: what the knowledge base search returns passes through every registered result
 /// filter, exactly as the AI data source search does before the chunks reach the model's context. Exam content
-/// (questions with their answer keys, quizzes and question banks) never gets through, not even when the learner asks
+/// (quizzes, whose text may hold answer keys; questions now live in Surveys, outside content) never gets through, not even when the learner asks
 /// for it (the chunks below are what a search for "the answers to the quiz" would match) and not even for a learner
 /// enrolled in the course.
 /// </summary>
@@ -283,22 +282,6 @@ public sealed class LearningTutorRetrievalTests
         await OutlineAsync(contentManager, disabled, disabledLesson);
         await OutlineAsync(contentManager, other, otherLesson);
 
-        var bank = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.QuestionBank);
-        bank.DisplayText = "Fire safety bank " + suffix;
-        bank.Alter<TitlePart>(part => part.Title = bank.DisplayText);
-        await contentManager.CreateAsync(bank, VersionOptions.Published);
-
-        var question = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.EssayQuestion);
-        question.DisplayText = "Which extinguisher for electrical fires?";
-        question.Alter<TitlePart>(part => part.Title = question.DisplayText);
-        question.Alter<QuestionPart>(part =>
-        {
-            part.Prompt = "Which extinguisher class is for electrical fires?";
-            part.GeneralFeedback = AnswerKey;
-        });
-        question.Alter<EssayQuestionPart>(part => part.GraderGuidance = AnswerKey);
-        await contentManager.CreateAsync(question, VersionOptions.Published);
-
         var enrollments = services.GetRequiredService<IEnrollmentService>();
 
         foreach (var courseId in new[] { enabled.ContentItemId, disabled.ContentItemId })
@@ -316,9 +299,7 @@ public sealed class LearningTutorRetrievalTests
 
         var chunks = new List<DataSourceSearchResult>
         {
-            Chunk(question.ContentItemId, "Question: which extinguisher class is for electrical fires? " + AnswerKey),
             Chunk(quiz.ContentItemId, "Fire safety quiz. " + AnswerKey),
-            Chunk(bank.ContentItemId, "Fire safety bank. " + AnswerKey),
             Chunk(lesson.ContentItemId, "Class C extinguishers are for electrical fires."),
             Chunk(disabledLesson.ContentItemId, "Use the one-in-four rule."),
             Chunk(otherLesson.ContentItemId, "Roll the person onto their side."),
@@ -330,7 +311,7 @@ public sealed class LearningTutorRetrievalTests
             lesson.ContentItemId,
             disabledLesson.ContentItemId,
             otherLesson.ContentItemId,
-            [question.ContentItemId, quiz.ContentItemId, bank.ContentItemId],
+            [quiz.ContentItemId],
             chunks);
     }
 

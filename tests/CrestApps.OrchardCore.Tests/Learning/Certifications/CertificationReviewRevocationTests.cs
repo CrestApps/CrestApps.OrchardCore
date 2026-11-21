@@ -1,10 +1,11 @@
-using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Certifications.Core.Services;
 using CrestApps.OrchardCore.Learning.Core.Services;
+using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Certifications;
@@ -64,12 +65,12 @@ public sealed class CertificationReviewRevocationTests
         => h.RunAsync(async services =>
         {
             var enrollment = await services.GetRequiredService<EnrollmentStore>().FindByIdAsync(enrollmentId);
-            var attempts = services.GetRequiredService<AssessmentAttemptStore>();
+            var responses = services.GetRequiredService<ISurveyResponseQueries>();
 
             return await services.GetRequiredService<DefaultCertificationPathService>().CanRevokeFromReviewAsync(
                 enrollment,
                 recordId,
-                async attemptId => (await attempts.FindByIdAsync(attemptId))?.EnrollmentId);
+                async responseId => LearningSurveyContexts.EnrollmentIdOf(await responses.FindByIdAsync(responseId)));
         });
 
     private static Task FlagAsync(CertificationHarness h, string enrollmentId)

@@ -1,0 +1,33 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyPartViewModel
+
+@if (string.IsNullOrEmpty(Model.Token))
+{
+    return;
+}
+
+@{
+    var url = Url.Content("~/s/" + Uri.EscapeDataString(Model.Token));
+}
+
+@switch (Model.Display)
+{
+    case SurveyEmbedDisplay.Link:
+        <a href="@url" class="survey-embed-link">@Model.Text</a>
+        break;
+    case SurveyEmbedDisplay.Button:
+        <a href="@url" class="btn btn-primary survey-embed-button" role="button">@Model.Text</a>
+        break;
+    default:
+        <section class="survey-embed card mb-3">
+            <div class="card-body">
+                <h2 class="h4">@Model.Title</h2>
+                <div class="mb-3">@Model.Introduction</div>
+                <form method="post" action="@Url.Content("~/s/" + Uri.EscapeDataString(Model.Token) + "/start")">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-primary">@T["Start"]</button>
+                </form>
+            </div>
+        </section>
+        break;
+}

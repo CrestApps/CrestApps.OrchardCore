@@ -1,0 +1,38 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyPartEditViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Survey"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="SurveyId" class="ocat-label">@T["Survey"]</label>
+            <div class="ocat-end">
+                <select asp-for="SurveyId" asp-items="Model.Surveys" class="form-select"></select>
+                <span class="hint">@T["Only open surveys are listed. Save to pick one of its links."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="CollectorId" class="ocat-label">@T["Link"]</label>
+            <div class="ocat-end">
+                <select asp-for="CollectorId" asp-items="Model.Collectors" class="form-select"></select>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Display" class="ocat-label">@T["Show as"]</label>
+            <div class="ocat-end">
+                <select asp-for="Display" class="form-select">
+                    <option value="@SurveyEmbedDisplay.Inline">@T["The survey in the page"]</option>
+                    <option value="@SurveyEmbedDisplay.Button">@T["A button"]</option>
+                    <option value="@SurveyEmbedDisplay.Link">@T["A link"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Text" class="ocat-label">@T["Button or link text"]</label>
+            <div class="ocat-end">
+                <input asp-for="Text" class="form-control" />
+                <span class="hint">@T["Leave empty to show the survey title."]</span>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,33 @@
+@model SurveyResponse
+@using CrestApps.OrchardCore.Users
+@using Microsoft.AspNetCore.Identity
+@using OrchardCore.Users
+@inject UserManager<IUser> UserManager
+@inject IEnumerable<IDisplayNameProvider> DisplayNameProviders
+@* The name of who answered: the user's display name, the party, or Anonymous. *@
+
+@{
+    var response = Model;
+    string name = null;
+
+    if (!string.IsNullOrEmpty(response.UserId))
+    {
+        var user = await UserManager.FindByIdAsync(response.UserId);
+
+        if (user is not null)
+        {
+            var provider = DisplayNameProviders.FirstOrDefault();
+            name = provider is not null ? await provider.GetAsync(user) : user.UserName;
+        }
+    }
+
+    name ??= response.Respondent?.ToString() ?? response.UserId;
+}
+@if (string.IsNullOrEmpty(name))
+{
+    @T["Anonymous"]
+}
+else
+{
+    @name
+}

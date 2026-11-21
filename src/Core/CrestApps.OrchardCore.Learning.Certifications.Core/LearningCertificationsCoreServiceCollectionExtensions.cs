@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Certifications.Core.Requirements;
 using CrestApps.OrchardCore.Learning.Certifications.Core.Services;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
@@ -72,7 +71,7 @@ public static class LearningCertificationsCoreServiceCollectionExtensions
     public static IServiceCollection AddLearningCertificationsAssessments(this IServiceCollection services)
     {
         services.AddCertificationRequirement<AssessmentPassedRequirement>();
-        services.AddAttemptObserver<CertificationAttemptObserver>();
+        services.AddSurveyResponseObserver<CertificationSurveyObserver>();
 
         return services;
     }

@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SurveyResponsePassedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-award" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Survey Response Passed"])
+    </h4>
+</header>

@@ -1,0 +1,32 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model SurveyOverridesViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyOverrides" title="@T["Accommodations: {0}", Model.SurveyTitle]">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2">
+            <div class="col"></div>
+            <div class="col-auto">
+                <a class="btn btn-secondary create" role="button" asp-action="Grant" asp-route-surveyId="@Model.SurveyId">@T["Grant accommodation"]</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="SurveyOverrides" context="Model.List"
+            show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> No accommodation has been granted for this survey."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Applies to"]" />
+        <admin-list-column name="Terms" position="30" title="@T["Accommodation"]" width="auto" />
+        <admin-list-column name="Granted" position="40" title="@T["Granted"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

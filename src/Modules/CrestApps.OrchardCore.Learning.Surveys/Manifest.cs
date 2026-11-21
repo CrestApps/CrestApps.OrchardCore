@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Learning;
 using CrestApps.OrchardCore.Learning.Surveys;
+using CrestApps.OrchardCore.Surveys;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -11,12 +12,13 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = SurveysConstants.Feature,
+    Id = LearningSurveysConstants.Feature,
     Name = "Learning Surveys",
-    Description = "The feedback survey and choice course items: rating, single choice, multiple choice and written questions, anonymous answers, a close date, totals learners may see, and a totals page for the course staff. The item completes when the learner answers.",
+    Description = "The feedback survey and choice course items. Each item owns a survey of the Surveys module, designed with every question type, logic and anonymity, and learners answer it through their enrollment. The item completes when the learner answers; the totals come from the Surveys reports.",
     Category = "Learning",
     Dependencies =
     [
         LearningConstants.Features.Learning,
+        SurveysConstants.Features.Surveys,
     ]
 )]

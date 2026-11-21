@@ -1,0 +1,56 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.Rating
+
+@using System.Globalization
+@{
+    var settings = Model.GetSettings<RatingSettings>();
+    var min = Math.Max(settings.Min, 0);
+    var max = Math.Clamp(settings.Max, min + 1, min + RatingControlHandler.MaxScale - 1);
+    var selected = Model.Answer?.Number is { } number ? (int)number : (int?)null;
+    var minLabel = !string.IsNullOrWhiteSpace(settings.MinLabel) ? settings.MinLabel : settings.Metric == RatingMetric.Nps ? T["Not at all likely"].Value : settings.Metric == RatingMetric.Csat ? T["Very unsatisfied"].Value : null;
+    var maxLabel = !string.IsNullOrWhiteSpace(settings.MaxLabel) ? settings.MaxLabel : settings.Metric == RatingMetric.Nps ? T["Extremely likely"].Value : settings.Metric == RatingMetric.Csat ? T["Very satisfied"].Value : null;
+    string[] faces = ["fa-face-angry", "fa-face-frown", "fa-face-meh", "fa-face-smile", "fa-face-grin-stars"];
+}
+<fieldset class="survey-rating" role="radiogroup" aria-required="@(Model.Question.Required ? "true" : null)" aria-describedby="@Model.DescribedBy()">
+    <legend class="visually-hidden">@Model.Question.Title</legend>
+    <div class="d-flex flex-wrap gap-1">
+        @for (var value = min; value <= max; value++)
+        {
+            var id = $"{Model.InputId}-{value}";
+            var text = value.ToString(CultureInfo.InvariantCulture);
+            <input class="btn-check" type="radio" name="@Model.Prefix" id="@id" value="@text" checked="@(selected == value)" disabled="@Model.ReadOnly" autocomplete="off" />
+            <label class="btn btn-outline-primary" for="@id" title="@text">
+                @if (settings.Style == RatingStyle.Stars)
+                {
+                    <i class="fa-@(selected >= value ? "solid" : "regular") fa-star" aria-hidden="true"></i><span class="visually-hidden">@text</span>
+                }
+                else if (settings.Style == RatingStyle.Smileys)
+                {
+                    var face = faces[(int)Math.Round((double)(value - min) / Math.Max(max - min, 1) * (faces.Length - 1))];
+                    <i class="fa-regular @face" aria-hidden="true"></i><span class="visually-hidden">@text</span>
+                }
+                else
+                {
+                    @text
+                }
+            </label>
+        }
+    </div>
+    @if (minLabel is not null || maxLabel is not null)
+    {
+        <div class="d-flex justify-content-between form-text">
+            <span>@minLabel</span>
+            <span>@maxLabel</span>
+        </div>
+    }
+</fieldset>
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}
