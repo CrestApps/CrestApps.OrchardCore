@@ -45,7 +45,7 @@ internal sealed class CertificationCompletionLinkProvider : ICourseCompletionLin
                 continue;
             }
 
-            var name = (await _certifications.FindByIdAsync(path.CertificationId))?.Name;
+            var name = (await _certifications.FindByIdAsync(path.CertificationId, cancellationToken))?.Name;
 
             if (string.IsNullOrEmpty(name))
             {

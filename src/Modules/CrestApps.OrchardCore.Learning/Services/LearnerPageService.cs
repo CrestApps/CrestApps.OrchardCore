@@ -281,9 +281,9 @@ public sealed class LearnerPageService
 
             if (course is not null)
             {
-                var categoryId = (await _categories.GetCategoryIdsAsync(course)).FirstOrDefault();
+                var categoryIds = await _categories.GetCategoryIdsAsync(course);
 
-                row.Category = categoryId is null ? null : tree.GetPathText(categoryId);
+                row.Category = categoryIds.Count > 0 ? tree.GetPathText(categoryIds[0]) : null;
 
                 var outline = await _courseStructure.GetOutlineAsync(course);
                 var progress = enrollment.Status == EnrollmentStatus.Completed ? null : await _progressService.GetAsync(enrollment.ItemId);

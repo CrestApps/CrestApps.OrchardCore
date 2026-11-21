@@ -91,7 +91,7 @@
                         }
                     </div>
                     <h1 class="h3 mb-2">@current.Item.DisplayText</h1>
-                    <partial name="_ItemCondition" model="(current, Model.CurrentProgress, Model.TracksProgress || enrollment is { Status: EnrollmentStatus.Completed })" />
+                    <partial name="_ItemCondition" model="(current, Model.CurrentProgress, enrollment is { Status: EnrollmentStatus.Active or EnrollmentStatus.Completed })" />
                 </header>
 
                 @if (Model.CurrentShape is not null)
