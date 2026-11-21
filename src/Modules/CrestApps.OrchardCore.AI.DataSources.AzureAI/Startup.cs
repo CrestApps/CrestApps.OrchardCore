@@ -8,12 +8,14 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Drivers;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.AzureAI;
 using OrchardCore.AzureAI.Core;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
@@ -44,6 +46,12 @@ public sealed class Startup : StartupBase
         services.AddIndexProfileHandler<DataSourceAzureAISearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceAzureAISearchDocumentIndexHandler>();
         services.TryAddScoped<AIDataSourceConnectionPicker>();
+
+        // The tenant's configuration, which only the host's operator controls, approves the indexes a tenant other than
+        // the default one may read as the host (review 10, B1).
+        services.AddOptions<AzureAISearchHostIdentityOptions>()
+            .Configure<IShellConfiguration>((options, configuration) => configuration.GetSection(AzureAISearchHostIdentityOptions.SectionName).Bind(options));
+        services.TryAddSingleton<AzureAISearchHostIdentity>();
         services.AddDisplayDriver<AIDataSource, AzureAISearchAIDataSourceDisplayDriver>();
         services.AddAIDataSourceSourceHandler<AzureAISearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.AzureAISearch);
         services.Configure<IngestionSourceSecretOptions>(options => options.Protect<AIDataSource>(nameof(AzureAISearchSourceMetadata), AIDataSourceProtectionConstants.SourceSecretPurpose));
