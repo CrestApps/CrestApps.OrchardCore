@@ -1,6 +1,6 @@
 using System.IO.Compression;
 
-namespace CrestApps.OrchardCore.Learning.Core.Archives;
+namespace CrestApps.OrchardCore.Archives;
 
 /// <summary>
 /// Reads the files of an uploaded package without extracting it, under the same rules as

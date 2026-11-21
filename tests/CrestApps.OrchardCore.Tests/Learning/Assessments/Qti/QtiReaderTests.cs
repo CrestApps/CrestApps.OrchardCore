@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Qti;
-using CrestApps.OrchardCore.Learning.Core.Archives;
+using CrestApps.OrchardCore.Archives;
 using CrestApps.OrchardCore.Tests.Learning.Scorm;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Assessments.Qti;
