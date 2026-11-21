@@ -38,16 +38,16 @@ public sealed class FileSizeRatchetTests
         ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs"] = 1496, // raised for main's #1331 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportDesignDocumentBuilder.cs"] = 1036,
         ["src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportQueryEngine.cs"] = 1050,
-        ["src/Core/CrestApps.OrchardCore.Scheduling.Core/Services/DefaultAppointmentService.cs"] = 845,
+        ["src/Core/CrestApps.OrchardCore.Scheduling.Core/Services/DefaultAppointmentService.cs"] = 908, // raised for main's #1343 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/DefaultInstallmentPlanService.cs"] = 1813, // raised for main's #1331 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.TenantHierarchy.Core/Services/TenantHierarchyBroker.cs"] = 1126,
         ["src/Core/CrestApps.OrchardCore.WorkOrders.Core/Services/WorkOrderService.cs"] = 932, // raised for main's #1330 when PR #1319 merged main; lower as it is paid down
-        ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultSchedulePlanningService.cs"] = 814,
+        ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultSchedulePlanningService.cs"] = 817, // raised for main's #1343 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskAriClient.cs"] = 930,
         ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskTelephonyProviderBase.cs"] = 1348,
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Providers/EnterpriseInteractionReportProvider.cs"] = 1148,
-        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/BackgroundTasks/ImportFilesBackgroundTask.cs"] = 1630,
-        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/Controllers/AdminController.cs"] = 1587,
+        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/BackgroundTasks/ImportFilesBackgroundTask.cs"] = 1758, // raised for main's #1343 when PR #1319 merged main; lower as it is paid down
+        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/Controllers/AdminController.cs"] = 1757, // raised for main's #1343 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.DncRegistry/Services/DefaultLocalDncListManager.cs"] = 1259,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Controllers/ActivitiesController.cs"] = 2231,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Reports/EnterpriseActivityReportProvider.cs"] = 891,
@@ -63,7 +63,7 @@ public sealed class FileSizeRatchetTests
         ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Controllers/ChildTenantsController.cs"] = 893,
         ["src/Modules/CrestApps.OrchardCore.Transactions/Services/DefaultTransactionCommandService.cs"] = 1377, // raised for main's #1331 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/MyWorkController.cs"] = 1153,
-        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/SchedulesController.cs"] = 979,
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/SchedulesController.cs"] = 981, // raised for main's #1343 when PR #1319 merged main; lower as it is paid down
 
         // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
         // remove as it is paid down. Sizes as of main's #1336, which added index declarations to four of them.
@@ -88,6 +88,18 @@ public sealed class FileSizeRatchetTests
         ["src/Core/CrestApps.OrchardCore.TimeTracker.Core/Services/DefaultTimeTrackerService.cs"] = 1006,
         ["src/Modules/CrestApps.OrchardCore.Tickets/Controllers/TicketsController.cs"] = 1732,
         ["src/Modules/CrestApps.OrchardCore.Tickets/Portal/TicketPortalController.cs"] = 970,
+
+        // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Learning.Assessments.Core/Qti/QtiItemParser.cs"] = 1244,
+        ["src/Core/CrestApps.OrchardCore.Learning.Assessments.Core/Services/DefaultAssessmentAttemptService.cs"] = 905,
+        ["src/Core/CrestApps.OrchardCore.Learning.Core/Services/DefaultLearnerProgressService.cs"] = 961,
+        ["src/Core/CrestApps.OrchardCore.Learning.Coursework.Core/Services/DefaultSubmissionService.cs"] = 868,
+        ["src/Core/CrestApps.OrchardCore.Learning.Packages.Core/Scorm/Scorm2004DataModel.cs"] = 822,
+        ["src/Core/CrestApps.OrchardCore.Learning.Xapi.Core/Services/XapiStatementService.cs"] = 951,
+        ["src/Core/CrestApps.OrchardCore.Learning.Xapi.Core/Validation/XapiStatementValidator.cs"] = 879,
+        ["src/Core/CrestApps.OrchardCore.Scheduling.Core/Services/DefaultSchedulingSessionService.cs"] = 843,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/ContentTransfer/Moodle/MoodleImportHandler.cs"] = 1213,
     };
 
     [Fact]

@@ -6,6 +6,8 @@ namespace CrestApps.OrchardCore.Workforce.Core.Indexes;
 /// <summary>
 /// The YesSql index of time-off ledger entries.
 /// </summary>
+// The index of the time-off ledger before it moved to its own quantity ledger collection. Its table and the original
+// entries are kept for nodes of the earlier release during a rolling upgrade; a later release drops the table.
 public sealed class TimeOffLedgerEntryIndex : CatalogItemIndex
 {
     /// <summary>

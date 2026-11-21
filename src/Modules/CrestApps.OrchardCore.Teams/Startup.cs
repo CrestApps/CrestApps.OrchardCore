@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Teams.Drivers;
 using CrestApps.OrchardCore.Teams.Migrations;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Navigation;
+using CrestApps.OrchardCore.Teams.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -22,6 +23,7 @@ public sealed class Startup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddUserAudienceRuleSource<TeamAudienceRuleSource>();
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(TeamsConstants.CollectionName));
         services.AddDataMigration<TeamsMigrations>()
             .AddIndexProvider<TeamIndexProvider>();

@@ -26,6 +26,9 @@ public static class SchedulingCoreServiceCollectionExtensions
         services.TryAddScoped<AppointmentChangeQueue>();
         services.TryAddScoped<ISchedulingAvailabilityService, DefaultSchedulingAvailabilityService>();
         services.TryAddScoped<IAppointmentService, DefaultAppointmentService>();
+        services.TryAddScoped<SchedulingSessionStore>();
+        services.TryAddScoped<SessionRegistrationStore>();
+        services.TryAddScoped<ISchedulingSessionService, DefaultSchedulingSessionService>();
 
         return services;
     }

@@ -132,7 +132,6 @@ public sealed class DuplicatePatternRatchetTests
         },
         ["data protector outside Core"] = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["src/Core/CrestApps.OrchardCore.AgenticCommerce.Core/Services/MerchantSigningKeyService.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.Calendars.Core/Services/CalendarFeedTokens.cs"] = 3,
             ["src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core/Twilio/TwilioWebhookEndpoint.cs"] = 1,
             ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/SecureKeypadCaptureStore.cs"] = 1,
@@ -193,6 +192,16 @@ public sealed class DuplicatePatternRatchetTests
             // Existing debt from main's #1330 (help desk), baselined when PR #1319 merged main;
             // remove as it is paid down.
             ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketProtectedInformation.cs"] = 1,
+
+            // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
+            // remove as it is paid down.
+            ["src/Core/CrestApps.OrchardCore.AgenticCommerce.Core/Services/MerchantSigningKeyImportSource.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.FileStorage.Core/ProtectedFiles/ProtectedFileLinks.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Learning.Lti.Core/DeepLinking/LtiDeepLinkingDataTokens.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Learning.Lti.Core/Launch/LtiMessageHints.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Learning.Packages.Core/Cmi5/Cmi5LaunchService.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Learning.Packages.Core/Services/PackageLaunchTokens.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Learning.Xapi.Core/Services/XapiAuthenticator.cs"] = 1,
         },
         ["time-limited protector by hand"] = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -200,6 +209,10 @@ public sealed class DuplicatePatternRatchetTests
             // remove as it is paid down.
             ["src/Core/CrestApps.OrchardCore.Users.Core/Services/PasswordConfirmation.cs"] = 2,
             ["src/Modules/CrestApps.OrchardCore.Payroll/DataSources/FileTaxIds.cs"] = 2,
+
+            // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
+            // remove as it is paid down.
+            ["src/Core/CrestApps.OrchardCore.FileStorage.Core/ProtectedFiles/ProtectedFileLinks.cs"] = 1,
         },
         ["secret token made and hashed by hand"] = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -207,6 +220,12 @@ public sealed class DuplicatePatternRatchetTests
             ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskPjsipCredentialIssuer.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.Telephony/Services/TelephonyPkceGenerator.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.Users/Services/EmailSignInCodes.cs"] = 1,
+
+            // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
+            // remove as it is paid down.
+            ["src/Core/CrestApps.OrchardCore.Accounts.Core/Services/DefaultAccountInvitationService.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Learning.Credentials.Core/OpenBadges/CredentialIdentityHash.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Learning.Xapi.Core/Http/XapiMultipart.cs"] = 1,
         },
         ["Status429TooManyRequests"] = new(StringComparer.OrdinalIgnoreCase)
         {

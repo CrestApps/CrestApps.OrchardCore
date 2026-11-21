@@ -1,0 +1,64 @@
+@model EnrollViewModel
+
+<zone Name="Title">
+    <breadcrumb name="LearningEnrollmentsCreate" title="@T["Enroll a learner"]">
+        <breadcrumb-item id="LearningEnrollments" action="Index" controller="Enrollments" area="CrestApps.OrchardCore.Learning" permission="@LearningPermissions.ViewEnrollments.Name">@T["Enrollments"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Create" method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    <div class="card mb-3">
+        <div class="card-header">@T["Learner and course"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="UserId">
+                <label asp-for="UserId" class="ocat-label">@T["Learner"]</label>
+                <div class="ocat-end">
+                    @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.UserId).ToString(), selectedValues = new[] { Model.UserId }, valueType = "userId", multiple = false, buttonText = T["Choose a learner"].Value, searchPlaceholder = T["Search users"].Value, smallButton = false, required = true })
+                    <span asp-validation-for="UserId"></span>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="CourseId">
+                <label asp-for="CourseId" class="ocat-label">@T["Course"]</label>
+                <div class="ocat-end">
+                    <select asp-for="CourseId" asp-items="Model.CourseOptions" class="form-select">
+                        <option value="">@T["Choose a course"]</option>
+                    </select>
+                    <span asp-validation-for="CourseId"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card mb-3">
+        <div class="card-header">@T["Dates"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="AccessEnds" class="ocat-label">@T["Access ends"]</label>
+                <div class="ocat-end">
+                    <input asp-for="AccessEnds" type="datetime-local" class="form-control" />
+                    <span class="hint">@T["In your time zone. Leave empty for no end."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Due" class="ocat-label">@T["Due"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Due" type="datetime-local" class="form-control" />
+                    <span class="hint">@T["In your time zone. Leave empty when the course has no due date."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="IgnorePrerequisites" type="checkbox" class="form-check-input" />
+                        <label asp-for="IgnorePrerequisites" class="form-check-label">@T["Skip prerequisites"]</label>
+                        <span class="hint dashed">@T["Enroll the learner even when they have not completed the prerequisite courses."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Enroll"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

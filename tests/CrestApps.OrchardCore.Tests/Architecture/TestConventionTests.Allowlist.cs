@@ -137,5 +137,18 @@ public sealed partial class TestConventionTests
         // Existing debt from main's #1338 (Fulfillment Partners), baselined when PR #1319 merged main;
         // remove as it is paid down.
         ["tests/CrestApps.OrchardCore.Tests/Fulfillment/FulfillmentSenderTests.cs"] = 1,
+
+        // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["tests/CrestApps.OrchardCore.Learning.IntegrationTests/AssessmentPathsTests.cs"] = 1,
+        ["tests/CrestApps.OrchardCore.Learning.IntegrationTests/LearningFeatureActivationTests.cs"] = 1,
+        ["tests/CrestApps.OrchardCore.Learning.IntegrationTests/LearningSiteFixture.cs"] = 1,
+        ["tests/CrestApps.OrchardCore.Learning.IntegrationTests/LearningTutorRetrievalTests.cs"] = 1,
+        ["tests/CrestApps.OrchardCore.Learning.IntegrationTests/LtiDeepLinkingTests.cs"] = 2,
+        ["tests/CrestApps.OrchardCore.Learning.IntegrationTests/LtiServicesTests.cs"] = 2,
+        ["tests/CrestApps.OrchardCore.Learning.IntegrationTests/ReadPathTests.cs"] = 1,
+        ["tests/CrestApps.OrchardCore.Learning.IntegrationTests/TimeOffLedgerCopyStartTests.cs"] = 1,
+        ["tests/CrestApps.OrchardCore.Tests/Learning/Classes/ClassRegistrationTests.cs"] = 1,
+        ["tests/CrestApps.OrchardCore.Tests/Learning/Lti/LtiReplayRound9Tests.cs"] = 1,
     };
 }

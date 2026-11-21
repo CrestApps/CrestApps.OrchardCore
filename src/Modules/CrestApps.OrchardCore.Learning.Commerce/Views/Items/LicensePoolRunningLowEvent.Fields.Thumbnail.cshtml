@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Learning.Commerce.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<LicensePoolRunningLowEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-battery-quarter" aria-hidden="true"></i> @T["Licence Pool Running Low"]</h4>
+<p>@T["Starts when an account has a tenth of its seats or fewer left. The input holds PoolId, AccountId, CourseId, Seats and Remaining."]</p>

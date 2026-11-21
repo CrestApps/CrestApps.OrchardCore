@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A synthetic package with the layout of an Articulate Rise package: a driver page that runs the SCORM driver and
+     frames the content, which calls the driver in its parent. Written for the tests; no real course content. -->
+<manifest identifier="it.multiframe" version="1.0" xmlns="http://www.imsproject.org/xsd/imscp_rootv1p1p2" xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_rootv1p2">
+  <metadata><schema>ADL SCORM</schema><schemaversion>1.2</schemaversion></metadata>
+  <organizations default="O">
+    <organization identifier="O">
+      <title>Multi-frame test package</title>
+      <item identifier="I1" identifierref="R1"><title>Multi-frame lesson</title><adlcp:masteryscore>80</adlcp:masteryscore></item>
+    </organization>
+  </organizations>
+  <resources>
+    <resource identifier="R1" type="webcontent" adlcp:scormtype="sco" href="scormdriver/indexAPI.html">
+      <file href="scormdriver/indexAPI.html"/>
+      <file href="scormdriver/scormdriver.js"/>
+      <file href="scormcontent/index.html"/>
+    </resource>
+  </resources>
+</manifest>

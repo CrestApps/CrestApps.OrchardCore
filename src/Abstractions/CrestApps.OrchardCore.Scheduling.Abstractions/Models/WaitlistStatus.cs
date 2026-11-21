@@ -24,4 +24,9 @@ public enum WaitlistStatus
     /// The entry was removed.
     /// </summary>
     Removed,
+
+    /// <summary>
+    /// A place was offered and the offer ran out.
+    /// </summary>
+    OfferExpired,
 }

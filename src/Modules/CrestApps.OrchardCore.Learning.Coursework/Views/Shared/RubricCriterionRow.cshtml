@@ -1,0 +1,45 @@
+@model RubricCriterionRowModel
+
+@{
+    var name = $"{Model.Prefix}[{Model.Index}]";
+    var levels = Model.Criterion.Levels.Count > 0 ? Model.Criterion.Levels : [new RubricLevelRow()];
+}
+
+<div class="card mb-2" data-rubric-criterion>
+    <div class="card-body">
+        <input type="hidden" name="@(name).Id" value="@Model.Criterion.Id" />
+        <div class="row g-2 align-items-start">
+            <div class="col-12 col-md-5">
+                <label class="form-label">@T["Criterion"]</label>
+                <input type="text" name="@(name).Title" value="@Model.Criterion.Title" class="form-control" maxlength="255" />
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label">@T["What the grader looks for"]</label>
+                <textarea name="@(name).Description" rows="2" class="form-control" maxlength="2000">@Model.Criterion.Description</textarea>
+            </div>
+            <div class="col-12 col-md-1 text-md-end">
+                <button type="button" class="btn btn-sm btn-outline-danger mt-md-4" data-rubric-remove-criterion title="@T["Remove the criterion"]" aria-label="@T["Remove the criterion"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+            </div>
+        </div>
+        <div class="mt-2" data-rubric-levels>
+            @for (var j = 0; j < levels.Count; j++)
+            {
+                var level = levels[j];
+
+                <div class="row g-2 align-items-center mb-1" data-rubric-level>
+                    <input type="hidden" name="@(name).Levels[@j].Id" value="@level.Id" />
+                    <div class="col">
+                        <input type="text" name="@(name).Levels[@j].Title" value="@level.Title" class="form-control form-control-sm" maxlength="255" aria-label="@T["Level"]" placeholder="@T["Level, such as Excellent"]" />
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <input type="number" step="0.01" min="0" name="@(name).Levels[@j].Points" value="@(level.Points?.ToString(System.Globalization.CultureInfo.InvariantCulture))" class="form-control form-control-sm" aria-label="@T["Points"]" placeholder="@T["Points"]" />
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-rubric-remove-level title="@T["Remove the level"]" aria-label="@T["Remove the level"]"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+            }
+        </div>
+        <button type="button" class="btn btn-sm btn-link px-0" data-rubric-add-level><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add a level"]</button>
+    </div>
+</div>

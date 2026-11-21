@@ -25,10 +25,11 @@
 }
 
 @{
-    var supportedFormats = Model.FileFormats?.Select(format => format.Value).ToList() ?? [];
+    var supportedFormats = Model.ImportFormats?.Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
     var maxUploadChunkSize = ContentImportOptions.Value.MaxUploadChunkSize;
     var maxUploadFileSize = ContentImportOptions.Value.MaxUploadFileSize;
     var maxUploadFileSizeDisplay = FormatBytes(maxUploadFileSize);
+    var title = Model.IsContentType ? T["Import {0} contents", Model.TargetDisplayName] : T["Import {0}", Model.TargetDisplayName];
     var importConfig = new
     {
         maxChunkSize = maxUploadChunkSize,
@@ -47,7 +48,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="ContentTransferImport" title="@T["Import {0} contents", Model.ContentTypeDefinition.DisplayName]">
+    <breadcrumb name="ContentTransferImport" title="@title">
         <breadcrumb-item id="ContentTransferImports" action="List" controller="Admin" area="CrestApps.OrchardCore.ContentTransfer" permission="@ContentTransferPermissions.ListContentTransferEntries.Name">@T["Bulk Import"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -58,9 +59,9 @@
 }
 
 <div class="card text-bg-theme mb-3">
-    <div class="card-header fw-bold">@T["Import {0} contents", Model.ContentTypeDefinition.DisplayName]</div>
+    <div class="card-header fw-bold">@title</div>
     <div class="card-body">
-        <form id="import-form" asp-route-contentTypeId="@(Model.ContentTypeDefinition.Name)" enctype="multipart/form-data" method="post" data-content-transfer-import data-config="@JsonSerializer.Serialize(importConfig, JOptions.CamelCase)">
+        <form id="import-form" asp-route-contentTypeId="@(Model.TargetName)" enctype="multipart/form-data" method="post" data-content-transfer-import data-config="@JsonSerializer.Serialize(importConfig, JOptions.CamelCase)">
 
             @await DisplayAsync(Model.Content)
             <div id="upload-progress" class="mb-3 mt-2" style="display:none;">
@@ -110,10 +111,10 @@
 
                         <a asp-action="DownloadTemplate"
                            asp-controller="Admin"
-                           asp-route-contentTypeId="@Model.ContentTypeDefinition.Name"
+                           asp-route-contentTypeId="@Model.TargetName"
                            asp-route-format="@format.Value"
                            asp-area="@(ContentTransferConstants.Feature.ModuleId)"
-                           download="Bulk-@(Model.ContentTypeDefinition.Name)-Import-Template@(format.Value)">
+                           download="Bulk-@(Model.TargetName)-Import-Template@(format.Value)">
                             @T["Download template ({0})", format.Text]
                         </a>
                     }

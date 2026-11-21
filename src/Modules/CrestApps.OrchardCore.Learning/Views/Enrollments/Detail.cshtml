@@ -1,0 +1,313 @@
+@model EnrollmentDetailViewModel
+
+@{
+    var enrollment = Model.Enrollment;
+    string StatusText(EnrollmentStatus status) => status switch
+    {
+        EnrollmentStatus.Pending => T["Waiting for approval"].Value,
+        EnrollmentStatus.Active => T["Active"].Value,
+        EnrollmentStatus.Suspended => T["Suspended"].Value,
+        EnrollmentStatus.Completed => T["Completed"].Value,
+        EnrollmentStatus.Expired => T["Access ended"].Value,
+        _ => T["Withdrawn"].Value,
+    };
+    string StateText(CourseItemState state) => state switch
+    {
+        CourseItemState.InProgress => T["In progress"].Value,
+        CourseItemState.Completed => T["Completed"].Value,
+        CourseItemState.Failed => T["Not passed"].Value,
+        _ => T["Not started"].Value,
+    };
+    string Name(string actor) => actor is not null && Model.ActorNames.TryGetValue(actor, out var name) ? name : actor;
+}
+
+<zone Name="Title">
+    <breadcrumb name="LearningEnrollmentsDetail" title="@(new Microsoft.AspNetCore.Html.HtmlString(System.Net.WebUtility.HtmlEncode(Model.LearnerName + " · " + Model.CourseTitle)))">
+        <breadcrumb-item id="LearningEnrollments" action="Index" controller="Enrollments" area="CrestApps.OrchardCore.Learning" permission="@LearningPermissions.ViewEnrollments.Name">@T["Enrollments"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Enrollment {0}", enrollment.Number]</div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@T["Learner"]</dt><dd class="col-sm-9">@Model.LearnerName</dd>
+            <dt class="col-sm-3">@T["Course"]</dt><dd class="col-sm-9">@Model.CourseTitle</dd>
+            <dt class="col-sm-3">@T["Status"]</dt><dd class="col-sm-9">@StatusText(enrollment.Status)</dd>
+            <dt class="col-sm-3">@T["Progress"]</dt><dd class="col-sm-9">@T["{0}% of required items", enrollment.ProgressPercent]</dd>
+            @if (enrollment.Grade is { } grade)
+            {
+                <dt class="col-sm-3">@T["Course grade"]</dt><dd class="col-sm-9">@T["{0}%", grade.ToString("0.##")]@(enrollment.Passed == true ? " · " + T["passed"].Value : enrollment.Passed == false ? " · " + T["below the pass mark"].Value : string.Empty)</dd>
+            }
+            <dt class="col-sm-3">@T["Enrolled"]</dt><dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(enrollment.CreatedUtc, DateTimeKind.Utc), Format: "g"))</dd>
+            @if (enrollment.StartedUtc is { } started)
+            {
+                <dt class="col-sm-3">@T["Started"]</dt><dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(started, DateTimeKind.Utc), Format: "g"))</dd>
+            }
+            @if (enrollment.DueUtc is { } due)
+            {
+                <dt class="col-sm-3">@T["Due"]</dt><dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(due, DateTimeKind.Utc), Format: "g"))</dd>
+            }
+            <dt class="col-sm-3">@T["Access ends"]</dt>
+            <dd class="col-sm-9">
+                @if (enrollment.AccessEndsUtc is { } ends)
+                {
+                    @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(ends, DateTimeKind.Utc), Format: "g"))
+                }
+                else
+                {
+                    @T["No end"]
+                }
+            </dd>
+            @if (enrollment.CompletedUtc is { } completed)
+            {
+                <dt class="col-sm-3">@T["Completed"]</dt><dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: "g"))</dd>
+            }
+            @if (enrollment.Cycle > 1)
+            {
+                <dt class="col-sm-3">@T["Pass"]</dt><dd class="col-sm-9">@T["Pass {0}", enrollment.Cycle]@if (!string.IsNullOrEmpty(enrollment.PreviousEnrollmentId))
+                    {
+                        <text> · </text><a asp-action="Detail" asp-route-id="@enrollment.PreviousEnrollmentId">@T["Previous pass"]</a>
+                    }</dd>
+            }
+        </dl>
+    </div>
+</div>
+
+@if (enrollment.Review is { } review)
+{
+    <div class="card mb-3 @(enrollment.NeedsReview ? "border-warning" : string.Empty)">
+        <div class="card-header">@(enrollment.NeedsReview ? T["Needs review"] : T["Review"])</div>
+        <div class="card-body">
+            <p class="mb-2">@T["A result this completion rests on changed after the course was completed: {0}.", Model.Outline?.Find(review.ItemId)?.Item?.DisplayText ?? review.ItemId]</p>
+            <dl class="row mb-2">
+                <dt class="col-sm-3">@T["Flagged"]</dt><dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(review.FlaggedUtc, DateTimeKind.Utc), Format: "g"))</dd>
+                <dt class="col-sm-3">@T["Score"]</dt><dd class="col-sm-9">@(review.PreviousScore?.ToString("0.##") ?? T["none"].Value) &rarr; @(review.NewScore?.ToString("0.##") ?? T["voided"].Value)</dd>
+                @if (review.ClearedUtc is { } cleared)
+                {
+                    <dt class="col-sm-3">@T["Cleared"]</dt><dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(cleared, DateTimeKind.Utc), Format: "g")) · @(Model.ActorNames.TryGetValue(review.ClearedBy ?? string.Empty, out var clearedBy) ? clearedBy : review.ClearedBy) · @review.ClearNote</dd>
+                }
+            </dl>
+            @if (enrollment.NeedsReview && Model.CanManage)
+            {
+                <form asp-action="ClearReview" asp-route-id="@enrollment.ItemId" method="post">
+                    <label class="form-label" for="review-note">@T["What you decided"]</label>
+                    <div class="input-group">
+                        <input id="review-note" name="note" class="form-control" required maxlength="500" placeholder="@T["Such as: retake booked, completion kept"]" />
+                        <button type="submit" class="btn btn-warning">@T["Clear the review"]</button>
+                    </div>
+                    <span class="hint">@T["The enrollment stays completed. Clearing the review records your decision."]</span>
+                </form>
+                @foreach (var action in Model.ReviewActions)
+                {
+                    <form action="@action.Url" method="post" class="mt-3" asp-antiforgery="true">
+                        <button type="submit" class="btn btn-outline-danger" data-title="@action.Text" data-message="@action.Confirmation" data-ok-text="@T["Yes"]" data-url-af="RemoveUrl">@action.Text</button>
+                        @if (!string.IsNullOrEmpty(action.Hint))
+                        {
+                            <span class="hint">@action.Hint</span>
+                        }
+                    </form>
+                }
+            }
+        </div>
+    </div>
+}
+
+@if (Model.CanManage && enrollment.Status is not (EnrollmentStatus.Completed or EnrollmentStatus.Withdrawn))
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Change the enrollment"]</div>
+        <div class="card-body">
+            @if (enrollment.Status == EnrollmentStatus.Pending)
+            {
+                <form asp-action="Approve" asp-route-id="@enrollment.ItemId" method="post" class="mb-3">
+                    <button type="submit" class="btn btn-success">@T["Approve"]</button>
+                </form>
+                <form asp-action="Reject" asp-route-id="@enrollment.ItemId" method="post" class="mb-3">
+                    <div class="input-group">
+                        <input name="reason" class="form-control" placeholder="@T["Why the request is rejected"]" aria-label="@T["Why the request is rejected"]" required maxlength="500" />
+                        <button type="submit" class="btn btn-outline-danger">@T["Reject"]</button>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <form asp-action="ChangeStatus" asp-route-id="@enrollment.ItemId" method="post" class="mb-3">
+                    <label class="form-label" for="status-reason">@T["Change the status, with a reason"]</label>
+                    <div class="input-group">
+                        <select name="status" class="form-select" aria-label="@T["New status"]" style="max-width: 14rem">
+                            @if (enrollment.Status == EnrollmentStatus.Active)
+                            {
+                                <option value="@EnrollmentStatus.Suspended">@T["Suspend"]</option>
+                                <option value="@EnrollmentStatus.Completed">@T["Mark completed"]</option>
+                            }
+                            @if (enrollment.Status is EnrollmentStatus.Suspended or EnrollmentStatus.Expired)
+                            {
+                                <option value="@EnrollmentStatus.Active">@T["Make active again"]</option>
+                            }
+                            <option value="@EnrollmentStatus.Withdrawn">@T["Withdraw"]</option>
+                        </select>
+                        <input id="status-reason" name="reason" class="form-control" placeholder="@T["Reason"]" required maxlength="500" />
+                        <button type="submit" class="btn btn-secondary">@T["Change"]</button>
+                    </div>
+                </form>
+                <form asp-action="Extend" asp-route-id="@enrollment.ItemId" method="post" class="mb-3">
+                    <label class="form-label" for="extend-access">@T["Change the dates, with a reason (in your time zone)"]</label>
+                    <div class="input-group flex-wrap">
+                        <span class="input-group-text">@T["Access until"]</span>
+                        <input id="extend-access" name="accessEnds" type="datetime-local" class="form-control" />
+                        <span class="input-group-text">@T["Due"]</span>
+                        <input name="due" type="datetime-local" class="form-control" aria-label="@T["Due"]" />
+                        <input name="reason" class="form-control" placeholder="@T["Reason"]" aria-label="@T["Reason"]" required maxlength="500" />
+                        <button type="submit" class="btn btn-secondary">@T["Save dates"]</button>
+                    </div>
+                </form>
+            }
+            @if (Model.NeedsStaffApproval && Model.CanApproveCompletion)
+            {
+                <form asp-action="ApproveCompletion" asp-route-id="@enrollment.ItemId" method="post">
+                    <button type="submit" class="btn btn-outline-success">@T["Approve the completion"]</button>
+                    <span class="hint">@T["The course needs a member of its staff to approve each completion."]</span>
+                </form>
+            }
+            else if (Model.NeedsStaffApproval)
+            {
+                <p class="hint mb-0" data-approval-role="@Model.ApprovalRole">@T["The course waits for a completion approval, which only its staff in the role {0} may give.", Model.ApprovalRole]</p>
+            }
+        </div>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Progress"]</div>
+    <div class="card-body">
+        @{
+            var items = enrollment.Status == EnrollmentStatus.Completed && enrollment.Completion is not null
+                ? enrollment.Completion.Items.Select(item => (Id: item.ContentItemId, Title: item.Title, Section: item.Section, Required: item.Required)).ToList()
+                : (Model.Outline?.Entries ?? []).Select(entry => (Id: entry.Item.ContentItemId, Title: entry.Item.DisplayText, Section: entry.Section?.Title, Required: entry.Required)).ToList();
+        }
+        @if (items.Count == 0)
+        {
+            <p class="mb-0">@T["The course outline has no items."]</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th scope="col">@T["Item"]</th><th scope="col">@T["Section"]</th><th scope="col">@T["State"]</th><th scope="col">@T["Score"]</th><th scope="col">@T["Time"]</th><th scope="col">@T["Completed"]</th>@if (Model.CanManage && enrollment.Status == EnrollmentStatus.Active)
+                    {
+                        <th scope="col"><span class="visually-hidden">@T["Actions"]</span></th>
+                    }</tr></thead>
+                    <tbody>
+                        @foreach (var item in items)
+                        {
+                            var progress = Model.Progress?.Find(item.Id);
+                            <tr>
+                                <td>@item.Title @if (!item.Required)
+                                    {
+                                        <span class="badge ta-badge fw-normal">@T["Optional"]</span>
+                                    }
+                                    @if (progress?.SelfReported == true)
+                                    {
+                                        <span class="badge ta-badge fw-normal" title="@T["Reported by the browser"]">@T["Self-reported"]</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(progress?.CompletedBy))
+                                    {
+                                        <div class="hint">@T["Marked complete by {0}: {1}", Name(progress.CompletedBy), progress.CompletionReason]</div>
+                                    }
+                                    @if (progress?.AttestedUtc is not null)
+                                    {
+                                        <div class="hint">@T["Confirmed: \"{0}\"", progress.AttestedStatement]</div>
+                                    }
+                                </td>
+                                <td>@item.Section</td>
+                                <td>@StateText(progress?.State ?? CourseItemState.NotStarted)</td>
+                                <td>@(progress?.Score is { } score ? T.GetString("{0}%", score.ToString("0.##")).Value : string.Empty)</td>
+                                <td>@(progress is null ? string.Empty : TimeSpan.FromSeconds(progress.SecondsSpent).ToString(@"h\:mm\:ss"))</td>
+                                <td>
+                                    @if (progress?.CompletedUtc is { } itemCompleted)
+                                    {
+                                        @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(itemCompleted, DateTimeKind.Utc), Format: "g"))
+                                    }
+                                </td>
+                                @if (Model.CanManage && enrollment.Status == EnrollmentStatus.Active)
+                                {
+                                    <td>
+                                        @if (progress?.State != CourseItemState.Completed)
+                                        {
+                                            <form asp-action="CompleteItem" asp-route-id="@enrollment.ItemId" method="post" class="d-flex gap-1">
+                                                <input type="hidden" name="itemId" value="@item.Id" />
+                                                <input name="reason" class="form-control form-control-sm" placeholder="@T["Reason"]" aria-label="@T["Reason to mark {0} complete", item.Title]" required maxlength="500" />
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">@T["Mark complete"]</button>
+                                            </form>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Access grants"]</div>
+    <div class="card-body">
+        @if (enrollment.Grants.Count == 0)
+        {
+            <p class="mb-0">@T["No grant: the learner has no access."]</p>
+        }
+        else
+        {
+            <ul class="mb-0">
+                @foreach (var grant in enrollment.Grants)
+                {
+                    <li>
+                        @(Model.SourceNames.TryGetValue(grant.Source ?? string.Empty, out var source) ? source : grant.Source)
+                        · @T["given"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(grant.GrantedUtc, DateTimeKind.Utc), Format: "g"))
+                        @if (grant.AccessEndsUtc is { } grantEnds)
+                        {
+                            <text> · </text>@T["until"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(grantEnds, DateTimeKind.Utc), Format: "g"))
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["History"]</div>
+    <div class="card-body">
+        @if (enrollment.History.Count == 0)
+        {
+            <p class="mb-0">@T["No change of status yet."]</p>
+        }
+        else
+        {
+            <ul class="mb-0">
+                @foreach (var change in enrollment.History)
+                {
+                    <li>
+                        @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(change.ChangedUtc, DateTimeKind.Utc), Format: "g"))
+                        · @StatusText(change.From) → @StatusText(change.To)
+                        @if (!string.IsNullOrEmpty(change.Actor))
+                        {
+                            <text> · </text>@Name(change.Actor)
+                        }
+                        @if (!string.IsNullOrEmpty(change.Reason))
+                        {
+                            <text> · </text><em>@change.Reason</em>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+<div class="action-bar-bottom">
+    <a class="btn btn-secondary" role="button" asp-action="Index">@T["Back to enrollments"]</a>
+</div>

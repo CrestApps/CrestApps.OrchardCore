@@ -32,8 +32,12 @@ internal static class SchedulingTestSupport
                 services.AddSchedulingCore();
                 configure?.Invoke(services);
             },
-            SchedulingIndexSchema.CreateAsync,
-            [new SchedulingResourceIndexProvider(), new AppointmentTypeIndexProvider(), new AppointmentIndexProvider(), new WaitlistEntryIndexProvider()],
+            async schemaBuilder =>
+            {
+                await SchedulingIndexSchema.CreateAsync(schemaBuilder);
+                await SchedulingSessionIndexSchema.CreateAsync(schemaBuilder);
+            },
+            [new SchedulingResourceIndexProvider(), new AppointmentTypeIndexProvider(), new AppointmentIndexProvider(), new WaitlistEntryIndexProvider(), .. SchedulingSessionIndexSchema.Providers()],
             [SchedulingConstants.CollectionName]);
     }
 

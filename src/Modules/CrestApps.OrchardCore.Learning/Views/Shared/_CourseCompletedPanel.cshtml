@@ -1,0 +1,66 @@
+@model (Enrollment Enrollment, IReadOnlyList<CourseCompletionLink> Links, string CourseId, bool InPlayer)
+
+@*
+    The panel a learner sees once they complete a course, in the player and on the course page: when they completed it,
+    their grade, what the completion earned (certificates and credentials, from ICourseCompletionLinkProvider) and the
+    way to their transcript.
+*@
+
+@{
+    var enrollment = Model.Enrollment;
+    var completedUtc = enrollment.CompletedUtc ?? enrollment.Completion?.CompletedUtc ?? enrollment.CreatedUtc;
+}
+
+<section class="card border-success learning-course-completed mb-4" data-learning-course-completed-panel aria-labelledby="learning-completed-@Model.CourseId">
+    <div class="card-body p-4">
+        <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-3">
+            <span class="d-inline-flex align-items-center justify-content-center rounded-circle text-bg-success flex-shrink-0" style="width: 3.5rem; height: 3.5rem;" aria-hidden="true">
+                <i class="fa-solid fa-trophy fa-lg"></i>
+            </span>
+            <div class="flex-grow-1">
+                <h2 class="h4 mb-1" id="learning-completed-@Model.CourseId">@T["You completed this course"]</h2>
+                <p class="mb-0 text-body-secondary">
+                    @T["Completed on"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completedUtc, DateTimeKind.Utc), Format: "D"))
+                    @if (enrollment.Grade is { } grade)
+                    {
+                        <span> &middot; @T["Grade {0}%", grade.ToString("0.##")]</span>
+                        @if (enrollment.Passed == true)
+                        {
+                            <span class="badge text-bg-success ms-1">@T["Passed"]</span>
+                        }
+                    }
+                </p>
+            </div>
+        </div>
+
+        @if (Model.Links.Count > 0)
+        {
+            <ul class="list-unstyled mt-3 mb-0" data-learning-completion-links>
+                @foreach (var link in Model.Links)
+                {
+                    <li class="mb-1">
+                        <a href="@(link.Url.StartsWith("~/", StringComparison.Ordinal) ? Url.Content(link.Url) : link.Url)" class="link-success fw-semibold">
+                            @if (!string.IsNullOrEmpty(link.Icon))
+                            {
+                                <i class="@link.Icon me-1" aria-hidden="true"></i>
+                            }
+                            @link.Text
+                        </a>
+                    </li>
+                }
+            </ul>
+        }
+
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <a class="btn btn-success" href="@Url.RouteUrl("LearningTranscript")"><i class="fa-solid fa-scroll me-1" aria-hidden="true"></i>@T["My transcript"]</a>
+            @if (Model.InPlayer)
+            {
+                <a class="btn btn-outline-secondary" href="@Url.RouteUrl("LearningMyLearning")">@T["Back to My learning"]</a>
+            }
+            else
+            {
+                <a class="btn btn-outline-secondary" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId })">@T["Review the course"]</a>
+            }
+        </div>
+    </div>
+</section>

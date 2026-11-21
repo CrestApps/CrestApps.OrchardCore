@@ -82,7 +82,58 @@ public sealed class ImportExistingRowsTests
         Assert.Equal(1, progress.ImportedCount);
     }
 
+    [Fact]
+    public async Task ARowOfARelatedType_UpdatesAnItemOfThatType()
+    {
+        // An import may create items of several related types (main's #1343), each row naming its own. A row's item is
+        // checked against the type the row names, not only the import's type.
+        var choice = new ContentItem { ContentItemId = "4xchoice000000000000000000", ContentType = "Choice", Published = true, Latest = true, Owner = "owner", Author = "owner" };
+        var site = new FakeContentSite(choice);
+        var progress = new ImportFileProcessStatsPart();
+
+        await ImportAsync(site, progress, choice.ContentItemId, "Choice");
+
+        Assert.Equal([choice.ContentItemId], site.Saved);
+        Assert.Equal(("owner", "owner"), (choice.Owner, choice.Author));
+        Assert.Equal(1, progress.ImportedCount);
+    }
+
+    [Fact]
+    public async Task ARowOfARelatedType_NamingAnItemOfTheImportsType_IsRefused_AndTheItemStaysPublished()
+    {
+        var article = new ContentItem { ContentItemId = "4xarticle00000000000000000", ContentType = "Article", Published = true, Latest = true, Owner = "owner" };
+        var site = new FakeContentSite(article);
+        var progress = new ImportFileProcessStatsPart();
+
+        await ImportAsync(site, progress, article.ContentItemId, "Choice");
+
+        Assert.True(article.Published, "Refusing the row must not unpublish the item it named.");
+        Assert.Empty(site.Saved);
+        Assert.Empty(site.Created);
+        Assert.Contains(0, progress.Errors);
+    }
+
+    [Fact]
+    public async Task ARowWhoseTypeCannotBeImported_ReadsNoItem_AndCreatesNothing()
+    {
+        var page = new ContentItem { ContentItemId = "4xpage0000000000000000000a", ContentType = "Page", Published = true, Latest = true, Owner = "owner" };
+        var site = new FakeContentSite(page);
+        var progress = new ImportFileProcessStatsPart();
+
+        await ImportAsync(site, progress, page.ContentItemId, rowType: null);
+
+        Assert.True(page.Published);
+        Assert.Empty(site.Saved);
+        Assert.Empty(site.Created);
+    }
+
     private static Task ImportAsync(FakeContentSite site, ImportFileProcessStatsPart progress, string rowId)
+        => ImportAsync(site, progress, rowId, rowDefinitionAsync: null);
+
+    private static Task ImportAsync(FakeContentSite site, ImportFileProcessStatsPart progress, string rowId, string rowType)
+        => ImportAsync(site, progress, rowId, (_, _) => Task.FromResult(rowType is null ? null : new ContentTypeDefinition(rowType, rowType)));
+
+    private static Task ImportAsync(FakeContentSite site, ImportFileProcessStatsPart progress, string rowId, Func<int, DataRow, Task<ContentTypeDefinition>> rowDefinitionAsync)
     {
         var dataTable = new DataTable();
         dataTable.Columns.Add(nameof(ContentItem.ContentItemId));
@@ -108,7 +159,8 @@ public sealed class ImportExistingRowsTests
             progress,
             new ImportRunMonitor(),
             new PassThroughStringLocalizer<ImportExistingRowsTests>(),
-            new ImportRunTelemetry(NullLogger.Instance, "entry", firstRowOfRun: 0));
+            new ImportRunTelemetry(NullLogger.Instance, "entry", firstRowOfRun: 0),
+            rowDefinitionAsync);
     }
 
     /// <summary>

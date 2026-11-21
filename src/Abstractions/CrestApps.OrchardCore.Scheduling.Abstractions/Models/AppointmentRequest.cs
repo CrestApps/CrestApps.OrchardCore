@@ -56,6 +56,11 @@ public sealed class AppointmentRequest
     public string Source { get; set; }
 
     /// <summary>
+    /// Gets or sets the id, within <see cref="Source"/>, of what the appointment is for.
+    /// </summary>
+    public string SourceId { get; set; }
+
+    /// <summary>
     /// Gets or sets who books it.
     /// </summary>
     public string Actor { get; set; }

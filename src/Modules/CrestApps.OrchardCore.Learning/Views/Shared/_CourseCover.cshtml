@@ -1,0 +1,36 @@
+@model (string CourseId, string Title, string CoverUrl, string Height)
+
+@*
+    A course's picture on a card: its cover, or, without one, a pattern drawn from the course id (the same course always
+    gets the same colors) with the course's initials, as Moodle does for courses without an image.
+*@
+
+@{
+    var height = string.IsNullOrEmpty(Model.Height) ? "7rem" : Model.Height;
+}
+
+@if (!string.IsNullOrEmpty(Model.CoverUrl))
+{
+    <img src="@Model.CoverUrl" class="card-img-top object-fit-cover" style="height: @height;" alt="" loading="lazy" data-course-cover />
+}
+else
+{
+    var seed = 0;
+
+    foreach (var character in Model.CourseId ?? Model.Title ?? string.Empty)
+    {
+        seed = unchecked((seed * 31) + character);
+    }
+
+    var hue = Math.Abs(seed % 360);
+    var initials = string.Concat((Model.Title ?? string.Empty)
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        .Where(word => char.IsLetterOrDigit(word[0]))
+        .Take(2)
+        .Select(word => char.ToUpperInvariant(word[0])));
+
+    <div class="card-img-top d-flex align-items-center justify-content-center text-white fw-semibold fs-3" aria-hidden="true" data-course-pattern
+         style="height: @height; background-color: hsl(@hue 45% 42%); background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.10) 0 12px, transparent 12px 24px), linear-gradient(135deg, hsl(@hue 50% 38%), hsl(@((hue + 40) % 360) 55% 52%));">
+        @initials
+    </div>
+}

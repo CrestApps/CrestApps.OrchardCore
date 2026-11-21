@@ -7,9 +7,10 @@
       $(CrestAppsDescription)
 
       Writes PDF documents: pages, text measured and wrapped with embedded fonts, lines, shapes and pictures placed
-      at exact positions. Reports, check printing and other modules build their documents on it.
+      at exact positions, vector QR codes drawn with QRCoder (MIT), and the renderer of the PDF layout model. Reports,
+      check printing, certificates and other modules build their documents on it.
     </Description>
-    <PackageTags>$(PackageTags) PDF Documents Core</PackageTags>
+    <PackageTags>$(PackageTags) PDF Documents QRCode Core</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,6 +19,11 @@
 
   <ItemGroup>
     <PackageReference Include="PdfPig" />
+    <PackageReference Include="QRCoder" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Pdf.Abstractions\CrestApps.OrchardCore.Pdf.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

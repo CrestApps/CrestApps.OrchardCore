@@ -1,0 +1,49 @@
+@model CourseworkSubmissionsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="LearningCourseworkSubmissions" title="@T["Submissions"]">
+        <breadcrumb-item id="LearningCourseworkItem" url="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = Model.Coursework.ContentItemId })">@Model.Coursework.DisplayText</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (Model.IsSignOff)
+{
+    <style asp-name="bootstrap-select"></style>
+    <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+    <div class="card text-bg-theme mb-3" data-coursework-sign-off>
+        <div class="card-header">@T["Sign off a learner"]</div>
+        <div class="card-body">
+            @if (Model.SignOffLearners.Count == 0)
+            {
+                <p class="mb-0">@T["The course has no active learners to sign off."]</p>
+            }
+            else
+            {
+                <form method="post" action="@Url.RouteUrl("LearningCourseworkSignOff", new { courseworkId = Model.Coursework.ContentItemId })" class="row g-2 align-items-end">
+                    @Html.AntiForgeryToken()
+                    <div class="col-md-6">
+                        <label for="sign-off-enrollment" class="form-label">@T["Learner"]</label>
+                        <select id="sign-off-enrollment" name="enrollmentId" asp-items="Model.SignOffLearners" class="selectpicker" data-live-search="true" data-width="100%" data-live-search-placeholder="@T["Search learners"]" title="@T["Choose a learner"]" required></select>
+                    </div>
+                    <div class="col-md-auto">
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-user-check me-1" aria-hidden="true"></i>@T["Sign off"]</button>
+                    </div>
+                    <div class="col-12">
+                        <span class="hint">@T["Learners hand nothing in for this coursework. Choose a learner to grade their work; a learner already started opens again."]</span>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+}
+
+<admin-list name="LearningCourseworkSubmissions" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> No work was handed in yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Learner" position="20" title="@T["Learner"]" />
+        <admin-list-column name="Submitted" position="30" title="@T["Handed in"]" width="auto" />
+        <admin-list-column name="Status" position="40" title="@T["Status"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

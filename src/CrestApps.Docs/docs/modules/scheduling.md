@@ -121,11 +121,53 @@ A group session (`Capacity` > 1) shares one calendar event per time, with `Sourc
 
 `AppointmentHoldsBackgroundTask` runs every minute and calls `ExpireHoldsAsync`: each expired hold is set to `Expired` and its calendar event is cancelled (for a group session, the customer is taken off the shared event).
 
+## Dated sessions
+
+A **session** (`SchedulingSession`) is a dated occurrence of an appointment type that several people register for, such as a class: one or more meetings, its own capacity, a location or a meeting link, a registration window and a waitlist. Scheduling owns the sessions, their places, the waitlist and its offers, so a module that needs sessions (a course's class, a workshop, a webinar) builds on them instead of keeping seats of its own. [Learning Classes](./learning-classes) is the first: a class item's sessions are Scheduling sessions with the source `Learning.Class`.
+
+`SchedulingSession` (a catalog item in the `Scheduling` collection) holds:
+
+| Property | Meaning |
+| --- | --- |
+| `AppointmentTypeId` | The appointment type whose rules (confirmation, cancel notice) the registrations follow. |
+| `Title` | The name shown. |
+| `Meetings` | `SchedulingSessionMeeting` rows (`StartUtc`, `EndUtc`), in order. `StartUtc`, `EndUtc` and `TotalMinutes` are read from them. |
+| `Capacity` | How many people may register (1 by default). |
+| `Location`, `MeetingUrl` | Where it takes place, and a meeting link pasted by the organizer. |
+| `ResourceIds` | The resources it uses, such as instructors and rooms. The first one's calendar holds its event (`CalendarEventId`), with the registered people as attendees. |
+| `RegistrationOpensUtc`, `RegistrationClosesUtc` | The registration window. Empty opens it at once and closes it when the first meeting starts. |
+| `WaitlistMode` | What happens when a place frees up: `AutoPromote` (the default: the next person is offered the place, held for `OfferHours`, then it passes on), `Notify` (the next person is told and registers themselves) or `None` (a full session refuses). |
+| `OfferHours` | How many hours an offered place is held (24 by default). |
+| `Status` | `SchedulingSessionStatus`: it takes place, or it was cancelled. |
+| `Source`, `SourceId` | What made it, such as `Learning.Class` and the class item. |
+
+A registration is an `Appointment` with `SessionId` set; one registration covers every meeting. Its `Attendance` (`AppointmentAttendance`: `Unmarked`, `Attended`, `Partial` or `Absent`) and `MinutesAttended` record how the person attended. A person waiting is a `WaitlistEntry` with `SessionId` set.
+
+### ISchedulingSessionService
+
+`ISchedulingSessionService` (Scheduling.Abstractions, registered by `AddSchedulingCore()` as `DefaultSchedulingSessionService`) keeps the sessions and their registrations. Registering, cancelling, accepting an offer and passing an offer on all run under one distributed lock per session, on fresh counts, so a session never takes more people than its capacity.
+
+| Method | What it does |
+| --- | --- |
+| `SaveAsync(session, actor)` | Creates or updates a session and its calendar event; returns the errors, if any. Moving the meetings tells the registrations' observers (`Rescheduled`). |
+| `FindByIdAsync`, `ListBySourceAsync(source, sourceId)`, `ListAsync(fromUtc, toUtc)` | Read sessions. |
+| `CancelAsync(sessionId, reason, actor)` | Cancels the session and every registration and wait of it. |
+| `RegisterAsync(SessionRegistrationRequest)` | Registers a person (`SessionId`, `UserId` or `CustomerName` and `CustomerEmail`, `Source`, `SourceId`, `Actor`), or puts them on the waitlist when the session is full and `JoinWaitlistWhenFull` is set. `IgnoreWindow` skips the registration window, as when staff register someone. The `SessionRegistrationResult` has the `Appointment` or the `WaitlistEntry` (`Waitlisted`), or the `Error`. |
+| `AcceptOfferAsync(appointmentId, actor)` | Confirms a place offered from the waitlist while it is still held. |
+| `CancelRegistrationAsync(appointmentId, reason, actor)` | Cancels a registration and offers the place to the next person waiting. |
+| `LeaveWaitlistAsync(waitlistEntryId)` | Leaves the waitlist. |
+| `ListRegistrationsAsync(sessionId)`, `ListRegistrationsForUserAsync(userId)`, `ListWaitlistAsync(sessionId)`, `CountTakenAsync(sessionId)` | Read the registrations (cancelled ones included), the waitlist (first come first) and the places taken (held offers included). |
+| `RecordAttendanceAsync(sessionId, marks, actor)` | Marks the attendance of several registrations at once (`SessionAttendanceMark`: the appointment, the attendance and the minutes), as from a roster. Saving the same marks again changes nothing. |
+| `ExpireOffersAsync()` | Passes the offers that ran out to the next people waiting. The appointment holds background task calls it every minute. |
+
+Changes reach `IAppointmentObserver` after they commit, as for any appointment, with `WaitlistSlotAvailable` when a place frees up for someone waiting; a module reacts there (Learning Classes completes the class item on attendance and sends its notices).
+
 ## Extension points
 
 | Contract | Use |
 | --- | --- |
 | `IAppointmentService` | Book, confirm, reschedule, cancel and complete appointments from another module. |
+| `ISchedulingSessionService` | Keep dated sessions, their registrations, waitlist and attendance (see [Dated sessions](#dated-sessions)). |
 | `ISchedulingAvailabilityService` | Find open times for an appointment type. |
 | `IAppointmentSlotFilter` | `FilterAsync(AppointmentSlotFilterContext, slots)` narrows the open times the resources' hours give: it can drop slots or lower `Remaining`, never add any. The context has the `AppointmentType` and the `ExcludeAppointmentId` of a booking being moved. Booking and rescheduling check the time against the same slots, so a time a filter drops can't be booked. Dispatch uses it for technicians' capacity. |
 | `IAppointmentObserver` | `OnChangedAsync(AppointmentChange)` after the change commits: `Kind` (`Held`, `Requested`, `Confirmed`, `Rescheduled`, `Cancelled`, `Completed`, `NoShow`, `HoldExpired`, `WaitlistSlotAvailable`), `Appointment`, `AppointmentType`, `PreviousStartUtc`, `WaitlistEntry`, `Actor`. The workflow integration listens here. |

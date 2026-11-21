@@ -15,7 +15,7 @@ internal sealed class SkillsMigrations : DataMigration
     {
         await SkillsIndexSchema.CreateAsync(SchemaBuilder);
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -78,5 +78,17 @@ internal sealed class SkillsMigrations : DataMigration
         });
 
         return 3;
+    }
+
+    /// <summary>
+    /// Adds the source, source id and verification code columns of certificates the site issues. Certificates saved
+    /// before have none of them, so nothing needs indexing again.
+    /// </summary>
+    /// <returns>The new version.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SkillsIndexSchema.AddIssuedCertificateColumnsAsync(SchemaBuilder);
+
+        return 4;
     }
 }

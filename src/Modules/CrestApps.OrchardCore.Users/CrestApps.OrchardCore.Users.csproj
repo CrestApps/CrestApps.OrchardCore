@@ -22,6 +22,10 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Recipes.Abstractions" />
+    <PackageReference Include="OrchardCore.Rules.Core" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
     <PackageReference Include="OrchardCore.Settings.Core" />
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
@@ -31,6 +35,7 @@
     <PackageReference Include="OrchardCore.Contents" />
     <PackageReference Include="OrchardCore.Media" />
     <PackageReference Include="OrchardCore.Email.Abstractions" />
+    <PackageReference Include="OrchardCore.Notifications.Core" />
 
     <!-- Only for revoking OpenID tokens when the OpenID server is on; the Users module does not depend on it. -->
     <PackageReference Include="OpenIddict.Abstractions" />

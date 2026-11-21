@@ -1,0 +1,244 @@
+@inject CrestApps.OrchardCore.Learning.Services.LearningRefusalText RefusalText
+@model PlayerViewModel
+
+@{
+    var course = Model.Outline.Course;
+    var current = Model.Current;
+    var courseId = course.ContentItemId;
+    var enrollment = Model.Enrollment;
+    var itemId = current?.Item.ContentItemId;
+    var completed = Model.CurrentProgress?.State == CourseItemState.Completed;
+    var mode = current?.Part?.CompletionMode;
+    var kind = current?.Part?.Kind ?? string.Empty;
+    var progressLabel = T["Course progress"].Value;
+    var canOpen = Model.Access is CourseItemAccessReason.Staff || enrollment is { Status: EnrollmentStatus.Active or EnrollmentStatus.Completed };
+
+}
+
+<div class="container my-4 learning-player">
+    <div class="product-breadcrumb">
+        <breadcrumb name="LearningPlayer" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(current?.Item.DisplayText ?? course.DisplayText))">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            <breadcrumb-item id="LearningMyLearning" url="@Url.RouteUrl("LearningMyLearning")">@T["My learning"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
+
+    <div class="row g-4">
+        <aside class="col-lg-4 order-lg-1 order-2 learning-player-index" aria-label="@T["Course outline"]">
+            <div class="card" data-learning-refresh="index">
+                <div class="card-body">
+                    <h2 class="h6 mb-2">@course.DisplayText</h2>
+                    @if (enrollment is { Status: EnrollmentStatus.Completed })
+                    {
+                        <p class="small mb-0 text-success" data-learning-course-completed>
+                            <i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["Completed on"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(enrollment.CompletedUtc ?? enrollment.CreatedUtc, DateTimeKind.Utc), Format: "d"))
+                            @if (!Model.ShowCompletion)
+                            {
+                                <a class="ms-1" href="@Url.RouteUrl("LearningCourseCompleted", new { courseId })">@T["See your completion"]</a>
+                            }
+                        </p>
+                    }
+                    else if (enrollment is not null && enrollment.Status != EnrollmentStatus.Pending)
+                    {
+                        <partial name="_LearnerProgress" model="(enrollment.ProgressPercent, Model.CompletedCount, Model.RequiredCount, progressLabel)" />
+                    }
+                </div>
+            </div>
+            @if (Model.Outline.Entries.Count > 0)
+            {
+                <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+                    <h2 class="h6 text-uppercase text-body-secondary mb-0">@T["Course outline"]</h2>
+                    <button type="button" class="btn btn-link btn-sm p-0" data-learning-toggle-sections data-collapse-text="@T["Collapse all"]" data-expand-text="@T["Expand all"]" aria-controls="learning-player-outline">@T["Collapse all"]</button>
+                </div>
+                <div id="learning-player-outline" data-learning-refresh="outline">
+                    <partial name="_LearnerOutline" model="new LearnerOutlineViewModel { Outline = Model.Outline, Progress = Model.Progress, KindIcons = Model.KindIcons, CurrentItemId = itemId, CanOpen = canOpen, LockedItems = Model.LockedItems, Navigation = true }" />
+                </div>
+            }
+        </aside>
+
+        <main class="col-lg-8 order-lg-2 order-1" id="learning-item">
+            @if (Model.ShowCompletion)
+            {
+                <partial name="_CourseCompletedPanel" model="(enrollment, Model.CompletionLinks, courseId, true)" />
+            }
+            else if (current is null)
+            {
+                <p>@T["This course has no lessons yet."]</p>
+            }
+            else
+            {
+                <header class="learning-item-header mb-3">
+                    <div class="small text-body-secondary mb-1">
+                        @if (Model.KindIcons.TryGetValue(kind, out var kindIcon))
+                        {
+                            <i class="@kindIcon me-1" aria-hidden="true"></i>
+                        }
+                        @if (Model.KindNames.TryGetValue(kind, out var kindName))
+                        {
+                            <span>@kindName</span>
+                        }
+                        @if (!string.IsNullOrEmpty(current.Section?.Title))
+                        {
+                            <span> &middot; @current.Section.Title</span>
+                        }
+                        @if (Model.StepNumber > 0)
+                        {
+                            <span> &middot; @T["{0} of {1}", Model.StepNumber, Model.StepCount]</span>
+                        }
+                        @if (current.Part?.EstimatedMinutes is { } estimated)
+                        {
+                            <span> &middot; <i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["About {0} min", estimated]</span>
+                        }
+                    </div>
+                    <h1 class="h3 mb-2">@current.Item.DisplayText</h1>
+                    <div data-learning-refresh="condition"><partial name="_ItemCondition" model="(current, Model.CurrentProgress, enrollment is { Status: EnrollmentStatus.Active or EnrollmentStatus.Completed })" /></div>
+                </header>
+
+                @if (Model.CurrentShape is not null)
+                {
+                    @if (Model.TracksProgress)
+                    {
+                        <div data-learning-player
+                             data-heartbeat-url="@Url.RouteUrl("LearningHeartbeat", new { enrollmentId = enrollment.ItemId, itemId })"
+                             data-viewed-url="@Url.RouteUrl("LearningViewed", new { enrollmentId = enrollment.ItemId, itemId })"
+                             data-item-id="@itemId"
+                             data-completed-text="@T["Completed"]">
+                            @Html.AntiForgeryToken()
+                        </div>
+                    }
+
+                    @foreach (var text in Model.TextBefore)
+                    {
+                        if (text.Item.TryGet<OrchardCore.Html.Models.HtmlBodyPart>(out var textBody) && !string.IsNullOrWhiteSpace(textBody.Html))
+                        {
+                            <div class="learning-text mb-3" data-learning-inline="@text.Item.ContentItemId">@Html.Raw(textBody.Html)</div>
+                        }
+                    }
+
+                    <div class="learning-item-content">
+                        @await DisplayAsync(Model.CurrentShape)
+                    </div>
+
+                    @foreach (var text in Model.TextAfter)
+                    {
+                        if (text.Item.TryGet<OrchardCore.Html.Models.HtmlBodyPart>(out var textBody) && !string.IsNullOrWhiteSpace(textBody.Html))
+                        {
+                            <div class="learning-text my-3" data-learning-inline="@text.Item.ContentItemId">@Html.Raw(textBody.Html)</div>
+                        }
+                    }
+
+                    @if (Model.TracksProgress && !completed)
+                    {
+                        if (mode == CompletionModes.MarkedDone)
+                        {
+                            <form method="post" action="@Url.RouteUrl("LearningDone", new { enrollmentId = enrollment.ItemId, itemId })" class="my-3">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-success"><i class="fa-solid fa-check me-1" aria-hidden="true"></i>@T["Mark as done"]</button>
+                            </form>
+                        }
+                        else if (mode == CompletionModes.Acknowledged)
+                        {
+                            var statement = current.Item.TryGet<AcknowledgementPart>(out var acknowledgement) ? acknowledgement.Statement : null;
+
+                            <form method="post" action="@Url.RouteUrl("LearningAcknowledge", new { enrollmentId = enrollment.ItemId, itemId })" class="my-3 card card-body">
+                                @Html.AntiForgeryToken()
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="confirm" value="true" id="learning-confirm" required />
+                                    <label class="form-check-label" for="learning-confirm">@statement</label>
+                                </div>
+                                <div><button type="submit" class="btn btn-primary">@T["Confirm"]</button></div>
+                            </form>
+                        }
+                        else if (mode == CompletionModes.MinimumTime)
+                        {
+                            <p class="small text-muted my-3">@T.Plural(current.Part.MinimumMinutes ?? 0, "This lesson completes after you spend 1 minute on it. Time on this page counts while it is open.", "This lesson completes after you spend {0} minutes on it. Time on this page counts while it is open.")</p>
+                        }
+                    }
+
+                    @if (completed)
+                    {
+                        <p class="text-success my-3"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["You completed this item."]</p>
+                        @if (Model.CurrentProgress?.AttestedUtc is { } attested)
+                        {
+                            <p class="small text-muted">@T["You confirmed \"{0}\" on", Model.CurrentProgress.AttestedStatement] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(attested, DateTimeKind.Utc), Format: "g")).</p>
+                        }
+                    }
+                    <p class="small text-success my-3 d-none" data-learning-completed role="status"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["You completed this item."]</p>
+                    <div class="alert alert-success d-flex flex-wrap align-items-center justify-content-between gap-2 d-none" data-learning-course-done role="status">
+                        <span><i class="fa-solid fa-trophy me-1" aria-hidden="true"></i>@T["You completed the course."]</span>
+                        <a class="btn btn-success btn-sm" href="@Url.RouteUrl("LearningCourseCompleted", new { courseId })">@T["See your completion"]</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info" role="status">
+                        @switch (Model.Access)
+                        {
+                            case CourseItemAccessReason.NotReleased:
+                                var blocking = Model.BlockingItemId is null ? null : Model.Outline.Find(Model.BlockingItemId);
+
+                                if (blocking is not null)
+                                {
+                                    <p class="mb-2" data-learning-locked-item><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["This item opens once you complete \"{0}\".", blocking.Item.DisplayText]</p>
+                                    <a class="btn btn-primary btn-sm" href="@Url.RouteUrl("LearningPlayer", new { courseId, itemId = blocking.Item.ContentItemId })" data-learning-blocking-item>@T["Go to \"{0}\"", blocking.Item.DisplayText]</a>
+                                }
+                                else
+                                {
+                                    <p class="mb-0"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@(RefusalText.Get(Model.LockedReason)?.Value ?? T["This item is not available yet."].Value)</p>
+                                }
+                                @if (Model.AvailableFromUtc is { } availableFrom)
+                                {
+                                    <p class="mb-0">@T["It opens on"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(availableFrom, DateTimeKind.Utc), Format: "g")).</p>
+                                }
+                                break;
+                            case CourseItemAccessReason.Pending:
+                                <p class="mb-0">@T["Your request to enroll waits for approval."]</p>
+                                break;
+                            case CourseItemAccessReason.Suspended:
+                                <p class="mb-0">@T["Your enrollment is paused. Contact the course staff."]</p>
+                                break;
+                            case CourseItemAccessReason.AccessEnded:
+                                <p class="mb-0">@T["Your access to this course has ended."]</p>
+                                break;
+                            default:
+                                <p class="mb-0">@T["Enroll in the course to open this item."]</p>
+                                break;
+                        }
+                    </div>
+                }
+
+                <nav class="d-flex justify-content-between my-4" data-learning-refresh="nav" aria-label="@T["Course items"]">
+                    @if (Model.PreviousItemId is not null)
+                    {
+                        <a class="btn btn-outline-secondary" href="@Url.RouteUrl("LearningPlayer", new { courseId, itemId = Model.PreviousItemId })"><i class="fa-solid fa-arrow-left me-1" aria-hidden="true"></i>@T["Previous"]</a>
+                    }
+                    else
+                    {
+                        <span></span>
+                    }
+                    @if (Model.NextItemId is not null)
+                    {
+                        <a class="btn btn-primary" href="@Url.RouteUrl("LearningPlayer", new { courseId, itemId = Model.NextItemId })">@T["Next"]<i class="fa-solid fa-arrow-right ms-1" aria-hidden="true"></i></a>
+                    }
+                    else if (enrollment is { Status: EnrollmentStatus.Completed })
+                    {
+                        <a class="btn btn-success" href="@Url.RouteUrl("LearningCourseCompleted", new { courseId })">@T["Finish"]<i class="fa-solid fa-flag-checkered ms-1" aria-hidden="true"></i></a>
+                    }
+                </nav>
+            }
+        </main>
+    </div>
+</div>
+
+@{
+    // The breadcrumb and the item's own display each add the item's title; the tab reads "Item - Course - Site" instead.
+    Title.Clear();
+    Title.AddSegment(new Microsoft.AspNetCore.Html.HtmlString(System.Net.WebUtility.HtmlEncode(current?.Item.DisplayText ?? course.DisplayText)), "before");
+
+    if (current is not null)
+    {
+        Title.AddSegment(new Microsoft.AspNetCore.Html.HtmlString(System.Net.WebUtility.HtmlEncode(course.DisplayText)), "before");
+    }
+}
+
+<script asp-src="~/CrestApps.OrchardCore.Learning/scripts/learning-player.min.js" debug-src="~/CrestApps.OrchardCore.Learning/scripts/learning-player.js" at="Foot"></script>

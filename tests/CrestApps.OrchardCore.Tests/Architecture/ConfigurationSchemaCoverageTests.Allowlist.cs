@@ -64,5 +64,10 @@ public sealed partial class ConfigurationSchemaCoverageTests
         ["CrestApps.OrchardCore.Transactions: CrestApps:Transactions:CustomerPages"] = 1,
         ["CrestApps.OrchardCore.WebSockets: CrestApps:WebSockets"] = 1,
         ["CrestApps.OrchardCore.Workforce: CrestApps_Workforce:WebPush"] = 1,
+
+        // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["CrestApps.OrchardCore.Learning.Assessments: CrestApps:Learning:MoodleImport"] = 1,
+        ["CrestApps.OrchardCore.Learning.Coursework: CrestApps:Learning:Coursework"] = 1,
     };
 }

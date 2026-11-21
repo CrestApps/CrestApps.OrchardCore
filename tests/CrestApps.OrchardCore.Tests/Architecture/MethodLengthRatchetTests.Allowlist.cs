@@ -79,9 +79,9 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Services/InboundVoiceCallProcessor.cs: RouteInboundCoreAsync"] = 290,
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Startup.cs: ConfigureServices"] = 257,
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/VoiceStartup.cs: ConfigureServices"] = 172,
-        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/BackgroundTasks/ExportFilesBackgroundTask.cs: ExportEntryAsync"] = 294,
-        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/BackgroundTasks/ImportFilesBackgroundTask.cs: ProcessEntryAsync"] = 233,
-        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/BackgroundTasks/ImportFilesBackgroundTask.cs: ProcessFileInBatchesAsync"] = 273,
+        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/BackgroundTasks/ExportFilesBackgroundTask.cs: ExportEntryAsync"] = 295, // raised for main's #1343 when PR #1319 merged main; lower as it is paid down
+        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/BackgroundTasks/ImportFilesBackgroundTask.cs: ProcessEntryAsync"] = 239, // raised for main's #1343 when PR #1319 merged main; lower as it is paid down
+        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/BackgroundTasks/ImportFilesBackgroundTask.cs: ProcessFileInBatchesAsync"] = 277, // raised for main's #1343 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.ContentTransfer/Controllers/AdminController.cs: DownloadExport"] = 310,
         ["src/Modules/CrestApps.OrchardCore.DncRegistry/Services/DefaultLocalDncListManager.cs: DeleteAsync"] = 159,
         ["src/Modules/CrestApps.OrchardCore.DncRegistry/Services/DefaultLocalDncListManager.cs: ProcessImportCoreAsync"] = 192,
@@ -137,5 +137,17 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketService.cs: CreateAsync"] = 224,
         ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketService.cs: ReplyAsync"] = 194,
         ["src/Modules/CrestApps.OrchardCore.Tickets/Reports/TicketAccountHealthReport.cs: RunAsync"] = 154,
+
+        // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Learning.Assessments.Core/Services/DefaultAssessmentAttemptService.cs: StartAsync"] = 159,
+        ["src/Core/CrestApps.OrchardCore.Learning.Core/Moodle/MoodleBackupReader.cs: ReadActivities"] = 152,
+        ["src/Core/CrestApps.OrchardCore.Learning.Core/Services/DefaultLearnerProgressService.cs: UpdateCoreAsync"] = 215,
+        ["src/Core/CrestApps.OrchardCore.Learning.Coursework.Core/Services/DefaultSubmissionService.cs: SubmitAsync"] = 168,
+        ["src/Core/CrestApps.OrchardCore.Learning.Packages.Core/Cmi5/Cmi5LaunchService.cs: LaunchAsync"] = 158,
+        ["src/Core/CrestApps.OrchardCore.Learning.Packages.Core/Cmi5/Cmi5Rules.cs: CheckAndApply"] = 151,
+        ["src/Core/CrestApps.OrchardCore.Learning.Packages.Core/Services/PackageRuntimeService.cs: ApplyAsync"] = 157,
+        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/Controllers/AdminController.cs: ImportPOST"] = 154,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/ContentTransfer/Moodle/MoodleCourseRows.cs: Write"] = 229,
     };
 }

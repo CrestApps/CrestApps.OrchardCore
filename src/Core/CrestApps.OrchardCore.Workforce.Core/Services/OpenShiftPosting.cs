@@ -150,7 +150,7 @@ internal sealed class OpenShiftPosting
         shift.End = draft.End;
         shift.TimeZoneId = timeZoneId;
         shift.TemplateId = draft.TemplateId;
-        shift.Segments = draft.Segments.Select(segment => new DraftShiftSegment { ActivityCodeId = segment.ActivityCodeId, Start = segment.Start, End = segment.End }).ToList();
+        shift.Segments = draft.Segments.Select(segment => new DraftShiftSegment { ActivityCodeId = segment.ActivityCodeId, Start = segment.Start, End = segment.End, Source = segment.Source, SourceId = segment.SourceId }).ToList();
         shift.RequiredSkillIds = skills;
         shift.Notes = draft.Notes;
     }

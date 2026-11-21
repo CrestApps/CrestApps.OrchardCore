@@ -30,4 +30,10 @@ public static class StructuredDataProviderOrder
     /// The JSON-LD an editor typed on the content item. It runs last, so it overrides everything else.
     /// </summary>
     public const int EditorJsonLd = 2000;
+
+    /// <summary>
+    /// The site's publisher and <c>WebSite</c> nodes and the links to them. It runs after the editor's JSON-LD and only
+    /// fills what is still missing; a provider that refers to those nodes runs after it.
+    /// </summary>
+    public const int Site = EditorJsonLd + 1000;
 }

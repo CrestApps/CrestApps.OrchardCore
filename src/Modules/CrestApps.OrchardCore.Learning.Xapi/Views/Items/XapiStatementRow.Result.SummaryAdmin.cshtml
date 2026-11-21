@@ -1,0 +1,27 @@
+@model ShapeViewModel<XapiStatementRow>
+
+@{
+    var row = Model.Value;
+    var summary = row.Summary;
+}
+
+@if (row.Record.Voided)
+{
+    <span class="badge text-bg-secondary fw-normal" title="@T["A voiding statement voided it; statement queries do not return it."]"><i class="fa-solid fa-ban me-1" aria-hidden="true"></i>@T["Voided"]</span>
+}
+@if (summary.Success is { } success)
+{
+    <span class="badge @(success ? "text-bg-success" : "text-bg-danger") fw-normal" title="@T["Success"]">@(success ? T["Success"] : T["No success"])</span>
+}
+@if (summary.Completion == true)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Completion"]"><i class="fa-solid fa-check me-1" aria-hidden="true"></i>@T["Complete"]</span>
+}
+@if (summary.ScoreScaled is { } scaled)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Scaled score"]"><i class="fa-solid fa-star-half-stroke me-1" aria-hidden="true"></i>@T["{0}%", (scaled * 100).ToString("0.##")]</span>
+}
+@if (!string.IsNullOrEmpty(row.Record.Registration))
+{
+    <span class="badge ta-badge fw-normal" title="@T["Registration"]"><i class="fa-solid fa-hashtag me-1" aria-hidden="true"></i>@row.Record.Registration[..8]</span>
+}

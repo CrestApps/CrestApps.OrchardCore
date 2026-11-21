@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Downloads;
 using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Services;
+using CrestApps.OrchardCore.FileStorage;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Utilities;
@@ -117,7 +118,7 @@ public sealed class CommerceTenantIsolationTests
         Assert.True((await limiterB.AcquireAsync("coupon-code", "203.0.113.5", TestContext.Current.CancellationToken)).Allowed);
     }
 
-    private static IDigitalFileStore FileStoreFor(string root, string tenant)
+    private static IProtectedFileStore<DigitalDownloadFiles> FileStoreFor(string root, string tenant)
     {
         var services = new ServiceCollection();
 
@@ -127,7 +128,7 @@ public sealed class CommerceTenantIsolationTests
 
         new CrestApps.OrchardCore.Downloads.Startup().ConfigureServices(services);
 
-        return services.BuildServiceProvider().GetRequiredService<IDigitalFileStore>();
+        return services.BuildServiceProvider().GetRequiredService<IProtectedFileStore<DigitalDownloadFiles>>();
     }
 
     private static DownloadService DownloadServiceFor(IDataProtectionProvider protection, DownloadEntitlement entitlement)

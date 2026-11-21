@@ -1,0 +1,80 @@
+using System.Security.Claims;
+using CrestApps.OrchardCore.Learning.Models;
+using CrestApps.OrchardCore.Learning.Services;
+using Microsoft.AspNetCore.Authorization;
+using OrchardCore.Security;
+
+namespace CrestApps.OrchardCore.Learning.Core.Services;
+
+/// <summary>
+/// Narrows the broad Learning permissions to the record: a learner may read their own records, the staff of a course may
+/// read the records of its learners, and its instructors and assistants may also manage its enrollments. Callers check
+/// the broad permission with the enrollment as the resource; a role that holds the permission passes as before.
+/// </summary>
+public sealed class LearningRecordAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
+{
+    private static readonly string[] _managingRoles = [LearningConstants.CourseStaffRoles.Instructor, LearningConstants.CourseStaffRoles.Assistant];
+
+    private readonly Lazy<ICourseStructureService> _courseStructure;
+    private readonly Lazy<IAuthorizationService> _authorizationService;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LearningRecordAuthorizationHandler"/> class.
+    /// </summary>
+    /// <param name="courseStructure">The course structure reader, resolved lazily because it builds the content manager, whose handlers may use authorization.</param>
+    public LearningRecordAuthorizationHandler(Lazy<ICourseStructureService> courseStructure, Lazy<IAuthorizationService> authorizationService)
+    {
+        _courseStructure = courseStructure;
+        _authorizationService = authorizationService;
+    }
+
+    /// <inheritdoc />
+    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
+    {
+        var enrollment = context.Resource as Enrollment;
+        var courseId = enrollment?.CourseId ?? (context.Resource as LearningCourseResource)?.CourseId;
+
+        if (context.HasSucceeded || string.IsNullOrEmpty(courseId) || context.User?.Identity?.IsAuthenticated != true)
+        {
+            return;
+        }
+
+        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return;
+        }
+
+        var name = requirement.Permission.Name;
+
+        if (name == LearningPermissions.ViewLearnerRecords.Name && enrollment?.UserId == userId)
+        {
+            context.Succeed(requirement);
+
+            return;
+        }
+
+        // Course staff reach records only with a Learning permission too: being named on a course or holding an editor
+        // role is not enough.
+        if (!await _authorizationService.Value.AuthorizeAsync(context.User, LearningPermissions.ManageOwnCourses))
+        {
+            return;
+        }
+
+        if (name == LearningPermissions.ViewLearnerRecords.Name || name == LearningPermissions.ViewEnrollments.Name)
+        {
+            if (await _courseStructure.Value.IsCourseStaffAsync(userId, courseId))
+            {
+                context.Succeed(requirement);
+            }
+
+            return;
+        }
+
+        if (name == LearningPermissions.ManageEnrollments.Name && await _courseStructure.Value.IsCourseStaffAsync(userId, courseId, _managingRoles))
+        {
+            context.Succeed(requirement);
+        }
+    }
+}

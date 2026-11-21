@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.Programs</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Programs Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts of Learning programs: learning paths made of ordered course sets, each person's progress on a
+      path, required learning with due dates, reminders, escalation and exemptions, and the targets it can require.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS Programs Required Learning Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+  </ItemGroup>
+
+</Project>

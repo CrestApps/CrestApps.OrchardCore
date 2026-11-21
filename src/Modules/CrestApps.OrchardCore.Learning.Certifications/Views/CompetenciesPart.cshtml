@@ -1,0 +1,11 @@
+@model CompetenciesDisplayViewModel
+
+@if (Model.Names.Count > 0)
+{
+    <p class="competencies mb-3">
+        <i class="fa-solid fa-medal text-secondary me-1" aria-hidden="true"></i>
+        @T["Grants the competencies"]
+        <span class="fw-semibold">@string.Join(", ", Model.Names)</span>
+        <span class="text-muted">(@T["level {0}", Model.Proficiency])</span>
+    </p>
+}

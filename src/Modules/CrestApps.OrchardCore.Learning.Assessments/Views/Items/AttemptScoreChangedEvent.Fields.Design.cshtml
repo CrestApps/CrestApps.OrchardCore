@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Learning.Assessments.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AttemptScoreChangedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Quiz Score Changed"])
+    </h4>
+</header>

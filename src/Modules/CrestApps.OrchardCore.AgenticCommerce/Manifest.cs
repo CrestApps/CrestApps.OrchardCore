@@ -17,7 +17,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = AgenticCommerceConstants.Features.AgenticCommerce,
     Name = "Agentic Commerce",
-    Description = "Lets AI agents buy from the store for a buyer: the agent platforms allowed to, their credentials, the store's signing keys, and one agent checkout over the store's own prices, tax, shipping, discounts and stock.",
+    Description = "Lets AI agents buy from the store for a buyer: the agent platforms allowed to, their credentials, the store's signing keys (kept in Secrets), and one agent checkout over the store's own prices, tax, shipping, discounts and stock.",
     Category = "Commerce",
     Dependencies =
     [
@@ -27,6 +27,7 @@ using OrchardCore.Modules.Manifest;
         OrderConstants.Features.Orders,
         ProductConstants.Feature.ModuleId,
         WebhooksConstants.Feature.Webhooks,
+        OrchardCoreFeatureIds.Secrets,
     ]
 )]
 

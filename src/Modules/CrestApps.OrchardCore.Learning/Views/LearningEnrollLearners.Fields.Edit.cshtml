@@ -1,0 +1,34 @@
+@using CrestApps.OrchardCore.Learning.Pipelines
+@model EnrollLearnersStepViewModel
+
+<div class="mb-3">
+    <label asp-for="UserIdField" class="form-label">@T["User id field"]</label>
+    <input asp-for="UserIdField" class="form-control" />
+    <span asp-validation-for="UserIdField"></span>
+    <span class="hint">@T["The input field that holds the user id of each learner, for example one joined from the Users data set by e-mail."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="CourseId" class="form-label">@T["Course"]</label>
+    <select asp-for="CourseId" asp-items="Model.CourseOptions" class="form-select">
+        <option value="">@T["Use the course field"]</option>
+    </select>
+    <span asp-validation-for="CourseId"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="CourseIdField" class="form-label">@T["Course field"]</label>
+    <input asp-for="CourseIdField" class="form-control" />
+    <span class="hint">@T["Optional. The input field that holds the content item id of each row's course, instead of one course for every row."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="DueField" class="form-label">@T["Due date field"]</label>
+    <input asp-for="DueField" class="form-control" />
+</div>
+<div class="mb-3">
+    <label asp-for="AccessEndsField" class="form-label">@T["Access ends field"]</label>
+    <input asp-for="AccessEndsField" class="form-control" />
+</div>
+<div class="mb-3 form-check">
+    <input asp-for="IgnorePrerequisites" class="form-check-input" />
+    <label asp-for="IgnorePrerequisites" class="form-check-label">@T["Enroll learners who have not completed the prerequisite courses"]</label>
+</div>
+<p class="hint">@T["Rows that cannot be enrolled go to the Rejected output with the reason. Running the pipeline again adds no second enrollment."]</p>

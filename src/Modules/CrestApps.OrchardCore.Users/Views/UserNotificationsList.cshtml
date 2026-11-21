@@ -1,0 +1,69 @@
+@using CrestApps.OrchardCore.Users
+@using CrestApps.OrchardCore.Users.ViewModels
+
+@*
+    The list of the site's Notifications page. Each item is the Notifications module's own notification shape (the
+    Header display type of the navbar), so a module's template for its notification type shows here too; its link opens
+    the notification through the module, which marks it read.
+*@
+
+@{
+    UserNotificationsViewModel page = Model.Page;
+    var status = page.UnreadOnly ? "unread" : null;
+}
+
+@await DisplayAsync(await New.UserNotificationNavbarStyles())
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <ul class="nav nav-pills">
+        <li class="nav-item">
+            <a class="nav-link @(page.UnreadOnly ? null : "active")" aria-current="@(page.UnreadOnly ? null : "page")" href="@Url.RouteUrl(UsersConstants.Notifications.RouteName)">@T["All"]</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(page.UnreadOnly ? "active" : null)" aria-current="@(page.UnreadOnly ? "page" : null)" href="@Url.RouteUrl(UsersConstants.Notifications.RouteName, new { status = "unread" })">@T["Unread"]</a>
+        </li>
+    </ul>
+    @if (page.HasUnread)
+    {
+        <form method="post" asp-route="@UsersConstants.Notifications.MarkAllReadRouteName">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-check-double" aria-hidden="true"></i> @T["Mark all as read"]
+            </button>
+        </form>
+    }
+</div>
+
+@if (page.Notifications.Count == 0)
+{
+    @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-regular fa-bell", Title: page.UnreadOnly ? T["You have no unread notifications."] : T["You have no notifications."], Hint: T["Messages about your orders, courses and account appear here."]))
+}
+else
+{
+    <div class="list-group user-notifications mb-3">
+        @foreach (var notification in page.Notifications)
+        {
+            <div class="list-group-item position-relative">
+                @await DisplayAsync(notification)
+            </div>
+        }
+    </div>
+}
+
+@if (page.Page > 1 || page.HasOlder)
+{
+    <nav aria-label="@T["Notification pages"]">
+        <ul class="pagination">
+            <li class="page-item @(page.Page > 1 ? null : "disabled")">
+                <a class="page-link" href="@Url.RouteUrl(UsersConstants.Notifications.RouteName, new { status, page = page.Page - 1 })">@T["Newer"]</a>
+            </li>
+            <li class="page-item @(page.HasOlder ? null : "disabled")">
+                <a class="page-link" href="@Url.RouteUrl(UsersConstants.Notifications.RouteName, new { status, page = page.Page + 1 })">@T["Older"]</a>
+            </li>
+        </ul>
+    </nav>
+}
+
+<p class="small text-muted">
+    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+    <a href="@Url.RouteUrl(UsersConstants.Notifications.PreferencesRouteName)">@T["Choose how each kind of notification reaches you"]</a>
+</p>

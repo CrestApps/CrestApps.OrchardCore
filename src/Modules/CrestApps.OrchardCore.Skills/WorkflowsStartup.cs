@@ -17,11 +17,15 @@ public sealed class WorkflowsStartup : StartupBase
     {
         services.AddScoped<SkillsWorkflowObserver>();
         services.AddScoped<ICertificationExpiryObserver>(provider => provider.GetRequiredService<SkillsWorkflowObserver>());
+        services.AddScoped<ICertificationRecordObserver>(provider => provider.GetRequiredService<SkillsWorkflowObserver>());
         services.AddScoped<ISkillAssignmentHandler>(provider => provider.GetRequiredService<SkillsWorkflowObserver>());
 
         services.AddActivity<CertificationExpiringEvent, SkillsEventActivityDisplayDriver<CertificationExpiringEvent>>();
         services.AddActivity<CertificationExpiredEvent, SkillsEventActivityDisplayDriver<CertificationExpiredEvent>>();
         services.AddActivity<SkillsChangedEvent, SkillsEventActivityDisplayDriver<SkillsChangedEvent>>();
+        services.AddActivity<CertificateIssuedEvent, SkillsEventActivityDisplayDriver<CertificateIssuedEvent>>();
+        services.AddActivity<CertificateRenewedEvent, SkillsEventActivityDisplayDriver<CertificateRenewedEvent>>();
+        services.AddActivity<CertificateRevokedEvent, SkillsEventActivityDisplayDriver<CertificateRevokedEvent>>();
         services.AddActivity<AssignSkillTask, AssignSkillTaskDisplayDriver>();
     }
 }

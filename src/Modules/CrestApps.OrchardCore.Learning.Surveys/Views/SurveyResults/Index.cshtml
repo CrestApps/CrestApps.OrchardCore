@@ -1,0 +1,22 @@
+@model SurveyResultsViewModel
+
+@{
+    ViewData["SurveyNamedTextAnswers"] = Model.NamedTextAnswers;
+}
+
+<zone Name="Title">
+    <breadcrumb name="LearningSurveyResults" title="@T["Totals"]">
+        <breadcrumb-item id="LearningSurveyItem" url="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = Model.Survey.ContentItemId })">@Model.Survey.DisplayText</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3" data-survey-results>
+    <div class="card-header">@T["How learners answered"]</div>
+    <div class="card-body">
+        @if (Model.Part.Anonymous)
+        {
+            <p class="hint">@T["The survey is anonymous: written answers are listed without names."]</p>
+        }
+        <partial name="SurveyTotals" model="Model.Summary" view-data="ViewData" />
+    </div>
+</div>

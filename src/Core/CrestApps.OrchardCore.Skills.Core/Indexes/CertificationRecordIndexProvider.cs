@@ -34,6 +34,9 @@ public sealed class CertificationRecordIndexProvider : IndexProvider<Certificati
                 Status = record.Status,
                 IssuedOn = SkillsDates.ToKey(record.IssuedOn),
                 ExpiresOn = SkillsDates.ToKey(record.ExpiresOn),
+                Source = record.Source,
+                SourceId = record.SourceId,
+                VerificationCode = record.VerificationCode,
             });
     }
 }

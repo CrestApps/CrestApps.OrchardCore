@@ -26,6 +26,11 @@ public static class AccountsConstants
     public const string TeamFeature = "CrestApps.OrchardCore.Accounts.Team";
 
     /// <summary>
+    /// The YesSql collection of account invitations.
+    /// </summary>
+    public const string InvitationsCollectionName = "AccountInvitations";
+
+    /// <summary>
     /// The feature that keeps the e-mail domains an account's people write from.
     /// </summary>
     public const string EmailDomainsFeature = "CrestApps.OrchardCore.Accounts.EmailDomains";

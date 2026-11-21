@@ -1,0 +1,4 @@
+@using CrestApps.OrchardCore.Learning.Pipelines
+@model EnrollLearnersStepViewModel
+
+<span class="hint">@(string.IsNullOrEmpty(Model.CourseTitle) ? T["Course from {0}", Model.CourseIdField ?? string.Empty] : T["Course: {0}", Model.CourseTitle])</span>

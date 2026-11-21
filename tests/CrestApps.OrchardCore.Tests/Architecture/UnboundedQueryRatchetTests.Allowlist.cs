@@ -230,5 +230,27 @@ public sealed partial class UnboundedQueryRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Tickets/WebForm/TicketFormPartDisplayDriver.cs"] = 2,
         ["src/Modules/CrestApps.OrchardCore.Tickets/WorkOrders/TicketWorkOrderDisplayDriver.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.WorkOrders/Agreements/Drivers/WorkOrderAgreementTermsDisplayDriver.cs"] = 1,
+
+        // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/Controllers/GradeScalesController.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/Controllers/GradebookController.cs"] = 2,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/Controllers/QuestionPickerController.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/Drivers/QuizPartDisplayDriver.cs"] = 2,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/Drivers/QuizPartLearnerDisplayDriver.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Certifications/Controllers/MyCompetenciesController.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Certifications/Drivers/CertificationPathDisplayDriver.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Certifications/Drivers/CompetenciesPartDisplayDriver.cs"] = 2,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Classes/Drivers/ClassPartDisplayDriver.cs"] = 2,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Credentials/Controllers/CredentialAwardsAdminController.cs"] = 2,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Lti/Controllers/LtiServicesController.cs"] = 2,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Programs/Controllers/RequiredLearningController.cs"] = 2,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Surveys/Controllers/SurveyResultsController.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning/Cohorts/LearningCohortsDisplayDriver.cs"] = 2,
+        ["src/Modules/CrestApps.OrchardCore.Learning/Drivers/CourseItemPartDisplayDriver.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Skills/Drivers/SkillCategoryReportFilterDisplayDriver.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Skills/IssuedCertificates/Drivers/IssuedCertificateSettingsDisplayDriver.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Users/Controllers/UserAudiencesController.cs"] = 2,
+        ["src/Modules/CrestApps.OrchardCore.Users/Controllers/UserNotificationsController.cs"] = 2,
     };
 }

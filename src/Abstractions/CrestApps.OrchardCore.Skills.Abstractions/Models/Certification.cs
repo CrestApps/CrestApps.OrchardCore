@@ -46,6 +46,21 @@ public sealed class Certification : CatalogItem, INameAwareModel, IModifiedUtcAw
     public bool Enabled { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether the site numbers the certificates it issues for this certification.
+    /// </summary>
+    public bool GenerateNumbers { get; set; }
+
+    /// <summary>
+    /// Gets or sets the prefix of a generated number, such as <c>CPR-</c>; the number follows it with six digits.
+    /// </summary>
+    public string NumberPrefix { get; set; }
+
+    /// <summary>
+    /// Gets or sets the content item id of the certificate template the issued certificates are printed with.
+    /// </summary>
+    public string CertificateTemplateId { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the certification was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

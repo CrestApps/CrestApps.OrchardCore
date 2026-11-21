@@ -1,0 +1,149 @@
+@model PackagePanelViewModel
+
+@{
+    var state = Model.State;
+    var summary = Model.Summary;
+
+    // SCORM 2004 reports "unknown" until the package says more; a launched package is in progress.
+    var status = summary?.Status;
+    var statusText = status switch
+    {
+        "passed" => T["Passed"],
+        "completed" => T["Completed"],
+        "failed" => T["Failed"],
+        "incomplete" or "unknown" => T["In progress"],
+        "browsed" => T["Browsed"],
+        _ => T["Not started"],
+    };
+    var opensWindow = Model.Part.OpenInNewWindow && Model.Part.Cmi5 is null && !Model.InWindow;
+    var statusClass = status switch
+    {
+        "passed" or "completed" => "text-bg-success",
+        "failed" => "text-bg-danger",
+        "incomplete" or "unknown" or "browsed" => "text-bg-info",
+        _ => "text-bg-secondary",
+    };
+}
+
+<div class="card mb-3 learning-package"
+     data-learning-package
+     data-launch-url="@Url.RouteUrl("LearningPackageLaunch", new { itemId = Model.PackageItemId })"
+     data-package-item-id="@Model.PackageItemId"
+     data-cmi5-launch-url="@(Model.Part.Cmi5 is null ? null : Url.RouteUrl("LearningCmi5Launch", new { itemId = Model.PackageItemId }))"
+     data-window-text="@T["The lesson opened in a new window. Reload this page when you finish to see your progress."]"
+     data-package-window-url="@(opensWindow ? Url.RouteUrl("LearningPackageWindow", new { itemId = Model.PackageItemId }) : null)"
+     data-package-in-window="@(Model.InWindow ? "true" : null)"
+     data-package-window-closed-text="@T["The window closed. Your progress is saved."]"
+     data-frame-title="@T["Learning package: {0}", Model.Part.Title ?? string.Empty]"
+     data-error-text="@T["The package could not be opened. Try again."]"
+     data-finished-text="@T["The session ended. Your progress is saved."]">
+    <div class="card-body">
+        @Html.AntiForgeryToken()
+
+        @if (!Model.SignedIn)
+        {
+            <p class="mb-0">@T["Sign in to open this package."]</p>
+        }
+        else if (!Model.Enrolled)
+        {
+            <p class="mb-0">@T["Enroll in the course to open this package."]</p>
+        }
+        else if (string.IsNullOrEmpty(Model.Part.PackageFileId))
+        {
+            <p class="mb-0">@T["This package is not ready yet."]</p>
+        }
+        else
+        {
+            <ul class="list-inline text-secondary small mb-3">
+                <li class="list-inline-item"><span class="badge @statusClass">@statusText</span></li>
+                @if (Model.Score is { } score)
+                {
+                    <li class="list-inline-item"><i class="fa-solid fa-star-half-stroke me-1" aria-hidden="true"></i>@T["Score: {0}%", score.ToString("0.##")]</li>
+                }
+                @if (summary?.TotalTime is { } totalTime)
+                {
+                    <li class="list-inline-item"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["Time: {0}", totalTime]</li>
+                }
+                @if (Model.AttemptsAllowed is { } allowed)
+                {
+                    <li class="list-inline-item" data-package-attempts><i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>@T["Attempts: {0} of {1}", Model.AttemptsUsed, allowed]</li>
+                }
+                @if (state?.LastLaunchedUtc is { } lastLaunched)
+                {
+                    <li class="list-inline-item"><i class="fa-solid fa-clock-rotate-left me-1" aria-hidden="true"></i>@T["Last opened"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(lastLaunched, DateTimeKind.Utc), Format: "g"))</li>
+                }
+            </ul>
+
+            @if (Model.AttemptsUsedUp)
+            {
+                <p class="small text-secondary" data-package-attempts-used-up>@T["You used every attempt this package allows. You can open it again to review it; nothing you do now changes your result."]</p>
+            }
+
+            @if (Model.Review)
+            {
+                <p class="small text-secondary">@T["You completed this course. You can open the package again to review it; nothing you do now changes your record."]</p>
+            }
+
+            @if (PackagesConstants.Standards.HasNoRuntime(Model.Part.Standard))
+            {
+                <p class="small text-secondary">@T["This package does not track your progress: it counts as done once you open it."]</p>
+            }
+            else
+            {
+                <p class="small text-secondary">@T["The package reports your progress itself, so its results are marked as reported by your browser."]</p>
+            }
+
+            @if (Model.Part.Cmi5 is { } course)
+            {
+                <ul class="list-group mb-3" data-cmi5-aus>
+                    @for (var index = 0; index < course.Aus.Count; index++)
+                    {
+                        var au = course.Aus[index];
+                        var auState = state?.Cmi5?.Aus.FirstOrDefault(item => item.AuId == au.Id);
+                        var auStatus = auState is null ? T["Not started"]
+                            : auState.Satisfied ? T["Satisfied"]
+                            : auState.Passed ? T["Passed"]
+                            : auState.Completed ? T["Completed"]
+                            : auState.Failed ? T["Failed"]
+                            : T["In progress"];
+
+                        <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+                            <span class="me-auto">@au.Title</span>
+                            <span class="badge @(auState?.Satisfied == true ? "text-bg-success" : auState?.Failed == true ? "text-bg-danger" : "text-bg-secondary")">@auStatus</span>
+                            @if (Model.CanLaunch)
+                            {
+                                <button type="button" class="btn btn-primary btn-sm" data-cmi5-au="@index">
+                                    <i class="fa-solid fa-play me-1" aria-hidden="true"></i>@(Model.Review ? T["Review"] : auState is null ? T["Launch"] : T["Launch again"])
+                                </button>
+                            }
+                        </li>
+                    }
+                </ul>
+                @if (!Model.CanLaunch)
+                {
+                    <p class="mb-0">@T["Your enrollment is not active, so the package cannot be opened."]</p>
+                }
+            }
+            else if (Model.CanLaunch)
+            {
+                <button type="button" class="btn btn-primary" data-package-launch>
+                    <i class="fa-solid @(opensWindow ? "fa-up-right-from-square" : "fa-play") me-1" aria-hidden="true"></i>@(Model.Review || Model.AttemptsUsedUp ? T["Review"] : Model.Resumes ? T["Resume"] : state is null ? T["Launch"] : T["Launch again"])
+                </button>
+                @if (opensWindow)
+                {
+                    <span class="small text-secondary ms-2">@T["Opens in a new window."]</span>
+                }
+            }
+            else
+            {
+                <p class="mb-0">@T["Your enrollment is not active, so the package cannot be opened."]</p>
+            }
+
+            <p class="small text-warning mt-2 mb-0 d-none" data-package-message role="status"></p>
+            <div class="learning-package-frame-host mt-3 d-none" data-package-frame-host></div>
+            <noscript><p class="mb-0">@T["The package needs JavaScript to run."]</p></noscript>
+        }
+    </div>
+</div>
+
+<script asp-src="~/CrestApps.OrchardCore.Learning.Packages/scripts/learning-package-player.min.js" debug-src="~/CrestApps.OrchardCore.Learning.Packages/scripts/learning-package-player.js" at="Foot"></script>

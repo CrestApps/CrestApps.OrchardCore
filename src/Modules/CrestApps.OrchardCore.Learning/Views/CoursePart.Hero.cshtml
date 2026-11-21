@@ -1,0 +1,136 @@
+@model CourseLearnerViewModel
+
+@*
+    The top of a course page, under its title: the summary, the facts (code, level, duration, categories, dates), and
+    the one thing to do next: enroll, continue where the learner left off with their progress, or the completion panel.
+    The outline follows the description (CoursePart.Learner).
+*@
+
+@{
+    var enrollment = Model.Enrollment;
+    var part = Model.Part;
+    var progressLabel = T["Course progress"].Value;
+}
+
+<section class="learning-course-hero mb-4" aria-label="@T["About this course"]" data-learning-course-hero>
+    <div class="row g-4 align-items-start">
+        <div class="@(string.IsNullOrEmpty(Model.CoverUrl) ? "col-12" : "col-lg-7")">
+            @if (!string.IsNullOrEmpty(part.Summary))
+            {
+                <p class="lead mb-3">@part.Summary</p>
+            }
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                @if (!string.IsNullOrEmpty(part.Code))
+                {
+                    <span class="badge text-bg-light border fw-normal">@part.Code</span>
+                }
+                @if (!string.IsNullOrEmpty(part.Level))
+                {
+                    <span class="badge text-bg-light border fw-normal"><i class="fa-solid fa-signal me-1" aria-hidden="true"></i>@part.Level</span>
+                }
+                @if (part.EstimatedMinutes is { } minutes)
+                {
+                    <span class="badge text-bg-light border fw-normal"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["About {0} minutes", minutes]</span>
+                }
+                @if (Model.RequiredCount > 0)
+                {
+                    <span class="badge text-bg-light border fw-normal"><i class="fa-solid fa-list-check me-1" aria-hidden="true"></i>@T.Plural(Model.RequiredCount, "1 required item", "{0} required items")</span>
+                }
+                @foreach (var category in Model.Categories)
+                {
+                    <span class="badge text-bg-light border fw-normal" data-course-category><i class="fa-regular fa-folder me-1" aria-hidden="true"></i>@category</span>
+                }
+                <partial name="_CourseDates" model="(part.StartsUtc, part.EndsUtc, Model.Schedule)" />
+            </div>
+
+            @if (enrollment?.Status == EnrollmentStatus.Completed)
+            {
+                <partial name="_CourseCompletedPanel" model="(enrollment, Model.CompletionLinks, Model.CourseId, false)" />
+            }
+            else
+            {
+                <div class="card learning-course-action" data-learning-course-action>
+                    <div class="card-body">
+                        @if (Model.Schedule == CourseSchedule.NotStarted && !Model.IsStaff)
+                        {
+                            <p class="small mb-2"><i class="fa-solid fa-hourglass-start me-1" aria-hidden="true"></i>@T["The course has not started yet. You can enroll now and open its items once it starts."]</p>
+                        }
+
+                        @if (Model.IsStaff)
+                        {
+                            <p class="mb-2">@T["You teach or author this course."]</p>
+                            <a class="btn btn-primary" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId })">@T["Open the player"]</a>
+                        }
+                        else if (enrollment is null)
+                        {
+                            if (!Model.SignedIn)
+                            {
+                                <a class="btn btn-primary btn-lg" href="@Url.Content("~/Login")?ReturnUrl=@Uri.EscapeDataString(Context.Request.Path + Context.Request.QueryString)">@T["Sign in to enroll"]</a>
+                            }
+                            else if (Model.CanSelfEnroll)
+                            {
+                                <form method="post" action="@Url.RouteUrl("LearningEnroll", new { courseId = Model.CourseId })" class="row g-2 align-items-end">
+                                    @Html.AntiForgeryToken()
+                                    @if (part.EnrollmentMode == EnrollmentMode.Key)
+                                    {
+                                        <div class="col-sm-6">
+                                            <label class="form-label" for="enrollment-key-@Model.CourseId">@T["Enrollment key"]</label>
+                                            <input class="form-control" id="enrollment-key-@Model.CourseId" name="enrollmentKey" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore required />
+                                        </div>
+                                    }
+                                    <div class="col-auto">
+                                        <button type="submit" class="btn btn-primary btn-lg">@(part.EnrollmentMode == EnrollmentMode.Approval ? T["Ask to enroll"] : T["Enroll"])</button>
+                                    </div>
+                                </form>
+                                @if (part.EnrollmentMode == EnrollmentMode.Approval)
+                                {
+                                    <p class="small text-body-secondary mt-2 mb-0">@T["A training manager approves your request before you start."]</p>
+                                }
+                            }
+                            else
+                            {
+                                <p class="mb-0">@T["Enrollment in this course is arranged by your organization."]</p>
+                            }
+                        }
+                        else if (enrollment.Status == EnrollmentStatus.Pending)
+                        {
+                            <p class="mb-0"><i class="fa-solid fa-hourglass-half me-1" aria-hidden="true"></i>@T["Your request to enroll waits for approval."]</p>
+                        }
+                        else if (enrollment.Status == EnrollmentStatus.Suspended)
+                        {
+                            <p class="mb-0">@T["Your enrollment is paused. Contact the course staff."]</p>
+                        }
+                        else
+                        {
+                            <div class="mb-3">
+                                <partial name="_LearnerProgress" model="(enrollment.ProgressPercent, Model.CompletedCount, Model.RequiredCount, progressLabel)" />
+                            </div>
+                            @if (enrollment.DueUtc is { } due)
+                            {
+                                <p class="small mb-2"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>@T["Due"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(due, DateTimeKind.Utc), Format: "g"))</p>
+                            }
+                            @if (enrollment.StartedUtc is null)
+                            {
+                                <a class="btn btn-primary btn-lg" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId })">@T["Start the course"]</a>
+                            }
+                            else
+                            {
+                                <a class="btn btn-primary btn-lg" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId, itemId = Model.NextItem?.Item.ContentItemId })">@T["Continue where you left off"]</a>
+                                @if (Model.NextItem is not null)
+                                {
+                                    <p class="small text-body-secondary mt-2 mb-0">@T["Next: {0}", Model.NextItem.Item.DisplayText]</p>
+                                }
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(Model.CoverUrl))
+        {
+            <div class="col-lg-5">
+                <img src="@Model.CoverUrl" alt="" class="img-fluid rounded w-100 object-fit-cover" style="max-height: 18rem;" data-course-cover />
+            </div>
+        }
+    </div>
+</section>

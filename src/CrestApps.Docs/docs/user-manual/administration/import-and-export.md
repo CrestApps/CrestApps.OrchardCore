@@ -43,6 +43,8 @@ Every import file follows the same rules:
 
 Every content type appears on the import and export screens unless an administrator turns it off. On the content type's settings, **Allow bulk import** and **Allow bulk export** are ticked by default. Untick one to keep a type off that screen.
 
+Some features add records that are not content items to the **Import** menu, such as **Skills and competency frameworks**. You need that feature's own permission to import them, for skills **Manage skills and certifications**. There's no **Publish imported content** option for them.
+
 ## Import a file
 
 <YouTube video="content-transfer" title="Video of preparing a file and uploading it" start={112} end={197} />

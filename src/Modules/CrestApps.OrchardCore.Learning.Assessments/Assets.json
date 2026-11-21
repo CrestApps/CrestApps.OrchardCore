@@ -1,0 +1,20 @@
+[
+  {
+    "action": "vite",
+    "name": "quiz-player.js",
+    "source": "Assets/js/quiz-player.js",
+    "dest": "wwwroot/scripts/quiz-player.js"
+  },
+  {
+    "action": "vite",
+    "name": "quiz-draw-rules.js",
+    "source": "Assets/js/quiz-draw-rules.js",
+    "dest": "wwwroot/scripts/quiz-draw-rules.js"
+  },
+  {
+    "action": "vite",
+    "name": "quiz-question-order.js",
+    "source": "Assets/js/quiz-question-order.js",
+    "dest": "wwwroot/scripts/quiz-question-order.js"
+  }
+]

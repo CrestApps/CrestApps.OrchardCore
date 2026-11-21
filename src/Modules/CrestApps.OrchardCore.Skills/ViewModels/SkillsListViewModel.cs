@@ -15,6 +15,12 @@ public class SkillsListViewModel
     public string Search { get; set; }
 
     /// <summary>
+    /// Gets or sets the address of the ContentTransfer import of skills, or <see langword="null"/> when ContentTransfer
+    /// is off.
+    /// </summary>
+    public string ImportUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets the certification filter.
     /// </summary>
     public string CertificationId { get; set; }

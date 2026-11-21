@@ -33,6 +33,11 @@ public sealed class StaffQuery
     public bool? HasUser { get; set; }
 
     /// <summary>
+    /// Gets or sets the employment types to match; any of them. Empty or <see langword="null"/> matches every type.
+    /// </summary>
+    public IReadOnlyCollection<EmploymentType> EmploymentTypes { get; set; }
+
+    /// <summary>
     /// Gets or sets a capability the person must have.
     /// </summary>
     public string Capability { get; set; }

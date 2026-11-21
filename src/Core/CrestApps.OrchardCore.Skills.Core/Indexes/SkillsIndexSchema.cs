@@ -85,6 +85,33 @@ public static class SkillsIndexSchema
         }, collection: collection);
 
         await AddSubjectKindNameColumnsAsync(schemaBuilder);
+        await AddIssuedCertificateColumnsAsync(schemaBuilder);
+    }
+
+    /// <summary>
+    /// Adds the columns of issued certificates to the certification record index: the source and source id that keep
+    /// issuing idempotent, and the verification code the public page looks certificates up by.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddIssuedCertificateColumnsAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        const string collection = SkillsConstants.CollectionName;
+
+        await schemaBuilder.AlterIndexTableAsync<CertificationRecordIndex>(table =>
+        {
+            table.AddColumn<string>("Source", column => column.Nullable().WithLength(50));
+            table.AddColumn<string>("SourceId", column => column.Nullable().WithLength(150));
+            table.AddColumn<string>("VerificationCode", column => column.Nullable().WithLength(26));
+        }, collection: collection);
+
+        await schemaBuilder.AlterIndexTableAsync<CertificationRecordIndex>(table =>
+        {
+            table.CreateIndex("IDX_CertificationRecordIndex_Source", "CertificationId", "Source", "SourceId");
+            table.CreateIndex("IDX_CertificationRecordIndex_VerificationCode", "VerificationCode");
+        }, collection: collection);
     }
 
     /// <summary>

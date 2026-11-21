@@ -114,6 +114,32 @@ public sealed class AccountStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Adds Notifications to the user menu on the site's pages, for the site's Notifications page, where people who don't
+/// use the admin read their Orchard Core notifications.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
+public sealed class NotificationsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<UserMenu, NotificationsUserMenuDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Adds the site's Notifications page to the account menu.
+/// </summary>
+[Feature(UsersConstants.Feature.Account)]
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
+public sealed class AccountNotificationsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNavigationProvider<Navigation.NotificationsAccountMenu>();
+    }
+}
+
 [Feature(UsersConstants.Feature.DisplayName)]
 public sealed class DisplayNameStartup : StartupBase
 {

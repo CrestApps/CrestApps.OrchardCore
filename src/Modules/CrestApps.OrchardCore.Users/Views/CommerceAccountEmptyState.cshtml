@@ -1,0 +1,32 @@
+@using Microsoft.AspNetCore.Html
+
+@*
+    The empty state of a storefront account page: a card with a short title, a hint on what will appear there and,
+    optionally, an Icon (Font Awesome classes) and Actions (links or buttons). Every account page renders it when it has
+    nothing to list, so empty pages look alike; a theme overrides this template to change them all.
+*@
+
+@{
+    var title = Model.Title as IHtmlContent ?? (Model.Title is null ? null : new HtmlString(System.Net.WebUtility.HtmlEncode(Model.Title.ToString())));
+    var hint = Model.Hint as IHtmlContent ?? (Model.Hint is null ? null : new HtmlString(System.Net.WebUtility.HtmlEncode(Model.Hint.ToString())));
+    var actions = Model.Actions as IHtmlContent;
+    var icon = Model.Icon as string;
+}
+
+<div class="card commerce-account-empty" data-account-empty>
+    <div class="card-body text-center py-5">
+        @if (!string.IsNullOrEmpty(icon))
+        {
+            <p class="mb-3"><i class="@icon fa-2x text-body-secondary" aria-hidden="true"></i></p>
+        }
+        <p class="mb-1">@title</p>
+        @if (hint is not null)
+        {
+            <p class="text-muted small mb-0">@hint</p>
+        }
+        @if (actions is not null)
+        {
+            <div class="mt-3">@actions</div>
+        }
+    </div>
+</div>

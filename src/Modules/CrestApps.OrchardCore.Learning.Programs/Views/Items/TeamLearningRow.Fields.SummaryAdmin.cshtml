@@ -1,0 +1,7 @@
+@model ShapeViewModel<TeamLearningRow>
+
+<span class="fw-semibold">@Model.Value.Name</span>
+@if (!string.IsNullOrEmpty(Model.Value.JobTitle))
+{
+    <span class="text-muted small ms-1">@Model.Value.JobTitle</span>
+}

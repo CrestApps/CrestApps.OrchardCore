@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.Learning.Programs.Workflows
+
+@model RequiredLearningEventViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<div class="mb-3">
+    <label asp-for="RequirementIds" class="form-label">@T["Required learning"]</label>
+    <select asp-for="RequirementIds" asp-items="Model.RequirementOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
+    <span class="hint">@T["Leave empty for every rule. The workflow input holds AssignmentId, RequirementId, RequirementName, TargetKind, TargetId, UserId, State and DueUtc, and DaysBefore for reminders."]</span>
+</div>

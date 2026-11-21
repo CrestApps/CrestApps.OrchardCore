@@ -10,9 +10,9 @@ namespace CrestApps.OrchardCore.ContentTransfer.BackgroundTasks;
 public sealed partial class ImportFilesBackgroundTask
 {
     /// <summary>
-    /// Imports the rows of a batch that carry the id of an item. A row whose id names an existing item of the import's
-    /// content type updates it; a row whose id names nothing creates a new item; a row whose id names an item of another
-    /// type is refused and leaves that item exactly as it was.
+    /// Imports the rows of a batch that carry the id of an item. A row whose id names an existing item of the content
+    /// type the row is imported as updates it; a row whose id names nothing creates a new item; a row whose id names an
+    /// item of another type is refused and leaves that item exactly as it was.
     /// </summary>
     /// <remarks>
     /// The items are first read with <see cref="VersionOptions.Latest"/>, which changes nothing. An item of the import's
@@ -23,6 +23,11 @@ public sealed partial class ImportFilesBackgroundTask
     /// case-insensitive database collation matches them, so an id in another case can't pass for a new item and take
     /// the existing one's id.
     /// </remarks>
+    /// <param name="rowDefinitionAsync">
+    /// Returns the content type a row is imported as, when an import may create items of several related types, or
+    /// <see langword="null"/> after recording why the row can't be imported. Every row is
+    /// <paramref name="contentTypeDefinition"/> when it is not given.
+    /// </param>
     internal static async Task ImportExistingRowsAsync(
         ContentTransferEntry entry,
         DataTable dataTable,
@@ -33,9 +38,31 @@ public sealed partial class ImportFilesBackgroundTask
         ImportFileProcessStatsPart progressPart,
         ImportRunMonitor monitor,
         IStringLocalizer localizer,
-        ImportRunTelemetry runTelemetry)
+        ImportRunTelemetry runTelemetry,
+        Func<int, DataRow, Task<ContentTypeDefinition>> rowDefinitionAsync = null)
     {
         if (existingRows.Count == 0)
+        {
+            return;
+        }
+
+        // Each row's content type is known before any item is read, so an item is checked against the type its own
+        // row names. A row whose type can't be imported already has its error and is left out.
+        var rowDefinitions = new Dictionary<string, ContentTypeDefinition>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var existingRow in existingRows)
+        {
+            var rowDefinition = rowDefinitionAsync is null
+                ? contentTypeDefinition
+                : await rowDefinitionAsync(existingRow.Value.Key, existingRow.Value.Value);
+
+            if (rowDefinition is not null)
+            {
+                rowDefinitions[existingRow.Key] = rowDefinition;
+            }
+        }
+
+        if (rowDefinitions.Count == 0)
         {
             return;
         }
@@ -44,9 +71,10 @@ public sealed partial class ImportFilesBackgroundTask
         var publishedIds = new List<string>();
         var existingContentItems = new Dictionary<string, ContentItem>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var item in await contentManager.GetAsync(existingRows.Keys, VersionOptions.Latest))
+        foreach (var item in await contentManager.GetAsync(rowDefinitions.Keys, VersionOptions.Latest))
         {
-            if (!IsSameContentType(item, entry))
+            if (!rowDefinitions.TryGetValue(item.ContentItemId, out var itemRowDefinition) ||
+                !IsSameContentType(item, itemRowDefinition.Name))
             {
                 refusedIds.Add(item.ContentItemId);
             }
@@ -73,16 +101,21 @@ public sealed partial class ImportFilesBackgroundTask
 
         foreach (var existingRow in existingRows)
         {
+            if (!rowDefinitions.TryGetValue(existingRow.Key, out var rowDefinition))
+            {
+                continue;
+            }
+
             monitor.BeginRow(existingRow.Value.Key);
 
             try
             {
                 if (refusedIds.Contains(existingRow.Key))
                 {
-                    // An id in the file can name any item on the site. An import is for one content type, and the
-                    // uploader's permission is for that type only, so a row that names an item of another type (a
-                    // page, an order) is refused instead of overwriting it.
-                    AddRowError(progressPart, existingRow.Value.Key, localizer["The content item '{0}' is not a {1}.", existingRow.Key, entry.ContentType], localizer["Could not be imported"]);
+                    // An id in the file can name any item on the site. A row is imported as one content type the
+                    // uploader may import, so a row that names an item of another type (a page, an order) is refused
+                    // instead of overwriting it.
+                    AddRowError(progressPart, existingRow.Value.Key, localizer["The content item '{0}' is not a {1}.", existingRow.Key, rowDefinition.Name], localizer["Could not be imported"]);
                     runTelemetry.AddError(ContentTransferDiagnostics.ReasonValidation);
 
                     continue;
@@ -92,7 +125,7 @@ public sealed partial class ImportFilesBackgroundTask
 
                 if (isNew)
                 {
-                    contentItem = await contentManager.NewAsync(entry.ContentType);
+                    contentItem = await contentManager.NewAsync(rowDefinition.Name);
                 }
 
                 await ProcessRowAsync(
@@ -101,7 +134,7 @@ public sealed partial class ImportFilesBackgroundTask
                     existingRow.Value.Key,
                     existingRow.Value.Value,
                     dataTable.Columns,
-                    contentTypeDefinition,
+                    rowDefinition,
                     contentManager,
                     contentImportManager,
                     progressPart,

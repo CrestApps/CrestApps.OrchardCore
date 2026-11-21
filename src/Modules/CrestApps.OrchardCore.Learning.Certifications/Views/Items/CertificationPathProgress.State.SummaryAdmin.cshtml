@@ -1,0 +1,13 @@
+@model CertificationPathProgressRowViewModel
+
+@{
+    var (css, text) = Model.Progress.State switch
+    {
+        CertificationPathState.Certified => ("text-bg-success", T["Certified"]),
+        CertificationPathState.RenewalOpen => ("text-bg-warning", T["Renewal open"]),
+        CertificationPathState.Lapsed => ("text-bg-secondary", T["Lapsed"]),
+        CertificationPathState.Revoked => ("text-bg-danger", T["Revoked"]),
+        _ => ("text-bg-info", T["In progress"]),
+    };
+}
+<span class="badge @css">@text</span>

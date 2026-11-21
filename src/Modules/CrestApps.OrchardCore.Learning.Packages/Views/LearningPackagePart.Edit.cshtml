@@ -1,0 +1,196 @@
+@model LearningPackagePartViewModel
+
+@{
+    var part = Model.Part;
+    var imported = !string.IsNullOrEmpty(part?.PackageFileId);
+    var scorm2004 = PackagesConstants.Standards.IsScorm2004(part?.Standard);
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Learning package"]</div>
+    <div class="card-body">
+        @if (Model.IsNew)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <span class="hint">@T["Save the item first; then import a SCORM 1.2, SCORM 2004 or cmi5 package into it."]</span>
+                </div>
+            </div>
+        }
+        else if (Model.CanImport)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <a class="btn btn-secondary btn-sm" href="@Url.RouteUrl("LearningPackageUpload", new { contentItemId = Model.ContentItemId })"><i class="fa-solid fa-file-zipper me-1" aria-hidden="true"></i>@(imported ? T["Import another package"] : T["Import a package"])</a>
+                    <span class="hint">@T["A .zip file of a SCORM 1.2, SCORM 2004 (3rd or 4th Edition) or, with Learning cmi5 Packages, cmi5 package. The import goes into a draft; publish the item to give it to learners."]</span>
+                </div>
+            </div>
+        }
+
+        @if (!imported)
+        {
+            @if (!Model.IsNew)
+            {
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <span class="hint">@T["No package is imported yet. Learners cannot launch this item until one is."]</span>
+                    </div>
+                </div>
+            }
+        }
+        else if (part.Cmi5 is { } course)
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Package"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext mb-0">@part.Title <span class="badge ta-badge ms-1">cmi5</span></p>
+                    <span class="hint">@T["{0}, {1} files.", part.FileName, part.FileCount]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Course id"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext mb-0"><code>@course.Id</code></p>
+                    <span class="hint">@T["From cmi5.xml. Each learner's enrollment gets a registration on this course in the Learning Record Store."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Assignable units"]</span>
+                <div class="ocat-end">
+                    <ul class="list-unstyled form-control-plaintext mb-0" data-cmi5-aus>
+                        @foreach (var au in course.Aus)
+                        {
+                            <li class="mb-1">
+                                <strong>@au.Title</strong>
+                                <span class="badge ta-badge fw-normal ms-1" title="@T["Satisfied when"]">@au.MoveOn</span>
+                                @if (au.MasteryScore is { } mastery)
+                                {
+                                    <span class="badge ta-badge fw-normal" title="@T["Mastery score"]">@T["Mastery {0}", mastery.ToString("0.###", System.Globalization.CultureInfo.CurrentCulture)]</span>
+                                }
+                                <span class="badge ta-badge fw-normal" title="@T["Launch"]">@(au.IsAbsolute || au.LaunchMethod == "OwnWindow" ? T["Own window"] : T["Frame"])</span>
+                                <div class="hint">@au.Url</div>
+                            </li>
+                        }
+                    </ul>
+                    <span class="hint">@T["The item completes when the course is satisfied: every AU met its moveOn. A file of the package runs in the sandboxed frame; an https AU and an OwnWindow AU open in a window of their own."]</span>
+                </div>
+            </div>
+            @if (part.ImportedUtc is { } cmi5Imported)
+            {
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Imported"]</span>
+                    <div class="ocat-end">
+                        <p class="form-control-plaintext mb-0">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(cmi5Imported, DateTimeKind.Utc), Format: "g"))</p>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Package"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext mb-0">@part.Title <span class="badge ta-badge ms-1">@part.Standard</span></p>
+                    <span class="hint">@T["{0}, {1} files.", part.FileName, part.FileCount]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Version"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext mb-0" data-package-standard>@(part.Standard ?? PackagesConstants.Standards.Scorm12)</p>
+                    <span class="hint">@T["Detected from the package's manifest."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Launched SCO"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext mb-0">@(part.LaunchItemTitle ?? part.LaunchItemIdentifier)</p>
+                    <span class="hint">@part.LaunchPath@(string.IsNullOrEmpty(part.LaunchQuery) ? null : "?" + part.LaunchQuery)</span>
+                    @if (part.ScoCount > 1)
+                    {
+                        <span class="hint">@T["The package has {0} SCOs; learners launch the first one.", part.ScoCount]</span>
+                    }
+                    @if (part.HasSequencing)
+                    {
+                        <span class="hint">@T["The manifest has sequencing rules. They are not applied: learners run the first SCO, without sequencing, rollup or navigation between SCOs."]</span>
+                    }
+                </div>
+            </div>
+            @if (scorm2004)
+            {
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Completion threshold"]</span>
+                    <div class="ocat-end">
+                        <p class="form-control-plaintext mb-0">@(part.CompletionThreshold is { } threshold ? threshold.ToString("0.###", System.Globalization.CultureInfo.CurrentCulture) : T["None"])</p>
+                        <span class="hint">@T["From the manifest. When the package reports its progress measure, the package is completed once the measure reaches the threshold."]</span>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Scaled passing score"]</span>
+                    <div class="ocat-end">
+                        <p class="form-control-plaintext mb-0">@(part.ScaledPassingScore is { } passing ? passing.ToString("0.###", System.Globalization.CultureInfo.CurrentCulture) : T["None"])</p>
+                        <span class="hint">@T["From the manifest's primary objective, from -1 to 1. When the package reports a scaled score, the learner passes once the score reaches it."]</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Mastery score"]</span>
+                    <div class="ocat-end">
+                        <p class="form-control-plaintext mb-0">@(part.MasteryScore is { } mastery ? T["{0}%", mastery.ToString("0.##")] : T["None"])</p>
+                        <span class="hint">@T["From the manifest. When the package sends a score without passing or failing the learner, the score is compared with it."]</span>
+                    </div>
+                </div>
+            }
+            @if (part.ImportedUtc is { } importedUtc)
+            {
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Imported"]</span>
+                    <div class="ocat-end">
+                        <p class="form-control-plaintext mb-0">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(importedUtc, DateTimeKind.Utc), Format: "g"))</p>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@if (part?.Cmi5 is null)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["How learners run it"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="OpenInNewWindow" type="checkbox" class="form-check-input" />
+                        <label asp-for="OpenInNewWindow" class="form-check-label">@T["Open in a new window"]</label>
+                        <span class="hint dashed">@T["The package runs in a window of its own, through the package content host when the site has one. The course page shows the learner's progress when the window closes."]</span>
+                    </div>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="MaxAttempts">
+                <label asp-for="MaxAttempts" class="ocat-label">@T["Attempts allowed"]</label>
+                <div class="ocat-end">
+                    <input asp-for="MaxAttempts" type="number" min="1" class="form-control" />
+                    <span asp-validation-for="MaxAttempts"></span>
+                    <span class="hint">@T["Leave empty for no limit. With a limit or a grading method, launching after a finished attempt (completed, passed or failed) starts a new one; once the attempts are used, the package opens only to review."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="GradingMethod">
+                <label asp-for="GradingMethod" class="ocat-label">@T["Score from"]</label>
+                <div class="ocat-end">
+                    <select asp-for="GradingMethod" class="form-select">
+                        <option value="">@T["The attempt in progress (one attempt that resumes)"]</option>
+                        <option value="Highest">@T["The best attempt"]</option>
+                        <option value="Average">@T["The average of the attempts"]</option>
+                        <option value="First">@T["The first attempt"]</option>
+                        <option value="Latest">@T["The last attempt"]</option>
+                    </select>
+                    <span asp-validation-for="GradingMethod"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+}

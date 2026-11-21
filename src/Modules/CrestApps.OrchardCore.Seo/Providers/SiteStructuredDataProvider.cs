@@ -13,7 +13,7 @@ internal sealed class SiteStructuredDataProvider : IStructuredDataProvider
     /// <summary>
     /// The order of the provider: after the editor's own JSON-LD.
     /// </summary>
-    internal const int ProviderOrder = StructuredDataProviderOrder.EditorJsonLd + 1000;
+    internal const int ProviderOrder = StructuredDataProviderOrder.Site;
 
     private static readonly HashSet<string> _publishedWorkTypes = new(StringComparer.Ordinal)
     {
@@ -53,14 +53,14 @@ internal sealed class SiteStructuredDataProvider : IStructuredDataProvider
     /// </summary>
     /// <param name="baseUrl">The absolute URL of the site.</param>
     /// <returns>The identifier.</returns>
-    internal static string GetPublisherId(string baseUrl) => $"{baseUrl}/#publisher";
+    internal static string GetPublisherId(string baseUrl) => StructuredDataNodeIds.Publisher(baseUrl);
 
     /// <summary>
     /// Gets the identifier of the site's <c>WebSite</c> node.
     /// </summary>
     /// <param name="baseUrl">The absolute URL of the site.</param>
     /// <returns>The identifier.</returns>
-    internal static string GetWebSiteId(string baseUrl) => $"{baseUrl}/#website";
+    internal static string GetWebSiteId(string baseUrl) => StructuredDataNodeIds.WebSite(baseUrl);
 
     /// <inheritdoc/>
     public async Task BuildAsync(StructuredDataContext context)

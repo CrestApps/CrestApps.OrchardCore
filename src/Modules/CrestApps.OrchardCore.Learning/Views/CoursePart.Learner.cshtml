@@ -1,0 +1,19 @@
+@model CourseLearnerViewModel
+
+@*
+    The course outline on the course page, after the description: each item with its kind, estimated time and
+    completion condition, and, for an enrolled learner, their states and the items still locked. The top of the page
+    (CoursePart.Hero) holds the summary and the action.
+*@
+
+@{
+    var enrollment = Model.Enrollment;
+}
+
+@if (Model.Outline is not null && Model.Outline.Entries.Count > 0)
+{
+    <section class="learning-outline my-4" aria-labelledby="learning-outline-@Model.CourseId">
+        <h2 class="h4 mb-3" id="learning-outline-@Model.CourseId">@T["Course outline"]</h2>
+        <partial name="_LearnerOutline" model="new LearnerOutlineViewModel { Outline = Model.Outline, Progress = Model.Progress, KindIcons = Model.KindIcons, KindNames = Model.KindNames, CanOpen = enrollment is not null || Model.IsStaff, LockedItems = Model.LockedItems, Tracked = enrollment is { Status: EnrollmentStatus.Active or EnrollmentStatus.Completed } }" />
+    </section>
+}

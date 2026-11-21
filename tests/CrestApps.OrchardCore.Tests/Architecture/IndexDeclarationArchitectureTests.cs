@@ -29,11 +29,17 @@ public sealed partial class IndexDeclarationArchitectureTests
         "AgentAllowedQueueIndex",
         "AgentQueueMembershipIndex",
         "AppointmentResourceIndex",
+        "AttemptItemIndex",
         "CalendarEventAttendeeIndex",
         "CalendarShareIndex",
         "CallSessionLegIndex",
+        "CertificationPathTargetIndex",
+        "CohortLearningLinkIndex",
         "ContentAccessRoleIndex",
+        "CourseItemProgressIndex",
+        "CourseStaffIndex",
         "DialerDecisionAgentIndex",
+        "EnrollmentGrantIndex",
         "LeadImportIndex",
         "OmnichannelContactPhoneNumberIndex",
         "PayStatementLineIndex",
@@ -49,6 +55,10 @@ public sealed partial class IndexDeclarationArchitectureTests
         "VendorUserIndex",
         "VisitWorkerIndex",
         "WorkOrderAssetIndex",
+        "XapiStatementActivityIndex",
+        "XapiStatementAgentIndex",
+        "XapiStatementRegistrationIndex",
+        "XapiStatementVerbIndex",
     };
 
     [Fact]

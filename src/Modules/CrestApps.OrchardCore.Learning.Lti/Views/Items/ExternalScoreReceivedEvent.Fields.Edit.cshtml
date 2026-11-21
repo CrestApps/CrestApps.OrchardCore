@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Learning.Lti.Workflows
+
+@model ExternalScoreReceivedEventViewModel
+
+<div class="mb-3">
+    <label asp-for="GradingProgress" class="form-label">@T["Grading progress"]</label>
+    <textarea asp-for="GradingProgress" rows="3" class="form-control"></textarea>
+    <span class="hint">@T["The grading progress values that start the workflow, one a line: FullyGraded, Pending, PendingManual, Failed or NotReady. Leave empty for every score. The workflow input holds ToolId, ToolName, ClientId, CourseId, CourseItemId, LineItemId, LineItemLabel, UserId, ScoreGiven, ScoreMaximum, Percent, ActivityProgress, GradingProgress, RecordedInProgress and TimestampUtc."]</span>
+</div>

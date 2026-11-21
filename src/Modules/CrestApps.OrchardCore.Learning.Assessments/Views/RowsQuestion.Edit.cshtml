@@ -1,0 +1,70 @@
+@model RowsQuestionViewModel
+
+@{
+    var isChoice = Model.Kind == "Choice";
+    var isMatching = Model.Kind == "Matching";
+    var title = isChoice ? T["Options"] : isMatching ? T["Pairs"] : T["Items in their right order"];
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@title</div>
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly"></div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-2">
+                <thead>
+                    <tr>
+                        <th scope="col">@(isMatching ? T["Prompt"] : T["Text"])</th>
+                        @if (isMatching)
+                        {
+                            <th scope="col">@T["Answer"]</th>
+                        }
+                        @if (isChoice)
+                        {
+                            <th scope="col" class="text-center">@T["Right"]</th>
+                            <th scope="col">@T["Feedback when chosen"]</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Rows.Count; i++)
+                    {
+                        <tr>
+                            <td>
+                                <input type="hidden" asp-for="Rows[i].Id" />
+                                <input asp-for="Rows[i].Text" class="form-control form-control-sm" maxlength="1000" aria-label="@(isMatching ? T["Prompt"] : T["Text"])" />
+                            </td>
+                            @if (isMatching)
+                            {
+                                <td><input asp-for="Rows[i].Answer" class="form-control form-control-sm" maxlength="1000" aria-label="@T["Answer"]" /></td>
+                            }
+                            @if (isChoice)
+                            {
+                                <td class="text-center"><input asp-for="Rows[i].Correct" type="checkbox" class="form-check-input" aria-label="@T["Right"]" /></td>
+                                <td><input asp-for="Rows[i].Feedback" class="form-control form-control-sm" maxlength="1000" aria-label="@T["Feedback when chosen"]" /></td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <span class="hint">@(isChoice ? (Model.Multiple ? T["Tick every right option. Leave a row empty to remove it; save to get more empty rows."] : T["Tick the one right option. Leave a row empty to remove it; save to get more empty rows."]) : isMatching ? T["The answers are shown in a random order. Leave a row empty to remove it."] : T["Write the items in their right order; learners see them shuffled. Leave a row empty to remove it."])</span>
+
+        @if (isChoice)
+        {
+            <div class="form-check mt-3">
+                <input asp-for="Shuffle" type="checkbox" class="form-check-input" />
+                <label asp-for="Shuffle" class="form-check-label">@T["Shuffle the options in each attempt"]</label>
+            </div>
+        }
+
+        @if (!isChoice || Model.Multiple)
+        {
+            <div class="form-check mt-2">
+                <input asp-for="PartialCredit" type="checkbox" class="form-check-input" />
+                <label asp-for="PartialCredit" class="form-check-label">@T["Give part of the points for a partly right answer"]</label>
+                <span class="hint dashed">@(isChoice ? T["Each right option earns its share, less each wrong one. Otherwise the answer must be exactly right."] : T["Each right match or place earns its share. Otherwise the answer must be exactly right."])</span>
+            </div>
+        }
+    </div>
+</div>

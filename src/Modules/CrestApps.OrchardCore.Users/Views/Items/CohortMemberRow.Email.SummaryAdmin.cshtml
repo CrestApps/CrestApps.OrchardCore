@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Users.Cohorts
+@model ShapeViewModel<CohortMemberRow>
+
+@if (!string.IsNullOrEmpty(Model.Value.Email))
+{
+    <span class="badge ta-badge fw-normal" title="@T["E-mail"]"><i class="fa-solid fa-envelope text-secondary me-1" aria-hidden="true"></i>@Model.Value.Email</span>
+}

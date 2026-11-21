@@ -1,0 +1,53 @@
+@model EducationCreditsPartViewModel
+
+@{
+    var rows = Model.Awards.ToList();
+
+    while (rows.Count < Model.Awards.Count + 2)
+    {
+        rows.Add(new EducationCreditAwardRow());
+    }
+
+    var prefix = Html.NameFor(m => m.Awards).ToString();
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Education credits"]</div>
+    <div class="card-body">
+        @if (Model.Types.Count == 0)
+        {
+            <p class="hint">@T["Add a credit type under Learning > Education Credits first."]</p>
+        }
+        else
+        {
+            <table class="table table-sm align-middle mb-1">
+                <thead>
+                    <tr>
+                        <th>@T["Credit type"]</th>
+                        <th style="width: 9rem">@T["Credits"]</th>
+                        <th style="width: 12rem">@T["Valid for (months)"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < rows.Count; i++)
+                    {
+                        <tr>
+                            <td>
+                                <select name="@(prefix)[@i].CreditTypeId" class="form-select form-select-sm" aria-label="@T["Credit type"]">
+                                    <option value="">@T["None"]</option>
+                                    @foreach (var type in Model.Types)
+                                    {
+                                        <option value="@type.Value" selected="@(type.Value == rows[i].CreditTypeId)">@type.Text</option>
+                                    }
+                                </select>
+                            </td>
+                            <td><input name="@(prefix)[@i].Amount" value="@rows[i].Amount" type="number" min="0" step="0.25" class="form-control form-control-sm" aria-label="@T["Credits"]" /></td>
+                            <td><input name="@(prefix)[@i].ValidityMonths" value="@rows[i].ValidityMonths" type="number" min="0" class="form-control form-control-sm" aria-label="@T["Valid for (months)"]" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <span class="hint">@T["Awarded once when a person completes it. Leave the months empty for credits that never expire."]</span>
+        }
+    </div>
+</div>

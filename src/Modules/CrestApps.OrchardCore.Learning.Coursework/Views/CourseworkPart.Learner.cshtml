@@ -1,0 +1,156 @@
+@model CourseworkPanelViewModel
+
+@{
+    var part = Model.Part;
+    var latest = Model.Latest;
+    var accept = string.Join(",", part.AllowedExtensions ?? []);
+    var signOff = part.SubmissionType == CourseworkSubmissionType.SignOff;
+    var takesText = !signOff && part.SubmissionType != CourseworkSubmissionType.Files;
+    var takesFiles = !signOff && part.SubmissionType != CourseworkSubmissionType.Text;
+}
+
+<div class="card mb-3 learning-coursework" data-learning-coursework>
+    <div class="card-body">
+        <ul class="list-inline text-secondary small mb-3">
+            @if (part.DueUtc is { } due)
+            {
+                <li class="list-inline-item"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>@T["Due"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(due, DateTimeKind.Utc), Format: "g"))</li>
+            }
+            @if (part.DueUtc is not null && part.LatePenaltyPercentPerDay > 0)
+            {
+                <li class="list-inline-item"><i class="fa-solid fa-hourglass-end me-1" aria-hidden="true"></i>@T["Late work loses {0}% a day, up to {1}%", part.LatePenaltyPercentPerDay.ToString("0.##"), part.MaxLatePenaltyPercent.ToString("0.##")]</li>
+            }
+            @if (Model.CloseUtc is { } close)
+            {
+                <li class="list-inline-item"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Closes"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(close, DateTimeKind.Utc), Format: "g"))</li>
+            }
+            @if (takesFiles)
+            {
+                <li class="list-inline-item"><i class="fa-solid fa-paperclip me-1" aria-hidden="true"></i>@T.Plural(part.MaxFiles, "Up to 1 file", "Up to {0} files"), @T["{0} MB each", part.MaxFileSizeMb]@(string.IsNullOrEmpty(accept) ? null : " (" + accept + ")")</li>
+            }
+        </ul>
+
+        @if (signOff && (latest is null || latest.Status == SubmissionStatus.Submitted))
+        {
+            <p class="mb-3"><i class="fa-solid fa-user-check me-1" aria-hidden="true"></i>@T["Nothing is handed in here: your instructor signs this off with a grade once you have done the work."]</p>
+        }
+
+        @if (!Model.SignedIn)
+        {
+            <p class="mb-0">@T["Sign in to hand in this work."]</p>
+        }
+        else if (!Model.Enrolled)
+        {
+            <p class="mb-0">@T["Enroll in the course to hand in this work."]</p>
+        }
+
+        @if (latest is not null)
+        {
+            <div class="alert @(latest.Status == SubmissionStatus.Graded ? "alert-success" : latest.Status == SubmissionStatus.Returned ? "alert-warning" : "alert-info")" role="status">
+                @if (latest.Status == SubmissionStatus.Graded)
+                {
+                    <p class="mb-1"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["Your work is graded: {0}%.", latest.Score?.ToString("0.##")]</p>
+                    @if (latest.LatePenaltyPercent is > 0 && latest.RawScore is { } raw)
+                    {
+                        <p class="mb-1 small">@T["{0}% before a late penalty of {1}% (days late: {2}).", raw.ToString("0.##"), latest.LatePenaltyPercent.Value.ToString("0.##"), latest.DaysLate ?? 0]</p>
+                    }
+                }
+                else if (latest.Status == SubmissionStatus.Returned)
+                {
+                    <p class="mb-1"><i class="fa-solid fa-rotate-left me-1" aria-hidden="true"></i>@T["Your work was returned to you to hand in again."]</p>
+                }
+                else if (latest.SignOff)
+                {
+                    <p class="mb-1"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["Your instructor started signing this off."]</p>
+                }
+                else
+                {
+                    <p class="mb-1"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["Your work is handed in and waits for a grader."]</p>
+                }
+                <p class="mb-0 small">
+                    @(latest.SignOff ? T["Opened"] : T["Handed in"]) @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(latest.SubmittedUtc, DateTimeKind.Utc), Format: "g"))
+                    @if (latest.Late)
+                    {
+                        <span class="badge text-bg-warning ms-1">@T["Late"]</span>
+                    }
+                    @if (latest.Attempt > 1)
+                    {
+                        <span class="ms-1">@T["(attempt {0})", latest.Attempt]</span>
+                    }
+                </p>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(latest.Feedback) && latest.Status != SubmissionStatus.Submitted)
+            {
+                <h2 class="h6">@T["Feedback"]</h2>
+                <p class="text-break" style="white-space: pre-line">@latest.Feedback</p>
+            }
+
+            @if (latest.Status == SubmissionStatus.Graded && Model.Rubric is not null && latest.RubricChoices.Count > 0)
+            {
+                <h2 class="h6">@T["Rubric"]</h2>
+                <ul class="list-group mb-3">
+                    @foreach (var criterion in Model.Rubric.Criteria)
+                    {
+                        var chosen = latest.RubricChoices.TryGetValue(criterion.Id ?? string.Empty, out var levelId) ? criterion.Levels.FirstOrDefault(level => level.Id == levelId) : null;
+
+                        <li class="list-group-item d-flex justify-content-between gap-2">
+                            <span>@criterion.Title</span>
+                            <span class="text-secondary">@(chosen is null ? T["Not scored"] : (chosen.Points == 1 ? T["{0} (1 point)", chosen.Title] : T["{0} ({1} points)", chosen.Title, chosen.Points.ToString("0.##")]))</span>
+                        </li>
+                    }
+                </ul>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(latest.Text) || latest.Files.Count > 0)
+            {
+                <h2 class="h6">@T["What you handed in"]</h2>
+                @if (!string.IsNullOrWhiteSpace(latest.Text))
+                {
+                    <div class="border rounded p-2 mb-2 text-break" style="white-space: pre-wrap">@latest.Text</div>
+                }
+                @if (latest.Files.Count > 0)
+                {
+                    <ul class="list-unstyled mb-3">
+                        @foreach (var file in latest.Files)
+                        {
+                            <li><i class="fa-solid fa-file me-1" aria-hidden="true"></i><a href="@Url.RouteUrl("LearningCourseworkFile", new { id = latest.ItemId, fileId = file.FileId })">@file.FileName</a></li>
+                        }
+                    </ul>
+                }
+            }
+        }
+
+        @if (!Model.CanSubmit && Model.Closed && Model.EnrollmentActive && (latest is null || latest.Status == SubmissionStatus.Submitted))
+        {
+            <p class="text-secondary small mb-0"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["This coursework no longer takes work."]</p>
+        }
+
+        @if (Model.CanSubmit)
+        {
+            @if (Model.PastDue)
+            {
+                <p class="text-warning small mb-2"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@(part.LatePenaltyPercentPerDay > 0 ? T["The due date has passed. Work handed in now is marked late and loses the late penalty."] : T["The due date has passed. Work handed in now is marked late."])</p>
+            }
+
+            <form method="post" enctype="multipart/form-data" action="@Url.RouteUrl("LearningCourseworkSubmit", new { courseworkId = Model.CourseworkId })">
+                @Html.AntiForgeryToken()
+                @if (takesText)
+                {
+                    <div class="mb-3">
+                        <label for="coursework-text-@Model.CourseworkId" class="form-label">@T["Your answer"]</label>
+                        <textarea id="coursework-text-@Model.CourseworkId" name="text" rows="8" class="form-control" maxlength="100000"></textarea>
+                    </div>
+                }
+                @if (takesFiles)
+                {
+                    <div class="mb-3">
+                        <label for="coursework-files-@Model.CourseworkId" class="form-label">@T["Files"]</label>
+                        <input id="coursework-files-@Model.CourseworkId" type="file" name="files" class="form-control" multiple="@(part.MaxFiles > 1)" accept="@(string.IsNullOrEmpty(accept) ? null : accept)" />
+                    </div>
+                }
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>@(latest is null ? T["Hand in"] : T["Hand in again"])</button>
+            </form>
+        }
+    </div>
+</div>

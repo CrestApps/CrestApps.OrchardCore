@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Learning.Certifications.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StartCertificationPathTask>
+
+<header><h4><i class="fa-solid fa-certificate" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Start Certification Path"])</h4></header>

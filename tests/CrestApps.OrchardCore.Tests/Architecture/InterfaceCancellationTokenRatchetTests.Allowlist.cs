@@ -231,5 +231,33 @@ public sealed partial class InterfaceCancellationTokenRatchetTests
         // Existing debt from main's #1338 (Fulfillment Partners), baselined when PR #1319 merged main;
         // remove as it is paid down.
         ["src/Abstractions/CrestApps.OrchardCore.Fulfillment.Abstractions/Services/IFulfillmentProvider.cs: IFulfillmentProvider.IsConnectedAsync"] = 1,
+
+        // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/IContentTransferImportTarget.cs: IContentTransferImportTarget.AuthorizeAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/IContentTransferImportTargetResolver.cs: IContentTransferImportTargetResolver.CanImportAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/IContentTransferImportTargetResolver.cs: IContentTransferImportTargetResolver.FindAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/IContentTransferImportTargetResolver.cs: IContentTransferImportTargetResolver.ListRecordImportersAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Learning.Abstractions/Services/ICourseAccessService.cs: ICourseAccessService.GetItemAccessAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Learning.Abstractions/Services/ICourseCompletionCriterion.cs: ICourseCompletionCriterion.IsMetAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Learning.Abstractions/Services/ICourseItemHandler.cs: ICourseItemHandler.CompletedAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Learning.Abstractions/Services/ICourseItemHandler.cs: ICourseItemHandler.StartedAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Learning.Abstractions/Services/ICourseItemReleaseRule.cs: ICourseItemReleaseRule.EvaluateAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Learning.Abstractions/Services/ICourseStructureService.cs: ICourseStructureService.GetCourseAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Learning.Abstractions/Services/ICourseStructureService.cs: ICourseStructureService.GetOutlineAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Learning.Abstractions/Services/ICourseStructureService.cs: ICourseStructureService.GetStaffCourseIdsAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Learning.Abstractions/Services/ICourseStructureService.cs: ICourseStructureService.IsCourseStaffAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Learning.Lti.Abstractions/Services/ILtiScoreObserver.cs: ILtiScoreObserver.ScoreReceivedAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Learning.Xapi.Abstractions/IXapiStatementFilter.cs: IXapiStatementFilter.OnWritingAsync"] = 1,
+        ["src/Abstractions/CrestApps.OrchardCore.Learning.Xapi.Abstractions/IXapiStatementFilter.cs: IXapiStatementObserver.StoredAsync"] = 1,
+        ["src/Core/CrestApps.OrchardCore.AI.Core/DataSources/IAIDataSourceResultFilter.cs: IAIDataSourceResultFilter.FilterAsync"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Assessments.Core/Services/IAssessmentContentSource.cs: IAssessmentContentSource.GetBankQuestionsAsync"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Assessments.Core/Services/IAssessmentContentSource.cs: IAssessmentContentSource.GetItemAsync"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Assessments.Core/Services/IAssessmentContentSource.cs: IAssessmentContentSource.GetQuestionsAsync"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Coursework.Core/Services/CourseworkContentSource.cs: ICourseworkContentSource.GetPublishedAsync"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Lti.Core/Launch/ILtiPlatform.cs: ILtiPlatform.GetAsync"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Packages.Core/Services/PackageContentSource.cs: IPackageContentSource.GetPublishedAsync"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Learning.Surveys.Core/Services/SurveyContentSource.cs: ISurveyContentSource.GetPublishedAsync"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.AI/Services/LearningAICompleter.cs: ILearningAICompleter.IsAvailableAsync"] = 1,
     };
 }

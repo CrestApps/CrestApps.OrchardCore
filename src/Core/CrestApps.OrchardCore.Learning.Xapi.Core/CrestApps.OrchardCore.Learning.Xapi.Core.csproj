@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.Xapi.Core</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Xapi Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services of the Learning Record Store: xAPI 1.0.3 statement validation, immutability, voiding and
+      statement references, the statement queries, attachments and signed statements, the state, activity profile
+      and agent profile documents with their concurrency rules, the request reader for the alternate request syntax,
+      the credentials (OpenID applications and launch tokens), and the YesSql store and indexes.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS xAPI LRS Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Learning.Xapi" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.OpenId.Core" />
+    <PackageReference Include="OrchardCore.Roles.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.FileStorage.Abstractions\CrestApps.OrchardCore.FileStorage.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Xapi.Abstractions\CrestApps.OrchardCore.Learning.Xapi.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.FileStorage.Core\CrestApps.OrchardCore.FileStorage.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>

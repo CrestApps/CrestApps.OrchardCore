@@ -1,0 +1,8 @@
+@model LearningRequirementRowViewModel
+
+<a asp-controller="RequiredLearning" asp-action="Edit" asp-route-id="@Model.Requirement.ItemId" class="fw-semibold">@Model.Requirement.Name</a>
+@if (!Model.Requirement.Enabled)
+{
+    <span class="badge bg-secondary text-white fw-normal ms-1">@T["Off"]</span>
+}
+<div class="text-muted small">@Model.TargetKindName: @Model.TargetName</div>

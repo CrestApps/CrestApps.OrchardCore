@@ -219,6 +219,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Skills` | Skills | [Skills](./modules/skills) |
+| `CrestApps.OrchardCore.Skills.IssuedCertificates` | Skills: Issued Certificates | [Skills](./modules/skills#issued-certificates) |
 | `CrestApps.OrchardCore.Teams` | Teams | [Teams](./modules/teams) |
 | `CrestApps.OrchardCore.Agreements` | Agreements | [Agreements](./modules/agreements) |
 | `CrestApps.OrchardCore.BusinessHours` | Business Hours | [Business Hours](./modules/business-hours#the-business-hours-feature) |
@@ -276,6 +277,34 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.TimeTracker` | Time Tracker | [Time Tracker](./modules/time-tracker) |
 | `CrestApps.OrchardCore.WorkOrders` | Work Orders | [Work Orders](./modules/work-orders) |
 | `CrestApps.OrchardCore.WorkOrders.Agreements` | Service Agreements | [Work Orders](./modules/work-orders#service-agreements) |
+
+## Learning
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Learning` | Learning | [Learning](./modules/learning) |
+| `CrestApps.OrchardCore.Learning.LearnerPages` | Learner Pages | [Learning](./modules/learning#learner-pages) |
+| `CrestApps.OrchardCore.Learning.SelfEnrollment` | Self Enrollment | [Learning](./modules/learning#learner-pages) |
+| `CrestApps.OrchardCore.Learning.CourseCategories` | Course Categories | [Learning](./modules/learning#course-categories) |
+| `CrestApps.OrchardCore.Learning.Cohorts` | Enrollment by Cohort | [Learning](./modules/learning#enrollment-by-cohort) |
+| `CrestApps.OrchardCore.Learning.Assessments` | Learning Assessments | [Learning Assessments](./modules/learning-assessments) |
+| `CrestApps.OrchardCore.Learning.Assessments.Gradebook` | Learning Gradebook | [Learning Assessments](./modules/learning-assessments) |
+| `CrestApps.OrchardCore.Learning.Assessments.QtiImport` | Learning QTI Import | [Learning Assessments](./modules/learning-assessments#qti-import) |
+| `CrestApps.OrchardCore.Learning.Assessments.MoodleImport` | Learning Moodle Import | [Learning Assessments](./modules/learning-assessments#moodle-import) |
+| `CrestApps.OrchardCore.Learning.AI` | Learning Assistant | [Learning AI](./modules/learning-ai) |
+| `CrestApps.OrchardCore.Learning.AI.Authoring` | Learning Authoring Assistant | [Learning AI](./modules/learning-ai#author-prompts) |
+| `CrestApps.OrchardCore.Learning.Certifications` | Learning Certifications | [Learning Certifications](./modules/learning-certifications) |
+| `CrestApps.OrchardCore.Learning.Classes` | Learning Classes | [Learning Classes](./modules/learning-classes) |
+| `CrestApps.OrchardCore.Learning.Commerce` | Learning Commerce | [Learning Commerce](./modules/learning-commerce) |
+| `CrestApps.OrchardCore.Learning.Coursework` | Learning Coursework | [Learning Coursework](./modules/learning-coursework) |
+| `CrestApps.OrchardCore.Learning.Packages.Scorm` | Learning SCORM Packages | [Learning Packages](./modules/learning-packages) |
+| `CrestApps.OrchardCore.Learning.Packages.Cmi5` | Learning cmi5 Packages | [Learning Packages](./modules/learning-packages#cmi5) |
+| `CrestApps.OrchardCore.Learning.Xapi` | Learning Record Store | [Learning Record Store](./modules/learning-xapi) |
+| `CrestApps.OrchardCore.Learning.Lti` | External Tools | [Learning External Tools](./modules/learning-lti) |
+| `CrestApps.OrchardCore.Learning.Credentials` | Digital Credentials | [Learning Digital Credentials](./modules/learning-credentials) |
+| `CrestApps.OrchardCore.Learning.Programs` | Learning Paths | [Learning Programs](./modules/learning-programs) |
+| `CrestApps.OrchardCore.Learning.Programs.RequiredLearning` | Required Learning | [Learning Programs](./modules/learning-programs#required-learning) |
+| `CrestApps.OrchardCore.Learning.Programs.TeamLearning` | Team Learning | [Learning Programs](./modules/learning-programs#team-learning) |
 
 ## Data connectors
 
@@ -373,6 +402,8 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Users` | Users Core Components (dependency only) | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.DisplayName` | User Display Name | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.Avatars` | User Avatar | [Users](./modules/users) |
+| `CrestApps.OrchardCore.Users.Audiences` | User Audiences | [Users](./modules/users#user-audiences) |
+| `CrestApps.OrchardCore.Users.Cohorts` | Cohorts | [Users](./modules/users#cohorts) |
 
 ## Multi-Tenancy
 

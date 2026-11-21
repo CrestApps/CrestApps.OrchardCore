@@ -1,0 +1,82 @@
+@using CrestApps.OrchardCore.Users
+@using CrestApps.OrchardCore.Users.ViewModels
+
+@*
+    The form of the site's notification preferences page: the Notifications module's own preferences of the user, the
+    methods they receive at all and the methods on for each kind of notification, for people who don't use the admin.
+    Notifications always reach the notification center; the methods are the other ways they are delivered.
+*@
+
+@{
+    UserNotificationPreferencesViewModel preferences = Model.Preferences;
+}
+
+@if (preferences.Methods.Count == 0)
+{
+    <p class="text-muted">@T["Notifications reach you on the Notifications page. This site sends them no other way, so there is nothing to choose."]</p>
+    <a class="btn btn-outline-secondary" href="@Url.RouteUrl(UsersConstants.Notifications.RouteName)">@T["Back to notifications"]</a>
+}
+else
+{
+    <form method="post" asp-route="@UsersConstants.Notifications.PreferencesRouteName">
+        <div class="card mb-3">
+            <div class="card-header">@T["How notifications reach you"]</div>
+            <div class="card-body">
+                <p class="text-muted small">@T["Every notification is on your Notifications page. Choose the other ways you want to get them."]</p>
+                @foreach (var method in preferences.Methods)
+                {
+                    var id = "notification-method-" + method.Method;
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="@id" name="EnabledMethods" value="@method.Method" checked="@method.Enabled" />
+                        <label class="form-check-label" for="@id">@method.Name</label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (preferences.Types.Count > 0)
+        {
+            <div class="card mb-3">
+                <div class="card-header">@T["Each kind of notification"]</div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">@T["Notification"]</th>
+                                @foreach (var method in preferences.Methods)
+                                {
+                                    <th scope="col" class="text-center text-nowrap">@method.Name</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var type in preferences.Types)
+                            {
+                                <tr>
+                                    <td>
+                                        <div>@type.DisplayName</div>
+                                        @if (!string.IsNullOrEmpty(type.Description))
+                                        {
+                                            <div class="small text-muted">@type.Description</div>
+                                        }
+                                    </td>
+                                    @foreach (var method in preferences.Methods)
+                                    {
+                                        <td class="text-center">
+                                            <input class="form-check-input" type="checkbox" name="TypeMethods[@type.Name]" value="@method.Method" checked="@type.EnabledMethods.Contains(method.Method)" aria-label="@T["{0} by {1}", type.DisplayName, method.Name]" />
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">@T["Save"]</button>
+            <a class="btn btn-outline-secondary" href="@Url.RouteUrl(UsersConstants.Notifications.RouteName)">@T["Cancel"]</a>
+        </div>
+    </form>
+}

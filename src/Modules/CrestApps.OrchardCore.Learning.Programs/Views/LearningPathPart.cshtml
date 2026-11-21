@@ -1,0 +1,87 @@
+@model LearningPathPartViewModel
+
+<section class="learning-path mb-4">
+    @if (Model.Progress is not null)
+    {
+        <p class="@(Model.Progress.State == LearningPathState.Completed ? "text-success" : "text-muted")">
+            @if (Model.Progress.State == LearningPathState.Completed)
+            {
+                @T["You completed this path."]
+            }
+            else
+            {
+                @T["You are on this path."]
+            }
+        </p>
+    }
+    else if (Model.CanStart)
+    {
+        <form method="post" action="~/learning/paths/@Model.PathId/start" class="mb-3">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
+            <button type="submit" class="btn btn-primary">@T["Start this path"]</button>
+        </form>
+    }
+
+    <ol class="list-unstyled">
+        @foreach (var stage in Model.Stages)
+        {
+            <li class="mb-3">
+                <h3 class="h5">
+                    @T["Stage {0}", stage.Number]
+                    @if (stage.IsComplete)
+                    {
+                        <span class="badge bg-success text-white fw-normal ms-1">@T["Done"]</span>
+                    }
+                    else if (stage.IsOpen)
+                    {
+                        <span class="badge bg-primary text-white fw-normal ms-1">@T["Open"]</span>
+                    }
+                </h3>
+                @for (var i = 0; i < stage.Sets.Count; i++)
+                {
+                    var set = stage.Sets[i];
+
+                    if (i > 0)
+                    {
+                        <div class="text-muted small text-uppercase my-1">@(set.Connector == LearningPathConnector.Or ? T["or"] : T["and"])</div>
+                    }
+
+                    <div class="card mb-1">
+                        <div class="card-body py-2">
+                            <div class="fw-semibold">
+                                @(string.IsNullOrEmpty(set.Title) ? T["Courses"] : new LocalizedHtmlString(set.Title, set.Title))
+                                <span class="text-muted small fw-normal ms-1">
+                                    @switch (set.Join)
+                                    {
+                                        case LearningPathSetJoin.Any:
+                                            @T["any one"]
+                                            break;
+                                        case LearningPathSetJoin.AtLeast:
+                                            @T["at least {0}", set.MinimumCount]
+                                            break;
+                                        default:
+                                            @T["every course"]
+                                            break;
+                                    }
+                                </span>
+                            </div>
+                            <ul class="mb-0">
+                                @foreach (var course in set.Courses)
+                                {
+                                    <li>
+                                        @course.Title
+                                        @if (course.IsCompleted)
+                                        {
+                                            <i class="fa-solid fa-check text-success ms-1" title="@T["Completed"]" aria-label="@T["Completed"]"></i>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </li>
+        }
+    </ol>
+</section>

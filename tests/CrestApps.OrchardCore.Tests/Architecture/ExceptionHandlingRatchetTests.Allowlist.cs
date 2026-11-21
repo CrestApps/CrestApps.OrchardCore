@@ -57,5 +57,17 @@ public sealed partial class ExceptionHandlingRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Stripe/Services/StripeCheckoutPaymentProvider.cs"] = 6,
         ["src/Modules/CrestApps.OrchardCore.Stripe/Services/StripeRecurringPaymentProvider.cs"] = 4,
         ["src/Modules/CrestApps.OrchardCore.Stripe/Services/StripeTerminalPaymentProvider.cs"] = 1,
+
+        // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/Recipes/LearningAttemptsRecipeStep.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/Recipes/LearningGradeScalesRecipeStep.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Certifications/Recipes/LearningCertificationPathsRecipeStep.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Certifications/Recipes/LearningCreditTypesRecipeStep.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Coursework/Recipes/LearningSubmissionsRecipeStep.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Packages/Recipes/LearningPackageRuntimeStatesRecipeStep.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Programs/Recipes/LearningRequirementsRecipeStep.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Learning/Recipes/LearningEnrollmentsRecipeStep.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Users/Audiences/UserAudiencesRecipeStep.cs"] = 1,
     };
 }

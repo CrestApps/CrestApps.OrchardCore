@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Users.Audiences
+@model ShapeViewModel<UserAudienceRow>
+
+@if (Model.Value.IsDefined)
+{
+    <a asp-controller="UserAudiences" asp-action="Delete" asp-route-name="@Model.Value.Name" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this audience? Features that target it stop finding anyone in it."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Services;
 using CrestApps.OrchardCore.Downloads.ViewModels;
+using CrestApps.OrchardCore.FileStorage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
@@ -19,7 +20,7 @@ public sealed class DigitalFilesPartDisplayDriver : ContentPartDisplayDriver<Dig
 {
     private const int MaxFiles = 50;
 
-    private readonly IDigitalFileStore _fileStore;
+    private readonly IProtectedFileStore<DigitalDownloadFiles> _fileStore;
     private readonly ISiteService _siteService;
     private readonly LinkGenerator _linkGenerator;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -27,7 +28,7 @@ public sealed class DigitalFilesPartDisplayDriver : ContentPartDisplayDriver<Dig
     internal readonly IStringLocalizer S;
 
     public DigitalFilesPartDisplayDriver(
-        IDigitalFileStore fileStore,
+        IProtectedFileStore<DigitalDownloadFiles> fileStore,
         ISiteService siteService,
         LinkGenerator linkGenerator,
         IHttpContextAccessor httpContextAccessor,

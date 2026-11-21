@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Learning.Assessments.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AttemptSubmittedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Quiz Attempt Submitted"])
+    </h4>
+</header>

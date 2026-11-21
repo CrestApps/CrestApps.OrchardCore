@@ -1,0 +1,13 @@
+@model RequiredLearningAssignmentRowViewModel
+
+@if (Model.CanExempt)
+{
+    if (Model.Assignment.State == RequiredLearningState.Exempt)
+    {
+        <a asp-controller="RequiredLearning" asp-action="RemoveExemption" asp-route-id="@Model.Assignment.ItemId" class="dropdown-item" data-title="@T["Take the exemption back"]" data-message="@T["Take the exemption back? The person is required to complete it again."]" data-url-af="RemoveUrl UnsafeUrl">@T["Take the exemption back"]</a>
+    }
+    else if (Model.Assignment.IsOpen)
+    {
+        <a asp-controller="RequiredLearning" asp-action="Exempt" asp-route-id="@Model.Assignment.ItemId" class="dropdown-item">@T["Exempt"]</a>
+    }
+}

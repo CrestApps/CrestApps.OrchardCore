@@ -2,6 +2,7 @@ using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Services;
 using CrestApps.OrchardCore.Downloads.ViewModels;
+using CrestApps.OrchardCore.FileStorage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -21,10 +22,10 @@ public sealed class DownloadsController : Controller
     private static readonly FileExtensionContentTypeProvider _contentTypes = new();
 
     private readonly DownloadService _downloads;
-    private readonly IDigitalFileStore _fileStore;
+    private readonly IProtectedFileStore<DigitalDownloadFiles> _fileStore;
     private readonly IShapeFactory _shapeFactory;
 
-    public DownloadsController(DownloadService downloads, IDigitalFileStore fileStore, IShapeFactory shapeFactory)
+    public DownloadsController(DownloadService downloads, IProtectedFileStore<DigitalDownloadFiles> fileStore, IShapeFactory shapeFactory)
     {
         _downloads = downloads;
         _fileStore = fileStore;

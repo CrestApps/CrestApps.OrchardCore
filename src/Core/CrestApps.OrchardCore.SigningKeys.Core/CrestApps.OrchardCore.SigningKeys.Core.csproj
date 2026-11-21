@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.SigningKeys.Core</RootNamespace>
+    <Title>CrestApps OrchardCore Signing Keys Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The shared signing keys: the key ring that makes, publishes and rotates the keys of the key sets modules register
+      (RS256 and ES256), with the key pairs in Orchard Core Secrets (RsaKeySecret, and a TextSecret holding the private
+      JSON Web Key for ES256) and only the list of keys and their dates in a document, and the daily rotation task.
+    </Description>
+    <PackageTags>$(PackageTags) SigningKeys JWKS Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Secrets.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.SigningKeys.Abstractions\CrestApps.OrchardCore.SigningKeys.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

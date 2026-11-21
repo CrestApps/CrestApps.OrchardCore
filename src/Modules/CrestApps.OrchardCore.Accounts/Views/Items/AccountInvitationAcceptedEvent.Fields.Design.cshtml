@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Accounts.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AccountInvitationAcceptedEvent>
+
+<header><h4><i class="fa-solid fa-user-plus" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Account Invitation Accepted"])</h4></header>

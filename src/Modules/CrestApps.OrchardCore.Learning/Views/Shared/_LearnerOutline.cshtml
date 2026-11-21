@@ -1,0 +1,146 @@
+@model LearnerOutlineViewModel
+@inject CrestApps.OrchardCore.Learning.Services.LearningRefusalText RefusalText
+
+@{
+    var outline = Model.Outline;
+    var courseId = outline.Course.ContentItemId;
+}
+
+<style>
+    .list-group-numbered > .learning-inline-text::before { content: none; counter-increment: none; }
+    .learning-outline-section > summary { list-style: none; cursor: pointer; }
+    .learning-outline-section > summary::-webkit-details-marker { display: none; }
+    .learning-outline-section > summary .learning-outline-chevron { transition: transform .15s ease-in-out; }
+    .learning-outline-section:not([open]) > summary .learning-outline-chevron { transform: rotate(-90deg); }
+</style>
+
+@foreach (var group in outline.Entries.GroupBy(entry => entry.Section))
+{
+    var entries = Model.Navigation ? group.Where(entry => !entry.Inline).ToList() : group.ToList();
+
+    if (entries.Count == 0)
+    {
+        continue;
+    }
+
+    var required = entries.Where(entry => entry.Required && !entry.Inline).ToList();
+    var done = required.Count(entry => Model.Progress?.Find(entry.Item.ContentItemId)?.State == CourseItemState.Completed);
+
+    <details class="mb-3 learning-outline-section" open data-learning-section>
+        <summary class="d-flex align-items-center gap-2 mb-1">
+            <i class="fa-solid fa-chevron-down small text-body-secondary learning-outline-chevron" aria-hidden="true"></i>
+            <h3 class="h6 text-uppercase text-body-secondary mb-0 flex-grow-1">@group.Key?.Title</h3>
+            @if (Model.Progress is not null && required.Count > 0)
+            {
+                <span class="small text-body-secondary" title="@T["Required items completed"]">@T["{0}/{1}", done, required.Count]</span>
+            }
+        </summary>
+        @if (!string.IsNullOrEmpty(group.Key?.Summary))
+        {
+            <p class="small text-body-secondary mb-1">@group.Key.Summary</p>
+        }
+        <ol class="list-group list-group-numbered">
+            @foreach (var entry in entries)
+            {
+                var itemId = entry.Item.ContentItemId;
+                var state = Model.Progress?.Find(itemId)?.State ?? CourseItemState.NotStarted;
+                var icon = Model.KindIcons.TryGetValue(entry.Part?.Kind ?? string.Empty, out var kindIcon) ? kindIcon : "fa-solid fa-file-lines";
+                var isCurrent = itemId == Model.CurrentItemId;
+                var canOpen = Model.CanOpen || entry.Part?.FreePreview == true;
+                ReleaseDecision lockDecision = null;
+                var isLocked = Model.LockedItems?.TryGetValue(itemId, out lockDecision) == true;
+
+                if (entry.Inline)
+                {
+                    // Text shown in place: its HTML was sanitized when it was saved, as Orchard's HTML body does. Without
+                    // the release decision (the course page), text with release rules waits for the player.
+                    var locked = Model.LockedItems is null ? entry.Part?.ReleaseRules?.Count > 0 : isLocked;
+                    var html = entry.Item.TryGet<OrchardCore.Html.Models.HtmlBodyPart>(out var body) ? body.Html : null;
+
+                    <li class="list-group-item learning-inline-text" data-learning-item="@itemId" data-learning-inline>
+                        @if (canOpen && !locked && !string.IsNullOrWhiteSpace(html))
+                        {
+                            <div class="learning-text">@Html.Raw(html)</div>
+                        }
+                        else if (canOpen && locked)
+                        {
+                            <span class="text-muted small"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["This text is not available to you yet."]</span>
+                        }
+                    </li>
+
+                    continue;
+                }
+
+                <li class="list-group-item d-flex align-items-center gap-2@(isCurrent ? " active" : string.Empty)" data-learning-item="@itemId" aria-current="@(isCurrent ? "step" : null)" data-learning-locked="@(isLocked ? "true" : null)">
+                    <i class="@icon" aria-hidden="true"></i>
+                    <span class="flex-grow-1">
+                        @if (canOpen && !isCurrent && !isLocked)
+                        {
+                            <a href="@Url.RouteUrl("LearningPlayer", new { courseId, itemId })" class="stretched-link text-reset">@entry.Item.DisplayText</a>
+                        }
+                        else
+                        {
+                            @entry.Item.DisplayText
+                        }
+                        @if (!entry.Required && Model.Navigation)
+                        {
+                            <span class="badge text-bg-light border ms-1">@T["Optional"]</span>
+                        }
+                        @if (entry.Part?.FreePreview == true && !Model.CanOpen)
+                        {
+                            <span class="badge text-bg-info ms-1">@T["Free preview"]</span>
+                        }
+                        @if (!Model.Navigation)
+                        {
+                            <span class="d-flex flex-wrap align-items-center gap-2 small text-body-secondary mt-1" data-learning-item-meta>
+                                @if (Model.KindNames.TryGetValue(entry.Part?.Kind ?? string.Empty, out var kindName))
+                                {
+                                    <span>@kindName</span>
+                                }
+                                @if (entry.Part?.EstimatedMinutes is { } minutes)
+                                {
+                                    <span><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["About {0} min", minutes]</span>
+                                }
+                                <partial name="_ItemCondition" model="(entry, Model.Progress?.Find(itemId), Model.Tracked)" />
+                            </span>
+                        }
+                        @if (isLocked)
+                        {
+                            <span class="d-block small@(isCurrent ? string.Empty : " text-body-secondary")" data-learning-lock-reason>
+                                @if (lockDecision.BlockingItemId is not null && outline.Find(lockDecision.BlockingItemId) is { } blocking)
+                                {
+                                    @T["Complete \"{0}\" first", blocking.Item.DisplayText]
+                                }
+                                else
+                                {
+                                    @(RefusalText.Get(lockDecision.Reason)?.Value ?? T["Not available yet"].Value)
+                                }
+                            </span>
+                        }
+                    </span>
+                    <span data-learning-state>
+                        @if (isLocked)
+                        {
+                            <i class="fa-solid fa-lock text-body-secondary" title="@T["Locked"]" aria-hidden="true"></i><span class="visually-hidden">@T["Locked"]</span>
+                        }
+                        else
+                        {
+                            switch (state)
+                            {
+                                case CourseItemState.Completed:
+                                    <i class="fa-solid fa-circle-check text-success" title="@T["Completed"]" aria-hidden="true"></i><span class="visually-hidden">@T["Completed"]</span>
+                                    break;
+                                case CourseItemState.InProgress:
+                                    <i class="fa-solid fa-circle-half-stroke text-primary" title="@T["In progress"]" aria-hidden="true"></i><span class="visually-hidden">@T["In progress"]</span>
+                                    break;
+                                case CourseItemState.Failed:
+                                    <i class="fa-solid fa-circle-xmark text-danger" title="@T["Not passed"]" aria-hidden="true"></i><span class="visually-hidden">@T["Not passed"]</span>
+                                    break;
+                            }
+                        }
+                    </span>
+                </li>
+            }
+        </ol>
+    </details>
+}

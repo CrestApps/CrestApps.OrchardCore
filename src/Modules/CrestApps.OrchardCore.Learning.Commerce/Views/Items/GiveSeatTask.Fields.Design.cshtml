@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Learning.Commerce.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<GiveSeatTask>
+
+<header><h4><i class="fa-solid fa-chair" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Give Course Seat"])</h4></header>

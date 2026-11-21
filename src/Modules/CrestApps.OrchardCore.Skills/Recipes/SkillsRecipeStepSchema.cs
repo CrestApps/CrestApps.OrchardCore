@@ -61,7 +61,10 @@ internal sealed class SkillsRecipeStepSchema : IRecipeStep
                 ("validityMonths", new JsonSchemaBuilder().Type(SchemaValueType.Integer, SchemaValueType.Null).Minimum(1).Description("How many months a certificate stays valid; null when it never expires.")),
                 ("requiresDocument", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether a copy of the certificate is needed before it counts.")),
                 ("reminderDays", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1)).Description("Days before expiry that a reminder is raised.")),
-                ("enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the certification can be recorded and required by skills.")))
+                ("enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the certification can be recorded and required by skills.")),
+                ("generateNumbers", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the site numbers the certificates it issues.")),
+                ("numberPrefix", Text("The prefix of a generated number, such as CPR-.")),
+                ("certificateTemplateId", Text("The content item id of the certificate template issued certificates are printed with.")))
             .Required("name")
             .AdditionalProperties(true);
     }
@@ -116,7 +119,16 @@ internal sealed class SkillsRecipeStepSchema : IRecipeStep
                 ("status", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Pending", "Valid", "Expired", "Revoked").Description("Whether the certificate is waiting for a check, valid, expired or revoked.")),
                 ("verifiedBy", Text("Who checked the certificate.")),
                 ("verifiedUtc", new JsonSchemaBuilder().Type(SchemaValueType.String, SchemaValueType.Null).Format(Formats.DateTime).Description("When the certificate was checked.")),
-                ("notes", Text("A note about the record.")))
+                ("notes", Text("A note about the record.")),
+                ("source", Text("What earned an issued certificate, such as Learning.CertificationPath.")),
+                ("sourceId", Text("The id, within the source, of what earned it.")),
+                ("evidence", Text("A summary of the evidence.")),
+                ("verificationCode", Text("The code that proves an issued certificate on the public verification page.")),
+                ("previousRecordId", Text("The certificate this one renews.")),
+                ("renewedByRecordId", Text("The certificate that renews this one.")),
+                ("revokedReason", Text("Why the certificate was revoked.")),
+                ("revokedBy", Text("Who revoked it.")),
+                ("revokedUtc", new JsonSchemaBuilder().Type(SchemaValueType.String, SchemaValueType.Null).Format(Formats.DateTime).Description("When it was revoked.")))
             .Required("subjectId")
             .AdditionalProperties(true);
     }

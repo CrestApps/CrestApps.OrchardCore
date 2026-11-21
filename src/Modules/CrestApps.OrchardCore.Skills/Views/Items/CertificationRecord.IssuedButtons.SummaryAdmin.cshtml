@@ -1,0 +1,5 @@
+@using CrestApps.OrchardCore.Skills.Services
+@model CertificationRecordRowViewModel
+
+<a asp-controller="IssuedCertificatesAdmin" asp-action="Document" asp-route-id="@Model.Record.ItemId" asp-route-area="CrestApps.OrchardCore.Skills" target="_blank" class="btn btn-primary btn-sm"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Certificate"]</a>
+<a asp-controller="CertificateVerification" asp-action="Show" asp-route-code="@CertificateVerificationCodes.Format(Model.Record.VerificationCode)" asp-route-area="CrestApps.OrchardCore.Skills" target="_blank" class="btn btn-secondary btn-sm">@T["Verification page"]</a>

@@ -104,5 +104,17 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Tickets/Controllers/TicketsController.cs: TicketsController"] = 19,
         ["src/Modules/CrestApps.OrchardCore.Tickets/Drivers/TicketPartDisplayDriver.cs: TicketPartDisplayDriver"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Tickets/Portal/TicketPortalController.cs: TicketPortalController"] = 15,
+
+        // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;
+        // remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Learning.Assessments.Core/Services/DefaultAssessmentAttemptService.cs: DefaultAssessmentAttemptService"] = 19,
+        ["src/Core/CrestApps.OrchardCore.Learning.Certifications.Core/Services/DefaultCertificationPathService.cs: DefaultCertificationPathService"] = 16,
+        ["src/Core/CrestApps.OrchardCore.Scheduling.Core/Services/DefaultSchedulingSessionService.cs: DefaultSchedulingSessionService"] = 13,
+        ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultShiftService.cs: DefaultShiftService"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/ContentTransfer/Moodle/MoodleImportHandler.cs: MoodleImportHandler"] = 14,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Commerce/Services/LearningPurchaseProcessor.cs: LearningPurchaseProcessor"] = 14,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Credentials/Controllers/CredentialAwardsAdminController.cs: CredentialAwardsAdminController"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.Learning/Controllers/EnrollmentsController.cs: EnrollmentsController"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.Learning/Services/LearnerPageService.cs: LearnerPageService"] = 13,
     };
 }

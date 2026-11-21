@@ -257,7 +257,7 @@ public sealed class CartService : ICartService
 
         if (total > evaluated.MaxQuantity)
         {
-            return CartResult.Failure(S["Only {0} of {1} left.", evaluated.MaxQuantity, resolved.Title], cart);
+            return CartResult.Failure(evaluated.MaxQuantityReason ?? S["Only {0} of {1} left.", evaluated.MaxQuantity, resolved.Title], cart);
         }
 
         var isNew = cart is null;
@@ -329,7 +329,7 @@ public sealed class CartService : ICartService
 
         if (quantity > evaluated.MaxQuantity)
         {
-            return CartResult.Failure(S["Only {0} of {1} left.", evaluated.MaxQuantity, resolved.Title], cart);
+            return CartResult.Failure(evaluated.MaxQuantityReason ?? S["Only {0} of {1} left.", evaluated.MaxQuantity, resolved.Title], cart);
         }
 
         line.Quantity = quantity;
@@ -495,9 +495,9 @@ public sealed class CartService : ICartService
 
             if (problem is null && evaluated is not null && line.Quantity > evaluated.MaxQuantity)
             {
-                problem = evaluated.MaxQuantity <= 0
+                problem = evaluated.MaxQuantityReason ?? (evaluated.MaxQuantity <= 0
                     ? S["{0} is sold out.", resolved.Title]
-                    : S["Only {0} left. Lower the quantity to check out.", evaluated.MaxQuantity];
+                    : S["Only {0} left. Lower the quantity to check out.", evaluated.MaxQuantity]);
             }
 
             var unitPrice = evaluated?.UnitPrice ?? line.AddedUnitPrice;

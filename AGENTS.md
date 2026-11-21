@@ -259,6 +259,7 @@ Build admin UI the way Orchard Core builds it, and add a new concept only when O
 
 * Every field uses the `ocat-*` layout (`ocat-wrapper`, `ocat-label`, `ocat-end`, and `ocat-end-offset` for a checkbox): one label and field per line, stacked. No multi-column field grids.
 * Group related fields in Bootstrap cards (`card` with a `card-header` naming the group and a `card-body`), one card per group, especially on forms with many fields.
+* A form with only a few fields still gets one card, so every editor looks the same. `tests/js/lint/learning-admin-edit-views-use-cards.test.js` fails for a Learning admin edit page, part editor or settings editor with a field outside a card (workflow, deployment and pipeline step fields, filters and `Shared` partials are left out).
 * Every top-level admin menu item has an icon (`icon-class-fa-solid`, `icon-class-fa-...`). One-time setup pages, such as a "Get started" page, are not in the menu; link to them from the module's pages.
 * Reports belong under the **Reports** menu, not under the module's own menu.
 
@@ -349,6 +350,7 @@ Modules by product area (each `X` is `src/Modules/CrestApps.OrchardCore.X`; most
 - **Platform**: **Recipes**, **Resources**, **ContentFields**, ContentAccessControl, **ContentTransfer** (+ Azure, OpenXml), **Wizard**, **Users**, Roles, **TimeZones**, **TenantHierarchy**, **WebSockets**, SignalR (deprecated), **Seo**, NLWeb, **DataConnectors** (+ SqlServer), **Reports** (+ OpenXml, Pdf).
 - **People and places**: **Accounts**, Accounts.B2B, **Customers**, **Teams**, **Skills**, **Addresses**, **PhoneNumbers**, PhoneNumbers.Verifications, **Geo** (+ AzureMaps, GoogleMaps, Osrm).
 - **Time and work**: **Calendars**, **Scheduling**, **TimeTracker**, Workforce, Workforce.ContactCenter, WorkOrders, Dispatch, **Assets**, OrTools.
+- **Learning**: **Learning** (courses, lessons, enrollments, progress, learner pages); **Learning Assessments** (question banks, quizzes, attempts, grading).
 - **CRM and communication**: **Omnichannel**, Omnichannel.Managements (CRM), Omnichannel.EventGrid, **Omnichannel.Messaging** (+ Azure, Sms), Omnichannel.Sms, Omnichannel.Voice, **DncRegistry** (+ Azure), ContactCenter, **Telephony** (+ Azure), Telnyx, Asterisk.
 - **AI**: **AI**, AI.A2A, AI.Agent, AI.Chat, AI.Chat.Claude, AI.Chat.Copilot, AI.Chat.Interactions, AI.DataSources (+ AzureAI, Elasticsearch, PostgreSQL), AI.Documents (+ Azure, AzureAI, Elasticsearch, OpenXml, Pdf), AI.FileSources (+ Ftp, Sftp), AI.Mcp (+ Resources.Ftp, Resources.Sftp), AI.Memory (+ AzureAI, Elasticsearch), AI.Prompting, AI.WebCrawlers, AI.WebMcp; providers OpenAI, OpenAI.Azure, AzureAIInference, Ollama, Cartesia, ElevenLabs.
 - **Commerce**: Commerce, Commerce.Webhooks, **Products** (+ AzureAI, Elasticsearch, Lucene), **Carts**, **Checkout**, **Orders**, **Transactions**, **Receipts**, Stripe, PayLater, **Subscriptions**, Memberships, Inventory, Shipping, **Taxation**, Markets, Marketing, Marketplace, Classifieds, PointOfSale, Fundraising, Downloads, Reviews, Bookings.

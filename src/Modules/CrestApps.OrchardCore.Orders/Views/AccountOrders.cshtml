@@ -44,12 +44,7 @@
 
 @if (Model.Orders.Count == 0 && Model.Open.Count == 0)
 {
-    <div class="card">
-        <div class="card-body text-center py-5">
-            <p class="mb-1">@T["You haven't placed an order yet."]</p>
-            <p class="text-muted small mb-0">@T["Orders you place while signed in, and earlier ones made with your email, appear here."]</p>
-        </div>
-    </div>
+    @await DisplayAsync(await New.CommerceAccountEmptyState(Title: T["You haven't placed an order yet."], Hint: T["Orders you place while signed in, and earlier ones made with your email, appear here."]))
 }
 else
 {

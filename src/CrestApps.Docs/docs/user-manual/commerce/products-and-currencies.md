@@ -73,6 +73,7 @@ You add the **Product** part to the content type that describes what you sell, f
 | **Price display** | How the price is shown to visitors: **Show the price**, **Show on request** (a label such as *Call for price* instead of the price) or **Hide the price**. |
 | **On-request label** | The text shown instead of the price when it is shown on request. |
 | **Let each product choose how its price is shown** | Adds a **Price display** choice to each item that overrides the setting above. |
+| **A product without a price is not for sale** | Lets an item of this type be saved with no price. It then shows no price and cannot be bought. Courses and learning paths have it on. |
 
 The same part's settings also lay out each product's own page and its inquiry button; see [Product listings](product-listings.md#lay-out-the-product-pages).
 

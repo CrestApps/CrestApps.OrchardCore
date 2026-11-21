@@ -1,5 +1,3 @@
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Scheduling.BackgroundTasks;
@@ -10,7 +8,9 @@ using CrestApps.OrchardCore.Scheduling.Migrations;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Navigation;
 using CrestApps.OrchardCore.Scheduling.Services;
+using CrestApps.OrchardCore.Staff;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -50,7 +50,10 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<SchedulingResourceIndexProvider>()
             .AddIndexProvider<AppointmentTypeIndexProvider>()
             .AddIndexProvider<AppointmentIndexProvider>()
-            .AddIndexProvider<WaitlistEntryIndexProvider>();
+            .AddIndexProvider<WaitlistEntryIndexProvider>()
+            .AddIndexProvider<SchedulingSessionIndexProvider>()
+            .AddIndexProvider<SessionRegistrationIndexProvider>()
+            .AddIndexProvider<SessionWaitlistIndexProvider>();
 
         services.AddSchedulingCore();
         services.AddPersonalDataContributor<AppointmentPersonalDataContributor>();
