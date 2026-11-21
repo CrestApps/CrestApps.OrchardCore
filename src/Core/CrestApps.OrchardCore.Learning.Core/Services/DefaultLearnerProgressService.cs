@@ -242,9 +242,10 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         item.ResultSelfReported = result.SelfReported;
         progress.ModifiedUtc = now;
 
-        if (context.IsNewProgress)
+        if (context.IsNewProgress && !context.Saved)
         {
             await _progressStore.CreateAsync(progress, cancellationToken);
+            context.Saved = true;
         }
         else
         {
@@ -273,6 +274,81 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         }
 
         await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
+    }
+
+    // Records work on an item of a completed enrollment that is not completed yet, while the learner may still review the
+    // course. Only the item changes: the enrollment's status, percent, grade and completion snapshot stay as they were
+    // completed, and no observer is told, so no completion, credential or item event fires again.
+    private async Task<bool> RecordAfterCompletionAsync(CompletedContext context, CourseOutlineEntry entry, string itemId, Func<UpdateContext, string> apply, CancellationToken cancellationToken)
+    {
+        var enrollment = context.Enrollment;
+        var progress = context.Progress;
+        var now = _clock.UtcNow;
+        var item = progress.Find(itemId);
+
+        if (item?.State == CourseItemState.Completed
+            || enrollment.Grants.Count == 0
+            || (enrollment.AccessEndsUtc is not null && enrollment.AccessEndsUtc <= now))
+        {
+            return false;
+        }
+
+        var added = item is null;
+
+        if (added)
+        {
+            item = new CourseItemProgress { ContentItemId = itemId, State = CourseItemState.NotStarted };
+            progress.Items.Add(item);
+        }
+
+        var update = new UpdateContext
+        {
+            Entry = entry,
+            Item = item,
+            UtcNow = now,
+            LastAccessUtc = progress.Items.Max(candidate => candidate.LastAccessUtc),
+        };
+
+        if (apply(update) is not null)
+        {
+            if (added)
+            {
+                progress.Items.Remove(item);
+            }
+
+            return false;
+        }
+
+        item.FirstAccessUtc ??= now;
+        item.LastAccessUtc = now;
+
+        if (item.State == CourseItemState.NotStarted)
+        {
+            item.State = CourseItemState.InProgress;
+        }
+
+        ApplyCompletionMode(update);
+
+        var itemCompleted = item.State == CourseItemState.Completed;
+
+        if (itemCompleted)
+        {
+            item.CompletedUtc = now;
+        }
+
+        progress.ModifiedUtc = now;
+
+        if (context.IsNewProgress && !context.Saved)
+        {
+            await _progressStore.CreateAsync(progress, cancellationToken);
+            context.Saved = true;
+        }
+        else
+        {
+            await _progressStore.SaveAsync(progress, cancellationToken);
+        }
+
+        return itemCompleted;
     }
 
     // After completion a result only matters when it undoes what the completion rests on: the item's score was voided,
@@ -554,14 +630,20 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (enrollment.Status == EnrollmentStatus.Completed)
         {
-            // A completed enrollment is a record: the learner may review the course, but nothing changes. A result that
-            // changed after completion only flags the enrollment for a person to review.
+            // A completed enrollment is a record: the course never reopens and its completion is not decided again. A
+            // result that changed after completion only flags the enrollment for a person to review.
+            var completed = new CompletedContext(enrollment, progress, isNewProgress, outline, course, notifications);
+
             if (whenCompleted is not null)
             {
-                await whenCompleted(new CompletedContext(enrollment, progress, isNewProgress, outline, course, notifications));
+                await whenCompleted(completed);
             }
 
-            return new ProgressUpdate { Enrollment = enrollment, Progress = progress, Item = progress.Find(itemId) };
+            // Work on an item not completed yet (the end-of-course survey, an optional lesson) is still recorded on the
+            // item, so it reads as done, while the enrollment, its snapshot and its observers stay as they were.
+            var completedAfter = await RecordAfterCompletionAsync(completed, entry, itemId, apply, cancellationToken);
+
+            return new ProgressUpdate { Enrollment = enrollment, Progress = progress, Item = progress.Find(itemId), ItemCompleted = completedAfter };
         }
 
         if (manual ? enrollment.Status != EnrollmentStatus.Active : !EnrollmentAccess.HasAccess(enrollment, now))
@@ -871,5 +953,9 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         public CourseItemResult Result { get; set; }
     }
 
-    private sealed record CompletedContext(Enrollment Enrollment, EnrollmentProgress Progress, bool IsNewProgress, CourseOutline Outline, ContentItem Course, IList<Func<Task>> Notifications);
+    private sealed record CompletedContext(Enrollment Enrollment, EnrollmentProgress Progress, bool IsNewProgress, CourseOutline Outline, ContentItem Course, IList<Func<Task>> Notifications)
+    {
+        // Whether the progress document was written in this update, so a new one is created once.
+        public bool Saved { get; set; }
+    }
 }

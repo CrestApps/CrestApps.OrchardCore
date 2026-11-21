@@ -175,7 +175,8 @@ public sealed class LearnerPageService
         model.LockedReason = access.LockedReason;
         model.AvailableFromUtc = access.AvailableFromUtc;
         model.BlockingItemId = access.BlockingItemId;
-        model.TracksProgress = !current.Inline && access.Reason == CourseItemAccessReason.Enrolled && enrollment is { Status: EnrollmentStatus.Active } && enrollment.UserId == userId;
+        // A learner who completed the course still does the items they have not done; only those items change.
+        model.TracksProgress = !current.Inline && access.Reason == CourseItemAccessReason.Enrolled && enrollment is { Status: EnrollmentStatus.Active or EnrollmentStatus.Completed } && enrollment.UserId == userId;
 
         if (access.Allowed)
         {
