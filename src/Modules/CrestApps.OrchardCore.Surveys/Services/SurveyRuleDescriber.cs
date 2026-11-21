@@ -41,6 +41,14 @@ internal sealed class SurveyRuleDescriber
             .Select(Describe)
             .ToList();
 
+        foreach (var group in rule.Groups ?? [])
+        {
+            if (!ConditionRule.IsEmpty(group))
+            {
+                parts.Add("(" + Describe(group) + ")");
+            }
+        }
+
         return string.Join(rule.Match == ConditionMatch.Any ? S[" or "] : S[" and "], parts);
     }
 
@@ -60,6 +68,14 @@ internal sealed class SurveyRuleDescriber
             ConditionOperator.Contains => S["{0} contains {1}", source, values],
             ConditionOperator.GreaterThan => S["{0} is greater than {1}", source, values],
             ConditionOperator.LessThan => S["{0} is less than {1}", source, values],
+            ConditionOperator.NotContains => S["{0} does not contain {1}", source, values],
+            ConditionOperator.StartsWith => S["{0} starts with {1}", source, values],
+            ConditionOperator.EndsWith => S["{0} ends with {1}", source, values],
+            ConditionOperator.GreaterThanOrEqual => S["{0} is at least {1}", source, values],
+            ConditionOperator.LessThanOrEqual => S["{0} is at most {1}", source, values],
+            ConditionOperator.Between => S["{0} is between {1}", source, values],
+            ConditionOperator.CountAtLeast => S["{0} has at least {1} selected", source, values],
+            ConditionOperator.CountAtMost => S["{0} has at most {1} selected", source, values],
             _ => S["{0} {1} {2}", source, condition.Operator.ToString(), values],
         };
     }

@@ -222,6 +222,11 @@ public static class SurveyDefinitionCloner
             condition.Source = MapSource(condition.Source, map);
             condition.Values = condition.Values?.Select(value => Map(value, map)).ToList() ?? [];
         }
+
+        foreach (var group in rule.Groups ?? [])
+        {
+            RemapRule(group, map);
+        }
     }
 
     private static string MapSource(string source, IReadOnlyDictionary<string, string> map)

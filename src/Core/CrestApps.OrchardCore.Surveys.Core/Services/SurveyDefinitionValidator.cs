@@ -514,7 +514,7 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
             }
         }
 
-        foreach (var condition in rule.Conditions.Where(condition => condition is not null && !string.IsNullOrWhiteSpace(condition.Source)))
+        foreach (var condition in AllConditions(rule).Where(condition => condition is not null && !string.IsNullOrWhiteSpace(condition.Source)))
         {
             if (condition.Operator is not (ConditionOperator.Is or ConditionOperator.IsNot or ConditionOperator.IsOneOf or ConditionOperator.IsNoneOf))
             {
@@ -731,5 +731,26 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
         public Dictionary<string, int> QuestionPage { get; } = new(StringComparer.Ordinal);
 
         public Dictionary<string, int> QuestionPosition { get; } = new(StringComparer.Ordinal);
+    }
+
+    private static IEnumerable<Condition> AllConditions(ConditionRule rule)
+    {
+        if (rule is null)
+        {
+            yield break;
+        }
+
+        foreach (var condition in rule.Conditions ?? [])
+        {
+            yield return condition;
+        }
+
+        foreach (var group in rule.Groups ?? [])
+        {
+            foreach (var condition in AllConditions(group))
+            {
+                yield return condition;
+            }
+        }
     }
 }
