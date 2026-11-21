@@ -32,7 +32,7 @@
     var surveyPage = Model.Definition.Pages[p];
 
     <div class="card mb-3">
-        <div class="card-header">@(string.IsNullOrWhiteSpace(surveyPage.Title) ? T["Page {0}", p + 1].Value : surveyPage.Title)</div>
+        <div class="card-header">@(string.IsNullOrWhiteSpace(surveyPage.Title) ? T.GetString("Page {0}", p + 1).Value : surveyPage.Title)</div>
         <ul class="list-group list-group-flush">
             @foreach (var question in surveyPage.Questions)
             {

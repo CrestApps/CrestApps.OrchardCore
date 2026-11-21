@@ -15,7 +15,7 @@
     @for (var p = 0; p < definition.Pages.Count; p++)
     {
         var surveyPage = definition.Pages[p];
-        var pageTitle = string.IsNullOrWhiteSpace(surveyPage.Title) ? T["Page {0}", p + 1].Value : surveyPage.Title;
+        var pageTitle = string.IsNullOrWhiteSpace(surveyPage.Title) ? T.GetString("Page {0}", p + 1).Value : surveyPage.Title;
 
         <div class="card mb-2" data-page-id="@surveyPage.Id">
             <div class="card-header d-flex align-items-center gap-1 py-1">
