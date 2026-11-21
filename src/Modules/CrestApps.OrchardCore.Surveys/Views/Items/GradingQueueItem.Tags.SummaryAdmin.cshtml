@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model ShapeViewModel<GradingQueueItem>
+
+<span class="badge ta-badge fw-normal" title="@T["Survey"]"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i> @Model.Value.SurveyTitle</span>
+@if (Model.Value.PendingQuestions > 0)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Questions to grade"]"><i class="fa-solid fa-pen" aria-hidden="true"></i> @T.Plural(Model.Value.PendingQuestions, "1 question", "{0} questions")</span>
+}

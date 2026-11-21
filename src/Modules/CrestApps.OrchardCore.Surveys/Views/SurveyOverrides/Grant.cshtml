@@ -1,0 +1,87 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model GrantSurveyOverrideViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyOverridesGrant" title="@T["Grant accommodation"]">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="SurveyOverrides" action="Index" controller="SurveyOverrides" area="CrestApps.OrchardCore.Surveys" route-surveyId="@Model.SurveyId">@T["Accommodations: {0}", Model.SurveyTitle]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Grant" asp-route-surveyId="@Model.SurveyId" method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Who"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="UserName" class="ocat-label">@T["User name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="UserName" class="form-control" autocomplete="off" />
+                    <span class="hint">@T["The person it applies to. Leave empty to grant it to an audience."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="AudienceId" class="ocat-label">@T["Audience"]</label>
+                <div class="ocat-end">
+                    <select asp-for="AudienceId" asp-items="Model.Audiences" class="form-select"></select>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ContextKind" class="ocat-label">@T["Limited to record kind"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ContextKind" class="form-control" />
+                    <span class="hint">@T["Optional, such as LearningEnrollment, with the record's id below."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ContextId" class="ocat-label">@T["Record id"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ContextId" class="form-control" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Accommodation"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="ExtraMinutes" class="ocat-label">@T["Extra minutes"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ExtraMinutes" type="number" min="0" class="form-control" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="ExtraAttempts" class="ocat-label">@T["Extra attempts"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ExtraAttempts" type="number" min="0" class="form-control" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Opens" class="ocat-label">@T["Opens"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Opens" type="datetime-local" class="form-control" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Closes" class="ocat-label">@T["Closes"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Closes" type="datetime-local" class="form-control" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Reason" class="form-control" required />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button type="submit" class="btn btn-primary">@T["Grant"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-surveyId="@Model.SurveyId">@T["Cancel"]</a>
+    </div>
+</form>

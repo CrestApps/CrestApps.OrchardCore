@@ -1,0 +1,5 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model ShapeViewModel<GradingQueueItem>
+
+<a asp-action="Grade" asp-controller="SurveyGrading" asp-route-responseId="@Model.Value.Response.ItemId" class="btn btn-primary btn-sm">@T["Grade"]</a>

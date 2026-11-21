@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model ShapeViewModel<SurveyOverrideListItem>
+
+@{
+    var item = Model.Value.Override;
+}
+@if (item.ExtraMinutes > 0)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Extra time"]"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> @T.Plural(item.ExtraMinutes, "1 minute", "{0} minutes")</span>
+}
+@if (item.ExtraAttempts > 0)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Extra attempts"]"><i class="fa-solid fa-rotate" aria-hidden="true"></i> @T.Plural(item.ExtraAttempts, "1 attempt", "{0} attempts")</span>
+}
+@if (item.OpensUtc is { } opens)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Opens"]"><i class="fa-regular fa-calendar" aria-hidden="true"></i> @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(opens, DateTimeKind.Utc), Format: "g"))</span>
+}
+@if (item.ClosesUtc is { } closes)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Closes"]"><i class="fa-regular fa-calendar-xmark" aria-hidden="true"></i> @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(closes, DateTimeKind.Utc), Format: "g"))</span>
+}
