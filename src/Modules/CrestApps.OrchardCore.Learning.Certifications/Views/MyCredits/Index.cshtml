@@ -55,7 +55,10 @@
         </div>
     }
 
-    <h2 class="h5">@T["External learning"]</h2>
+    @if (Model.Submissions.Count > 0 || Model.ExternalTypes.Count > 0)
+    {
+        <h2 class="h5">@T["External learning"]</h2>
+    }
     @if (Model.Submissions.Count > 0)
     {
         <div class="list-group mb-3">
