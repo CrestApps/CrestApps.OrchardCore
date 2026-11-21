@@ -176,6 +176,13 @@ public sealed class EmailOwnershipController : Controller
             passwordShown = true;
         }
 
+        // A5: confirming signs this browser in again; the login policies (Tenant Hierarchy's linked users, for one) are
+        // asked first, for the account as it will be once proved, so a refusal changes nothing and spends no code.
+        if (await EmailOwnershipProof.ValidateLoginAsProvedAsync(account, _loginFormEvents) is { } refusal)
+        {
+            return refusal;
+        }
+
         var check = await _codes.CheckAsync(account.UserId, account.Email, model.Code, HttpContext.RequestAborted);
 
         if (check == EmailSignInCodeCheck.Wrong)

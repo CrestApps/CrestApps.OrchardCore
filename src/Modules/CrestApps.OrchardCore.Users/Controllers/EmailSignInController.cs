@@ -222,6 +222,13 @@ public sealed class EmailSignInController : Controller
         }
 
         var providers = LoginProviderNames(account);
+        // A5: the login policies (Tenant Hierarchy's linked users, for one) are asked first, for the account as it will be
+        // once proved, so a refusal leaves its logins, passkeys and sessions as they were.
+        if (await EmailOwnershipProof.ValidateLoginAsProvedAsync(account, _loginFormEvents) is { } refusal)
+        {
+            return refusal;
+        }
+
         var hadPasskeys = UserCredentialsProof.HasPasskeys(account);
         var proof = await _proof.RecordAsync(account, HttpContext.RequestAborted);
 
@@ -244,11 +251,12 @@ public sealed class EmailSignInController : Controller
                 : H["This account's passkeys were removed too. You can add a passkey again from your account's security settings."]);
         }
 
-        return await CompleteSignInAsync(account, credentialsInDoubt: false, model.ReturnUrl);
+        return await CompleteSignInAsync(account, credentialsInDoubt: false, model.ReturnUrl, validated: true);
     }
 
     // The code proves the email is theirs, by a round trip, which is what lets a user claim what belongs to the address.
-    // It is recorded before the login is validated, so Orchard's check that the email is confirmed sees it confirmed.
+    // The login policies are asked first, as the account will be once proved (Orchard's check that the email is confirmed
+    // sees it confirmed), and only then is the proof recorded, so a refusal changes nothing (A5).
     private async Task<IActionResult> SignInWithRightCodeAsync(IUser user, EmailSignInViewModel model)
     {
         var credentialsInDoubt = false;
@@ -278,6 +286,11 @@ public sealed class EmailSignInController : Controller
         }
         else if (user is User proved && (!proved.EmailConfirmed || !UserEmailOwnership.IsVerified(proved.Properties, proved.Email)))
         {
+            if (await EmailOwnershipProof.ValidateLoginAsProvedAsync(proved, _loginFormEvents) is { } refusal)
+            {
+                return refusal;
+            }
+
             var hadPasskeys = !UserEmailOwnership.IsVerified(proved.Properties, proved.Email) && UserCredentialsProof.HasPasskeys(proved);
             var proof = await _proof.RecordAsync(proved, HttpContext.RequestAborted);
 
@@ -295,14 +308,17 @@ public sealed class EmailSignInController : Controller
             {
                 await _notifier.InformationAsync(H["This account's passkeys were removed too. You can add a passkey again from your account's security settings."]);
             }
+
+            return await CompleteSignInAsync(user, credentialsInDoubt: false, model.ReturnUrl, validated: true);
         }
 
         return await CompleteSignInAsync(user, credentialsInDoubt, model.ReturnUrl);
     }
 
-    private async Task<IActionResult> CompleteSignInAsync(IUser user, bool credentialsInDoubt, string returnUrl)
+    // validated: the login policies were already asked, before the proof was recorded.
+    private async Task<IActionResult> CompleteSignInAsync(IUser user, bool credentialsInDoubt, string returnUrl, bool validated = false)
     {
-        foreach (var loginFormEvent in _loginFormEvents)
+        foreach (var loginFormEvent in validated ? Enumerable.Empty<ILoginFormEvent>() : _loginFormEvents)
         {
             if (await loginFormEvent.ValidatingLoginAsync(user) is { } refusal)
             {

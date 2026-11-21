@@ -2,10 +2,12 @@ using System.Text.Json;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Users.Core.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 using OrchardCore.Users;
+using OrchardCore.Users.Events;
 using OrchardCore.Users.Models;
 using ISession = YesSql.ISession;
 
@@ -207,6 +209,41 @@ public sealed class EmailOwnershipProof
     /// <param name="account">The account.</param>
     public bool CredentialsNeverSignedIn(User account)
         => account is { EmailConfirmed: false } && _registrationOptions.CurrentValue.UsersMustValidateEmail;
+
+    /// <summary>
+    /// Asks the login policies (<see cref="ILoginFormEvent.ValidatingLoginAsync"/>: Orchard Core's disabled, moderated and
+    /// unconfirmed-address checks, Tenant Hierarchy's linked users, and any other) whether the account may sign in once
+    /// its address is proved, before anything of the proof is saved, so a refusal leaves its credentials and sessions as
+    /// they were (A5). Orchard Core's checks read the account's confirmed flag, which the proof sets, so they see it set;
+    /// it is put back afterwards. Returns the first refusal, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="account">The account a code is about to prove.</param>
+    /// <param name="loginFormEvents">The login form event handlers.</param>
+    public static async Task<IActionResult> ValidateLoginAsProvedAsync(User account, IEnumerable<ILoginFormEvent> loginFormEvents)
+    {
+        ArgumentNullException.ThrowIfNull(account);
+        ArgumentNullException.ThrowIfNull(loginFormEvents);
+
+        var emailConfirmed = account.EmailConfirmed;
+        account.EmailConfirmed = true;
+
+        try
+        {
+            foreach (var loginFormEvent in loginFormEvents)
+            {
+                if (await loginFormEvent.ValidatingLoginAsync(account) is { } refusal)
+                {
+                    return refusal;
+                }
+            }
+
+            return null;
+        }
+        finally
+        {
+            account.EmailConfirmed = emailConfirmed;
+        }
+    }
 
     /// <summary>
     /// Confirms the account's address and records it as proved, removing every credential the account had. Everything
