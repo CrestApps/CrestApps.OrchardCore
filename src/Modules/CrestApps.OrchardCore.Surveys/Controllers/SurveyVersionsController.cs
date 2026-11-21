@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -151,10 +152,11 @@ public sealed class SurveyVersionsController : Controller
     /// </summary>
     /// <param name="id">The survey.</param>
     /// <param name="versionId">The version.</param>
+    /// <param name="auditTrail">The audit trail.</param>
     /// <returns>A redirect to the designer.</returns>
     [HttpPost]
     [Admin("surveys/{id}/versions/{versionId}/restore", "SurveysVersionRestore")]
-    public async Task<IActionResult> Restore(string id, string versionId)
+    public async Task<IActionResult> Restore(string id, string versionId, [FromServices] ISurveyAuditTrail auditTrail)
     {
         var survey = await AuthorizeAsync(id, SurveyOperation.Publish);
 
@@ -167,6 +169,16 @@ public sealed class SurveyVersionsController : Controller
 
         if (result == SurveyErrorCode.None)
         {
+            var version = await _versionCache.GetAsync(versionId, HttpContext.RequestAborted);
+
+            await auditTrail.RecordAsync(SurveyAuditEvents.SurveyRestored, new SurveyAuditEntry
+            {
+                ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                SurveyId = survey.ItemId,
+                SurveyName = survey.Name,
+                VersionNumber = version?.Number,
+            }, HttpContext.RequestAborted);
+
             await _notifier.SuccessAsync(H["The version has been copied into the draft. Publish the draft to use it."]);
         }
         else

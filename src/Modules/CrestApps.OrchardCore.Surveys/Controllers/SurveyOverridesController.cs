@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Records;
@@ -237,10 +238,11 @@ public sealed class SurveyOverridesController : Controller
     /// </summary>
     /// <param name="surveyId">The survey.</param>
     /// <param name="overrideId">The accommodation.</param>
+    /// <param name="auditTrail">The audit trail.</param>
     /// <returns>The list.</returns>
     [HttpPost]
     [Admin("surveys/{surveyId}/overrides/{overrideId}/revoke", "SurveyOverridesRevoke")]
-    public async Task<IActionResult> Revoke(string surveyId, string overrideId)
+    public async Task<IActionResult> Revoke(string surveyId, string overrideId, [FromServices] ISurveyAuditTrail auditTrail)
     {
         var survey = await _surveys.FindByIdAsync(surveyId, HttpContext.RequestAborted);
 
@@ -258,6 +260,13 @@ public sealed class SurveyOverridesController : Controller
 
         if (existing is not null && await _overrides.RevokeAsync(overrideId, HttpContext.RequestAborted))
         {
+            await auditTrail.RecordAsync(SurveyAuditEvents.OverrideRevoked, new SurveyAuditEntry
+            {
+                ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                SurveyId = survey.ItemId,
+                SurveyName = survey.Name,
+                Reason = existing.Reason,
+            }, HttpContext.RequestAborted);
             await _notifier.SuccessAsync(H["The accommodation has been revoked."]);
         }
 

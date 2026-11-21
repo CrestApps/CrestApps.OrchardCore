@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Drivers;
@@ -396,11 +397,12 @@ public sealed class SurveysController : Controller
     /// Saves the access and settings page.
     /// </summary>
     /// <param name="id">The survey.</param>
+    /// <param name="auditTrail">The audit trail.</param>
     /// <returns>The page, or a redirect.</returns>
     [HttpPost]
     [ActionName(nameof(Access))]
     [Admin("surveys/{id}/access", "SurveysAccess")]
-    public async Task<IActionResult> AccessPost(string id)
+    public async Task<IActionResult> AccessPost(string id, [FromServices] ISurveyAuditTrail auditTrail)
     {
         var survey = await _manager.FindByIdAsync(id);
 
@@ -422,6 +424,12 @@ public sealed class SurveysController : Controller
         }
 
         await _manager.UpdateAsync(survey, null, HttpContext.RequestAborted);
+        await auditTrail.RecordAsync(SurveyAuditEvents.AccessChanged, new SurveyAuditEntry
+        {
+            ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+            SurveyId = survey.ItemId,
+            SurveyName = survey.Name,
+        }, HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["The settings have been saved."]);
 
         return RedirectToAction(nameof(Access), new { id });
