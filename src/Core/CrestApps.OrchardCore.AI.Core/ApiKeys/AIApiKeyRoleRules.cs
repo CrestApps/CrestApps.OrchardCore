@@ -6,7 +6,8 @@ namespace CrestApps.OrchardCore.AI.Core.ApiKeys;
 /// Which roles an editor may give an AI API key. A key acts with its roles' permissions, so giving it a role is
 /// granting that role: an editor may only give the roles they hold themselves, unless they may manage roles, and only
 /// roles that exist. Roles the key already had stay, so an editor can change other settings of a key a more powerful
-/// user created without being refused.
+/// user created without being refused; an edit that widens the key (more areas, turned back on, a later expiry) passes no
+/// existing roles, so every role it acts with is checked.
 /// </summary>
 public static class AIApiKeyRoleRules
 {
