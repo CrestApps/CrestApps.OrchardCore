@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Learning.Assessments;
@@ -29,6 +30,7 @@ public sealed class QuestionTypeDescriptor
     /// <summary>
     /// Gets or sets the name shown to people.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; set; }
 
     /// <summary>
