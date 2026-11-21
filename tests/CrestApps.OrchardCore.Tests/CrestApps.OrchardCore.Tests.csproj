@@ -42,6 +42,7 @@
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Learning.Classes.Core/CrestApps.OrchardCore.Learning.Classes.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Learning.Coursework.Core/CrestApps.OrchardCore.Learning.Coursework.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Learning.Surveys.Core/CrestApps.OrchardCore.Learning.Surveys.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Surveys.Core/CrestApps.OrchardCore.Surveys.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Learning.Packages.Core/CrestApps.OrchardCore.Learning.Packages.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Learning.Lti.Core/CrestApps.OrchardCore.Learning.Lti.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Learning.Xapi.Core/CrestApps.OrchardCore.Learning.Xapi.Core.csproj" />
@@ -57,6 +58,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Classes/CrestApps.OrchardCore.Learning.Classes.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Coursework/CrestApps.OrchardCore.Learning.Coursework.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Surveys/CrestApps.OrchardCore.Learning.Surveys.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Surveys/CrestApps.OrchardCore.Surveys.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Packages/CrestApps.OrchardCore.Learning.Packages.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Xapi/CrestApps.OrchardCore.Learning.Xapi.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Credentials/CrestApps.OrchardCore.Learning.Credentials.csproj" PrivateAssets="none" />
