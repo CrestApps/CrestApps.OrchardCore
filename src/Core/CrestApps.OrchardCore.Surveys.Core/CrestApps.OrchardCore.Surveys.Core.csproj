@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="JsonSchema.Net" />
     <PackageReference Include="DocumentFormat.OpenXml" />
     <PackageReference Include="OrchardCore.Abstractions" />
     <PackageReference Include="OrchardCore.Data.Abstractions" />
@@ -38,6 +39,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Surveys.Abstractions\CrestApps.OrchardCore.Surveys.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
   </ItemGroup>
 

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+using CrestApps.OrchardCore.Surveys.Core.Schemas;
 using CrestApps.OrchardCore.Surveys.Models;
 using Json.Schema;
 
