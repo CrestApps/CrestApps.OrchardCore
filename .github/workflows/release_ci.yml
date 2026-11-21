@@ -109,6 +109,11 @@ jobs:
     - name: Learning integration tests
       run: |
         dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Learning.IntegrationTests/CrestApps.OrchardCore.Learning.IntegrationTests.csproj
+    # The Surveys suite runs one real tenant with Surveys on and checks over HTTP that a survey is designed,
+    # published and answered on its public link, that a quiz is graded, and that a recipe moves surveys.
+    - name: Surveys integration tests
+      run: |
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Surveys.IntegrationTests/CrestApps.OrchardCore.Surveys.IntegrationTests.csproj
     - name: Telephony browser tests
       if: matrix.os == 'ubuntu-latest'
       run: |
