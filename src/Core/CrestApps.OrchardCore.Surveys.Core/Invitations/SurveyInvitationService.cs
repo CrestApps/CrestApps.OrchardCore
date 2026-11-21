@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -25,6 +26,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     private readonly SurveyCollectorStore _collectorStore;
     private readonly SurveyInvitationStore _invitationStore;
     private readonly SurveyInvitationLinks _links;
+    private readonly SurveyParticipationStore _participationStore;
     private readonly IEnumerable<ISurveyInvitationSender> _senders;
     private readonly IClock _clock;
 
@@ -35,6 +37,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     /// <param name="collectorStore">The collector store.</param>
     /// <param name="invitationStore">The invitation store.</param>
     /// <param name="links">The link builder.</param>
+    /// <param name="participationStore">The participation store, which tells when an anonymous invitation was answered.</param>
     /// <param name="senders">The invitation sender, when the module registers one.</param>
     /// <param name="clock">The clock.</param>
     public SurveyInvitationService(
@@ -42,6 +45,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         SurveyCollectorStore collectorStore,
         SurveyInvitationStore invitationStore,
         SurveyInvitationLinks links,
+        SurveyParticipationStore participationStore,
         IEnumerable<ISurveyInvitationSender> senders,
         IClock clock)
     {
@@ -49,6 +53,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         _collectorStore = collectorStore;
         _invitationStore = invitationStore;
         _links = links;
+        _participationStore = participationStore;
         _senders = senders;
         _clock = clock;
     }
@@ -230,6 +235,16 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
                 continue;
             }
 
+            // An anonymous response never names its invitation, so its completion is read from the participation
+            // count of the invitation's pseudonymous key instead; such an invitation gets no more reminders.
+            if (await IsAnsweredAnonymouslyAsync(survey, invitation, cancellationToken))
+            {
+                invitation.Status = SurveyInvitationStatus.Completed;
+                await _invitationStore.UpdateAsync(invitation, cancellationToken);
+
+                continue;
+            }
+
             var link = await _links.BuildAsync(SurveyInvitationTokens.Create(survey, invitation.ItemId));
 
             if (await DeliverAsync(survey, collector, invitation, link, isReminder: true, cancellationToken))
@@ -354,6 +369,25 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         await _invitationStore.UpdateAsync(invitation, cancellationToken);
 
         return true;
+    }
+
+    private async Task<bool> IsAnsweredAnonymouslyAsync(Survey survey, SurveyInvitation invitation, CancellationToken cancellationToken)
+    {
+        if (survey.Access?.Anonymity != AnonymityMode.Anonymous)
+        {
+            return false;
+        }
+
+        var key = SurveyRespondentKeys.For(survey, new SurveyRespondentIdentity(), invitation);
+
+        if (string.IsNullOrEmpty(key))
+        {
+            return false;
+        }
+
+        var rows = await _participationStore.ListAsync(survey.ItemId, key, DateOnly.MinValue, cancellationToken);
+
+        return rows.Any(row => row.CompletedCount > 0);
     }
 
     private async Task<SurveyInvitation> FindForRecipientAsync(string collectorId, string userId, PartyRef? recipient, string email, CancellationToken cancellationToken)
