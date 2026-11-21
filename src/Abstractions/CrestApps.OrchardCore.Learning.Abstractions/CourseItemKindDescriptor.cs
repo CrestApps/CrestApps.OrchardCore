@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Learning;
@@ -27,11 +28,13 @@ public sealed class CourseItemKindDescriptor
     /// <summary>
     /// Gets or sets the name shown to authors.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; set; }
 
     /// <summary>
     /// Gets or sets the name shown to learners, such as "Lesson".
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource LearnerName { get; set; }
 
     /// <summary>
