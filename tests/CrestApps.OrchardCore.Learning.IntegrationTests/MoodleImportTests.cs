@@ -268,8 +268,8 @@ public sealed class MoodleImportTests
         var quizSurvey = await SurveyAsync(ordered[5]);
         Assert.Equal(2, quizSurvey.Draft.Presentation.QuestionsPerPage);
         Assert.Equal(FeedbackMode.Immediate, quizSurvey.Draft.Scoring.FeedbackMode);
-        Assert.Equal(ReviewShows.Score, quizSurvey.Draft.Review.During);
-        Assert.Equal(ReviewShows.Score | ReviewShows.RightAnswers, quizSurvey.Draft.Review.AfterClose);
+        Assert.Equal(ReviewShows.Responses | ReviewShows.Score, quizSurvey.Draft.Review.During);
+        Assert.Equal(ReviewShows.Responses | ReviewShows.Score | ReviewShows.RightAnswers, quizSurvey.Draft.Review.AfterClose);
         var quizQuestions = quizSurvey.Draft.Pages.SelectMany(page => page.Questions).ToList();
         Assert.Equal(4, quizQuestions.Count);
         Assert.Contains(quizQuestions, question => question.ControlType == SurveyControlNames.ChoiceBlanks);

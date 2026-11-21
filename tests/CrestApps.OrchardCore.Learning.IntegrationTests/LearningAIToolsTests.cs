@@ -68,7 +68,7 @@ public sealed class LearningAIToolsTests
     [Fact]
     public async Task MyProgressAndNextLesson_ReadOnlyTheLearnersOwnCourses()
     {
-        var setup = await _site.InTenantAsync(SetUpAsync);
+        var setup = await SetUpAsync();
 
         var progress = await _site.InTenantAsync(services => InvokeAsync(services, setup.LearnerName, LearningAIConstants.Tools.MyProgress));
         var next = await _site.InTenantAsync(services => InvokeAsync(services, setup.LearnerName, LearningAIConstants.Tools.MyNextLesson));
@@ -83,7 +83,7 @@ public sealed class LearningAIToolsTests
     [Fact]
     public async Task ExplainMyResult_GivesTheRightAnswerOnlyWhenTheReviewPolicyAllows()
     {
-        var setup = await _site.InTenantAsync(SetUpAsync);
+        var setup = await SetUpAsync();
 
         var scoreOnly = await _site.InTenantAsync(services => InvokeAsync(services, setup.LearnerName, LearningAIConstants.Tools.ExplainMyResult, ("quiz", setup.ScoreOnlyQuizId)));
         var reviewed = await _site.InTenantAsync(services => InvokeAsync(services, setup.LearnerName, LearningAIConstants.Tools.ExplainMyResult, ("quiz", setup.ReviewedQuizId)));
@@ -98,7 +98,7 @@ public sealed class LearningAIToolsTests
     [Fact]
     public async Task OverdueAndExpiring_ListOnlyLearnersInTheCallersScope()
     {
-        var setup = await _site.InTenantAsync(SetUpAsync);
+        var setup = await SetUpAsync();
 
         var instructor = await _site.InTenantAsync(services => InvokeAsync(services, "instructor1", LearningAIConstants.Tools.OverdueLearners, ("take", "50")));
         var admin = await _site.InTenantAsync(services => InvokeAsync(services, "admin", LearningAIConstants.Tools.OverdueLearners, ("take", "50")));
@@ -136,7 +136,26 @@ public sealed class LearningAIToolsTests
         return result?.ToString() ?? string.Empty;
     }
 
-    private async Task<ToolsSetup> SetUpAsync(IServiceProvider services)
+    // The courses and quizzes are saved in one scope; the learner then answers each quiz in a scope of its own, as a
+    // request would, so a response never waits on the set-up's open transaction.
+    private async Task<ToolsSetup> SetUpAsync()
+    {
+        var setup = await _site.InTenantAsync(CreateAsync);
+
+        foreach (var quizId in new[] { setup.ScoreOnlyQuizId, setup.ReviewedQuizId })
+        {
+            await _site.InTenantAsync(async services =>
+            {
+                var quiz = await services.GetRequiredService<IContentManager>().GetAsync(quizId, VersionOptions.Published);
+
+                await LearningSurveyTestSupport.AnswerAsync(services, setup.LearnerName, quiz, new Dictionary<string, string> { ["q.fire"] = "w" });
+            });
+        }
+
+        return setup;
+    }
+
+    private async Task<ToolsSetup> CreateAsync(IServiceProvider services)
     {
         var suffix = Guid.NewGuid().ToString("n")[..8];
         var contentManager = services.GetRequiredService<IContentManager>();
@@ -187,11 +206,6 @@ public sealed class LearningAIToolsTests
             });
 
             Assert.True(result.Succeeded, result.ErrorCode);
-        }
-
-        foreach (var quiz in new[] { scoreOnly, reviewed })
-        {
-            await LearningSurveyTestSupport.AnswerAsync(services, learnerName, quiz, new Dictionary<string, string> { ["q.fire"] = "w" });
         }
 
         return new ToolsSetup(suffix, learnerName, otherName, taught.ContentItemId, taught.DisplayText, scoreOnly.ContentItemId, reviewed.ContentItemId);
