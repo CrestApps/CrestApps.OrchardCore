@@ -1,0 +1,56 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveySettingsViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["New surveys"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="DefaultRetentionDays" class="ocat-label">@T["Keep responses for"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="DefaultRetentionDays" type="number" min="1" class="form-control" />
+                    <span class="input-group-text">@T["days"]</span>
+                </div>
+                <span class="hint">@T["Leave it empty to keep responses."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="DefaultIncompleteExpiryHours" class="ocat-label">@T["Abandon after"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="DefaultIncompleteExpiryHours" type="number" min="1" class="form-control" />
+                    <span class="input-group-text">@T["idle hours"]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="DefaultMinimumGroupSize" class="ocat-label">@T["Minimum group size"]</label>
+            <div class="ocat-end">
+                <input asp-for="DefaultMinimumGroupSize" type="number" min="0" class="form-control" />
+                <span class="hint">@T["Reports of anonymous surveys hide groups with fewer responses. 0 turns this off."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Responding"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="MaxUploadMegabytes" class="ocat-label">@T["Largest upload"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="MaxUploadMegabytes" type="number" min="1" class="form-control" />
+                    <span class="input-group-text">@T["MB"]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="AllowedRedirectHosts" class="ocat-label">@T["Allowed redirect hosts"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="AllowedRedirectHosts" class="form-control" rows="3"></textarea>
+                <span class="hint">@T["Endings may send respondents to this site or to these hosts, one per line, such as www.example.com."]</span>
+            </div>
+        </div>
+    </div>
+</div>

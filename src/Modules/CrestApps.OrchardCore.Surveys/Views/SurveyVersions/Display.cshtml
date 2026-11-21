@@ -1,0 +1,62 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyVersionViewModel
+
+@{
+    var title = Model.Version is null ? T["Draft"] : T["Version {0}", Model.Version.Number];
+}
+
+<zone Name="Title">
+    <breadcrumb name="SurveyVersionsDisplay" title="@title">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="SurveyVersionsIndex" action="Index" controller="SurveyVersions" area="CrestApps.OrchardCore.Surveys" route-id="@Model.Survey.ItemId">@T["Versions"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_SurveyNav" model="Model.Survey" />
+
+@if (Model.Version is not null)
+{
+    <p class="text-body-secondary">
+        @T["Published"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(Model.Version.PublishedUtc, DateTimeKind.Utc), Format: "g"))
+        @if (!string.IsNullOrWhiteSpace(Model.Version.Notes))
+        {
+            <span>· @Model.Version.Notes</span>
+        }
+    </p>
+}
+
+<h4>@Model.Definition.Title</h4>
+
+@for (var p = 0; p < Model.Definition.Pages.Count; p++)
+{
+    var surveyPage = Model.Definition.Pages[p];
+
+    <div class="card mb-3">
+        <div class="card-header">@(string.IsNullOrWhiteSpace(surveyPage.Title) ? T["Page {0}", p + 1].Value : surveyPage.Title)</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var question in surveyPage.Questions)
+            {
+                <li class="list-group-item">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="me-auto">@(string.IsNullOrWhiteSpace(question.Title) ? question.Name : question.Title)</span>
+                        <span class="badge ta-badge fw-normal">@question.Name</span>
+                        <span class="badge ta-badge fw-normal">@(Model.ControlNames.TryGetValue(question.ControlType ?? string.Empty, out var name) ? name : question.ControlType)</span>
+                        @if (question.Required)
+                        {
+                            <span class="badge ta-badge fw-normal">@T["Required"]</span>
+                        }
+                    </div>
+                    @if (question.Choices.Count > 0)
+                    {
+                        <ul class="small text-body-secondary mb-0 mt-1">
+                            @foreach (var choice in question.Choices)
+                            {
+                                <li class="@(choice.Retired ? "text-decoration-line-through" : null)">@choice.Text <span class="text-body-tertiary">(@choice.Value)</span></li>
+                            }
+                        </ul>
+                    }
+                </li>
+            }
+        </ul>
+    </div>
+}

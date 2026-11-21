@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model ShapeViewModel<SurveyVersionRowViewModel>
+
+@{
+    var version = Model.Value.Version;
+}
+
+<a asp-action="Display" asp-controller="SurveyVersions" asp-route-id="@version.SurveyId" asp-route-versionId="@version.ItemId" class="btn btn-primary btn-sm">@T["View"]</a>
+<a asp-action="Compare" asp-controller="SurveyVersions" asp-route-id="@version.SurveyId" asp-route-from="@version.ItemId" class="btn btn-secondary btn-sm">@T["Compare with draft"]</a>
+<a asp-action="Restore" asp-controller="SurveyVersions" asp-route-id="@version.SurveyId" asp-route-versionId="@version.ItemId" class="btn btn-secondary btn-sm" data-url-af="UnsafeUrl" data-title="@T["Restore"]" data-message="@T["Copy this version into the draft? Unpublished changes in the draft are replaced."]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Restore to draft"]</a>

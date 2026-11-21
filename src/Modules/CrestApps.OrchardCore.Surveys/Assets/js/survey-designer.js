@@ -1,0 +1,332 @@
+// @ts-check
+/*
+ * The survey designer: outline commands (add, move, duplicate and delete pages and questions, also by dragging), the
+ * question and page editors loaded into the side panel and saved without leaving the page, and the lists and rule
+ * builders of every editor on the page. Everything posts to the server, which applies the change to the draft and
+ * returns the new markup.
+ */
+import { initRepeaters } from './designer/repeater.js';
+import { initRuleBuilders } from './designer/rule-builder.js';
+
+/**
+ * @param {string} id The id of a JSON script element.
+ * @param {any} fallback The value when it is missing.
+ * @returns {any} The parsed value.
+ */
+function readJson(id, fallback) {
+    const node = document.getElementById(id);
+
+    if (!node) {
+        return fallback;
+    }
+
+    try {
+        return JSON.parse(node.textContent || '');
+    } catch {
+        return fallback;
+    }
+}
+
+const designer = document.querySelector('[data-survey-designer]');
+
+if (designer) {
+    const context = { operators: readJson('survey-rule-operators', []), texts: readJson('survey-designer-texts', {}) };
+    const outlineHost = /** @type {HTMLElement} */ (document.getElementById('survey-outline'));
+    const panel = /** @type {HTMLElement} */ (document.getElementById('survey-editor-panel'));
+    const settingsForm = /** @type {HTMLFormElement | null} */ (document.getElementById('survey-settings-form'));
+    const pickerModal = document.getElementById('survey-picker-modal');
+    let targetPageId = '';
+    /** @type {string | null} */
+    let draggedQuestion = null;
+
+    const token = () => /** @type {HTMLInputElement | null} */ (document.querySelector('input[name="__RequestVerificationToken"]'))?.value ?? '';
+    const outline = () => /** @type {HTMLElement | null} */ (outlineHost.querySelector('[data-survey-outline]'));
+
+    /**
+     * Wires the lists and rule builders under a root.
+     * @param {ParentNode} root The root.
+     */
+    const wire = root => {
+        initRepeaters(root, item => wire(item));
+        initRuleBuilders(root, context);
+    };
+
+    /**
+     * Keeps the draft version the settings form posts in step with saves made here.
+     * @param {Response} response The response of a save.
+     */
+    const trackVersion = response => {
+        const version = response.headers.get('X-Survey-Draft-Version');
+        const input = /** @type {HTMLInputElement | null} */ (settingsForm?.querySelector('[data-survey-draft-version]') ?? null);
+
+        if (version && input) {
+            input.value = version;
+        }
+    };
+
+    /**
+     * Shows a short error in the panel.
+     * @param {string} message The message.
+     */
+    const showError = message => {
+        const alert = document.createElement('div');
+
+        alert.className = 'alert alert-danger mt-2';
+        alert.setAttribute('role', 'alert');
+        alert.textContent = message || context.texts.failed;
+        panel.prepend(alert);
+        setTimeout(() => alert.remove(), 6000);
+    };
+
+    /**
+     * Loads an editor into the panel.
+     * @param {string} url The editor's URL.
+     */
+    const loadPanel = async url => {
+        const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' });
+
+        if (!response.ok) {
+            showError(context.texts.failed);
+
+            return;
+        }
+
+        panel.innerHTML = await response.text();
+        wire(panel);
+        /** @type {HTMLElement | null} */ (panel.querySelector('input:not([type=hidden]), textarea, select'))?.focus();
+    };
+
+    /**
+     * Opens the editor of a question.
+     * @param {string} id The question id.
+     */
+    const editQuestion = id => {
+        const url = outline()?.dataset.questionUrl;
+
+        if (url && id) {
+            loadPanel(url.replace('__question__', encodeURIComponent(id)));
+        }
+    };
+
+    /**
+     * Opens the editor of a page.
+     * @param {string} id The page id.
+     */
+    const editPage = id => {
+        const url = outline()?.dataset.pageUrl;
+
+        if (url && id) {
+            loadPanel(url.replace('__page__', encodeURIComponent(id)));
+        }
+    };
+
+    /**
+     * Sends an outline command and shows the new outline.
+     * @param {Record<string, any>} command The command.
+     * @returns {Promise<string | null>} The id of the item added, or null.
+     */
+    const send = async command => {
+        const url = outline()?.dataset.commandsUrl;
+
+        if (!url) {
+            return null;
+        }
+
+        const response = await fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token(), 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify(command),
+        });
+
+        if (!response.ok) {
+            showError(await response.text());
+
+            return null;
+        }
+
+        outlineHost.innerHTML = await response.text();
+        trackVersion(response);
+
+        return response.headers.get('X-Survey-Item');
+    };
+
+    /**
+     * Reloads the outline after an editor saved.
+     */
+    const refreshOutline = async () => {
+        const url = outline()?.dataset.commandsUrl?.replace(/\/commands$/, '/outline');
+
+        if (!url) {
+            return;
+        }
+
+        const response = await fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+
+        if (response.ok) {
+            outlineHost.innerHTML = await response.text();
+        }
+    };
+
+    /**
+     * @param {string | undefined} value A number attribute.
+     * @returns {number | undefined} The number, or undefined.
+     */
+    const toIndex = value => (value === undefined || value === '' ? undefined : Number(value));
+
+    document.addEventListener('click', async event => {
+        const target = /** @type {HTMLElement} */ (event.target);
+        const commandButton = /** @type {HTMLElement | null} */ (target.closest('[data-survey-command]'));
+
+        if (commandButton) {
+            event.preventDefault();
+
+            const data = commandButton.dataset;
+            const confirmText = data.confirm === 'page' ? context.texts.confirmDeletePage : data.confirm ? context.texts.confirmDelete : null;
+
+            if (confirmText && !window.confirm(confirmText)) {
+                return;
+            }
+
+            const command = data.surveyCommand;
+            const id = await send({
+                command,
+                pageId: data.pageId,
+                questionId: data.questionId,
+                toPageId: data.toPageId,
+                index: toIndex(data.index),
+            });
+
+            if (id && command === 'duplicate') {
+                editQuestion(id);
+            } else if (id && (command === 'addPage' || command === 'duplicatePage')) {
+                editPage(id);
+            } else if (command === 'delete' || command === 'deletePage') {
+                panel.innerHTML = '';
+            }
+
+            return;
+        }
+
+        const picker = /** @type {HTMLElement | null} */ (target.closest('[data-survey-open-picker]'));
+
+        if (picker) {
+            event.preventDefault();
+            targetPageId = picker.dataset.surveyOpenPicker ?? '';
+
+            const bootstrap = /** @type {any} */ (window).bootstrap;
+
+            if (pickerModal && bootstrap?.Modal) {
+                bootstrap.Modal.getOrCreateInstance(pickerModal).show();
+            }
+
+            return;
+        }
+
+        const add = /** @type {HTMLElement | null} */ (target.closest('[data-survey-add-question]'));
+
+        if (add) {
+            const id = await send({ command: 'addQuestion', pageId: targetPageId, controlType: add.dataset.controlType, preset: add.dataset.preset || undefined });
+
+            if (id) {
+                editQuestion(id);
+            }
+
+            return;
+        }
+
+        const question = /** @type {HTMLElement | null} */ (target.closest('[data-survey-edit-question]'));
+
+        if (question) {
+            event.preventDefault();
+            editQuestion(question.dataset.surveyEditQuestion ?? '');
+
+            return;
+        }
+
+        const page = /** @type {HTMLElement | null} */ (target.closest('[data-survey-edit-page]'));
+
+        if (page) {
+            event.preventDefault();
+            editPage(page.dataset.surveyEditPage ?? '');
+        }
+    });
+
+    panel.addEventListener('submit', async event => {
+        const form = /** @type {HTMLFormElement} */ (event.target);
+
+        if (!form.matches('[data-survey-panel-form]')) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const response = await fetch(form.action, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: new FormData(form),
+        });
+
+        if (!response.ok && response.status !== 422) {
+            showError(context.texts.failed);
+
+            return;
+        }
+
+        panel.innerHTML = await response.text();
+        wire(panel);
+
+        if (response.ok) {
+            trackVersion(response);
+            await refreshOutline();
+        }
+    });
+
+    outlineHost.addEventListener('dragstart', event => {
+        const item = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (event.target).closest('[data-question-id]'));
+
+        if (item) {
+            draggedQuestion = item.dataset.questionId ?? null;
+            item.classList.add('opacity-50');
+            event.dataTransfer?.setData('text/plain', draggedQuestion ?? '');
+        }
+    });
+
+    outlineHost.addEventListener('dragover', event => {
+        if (draggedQuestion && /** @type {HTMLElement} */ (event.target).closest('[data-survey-question-list]')) {
+            event.preventDefault();
+        }
+    });
+
+    outlineHost.addEventListener('drop', async event => {
+        const target = /** @type {HTMLElement} */ (event.target);
+        const list = /** @type {HTMLElement | null} */ (target.closest('[data-survey-question-list]'));
+
+        if (!draggedQuestion || !list) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const over = /** @type {HTMLElement | null} */ (target.closest('[data-question-id]'));
+        const items = Array.from(list.querySelectorAll('[data-question-id]')).filter(item => /** @type {HTMLElement} */ (item).dataset.questionId !== draggedQuestion);
+        let index = items.length;
+
+        if (over && over.dataset.questionId !== draggedQuestion) {
+            const box = over.getBoundingClientRect();
+            index = items.indexOf(over) + (event.clientY > box.top + box.height / 2 ? 1 : 0);
+        }
+
+        const id = draggedQuestion;
+        draggedQuestion = null;
+        await send({ command: 'move', questionId: id, toPageId: list.dataset.pageId, index });
+    });
+
+    outlineHost.addEventListener('dragend', () => {
+        draggedQuestion = null;
+        outlineHost.querySelectorAll('.opacity-50').forEach(item => item.classList.remove('opacity-50'));
+    });
+
+    wire(document);
+}

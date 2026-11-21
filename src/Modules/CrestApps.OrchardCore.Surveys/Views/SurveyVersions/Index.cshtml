@@ -1,0 +1,24 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyVersionsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyVersionsIndex" title="@T["Versions"]">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="SurveysDesign" action="Design" controller="SurveyDesigner" area="CrestApps.OrchardCore.Surveys" route-id="@Model.Survey.ItemId">@Model.Survey.Title</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_SurveyNav" model="Model.Survey" />
+
+<form method="post" class="no-multisubmit">
+    <admin-list name="SurveyVersions" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> The survey has not been published yet."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Version"]" />
+            <admin-list-column name="Published" position="30" title="@T["Published"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>

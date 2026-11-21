@@ -1,0 +1,20 @@
+@model Survey
+@* The links between the pages of one survey. *@
+
+@{
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+
+    string Active(string c, string a)
+        => string.Equals(controller, c, StringComparison.OrdinalIgnoreCase) && (a is null || string.Equals(action, a, StringComparison.OrdinalIgnoreCase)) ? "active" : null;
+}
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link @Active("SurveyDesigner", null)" asp-action="Design" asp-controller="SurveyDesigner" asp-route-id="@Model.ItemId">@T["Design"]</a></li>
+    <li class="nav-item"><a class="nav-link @Active("Surveys", "Logic")" asp-action="Logic" asp-controller="Surveys" asp-route-id="@Model.ItemId">@T["Logic"]</a></li>
+    <li class="nav-item"><a class="nav-link @Active("Surveys", "Access")" asp-action="Access" asp-controller="Surveys" asp-route-id="@Model.ItemId">@T["Access and settings"]</a></li>
+    <li class="nav-item"><a class="nav-link @Active("SurveyCollectors", null)" asp-action="Index" asp-controller="SurveyCollectors" asp-route-id="@Model.ItemId">@T["Collect"]</a></li>
+    <li class="nav-item"><a class="nav-link @Active("SurveyVersions", null)" asp-action="Index" asp-controller="SurveyVersions" asp-route-id="@Model.ItemId">@T["Versions"]</a></li>
+    <li class="nav-item"><a class="nav-link" href="@Url.Content("~/Admin/surveys/" + Model.ItemId + "/responses")">@T["Responses"]</a></li>
+    <li class="nav-item"><a class="nav-link" href="@Url.RouteUrl("ReportsDisplay", new { id = "survey-results", surveyId = Model.ItemId })">@T["Results"]</a></li>
+</ul>

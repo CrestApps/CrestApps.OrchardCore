@@ -1,0 +1,208 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyPageEditorViewModel
+
+@* A sub-form of the designer's editor card: it saves this item only, so its button stays with its fields. *@
+<div class="card border-0">
+    <form method="post" asp-action="Page" asp-controller="SurveyDesigner" asp-route-id="@Model.SurveyId" asp-route-pageId="@Model.PageId" data-survey-panel-form class="survey-page-editor">
+        <div class="d-flex align-items-center mb-2">
+            <h6 class="mb-0 me-auto">@T["Page"]</h6>
+            @if (Model.Saved)
+            {
+                <span class="text-success small" role="status"><i class="fa-solid fa-check" aria-hidden="true"></i> @T["Saved."]</span>
+            }
+        </div>
+        <div asp-validation-summary="All" class="text-danger"></div>
+
+        <div class="card mb-3">
+            <div class="card-header">@T["Page"]</div>
+            <div class="card-body">
+                <div class="ocat-wrapper">
+                    <label asp-for="Title" class="ocat-label">@T["Title"]</label>
+                    <div class="ocat-end"><input asp-for="Title" class="form-control" /></div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="Name" class="ocat-label">@T["Code"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="Name" class="form-control" required />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+                    <div class="ocat-end">
+                        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                        <span class="hint">@T["Shown under the title. HTML is allowed and cleaned; use {code} to show an earlier answer."]</span>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="QuestionOrder" class="ocat-label">@T["Question order"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="QuestionOrder" class="form-select">
+                            <option value="@QuestionOrder.AsDefined">@T["As designed"]</option>
+                            <option value="@QuestionOrder.Shuffle">@T["Shuffled (pinned questions keep their place)"]</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <div class="form-check">
+                            <input asp-for="AllowBack" type="checkbox" class="form-check-input" />
+                            <label asp-for="AllowBack" class="form-check-label">@T["Respondents may go back from this page"]</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="TimeLimitSeconds" class="ocat-label">@T["Time on the page"]</label>
+                    <div class="ocat-end">
+                        <div class="input-group">
+                            <input asp-for="TimeLimitSeconds" type="number" min="1" class="form-control" />
+                            <span class="input-group-text">@T["seconds"]</span>
+                        </div>
+                        <span class="hint">@T["Leave it empty for no limit."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">@T["When the page shows"]</div>
+            <div class="card-body">
+                <div class="ocat-wrapper">
+                    <label asp-for="VisibilityMode" class="ocat-label">@T["Shows"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="VisibilityMode" class="form-select" data-rule-mode>
+                            <option value="@VisibilityMode.Always">@T["Always"]</option>
+                            <option value="@VisibilityMode.ShowWhen">@T["Only when"]</option>
+                            <option value="@VisibilityMode.HideWhen">@T["Unless"]</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="ocat-wrapper" data-rule-field data-rule-sources="@Model.PageRuleSources">
+                    <div class="ocat-end-offset">
+                        <input type="hidden" asp-for="VisibilityRule" data-rule-value />
+                        <div data-rule-builder></div>
+                        <span class="hint">@T["A page rule may read questions of earlier pages."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">@T["Branches"]</div>
+            <div class="card-body" data-repeater data-repeater-prefix="@Html.NameFor(m => m.Branches)" data-rule-sources="@Model.BranchRuleSources">
+                <p class="hint">@T["When respondents leave the page, the first branch whose rule holds sends them to a later page or an ending."]</p>
+                <div data-repeater-items>
+                    @for (var i = 0; i < Model.Branches.Count; i++)
+                    {
+                        <div class="border rounded p-2 mb-2" data-repeater-item>
+                            <input type="hidden" asp-for="Branches[i].Id" />
+                            <div data-rule-field>
+                                <input type="hidden" asp-for="Branches[i].Rule" data-rule-value />
+                                <div data-rule-builder></div>
+                            </div>
+                            <div class="input-group mt-2">
+                                <span class="input-group-text">@T["Go to"]</span>
+                                <select asp-for="Branches[i].TargetId" asp-items="Model.Targets" class="form-select"></select>
+                                <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <template data-repeater-template>
+                    <div class="border rounded p-2 mb-2" data-repeater-item>
+                        <input type="hidden" name="@(Html.NameFor(m => m.Branches))[__index__].Id" value="" />
+                        <div data-rule-field>
+                            <input type="hidden" name="@(Html.NameFor(m => m.Branches))[__index__].Rule" value="" data-rule-value />
+                            <div data-rule-builder></div>
+                        </div>
+                        <div class="input-group mt-2">
+                            <span class="input-group-text">@T["Go to"]</span>
+                            <select name="@(Html.NameFor(m => m.Branches))[__index__].TargetId" class="form-select">
+                                @foreach (var target in Model.Targets)
+                                {
+                                    <option value="@target.Value">@target.Text</option>
+                                }
+                            </select>
+                            <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                </template>
+                <button type="button" class="btn btn-sm btn-secondary" data-repeater-add disabled="@(Model.Targets.Count == 0)"><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add branch"]</button>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">@T["Question pools"]</div>
+            <div class="card-body" data-repeater data-repeater-prefix="@Html.NameFor(m => m.Pools)">
+                <p class="hint">@T["A pool shows each respondent a random number of its questions. Put a question in a pool from the question editor, or draw from a question bank."]</p>
+                <div data-repeater-items>
+                    @for (var i = 0; i < Model.Pools.Count; i++)
+                    {
+                        <div class="border rounded p-2 mb-2" data-repeater-item>
+                            <input type="hidden" asp-for="Pools[i].Id" />
+                            <input type="hidden" asp-for="Pools[i].Name" />
+                            <div class="input-group mb-2">
+                                <input asp-for="Pools[i].Title" class="form-control" placeholder="@T["Pool name"]" aria-label="@T["Pool name"]" />
+                                <span class="input-group-text">@T["Draw"]</span>
+                                <input asp-for="Pools[i].DrawCount" type="number" min="0" class="form-control" aria-label="@T["Questions drawn"]" />
+                                <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input asp-for="Pools[i].Shuffle" type="checkbox" class="form-check-input" />
+                                <label asp-for="Pools[i].Shuffle" class="form-check-label">@T["Shuffle"]</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input asp-for="Pools[i].EvenlyPresent" type="checkbox" class="form-check-input" />
+                                <label asp-for="Pools[i].EvenlyPresent" class="form-check-label">@T["Present evenly"]</label>
+                            </div>
+                            <div class="input-group mt-2">
+                                <span class="input-group-text">@T["Bank"]</span>
+                                <select asp-for="Pools[i].BankId" class="form-select" aria-label="@T["Question bank"]">
+                                    <option value="">@T["None"]</option>
+                                    @foreach (var bank in Model.Banks)
+                                    {
+                                        <option value="@bank.Value" selected="@(bank.Value == Model.Pools[i].BankId)">@bank.Text</option>
+                                    }
+                                </select>
+                                <input asp-for="Pools[i].BankTags" class="form-control" placeholder="@T["Tags"]" aria-label="@T["Tags"]" />
+                                <input asp-for="Pools[i].BankDifficulty" type="number" min="1" max="5" class="form-control" placeholder="@T["Difficulty"]" aria-label="@T["Difficulty"]" />
+                                <input asp-for="Pools[i].BankMaxCandidates" type="number" min="1" max="2000" class="form-control" placeholder="@T["Most questions"]" aria-label="@T["Most questions"]" />
+                            </div>
+                        </div>
+                    }
+                </div>
+                <template data-repeater-template>
+                    <div class="border rounded p-2 mb-2" data-repeater-item>
+                        <input type="hidden" name="@(Html.NameFor(m => m.Pools))[__index__].Id" value="" />
+                        <input type="hidden" name="@(Html.NameFor(m => m.Pools))[__index__].Name" value="" />
+                        <div class="input-group mb-2">
+                            <input name="@(Html.NameFor(m => m.Pools))[__index__].Title" class="form-control" placeholder="@T["Pool name"]" aria-label="@T["Pool name"]" />
+                            <span class="input-group-text">@T["Draw"]</span>
+                            <input name="@(Html.NameFor(m => m.Pools))[__index__].DrawCount" type="number" min="0" value="1" class="form-control" aria-label="@T["Questions drawn"]" />
+                            <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                        </div>
+                        <input type="hidden" name="@(Html.NameFor(m => m.Pools))[__index__].Shuffle" value="true" />
+                        <div class="input-group mt-2">
+                            <span class="input-group-text">@T["Bank"]</span>
+                            <select name="@(Html.NameFor(m => m.Pools))[__index__].BankId" class="form-select" aria-label="@T["Question bank"]">
+                                <option value="">@T["None"]</option>
+                                @foreach (var bank in Model.Banks)
+                                {
+                                    <option value="@bank.Value">@bank.Text</option>
+                                }
+                            </select>
+                            <input name="@(Html.NameFor(m => m.Pools))[__index__].BankTags" class="form-control" placeholder="@T["Tags"]" aria-label="@T["Tags"]" />
+                        </div>
+                    </div>
+                </template>
+                <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add pool"]</button>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <button type="submit" class="btn btn-primary">@T["Save page"]</button>
+            </div>
+        </div>
+    </form>
+</div>

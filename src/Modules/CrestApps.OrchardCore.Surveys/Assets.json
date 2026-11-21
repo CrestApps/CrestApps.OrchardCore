@@ -1,0 +1,14 @@
+[
+  {
+    "action": "vite",
+    "name": "survey-designer.js",
+    "source": "Assets/js/survey-designer.js",
+    "dest": "wwwroot/scripts/survey-designer.js"
+  },
+  {
+    "action": "vite",
+    "name": "survey-admin.js",
+    "source": "Assets/js/survey-admin.js",
+    "dest": "wwwroot/scripts/survey-admin.js"
+  }
+]

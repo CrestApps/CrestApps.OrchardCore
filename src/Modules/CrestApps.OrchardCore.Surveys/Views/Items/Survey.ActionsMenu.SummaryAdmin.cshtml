@@ -1,0 +1,27 @@
+@model ShapeViewModel<Survey>
+
+@{
+    var survey = Model.Value;
+}
+
+<a asp-action="Index" asp-controller="SurveyCollectors" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Collect responses"]</a>
+<a href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/responses")" class="dropdown-item">@T["Responses"]</a>
+<a href="@Url.RouteUrl("ReportsDisplay", new { id = "survey-results", surveyId = survey.ItemId })" class="dropdown-item">@T["Results"]</a>
+<a asp-action="Index" asp-controller="SurveyVersions" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Versions"]</a>
+<a asp-action="Access" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Access and settings"]</a>
+<a asp-action="Logic" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Logic overview"]</a>
+<a asp-action="Duplicate" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Copy"]" data-message="@T["Create a draft copy of this survey?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Copy as a draft"]</a>
+@if (survey.Status == SurveyStatus.Open)
+{
+    <a asp-action="Status" asp-controller="Surveys" asp-route-id="@survey.ItemId" asp-route-status="@SurveyStatus.Closed" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Close"]" data-message="@T["Stop collecting responses for this survey?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Close"]</a>
+}
+@if (survey.Status == SurveyStatus.Closed)
+{
+    <a asp-action="Status" asp-controller="Surveys" asp-route-id="@survey.ItemId" asp-route-status="@SurveyStatus.Open" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Open"]" data-message="@T["Collect responses for this survey again?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Open"]</a>
+    <a asp-action="Status" asp-controller="Surveys" asp-route-id="@survey.ItemId" asp-route-status="@SurveyStatus.Archived" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Archive"]" data-message="@T["Archive this survey? It keeps its results and leaves the default list."]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Archive"]</a>
+}
+@if (survey.Status == SurveyStatus.Archived)
+{
+    <a asp-action="Status" asp-controller="Surveys" asp-route-id="@survey.ItemId" asp-route-status="@SurveyStatus.Closed" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Unarchive"]" data-message="@T["Bring this survey back to the list as closed?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Unarchive"]</a>
+}
+<a asp-action="Delete" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item text-danger" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete"]" data-message="@T["Delete this survey? A survey with responses cannot be deleted; archive it instead."]">@T["Delete"]</a>

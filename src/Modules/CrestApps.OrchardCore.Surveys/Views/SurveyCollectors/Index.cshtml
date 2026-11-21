@@ -1,0 +1,44 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyCollectorsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyCollectorsIndex" title="@T["Collect responses"]">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="SurveysDesign" action="Design" controller="SurveyDesigner" area="CrestApps.OrchardCore.Surveys" route-id="@Model.Survey.ItemId">@Model.Survey.Title</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_SurveyNav" model="Model.Survey" />
+
+@if (string.IsNullOrEmpty(Model.Survey.PublishedVersionId))
+{
+    <div class="alert alert-info">@T["Publish the survey first: its default link is made on the first publish."]</div>
+}
+
+<form method="post" class="no-multisubmit">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col"></div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary" role="button" asp-action="Create" asp-route-id="@Model.Survey.ItemId" asp-route-kind="@SurveyCollectorKinds.WebLink">@T["Add web link"]</a>
+                    <a class="btn btn-secondary" role="button" asp-action="Create" asp-route-id="@Model.Survey.ItemId" asp-route-kind="@SurveyCollectorKinds.Kiosk">@T["Add kiosk"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="SurveyCollectors" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> There are no collectors yet."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Collector"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Link" position="40" title="@T["Link"]" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<script asp-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-admin.min.js" debug-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-admin.js" at="Foot"></script>

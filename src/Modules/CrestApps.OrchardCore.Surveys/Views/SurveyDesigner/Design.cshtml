@@ -1,0 +1,142 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyDesignerViewModel
+
+@{
+    var survey = Model.Survey;
+    var operators = new object[]
+    {
+        new { value = "Is", text = T["is"].Value },
+        new { value = "IsNot", text = T["is not"].Value },
+        new { value = "IsOneOf", text = T["is one of"].Value },
+        new { value = "IsNoneOf", text = T["is none of"].Value },
+        new { value = "IsEmpty", text = T["is not answered"].Value, noValue = true },
+        new { value = "IsNotEmpty", text = T["is answered"].Value, noValue = true },
+        new { value = "Contains", text = T["contains"].Value },
+        new { value = "NotContains", text = T["does not contain"].Value },
+        new { value = "StartsWith", text = T["starts with"].Value },
+        new { value = "EndsWith", text = T["ends with"].Value },
+        new { value = "GreaterThan", text = T["is greater than"].Value },
+        new { value = "GreaterThanOrEqual", text = T["is at least"].Value },
+        new { value = "LessThan", text = T["is less than"].Value },
+        new { value = "LessThanOrEqual", text = T["is at most"].Value },
+        new { value = "Between", text = T["is between"].Value, twoValues = true },
+        new { value = "CountAtLeast", text = T["has at least this many chosen"].Value },
+        new { value = "CountAtMost", text = T["has at most this many chosen"].Value },
+    };
+    var texts = new
+    {
+        all = T["All of these"].Value,
+        any = T["Any of these"].Value,
+        addCondition = T["Add condition"].Value,
+        addGroup = T["Add group"].Value,
+        remove = T["Remove"].Value,
+        source = T["Question"].Value,
+        row = T["Row"].Value,
+        comparison = T["Comparison"].Value,
+        value = T["Value"].Value,
+        and = T["and"].Value,
+        always = T["No conditions: it always applies."].Value,
+        chooseSource = T["Choose a question"].Value,
+        anyRow = T["Whole question"].Value,
+        saved = T["Saved."].Value,
+        failed = T["The change could not be saved."].Value,
+        confirmDelete = T["Delete this item?"].Value,
+        confirmDeletePage = T["Delete this page and its questions?"].Value,
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="SurveysDesign" title="@(new Microsoft.AspNetCore.Html.HtmlString(System.Net.WebUtility.HtmlEncode(survey.Title ?? survey.Name)))">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_SurveyNav" model="survey" />
+
+@if (survey.HasUnpublishedChanges && survey.PublishedVersionNumber > 0)
+{
+    <div class="alert alert-info">@T["The draft has changes that respondents don't see yet. Publish it to make version {0}.", survey.PublishedVersionNumber + 1]</div>
+}
+
+<script type="application/json" id="survey-rule-operators">@Html.Raw(SurveyRuleJson.Serialize(operators))</script>
+<script type="application/json" id="survey-designer-texts">@Html.Raw(SurveyRuleJson.Serialize(texts))</script>
+
+<div class="row g-3 mb-3 survey-designer" data-survey-designer>
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center">
+                <span class="me-auto">@T["Pages and questions"]</span>
+                <button type="button" class="btn btn-sm btn-secondary" data-survey-command="addPage">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add page"]
+                </button>
+            </div>
+            <div class="card-body" id="survey-outline">
+                <partial name="_SurveyOutline" model="Model.Outline" />
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header">@T["Editor"]</div>
+            <div class="card-body" id="survey-editor-panel" aria-live="polite">
+                <p class="text-body-secondary mb-0">@T["Pick a page or a question in the outline to edit it."]</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="survey-picker-modal" tabindex="-1" aria-labelledby="survey-picker-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="survey-picker-title">@T["Add a question"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+            </div>
+            <div class="modal-body">
+                @if (Model.Picker.Count == 0)
+                {
+                    <p class="text-body-secondary">@T["No question type is available. Turn on the features that add them."]</p>
+                }
+                @foreach (var group in Model.Picker.GroupBy(item => item.Category))
+                {
+                    <h6 class="text-uppercase text-body-secondary small mt-2">@group.Key</h6>
+                    <div class="row row-cols-1 row-cols-md-2 g-2 mb-2">
+                        @foreach (var item in group)
+                        {
+                            <div class="col">
+                                <button type="button" class="btn btn-outline-secondary w-100 text-start h-100" data-survey-add-question data-control-type="@item.ControlType" data-preset="@item.Preset" data-bs-dismiss="modal">
+                                    <i class="@item.Icon me-1" aria-hidden="true"></i>
+                                    <span class="fw-semibold">@item.DisplayName</span>
+                                    @if (!string.IsNullOrEmpty(item.Description))
+                                    {
+                                        <span class="d-block small text-body-secondary">@item.Description</span>
+                                    }
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="post" asp-action="Design" asp-route-id="@survey.ItemId" class="no-multisubmit" id="survey-settings-form">
+    <input type="hidden" name="draftVersion" value="@Model.DraftVersion" data-survey-draft-version />
+    @Html.ValidationSummary()
+    <h5 class="mb-3">@T["Survey settings"]</h5>
+    @await DisplayAsync(Model.SettingsEditor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save draft"]</button>
+        <a class="btn btn-success" role="button" asp-action="Publish" asp-route-id="@survey.ItemId">@T["Publish"]</a>
+        <a class="btn btn-secondary action-bar-secondary" role="button" href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/preview")">@T["Preview"]</a>
+        @if (!string.IsNullOrEmpty(survey.PublishedVersionId))
+        {
+            <button class="btn btn-danger action-bar-secondary" type="submit" asp-action="Discard" asp-route-id="@survey.ItemId" data-url-af="RemoveUrl" data-title="@T["Discard draft"]" data-message="@T["Replace the draft with the published version? Your unpublished changes are lost."]">@T["Discard draft"]</button>
+        }
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-controller="Surveys">@T["Back"]</a>
+    </div>
+</form>
+
+<script asp-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-designer.min.js" debug-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-designer.js" at="Foot"></script>
