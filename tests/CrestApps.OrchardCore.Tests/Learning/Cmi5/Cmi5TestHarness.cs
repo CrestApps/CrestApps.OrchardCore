@@ -65,6 +65,7 @@ internal sealed class Cmi5TestHarness : IAsyncDisposable
                 services.AddSingleton<IClock>(clock);
                 services.AddHttpContextAccessor();
                 services.AddLearningPackagesCore();
+                CrestApps.OrchardCore.Tests.Learning.Scorm.PackageArchiveCacheTestServices.Use(services);
                 services.AddLearningXapiCore();
                 services.AddLearningCmi5Core();
                 services.RemoveAll<IProtectedFileStore<LearningPackageFiles>>();
