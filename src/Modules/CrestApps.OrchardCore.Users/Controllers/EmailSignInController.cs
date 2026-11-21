@@ -197,17 +197,28 @@ public sealed class EmailSignInController : Controller
             return NotFound();
         }
 
-        // The account must still be the one the code reached, unchanged since (the step holds its security stamp), and
-        // still be one a code takes back.
+        // The account must still be the one the code reached, with the address the code went to and unchanged since (the
+        // step holds its security stamp, address and sign-in methods), and still be one a code takes back.
         if (_proof.ReadStepUserId(EmailOwnershipProof.TakeBackStep, model.Token) is not { } userId ||
             await _userManager.FindByIdAsync(userId) is not User account ||
-            !_proof.IsStepFor(EmailOwnershipProof.TakeBackStep, model.Token, account) ||
             !IsTakeBack(account) ||
             !await _eligibility.AllowsAsync(account))
         {
-            ModelState.AddModelError(nameof(model.Email), S["That took too long, or the account changed. Ask for a new code."]);
+            return TakeBackRefused(model);
+        }
 
-            return View(nameof(Index), new EmailSignInViewModel { ReturnUrl = model.ReturnUrl });
+        if (!_proof.IsStepFor(EmailOwnershipProof.TakeBackStep, model.Token, account))
+        {
+            // B6: a passkey or a login added since the choice was shown keeps the security stamp, and would be removed
+            // with the rest without the owner having seen it. The choice is shown again, naming what it removes now.
+            if (_proof.RenewStepForChangedCredentials(EmailOwnershipProof.TakeBackStep, model.Token, account) is not { } renewed)
+            {
+                return TakeBackRefused(model);
+            }
+
+            ModelState.AddModelError(string.Empty, S["This account's sign-ins changed since this page opened. Check what is removed now, and choose again."]);
+
+            return TakeBackChoice(account, model, renewed);
         }
 
         var providers = LoginProviderNames(account);
@@ -263,15 +274,7 @@ public sealed class EmailSignInController : Controller
             // address isn't proved. A code never signs in to one with them kept: that would get around the provider's
             // checks, or let in a passkey whoever registered with the address added. And it may be the owner's own
             // passwordless account, so nothing is removed until they choose to remove them and use their email.
-            return View("TakeBack", new EmailSignInViewModel
-            {
-                Email = model.Email,
-                ReturnUrl = model.ReturnUrl,
-                Token = _proof.ProtectStep(EmailOwnershipProof.TakeBackStep, external),
-                LoginProviders = LoginProviderNames(external),
-                Passkeys = external.Passkeys?.Count ?? 0,
-                SignInMethods = SignInMethodNames(external),
-            });
+            return TakeBackChoice(external, model, _proof.ProtectStep(EmailOwnershipProof.TakeBackStep, external));
         }
         else if (user is User proved && (!proved.EmailConfirmed || !UserEmailOwnership.IsVerified(proved.Properties, proved.Email)))
         {
@@ -340,6 +343,25 @@ public sealed class EmailSignInController : Controller
             (account.LoginInfos is { Count: > 0 } || UserCredentialsProof.HasPasskeys(account)) &&
             !UserEmailOwnership.IsVerified(account.Properties, account.Email) &&
             !_proof.CredentialsNeverSignedIn(account);
+
+    // The take-back choice, naming what the account signs in with now.
+    private ViewResult TakeBackChoice(User account, EmailSignInViewModel model, string token)
+        => View("TakeBack", new EmailSignInViewModel
+        {
+            Email = model.Email,
+            ReturnUrl = model.ReturnUrl,
+            Token = token,
+            LoginProviders = LoginProviderNames(account),
+            Passkeys = account.Passkeys?.Count ?? 0,
+            SignInMethods = SignInMethodNames(account),
+        });
+
+    private ViewResult TakeBackRefused(EmailSignInViewModel model)
+    {
+        ModelState.AddModelError(nameof(model.Email), S["That took too long, or the account changed. Ask for a new code."]);
+
+        return View(nameof(Index), new EmailSignInViewModel { ReturnUrl = model.ReturnUrl });
+    }
 
     private static string LoginProviderNames(User account)
         => string.Join(", ", (account.LoginInfos ?? []).Select(login => login.ProviderDisplayName ?? login.LoginProvider).Distinct(StringComparer.Ordinal));

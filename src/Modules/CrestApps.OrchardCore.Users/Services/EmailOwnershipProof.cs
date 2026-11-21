@@ -75,20 +75,39 @@ public sealed class EmailOwnershipProof
     /// <summary>
     /// Protects what one step of a proof established for the next, posted back in a form: that a right code reached an
     /// account (<see cref="TakeBackStep"/>), or that the user just signed in again through one of the account's external
-    /// logins (<see cref="KeptLoginStep"/>). It names the account, its security stamp and, for a login, its provider and
-    /// key, and works for 15 minutes; a change of the account's credentials, which rotates the stamp, ends it sooner.
+    /// logins (<see cref="KeptLoginStep"/>). It names the account, its security stamp, its address (A1: Orchard Core's
+    /// user editor changes the address without rotating the stamp), what it signs in with (B6: adding a passkey or a login
+    /// keeps the stamp, see <see cref="CredentialsFingerprint"/>) and, for a login, its provider and key. It works for
+    /// 15 minutes; a change of any of those ends it sooner.
     /// </summary>
     /// <param name="step">What the step established: <see cref="TakeBackStep"/> or <see cref="KeptLoginStep"/>.</param>
     /// <param name="account">The account.</param>
     /// <param name="login">The login signed in through again, for <see cref="KeptLoginStep"/>.</param>
     public string ProtectStep(string step, User account, UserLoginInfo login = null)
+        => Protect(step, account, login, _clock.UtcNow + _stepLifetime);
+
+    /// <summary>
+    /// For a <paramref name="step"/> that is for <paramref name="account"/> with its current address and security stamp,
+    /// but whose sign-in methods changed since (a passkey or a login was added, which keeps the stamp), the same step for
+    /// the account as it is now, ending when the first one does, so the page can show the choice again with what it
+    /// would remove now; otherwise <see langword="null"/>.
+    /// </summary>
+    /// <param name="step">The step expected.</param>
+    /// <param name="protectedStep">The protected step, as posted.</param>
+    /// <param name="account">The account.</param>
+    public string RenewStepForChangedCredentials(string step, string protectedStep, User account)
+        => Read(step, protectedStep) is { } read && IsSameAccount(read, account) && !HasSameCredentials(read, account)
+            ? Protect(step, account, read.LoginProvider is null ? null : new UserLoginInfo(read.LoginProvider, read.ProviderKey, null), new DateTime(read.ExpiresTicks, DateTimeKind.Utc))
+            : null;
+
+    private string Protect(string step, User account, UserLoginInfo login, DateTime expiresUtc)
     {
         ArgumentException.ThrowIfNullOrEmpty(step);
         ArgumentNullException.ThrowIfNull(account);
 
-        var payload = JsonSerializer.Serialize(new ProofStep(step, account.UserId, account.SecurityStamp, (_clock.UtcNow + _stepLifetime).Ticks, login?.LoginProvider, login?.ProviderKey));
+        var payload = JsonSerializer.Serialize(new ProofStep(step, account.UserId, account.SecurityStamp, expiresUtc.Ticks, login?.LoginProvider, login?.ProviderKey, NormalizeAddress(account.Email), CredentialsFingerprint(account)));
 
-        return _signedTokens.Protect(StepPurpose, payload, _stepLifetime);
+        return _signedTokens.Protect(StepPurpose, payload, expiresUtc - _clock.UtcNow);
     }
 
     /// <summary>
@@ -102,7 +121,7 @@ public sealed class EmailOwnershipProof
 
     /// <summary>
     /// Whether <paramref name="protectedStep"/> is a <paramref name="step"/> for <paramref name="account"/> as it is now:
-    /// within its lifetime, with the account's current security stamp.
+    /// within its lifetime, with the account's current security stamp, address and sign-in methods.
     /// </summary>
     /// <param name="step">The step expected.</param>
     /// <param name="protectedStep">The protected step, as posted.</param>
@@ -150,10 +169,28 @@ public sealed class EmailOwnershipProof
     }
 
     private static bool Matches(ProofStep read, User account)
+        => IsSameAccount(read, account) && HasSameCredentials(read, account);
+
+    // The account, with the security stamp and the address it had at the step: the code went to that address.
+    private static bool IsSameAccount(ProofStep read, User account)
         => account is not null &&
             !string.IsNullOrEmpty(account.SecurityStamp) &&
+            !string.IsNullOrEmpty(read.Email) &&
             string.Equals(read.UserId, account.UserId, StringComparison.Ordinal) &&
-            string.Equals(read.SecurityStamp, account.SecurityStamp, StringComparison.Ordinal);
+            string.Equals(read.SecurityStamp, account.SecurityStamp, StringComparison.Ordinal) &&
+            string.Equals(read.Email, NormalizeAddress(account.Email), StringComparison.Ordinal);
+
+    private static bool HasSameCredentials(ProofStep read, User account)
+        => string.Equals(read.Credentials, CredentialsFingerprint(account), StringComparison.Ordinal);
+
+    // Compared as Orchard Core normalizes an address for its lookup, but exactly (see EmailSignInController).
+    private static string NormalizeAddress(string email)
+        => string.IsNullOrWhiteSpace(email) ? null : email.Trim().Normalize().ToUpperInvariant();
+
+    // What the account signs in with: its logins and passkeys and its security stamp (UserCredentialsProof's digest),
+    // and whether it has a password.
+    private static string CredentialsFingerprint(User account)
+        => UserCredentialsProof.CredentialsFingerprint(account) + (string.IsNullOrEmpty(account.PasswordHash) ? string.Empty : "+password");
 
     /// <summary>
     /// Whether the account has a password, an external login or a passkey, which the first proof of its address removes
@@ -322,5 +359,5 @@ public sealed class EmailOwnershipProof
         }
     }
 
-    private sealed record ProofStep(string Step, string UserId, string SecurityStamp, long ExpiresTicks, string LoginProvider, string ProviderKey);
+    private sealed record ProofStep(string Step, string UserId, string SecurityStamp, long ExpiresTicks, string LoginProvider, string ProviderKey, string Email, string Credentials);
 }

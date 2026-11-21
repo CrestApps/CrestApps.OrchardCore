@@ -6,6 +6,7 @@
 
 <div class="container my-5" style="max-width: 480px">
     <h1 class="h3 mb-2">@T["Use your email instead?"]</h1>
+    <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
     @if (Model.Passkeys > 0)
     {
         <p>@T["This account signs in with {0}. Remove it and use your email instead?", Model.SignInMethods]</p>
