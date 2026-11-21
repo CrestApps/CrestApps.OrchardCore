@@ -1,4 +1,5 @@
 @model Survey
+@inject IEnumerable<CrestApps.OrchardCore.Surveys.Services.ISurveyOwnerLinkProvider> OwnerLinkProviders
 @* The links between the pages of one survey. *@
 
 @{
@@ -7,6 +8,27 @@
 
     string Active(string c, string a)
         => string.Equals(controller, c, StringComparison.OrdinalIgnoreCase) && (a is null || string.Equals(action, a, StringComparison.OrdinalIgnoreCase)) ? "active" : null;
+
+    // An owned survey (a course item's quiz, say) links back to its owner's page.
+    CrestApps.OrchardCore.Surveys.Services.SurveyOwnerLink ownerLink = null;
+
+    if (Model.Owner is { } owner && !owner.IsEmpty)
+    {
+        foreach (var provider in OwnerLinkProviders)
+        {
+            ownerLink = await provider.GetLinkAsync(owner);
+
+            if (ownerLink is not null)
+            {
+                break;
+            }
+        }
+    }
+}
+
+@if (ownerLink is not null && Url.IsLocalUrl(ownerLink.Url))
+{
+    <p class="mb-2"><a href="@ownerLink.Url"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> @T["Back to {0}", ownerLink.Text]</a></p>
 }
 
 <ul class="nav nav-tabs mb-3">

@@ -44,6 +44,11 @@
     }
 
     <div class="d-flex gap-2">
+        @if (!string.IsNullOrEmpty(Model.ReturnUrl))
+        {
+            <a class="btn btn-primary" href="@Model.ReturnUrl">@(string.IsNullOrWhiteSpace(Model.ReturnText) ? T["Continue"].Value : Model.ReturnText)</a>
+        }
+
         @if (Model.CanReview)
         {
             <a class="btn btn-secondary" href="@Url.Content("~/s/r/" + Model.Response.ItemId + "/review")">@T["Review your answers"]</a>

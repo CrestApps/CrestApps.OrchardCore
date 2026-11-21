@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
-using CrestApps.OrchardCore.Learning.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
@@ -11,32 +10,37 @@ using OrchardCore.Title.Models;
 namespace CrestApps.OrchardCore.Learning.Surveys.Migrations;
 
 /// <summary>
-/// Creates the responses table, the survey part, the Feedback survey and Choice course item types, and adds them to the
-/// course outlines. The types are defined in code: a recipe run inside a migration would wait forever on SQLite for
-/// the write lock the migration holds.
+/// Defines the course survey part and the feedback survey and choice course item types.
 /// </summary>
-internal sealed class SurveysMigrations : DataMigration
+internal sealed class LearningSurveysMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly CourseListSynchronizer _courseListSynchronizer;
 
-    public SurveysMigrations(IContentDefinitionManager contentDefinitionManager, CourseListSynchronizer courseListSynchronizer)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LearningSurveysMigrations"/> class.
+    /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="courseListSynchronizer">The course list synchronizer.</param>
+    public LearningSurveysMigrations(IContentDefinitionManager contentDefinitionManager, CourseListSynchronizer courseListSynchronizer)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _courseListSynchronizer = courseListSynchronizer;
     }
 
+    /// <summary>
+    /// Defines the part and the types.
+    /// </summary>
+    /// <returns>The migration version.</returns>
     public async Task<int> CreateAsync()
     {
-        await SurveysIndexSchema.CreateAsync(SchemaBuilder);
-
-        await _contentDefinitionManager.AlterPartDefinitionAsync(nameof(SurveyPart), part => part
+        await _contentDefinitionManager.AlterPartDefinitionAsync(nameof(CourseSurveyPart), part => part
             .Attachable(false)
-            .WithDisplayName("Survey")
-            .WithDescription("Makes a course item a survey: its questions, anonymous answers, a close date and when learners see the totals."));
+            .WithDisplayName("Course survey")
+            .WithDescription("Makes a course item a survey whose questions live in a survey of the Surveys module the item owns."));
 
-        await DefineAsync(SurveysConstants.ContentTypes.FeedbackSurvey, "Feedback survey", "Questions learners answer about the course, with the totals for the course staff.", singleQuestion: false);
-        await DefineAsync(SurveysConstants.ContentTypes.Choice, "Choice", "One question learners answer by picking a choice, as a poll, with totals learners may see.", singleQuestion: true);
+        await DefineAsync(LearningSurveysConstants.ContentTypes.FeedbackSurvey, "Feedback survey", "Questions learners answer about the course, with the totals for the course staff.", singleQuestion: false);
+        await DefineAsync(LearningSurveysConstants.ContentTypes.Choice, "Choice", "One question learners answer by picking a choice, as a poll, with totals learners may see.", singleQuestion: true);
 
         await _courseListSynchronizer.SynchronizeAsync();
 
@@ -54,14 +58,14 @@ internal sealed class SurveysMigrations : DataMigration
             .Securable()
             .WithPart(nameof(TitlePart), part => part.WithPosition("1"))
             .WithPart(nameof(HtmlBodyPart), part => part.WithPosition("2").WithEditor("Wysiwyg").WithDisplayName("Introduction"))
-            .WithPart(nameof(SurveyPart), part => part
+            .WithPart(nameof(CourseSurveyPart), part => part
                 .WithPosition("3")
-                .WithSettings(new SurveyPartSettings { SingleQuestion = singleQuestion }))
+                .WithSettings(new CourseSurveyPartSettings { SingleQuestion = singleQuestion }))
             .WithPart(nameof(CourseItemPart), part => part
                 .WithPosition("10")
                 .WithSettings(new CourseItemPartSettings
                 {
-                    Kind = SurveysConstants.SurveyKind,
+                    Kind = LearningSurveysConstants.SurveyKind,
                     DefaultCompletionMode = CompletionModes.Submitted,
                 })));
 }
