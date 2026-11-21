@@ -1,9 +1,12 @@
 // @ts-check
 
+import { getHidden, isConditionMet, isRuleMet, same } from '../../../CrestApps.OrchardCore.Resources/Assets/js/conditions.js';
+
 /**
  * Shows and hides the fields of a content editor whose settings say "Show this field when". The server makes the
  * same decision when the form is posted, drops what a hidden field holds and ignores its validation; this script
- * only spares people the questions that don't apply.
+ * only spares people the questions that don't apply. The rules themselves are the shared Conditions evaluator
+ * (Resources module, conditions.js), the browser mirror of the server's ConditionEvaluator.
  *
  * Each editor with rules carries a <script type="application/json" data-conditional-fields> block:
  * {
@@ -17,182 +20,11 @@
  */
 
 /**
- * @typedef {{ Source: string, Operator: string, Values?: string[] }} Condition
- * @typedef {{ Match?: string, Conditions?: Condition[] }} Rule
+ * @typedef {import('../../../CrestApps.OrchardCore.Resources/Assets/js/conditions.js').Rule} Rule
+ * @typedef {import('../../../CrestApps.OrchardCore.Resources/Assets/js/conditions.js').Value} Value
  * @typedef {{ kind?: string, input?: string, values?: string[] }} Source
  * @typedef {{ prefix?: string, fields: { key: string, rule: Rule }[], sources: Record<string, Source>, ancestors?: Record<string, string[]> }} Model
- * @typedef {{ values: string[], ancestors: string[], withheld?: boolean }} Value
  */
-
-/** @param {unknown} left @param {unknown} right */
-function same(left, right) {
-    return String(left ?? '').trim().toLowerCase() === String(right ?? '').trim().toLowerCase();
-}
-
-/** @param {unknown} value */
-function toNumber(value) {
-    const text = String(value ?? '').trim();
-
-    return /^[-+]?(\d+(\.\d*)?|\.\d+)$/.test(text) ? Number(text) : Number.NaN;
-}
-
-/**
- * Tells whether a condition is met by a value; the same rules as the server's ConditionEvaluator.
- * @param {Condition} condition
- * @param {Value} value
- */
-function conditionMet(condition, value) {
-    if (value.withheld) {
-        return false;
-    }
-
-    const values = value.values;
-    const targets = condition.Values ?? [];
-    const expected = targets.length > 0 ? targets[0] : null;
-    const has = (/** @type {string} */ target) => values.some((item) => same(item, target));
-    const compare = (/** @type {(c: number) => boolean} */ test) => {
-        const target = toNumber(expected);
-
-        return !Number.isNaN(target) && values.some((item) => {
-            const number = toNumber(item);
-
-            return !Number.isNaN(number) && test(Math.sign(number - target));
-        });
-    };
-
-    switch (condition.Operator) {
-        case 'Is': return expected !== null && has(expected);
-        case 'IsNot': return expected === null || !has(expected);
-        case 'IsOneOf': return targets.some(has);
-        case 'IsNoneOf': return !targets.some(has);
-        case 'IsEmpty': return !values.some((item) => String(item ?? '').trim() !== '');
-        case 'IsNotEmpty': return values.some((item) => String(item ?? '').trim() !== '');
-        case 'Contains': return !!expected && values.some((item) => String(item).toLowerCase().includes(expected.toLowerCase()));
-        case 'GreaterThan': return compare((c) => c > 0);
-        case 'LessThan': return compare((c) => c < 0);
-        case 'IsOrUnder': return expected !== null && (has(expected) || value.ancestors.some((item) => same(item, expected)));
-        default: return false;
-    }
-}
-
-/**
- * Tells whether a rule is met; a condition on a source the lookup doesn't know is left out.
- * @param {Rule} rule
- * @param {(source: string) => Value | null} lookup
- */
-function ruleMet(rule, lookup) {
-    const conditions = (rule?.Conditions ?? []).filter((condition) => condition && String(condition.Source ?? '').trim() !== '');
-    let judged = 0;
-    let met = 0;
-
-    for (const condition of conditions) {
-        const value = lookup(condition.Source);
-
-        if (!value) {
-            continue;
-        }
-
-        judged++;
-
-        if (conditionMet(condition, value)) {
-            met++;
-        }
-    }
-
-    if (judged === 0) {
-        return true;
-    }
-
-    return rule.Match === 'Any' ? met > 0 : met === judged;
-}
-
-/**
- * Works out the hidden fields: a field shows when its rule is met, and a condition reading a hidden field fails.
- * @param {Record<string, Rule>} rules
- * @param {(source: string) => Value | null} lookup
- * @returns {Set<string>}
- */
-function hiddenKeys(rules, lookup) {
-    /** @type {Map<string, boolean>} */
-    const shown = new Map();
-    const visiting = new Set();
-    const cyclic = cyclicKeys(rules);
-
-    /** @param {string} key @returns {boolean} */
-    const shows = (key) => {
-        if (shown.has(key)) {
-            return /** @type {boolean} */ (shown.get(key));
-        }
-
-        const rule = rules[key];
-
-        // A field caught in a cycle of rules shows, as one without a rule would.
-        if (!rule || cyclic.has(key) || visiting.has(key)) {
-            return true;
-        }
-
-        visiting.add(key);
-
-        const result = ruleMet(rule, (source) => {
-            const value = lookup(source);
-
-            if (!value) {
-                return null;
-            }
-
-            return Object.prototype.hasOwnProperty.call(rules, source) && !shows(source)
-                ? { values: [], ancestors: [], withheld: true }
-                : value;
-        });
-
-        visiting.delete(key);
-        shown.set(key, result);
-
-        return result;
-    };
-
-    const hidden = new Set();
-
-    for (const key of Object.keys(rules)) {
-        if (!shows(key)) {
-            hidden.add(key);
-        }
-    }
-
-    return hidden;
-}
-
-/**
- * The fields that can reach themselves through the sources of their rules.
- * @param {Record<string, Rule>} rules
- * @returns {Set<string>}
- */
-function cyclicKeys(rules) {
-    const has = (/** @type {string} */ key) => Object.prototype.hasOwnProperty.call(rules, key);
-    const sources = (/** @type {string} */ key) => (rules[key]?.Conditions ?? []).map((condition) => condition?.Source).filter((source) => source && has(source));
-    const cyclic = new Set();
-
-    for (const start of Object.keys(rules)) {
-        const seen = new Set();
-        const pending = sources(start);
-
-        while (pending.length > 0) {
-            const current = /** @type {string} */ (pending.pop());
-
-            if (current === start) {
-                cyclic.add(start);
-                break;
-            }
-
-            if (!seen.has(current)) {
-                seen.add(current);
-                pending.push(...sources(current));
-            }
-        }
-    }
-
-    return cyclic;
-}
 
 /**
  * The form controls posted under a name: the name itself or anything below it.
@@ -355,7 +187,7 @@ function start(element) {
     };
 
     const update = () => {
-        const hidden = hiddenKeys(rules, lookup);
+        const hidden = getHidden(rules, lookup);
 
         for (const field of model.fields ?? []) {
             const wrapper = wrapperOf(scope, prefix + field.key);
@@ -393,4 +225,4 @@ if (document.readyState === 'loading') {
 }
 
 // The rules, for tests and for scripts that build editors of their own.
-globalThis.CrestAppsConditionalFields = { conditionMet, ruleMet, hiddenKeys, startAll };
+globalThis.CrestAppsConditionalFields = { conditionMet: isConditionMet, ruleMet: isRuleMet, hiddenKeys: getHidden, startAll };

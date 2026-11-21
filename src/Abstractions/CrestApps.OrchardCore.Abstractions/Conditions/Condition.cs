@@ -19,7 +19,8 @@ public sealed class Condition
     /// <summary>
     /// Gets or sets the values compared, written with the invariant culture. Most operators use the first;
     /// <see cref="ConditionOperator.IsOneOf"/> and <see cref="ConditionOperator.IsNoneOf"/> use them all;
-    /// <see cref="ConditionOperator.IsEmpty"/> and <see cref="ConditionOperator.IsNotEmpty"/> use none.
+    /// <see cref="ConditionOperator.Between"/> uses the first two; <see cref="ConditionOperator.IsEmpty"/> and
+    /// <see cref="ConditionOperator.IsNotEmpty"/> use none.
     /// </summary>
     public List<string> Values { get; set; } = [];
 }

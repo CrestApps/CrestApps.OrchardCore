@@ -25,6 +25,22 @@ public sealed class ConditionEvaluatorTests
     [InlineData(ConditionOperator.GreaterThan, new[] { "9" }, new[] { "10" }, false)]
     [InlineData(ConditionOperator.GreaterThan, new[] { "many" }, new[] { "10" }, false)]
     [InlineData(ConditionOperator.LessThan, new[] { "9" }, new[] { "10" }, true)]
+    [InlineData(ConditionOperator.NotContains, new[] { "All good" }, new[] { "refund" }, true)]
+    [InlineData(ConditionOperator.NotContains, new[] { "I want a Refund" }, new[] { "refund" }, false)]
+    [InlineData(ConditionOperator.StartsWith, new[] { "ACME Corp" }, new[] { "acme" }, true)]
+    [InlineData(ConditionOperator.EndsWith, new[] { "admin@example.com" }, new[] { "EXAMPLE.COM" }, true)]
+    [InlineData(ConditionOperator.EndsWith, new[] { "admin@example.com" }, new[] { "admin" }, false)]
+    [InlineData(ConditionOperator.GreaterThanOrEqual, new[] { "9" }, new[] { "9" }, true)]
+    [InlineData(ConditionOperator.GreaterThanOrEqual, new[] { "8" }, new[] { "9" }, false)]
+    [InlineData(ConditionOperator.LessThanOrEqual, new[] { "6" }, new[] { "6" }, true)]
+    [InlineData(ConditionOperator.LessThanOrEqual, new[] { "2026-05-02" }, new[] { "2026-05-01" }, false)]
+    [InlineData(ConditionOperator.Between, new[] { "5" }, new[] { "1", "5" }, true)]
+    [InlineData(ConditionOperator.Between, new[] { "0.5" }, new[] { "1", "5" }, false)]
+    [InlineData(ConditionOperator.Between, new[] { "2026-01-15T10:00:00Z" }, new[] { "2026-01-01", "2026-01-31" }, true)]
+    [InlineData(ConditionOperator.CountAtLeast, new[] { "a", "b" }, new[] { "2" }, true)]
+    [InlineData(ConditionOperator.CountAtLeast, new[] { "a", " " }, new[] { "2" }, false)]
+    [InlineData(ConditionOperator.CountAtMost, new[] { "a", "b", "c" }, new[] { "2" }, false)]
+    [InlineData(ConditionOperator.CountAtMost, new string[0], new[] { "0" }, true)]
     public void Operators_CompareTheSourceWithTheValues(ConditionOperator op, string[] actual, string[] expected, bool met)
     {
         // Arrange
@@ -114,5 +130,70 @@ public sealed class ConditionEvaluatorTests
         Assert.True(ConditionEvaluator.IsMet(null, _ => null));
         Assert.True(ConditionEvaluator.IsMet(new ConditionRule(), _ => null));
         Assert.True(ConditionRule.IsEmpty(new ConditionRule { Conditions = [new Condition { Source = " " }] }));
+    }
+
+    [Fact]
+    public void IsEmpty_IsFalseForARuleWithOnlyAGroup()
+    {
+        // Arrange
+        var rule = new ConditionRule { Groups = [new ConditionRule { Conditions = [new Condition { Source = "q", Operator = ConditionOperator.IsNotEmpty }] }] };
+        var emptyGroups = new ConditionRule { Groups = [new ConditionRule(), new ConditionRule { Conditions = [new Condition { Source = " " }] }] };
+
+        // Act & Assert
+        Assert.False(ConditionRule.IsEmpty(rule));
+        Assert.True(ConditionRule.IsEmpty(emptyGroups));
+    }
+
+    [Theory]
+    [InlineData(ConditionMatch.All, "Yes", "3", "", true)]
+    [InlineData(ConditionMatch.All, "Yes", "9", "", false)]
+    [InlineData(ConditionMatch.All, "Yes", "9", "very bad", true)]
+    [InlineData(ConditionMatch.All, "No", "3", "", false)]
+    [InlineData(ConditionMatch.Any, "No", "9", "", false)]
+    [InlineData(ConditionMatch.Any, "No", "3", "", true)]
+    public void Rule_MatchAppliesOverConditionsAndGroups(ConditionMatch match, string member, string score, string comment, bool met)
+    {
+        // Arrange: member is Yes AND (score <= 6 OR the comment says "bad").
+        var rule = new ConditionRule
+        {
+            Match = match,
+            Conditions = [new Condition { Source = "member", Operator = ConditionOperator.Is, Values = ["Yes"] }],
+            Groups =
+            [
+                new ConditionRule
+                {
+                    Match = ConditionMatch.Any,
+                    Conditions =
+                    [
+                        new Condition { Source = "score", Operator = ConditionOperator.LessThanOrEqual, Values = ["6"] },
+                        new Condition { Source = "comment", Operator = ConditionOperator.Contains, Values = ["bad"] },
+                    ],
+                },
+            ],
+        };
+        var answers = new Dictionary<string, string> { ["member"] = member, ["score"] = score, ["comment"] = comment };
+
+        // Act
+        var result = ConditionEvaluator.IsMet(rule, source => ConditionValue.Of(answers.GetValueOrDefault(source)));
+
+        // Assert
+        Assert.Equal(met, result);
+    }
+
+    [Fact]
+    public void Rule_LeavesOutAGroupThatCannotBeJudged()
+    {
+        // Arrange: the group only reads a source the lookup no longer knows.
+        var rule = new ConditionRule
+        {
+            Conditions = [new Condition { Source = "a", Operator = ConditionOperator.Is, Values = ["1"] }],
+            Groups = [new ConditionRule { Conditions = [new Condition { Source = "removed", Operator = ConditionOperator.Is, Values = ["x"] }] }],
+        };
+
+        // Act
+        var result = ConditionEvaluator.IsMet(rule, source => source == "a" ? ConditionValue.Of("1") : null);
+
+        // Assert
+        Assert.True(result);
     }
 }
