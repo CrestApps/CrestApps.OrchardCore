@@ -55,6 +55,6 @@ public static class ControlsTestData
             Response = new SurveyResponse { ItemId = "r1" },
         };
 
-    public static SurveyScoringContext Scoring(bool negativeMarking = false)
+    public static SurveyScoringContext ScoringContext(bool negativeMarking = false)
         => new() { Settings = new SurveyScoringSettings { Enabled = true, NegativeMarking = negativeMarking } };
 }

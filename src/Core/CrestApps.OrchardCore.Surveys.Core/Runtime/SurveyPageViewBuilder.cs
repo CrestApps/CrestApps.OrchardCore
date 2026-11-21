@@ -1,9 +1,10 @@
 using CrestApps.OrchardCore.Conditions;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Core.Logic;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
-using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 
@@ -15,16 +16,22 @@ public sealed class SurveyPageViewBuilder
 {
     private readonly ISurveyControlRegistry _registry;
     private readonly SurveyPipingRenderer _piping;
+    private readonly SurveyRespondentProjector _projector;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyPageViewBuilder"/> class.
     /// </summary>
     /// <param name="registry">The control registry.</param>
     /// <param name="piping">The piping renderer.</param>
-    public SurveyPageViewBuilder(ISurveyControlRegistry registry, SurveyPipingRenderer piping)
+    /// <param name="projector">The respondent projector.</param>
+    public SurveyPageViewBuilder(
+        ISurveyControlRegistry registry,
+        SurveyPipingRenderer piping,
+        SurveyRespondentProjector projector)
     {
         _registry = registry;
         _piping = piping;
+        _projector = projector;
     }
 
     /// <summary>
@@ -141,69 +148,46 @@ public sealed class SurveyPageViewBuilder
         ArgumentNullException.ThrowIfNull(question);
         ArgumentNullException.ThrowIfNull(handler);
 
-        var view = new SurveyQuestionView
-        {
-            Id = question.Id,
-            Name = question.Name,
-            ControlType = question.ControlType,
-            Number = number,
-            Title = _piping.Render(question.Title, definition, response, hiddenQuestions),
-            Description = _piping.Render(question.Description, definition, response, hiddenQuestions),
-            Placeholder = question.Placeholder,
-            Required = state?.RequiredQuestionIds.Contains(question.Id) ?? question.Required,
-            Disabled = state?.DisabledQuestionIds.Contains(question.Id) ?? false,
-            Settings = handler.GetRespondentSettings(question) ?? [],
-        };
+        var allowed = AllowedChoices(definition, question, response, state).ToHashSet(StringComparer.Ordinal);
+        var hiddenChoices = SurveyChoiceSource.GetChoices(question, definition)
+            .Where(choice => !string.IsNullOrEmpty(choice?.Id) && !allowed.Contains(choice.Id))
+            .Select(choice => choice.Id)
+            .ToList();
 
-        var choices = (question.Choices ?? []).Where(choice => !string.IsNullOrEmpty(choice?.Id)).ToDictionary(choice => choice.Id, StringComparer.Ordinal);
-        var order = response.Plan.ChoiceOrder.TryGetValue(question.Id, out var planned)
-            ? planned
-            : SurveyPlanBuilder.DefaultChoiceOrder(question, null);
+        var view = _projector.Project(question, definition, response.Plan, hiddenChoices, (_, text) => _piping.Render(text, definition, response, hiddenQuestions));
 
-        foreach (var choiceId in order)
-        {
-            if (!choices.TryGetValue(choiceId, out var choice) || choice.Retired)
-            {
-                continue;
-            }
-
-            view.Choices.Add(new SurveyChoiceView
-            {
-                Id = choice.Id,
-                Value = choice.Value,
-                Text = _piping.Render(choice.Text, definition, response, hiddenQuestions),
-                ImageUrl = choice.ImageUrl,
-                IsOther = choice.IsOther,
-                IsExclusive = choice.IsExclusive,
-            });
-        }
-
-        foreach (var row in question.Rows ?? [])
-        {
-            if (!string.IsNullOrEmpty(row?.Id) && !row.Retired)
-            {
-                view.Rows.Add(new SurveySubQuestionView { Id = row.Id, Name = row.Name, Text = row.Text });
-            }
-        }
+        view.Number = number;
+        view.Required = state?.RequiredQuestionIds.Contains(question.Id) ?? question.Required;
+        view.Disabled = state?.DisabledQuestionIds.Contains(question.Id) ?? false;
 
         return view;
     }
 
     /// <summary>
-    /// Gets the choice ids a respondent may pick for a question: plan order, shown, not retired.
+    /// Gets the choice ids a respondent may pick for a question: plan order, shown, not retired, and, for carried-forward
+    /// choices, those the source answer allows.
     /// </summary>
+    /// <param name="definition">The definition.</param>
     /// <param name="question">The question.</param>
     /// <param name="response">The response.</param>
     /// <param name="state">The logic state.</param>
     /// <returns>The choice ids.</returns>
-    public static IReadOnlyList<string> AllowedChoices(SurveyQuestion question, SurveyResponse response, SurveyLogicState state)
+    public static IReadOnlyList<string> AllowedChoices(SurveyDefinition definition, SurveyQuestion question, SurveyResponse response, SurveyLogicState state)
     {
+        ArgumentNullException.ThrowIfNull(question);
+        ArgumentNullException.ThrowIfNull(response);
+
+        var choices = SurveyChoiceSource.GetChoices(question, definition);
         var order = response.Plan.ChoiceOrder.TryGetValue(question.Id, out var planned)
             ? planned
-            : SurveyPlanBuilder.DefaultChoiceOrder(question, null);
-        var retired = (question.Choices ?? []).Where(choice => choice?.Retired == true).Select(choice => choice.Id).ToHashSet(StringComparer.Ordinal);
+            : SurveyChoiceSource.OrderChoices(choices, shuffle: false, random: null);
+        var retired = choices.Where(choice => choice?.Retired == true).Select(choice => choice.Id).ToHashSet(StringComparer.Ordinal);
+        var known = choices.Where(choice => !string.IsNullOrEmpty(choice?.Id)).Select(choice => choice.Id).ToHashSet(StringComparer.Ordinal);
+        var shown = order.Where(id => known.Contains(id) && !retired.Contains(id) && (state is null || !state.IsChoiceHidden(question.Id, id)));
 
-        return order.Where(id => !retired.Contains(id) && (state is null || !state.IsChoiceHidden(question.Id, id))).ToList();
+        response.Answers.TryGetValue(question.ChoicesFrom ?? string.Empty, out var sourceAnswer);
+
+        return SurveyChoiceSource.FilterCarriedForward(question, shown, sourceAnswer);
     }
 
     private static void AddClientRule(SurveyPageView view, string key, SurveyVisibility visibility, HashSet<string> onScreen)

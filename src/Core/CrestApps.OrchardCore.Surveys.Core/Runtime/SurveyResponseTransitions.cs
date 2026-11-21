@@ -8,11 +8,7 @@ namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 /// </summary>
 public static class SurveyResponseTransitions
 {
-    /// <summary>
-    /// Gets the table of moves: in progress to completed, screened out, abandoned or voided; completed to voided or
-    /// back in progress (reopened); screened out and abandoned to voided.
-    /// </summary>
-    public static TransitionTable<SurveyResponseStatus> Table { get; } = new(new Dictionary<SurveyResponseStatus, SurveyResponseStatus[]>
+    private static readonly TransitionTable<SurveyResponseStatus> _table = new(new Dictionary<SurveyResponseStatus, SurveyResponseStatus[]>
     {
         [SurveyResponseStatus.InProgress] = [SurveyResponseStatus.Completed, SurveyResponseStatus.ScreenedOut, SurveyResponseStatus.Abandoned, SurveyResponseStatus.Voided],
         [SurveyResponseStatus.Completed] = [SurveyResponseStatus.Voided, SurveyResponseStatus.InProgress],
@@ -20,4 +16,11 @@ public static class SurveyResponseTransitions
         [SurveyResponseStatus.Abandoned] = [SurveyResponseStatus.Voided],
         [SurveyResponseStatus.Voided] = [],
     });
+
+    /// <summary>
+    /// Gets the table of moves: in progress to completed, screened out, abandoned or voided; completed to voided or
+    /// back in progress (reopened); screened out and abandoned to voided.
+    /// </summary>
+    public static TransitionTable<SurveyResponseStatus> Table
+        => _table;
 }

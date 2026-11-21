@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Logic;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.ViewModels;
@@ -18,12 +19,12 @@ public sealed class SurveyRunnerShapes
     /// <summary>
     /// The display type of the respondent's form.
     /// </summary>
-    public const string Respond = "Respond";
+    public const string Respond = SurveyControlShapes.Respond;
 
     /// <summary>
     /// The display type of the read-only review.
     /// </summary>
-    public const string Review = "Review";
+    public const string Review = SurveyControlShapes.Review;
 
     private readonly IShapeFactory _shapeFactory;
     private readonly ISurveyControlRegistry _registry;
@@ -127,7 +128,7 @@ public sealed class SurveyRunnerShapes
 
         if (!string.IsNullOrEmpty(survey.Name))
         {
-            shape.Metadata.Alternates.Add("SurveyPage_Respond__" + Alternate(survey.Name));
+            shape.Metadata.Alternates.Add("SurveyPage_Respond__" + SurveyControlShapes.Encode(survey.Name));
         }
 
         return shape;
@@ -228,7 +229,7 @@ public sealed class SurveyRunnerShapes
         string culture,
         SurveyAnswerFeedback feedback = null)
     {
-        var control = await _shapeFactory.CreateAsync<SurveyControlViewModel>("SurveyControl", model =>
+        var control = await _shapeFactory.CreateAsync<SurveyControlViewModel>(SurveyControlShapes.Control, model =>
         {
             model.Question = view;
             model.Settings = view.Settings;
@@ -242,17 +243,10 @@ public sealed class SurveyRunnerShapes
         });
 
         control.Metadata.DisplayType = displayType;
-        control.Metadata.Alternates.Add("SurveyControl_" + displayType);
-        control.Metadata.Alternates.Add("SurveyControl_" + displayType + "__" + Alternate(question.ControlType));
 
-        if (!string.IsNullOrEmpty(survey?.Name))
+        foreach (var alternate in SurveyControlShapes.GetAlternates(displayType, question.ControlType, survey?.Name, question.Name))
         {
-            control.Metadata.Alternates.Add("SurveyControl_" + displayType + "__" + Alternate(question.ControlType) + "__" + Alternate(survey.Name));
-        }
-
-        if (!string.IsNullOrEmpty(question.Name))
-        {
-            control.Metadata.Alternates.Add("SurveyControl_" + displayType + "__" + Alternate(question.ControlType) + "__" + Alternate(question.Name));
+            control.Metadata.Alternates.Add(alternate);
         }
 
         if (hiddenChoiceIds is { Count: > 0 })
@@ -277,7 +271,4 @@ public sealed class SurveyRunnerShapes
 
     private static SurveyQuestion Find(SurveyDefinition definition, string questionId)
         => definition.Pages?.SelectMany(page => page.Questions ?? []).FirstOrDefault(question => question?.Id == questionId);
-
-    private static string Alternate(string value)
-        => value.Replace('.', '_').Replace('-', '_');
 }

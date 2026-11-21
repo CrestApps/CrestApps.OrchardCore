@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using CrestApps.OrchardCore.Numbering;
@@ -6,6 +7,7 @@ using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Formulas;
 using CrestApps.OrchardCore.Surveys.Core.Logic;
 using CrestApps.OrchardCore.Surveys.Core.Services;
+using CrestApps.OrchardCore.Surveys.Core.Telemetry;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.WorkQueues;
@@ -423,10 +425,24 @@ public sealed class SurveyResponseService : ISurveyResponseService
     }
 
     /// <inheritdoc />
-    public Task<SurveyPageResult> SubmitPageAsync(SubmitPageRequest request, CancellationToken cancellationToken = default)
+    public async Task<SurveyPageResult> SubmitPageAsync(SubmitPageRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        var started = Stopwatch.GetTimestamp();
+
+        try
+        {
+            return await SubmitPageCoreAsync(request, cancellationToken);
+        }
+        finally
+        {
+            SurveysTelemetry.PagePostDuration.Record(Stopwatch.GetElapsedTime(started).TotalSeconds);
+        }
+    }
+
+    private Task<SurveyPageResult> SubmitPageCoreAsync(SubmitPageRequest request, CancellationToken cancellationToken)
+    {
         return WriteOwnAsync(request.ResponseId, request.Identity, () => new SurveyPageResult { Error = SurveyErrorCode.Busy }, async (survey, version, response, notifications) =>
         {
             var refusal = await RefuseClosedAsync(survey, version, response, notifications, cancellationToken);
@@ -640,7 +656,9 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             var now = _clock.UtcNow;
             var scorer = _registry.GetScorer(question.ControlType);
-            var during = definition.Review?.During ?? ReviewShows.None;
+            var during = _serviceProvider.GetService<ISurveyReviewPolicy>() is { } policy
+                ? policy.GetAllowedFor(survey, definition, response, question.Id, now)
+                : definition.Review?.During ?? ReviewShows.None;
             var check = new SurveyCheckResult { Response = response };
 
             if (scorer is not null)
@@ -880,6 +898,10 @@ public sealed class SurveyResponseService : ISurveyResponseService
     private async Task<Dictionary<string, List<string>>> ReadScreenAsync(SurveyDefinition definition, SurveyVersion version, SurveyResponse response, SubmitPageRequest request, CancellationToken cancellationToken)
     {
         var errors = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+        // Calculated questions and variables are current before the page is read, so their controls show their value.
+        _formulas.ComputeVariables(definition, response, SurveyRuntimeVersions.CacheKey(version));
+
         var before = _logic.Evaluate(definition, response, SurveyRuntimeVersions.CacheKey(version));
 
         foreach (var questionId in SurveyPlanNavigator.QuestionsOf(response.Plan, response.CurrentPageId))
@@ -922,7 +944,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
             Json = request.Answers?[question.Id],
             Prefix = SurveysConstants.AnswerPrefix + "." + question.Id,
             Existing = existing,
-            AllowedChoiceIds = SurveyPageViewBuilder.AllowedChoices(question, response, state),
+            AllowedChoiceIds = SurveyPageViewBuilder.AllowedChoices(definition, question, response, state),
             CancellationToken = cancellationToken,
         };
 
@@ -1004,7 +1026,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 IsRequired = required,
                 Definition = definition,
                 Response = response,
-                AllowedChoiceIds = SurveyPageViewBuilder.AllowedChoices(question, response, state),
+                AllowedChoiceIds = SurveyPageViewBuilder.AllowedChoices(definition, question, response, state),
             };
 
             if (readErrors.TryGetValue(questionId, out var read))
@@ -1154,7 +1176,10 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             if (scoring is not null)
             {
+                var scoringStarted = Stopwatch.GetTimestamp();
+
                 scoring.Score(definition, response);
+                SurveysTelemetry.ScoringDuration.Record(Stopwatch.GetElapsedTime(scoringStarted).TotalSeconds);
             }
             else if (definition.Scoring?.Enabled != true)
             {

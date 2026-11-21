@@ -27,6 +27,13 @@ async function post(form, url) {
     const body = new FormData(form);
     body.delete('direction');
 
+    // Files are sent only with the page post, not with every autosave or evaluation.
+    for (const [name, value] of Array.from(body.entries())) {
+        if (value instanceof File) {
+            body.delete(name);
+        }
+    }
+
     const response = await fetch(url, {
         method: 'POST',
         body,
@@ -205,6 +212,9 @@ function initForm(form) {
 
     firstError?.focus();
     evaluateLocal();
+
+    // Controls with scripts of their own initialize on this event, for this page and any content inserted later.
+    form.dispatchEvent(new CustomEvent('survey:page-loaded', { bubbles: true, detail: { pageId: form.dataset.pageId } }));
 
     initTimer(form, announce);
 }

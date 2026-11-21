@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Surveys.Core.Formulas;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
@@ -99,5 +100,24 @@ public sealed class SurveyFormulaServiceTests
         Assert.True(selected);
         Assert.Equal(2L, count);
         Assert.True(answered);
+    }
+
+    [Fact]
+    public async Task ScoreFormulaEvaluator_UsesTheCategoryScores()
+    {
+        // Arrange
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var definition = RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Number("q1")));
+
+        definition.ScoreCategories.Add(new ScoreCategory { Id = "c1", Name = "a" });
+        definition.ScoreCategories.Add(new ScoreCategory { Id = "c2", Name = "b" });
+        definition.Scoring.ScoreFormula = "[score:a] * 2 + [score:b]";
+
+        // Act
+        var total = await harness.RunAsync(services => Task.FromResult(services.GetRequiredService<ISurveyScoreFormulaEvaluator>()
+            .Evaluate(definition, new Dictionary<string, decimal> { ["c1"] = 3, ["c2"] = 4 }, 7)));
+
+        // Assert
+        Assert.Equal(10m, total);
     }
 }

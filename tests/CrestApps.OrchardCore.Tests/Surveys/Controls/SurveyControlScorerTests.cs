@@ -31,7 +31,7 @@ public sealed class SurveyControlScorerTests
         var question = Question(SurveyControlNames.SingleChoice, ("a", "A"), ("b", "B"), ("c", "C"));
         question.Scoring = new SurveyQuestionScoring { Points = 2, CorrectChoiceIds = ["b"] };
 
-        var result = new SingleChoiceScorer().Score(question, new SurveyAnswer { Values = chosen.ToList() }, Scoring());
+        var result = new SingleChoiceScorer().Score(question, new SurveyAnswer { Values = chosen.ToList() }, ScoringContext());
 
         Assert.Equal((decimal)expected, result.Points);
         Assert.Equal(2, result.MaxPoints);
@@ -43,7 +43,7 @@ public sealed class SurveyControlScorerTests
         var question = Question(SurveyControlNames.SingleChoice, ("a", "A"), ("b", "B"));
         question.Scoring = new SurveyQuestionScoring { ChoicePoints = new() { ["a"] = 1, ["b"] = 5 } };
 
-        var result = new SingleChoiceScorer().Score(question, new SurveyAnswer { Values = ["a"] }, Scoring());
+        var result = new SingleChoiceScorer().Score(question, new SurveyAnswer { Values = ["a"] }, ScoringContext());
 
         Assert.Equal(1, result.Points);
         Assert.Equal(5, result.MaxPoints);
@@ -56,7 +56,7 @@ public sealed class SurveyControlScorerTests
         var question = Question(SurveyControlNames.SingleChoice, ("a", "A"), ("b", "B"));
         question.Scoring = new SurveyQuestionScoring { Points = 1, CorrectChoiceIds = ["b"], PenaltyPerWrong = 0.25m };
 
-        var result = new SingleChoiceScorer().Score(question, new SurveyAnswer { Values = ["a"] }, Scoring(negativeMarking: true));
+        var result = new SingleChoiceScorer().Score(question, new SurveyAnswer { Values = ["a"] }, ScoringContext(negativeMarking: true));
 
         Assert.Equal(-0.25m, result.Points);
     }
@@ -73,7 +73,7 @@ public sealed class SurveyControlScorerTests
         var question = Question(SurveyControlNames.MultipleChoice, ("a", "A"), ("b", "B"), ("c", "C"), ("d", "D"));
         question.Scoring = new SurveyQuestionScoring { Points = 3, CorrectChoiceIds = ["a", "c"], PartialCredit = partial };
 
-        var result = new MultipleChoiceScorer().Score(question, new SurveyAnswer { Values = chosen.ToList() }, Scoring());
+        var result = new MultipleChoiceScorer().Score(question, new SurveyAnswer { Values = chosen.ToList() }, ScoringContext());
 
         Assert.Equal((decimal)expected, result.Points);
     }
@@ -86,7 +86,7 @@ public sealed class SurveyControlScorerTests
         var question = Question(SurveyControlNames.Boolean);
         question.Scoring = new SurveyQuestionScoring { CorrectChoiceIds = ["true"] };
 
-        var result = new BooleanScorer().Score(question, new SurveyAnswer { Values = [chosen] }, Scoring());
+        var result = new BooleanScorer().Score(question, new SurveyAnswer { Values = [chosen] }, ScoringContext());
 
         Assert.Equal((decimal)expected, result.Points);
     }
@@ -99,8 +99,8 @@ public sealed class SurveyControlScorerTests
         var keyed = Question(SurveyControlNames.Boolean);
         keyed.Scoring = new SurveyQuestionScoring { Key = new System.Text.Json.Nodes.JsonObject { ["answer"] = "true" } };
 
-        var fromAccepted = new BooleanScorer().Score(accepted, new SurveyAnswer { Values = ["false"] }, Scoring());
-        var fromKey = new BooleanScorer().Score(keyed, new SurveyAnswer { Values = ["true"] }, Scoring());
+        var fromAccepted = new BooleanScorer().Score(accepted, new SurveyAnswer { Values = ["false"] }, ScoringContext());
+        var fromKey = new BooleanScorer().Score(keyed, new SurveyAnswer { Values = ["true"] }, ScoringContext());
 
         Assert.Equal(1, fromAccepted.Points);
         Assert.Equal(1, fromKey.Points);
@@ -112,7 +112,7 @@ public sealed class SurveyControlScorerTests
         var question = Question(SurveyControlNames.ChoiceBlanks);
         question.SetSettings(new ChoiceBlanksSettings { Text = "[[Cats]] purr.", CaseSensitive = true });
 
-        var result = new ChoiceBlanksScorer().Score(question, new SurveyAnswer { Values = ["cats"] }, Scoring());
+        var result = new ChoiceBlanksScorer().Score(question, new SurveyAnswer { Values = ["cats"] }, ScoringContext());
 
         Assert.Equal(0, result.Points);
     }
@@ -128,7 +128,7 @@ public sealed class SurveyControlScorerTests
         var question = Question(SurveyControlNames.ShortText);
         question.Scoring = new SurveyQuestionScoring { AcceptedAnswers = ["Paris", "Paris, France"], CaseSensitive = caseSensitive };
 
-        var result = new ShortTextScorer().Score(question, new SurveyAnswer { Values = [answer] }, Scoring());
+        var result = new ShortTextScorer().Score(question, new SurveyAnswer { Values = [answer] }, ScoringContext());
 
         Assert.Equal((decimal)expected, result.Points);
     }
@@ -142,7 +142,7 @@ public sealed class SurveyControlScorerTests
         var question = Question(SurveyControlNames.Number);
         question.Scoring = new SurveyQuestionScoring { NumberAnswer = 3.14159m, Tolerance = 0.1m };
 
-        var result = new NumberScorer().Score(question, new SurveyAnswer { Number = (decimal)answer }, Scoring());
+        var result = new NumberScorer().Score(question, new SurveyAnswer { Number = (decimal)answer }, ScoringContext());
 
         Assert.Equal((decimal)expected, result.Points);
     }
@@ -155,7 +155,7 @@ public sealed class SurveyControlScorerTests
         question.Scoring = new SurveyQuestionScoring { Points = 2, PartialCredit = true, Pairs = new() { ["r1"] = "x", ["r2"] = "y" } };
         var answer = new SurveyAnswer { Rows = new() { ["r1"] = ["x"], ["r2"] = ["x"] } };
 
-        var result = new MatchingScorer().Score(question, answer, Scoring());
+        var result = new MatchingScorer().Score(question, answer, ScoringContext());
 
         Assert.Equal(1, result.Points);
         Assert.False(result.Correct);
@@ -168,8 +168,8 @@ public sealed class SurveyControlScorerTests
         question.Rows = [new SurveySubQuestion { Id = "r1" }, new SurveySubQuestion { Id = "r2" }];
         question.Scoring = new SurveyQuestionScoring { Points = 2, Pairs = new() { ["r1"] = "x", ["r2"] = "y" } };
 
-        var right = new MatrixScorer().Score(question, new SurveyAnswer { Rows = new() { ["r1"] = ["x"], ["r2"] = ["y"] } }, Scoring());
-        var half = new MatrixScorer().Score(question, new SurveyAnswer { Rows = new() { ["r1"] = ["x"], ["r2"] = ["x"] } }, Scoring());
+        var right = new MatrixScorer().Score(question, new SurveyAnswer { Rows = new() { ["r1"] = ["x"], ["r2"] = ["y"] } }, ScoringContext());
+        var half = new MatrixScorer().Score(question, new SurveyAnswer { Rows = new() { ["r1"] = ["x"], ["r2"] = ["x"] } }, ScoringContext());
 
         Assert.Equal(2, right.Points);
         Assert.Equal(0, half.Points);
@@ -184,7 +184,7 @@ public sealed class SurveyControlScorerTests
         var question = Question(SurveyControlNames.Ranking, ("a", "A"), ("b", "B"), ("c", "C"));
         question.Scoring = new SurveyQuestionScoring { Points = 3, PartialCredit = partial };
 
-        var result = new RankingScorer().Score(question, new SurveyAnswer { Values = order.ToList() }, Scoring());
+        var result = new RankingScorer().Score(question, new SurveyAnswer { Values = order.ToList() }, ScoringContext());
 
         Assert.Equal((decimal)expected, result.Points);
     }
@@ -196,8 +196,8 @@ public sealed class SurveyControlScorerTests
         question.SetSettings(new FillInBlanksSettings { Text = "The [[sky|heavens]] is [[blue]]." });
         question.Scoring = new SurveyQuestionScoring { Points = 2 };
 
-        var both = new FillInBlanksScorer().Score(question, new SurveyAnswer { Values = ["Heavens", "blue"] }, Scoring());
-        var one = new FillInBlanksScorer().Score(question, new SurveyAnswer { Values = ["sea", "blue"] }, Scoring());
+        var both = new FillInBlanksScorer().Score(question, new SurveyAnswer { Values = ["Heavens", "blue"] }, ScoringContext());
+        var one = new FillInBlanksScorer().Score(question, new SurveyAnswer { Values = ["sea", "blue"] }, ScoringContext());
 
         Assert.Equal(2, both.Points);
         Assert.Equal(1, one.Points);
@@ -209,7 +209,7 @@ public sealed class SurveyControlScorerTests
         var question = Question(SurveyControlNames.ChoiceBlanks);
         question.SetSettings(new ChoiceBlanksSettings { Text = "[[Cats]] chase [[mice]].", Distractors = ["dogs"] });
 
-        var result = new ChoiceBlanksScorer().Score(question, new SurveyAnswer { Values = ["Cats", "dogs"] }, Scoring());
+        var result = new ChoiceBlanksScorer().Score(question, new SurveyAnswer { Values = ["Cats", "dogs"] }, ScoringContext());
 
         Assert.Equal(0.5m, result.Points);
     }
@@ -220,8 +220,8 @@ public sealed class SurveyControlScorerTests
         var question = Question(SurveyControlNames.LongText);
         question.Scoring = new SurveyQuestionScoring { Points = 5 };
 
-        var answered = new LongTextScorer().Score(question, new SurveyAnswer { Values = ["An essay."] }, Scoring());
-        var empty = new LongTextScorer().Score(question, null, Scoring());
+        var answered = new LongTextScorer().Score(question, new SurveyAnswer { Values = ["An essay."] }, ScoringContext());
+        var empty = new LongTextScorer().Score(question, null, ScoringContext());
 
         Assert.Null(answered.Points);
         Assert.Equal(5, answered.MaxPoints);

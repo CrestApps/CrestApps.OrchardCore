@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.Caching.Memory;
@@ -152,24 +153,36 @@ public sealed class SurveyFormulaService
     /// <param name="cacheKey">The id of the version, or <see langword="null"/>.</param>
     public void ComputeVariables(SurveyDefinition definition, SurveyResponse response, string cacheKey = null)
     {
-        if (definition?.Variables is null || response is null)
+        if (definition is null || response is null)
         {
             return;
         }
 
-        var calculated = definition.Variables
+        var calculated = (definition.Variables ?? [])
             .Where(variable => variable is not null && variable.Kind == VariableKind.Calculated && !string.IsNullOrEmpty(variable.Name) && !string.IsNullOrWhiteSpace(variable.Formula))
             .ToList();
 
-        if (calculated.Count == 0)
+        if (calculated.Count > 0)
         {
-            return;
+            foreach (var variable in OrderByDependencies(definition, calculated, cacheKey))
+            {
+                var value = Evaluate(definition, response, variable.Formula, cacheKey);
+                response.Variables[variable.Name] = value is null ? string.Empty : DataValues.ToText(value);
+            }
         }
 
-        foreach (var variable in OrderByDependencies(definition, calculated, cacheKey))
+        // Calculated questions keep their value under their name, in the invariant culture, where their handler reads it.
+        foreach (var question in (definition.Pages ?? []).SelectMany(page => page?.Questions ?? []))
         {
-            var value = Evaluate(definition, response, variable.Formula, cacheKey);
-            response.Variables[variable.Name] = value is null ? string.Empty : DataValues.ToText(value);
+            if (string.IsNullOrEmpty(question?.Name)
+                || _registry.GetHandler(question.ControlType) is not ISurveyCalculatedControl control
+                || control.GetFormula(question) is not { Length: > 0 } formula)
+            {
+                continue;
+            }
+
+            var value = Evaluate(definition, response, formula, cacheKey);
+            response.Variables[question.Name] = value is null ? string.Empty : DataValues.ToText(value);
         }
     }
 

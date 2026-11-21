@@ -375,6 +375,7 @@
 	async function post(form, url) {
 		const body = new FormData(form);
 		body.delete("direction");
+		for (const [name, value] of Array.from(body.entries())) if (value instanceof File) body.delete(name);
 		const response = await fetch(url, {
 			method: "POST",
 			body,
@@ -487,6 +488,10 @@
 		if (message) message.focus();
 		firstError?.focus();
 		evaluateLocal();
+		form.dispatchEvent(new CustomEvent("survey:page-loaded", {
+			bubbles: true,
+			detail: { pageId: form.dataset.pageId }
+		}));
 		initTimer(form, announce);
 	}
 	/**

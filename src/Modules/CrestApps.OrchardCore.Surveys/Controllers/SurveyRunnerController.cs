@@ -636,8 +636,13 @@ public sealed class SurveyRunnerController : Controller
         return View("Respond", shape);
     }
 
-    private static ReviewShows ReviewMoment(Survey survey, SurveyDefinition definition, SurveyResponse response, DateTime utcNow)
+    private ReviewShows ReviewMoment(Survey survey, SurveyDefinition definition, SurveyResponse response, DateTime utcNow)
     {
+        if (_serviceProvider.GetService<ISurveyReviewPolicy>() is { } policy)
+        {
+            return policy.GetAllowed(survey, definition, response, utcNow);
+        }
+
         var review = definition.Review ?? new SurveyReviewSettings();
         var closed = survey.Status is SurveyStatus.Closed or SurveyStatus.Archived;
 

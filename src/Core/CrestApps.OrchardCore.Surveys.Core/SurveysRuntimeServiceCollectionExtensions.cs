@@ -39,11 +39,17 @@ public static class SurveysRuntimeServiceCollectionExtensions
         services.RemoveAll<ISurveyFormulaValidator>();
         services.AddScoped<ISurveyFormulaValidator, SurveyFormulaValidator>();
 
+        services.RemoveAll<ISurveyScoreFormulaEvaluator>();
+        services.AddScoped<ISurveyScoreFormulaEvaluator, SurveyFormulaScoreEvaluator>();
+
         services.TryAddScoped<SurveyLogicEngine>();
+        services.RemoveAll<ISurveyHiddenQuestionResolver>();
+        services.AddScoped<ISurveyHiddenQuestionResolver, SurveyLogicHiddenQuestionResolver>();
         services.TryAddScoped<SurveyPipingRenderer>();
         services.TryAddSingleton<ISurveyPoolCounter, NullSurveyPoolCounter>();
         services.TryAddScoped<SurveyPlanBuilder>();
         services.TryAddScoped<SurveyRuntimeVersions>();
+        services.TryAddScoped<SurveyRespondentProjector>();
         services.TryAddScoped<SurveyPageViewBuilder>();
         services.TryAddScoped<SurveyEndingService>();
         services.TryAddScoped<ISurveyWeekStartProvider, SiteCultureWeekStartProvider>();

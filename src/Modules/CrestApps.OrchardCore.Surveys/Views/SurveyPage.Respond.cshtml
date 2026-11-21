@@ -52,7 +52,7 @@
         <div class="alert alert-danger" role="alert" tabindex="-1" data-survey-message>@Model.Message</div>
     }
 
-    <form action="@formUrl" method="post" class="survey-form" novalidate
+    <form action="@formUrl" method="post" enctype="multipart/form-data" class="survey-form" novalidate
           data-survey-form
           data-response-id="@Model.Response.ItemId"
           data-page-id="@screen.Id"

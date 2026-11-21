@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Controls;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 
@@ -195,37 +196,9 @@ public sealed class SurveyPlanBuilder
 
         handler.PreparePresentation(question, context);
 
-        if (!context.Plan.ChoiceOrder.ContainsKey(question.Id) && question.Choices?.Count > 0)
+        if (!context.Plan.ChoiceOrder.ContainsKey(question.Id) && SurveyChoiceSource.GetChoices(question, context.Definition).Count > 0)
         {
-            context.Plan.ChoiceOrder[question.Id] = DefaultChoiceOrder(question, context.Random);
+            context.Plan.ChoiceOrder[question.Id] = SurveyChoiceSource.OrderChoices(SurveyChoiceSource.GetChoices(question, context.Definition), question.ShuffleChoices, context.Random);
         }
-    }
-
-    /// <summary>
-    /// Orders the choices of a question: in the designed order, or shuffled with pinned, other and exclusive choices
-    /// kept at their place. Retired choices are left out.
-    /// </summary>
-    /// <param name="question">The question.</param>
-    /// <param name="random">The random generator.</param>
-    /// <returns>The choice ids.</returns>
-    public static List<string> DefaultChoiceOrder(SurveyQuestion question, SurveyRandom random)
-    {
-        ArgumentNullException.ThrowIfNull(question);
-
-        var choices = (question.Choices ?? []).Where(choice => !string.IsNullOrEmpty(choice?.Id) && !choice.Retired).ToList();
-
-        if (question.ShuffleChoices && random is not null)
-        {
-            var free = Enumerable.Range(0, choices.Count).Where(index => !choices[index].Pinned && !choices[index].IsOther && !choices[index].IsExclusive).ToList();
-            var movable = free.Select(index => choices[index]).ToList();
-            random.Shuffle(movable);
-
-            for (var i = 0; i < free.Count; i++)
-            {
-                choices[free[i]] = movable[i];
-            }
-        }
-
-        return choices.Select(choice => choice.Id).ToList();
     }
 }
