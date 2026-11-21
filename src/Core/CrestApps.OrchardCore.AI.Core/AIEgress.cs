@@ -77,7 +77,8 @@ public static class AIEgress
 
     /// <summary>
     /// Replaces the primary handler of the AI building blocks' HTTP clients with one that checks every address it
-    /// connects to, redirects included. The handler is set after every other configuration of the client, so a package
+    /// connects to, redirects included, and follows redirects through <see cref="CrossOriginRedirectHandler"/>, so no
+    /// credential reaches another origin. The handler is set after every other configuration of the client, so a package
     /// that sets its own primary handler (the documentation sources do) cannot replace it, whatever order the features
     /// register in. Calling it more than once registers the guard once.
     /// </summary>
@@ -105,8 +106,11 @@ public static class AIEgress
                 // tenant) is kept and chained to, not replaced with the handler.
                 var existingConnect = (builder.PrimaryHandler as SocketsHttpHandler)?.ConnectCallback;
 
-                // Crawled sites commonly redirect (sitemap.xml to sitemap_index.xml); every hop is checked at connect.
-                builder.PrimaryHandler = EgressNetwork.CreateHandler(isDevelopment, allowPrivateNetwork, allowRedirects: true, EgressNetwork.GetProxy(serviceProvider), existingConnect);
+                // Crawled sites commonly redirect (sitemap.xml to sitemap_index.xml); every hop is checked at connect. The
+                // redirects are followed by the handler below, not by .NET, which would carry a connection's custom
+                // headers (an MCP API key) and a token request's body to another origin.
+                builder.PrimaryHandler = EgressNetwork.CreateHandler(isDevelopment, allowPrivateNetwork, allowRedirects: false, EgressNetwork.GetProxy(serviceProvider), existingConnect);
+                builder.AdditionalHandlers.Add(new CrossOriginRedirectHandler());
             }));
         }
 
