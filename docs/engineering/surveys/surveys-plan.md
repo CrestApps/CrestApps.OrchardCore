@@ -1393,6 +1393,37 @@ All eight checks pass; three need a small change of approach, recorded here.
 | C7 | Pass. `ReportDocument` sections hold metrics, tables, bars and charts (`ReportChart`, `ReportBar`, `ReportMetric`); the Report Builder reads any registered `IDataSource`, dynamic sets included (as Connected data does) | Analyzers return `ReportSection`s directly |
 | C8 | Pass. YesSql serializes documents with System.Text.Json: typed `Dictionary<string, SurveyAnswer>` and `JsonObject` round-trip without type names (the DictionaryDocument trap only affects whole-set catalogs, and we use one document per record). `DateTime` values come back with an unspecified or UTC kind | No `object`-typed members anywhere (ExpandoObject trap). Every displayed time goes through `ILocalClock` after `DateTime.SpecifyKind(value, DateTimeKind.Utc)`. A storage round-trip test covers a response with every answer shape |
 
+### Phase 1: building-block changes (done)
+
+- `9bc7f6f48` Conditions: eight operators (`NotContains`, `StartsWith`, `EndsWith`, `GreaterThanOrEqual`, `LessThanOrEqual`, `Between`, `CountAtLeast`, `CountAtMost`), nested `Groups`, ISO date comparison for the ordering operators, `Sources` and cycle detection through groups, schema with groups four levels deep (deeper levels are plain objects instead of a recursive `$ref`, so the existing schema tests keep validating). The JS evaluator moved to `Resources/Assets/js/conditions.js` (resource `crestapps-conditions`, global `window.CrestAppsConditions`, ES module named exports); ContentFields imports it. Parity vectors in `tests/fixtures/conditions/condition-vectors.json` run in xUnit and Vitest. Deviation: the C# tests stay next to the existing ones in `tests/CrestApps.OrchardCore.Tests/Core/Conditions/`.
+
+### Phase 2: foundation and designer (done)
+
+- `639cd6e0a` Abstractions (models, contracts, constants, permissions, registration helpers), Core storage (stores, indexes, schema, version cache, control registry) and the module skeleton. Deviation: `SurveysPermissions` lives in Surveys.Abstractions (not Core) so consumers such as Learning check permissions without the core library; `ISurveyExpressionFunctionProvider` lives in Core because `ExpressionFunction` is in `OrchardCore.DataSources.Core`.
+- `c816230f2`, `8212fdf8c`, `e58476b54`, `2ba48e722`, `2f3607f14` Controls: base handlers, settings driver base, respondent projector, `SurveyControlViewModel`, every control of section 8.6 (all phases) with scorers ported from Learning and analyzers, settings editors, Respond/Review views, `survey-controls.js`, key-leak and architecture tests.
+- `9bd18083a`, `d5f46a1c7`, `80847b650`, `405ba288f` Authoring: manager, validator, differ, publisher with bank snapshots, eight templates, authorization service, admin pages (list, create, designer, publish with diff, versions, compare, restore, collectors with QR, access, logic overview, site settings). Deviations: ordering uses native drag and drop with up/down buttons (no SortableJS resource exists in the repository); survey settings are stacked cards instead of tabs; the page editor edits one bank draw per pool; audiences are entered by id.
+- Integration fixes: `718358888`, `0f5ecd469`, `e9ce33321`, `a23773300`, `c03dd19a5`.
+
+### Phase 3: runtime (done)
+
+- `f0fbd5692`, `179c1b1b2`, `3f535a14b` Logic engine, piping, formulas (C1 verified by a test), plan builder with `SurveyRandom`, access rules, participation with the HMAC key for anonymous surveys, `SurveyResponseService`, deadline work on the leased queue, maintenance task, runner routes and views, `survey-runner.js`, responses list and response page, preview.
+
+### Phase 4: scoring, quizzes and banks (done)
+
+- `943742165`, `ddedb236a` Scoring engine, review policy, grading service, grading queue, accommodations and their pages.
+- `aa322bf9f`, `4c91428b8`, `0477f1013`, `081e6c020` Question banks, spreadsheet import, QTI import (feature Surveys.Qti) and bank pages. Deviation: the package archive helpers moved from Learning.Core to `CrestApps.OrchardCore.Abstractions/Archives` so Surveys can read QTI packages without depending on Learning. Feedback-only QTI images go to the media library.
+
+### Phase 5: results and integrations (done)
+
+- `fceb09021`, `e46fb8de5`, `aed46b64a`, `ffff61f3c` Answer index, SQL aggregates, eight reports (adds `survey-activity` for the dashboard widget), the `Surveys` data source (C2 approach).
+- `4f952b6a0`, `0d01a5ffa`, `43cd9dd16` Recipe and deployment steps with schemas and a sample recipe, workflow events and tasks, notifications, audit trail, webhooks, personal data, telemetry. Deviations: `SurveySettings` travels in Orchard's Settings step (with a site settings schema) rather than a step of its own; the recipe steps write the stores directly, so catalog handlers do not run on import.
+
+### Open issues
+
+- The "matches condition" workflow event takes its rule as JSON; its optional formula is not evaluated yet.
+- The override grant form takes a user name rather than the user picker (the picker lives in the CrestApps Users module, which Surveys does not depend on).
+- The Excel reader of bank imports repeats a private reader of ContentTransfer.OpenXml; extracting a shared reader is a follow-up.
+
 ## 27. Sources
 
 - Qualtrics: [publishing and versions](https://www.qualtrics.com/support/survey-platform/survey-module/survey-publishing-versions/), [randomizer](https://www.qualtrics.com/support/survey-platform/survey-module/survey-flow/standard-elements/randomizer/), [question randomization](https://www.qualtrics.com/support/survey-platform/survey-module/block-options/question-randomization/), [quotas](https://www.qualtrics.com/support/survey-platform/survey-module/survey-tools/quotas/), [scoring](https://www.qualtrics.com/support/survey-platform/survey-module/survey-tools/scoring/), [survey options](https://www.qualtrics.com/support/survey-platform/survey-module/survey-options/survey-options-overview/), [question types](https://www.qualtrics.com/support/survey-platform/survey-module/editing-questions/question-types-guide/question-types-overview/), [data protection](https://www.qualtrics.com/support/survey-platform/getting-started/data-protection-privacy/).
