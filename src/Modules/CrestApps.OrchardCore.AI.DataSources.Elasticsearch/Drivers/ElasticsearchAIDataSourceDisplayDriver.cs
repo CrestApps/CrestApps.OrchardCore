@@ -141,12 +141,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         var existingMetadata = KeptCredentials(stored, environmentType, model.Url, model.CloudId, authenticationType);
 
         ValidateUrl(context, environmentType, model.Url, stored, storedConnectionId);
-
-        if (string.Equals(environmentType, ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
-            string.IsNullOrWhiteSpace(model.CloudId))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CloudId), S["Elastic Cloud ID is required."]);
-        }
+        ValidateCloudId(context, environmentType, model.CloudId, stored, storedConnectionId);
 
         if (string.IsNullOrWhiteSpace(model.IndexName))
         {
@@ -249,6 +244,29 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         else if (!ElasticsearchAIDataSourceSourceHandler.UsedStoredUrl(stored, storedConnectionId, url) && !_endpointPolicy.IsAllowed(url.Trim()))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(EditElasticsearchAIDataSourceViewModel.Url), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
+        }
+    }
+
+    // A Cloud ID is required, and the address it decodes to must not be on the site's own network, since the client
+    // derives the cluster's address from the ID (review 10, A3). As for a URL, a Cloud ID the stored source used is not
+    // checked again.
+    private void ValidateCloudId(UpdateEditorContext context, string environmentType, string cloudId, ElasticsearchSourceMetadata stored, string storedConnectionId)
+    {
+        if (!string.Equals(environmentType, ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(cloudId))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(EditElasticsearchAIDataSourceViewModel.CloudId), S["Elastic Cloud ID is required."]);
+        }
+        else if (!ElasticsearchAIDataSourceSourceHandler.UsedStoredCloudId(stored, storedConnectionId, cloudId) &&
+            ElasticsearchAIDataSourceSourceHandler.GetCloudIdError(cloudId, _endpointPolicy.IsAllowed) is { } error)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(EditElasticsearchAIDataSourceViewModel.CloudId), error == ElasticsearchAIDataSourceSourceHandler.InvalidCloudIdError
+                ? S["This is not an Elastic Cloud ID. Copy the Cloud ID from the deployment's page in Elastic Cloud."]
+                : S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
     }
 
