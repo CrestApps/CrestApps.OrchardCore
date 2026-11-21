@@ -1,0 +1,72 @@
+---
+sidebar_label: Logic
+title: Survey Logic
+description: "Visibility rules for pages, questions and choices, required and enabled rules, branching, endings, piping, formulas, variables and randomization, all decided on the server."
+user_manual:
+  - user-manual/surveys/logic
+---
+
+Logic uses the shared [Conditions](../content-fields.md) model (`ConditionRule`, with nested groups and the full operator list) and Orchard Core's data pipeline formula language. The server decides on every page post; the browser only spares a round trip.
+
+## Visibility
+
+Pages, questions and choices carry a `SurveyVisibility`: `Always`, `ShowWhen` or `HideWhen` with a rule, plus an optional `Formula` that must also hold (evaluated on the server only).
+
+Condition sources:
+
+| Source | Reads |
+| --- | --- |
+| `{questionId}` | The answer to a question |
+| `{questionId}.{rowId}` | One row of a matrix or similar |
+| `var:{name}` | A variable |
+| `score`, `score:{categoryId}` | The score so far, or a category's |
+| `context:{key}` | A value a consumer provides through `ISurveyConditionSourceProvider` |
+| `collector` | The collector the response came through |
+| `culture` | The response's culture |
+
+A question on a hidden page is hidden, and a hidden question answers nothing, so a chain of rules closes when an early answer changes (`ConditionalVisibility.GetHidden`). After every page post, the answers of questions that are now hidden are removed from the response.
+
+`RequiredWhen` decides whether an answer is required; `EnabledWhen` decides whether the question can be answered (otherwise it shows read-only).
+
+Publishing refuses a rule that reads a question on a later page, a cycle of rules, a source that does not exist, or a choice that does not exist.
+
+### In the browser
+
+The runner script (`survey-runner.js`) evaluates plain rules of the current page with the shared JS evaluator (`crestapps-conditions`). When a rule on the page uses a formula, a calculated variable or piping, it posts the page's answers to `/s/r/{responseId}/evaluate` and shows what the server returns.
+
+## Branching and endings
+
+When a page is completed, its `Branches` are evaluated in order; the first that holds goes to a **later** page or to an ending. Without a branch, the next visible page in the plan follows. Skipped pages leave the page path and their answers are dropped. Going back (when the survey and the page allow it) saves the page without checking it.
+
+After the last page, the first ending whose condition holds is used, else the default ending. An ending with the outcome **Screened out** ends the response as screened out. Ending messages are Liquid with sanitized HTML; a redirect goes only to the site or a host listed in the site settings.
+
+## Piping
+
+`{name}` in titles, descriptions, choice texts, ending messages and redirect URLs shows an earlier answer (through the type's `FormatAnswer`), HTML-encoded. Also `{name.row}`, `{var:name}`, `{score}`, `{score:category}` and `{percent}`. An unknown name shows nothing; publishing checks that names exist and come earlier.
+
+## Formulas and variables
+
+Formulas use Orchard Core's formula language (see the Data Pipelines formula reference). A formula reads `[name]` for a question or a variable (names are unique across both), `[name.row]`, `[score]` and `[score:category]`. Survey formulas also have these functions, which pipeline editors do not list:
+
+| Function | Returns |
+| --- | --- |
+| `SELECTED([question], value)` | Whether a choice is chosen |
+| `COUNTSELECTED([question])` | How many choices are chosen |
+| `ANSWERED([question])` | Whether the question has an answer |
+| `SCORE('question name')` | The question's score |
+| `AGE([date])` | Whole years since a date |
+
+A module adds functions for survey formulas with an `ISurveyExpressionFunctionProvider` in `Surveys.Core`. Compiled formulas are cached per version. Calculated variables are computed after every page post in dependency order; a cycle is a publish error. A failing formula logs a warning and reads as missing; it never fails the respondent's page.
+
+Hidden variables take their value, in this order, from the consumer that starts the response, the link's query string (only variables marked **From the link**), the collector's values, then the default.
+
+## Randomization
+
+When a response starts, its plan is drawn with a seed and kept on the response, so refresh, back and resume show the same thing:
+
+- page order (shuffled pages keep the first and last in place);
+- per page, the pool draws, then the question shuffle (pinned questions keep their place);
+- per question, the choice order (pinned, other and clearing choices keep their place);
+- one question per screen when **Questions per screen** is 1.
+
+Draws use a small deterministic generator (`SurveyRandom`, xoshiro128**), so a seed gives the same plan on every runtime.
