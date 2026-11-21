@@ -59,6 +59,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Coursework/CrestApps.OrchardCore.Learning.Coursework.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Surveys/CrestApps.OrchardCore.Learning.Surveys.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Surveys/CrestApps.OrchardCore.Surveys.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Surveys.AI/CrestApps.OrchardCore.Surveys.AI.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Packages/CrestApps.OrchardCore.Learning.Packages.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Xapi/CrestApps.OrchardCore.Learning.Xapi.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Credentials/CrestApps.OrchardCore.Learning.Credentials.csproj" PrivateAssets="none" />
