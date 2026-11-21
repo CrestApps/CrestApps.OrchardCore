@@ -1,0 +1,6 @@
+@model ShapeViewModel<SurveyInvitation>
+
+@if (Model.Value.SentUtc is { } sent)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Sent"]"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(sent, DateTimeKind.Utc), Format: "g"))</span>
+}

@@ -23,6 +23,10 @@
                 <div class="col-auto">
                     <a class="btn btn-secondary" role="button" asp-action="Create" asp-route-id="@Model.Survey.ItemId" asp-route-kind="@SurveyCollectorKinds.WebLink">@T["Add web link"]</a>
                     <a class="btn btn-secondary" role="button" asp-action="Create" asp-route-id="@Model.Survey.ItemId" asp-route-kind="@SurveyCollectorKinds.Kiosk">@T["Add kiosk"]</a>
+                    @if (Url.Action("Create", "SurveyInvitations", new { area = "CrestApps.OrchardCore.Surveys", surveyId = Model.Survey.ItemId }) is { } inviteUrl)
+                    {
+                        <a class="btn btn-secondary" role="button" href="@inviteUrl">@T["Add invitations"]</a>
+                    }
                 </div>
             </div>
         </div>
