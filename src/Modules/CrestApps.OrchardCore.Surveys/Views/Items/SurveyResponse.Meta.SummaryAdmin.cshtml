@@ -9,4 +9,4 @@
 {
     <span class="badge ta-badge fw-normal" title="@T["Duration"]"><i class="fa-solid fa-stopwatch" aria-hidden="true"></i> @((completed - response.StartedUtc).ToString(@"h\:mm\:ss"))</span>
 }
-<span class="badge ta-badge fw-normal" title="@T["Respondent"]"><i class="fa-regular fa-user" aria-hidden="true"></i> @(string.IsNullOrEmpty(response.UserId) && response.Respondent is null ? T["Anonymous"].Value : (response.Respondent?.ToString() ?? response.UserId))</span>
+<span class="badge ta-badge fw-normal" title="@T["Respondent"]"><i class="fa-regular fa-user" aria-hidden="true"></i> <partial name="_SurveyRespondentName" model="response" /></span>

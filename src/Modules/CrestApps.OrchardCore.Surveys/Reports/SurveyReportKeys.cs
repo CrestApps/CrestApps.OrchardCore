@@ -2,7 +2,7 @@ namespace CrestApps.OrchardCore.Surveys.Reports;
 
 /// <summary>
 /// The names of the survey report filters, as they are kept in a report filter and read from the address
-/// (<c>SurveyReport.SurveyId</c> and so on).
+/// (<c>ReportFilter.SurveyId</c> and so on).
 /// </summary>
 public static class SurveyReportKeys
 {

@@ -20,7 +20,7 @@
             <dt class="col-sm-3">@T["Status"]</dt>
             <dd class="col-sm-9">@response.Status @(response.IsTest ? T["(test)"].Value : string.Empty)</dd>
             <dt class="col-sm-3">@T["Respondent"]</dt>
-            <dd class="col-sm-9">@(string.IsNullOrEmpty(response.UserId) && response.Respondent is null ? T["Anonymous"].Value : (response.Respondent?.ToString() ?? response.UserId))</dd>
+            <dd class="col-sm-9"><partial name="_SurveyRespondentName" model="response" /></dd>
             <dt class="col-sm-3">@T["Started"]</dt>
             <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(response.StartedUtc, DateTimeKind.Utc), Format: "g"))</dd>
             @if (response.CompletedUtc is { } completed)

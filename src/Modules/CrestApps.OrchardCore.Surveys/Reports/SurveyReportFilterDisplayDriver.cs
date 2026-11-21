@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.Surveys.Reports;
 /// <summary>
 /// The filter of the survey reports: the survey, its versions, a collector, a context kind and test responses, plus a
 /// segment, a trend or an audience for the reports that use them. A link may preselect them with
-/// <c>?SurveyReport.SurveyId={id}</c>.
+/// <c>?ReportFilter.SurveyId={id}</c>.
 /// </summary>
 internal sealed class SurveyReportFilterDisplayDriver : DisplayDriver<ReportFilter>
 {
