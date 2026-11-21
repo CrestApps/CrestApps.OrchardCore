@@ -45,7 +45,8 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
     private static readonly object _passed = new();
 
     private readonly ECDsa _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-    private readonly IDistributedCache _cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+    private IDistributedCache _cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+    private DateTime _clockNow = _now;
 
     private IDistributedLock _distributedLock = new LocalLock(NullLogger<LocalLock>.Instance);
 
@@ -221,16 +222,65 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
     public async Task UcpFilter_ASignedIdempotencyKeyWithoutCreated_IsAcceptedOnlyWhereTheKeyIsHonored()
     {
         // Arrange: a REST POST de-duplicates by its key, so a replay gets the first answer; the MCP binding doesn't.
-        var (input, signature) = SignUcp(HttpMethods.Post, "/ucp/checkout-sessions", Body, "key-1", created: false);
+        var (input, signature) = SignUcp(HttpMethods.Post, "/ucp/checkout-sessions", Body, "key-1", created: false, expiresIn: TimeSpan.FromMinutes(5));
 
         // Act
         var idempotent = await InvokeUcpAsync(HttpMethods.Post, "/ucp/checkout-sessions", Body, "key-1", input, signature, idempotentEndpoint: true);
-        var (mcpInput, mcpSignature) = SignUcp(HttpMethods.Post, "/ucp/mcp", Body, "key-1", created: false);
+        var (mcpInput, mcpSignature) = SignUcp(HttpMethods.Post, "/ucp/mcp", Body, "key-1", created: false, expiresIn: TimeSpan.FromMinutes(5));
         var mcp = await InvokeUcpAsync(HttpMethods.Post, "/ucp/mcp", Body, "key-1", mcpInput, mcpSignature, idempotentEndpoint: false);
 
         // Assert
         Assert.Equal(StatusCodes.Status422UnprocessableEntity, StatusCode(idempotent));
         Assert.Equal(StatusCodes.Status401Unauthorized, StatusCode(mcp));
+    }
+
+    /// <summary>
+    /// Review 10 (B4): a signed REST write without a created time was accepted on its idempotency key alone, with no
+    /// expiry or a distant one. The idempotency layer forgets the key's answer after 48 hours, so the same captured request
+    /// sent then created a second checkout session. The second send runs with the idempotency record and the replay guard's
+    /// memory expired.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData(365 * 24)]
+    public async Task UcpFilter_ASignedWriteThatOutlivesItsIdempotencyRecord_IsRefused_WhenSentAgain(int? expiresInHours)
+    {
+        // Arrange
+        var (input, signature) = SignUcp(HttpMethods.Post, "/ucp/checkout-sessions", Body, "key-1", created: false, expiresIn: expiresInHours is { } hours ? TimeSpan.FromHours(hours) : null);
+
+        await InvokeUcpAsync(HttpMethods.Post, "/ucp/checkout-sessions", Body, "key-1", input, signature, idempotentEndpoint: true);
+
+        _clockNow = _now.Add(UcpEndpoints.Idempotency.Lifetime).AddHours(1);
+        _cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+
+        // Act
+        var replayed = await InvokeUcpAsync(HttpMethods.Post, "/ucp/checkout-sessions", Body, "key-1", input, signature, idempotentEndpoint: true);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status401Unauthorized, StatusCode(replayed));
+    }
+
+    /// <summary>
+    /// A write signed with a short expiry and no created time is still accepted, and is refused once it has expired, well
+    /// before its idempotency record is forgotten.
+    /// </summary>
+    [Fact]
+    public async Task UcpFilter_ASignedWriteWithAShortExpiry_IsAccepted_AndRefusedAfterItExpires()
+    {
+        // Arrange
+        var (input, signature) = SignUcp(HttpMethods.Post, "/ucp/checkout-sessions", Body, "key-1", created: false, expiresIn: TimeSpan.FromHours(1));
+
+        // Act
+        var first = await InvokeUcpAsync(HttpMethods.Post, "/ucp/checkout-sessions", Body, "key-1", input, signature, idempotentEndpoint: true);
+
+        _clockNow = _now.AddHours(2);
+        _cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+
+        var later = await InvokeUcpAsync(HttpMethods.Post, "/ucp/checkout-sessions", Body, "key-1", input, signature, idempotentEndpoint: true);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, StatusCode(first));
+        Assert.Equal(StatusCodes.Status401Unauthorized, StatusCode(later));
     }
 
     [Fact]
@@ -374,7 +424,7 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
         return Assert.IsType<JsonHttpResult<JsonObject>>(result).Value;
     }
 
-    private (string Input, string Signature) SignUcp(string method, string path, string body, string idempotencyKey, bool created, string nonce = null)
+    private (string Input, string Signature) SignUcp(string method, string path, string body, string idempotencyKey, bool created, string nonce = null, TimeSpan? expiresIn = null)
     {
         var httpContext = CreateContext(new ServiceCollection().BuildServiceProvider(), method, path, body);
 
@@ -386,7 +436,8 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
             "k1",
             _key,
             created: created ? new DateTimeOffset(_now).ToUnixTimeSeconds() : null,
-            nonce: nonce);
+            nonce: nonce,
+            expires: expiresIn is { } lifetime ? new DateTimeOffset(_now).Add(lifetime).ToUnixTimeSeconds() : null);
 
         return (signed.SignatureInput, signed.Signature);
     }
@@ -457,7 +508,7 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
             .AddSingleton(platforms.Object)
             .AddSingleton(factory.Object)
             .AddSingleton(siteService.Object)
-            .AddSingleton(Mock.Of<global::OrchardCore.Modules.IClock>(clock => clock.UtcNow == _now))
+            .AddSingleton(Mock.Of<global::OrchardCore.Modules.IClock>(clock => clock.UtcNow == _clockNow))
             .AddSingleton<UcpProfileCache>()
             .AddScoped<UcpProfileClient>()
             .AddSingleton(new UcpNegotiator(null))

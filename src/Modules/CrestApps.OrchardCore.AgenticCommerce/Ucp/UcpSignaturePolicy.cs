@@ -7,10 +7,19 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
 /// path, so it can't be sent to another target or another store; the body's digest when there is a body; the
 /// idempotency key when the request has one. A signature must age: it carries a <c>created</c> time within five
 /// minutes of the store's clock, or covers the idempotency key of an endpoint that answers a repeated key with its
-/// first answer, which is what UCP relies on against replays. An <c>expires</c> time hasn't passed.
+/// first answer (which is what UCP relies on against replays) and carries an <c>expires</c> time at most
+/// <see cref="MaxWriteSignatureLifetime"/> away, so it is dead before that answer is forgotten. An <c>expires</c> time
+/// hasn't passed.
 /// </summary>
 public static class UcpSignaturePolicy
 {
+    /// <summary>
+    /// How far away the <c>expires</c> time of a signature without <c>created</c> may be. It is shorter than the
+    /// idempotency layer keeps a key's answer (<see cref="UcpEndpoints.Idempotency"/>, 48 hours), so a captured signed
+    /// write can't run again once that answer is forgotten.
+    /// </summary>
+    public static readonly TimeSpan MaxWriteSignatureLifetime = TimeSpan.FromHours(24);
+
     /// <summary>
     /// How far a signature's <c>created</c> time may be from the store's clock, either way.
     /// </summary>
@@ -60,10 +69,19 @@ public static class UcpSignaturePolicy
             return "The signature's created time is more than five minutes from the store's clock.";
         }
 
-        // Without a time, only an idempotency key the endpoint honors keeps a captured signature from running again.
-        if (verification.Created is null && !(idempotent && !string.IsNullOrEmpty(idempotencyKey)))
+        if (verification.Created is null)
         {
-            return "The signature must have a created time, or cover the Idempotency-Key of a POST or PUT.";
+            // Without a created time, only an idempotency key the endpoint honors keeps a captured signature from running
+            // again, and only while the key's answer is kept, so the signature must expire well before it is forgotten.
+            if (!(idempotent && !string.IsNullOrEmpty(idempotencyKey)))
+            {
+                return "The signature must have a created time, or cover the Idempotency-Key of a POST or PUT.";
+            }
+
+            if (verification.Expires is not { } bound || bound - now > MaxWriteSignatureLifetime)
+            {
+                return "A signature without a created time must have an expires time at most 24 hours away.";
+            }
         }
 
         if (verification.Expires is { } expires && expires <= now)

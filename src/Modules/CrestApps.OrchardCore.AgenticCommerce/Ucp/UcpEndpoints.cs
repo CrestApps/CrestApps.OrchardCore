@@ -29,8 +29,9 @@ public static class UcpEndpoints
 
     /// <summary>
     /// The idempotency rules of UCP: every POST and PUT carries a key (UCP's OpenAPI requires it, and a request
-    /// signature without a created time relies on it against replays); a retry with the same key and body gets the
-    /// first answer for two days, another body with the same key gets 409.
+    /// signature without a created time relies on it against replays, and so must expire within
+    /// <see cref="UcpSignaturePolicy.MaxWriteSignatureLifetime"/>); a retry with the same key and body gets the first
+    /// answer for two days, another body with the same key gets 409.
     /// </summary>
     public static readonly IdempotencyPolicy Idempotency = new()
     {

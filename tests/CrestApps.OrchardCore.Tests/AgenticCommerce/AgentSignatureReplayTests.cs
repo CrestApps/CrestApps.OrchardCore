@@ -194,6 +194,30 @@ public sealed class AgentSignatureReplayTests : IDisposable
         Assert.Null(error);
     }
 
+    /// <summary>
+    /// Review 10 (B4): a signed write without created must expire before its idempotency answer is forgotten.
+    /// </summary>
+    [Fact]
+    public void UcpPolicy_AWriteWithoutCreated_MustExpireBeforeItsIdempotencyRecordIsForgotten()
+    {
+        // Arrange
+        var components = new[] { "@method", "@authority", "@path", "idempotency-key", "content-digest" };
+        var unbounded = new HttpSignatureVerification { Succeeded = true, CoveredComponents = components };
+        var distant = new HttpSignatureVerification { Succeeded = true, CoveredComponents = components, Expires = _now.AddHours(25) };
+        var bounded = new HttpSignatureVerification { Succeeded = true, CoveredComponents = components, Expires = _now.AddHours(1) };
+
+        // Act
+        var unboundedError = UcpSignaturePolicy.Check(unbounded, hasBody: true, idempotencyKey: "key-1", idempotent: true, _now);
+        var distantError = UcpSignaturePolicy.Check(distant, hasBody: true, idempotencyKey: "key-1", idempotent: true, _now);
+        var boundedError = UcpSignaturePolicy.Check(bounded, hasBody: true, idempotencyKey: "key-1", idempotent: true, _now);
+
+        // Assert
+        Assert.NotNull(unboundedError);
+        Assert.NotNull(distantError);
+        Assert.Null(boundedError);
+        Assert.True(UcpSignaturePolicy.MaxWriteSignatureLifetime < UcpEndpoints.Idempotency.Lifetime);
+    }
+
     private static AgentSignatureReplayGuard CreateGuard()
         => new(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())), new LocalLock(NullLogger<LocalLock>.Instance));
 

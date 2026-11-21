@@ -56,6 +56,7 @@ public static class HttpMessageSignatures
     /// <param name="created">The <c>created</c> parameter in Unix seconds, or <see langword="null"/> to leave it out.</param>
     /// <param name="nonce">The <c>nonce</c> parameter, or <see langword="null"/> to leave it out. A signer that may send two
     /// equal requests within one second of <paramref name="created"/> gives each its own, so each signature is unique.</param>
+    /// <param name="expires">The <c>expires</c> parameter in Unix seconds, or <see langword="null"/> to leave it out.</param>
     /// <returns>The header values.</returns>
     public static HttpSignature Sign(
         HttpSignatureMessage message,
@@ -64,7 +65,8 @@ public static class HttpMessageSignatures
         ECDsa key,
         string label = "sig1",
         long? created = null,
-        string nonce = null)
+        string nonce = null,
+        long? expires = null)
     {
         ArgumentNullException.ThrowIfNull(message);
         ArgumentNullException.ThrowIfNull(coveredComponents);
@@ -84,6 +86,11 @@ public static class HttpMessageSignatures
         if (created.HasValue)
         {
             parameters["created"] = created.Value;
+        }
+
+        if (expires.HasValue)
+        {
+            parameters["expires"] = expires.Value;
         }
 
         if (!string.IsNullOrEmpty(nonce))
