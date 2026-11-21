@@ -40,7 +40,7 @@ public interface IVendorPayoutProvider : IDisbursementProvider
 /// What vendors earn: each paid sale of their products, less the store's commission, held in escrow until released,
 /// with refunds taken back, then paid out order by order.
 /// </summary>
-public sealed class MarketplaceService
+public sealed partial class MarketplaceService
 {
     // How many of a vendor's latest payouts are looked through for one still pending.
     private const int PendingPayoutLookback = 100;
@@ -444,8 +444,11 @@ public sealed class MarketplaceService
             // Whether a transfer exists isn't known, so nothing is marked failed and the key is kept: the payout stays
             // pending, and the next run asks its disbursement, and the provider, about it first.
             MarketplaceTelemetry.RecordPayout(provider.Name, MarketplaceTelemetry.OutcomeUnsettled);
-            failures.Add(result.Failure);
-            _logger.LogWarning("The payout of order '{OrderNumber}' to vendor '{VendorId}' stays pending: {Failure}", payout.OrderNumber, vendor.ItemId, result.Failure);
+
+            var pending = result.IsNotFound ? await RecordNotFoundAsync(payout, disbursementId, result.Failure, cancellationToken) : result.Failure;
+
+            failures.Add(pending);
+            _logger.LogWarning("The payout of order '{OrderNumber}' to vendor '{VendorId}' stays pending: {Failure}", payout.OrderNumber, vendor.ItemId, pending);
 
             return 0m;
         }
@@ -685,7 +688,7 @@ public sealed class MarketplaceService
         switch (disbursement.Status)
         {
             case DisbursementStatus.Settled when string.IsNullOrEmpty(disbursement.TraceNumber):
-                return await ConfirmSettledAsync(disbursements, provider, disbursement, payout, cancellationToken);
+                return await ConfirmSettledAsync(provider, disbursement, payout, cancellationToken);
 
             case DisbursementStatus.Settled:
                 return (VendorPayoutResult.Paid(disbursement.TraceNumber), disbursement.ItemId);
@@ -701,11 +704,9 @@ public sealed class MarketplaceService
 
                 if (found is null)
                 {
-                    var reason = S["No transfer was made for the payout of order {0}.", payout.OrderNumber].Value;
-
-                    return await disbursements.MarkClosedAsync(disbursement, DisbursementStatus.Failed, null, reason, cancellationToken)
-                        ? (VendorPayoutResult.Refused(reason), disbursement.ItemId)
-                        : (VendorPayoutResult.Unsettled(reason), disbursement.ItemId);
+                    // Not found proves nothing: the provider may still be making it (an incident it recovers from), so the
+                    // payout stays pending under its key until the transfer appears or staff confirm none was made.
+                    return (VendorPayoutResult.NotFound(S["No transfer for the payout of order {0} has been found yet. It stays pending under its key, and the next payout run asks again.", payout.OrderNumber].Value), disbursement.ItemId);
                 }
 
                 if (found.RetryLater || found.Failure is not null)
@@ -730,11 +731,9 @@ public sealed class MarketplaceService
 
     // A payout provider settles a disbursement with its transfer's ID, so one settled without it was settled by the
     // generic settle path (the "Settle Disbursement Batches" workflow or a staff click) while its outcome wasn't known.
-    // The provider says whether the transfer was made: found, the payout is paid with it; not found, the disbursement is
-    // returned and the payout refused, so the next run sends its earnings once under a new key; not answered, it stays
-    // pending and the next run asks again.
+    // The provider says whether the transfer was made: found, the payout is paid with it; not found or not answered, it
+    // stays pending under its key and the next run asks again, until staff confirm no transfer was made.
     private async Task<(VendorPayoutResult Result, string DisbursementId)> ConfirmSettledAsync(
-        IDisbursementService disbursements,
         IVendorPayoutProvider provider,
         Disbursement disbursement,
         VendorPayout payout,
@@ -744,11 +743,7 @@ public sealed class MarketplaceService
 
         if (found is null)
         {
-            var reason = S["No transfer was made for the payout of order {0}, although its disbursement was settled.", payout.OrderNumber].Value;
-
-            return await disbursements.MarkClosedAsync(disbursement, DisbursementStatus.Returned, null, reason, cancellationToken)
-                ? (VendorPayoutResult.Refused(reason), disbursement.ItemId)
-                : (VendorPayoutResult.Unsettled(reason), disbursement.ItemId);
+            return (VendorPayoutResult.NotFound(S["No transfer for the payout of order {0} has been found yet, although its disbursement was settled. It stays pending under its key, and the next payout run asks again.", payout.OrderNumber].Value), disbursement.ItemId);
         }
 
         if (found.RetryLater || found.Failure is not null || string.IsNullOrEmpty(found.TransferId))

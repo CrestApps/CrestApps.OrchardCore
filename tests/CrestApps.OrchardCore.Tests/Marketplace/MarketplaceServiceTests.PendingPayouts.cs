@@ -271,11 +271,13 @@ public sealed partial class MarketplaceServiceTests
     }
 
     /// <summary>
-    /// K8: as above, but Stripe never made the transfer (it answered with a rate limit). The payout is not recorded paid:
-    /// the disbursement is marked returned, the payout failed, and the next run pays the earnings once, under a new key.
+    /// K8: as above, but Stripe never made the transfer (it answered with a rate limit). The payout is not recorded paid.
+    /// Not found proves nothing (review 10, A2), so it stays pending under its key until staff confirm, after the review
+    /// time, that no transfer was made; then the disbursement is returned, the payout failed, and the next run pays the
+    /// earnings once, under a new key.
     /// </summary>
     [Fact]
-    public async Task APayoutSettledWithoutATraceNumber_ThatStripeNeverMade_IsNotPaid_AndIsSentOnceByTheNextRun()
+    public async Task APayoutSettledWithoutATraceNumber_ThatStripeNeverMade_IsNotPaid_AndIsSentOnceAfterStaffConfirmIt()
     {
         // Arrange
         var stripe = new FakeStripe { TransferStatus = HttpStatusCode.TooManyRequests };
@@ -292,15 +294,26 @@ public sealed partial class MarketplaceServiceTests
 
         Assert.Equal(1, await SettleAsStaffAsync());
 
-        // Act: the run after the settle finds no transfer; the one after it pays.
+        // Act: the run after the settle finds no transfer and keeps the payout pending.
         var (secondPaid, secondFailures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
 
         Assert.Equal(0m, secondPaid);
         Assert.Single(secondFailures);
         Assert.Empty(stripe.Transfers);
+        Assert.Equal(VendorPayoutStatus.Pending, Assert.Single(_payouts).Status);
+        Assert.Equal(DisbursementStatus.Settled, Assert.Single(_disbursements.Store.Entries).Status);
+        Assert.All(_earnings, earning => Assert.Equal(VendorEarningStatus.Available, earning.Status));
+
+        // After the review time, the run says so, and staff confirm that Stripe has no transfer.
+        _utcNow = _now.Add(MarketplaceService.UnconfirmedPayoutReviewAfter);
+
+        var (_, reviewFailures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        Assert.Contains("No transfer was made", Assert.Single(reviewFailures));
+        Assert.True(MarketplaceService.IsAwaitingReview(_payouts[0], _utcNow));
+        Assert.Null(await service.ConfirmNoTransferAsync(_vendor, _payouts[0].ItemId, TestContext.Current.CancellationToken));
         Assert.Equal(VendorPayoutStatus.Failed, Assert.Single(_payouts).Status);
         Assert.Equal(DisbursementStatus.Returned, Assert.Single(_disbursements.Store.Entries).Status);
-        Assert.All(_earnings, earning => Assert.Equal(VendorEarningStatus.Available, earning.Status));
 
         var (thirdPaid, thirdFailures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
 
@@ -375,6 +388,20 @@ public sealed partial class MarketplaceServiceTests
         // Makes the next transfer, then answers with a server error, as when Stripe's answer is lost.
         public bool LoseNextTransferAnswer { get; set; }
 
+        // Answers the next transfer with a server error and makes it only when CompleteDelayedTransfer is called, as when
+        // Stripe finishes a request during incident recovery, after a lookup found nothing.
+        public bool DelayNextTransfer { get; set; }
+
+        private (string Key, string Body)? _delayed;
+
+        public void CompleteDelayedTransfer()
+        {
+            var (key, body) = _delayed ?? throw new InvalidOperationException("No transfer is delayed.");
+
+            _delayed = null;
+            MakeTransfer(key, body);
+        }
+
         // Anything but OK refuses new transfers with this status: 400 as Stripe's invalid_request_error, 429 as a rate limit.
         public HttpStatusCode TransferStatus { get; set; } = HttpStatusCode.OK;
 
@@ -427,6 +454,28 @@ public sealed partial class MarketplaceServiceTests
                     : """{"error":{"type":"invalid_request_error","code":"balance_insufficient","message":"You have insufficient funds in your Stripe account."}}""");
             }
 
+            if (DelayNextTransfer)
+            {
+                DelayNextTransfer = false;
+                _delayed = (key, body);
+
+                return Json(HttpStatusCode.InternalServerError, """{"error":{"type":"api_error","message":"An unknown error occurred."}}""");
+            }
+
+            var json = MakeTransfer(key, body);
+
+            if (LoseNextTransferAnswer)
+            {
+                LoseNextTransferAnswer = false;
+
+                return Json(HttpStatusCode.InternalServerError, """{"error":{"type":"api_error","message":"An unknown error occurred."}}""");
+            }
+
+            return Json(HttpStatusCode.OK, json);
+        }
+
+        private string MakeTransfer(string key, string body)
+        {
             var form = HttpUtility.ParseQueryString(body);
             var metadata = form.AllKeys
                 .Where(name => name?.StartsWith("metadata[", StringComparison.Ordinal) == true)
@@ -452,14 +501,7 @@ public sealed partial class MarketplaceServiceTests
                 _keys[key] = (body, Now, json);
             }
 
-            if (LoseNextTransferAnswer)
-            {
-                LoseNextTransferAnswer = false;
-
-                return Json(HttpStatusCode.InternalServerError, """{"error":{"type":"api_error","message":"An unknown error occurred."}}""");
-            }
-
-            return Json(HttpStatusCode.OK, json);
+            return json;
         }
 
         private static HttpResponseMessage Json(HttpStatusCode status, string body)

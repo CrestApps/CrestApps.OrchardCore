@@ -37,6 +37,22 @@
     }
 </p>
 
+@if (Model.PayoutsToCheck.Count > 0)
+{
+    <div class="alert alert-warning">
+        <h5 class="alert-heading">@T["Payouts to check"]</h5>
+        <p class="small">@T["The payout provider has shown no transfer for these payouts for {0} days, so they stay pending. Check the vendor's account at the provider: a transfer found there is recorded by the next payout. If none was made, mark it so, and the next payout pays its earnings again.", CrestApps.OrchardCore.Marketplace.Services.MarketplaceService.UnconfirmedPayoutReviewAfter.TotalDays]</p>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var payout in Model.PayoutsToCheck)
+            {
+                <form asp-action="ConfirmNoTransfer" asp-route-itemId="@vendor.ItemId" asp-route-payoutId="@payout.ItemId" method="post" class="no-multisubmit">
+                    <button type="submit" class="btn btn-outline-danger btn-sm" data-url-af="RemoveUrl" data-title="@T["No transfer was made"]" data-message="@T["Did you check the vendor's account at the payout provider and find no transfer for this payout? Its earnings are paid again by the next payout."]" data-ok-text="@T["No transfer was made"]" data-cancel-text="@T["Cancel"]">@T["No transfer was made for order {0} ({1})", payout.OrderNumber, ProductPriceFormatter.Format(payout.Amount, payout.Currency)]</button>
+                </form>
+            }
+        </div>
+    </div>
+}
+
 @await DisplayAsync((IShape)ViewData["Dashboard"])
 
 @if (heldOrders.Count > 0)

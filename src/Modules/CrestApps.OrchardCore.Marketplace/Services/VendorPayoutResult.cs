@@ -23,6 +23,12 @@ public sealed record VendorPayoutResult
     public bool RetryLater { get; init; }
 
     /// <summary>
+    /// Gets a value indicating whether the provider was asked for the transfer and had none. That proves nothing (the
+    /// provider may still be making it), so the payout stays pending with its key, like <see cref="RetryLater"/>.
+    /// </summary>
+    public bool IsNotFound { get; init; }
+
+    /// <summary>
     /// The transfer was made.
     /// </summary>
     /// <param name="transferId">The provider's reference for the transfer.</param>
@@ -42,4 +48,12 @@ public sealed record VendorPayoutResult
     /// <param name="failure">Why.</param>
     public static VendorPayoutResult Unsettled(string failure)
         => new() { Failure = failure, RetryLater = true };
+
+    /// <summary>
+    /// The provider has no transfer for the payout yet, which doesn't prove there will be none: the payout stays pending
+    /// with its key.
+    /// </summary>
+    /// <param name="failure">Why.</param>
+    public static VendorPayoutResult NotFound(string failure)
+        => new() { Failure = failure, RetryLater = true, IsNotFound = true };
 }

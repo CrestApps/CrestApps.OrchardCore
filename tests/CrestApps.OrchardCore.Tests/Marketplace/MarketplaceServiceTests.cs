@@ -369,11 +369,12 @@ public sealed partial class MarketplaceServiceTests
     }
 
     /// <summary>
-    /// When the provider has no transfer for a payout whose outcome was unknown, only then is the disbursement failed and
-    /// the next try made under a new key.
+    /// When the provider has no transfer for a payout whose outcome was unknown, that proves nothing (review 10, A2): the
+    /// payout stays pending under its key. Only once staff confirm, after the review time, that no transfer was made is
+    /// the disbursement failed, and the next try made under a new key.
     /// </summary>
     [Fact]
-    public async Task APayoutWhoseOutcomeIsUnknown_AndThatTheProviderNeverMade_FailsAndIsSentAgainWithANewKey()
+    public async Task APayoutWhoseOutcomeIsUnknown_AndThatTheProviderNeverMade_StaysPending_UntilStaffConfirmIt_ThenIsSentWithANewKey()
     {
         // Arrange
         var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
@@ -389,18 +390,68 @@ public sealed partial class MarketplaceServiceTests
 
         _provider.OutcomeUnknown = false;
 
-        // Act: the next run finds no transfer and fails the payout; the one after sends it again.
-        var (secondPaid, _) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
-        var (thirdPaid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+        // Act: the next runs find no transfer and keep the payout pending.
+        var (secondPaid, secondFailures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        _utcNow = _now.AddDays(1);
+
+        var (thirdPaid, _) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+        var tooSoon = await service.ConfirmNoTransferAsync(_vendor, _payouts[0].ItemId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0m, secondPaid + thirdPaid);
+        Assert.Single(secondFailures);
+        Assert.NotNull(tooSoon);
+        Assert.Equal(1, _provider.Calls);
+        Assert.Equal(VendorPayoutStatus.Pending, Assert.Single(_payouts).Status);
+        Assert.Equal(_now, _payouts[0].UnconfirmedSinceUtc);
+        Assert.Equal(DisbursementStatus.Submitted, Assert.Single(_disbursements.Store.Entries).Status);
+
+        _utcNow = _now.Add(MarketplaceService.UnconfirmedPayoutReviewAfter);
+
+        var confirmed = await service.ConfirmNoTransferAsync(_vendor, _payouts[0].ItemId, TestContext.Current.CancellationToken);
+        var (paid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(0m, secondPaid);
+        Assert.Null(confirmed);
         Assert.Empty(failures);
-        Assert.Equal(48.6m, thirdPaid);
+        Assert.Equal(48.6m, paid);
         Assert.NotEqual(firstKey, _provider.IdempotencyKey);
         Assert.Equal(2, _provider.Calls);
         Assert.Equal([VendorPayoutStatus.Failed, VendorPayoutStatus.Paid], _payouts.Select(payout => payout.Status));
         Assert.Equal([DisbursementStatus.Failed, DisbursementStatus.Settled], _disbursements.Store.Entries.Select(entry => entry.Status));
+    }
+
+    /// <summary>
+    /// Staff can't mark a payout as not made while the provider shows its transfer: the next run records it paid instead.
+    /// </summary>
+    [Fact]
+    public async Task ConfirmingNoTransfer_ForAPayoutTheProviderNowHas_ChangesNothing()
+    {
+        // Arrange
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        _provider.OutcomeUnknown = true;
+
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // The transfer turns up at the provider later, as when it finishes a request during incident recovery.
+        _provider.MarkTransferred(_provider.IdempotencyKey);
+        _utcNow = _now.Add(MarketplaceService.UnconfirmedPayoutReviewAfter);
+
+        // Act
+        var refused = await service.ConfirmNoTransferAsync(_vendor, _payouts[0].ItemId, TestContext.Current.CancellationToken);
+        var (paid, _) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(refused);
+        Assert.Equal(48.6m, paid);
+        Assert.Equal(1, _provider.Calls);
+        Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
+        Assert.Equal(DisbursementStatus.Settled, Assert.Single(_disbursements.Store.Entries).Status);
     }
 
     [Fact]
@@ -563,7 +614,7 @@ public sealed partial class MarketplaceServiceTests
         site.Setup(service => service.GetSiteSettingsAsync()).ReturnsAsync(siteSettings.Object);
 
         var clock = new Mock<IClock>();
-        clock.Setup(c => c.UtcNow).Returns(_now);
+        clock.Setup(c => c.UtcNow).Returns(() => _utcNow);
 
         var session = new Mock<global::YesSql.ISession>();
         session.Setup(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()))
@@ -588,13 +639,14 @@ public sealed partial class MarketplaceServiceTests
                 withDisbursements ? [_disbursements.Batches] : [],
                 _disbursements.Locks,
                 session.Object),
-            new FixedOffsetLocalClock(() => _now, TimeSpan.Zero),
+            new FixedOffsetLocalClock(() => _utcNow, TimeSpan.Zero),
             clock.Object,
             NullLogger<MarketplaceService>.Instance,
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<MarketplaceService>());
     }
 
     private int _commits;
+    private DateTime _utcNow = _now;
     private MarketplaceService _service;
 
     private sealed class FakePayoutProvider : IVendorPayoutProvider
@@ -683,6 +735,9 @@ public sealed partial class MarketplaceServiceTests
         }
 
         public int FindCalls { get; private set; }
+
+        public void MarkTransferred(string idempotencyKey)
+            => _transferred.Add(idempotencyKey);
 
         private readonly HashSet<string> _transferred = new(StringComparer.Ordinal);
     }

@@ -194,13 +194,15 @@ public sealed class VendorsAdminController : Controller
         }
 
         var earnings = await _earnings.ListByVendorAsync(vendor.ItemId, 500, HttpContext.RequestAborted);
+        var payouts = await _payouts.ListByVendorAsync(vendor.ItemId, 100, HttpContext.RequestAborted);
         var model = new VendorDashboardViewModel
         {
             Vendor = vendor,
             Earnings = [.. earnings],
-            Payouts = [.. await _payouts.ListByVendorAsync(vendor.ItemId, 100, HttpContext.RequestAborted)],
+            Payouts = [.. payouts],
             Totals = MarketplaceService.GetTotals(earnings),
             CanPayOut = _marketplace.CanPayOut && vendor.PayoutsEnabled && vendor.Status == VendorStatus.Active,
+            PayoutsToCheck = [.. payouts.Where(payout => MarketplaceService.IsAwaitingReview(payout, _clock.UtcNow))],
         };
 
         // The same dashboard the vendor sees on its own page.
@@ -253,6 +255,35 @@ public sealed class VendorsAdminController : Controller
         if (failures.Count == 0)
         {
             await _notifier.SuccessAsync(paid > 0m ? H["The vendor was paid out."] : H["Nothing was ready to pay out."]);
+        }
+
+        return RedirectToAction(nameof(Detail), new { itemId });
+    }
+
+    /// <summary>
+    /// Records that staff checked the vendor's account at the payout provider and no transfer was made for a payout whose
+    /// transfer hasn't been found for the review time, so the next payout pays its earnings again under a new key.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> ConfirmNoTransfer(string itemId, string payoutId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, MarketplacePermissions.ManageMarketplace))
+        {
+            return Forbid();
+        }
+
+        if (await _vendors.FindByIdAsync(itemId) is not { } vendor)
+        {
+            return NotFound();
+        }
+
+        if (await _marketplace.ConfirmNoTransferAsync(vendor, payoutId, HttpContext.RequestAborted) is { } problem)
+        {
+            await _notifier.ErrorAsync(H["{0}", problem]);
+        }
+        else
+        {
+            await _notifier.SuccessAsync(H["The payout is marked as not made. The next payout pays its earnings again."]);
         }
 
         return RedirectToAction(nameof(Detail), new { itemId });

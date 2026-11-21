@@ -77,5 +77,11 @@ public class VendorDashboardViewModel
 
     public bool CanPayOut { get; set; }
 
+    /// <summary>
+    /// Gets or sets the pending payouts whose transfer the provider hasn't shown for the review time, which staff check
+    /// at the provider and mark as not made when none was.
+    /// </summary>
+    public IList<VendorPayout> PayoutsToCheck { get; set; } = [];
+
     public bool CanConnectStripe { get; set; }
 }
