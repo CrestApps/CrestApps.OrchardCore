@@ -35,6 +35,14 @@ public static partial class SurveyBlankText
         return (segments, answers);
     }
 
+    /// <summary>
+    /// Gets the first item of a list, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="items">The list.</param>
+    /// <returns>The first item.</returns>
+    public static string First(IReadOnlyList<string> items)
+        => items is { Count: > 0 } ? items[0] : null;
+
     [GeneratedRegex(@"\[\[(?<answers>[^\]]+)\]\]")]
     private static partial Regex Blank();
 }
