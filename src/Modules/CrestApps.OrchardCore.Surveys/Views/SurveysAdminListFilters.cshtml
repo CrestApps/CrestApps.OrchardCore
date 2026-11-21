@@ -1,0 +1,12 @@
+@model CrestApps.OrchardCore.Core.Models.AdminListFiltersViewModel
+@* The filters of the survey list, at the end of its toolbar. They name the list's form, which they submit when one changes. *@
+
+<div class="btn-group filter">
+    @for (var i = 0; i < Model.Filters.Count; i++)
+    {
+        var filter = Model.Filters[i];
+        var cssClass = i < Model.Filters.Count - 1 ? "selectpicker show-tick me-2" : "selectpicker show-tick";
+
+        <select name="@filter.Name" asp-items="filter.Items" form="@Model.FormId" class="@cssClass" data-style="btn-sm" data-width="fit" data-header="@filter.Header" data-dropdown-align-right="auto" data-surveys-list-filter aria-label="@filter.Label"></select>
+    }
+</div>

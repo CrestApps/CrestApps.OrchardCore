@@ -1,0 +1,4 @@
+@model ShapeViewModel<SurveyCollector>
+
+<a asp-action="Edit" asp-controller="SurveyCollectors" asp-route-collectorId="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+<a asp-action="Qr" asp-controller="SurveyCollectors" asp-route-collectorId="@Model.Value.ItemId" class="btn btn-secondary btn-sm">@T["QR code"]</a>

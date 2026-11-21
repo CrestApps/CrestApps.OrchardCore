@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model ShapeViewModel<SurveyVersionRowViewModel>
+
+<a asp-action="Display" asp-controller="SurveyVersions" asp-route-id="@Model.Value.Version.SurveyId" asp-route-versionId="@Model.Value.Version.ItemId">@T["Version {0}", Model.Value.Version.Number]</a>
+@if (Model.Value.IsCurrent)
+{
+    <span class="badge text-bg-success fw-normal ms-1">@T["Published"]</span>
+}

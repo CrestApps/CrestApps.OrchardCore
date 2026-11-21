@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyEditorPageViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveysAccess" title="@T["Access and settings"]">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="SurveysDesign" action="Design" controller="SurveyDesigner" area="CrestApps.OrchardCore.Surveys" route-id="@Model.Survey.ItemId">@Model.Survey.Title</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_SurveyNav" model="Model.Survey" />
+
+<form method="post" asp-action="Access" asp-route-id="@Model.Survey.ItemId" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

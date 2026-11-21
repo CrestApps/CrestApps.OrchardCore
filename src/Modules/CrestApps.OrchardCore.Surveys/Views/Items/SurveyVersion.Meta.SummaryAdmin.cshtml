@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model ShapeViewModel<SurveyVersionRowViewModel>
+
+@{
+    var row = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal" title="@T["Published"]"><i class="fa-regular fa-clock" aria-hidden="true"></i> @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(row.Version.PublishedUtc, DateTimeKind.Utc), Format: "g"))</span>
+@if (!string.IsNullOrEmpty(row.PublishedBy))
+{
+    <span class="badge ta-badge fw-normal" title="@T["Published by"]"><i class="fa-regular fa-user" aria-hidden="true"></i> @row.PublishedBy</span>
+}
+<span class="badge ta-badge fw-normal" title="@T["Responses"]"><i class="fa-regular fa-comment-dots" aria-hidden="true"></i> @row.Responses</span>

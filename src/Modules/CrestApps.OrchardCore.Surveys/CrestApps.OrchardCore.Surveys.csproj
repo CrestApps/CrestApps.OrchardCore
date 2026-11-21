@@ -51,10 +51,12 @@
     <PackageReference Include="OrchardCore.Users.Abstractions" />
     <PackageReference Include="OrchardCore.Users.Core" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="QRCoder" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Calendars.Abstractions\CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Attachments.Abstractions\CrestApps.OrchardCore.Attachments.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Calendars.Abstractions\CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Outreach.Abstractions\CrestApps.OrchardCore.Outreach.Abstractions.csproj" />

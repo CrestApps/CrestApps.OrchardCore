@@ -1,0 +1,4 @@
+@model ShapeViewModel<Survey>
+
+<a asp-action="Design" asp-controller="SurveyDesigner" asp-route-id="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Design"]</a>
+<a href="@Url.Content("~/Admin/surveys/" + Model.Value.ItemId + "/preview")" class="btn btn-secondary btn-sm">@T["Preview"]</a>

@@ -1,0 +1,42 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyListViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveysIndex" title="@T["Surveys"]" />
+</zone>
+
+<form asp-action="Index" method="post" id="surveys-filter" class="no-multisubmit" data-list-management data-client-side-search="false">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add survey"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="Surveys" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> There are no surveys that match the current filter."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Survey"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Modified" position="40" title="@T["Last changed"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<script asp-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-admin.min.js" debug-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-admin.js" at="Foot"></script>

@@ -1,0 +1,10 @@
+@model ShapeViewModel<SurveyCollector>
+
+@if (Model.Value.Status == CollectorStatus.Open)
+{
+    <a asp-action="Status" asp-controller="SurveyCollectors" asp-route-collectorId="@Model.Value.ItemId" asp-route-status="@CollectorStatus.Closed" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Close"]" data-message="@T["Stop accepting responses through this collector?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Close"]</a>
+}
+else
+{
+    <a asp-action="Status" asp-controller="SurveyCollectors" asp-route-collectorId="@Model.Value.ItemId" asp-route-status="@CollectorStatus.Open" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Open"]" data-message="@T["Accept responses through this collector again?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Open"]</a>
+}

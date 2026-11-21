@@ -1,0 +1,62 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyEndingsEditViewModel
+
+@{
+    var prefix = Html.NameFor(m => m.Endings).ToString();
+    var rules = Html.NameFor(m => m.EndingRules).ToString();
+    var defaultName = Html.NameFor(m => m.DefaultEndingId).ToString();
+}
+
+<div class="card mb-3" data-rule-sources="@Model.Sources">
+    <div class="card-header">@T["Endings"]</div>
+    <div class="card-body" data-repeater data-repeater-prefix="@prefix" data-repeater-also="@rules">
+        <p class="hint">@T["After the last page, the first ending whose rule holds is used, else the default one. Messages may use Liquid and {{code}} piping."]</p>
+        <div data-repeater-items>
+            @for (var i = 0; i < Model.Endings.Count; i++)
+            {
+                var ending = Model.Endings[i];
+
+                <div class="border rounded p-2 mb-2" data-repeater-item>
+                    <input type="hidden" name="@(prefix)[@i].Id" value="@ending.Id" />
+                    <div class="input-group mb-1">
+                        <span class="input-group-text">
+                            <input type="radio" class="form-check-input mt-0" name="@defaultName" value="@ending.Id" checked="@ending.IsDefault" aria-label="@T["Default ending"]" title="@T["Default ending"]" />
+                        </span>
+                        <input name="@(prefix)[@i].Title" value="@ending.Title" class="form-control" placeholder="@T["Title"]" aria-label="@T["Title"]" />
+                        <input name="@(prefix)[@i].Name" value="@ending.Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
+                        <select name="@(prefix)[@i].Outcome" class="form-select flex-grow-0 w-auto" aria-label="@T["Outcome"]">
+                            <option value="@EndingOutcome.Completed" selected="@(ending.Outcome == EndingOutcome.Completed)">@T["Completed"]</option>
+                            <option value="@EndingOutcome.ScreenedOut" selected="@(ending.Outcome == EndingOutcome.ScreenedOut)">@T["Screened out"]</option>
+                        </select>
+                        <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                    </div>
+                    <textarea name="@(prefix)[@i].Message" class="form-control mb-1" rows="2" placeholder="@T["Message"]" aria-label="@T["Message"]">@ending.Message</textarea>
+                    <input name="@(prefix)[@i].RedirectUrl" value="@ending.RedirectUrl" class="form-control form-control-sm mb-1" placeholder="@T["Redirect to (optional)"]" aria-label="@T["Redirect to"]" />
+                    <details data-rule-field>
+                        <summary class="small">@T["Use this ending when"]</summary>
+                        <input type="hidden" name="@(rules)[@i]" value="@(i < Model.EndingRules.Count ? Model.EndingRules[i] : string.Empty)" data-rule-value />
+                        <div data-rule-builder></div>
+                    </details>
+                </div>
+            }
+        </div>
+        <template data-repeater-template>
+            <div class="border rounded p-2 mb-2" data-repeater-item>
+                <input type="hidden" name="@(prefix)[__index__].Id" value="" />
+                <div class="input-group mb-1">
+                    <input name="@(prefix)[__index__].Title" class="form-control" placeholder="@T["Title"]" aria-label="@T["Title"]" />
+                    <input name="@(prefix)[__index__].Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
+                    <select name="@(prefix)[__index__].Outcome" class="form-select flex-grow-0 w-auto" aria-label="@T["Outcome"]">
+                        <option value="@EndingOutcome.Completed">@T["Completed"]</option>
+                        <option value="@EndingOutcome.ScreenedOut">@T["Screened out"]</option>
+                    </select>
+                    <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                </div>
+                <textarea name="@(prefix)[__index__].Message" class="form-control mb-1" rows="2" placeholder="@T["Message"]" aria-label="@T["Message"]"></textarea>
+                <input type="hidden" name="@(rules)[__index__]" value="" data-rule-value />
+            </div>
+        </template>
+        <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add ending"]</button>
+        <span asp-validation-for="Endings" class="text-danger"></span>
+    </div>
+</div>

@@ -1,0 +1,140 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyDefinitionScoringEditViewModel
+
+@{
+    var flags = new[]
+    {
+        (ReviewShows.Score, T["Score"].Value),
+        (ReviewShows.Responses, T["Their answers"].Value),
+        (ReviewShows.RightAnswers, T["Right answers"].Value),
+        (ReviewShows.Feedback, T["Answer feedback"].Value),
+        (ReviewShows.GeneralFeedback, T["General feedback"].Value),
+    };
+    var moments = new[]
+    {
+        (Html.NameFor(m => m.ReviewDuring).ToString(), T["While answering"].Value, Model.ReviewDuring),
+        (Html.NameFor(m => m.ReviewImmediatelyAfter).ToString(), T["Right after"].Value, Model.ReviewImmediatelyAfter),
+        (Html.NameFor(m => m.ReviewLaterWhileOpen).ToString(), T["Later, while open"].Value, Model.ReviewLaterWhileOpen),
+        (Html.NameFor(m => m.ReviewAfterClose).ToString(), T["After the survey closes"].Value, Model.ReviewAfterClose),
+    };
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Scoring"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Scoring.Enabled" type="checkbox" class="form-check-input" />
+                    <label asp-for="Scoring.Enabled" class="form-check-label">@T["Score responses"]</label>
+                    <span class="hint dashed">@T["Save the draft after turning this on to see the scoring of each question."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Scoring.PassMarkPercent" class="ocat-label">@T["Pass mark"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="Scoring.PassMarkPercent" type="number" step="any" min="0" max="100" class="form-control" />
+                    <span class="input-group-text">%</span>
+                </div>
+                <span asp-validation-for="Scoring.PassMarkPercent" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Scoring.DefaultPoints" class="ocat-label">@T["Default points"]</label>
+            <div class="ocat-end"><input asp-for="Scoring.DefaultPoints" type="number" step="any" min="0" class="form-control" /></div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check"><input asp-for="Scoring.NegativeMarking" type="checkbox" class="form-check-input" /><label asp-for="Scoring.NegativeMarking" class="form-check-label">@T["Take points away for wrong choices"]</label></div>
+                <div class="form-check"><input asp-for="Scoring.ShowScoreToRespondent" type="checkbox" class="form-check-input" /><label asp-for="Scoring.ShowScoreToRespondent" class="form-check-label">@T["Show respondents their score when the review allows"]</label></div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Scoring.FeedbackMode" class="ocat-label">@T["Answers are checked"]</label>
+            <div class="ocat-end">
+                <select asp-for="Scoring.FeedbackMode" class="form-select">
+                    <option value="@FeedbackMode.Deferred">@T["At the end"]</option>
+                    <option value="@FeedbackMode.Immediate">@T["One at a time, then locked"]</option>
+                </select>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Scoring.RoundingDecimals" class="ocat-label">@T["Decimals"]</label>
+            <div class="ocat-end"><input asp-for="Scoring.RoundingDecimals" type="number" min="0" max="6" class="form-control" /></div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Scoring.ScoreFormula" class="ocat-label">@T["Total score formula"]</label>
+            <div class="ocat-end">
+                <input asp-for="Scoring.ScoreFormula" class="form-control font-monospace" />
+                <span class="hint">@T["Optional, over category scores such as [score:skills] * 2. The sum when empty."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["What respondents see"]</div>
+    <div class="card-body">
+        @foreach (var (name, label, selected) in moments)
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@label</span>
+                <div class="ocat-end">
+                    @foreach (var (flag, text) in flags)
+                    {
+                        var id = name.Replace('.', '_') + "_" + flag;
+
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" class="form-check-input" id="@id" name="@name" value="@flag" checked="@selected.Contains(flag)" />
+                            <label class="form-check-label" for="@id">@text</label>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        <div class="ocat-wrapper">
+            <label asp-for="ResultsVisibility" class="ocat-label">@T["Totals of all responses"]</label>
+            <div class="ocat-end">
+                <select asp-for="ResultsVisibility" class="form-select">
+                    <option value="@ResultsVisibility.Never">@T["Never"]</option>
+                    <option value="@ResultsVisibility.AfterAnswer">@T["After they answer"]</option>
+                    <option value="@ResultsVisibility.AfterClose">@T["After the survey closes"]</option>
+                    <option value="@ResultsVisibility.Always">@T["Always"]</option>
+                </select>
+                <span class="hint">@T["For polls: respondents see how everyone answered."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Time limit"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="Timing.TimeLimitMinutes" class="ocat-label">@T["Time to finish"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="Timing.TimeLimitMinutes" type="number" min="1" class="form-control" />
+                    <span class="input-group-text">@T["minutes"]</span>
+                </div>
+                <span class="hint">@T["Leave it empty for no limit."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Timing.GraceSeconds" class="ocat-label">@T["Grace"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="Timing.GraceSeconds" type="number" min="0" max="300" class="form-control" />
+                    <span class="input-group-text">@T["seconds"]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check"><input asp-for="Timing.AutoSubmitAtDeadline" type="checkbox" class="form-check-input" /><label asp-for="Timing.AutoSubmitAtDeadline" class="form-check-label">@T["Submit unfinished responses when time runs out"]</label></div>
+            </div>
+        </div>
+    </div>
+</div>
