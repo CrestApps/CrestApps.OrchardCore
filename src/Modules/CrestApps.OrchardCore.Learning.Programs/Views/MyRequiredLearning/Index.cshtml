@@ -1,0 +1,138 @@
+@model MyRequiredLearningViewModel
+@using Microsoft.AspNetCore.Html
+
+@{
+    ViewData["Title"] = T["My required learning"];
+}
+
+@{
+    // Inside the storefront account the page is framed by the account menu; without it, it stands alone.
+    var accountUrl = Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName);
+    Func<object, IHtmlContent> content = @<text>
+    @if (Model.Required.Count == 0 && Model.Paths.Count == 0)
+    {
+        @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-solid fa-list-check", Title: T["Nothing is required of you."], Hint: T["Courses, learning paths and certifications your organization asks you to complete appear here, with their due dates."]))
+    }
+    else if (Model.Required.Count == 0)
+    {
+        <p class="text-muted">@T["Nothing is required of you."]</p>
+    }
+    else
+    {
+        <div class="list-group mb-4">
+            @foreach (var item in Model.Required)
+            {
+                <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <div class="fw-semibold">
+                            @if (item.TargetKind == ProgramsConstants.TargetKinds.CertificationPath)
+                            {
+                                <a href="~/learning/certifications">@item.Name</a>
+                            }
+                            else
+                            {
+                                <a href="@Url.RouteUrl(new { area = "OrchardCore.Contents", controller = "Item", action = "Display", contentItemId = item.TargetId })">@item.Name</a>
+                            }
+                        </div>
+                        <div class="text-muted small">
+                            @if (item.Assignment.State == RequiredLearningState.Completed)
+                            {
+                                @T["Completed"]
+                            }
+                            else if (item.Assignment.State == RequiredLearningState.Exempt)
+                            {
+                                @T["You are exempt."]
+                            }
+                            else if (item.Due is not null)
+                            {
+                                @T["Due {0}", item.Due]
+                            }
+                            else
+                            {
+                                @T["No due date"]
+                            }
+                        </div>
+                    </div>
+                    @switch (item.Assignment.State)
+                    {
+                        case RequiredLearningState.Completed:
+                            <span class="badge bg-success text-white">@T["Completed"]</span>
+                            break;
+                        case RequiredLearningState.Overdue:
+                            <span class="badge bg-danger text-white">@T["Overdue"]</span>
+                            break;
+                        case RequiredLearningState.InProgress:
+                            <span class="badge bg-primary text-white">@T["In progress"]</span>
+                            break;
+                        case RequiredLearningState.Exempt:
+                            <span class="badge bg-info text-white">@T["Exempt"]</span>
+                            break;
+                        default:
+                            <span class="badge bg-warning text-dark">@T["Not started"]</span>
+                            break;
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @if (Model.Paths.Count > 0)
+    {
+        <h2 class="h4 mb-3">@T["My learning paths"]</h2>
+        <div class="list-group">
+            @foreach (var path in Model.Paths)
+            {
+                <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <div class="fw-semibold">
+                            @if (path.Url is not null)
+                            {
+                                <a href="@path.Url">@path.Title</a>
+                            }
+                            else
+                            {
+                                @path.Title
+                            }
+                        </div>
+                        @if (path.Progress.State == LearningPathState.InProgress && path.StageCount > 0)
+                        {
+                            <div class="text-muted small">@T["Stage {0} of {1}", path.Progress.OpenedStage + 1, path.StageCount]</div>
+                        }
+                    </div>
+                    @if (path.Progress.State == LearningPathState.Completed)
+                    {
+                        <span class="badge bg-success text-white">@T["Completed"]</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-primary text-white">@T["In progress"]</span>
+                    }
+                </div>
+            }
+        </div>
+    }
+    </text>;
+}
+
+@if (accountUrl is not null)
+{
+    <zone Name="Title">
+        <breadcrumb name="LearningMyRequiredLearning" title="@T["My required learning"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        </breadcrumb>
+    </zone>
+
+    @await DisplayAsync(await New.CommerceAccountPage(Title: T["My required learning"], Content: content(null)))
+}
+else
+{
+    <div class="container my-4">
+        <div class="product-breadcrumb">
+            <breadcrumb name="LearningMyRequiredLearning" title="@T["My required learning"]">
+                <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            </breadcrumb>
+        </div>
+        <h1 class="h3 mb-3">@T["My required learning"]</h1>
+        @content(null)
+    </div>
+}

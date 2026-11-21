@@ -1,0 +1,3 @@
+@model ShapeViewModel<XapiStatementRow>
+
+<span class="badge ta-badge fw-normal" title="@T["Stored"]"><i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(Model.Value.Record.StoredUtc, DateTimeKind.Utc), Format: "g"))</span>

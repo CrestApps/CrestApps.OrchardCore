@@ -45,6 +45,8 @@ internal static class ShiftEvents
                 Kind = segment.ActivityCodeId is not null && codes.TryGetValue(segment.ActivityCodeId, out var code) ? code.Kind : ActivityKind.Break,
                 StartUtc = CalendarTime.ToUtc(segment.Start, timeZoneId),
                 EndUtc = CalendarTime.ToUtc(segment.End, timeZoneId),
+                Source = segment.Source,
+                SourceId = segment.SourceId,
             }).ToList(),
         };
     }

@@ -1,0 +1,55 @@
+@model EducationCreditTypeEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="LearningCreditTypesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Credit Type"] : T["Edit '{0}' Credit Type", Model.Name ?? string.Empty])">
+        <breadcrumb-item id="LearningCreditTypes" action="Index" controller="EducationCreditTypes" area="CrestApps.OrchardCore.Learning.Certifications">@T["Education Credits"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Credit type"]</div>
+        <div class="card-body">
+            <div class="ocat-limited-wrapper">
+                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="Name" class="form-control" maxlength="100" autofocus required />
+                    <span class="hint">@T["Such as CPD hours, CEU or PDU."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper">
+                <label asp-for="Unit" class="ocat-label">@T["Unit"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="Unit" class="form-control" maxlength="50" />
+                    <span class="hint">@T["Shown after an amount, such as hours. Empty shows the name."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper">
+                <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+                <div class="ocat-limited">
+                    <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="AllowExternalLearning" class="form-check-input" />
+                        <label asp-for="AllowExternalLearning" class="form-check-label">@T["People can record external learning of this type"]</label>
+                        <span class="hint dashed">@T["They record learning done elsewhere with evidence on My education credits; a reviewer accepts it."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

@@ -37,4 +37,10 @@ public sealed class ProductPartSettings
     /// Gets or sets whether each product may choose how its own price is shown.
     /// </summary>
     public bool AllowPriceDisplayOverride { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a product of the content type may be saved without a price. Such a product is simply not
+    /// for sale: it cannot be bought and shows no price, as on a type whose items are often given away, such as courses.
+    /// </summary>
+    public bool PriceOptional { get; set; }
 }

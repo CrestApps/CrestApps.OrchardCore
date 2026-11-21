@@ -5,7 +5,7 @@
 
 @if (Model.Items.Count == 0)
 {
-    <p class="text-muted">@T["There is nothing here for your account yet."]</p>
+    @await DisplayAsync(await New.CommerceAccountEmptyState(Title: T["There is nothing here for your account yet."]))
 }
 else
 {

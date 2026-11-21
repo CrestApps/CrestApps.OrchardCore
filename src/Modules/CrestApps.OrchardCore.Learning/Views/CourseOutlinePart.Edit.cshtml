@@ -1,0 +1,97 @@
+@model CourseOutlinePartViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Outline"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <span class="hint">@T["Sections group the course items. Clear a section's title to remove it; its items leave the outline but stay in the course."]</span>
+            </div>
+        </div>
+        @for (var index = 0; index < Model.Sections.Count; index++)
+        {
+            <fieldset class="border rounded p-2 mb-2">
+                <legend class="fs-6 px-1">@(string.IsNullOrEmpty(Model.Sections[index].Title) ? T["New section"] : T["Section {0}", index + 1])</legend>
+                <input type="hidden" asp-for="Sections[index].Id" />
+                <div class="ocat-wrapper">
+                    <label asp-for="Sections[index].Title" class="ocat-label">@T["Title"]</label>
+                    <div class="ocat-end"><input asp-for="Sections[index].Title" class="form-control" maxlength="200" /></div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="Sections[index].Summary" class="ocat-label">@T["Summary"]</label>
+                    <div class="ocat-end"><input asp-for="Sections[index].Summary" class="form-control" maxlength="500" /></div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="Sections[index].Order" class="ocat-label">@T["Position"]</label>
+                    <div class="ocat-end"><input asp-for="Sections[index].Order" type="number" class="form-control" /></div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="Sections[index].OpensDaysAfterEnrollment" class="ocat-label">@T["Opens days after enrollment"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="Sections[index].OpensDaysAfterEnrollment" type="number" min="1" class="form-control" />
+                        <span class="hint">@T["Leave empty for a section that opens with the course."]</span>
+                    </div>
+                </div>
+            </fieldset>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Items in the outline"]</div>
+    <div class="card-body">
+        @if (Model.IsNew)
+        {
+            <p class="mb-0">@T["Save the course first. Then add lessons with the list of the course, and place them in sections here."]</p>
+        }
+        else if (Model.Items.Count == 0)
+        {
+            <p class="mb-0">@T["The course has no items yet. Add lessons with the list of the course, then place them in sections here."]</p>
+        }
+        else
+        {
+            var sections = Model.Sections.Where(section => !string.IsNullOrEmpty(section.Title)).ToList();
+
+            @for (var index = 0; index < Model.Items.Count; index++)
+            {
+                var item = Model.Items[index];
+
+                <fieldset class="border rounded p-2 mb-2">
+                    <legend class="fs-6 px-1">
+                        @item.Title
+                        <span class="badge ta-badge fw-normal ms-1">@item.TypeDisplayName</span>
+                        @if (!item.Published)
+                        {
+                            <span class="badge ta-badge fw-normal ms-1" title="@T["Learners see only published items."]"><i class="fa-solid fa-pen text-warning me-1" aria-hidden="true"></i>@T["Draft"]</span>
+                        }
+                    </legend>
+                    <input type="hidden" asp-for="Items[index].ContentItemId" />
+                    <div class="ocat-wrapper">
+                        <label asp-for="Items[index].SectionId" class="ocat-label">@T["Section"]</label>
+                        <div class="ocat-end">
+                            <select asp-for="Items[index].SectionId" class="form-select">
+                                <option value="">@T["Not in the outline"]</option>
+                                @foreach (var outlineSection in sections)
+                                {
+                                    <option value="@outlineSection.Id" selected="@(outlineSection.Id == item.SectionId)">@outlineSection.Title</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="ocat-wrapper">
+                        <label asp-for="Items[index].Order" class="ocat-label">@T["Position in the section"]</label>
+                        <div class="ocat-end"><input asp-for="Items[index].Order" type="number" class="form-control" /></div>
+                    </div>
+                    <div class="ocat-wrapper">
+                        <div class="ocat-end-offset">
+                            <div class="form-check">
+                                <input asp-for="Items[index].Required" type="checkbox" class="form-check-input" />
+                                <label asp-for="Items[index].Required" class="form-check-label">@T["Required for completion"]</label>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            }
+        }
+    </div>
+</div>

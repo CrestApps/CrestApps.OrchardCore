@@ -10,9 +10,7 @@ namespace CrestApps.OrchardCore.ContentTransfer.Drivers;
 
 public sealed class ImportContentDisplayDriver : DisplayDriver<ImportContent>
 {
-    private readonly HashSet<string> _allowedExtensions;
-    private readonly string _acceptedFileTypes;
-    private readonly string _supportedExtensions;
+    private readonly IReadOnlyList<IContentTransferFileFormatProvider> _formatProviders;
 
     internal readonly IStringLocalizer S;
 
@@ -20,15 +18,9 @@ public sealed class ImportContentDisplayDriver : DisplayDriver<ImportContent>
         IEnumerable<IContentTransferFileFormatProvider> formatProviders,
         IStringLocalizer<ImportContentDisplayDriver> stringLocalizer)
     {
-        var orderedProviders = formatProviders
+        _formatProviders = formatProviders
             .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)
             .ToList();
-
-        _allowedExtensions = orderedProviders
-            .Select(provider => provider.FileExtension)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        _acceptedFileTypes = string.Join(',', orderedProviders.Select(provider => provider.FileExtension));
-        _supportedExtensions = string.Join(", ", orderedProviders.Select(provider => provider.FileExtension));
         S = stringLocalizer;
     }
 
@@ -39,7 +31,8 @@ public sealed class ImportContentDisplayDriver : DisplayDriver<ImportContent>
                 var options = model.GetOrCreate<ImportContentOptionsPart>();
                 viewModel.File = model.File;
                 viewModel.PublishImportedContent = options.PublishImportedContent;
-                viewModel.AcceptedFileTypes = _acceptedFileTypes;
+                viewModel.AcceptedFileTypes = string.Join(',', AllowedExtensions(model));
+                viewModel.ShowContentOptions = model.IsContentType;
             })
             .Location("Content:1"));
 
@@ -49,11 +42,13 @@ public sealed class ImportContentDisplayDriver : DisplayDriver<ImportContent>
 
         if (await context.Updater.TryUpdateModelAsync(viewModel, Prefix))
         {
+            var allowedExtensions = AllowedExtensions(model);
+
             if (viewModel.File?.Length == 0)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.File), S["File is required."]);
             }
-            else if (_allowedExtensions.Count == 0)
+            else if (allowedExtensions.Count == 0)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.File), S["No import file formats are currently enabled."]);
             }
@@ -61,12 +56,12 @@ public sealed class ImportContentDisplayDriver : DisplayDriver<ImportContent>
             {
                 var extension = Path.GetExtension(viewModel.File.FileName);
 
-                if (!_allowedExtensions.Contains(extension))
+                if (!allowedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
                 {
                     context.Updater.ModelState.AddModelError(
                         Prefix,
                         nameof(viewModel.File),
-                        S["Only the enabled file formats are supported: {0}.", _supportedExtensions]);
+                        S["Only the enabled file formats are supported: {0}.", string.Join(", ", allowedExtensions)]);
                 }
 
                 model.File = viewModel.File;
@@ -80,4 +75,12 @@ public sealed class ImportContentDisplayDriver : DisplayDriver<ImportContent>
 
         return await EditAsync(model, context);
     }
+
+    // A format may import some content types only, such as a package of questions.
+    private List<string> AllowedExtensions(ImportContent model)
+        => _formatProviders
+            .Where(provider => string.IsNullOrEmpty(model.ContentTypeName) || provider.CanImport(model.ContentTypeName))
+            .Select(provider => provider.FileExtension)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 }

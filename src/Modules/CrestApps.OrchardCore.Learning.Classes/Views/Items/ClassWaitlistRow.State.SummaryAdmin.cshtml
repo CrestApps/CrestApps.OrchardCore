@@ -1,0 +1,11 @@
+@model ShapeViewModel<ClassWaitlistRow>
+
+@if (Model.Value.Entry.Status == WaitlistStatus.Notified)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-bell text-info me-1" aria-hidden="true"></i>@T["Told a place is free"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-hourglass-half text-secondary me-1" aria-hidden="true"></i>@T["Waiting"]</span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Joined the waitlist"]"><i class="fa-regular fa-calendar-plus text-secondary me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(Model.Value.Entry.CreatedUtc, DateTimeKind.Utc), Format: "g"))</span>

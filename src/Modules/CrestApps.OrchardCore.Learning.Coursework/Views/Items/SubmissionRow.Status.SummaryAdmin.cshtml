@@ -1,0 +1,22 @@
+@model ShapeViewModel<SubmissionRow>
+
+@{
+    var submission = Model.Value.Submission;
+}
+
+@if (!submission.Current)
+{
+    <span class="badge ta-badge fw-normal">@T["Replaced by a newer hand-in"]</span>
+}
+else if (submission.Status == SubmissionStatus.Graded)
+{
+    <span class="badge text-bg-success fw-normal">@T["Graded: {0}%", submission.Score?.ToString("0.##")]</span>
+}
+else if (submission.Status == SubmissionStatus.Returned)
+{
+    <span class="badge text-bg-warning fw-normal">@T["Returned to hand in again"]</span>
+}
+else
+{
+    <span class="badge text-bg-info fw-normal">@T["Waits for a grader"]</span>
+}

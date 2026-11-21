@@ -1,0 +1,13 @@
+@model string
+
+<zone Name="Title">
+    <breadcrumb name="LearningLtiLaunchError" title="@T["External tool"]">
+        <breadcrumb-item id="LearningMyLearning" url="@Url.RouteUrl("LearningMyLearning")">@T["My learning"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="alert alert-warning" role="alert">
+    <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@Model
+</div>
+
+<p><a href="@Url.RouteUrl("LearningMyLearning")">@T["Back to my learning"]</a></p>

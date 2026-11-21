@@ -18,6 +18,8 @@ public class ProductPartSettingsViewModel
 
     public bool AllowPriceDisplayOverride { get; set; }
 
+    public bool PriceOptional { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Types { get; set; }
 

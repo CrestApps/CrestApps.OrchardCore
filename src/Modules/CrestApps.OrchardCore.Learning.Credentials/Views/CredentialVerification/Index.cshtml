@@ -1,0 +1,95 @@
+@using CrestApps.OrchardCore.Learning.Credentials.Core.Services
+@model CredentialVerificationViewModel
+
+@{
+    ViewData["Title"] = T["Verify a digital credential"];
+
+    var (badge, text, summary) = Model.Outcome switch
+    {
+        CredentialVerificationOutcome.Valid => ("bg-success text-white", T["Valid"], T["The signature checks out against the issuer's published key, the credential has not expired and it is not revoked."]),
+        CredentialVerificationOutcome.Expired => ("bg-secondary text-white", T["Expired"], T["The signature checks out, but the credential is past its expiry."]),
+        CredentialVerificationOutcome.Revoked => ("bg-danger text-white", T["Revoked"], T["The issuer revoked this credential. It is no longer valid."]),
+        CredentialVerificationOutcome.Invalid => ("bg-danger text-white", T["Not valid"], T["The signature does not check out against the issuer's published keys. Do not rely on this credential."]),
+        _ => ("bg-warning text-dark", T["Not found"], T["No credential has this address. Check the link, or ask the holder for it."]),
+    };
+}
+
+<meta name="robots" content="noindex, nofollow" />
+
+<div class="container my-5" style="max-width: 46rem">
+    <div class="product-breadcrumb">
+        <breadcrumb name="LearningCredentialVerification" title="@T["Verify a digital credential"]">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
+    <h1 class="h3 mb-4">@T["Verify a digital credential"]</h1>
+
+    @if (Model.Outcome == CredentialVerificationOutcome.NotFound)
+    {
+        <div class="alert alert-warning" role="alert">@summary</div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                        {
+                            <img src="@Model.ImageUrl" alt="" width="72" height="72" class="rounded" style="object-fit: contain" />
+                        }
+                        <h2 class="h4 mb-0">@Model.AchievementName</h2>
+                    </div>
+                    <span class="badge @badge fs-6" data-credential-status="@Model.Outcome">@text</span>
+                </div>
+                <p class="mb-3" role="status">@summary</p>
+                <dl class="row mb-0">
+                    @if (!string.IsNullOrEmpty(Model.AchievementDescription))
+                    {
+                        <dt class="col-sm-4">@T["Achievement"]</dt>
+                        <dd class="col-sm-8">@Model.AchievementDescription</dd>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Criteria))
+                    {
+                        <dt class="col-sm-4">@T["Earned by"]</dt>
+                        <dd class="col-sm-8">@Model.Criteria</dd>
+                    }
+                    <dt class="col-sm-4">@T["Holder"]</dt>
+                    <dd class="col-sm-8">@(Model.RecipientName ?? T["Not shown"].Value)</dd>
+                    <dt class="col-sm-4">@T["Issued by"]</dt>
+                    <dd class="col-sm-8">@Model.IssuerName</dd>
+                    @if (Model.IssuedUtc is { } issued)
+                    {
+                        <dt class="col-sm-4">@T["Issued on"]</dt>
+                        <dd class="col-sm-8">@await DisplayAsync(await New.DateTime(Utc: issued, Format: "D"))</dd>
+                    }
+                    <dt class="col-sm-4">@T["Valid until"]</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.ValidUntilUtc is { } validUntil)
+                        {
+                            @await DisplayAsync(await New.DateTime(Utc: validUntil, Format: "D"))
+                        }
+                        else
+                        {
+                            @T["Does not expire"]
+                        }
+                    </dd>
+                    @if (Model.RevokedUtc is { } revoked)
+                    {
+                        <dt class="col-sm-4">@T["Revoked on"]</dt>
+                        <dd class="col-sm-8">@await DisplayAsync(await New.DateTime(Utc: revoked, Format: "D"))</dd>
+                    }
+                </dl>
+                @if (!string.IsNullOrEmpty(Model.CredentialUrl))
+                {
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <a class="btn btn-sm btn-outline-secondary" href="@Model.CredentialUrl" rel="nofollow">@T["Credential (JSON-LD)"]</a>
+                        <a class="btn btn-sm btn-outline-secondary" href="@Model.JwtUrl" rel="nofollow">@T["Signed credential (JWT)"]</a>
+                        <a class="btn btn-sm btn-outline-secondary" href="@Model.KeySetUrl" rel="nofollow">@T["Issuer keys"]</a>
+                    </div>
+                }
+                <p class="small text-muted mt-3 mb-0">@T["This page checked the credential on the issuer's server just now. The credential is an Open Badges 3.0 credential; any verifier can check its signature with the issuer's keys and its revocation list."]</p>
+            </div>
+        </div>
+    }
+</div>

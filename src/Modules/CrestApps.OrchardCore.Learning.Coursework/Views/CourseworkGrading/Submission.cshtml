@@ -1,0 +1,209 @@
+@model SubmissionGradingViewModel
+@inject IDisplayManager<CrestApps.OrchardCore.Learning.Models.GradingAssistContext> AssistDisplay
+@inject OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor UpdateModelAccessor
+
+@{
+    var submission = Model.Submission;
+    var regrade = submission.Status == SubmissionStatus.Graded;
+}
+
+<zone Name="Title">
+    <breadcrumb name="LearningCourseworkGradeSubmission" title="@T["{0}, attempt {1}", Model.LearnerName, submission.Attempt]">
+        <breadcrumb-item id="LearningGrading" action="Index" controller="Grading" area="CrestApps.OrchardCore.Learning.Assessments">@T["Grading"]</breadcrumb-item>
+        <breadcrumb-item id="LearningCourseworkSubmissions" url="@Url.RouteUrl("LearningCourseworkSubmissions", new { courseworkId = submission.CourseworkId })">@(Model.Coursework?.DisplayText ?? submission.CourseworkTitle)</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" action="@Url.RouteUrl("LearningCourseworkGrade", new { id = submission.ItemId })" class="no-multisubmit">
+    @Html.AntiForgeryToken()
+    @Html.ValidationSummary()
+
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@(submission.SignOff ? T["Sign-off"] : T["Handed in"])</div>
+        <div class="card-body">
+            <p class="mb-2">
+                @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(submission.SubmittedUtc, DateTimeKind.Utc), Format: "g"))
+                @if (submission.Late)
+                {
+                    <span class="badge text-bg-warning ms-1">@T["Late"]</span>
+                }
+                @if (!submission.Current)
+                {
+                    <span class="badge ta-badge ms-1">@T["Replaced by a newer hand-in"]</span>
+                }
+                else if (submission.Status == SubmissionStatus.Graded)
+                {
+                    <span class="badge text-bg-success ms-1">@T["Graded: {0}%", submission.Score?.ToString("0.##")]</span>
+                    @if (submission.AIAssisted)
+                    {
+                        <span class="badge ta-badge fw-normal ms-1" title="@T["The grader saved this grade after using scoring help."]"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> @T["AI-assisted"]</span>
+                    }
+                }
+                else if (submission.Status == SubmissionStatus.Returned)
+                {
+                    <span class="badge text-bg-warning ms-1">@T["Returned to hand in again"]</span>
+                }
+            </p>
+            @if (submission.Status == SubmissionStatus.Graded && submission.RawScore is { } rawScore && submission.LatePenaltyPercent is > 0)
+            {
+                <p class="mb-2 small">@T["Raw score {0}%, late penalty {1}% (days late: {2}), final score {3}%.", rawScore.ToString("0.##"), submission.LatePenaltyPercent.Value.ToString("0.##"), submission.DaysLate ?? 0, submission.Score?.ToString("0.##")]</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(submission.Text))
+            {
+                <div class="border rounded p-2 mb-2 text-break" style="white-space: pre-wrap">@submission.Text</div>
+            }
+            @if (submission.Files.Count > 0)
+            {
+                <ul class="list-unstyled mb-0">
+                    @foreach (var file in submission.Files)
+                    {
+                        <li><i class="fa-solid fa-file me-1" aria-hidden="true"></i><a href="@Model.FileUrls[file.FileId]">@file.FileName</a> <span class="text-secondary small">(@((file.Size / 1024.0).ToString("0.#")) KB)</span></li>
+                    }
+                </ul>
+            }
+            @if (submission.SignOff)
+            {
+                <p class="text-secondary mb-0"><i class="fa-solid fa-user-check me-1" aria-hidden="true"></i>@T["A sign-off: the learner hands nothing in. Grade the work you saw them do."]</p>
+            }
+            else if (string.IsNullOrWhiteSpace(submission.Text) && submission.Files.Count == 0)
+            {
+                <p class="text-secondary mb-0">@T["Nothing is left of this hand-in: the learner's personal data was erased."]</p>
+            }
+        </div>
+    </div>
+
+    @if (Model.CanGrade)
+    {
+        <div class="card text-bg-theme mb-3">
+            <div class="card-header">@(regrade ? T["Grade again"] : T["Grade"])</div>
+            <div class="card-body">
+                @if (Model.LatePenaltyPercent > 0)
+                {
+                    <div class="ocat-wrapper">
+                        <div class="ocat-end-offset">
+                            <span class="hint">@T["Handed in late (days late: {0}): the grade you give loses a late penalty of {1}%.", Model.DaysLate, Model.LatePenaltyPercent.ToString("0.##")]</span>
+                        </div>
+                    </div>
+                }
+                @if (Model.Rubric is not null)
+                {
+                    @foreach (var criterion in Model.Rubric.Criteria)
+                    {
+                        var chosen = Model.Choices.TryGetValue(criterion.Id ?? string.Empty, out var levelId) ? levelId : null;
+
+                        <fieldset class="ocat-wrapper">
+                            <legend class="ocat-label fs-6">@criterion.Title</legend>
+                            <div class="ocat-end">
+                                @if (!string.IsNullOrWhiteSpace(criterion.Description))
+                                {
+                                    <span class="hint d-block mb-1">@criterion.Description</span>
+                                }
+                                @foreach (var level in criterion.Levels)
+                                {
+                                    var inputId = $"choice-{criterion.Id}-{level.Id}";
+
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" id="@inputId" name="Choices[@criterion.Id]" value="@level.Id" checked="@(chosen == level.Id)" />
+                                        <label class="form-check-label" for="@inputId">@(level.Points == 1 ? T["{0} (1 point)", level.Title] : T["{0} ({1} points)", level.Title, level.Points.ToString("0.##")])</label>
+                                    </div>
+                                }
+                            </div>
+                        </fieldset>
+                    }
+                }
+                else
+                {
+                    <div class="ocat-wrapper" asp-validation-class-for="Points">
+                        <label asp-for="Points" class="ocat-label">@T["Points"]</label>
+                        <div class="ocat-end">
+                            <input asp-for="Points" type="number" min="0" max="@Model.Part.MaxPoints.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control" />
+                            <span class="hint">@T["Out of {0}.", Model.Part.MaxPoints.ToString("0.##")]</span>
+                        </div>
+                    </div>
+                }
+
+                <div class="ocat-wrapper" asp-validation-class-for="Feedback">
+                    <label asp-for="Feedback" class="ocat-label">@T["Feedback"]</label>
+                    <div class="ocat-end">
+                        <textarea asp-for="Feedback" rows="5" class="form-control" maxlength="@CourseworkConstants.MaxFeedbackLength"></textarea>
+                        <span class="hint">@T["The learner sees it with the grade, or with the work when you return it."]</span>
+                    </div>
+                </div>
+
+                @await DisplayAsync(await AssistDisplay.BuildDisplayAsync(new CrestApps.OrchardCore.Learning.Models.GradingAssistContext
+                {
+                    Kind = CrestApps.OrchardCore.Learning.Models.GradingAssistContext.SubmissionKind,
+                    RecordId = submission.ItemId,
+                    MaxPoints = Model.Part.MaxPoints,
+                    CanEdit = Model.CanGrade,
+                    PointsField = Model.Rubric is null ? Html.NameFor(m => m.Points).ToString() : null,
+                    FeedbackField = Html.NameFor(m => m.Feedback).ToString(),
+                    RubricFieldPrefix = Model.Rubric is null ? null : "Choices",
+                    AssistedField = Html.NameFor(m => m.AIAssisted).ToString(),
+                }, UpdateModelAccessor.ModelUpdater, "Detail"))
+
+                @if (regrade)
+                {
+                    <div class="ocat-wrapper" asp-validation-class-for="Reason">
+                        <label asp-for="Reason" class="ocat-label">@T["Why grade again"]</label>
+                        <div class="ocat-end">
+                            <input asp-for="Reason" class="form-control" maxlength="@CourseworkConstants.MaxReasonLength" />
+                            <span class="hint">@T["Needed to change a grade. The earlier grade is kept with it."]</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @if (submission.History.Count > 0)
+    {
+        <div class="card text-bg-theme mb-3">
+            <div class="card-header">@T["Earlier grades"]</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var grade in submission.History.AsEnumerable().Reverse())
+                {
+                    <li class="list-group-item">
+                        <div>
+                            @T["{0}% by {1}", grade.Score?.ToString("0.##"), Model.Names.TryGetValue(grade.GraderId ?? string.Empty, out var grader) ? grader : grade.GraderId]
+                            @if (grade.AIAssisted)
+                            {
+                                <span class="badge ta-badge fw-normal ms-1">@T["AI-assisted"]</span>
+                            }
+                            @if (grade.LatePenaltyPercent is > 0 && grade.RawScore is { } earlierRaw)
+                            {
+                                <span class="text-secondary small">@T["({0}% before the late penalty of {1}%)", earlierRaw.ToString("0.##"), grade.LatePenaltyPercent.Value.ToString("0.##")]</span>
+                            }
+                        </div>
+                        <div class="small text-secondary">@T["Replaced by {0}:", Model.Names.TryGetValue(grade.ReplacedBy ?? string.Empty, out var replacer) ? replacer : grade.ReplacedBy] @grade.Reason</div>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (Model.EarlierAttempts.Count > 0)
+    {
+        <div class="card text-bg-theme mb-3">
+            <div class="card-header">@T["Other attempts of the learner"]</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var other in Model.EarlierAttempts)
+                {
+                    <li class="list-group-item"><a href="@Url.RouteUrl("LearningCourseworkGradeSubmission", new { id = other.ItemId })">@T["Attempt {0}", other.Attempt]</a> <span class="text-secondary small">@other.Status</span></li>
+                }
+            </ul>
+        </div>
+    }
+
+    <div class="action-bar-bottom">
+        @if (Model.CanGrade)
+        {
+            <button class="btn btn-primary" type="submit">@(regrade ? T["Grade again"] : T["Grade"])</button>
+            @if (!submission.SignOff)
+            {
+                <button class="btn btn-secondary action-bar-secondary" type="submit" formaction="@Url.RouteUrl("LearningCourseworkReturn", new { id = submission.ItemId })">@T["Return for resubmission"]</button>
+            }
+        }
+        <a class="btn btn-secondary cancel" role="button" href="@Url.RouteUrl("LearningCourseworkSubmissions", new { courseworkId = submission.CourseworkId })">@T["Back"]</a>
+    </div>
+</form>

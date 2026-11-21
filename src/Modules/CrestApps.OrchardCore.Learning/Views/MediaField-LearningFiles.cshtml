@@ -1,0 +1,36 @@
+@model OrchardCore.Media.ViewModels.DisplayMediaFieldViewModel
+@using OrchardCore.Media.Fields
+@using OrchardCore.Mvc.Utilities
+@using OrchardCore.ContentManagement.Metadata.Models
+@using CrestApps.OrchardCore.Learning.Core.Services
+@{
+    var paths = Model.Paths ?? Array.Empty<string>();
+    var mediaTexts = Model.Field?.MediaTexts ?? Array.Empty<string>();
+    var attachedNames = Model.Field?.GetAttachedFileNames() ?? Array.Empty<string>();
+    var name = (Model.PartFieldDefinition.PartDefinition.Name + "-" + Model.PartFieldDefinition.Name).HtmlClassify();
+}
+@if (paths.Length > 0)
+{
+    <div class="field field-type-mediafield field-name-@name learning-files mb-3">
+        <h2 class="h6">@Model.PartFieldDefinition.DisplayName()</h2>
+        <ul class="list-unstyled mb-0">
+            @for (var i = 0; i < paths.Length; i++)
+            {
+                var path = paths[i];
+                var url = Orchard.AssetUrl(path);
+                var text = mediaTexts.ElementAtOrDefault(i);
+
+                if (Orchard.IsImageFile(path))
+                {
+                    <li class="mb-2"><img src="@url" alt="@(text ?? string.Empty)" class="img-fluid" /></li>
+                }
+                else
+                {
+                    var fileName = LearningFileNames.GetDisplayName(path, attachedNames.ElementAtOrDefault(i), text);
+
+                    <li class="mb-1"><i class="fa-regular fa-file me-1" aria-hidden="true"></i><a href="@url" download="@fileName">@fileName</a></li>
+                }
+            }
+        </ul>
+    </div>
+}

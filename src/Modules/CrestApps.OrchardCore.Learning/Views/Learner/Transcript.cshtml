@@ -1,0 +1,76 @@
+@inject CrestApps.OrchardCore.Learning.Services.LearningTimeText TimeText
+@model IReadOnlyList<Enrollment>
+@using Microsoft.AspNetCore.Html
+
+@{
+    // Inside the storefront account the page is framed by the account menu; without it, it stands alone.
+    var accountUrl = Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName);
+    Func<object, IHtmlContent> content = @<text>
+    <p class="text-muted">@T["Every course you completed, as it was when you completed it."]</p>
+
+    @if (Model.Count == 0)
+    {
+        @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-solid fa-graduation-cap", Title: T["You have not completed a course yet."], Hint: T["Each course you complete appears here, with the date, the grade and the time you spent."], Actions: new Microsoft.AspNetCore.Html.HtmlString($"<a class=\"btn btn-outline-primary btn-sm\" href=\"{Url.RouteUrl("LearningMyLearning")}\">{System.Net.WebUtility.HtmlEncode(T["My learning"].Value)}</a>")))
+    }
+    else
+    {
+        <div class="card">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Course"]</th>
+                        <th scope="col">@T["Completed"]</th>
+                        <th scope="col">@T["Grade"]</th>
+                        <th scope="col">@T["Time spent"]</th>
+                        <th scope="col">@T["Enrollment"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var enrollment in Model)
+                    {
+                        var completion = enrollment.Completion;
+                        <tr>
+                            <td>
+                                @completion.CourseTitle
+                                @if (!string.IsNullOrEmpty(completion.CourseCode))
+                                {
+                                    <div class="small text-muted">@completion.CourseCode</div>
+                                }
+                            </td>
+                            <td>@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completion.CompletedUtc, DateTimeKind.Utc), Format: "d"))</td>
+                            <td>@(completion.Grade is { } grade ? T.GetString("{0}%", grade.ToString("0.##")).Value : T["No grade"].Value)</td>
+                            <td>@TimeText.Format(completion.SecondsSpent)</td>
+                            <td class="small">@enrollment.Number</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        </div>
+    }
+    </text>;
+}
+
+@if (accountUrl is not null)
+{
+    <zone Name="Title">
+        <breadcrumb name="LearningTranscript" title="@T["My transcript"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        </breadcrumb>
+    </zone>
+
+    @await DisplayAsync(await New.CommerceAccountPage(Title: T["My transcript"], Content: content(null)))
+}
+else
+{
+    <div class="container my-4">
+        <div class="product-breadcrumb">
+            <breadcrumb name="LearningTranscript" title="@T["My transcript"]">
+                <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            </breadcrumb>
+        </div>
+        <h1 class="h3 mb-3">@T["My transcript"]</h1>
+        @content(null)
+    </div>
+}

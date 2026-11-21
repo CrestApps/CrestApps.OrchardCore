@@ -42,7 +42,7 @@ The repository's `CrestApps.OrchardCore.RecipeSchemaExporter` utility now instan
 
 ## AI profile creation from templates
 
-The AI module contributes a `CreateAIProfileFromTemplate` recipe step for creating or updating profiles from reusable AI templates whose source is **Profile**.
+The AI module contributes a `CreateAIProfileFromTemplate` recipe step for creating or updating profiles from reusable AI templates whose source is **Profile**. Like the New AI Profile flow, it runs the template application handlers (`IAIProfileTemplateApplicationHandler`) before it saves the profile, so features that finish a profile made from their template (such as Learning AI's tutor mark) apply to recipes too.
 
 ```json
 {

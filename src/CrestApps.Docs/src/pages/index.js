@@ -148,6 +148,14 @@ const AREAS = [
     technical: '/docs/invoicing-and-billing',
   },
   {
+    title: 'Learning (LMS)',
+    inHero: true,
+    icon: 'graduation-cap',
+    text: 'Courses, quizzes, certifications and learning paths, SCORM, xAPI and LTI content, digital credentials and a Moodle import.',
+    user: '/docs/user-manual/learning/courses',
+    technical: '/docs/modules/learning',
+  },
+  {
     title: 'Site Administration',
     icon: 'shield-check',
     text: 'Users and roles, import and export, Do Not Call lists, phone number checks and time zones.',
@@ -167,7 +175,8 @@ function HomepageHeader() {
         <p className={clsx('hero__subtitle', styles.heroDefinition)}>
           Open-source modules that turn an Orchard Core site into a business application: an AI assistant
           suite, a CRM, a contact center with phones and a dialer, omnichannel messaging, a service desk and knowledge base, workforce
-          management, field service, e-commerce, calendars and scheduling, payroll, and invoicing and billing, all managed from the site's admin.
+          management, field service, e-commerce, calendars and scheduling, payroll, invoicing and billing, and a learning management system,
+          all managed from the site's admin.
         </p>
         <ul className={styles.heroFacts}>
           {AREAS.filter((area) => area.inHero).map((area) => (
@@ -253,7 +262,7 @@ export default function Home() {
   return (
     <Layout
       title="Documentation"
-      description="The User Manual and the Technical Manual for the CrestApps Orchard Core modules: AI, CRM, Contact Center, Messaging, Phone, Service Desk, Knowledge Base, Workforce, Field Service, E-Commerce, Calendars and Scheduling, Payroll, and Invoicing & Billing.">
+      description="The User Manual and the Technical Manual for the CrestApps Orchard Core modules: AI, CRM, Contact Center, Messaging, Phone, Service Desk, Knowledge Base, Workforce, Field Service, E-Commerce, Calendars and Scheduling, Payroll, Invoicing & Billing, and Learning.">
       <HomepageHeader />
       <main>
         <div className={clsx('container', styles.cards)}>

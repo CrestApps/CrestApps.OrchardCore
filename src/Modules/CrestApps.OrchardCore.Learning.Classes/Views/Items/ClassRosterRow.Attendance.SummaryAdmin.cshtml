@@ -1,0 +1,22 @@
+@model ShapeViewModel<ClassRosterRow>
+
+@{
+    var id = Model.Value.Appointment.ItemId;
+    var attendance = Model.Value.Appointment.Attendance;
+}
+
+@if (Model.Value.CanMark)
+{
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <select name="attendance[@id]" form="class-roster-form" class="form-select form-select-sm w-auto" aria-label="@T["Attendance of {0}", Model.Value.Name]">
+            <option value="@AppointmentAttendance.Unmarked" selected="@(attendance == AppointmentAttendance.Unmarked)">@T["Not marked"]</option>
+            <option value="@AppointmentAttendance.Attended" selected="@(attendance == AppointmentAttendance.Attended)">@T["Attended"]</option>
+            <option value="@AppointmentAttendance.Partial" selected="@(attendance == AppointmentAttendance.Partial)">@T["Partly attended"]</option>
+            <option value="@AppointmentAttendance.Absent" selected="@(attendance == AppointmentAttendance.Absent)">@T["Absent"]</option>
+        </select>
+        <div class="input-group input-group-sm w-auto">
+            <input type="number" name="minutes[@id]" form="class-roster-form" min="1" max="@Model.Value.TotalMinutes" value="@(attendance == AppointmentAttendance.Partial ? Model.Value.Appointment.MinutesAttended : null)" class="form-control" style="max-width: 6rem" aria-label="@T["Minutes attended by {0}", Model.Value.Name]" />
+            <span class="input-group-text">@T["of {0} min", Model.Value.TotalMinutes]</span>
+        </div>
+    </div>
+}

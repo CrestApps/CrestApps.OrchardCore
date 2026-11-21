@@ -635,6 +635,36 @@ OrchardCore__CrestApps__DataConnectors__Network__AllowPrivateNetworks=true
 
 See [Data Connectors](modules/data-connectors.md#configuration).
 
+## Learning
+
+### Learning upkeep
+
+The daily Learning upkeep raises the access-ending, due-soon and inactive notices once per enrollment and expires enrollments whose access ended. It reads `OrchardCore:CrestApps:Learning:Upkeep`; zero turns a notice off.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Learning": {
+        "Upkeep": {
+          "AccessEndingNoticeDays": 7,
+          "InactiveDays": 14,
+          "DueSoonDays": 3
+        }
+      }
+    }
+  }
+}
+```
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `AccessEndingNoticeDays` | 7 | How many days before access ends the access-ending notice is raised. |
+| `InactiveDays` | 14 | After how many days without activity a learner counts as inactive, for the workflow event and the Inactive learners report. |
+| `DueSoonDays` | 3 | How many days before the due date the due-soon notice is sent. |
+
+See [Learning](./modules/learning#configuration).
+
 ## MCP and A2A
 
 ### MCP server

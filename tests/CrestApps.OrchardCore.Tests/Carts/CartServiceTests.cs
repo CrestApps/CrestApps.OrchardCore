@@ -5,15 +5,16 @@ using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using ISession = YesSql.ISession;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 using Xunit;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Carts;
 
@@ -232,6 +233,32 @@ public sealed class CartServiceTests
 
         Assert.False(result.Succeeded);
         Assert.Equal("Only 2 of tour left.", result.Message.Value);
+    }
+
+    [Fact]
+    public async Task ALineHandler_ThatSaysWhyItLimitsTheQuantity_IsQuoted_InsteadOfWhatIsLeft()
+    {
+        _harness.AddProduct("course", unitPrice: 20m);
+        _harness.LineHandlers.Add(new OnePerPersonLineHandler());
+
+        var result = await _harness.NewRequest().AddAsync("course", null, null, 2, null, null, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("course is for you alone, so one is enough.", result.Message.Value);
+    }
+
+    private sealed class OnePerPersonLineHandler : ICartLineHandler
+    {
+        public Task PrepareAsync(CartLinePrepareContext context, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task EvaluateAsync(CartLineEvaluateContext context, CancellationToken cancellationToken = default)
+        {
+            context.MaxQuantity = 1;
+            context.MaxQuantityReason = new LocalizedString("one", $"{context.Title} is for you alone, so one is enough.");
+
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class DateLineHandler : ICartLineHandler

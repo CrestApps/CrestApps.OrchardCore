@@ -1,0 +1,331 @@
+---
+sidebar_label: Learning Packages
+title: Learning Packages
+description: "The learning package course item of Learning: SCORM 1.2, SCORM 2004 and cmi5 packages imported by authors and run by learners in a sandboxed frame, with the run-time data checked and kept on the server."
+user_manual:
+  - user-manual/learning/learning-packages
+---
+
+**Learning Packages** (`CrestApps.OrchardCore.Learning.Packages`, with `Learning.Packages.Abstractions` and `Learning.Packages.Core`) adds the **Learning package** course item to [Learning](./learning). Its **Learning SCORM Packages** feature lets an author import a package, learners run it in the course player, and what the package reports count in the learner's progress. It implements:
+
+- SCORM 1.2 (ADL SCORM 1.2, the Run-Time Environment and Content Aggregation Model);
+- SCORM 2004 3rd and 4th Edition (Content Aggregation Model and Run-Time Environment; Sequencing and Navigation not implemented: a package runs its first SCO, without sequencing rules, rollup or navigation requests);
+- with the **Learning cmi5 Packages** feature, cmi5 (Quartz), on the [Learning Record Store](./learning-xapi) (see [cmi5](#cmi5); `waived`, the Browse launch mode and sequencing between AUs not implemented).
+
+| Feature | Id | Depends on |
+| --- | --- | --- |
+| Learning SCORM Packages | `CrestApps.OrchardCore.Learning.Packages.Scorm` | Learning |
+| Learning cmi5 Packages | `CrestApps.OrchardCore.Learning.Packages.Cmi5` | Learning SCORM Packages, Learning Record Store |
+
+One feature imports both SCORM versions; the version of a package is read from its manifest. A cmi5 package needs Learning cmi5 Packages; without it, importing one is refused with a message that names the feature.
+
+## The learning package item
+
+A learning package is a content item of the **Learning package** type (`LearningPackage`, defined in code with `TitlePart`, `HtmlBodyPart` for an introduction, `LearningPackagePart` and `CourseItemPart`). Its course item kind is `LearningPackage`. Add it to a course outline like any other course item.
+
+Its completion mode is one of:
+
+| Mode | The item completes when |
+| --- | --- |
+| **When the package reports it complete** (`PackageReported`, the default) | SCORM 1.2: `cmi.core.lesson_status` is `completed` or `passed`. SCORM 2004: `cmi.completion_status`, as evaluated against the completion threshold, is `completed`. |
+| **Passed** | The package passes the learner (`passed`; in SCORM 2004 `cmi.success_status`, as evaluated against the scaled passing score); `failed` fails the item. Without a status, the item's pass mark is compared with the score. |
+| **When the score reaches the pass mark, whatever the package reports** (`MinimumScore`) | The item's score reaches its pass mark, whatever the package reports about passing or completion (Moodle's "a score of at least N"). See [How learners run it](#how-learners-run-it). |
+| **Marked done** (`MarkedDone`) | The learner marks the item done in the player; the package's status does not complete it. |
+| **When the learner opens it** (`Viewed`) | The learner opens the item in the player. The import page sets it for an IMS content package, which has no run-time API to report anything. |
+
+The kind registers these five modes in `AddLearningPackagesCore()` (`LearningPackagesCoreServiceCollectionExtensions`).
+
+`LearningPackagePart` holds only what an import found; nothing in it is edited by hand:
+
+| Property | Meaning |
+| --- | --- |
+| `PackageFileId`, `FileName` | The package in the protected file store and the name of the uploaded file. |
+| `Standard`, `ManifestIdentifier`, `Title` | The version read from the manifest (`SCORM 1.2`, `SCORM 2004 3rd Edition` or `SCORM 2004 4th Edition`), the manifest's identifier and the title of its default organization. |
+| `LaunchItemIdentifier`, `LaunchItemTitle`, `LaunchPath`, `LaunchQuery` | The item that is launched and the file and query it opens. |
+| `MasteryScore`, `MaxTimeAllowed`, `TimeLimitAction`, `LaunchData` | SCORM 1.2: `adlcp:masteryscore`, `adlcp:maxtimeallowed`, `adlcp:timelimitaction` and `adlcp:datafromlms` of the launched item. SCORM 2004: no mastery score; the `attemptAbsoluteDurationLimit` of the item's `imsss:limitConditions`, `adlcp:timeLimitAction` and `adlcp:dataFromLMS`. |
+| `CompletionThreshold`, `ScaledPassingScore`, `ObjectiveIds`, `HasSequencing` | SCORM 2004 only: the completion threshold (0 to 1), the scaled passing score (-1 to 1), the ids of the item's objectives, and whether the manifest has sequencing information (recorded, not applied). |
+| `ScoCount`, `FileCount`, `ExpandedSize` | The SCOs of the default organization, and the files and their size. |
+| `ImportedUtc`, `ImportedBy` | When and by whom the package was imported. |
+
+## Importing a package
+
+Save the learning package item, then choose **Import a package** in its editor (`/Admin/learning/packages/{contentItemId}/upload`). The page needs the **Import learning packages** permission (`ImportLearningPackages`, implied by Manage courses, given to administrators) and the right to edit the item. The import goes into a draft of the item, so learners keep the current package until the draft is published.
+
+The upload is a .zip file of up to 500 MB. It is copied to a temporary folder of the tenant (`ITempDirectoryProvider`) and extracted there. Every entry is checked before anything is written, and the import is refused, with the entry named, when an entry:
+
+- has an absolute path, a drive letter, a network share, or a `..` segment that climbs out of the package;
+- has a colon (a stream or a drive), a control character, a name Windows keeps for a device, or a name ending in a dot or a space;
+- is a symbolic link;
+- has the same path as another entry, ignoring case.
+
+The import is also refused when the archive has more than 10,000 entries or more than 1 GB once extracted; the bytes are counted as they are written, so the size an entry claims is never trusted. The limits are `LearningPackageOptions` (`MaxUploadBytes`, `MaxEntries`, `MaxExpandedBytes`).
+
+Then `imsmanifest.xml` is read:
+
+- The **version** is the metadata's `schemaversion`: `1.2`, `2004 3rd Edition` or `2004 4th Edition` (`2004 2nd Edition` and `CAM 1.3` follow the 3rd Edition's rules). Without one, the SCORM 2004 namespaces (`adlcp_v1p3`, `adlseq_v1p3`, `adlnav_v1p3`, `imsss`) make the package SCORM 2004 4th Edition, whose limits are the larger; otherwise it is SCORM 1.2. The item's editor shows the version.
+- The **default organization** is the one `organizations/@default` names; without a default, or when it names no organization, the first organization is used.
+- Its items are read depth first in document order. An item whose resource has `adlcp:scormtype="sco"` is a SCO; any other is an asset.
+- A SCO's file is its resource's `href` under the `xml:base` of the manifest, of the `resources` element and of the resource. It opens with the query of the `href` and the item's `parameters`. A `href` outside the package, or a web address, is refused, and the file must be in the package.
+- SCORM 1.2: the launched item's `adlcp:masteryscore` (0 to 100), `adlcp:maxtimeallowed`, `adlcp:timelimitaction` and `adlcp:datafromlms` are kept.
+- SCORM 2004: the resource's `adlcp:scormType` says SCO or asset. The launched item's `adlcp:completionThreshold` is kept: its text in the 3rd Edition; in the 4th Edition its `minProgressMeasure` (1.0 when missing), only when `completedByMeasure` is `true`. From the item's `imsss:sequencing` (or the shared definition its `IDRef` names in `imsss:sequencingCollection`), the ids of its `imsss:objectives` (the primary objective first), the primary objective's `imsss:minNormalizedMeasure` when it is `satisfiedByMeasure` (the scaled passing score, 1.0 when missing) and the `attemptAbsoluteDurationLimit` are kept, with `adlcp:timeLimitAction` and `adlcp:dataFromLMS`. A threshold outside 0 to 1, or a measure outside -1 to 1, is refused.
+- A manifest with a DTD is refused; no external entity is ever resolved.
+
+**The first SCO is launched.** A package with one SCO, or a simple package with several SCOs whose first SCO is the course, runs as expected. A package that needs the learner to move from SCO to SCO (sequencing between SCOs) is not supported: only the first one runs, and the editor says how many SCOs the package has. SCORM 2004 sequencing rules, rollup and navigation requests are not applied; the editor says so when the manifest has sequencing information. A SCORM package of assets only, with no SCO, is refused because it cannot report progress; a manifest that says nothing of SCORM is an IMS content package (below).
+
+A clean archive of only the extracted files, under their checked names, is kept in the protected file store (`IProtectedFileStore`), through Orchard Core's file creation pipeline, so an antivirus scanner registered there can refuse it. The temporary folder is always deleted. The package files are not in the media library and no URL serves them except the launch endpoint below.
+
+### IMS content packages
+
+A manifest with no `adlcp:scormtype` attribute, no ADL namespace and no `SCORM` in its metadata `schema` is an IMS Content Packaging package (Moodle's IMS content package activity): its standard is `IMS Content Package` (`PackagesConstants.Standards.ImsContentPackage`). Its items with a resource `href` are read in document order, with the same path checks as a SCO, and the first is launched. The import page sets the item's completion mode to **Viewed** (`PackageImportResult.CompletionModeFor`), and the kind supports it, so the item completes when the learner opens it in the player.
+
+It plays without the run-time API (`PackagesConstants.Standards.HasNoRuntime`): its pages are served as they are, with no script injected, in the same sandboxed frame; the launch opens the launch file directly, from the package content host when one is set, and the content host's frame page is not used. Nothing is reported from the package itself.
+
+### File kinds
+
+A package may hold these kinds of file, each served with its content type (`PackageFileTypes`):
+
+| Kind | Extensions |
+| --- | --- |
+| Pages, scripts and styles | `.html`, `.htm`, `.xhtml`, `.js`, `.mjs`, `.css`, `.map`, `.wasm` |
+| Data, manifests and schemas | `.json`, `.xml`, `.xsd`, `.dtd`, `.xsl`, `.txt`, `.csv`, `.md` |
+| Captions | `.vtt`, `.srt` |
+| Images, icons and cursors | `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.webp`, `.bmp`, `.avif`, `.ico`, `.cur` |
+| Fonts | `.woff`, `.woff2`, `.ttf`, `.otf`, `.eot` |
+| Audio and video | MP3, M4A, AAC, FLAC, Ogg (`.ogg`, `.oga`, `.ogv`), WAV, MPEG-4 video (`.m4v` and the MP4 extension), WebM and SWF |
+| 3D models | `.glb`, `.gltf`, `.bin` |
+| Documents | `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.ppt`, `.pptx` |
+
+Office files with macros (`.docm`, `.xlsm`), programs and scripts (`.exe`, `.dll`, `.msi`, `.bat`, `.cmd`, `.ps1`, `.sh`, `.vbs`), server pages (`.cshtml`, `.aspx`, `.ashx`, `.asp`, `.php`, `.jsp`) and configuration (`web.config`, `.htaccess`) are refused. Pages and SVG images run under the sandbox like every package file.
+
+## How learners run it
+
+The package editor's **How learners run it** card sets three values of `LearningPackagePart` (SCORM 1.2, SCORM 2004 and IMS content packages; not cmi5):
+
+- `OpenInNewWindow`: the Launch button opens `learning/packages/{itemId}/window` (route `LearningPackageWindow`, `PackageRunController.Window`), a page of the site with the same package panel (`_PackagePanel`, built by `PackagePanelBuilder`) that launches at once and fills the window with the frame. The package still runs in the opaque frame, or through the package content host's bridge page when the site has one; the launch checks are the player's. When the session finishes the window posts `{ protocol: 'crestapps-package-window', type: 'finished', itemId }` to the page that opened it, on the site's own origin, and closes; the page takes it only from the window it opened (`isWindowFinishedMessage`) and reloads, as it does when the window closes. A runtime call the server answers with `itemCompleted` (a commit that completes the item before the session finishes) raises the `learning:item-completed` DOM event, so the course player refreshes its outline, progress and **Next** in place.
+- `MaxAttempts`: with a limit or a grading method, a launch after a finished attempt starts a new one (`PackageAttempts.StartsNewAttempt`: SCORM 1.2 after `completed`, `passed` or `failed` without `suspend`, with fresh data; SCORM 2004 whenever the session does not resume). Once the learner has used every attempt, a launch only reviews (`no-credit`, nothing kept, `PackageLaunchResult.AttemptsUsedUp`), and the panel says so and shows the attempts used.
+- `GradingMethod` (`Highest`, `Average`, `First`, `Latest`, the `GradingMethod` of Learning shared with quizzes): `PackageRuntimeState.AttemptScores` keeps each attempt's score, pass and completion; the item's score comes from them through `AttemptScores.Combine`, and the item completes or passes when any attempt did. Empty keeps one attempt that resumes, as before.
+
+The **Minimum score** completion mode (`CompletionModes.MinimumScore`) completes the item when its score reaches its pass mark, whatever the package reports about passing: Moodle's "viewed, graded and a score of at least N".
+
+## Running a package
+
+The package panel of the item in the learner player shows the learner's status, score, time and when they last opened the package, and a **Launch** button (**Resume** after a session the package suspended, **Review** once the course is completed). Results are marked as reported by the browser.
+
+### The sandbox
+
+Package content is untrusted script. Without a [package content host](#the-package-content-host) (strict mode, the default), it runs in a frame on an **opaque origin**:
+
+- The player embeds `<iframe sandbox="allow-scripts allow-forms allow-popups">`.
+- Every file of the package is served with `Content-Security-Policy: sandbox allow-scripts allow-forms allow-popups`, without `allow-same-origin`. Even a package file opened directly in a browser tab runs on an opaque origin.
+- The frame therefore cannot read the learner's cookies, cannot read or script the player page, and cannot call the site's endpoints as the learner.
+- The responses also carry `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and the content type of the file's extension.
+- They carry `Access-Control-Allow-Origin: *`, because the package's own scripts, fonts and data files are requested from an opaque origin. What opens a file is the launch token in the path, never a cookie, so this gives nothing to a reader who does not already hold the token.
+
+### The package content host
+
+Some packages run in several frames that must reach each other. Articulate Rise and Storyline 360 packages load Articulate's SCORM Driver (`scormdriver/scormdriver.js`) in one frame, which looks for `window.API` by walking `window.parent` and `window.opener`, and the content in another frame, which calls the driver in its parent. In strict mode every page and frame gets an opaque origin of its own, so these calls fail with a `SecurityError` ("Error grabbing 1.2 API ... LMS Initialize Failed") and the content stays blank. Packages that run in a single frame work in strict mode.
+
+Such packages need a **package content host**: a host name of its own that serves only package files, set per tenant under **Settings › Learning packages** (`LearningPackageContentHostSettings.BaseUrl`, permission **Manage learning package settings**, `ManageLearningPackageSettings`, given to administrators). The value is an origin: `http` or `https`, a host name and an optional port, and nothing after it, such as `https://packages.example.com`. It cannot be the host you use for the site. The `Settings` recipe step sets it:
+
+```json
+{
+  "name": "Settings",
+  "LearningPackageContentHostSettings": {
+    "BaseUrl": "https://packages.example.com"
+  }
+}
+```
+
+With a content host set:
+
+- **Routing.** `/learning/packages/run/{token}/{path}` and `/learning/packages/frame/{token}` answer only on the content host; on the site's other hosts they answer 404. Every other path on the content host (pages, the admin, sign-in, APIs, the runtime endpoint) answers 404, so the site never runs there. A middleware that runs before authentication (`PackageContentHostMiddleware`, `ConfigureOrder` just before Orchard Core's authentication) decides this, and removes the `Cookie` and `Authorization` headers of every request on the content host: nothing there is done as a signed-in person, and the launch token in the path is the only credential.
+- **Headers.** The files and the frame page carry `Content-Security-Policy: sandbox allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox; frame-ancestors 'self' <player origin>`, where the player origin is the site origin the learner launched from (it travels in the launch token). They keep `nosniff`, `Referrer-Policy: no-referrer`, and `no-store` for pages. The frames of a package share the content host's origin, which is not the site's, so they reach each other but not the learner's cookies, the player page or the site's endpoints. A window a package opens (such as a Rise attachment) is not sandboxed.
+- **The frame page.** The launch opens `/learning/packages/frame/{token}` on the content host in the player's frame (`sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"`; same origin is safe there because the frame is on another origin than the player). The page defines `window.API` (SCORM 1.2) or `window.API_1484_11` (SCORM 2004) with the learner's data, as the strict mode script does, and loads the package's launch file in a child frame on the same origin, so the driver finds the API by walking up its parents. The package's own pages are served as they are, without the script.
+- **Messages.** The frame page sends what the content sets, commits and finishes to the player by `postMessage`, to the player's origin only, and passes up only messages from its own children on its own origin. The player takes a message only from its own frame, from the content host's origin (which the launch names), with the protocol and the current launch id. The runtime endpoint, the server-side data model and the checks do not change.
+- **cmi5.** A cmi5 AU that is a file of the package is served from the content host too, still in the player's opaque-origin frame (cmi5 AUs talk to the Learning Record Store, not to a frame API).
+
+Without a content host nothing changes: package files are served from the site's own host in strict mode, and `/learning/packages/frame/...` answers 404. The import page says that multi-frame packages need a content host, and an import that finds `scormdriver.js` warns when none is set (`PackageImportResult.UsesScormDriver`).
+
+All packages of the tenant share the content host's origin, so a package can reach another package's storage on that origin in the same browser. Import packages only from authors you trust with script, as for strict mode.
+
+#### Setting up the content host in production
+
+1. **Choose a host whose cookies never include the site's.** The best choice is another registrable domain, such as `example-packages.com` for `learn.example.com`. A subdomain (`packages.example.com`) works only when the site's cookies are host-only, which is Orchard Core's default: no authentication, antiforgery or session cookie may be set with `Domain=example.com`, and no other application on the parent domain may set such cookies either.
+2. **DNS.** Point the host at the same server or load balancer as the site, for example a `CNAME` record from `packages.example.com` to the site's host name (or an `A`/`AAAA` record to the same address). In Azure App Service, add the host as a custom domain of the same app.
+3. **The tenant's host names.** Add the content host to the tenant's **Host names** (`RequestUrlHost`, a comma-separated list in **Tenants** or in `tenants.json`), for example `learn.example.com,packages.example.com`, so requests for it reach the same tenant. A tenant with a URL prefix needs the same prefix on the content host. The Default tenant without host names already answers every host.
+4. **TLS.** Give the content host a certificate (a certificate for both names, or one of its own). Use `https` for both the site and the content host: a page on `https` cannot frame an `http` content host.
+5. **Reverse proxy.** When the site runs behind a proxy, forward the original `Host` (or configure Orchard Core's reverse proxy feature for `X-Forwarded-Host`) so the content host is recognized.
+6. **The site's own policy.** If the site sends a `Content-Security-Policy` with `frame-src` or `child-src`, add the content host to it.
+7. Set **Settings › Learning packages › Package content host** to `https://packages.example.com`, then launch a package and check that it shows.
+
+For local testing, `http://127.0.0.1:<port>` as the content host of a site browsed at `http://localhost:<port>` behaves like production: the two are different origins and the site's cookies are host-only.
+
+### The launch token
+
+**Launch** posts to `/learning/packages/{itemId}/launch` with the learner's session and antiforgery token. It checks the learner's own enrollment, access window and the item's release rules, starts a session and returns a launch token. The token:
+
+- is made with the tenant's ASP.NET Core Data Protection, with a purpose of its own;
+- is bound to the launch, the enrollment, the package item, the package file and the learner, and carries the origin of the player page that launched it (the only origin that may frame the package on a content host);
+- expires after 8 hours (`PackageLaunchTokens.Lifetime`).
+
+In strict mode the frame loads `/learning/packages/run/{token}/{path}`; with a content host it loads the frame page there, which loads the same path on the content host. The token is in the path, so the package's relative links resolve. Only files of the token's package are served, at normalized paths that cannot leave the package. A token stops opening files when the enrollment is withdrawn or no longer the learner's, or when another package is published into the item.
+
+### The SCORM 1.2 API
+
+The server puts the learner's run-time data and a small script at the start of every HTML page of the package. For a SCORM 1.2 package the script defines `window.API` with the eight SCORM 1.2 functions: `LMSInitialize`, `LMSFinish`, `LMSGetValue`, `LMSSetValue`, `LMSCommit`, `LMSGetLastError`, `LMSGetErrorString` and `LMSGetDiagnostic`. A SCO that searches its own window, its parents and its opener for `API` finds it. The script answers the SCO at once, with the SCORM 1.2 error codes, from its copy of the data.
+
+### The SCORM 2004 API
+
+For a SCORM 2004 package the script defines `window.API_1484_11` with the eight SCORM 2004 methods: `Initialize`, `Terminate`, `GetValue`, `SetValue`, `Commit`, `GetLastError`, `GetErrorString` and `GetDiagnostic`. It answers with the SCORM 2004 error codes, including the state rules of the API: `Initialize` twice is 103 and after `Terminate` 104; `Terminate` before `Initialize` is 112 and twice 113; `GetValue`, `SetValue` and `Commit` before `Initialize` are 122, 132 and 142, and after `Terminate` 123, 133 and 143. Its messages use their own protocol name, which the launch tells the player.
+
+### Messages to the player
+
+The script tells the player page what the SCO set, committed and finished (terminated) **only through `postMessage`**, to the player's origin. The player takes a message only when all of these hold:
+
+- it comes from its own frame (`event.source`);
+- its origin is `"null"` in strict mode, or the content host's origin;
+- it carries the protocol name and the id of the current launch.
+
+The player sends the values to `/learning/packages/runtime/{enrollmentId}/{itemId}` with the learner's session and antiforgery token: when the SCO commits or finishes, every 30 seconds, and when the page is left. Its calls go one at a time and in order (a finish waits for the commit before it), each with the next `sequence` number of the launch; a busy or lost answer is sent again with the same values and number before anything newer. The server applies nothing at or below the last number it applied in the launch (`PackageRuntimeState.LastSequence`, reset by each launch) and answers such a call as taken, so an older call never overwrites a newer one. The frame itself never holds a credential that can do more than this launch's runtime calls. When a commit or finish is saved but its result cannot reach the learner's progress because the enrollment stays busy, the state keeps `ResultNotRecorded`; the next launch records that result before it starts a session (for SCORM 2004 a new attempt resets the data the result came from), and is refused as busy while the enrollment still is.
+
+### The runtime state on the server
+
+The server keeps one runtime state per enrollment and package item (the `LearningPackageRuntime` collection). A runtime call must carry the token of the latest launch by the signed-in learner, for the enrollment and item it names. A call from an older launch (another tab) or after the session finished is refused. Writes to one runtime state run under one lock per enrollment and package. A package may hold only web content; a file of another kind, such as a program or a server page, is refused at import with its name (see [File kinds](#file-kinds)). The `LearningPackageRuntimeStates` recipe step imports a state only into an enrollment of the named person in the named course, and only with status values of the package's standard. The lists of the runtime data take at most the SCORM 2004 smallest permitted maximums (250 interactions, 100 objectives, 10 objective ids and 10 correct responses per interaction, 250 learner comments; `ScormLimits`): a write past a list's limit gets 201 in SCORM 1.2 and 351 in SCORM 2004. A call that would make the stored state larger than 1 MB is refused whole (`StateTooLarge`), and nothing of it is saved.
+
+For a SCORM 1.2 package, every value is replayed through the SCORM 1.2 data model on the server (`Scorm12DataModel`), so a value the browser accepted is never trusted:
+
+- read-only, write-only and read-write elements;
+- the vocabularies of `lesson_status`, `exit`, `entry`, `credit`, the objective status and the interaction type and result;
+- scores as CMIDecimal from 0 to 100, or blank;
+- CMITimespan for `session_time` and `latency`, and CMITime for the interaction time;
+- CMIString255 for `lesson_location`, CMIString4096 for `suspend_data` and `comments`, and CMIIdentifier for the ids;
+- the student preference ranges;
+- the `_children`, `_count` and `_version` keywords, and arrays that grow only at their count.
+
+A refused value is reported with its error code: 201, 202, 203, 402, 403, 404 or 405. The API itself also answers 101 and 301.
+
+The learner's id and name, the credit, the lesson mode, the launch data and the student data are set by the server at every launch. The entry is `ab-initio` the first time, `resume` after a session that exited with `suspend`, and empty otherwise. When a session finishes, its `session_time` is added to `total_time`. A status the package never set is then `completed`.
+
+**Mastery score.** When the package sends a raw score and its status is `not attempted`, `completed` or `browsed`, the mastery score of the manifest decides: `passed` when the raw score reaches it, `failed` otherwise. A `passed` or `failed` the package sets itself stands, and so does `incomplete`. This only happens in credit mode.
+
+### The SCORM 2004 runtime state
+
+A SCORM 2004 state records the package's version (states written before SCORM 2004 have none and are SCORM 1.2). Every value is replayed through the SCORM 2004 data model on the server (`Scorm2004DataModel`), the same table the frame script uses:
+
+- every element of the RTE data model with its access: `cmi.completion_status`, `cmi.success_status`, `cmi.score.*` (`scaled` from -1 to 1), `cmi.progress_measure` (0 to 1), `cmi.completion_threshold`, `cmi.scaled_passing_score`, `cmi.location` (1,000 characters), `cmi.suspend_data` (64,000 characters in the 4th Edition, 4,000 in the 3rd), `cmi.session_time` and `cmi.total_time`, `cmi.exit`, `cmi.entry`, `cmi.credit`, `cmi.mode`, `cmi.learner_id`, `cmi.learner_name`, `cmi.launch_data`, `cmi.max_time_allowed`, `cmi.time_limit_action`, `cmi.learner_preference.*`, `cmi.interactions.n.*`, `cmi.objectives.n.*`, `cmi.comments_from_learner.n.*` and `cmi.comments_from_lms` (read only);
+- the data types: `localized_string_type` with its `{lang=}` delimiter, `long_identifier_type` and `short_identifier_type`, `real(10,7)` with each element's range, ISO 8601 timestamps from 1970 to 2038 and ISO 8601 durations;
+- objective ids unique and never changed; an objective or an interaction is added by its id first; a learner response or correct response pattern needs the interaction type first and follows that type's format; true-false, likert, numeric and other interactions have one correct response;
+- `_version` (`1.0`), `_children` and `_count`;
+- `adl.nav.request` is checked against its vocabulary (`{target=}jump` only in the 4th Edition) and stored; every `adl.nav.request_valid` element answers `unknown`.
+
+A refused value is reported with its error code: 301, 351, 401, 403, 404, 405, 406, 407 or 408. A value longer than the smallest permitted maximum is refused (406), so the store stays bounded.
+
+**Status evaluation.** A read of `cmi.completion_status` with a completion threshold returns `completed` when `cmi.progress_measure` reaches it, `incomplete` when it does not, and `unknown` when no progress measure was set; a read of `cmi.success_status` with a scaled passing score returns `passed` when `cmi.score.scaled` reaches it, `failed` when it does not, and `unknown` without a scaled score. Without a threshold or passing score, the value the package set is returned. Progress uses the evaluated values.
+
+**Attempts.** A launch after a session that exited with `suspend` resumes the attempt: `cmi.entry` is `resume` and the data is kept. Any other exit (`normal`, `logout`, `time-out` or none) ends the attempt, and the next launch starts a new one: `cmi.entry` is `ab-initio`, and the location, suspend data, statuses, scores, progress measure, total time, interactions and the learner's comments are reset, and the objectives go back to the manifest's ids. The learner's preferences and the comments from the LMS are kept. When a session terminates, its `cmi.session_time` is added to `cmi.total_time` of the attempt. The learner's id and name, the credit, the mode, the launch data, the thresholds and the time limits are set by the server at every launch. A package of the other standard published into the item starts the learner afresh.
+
+### Progress
+
+When the package commits or finishes, the result goes to Learning (`ILearnerProgressService.RecordResultAsync`) as the learner's own work:
+
+- the learner's access window and the item's release rules apply;
+- the score is the raw score as a percentage of the range the package set (`score.min` to `score.max`), or the raw score; in SCORM 2004, `score.scaled` times 100 when the package set it, else the raw score the same way;
+- `passed` or `failed` is kept (in SCORM 2004 from the evaluated `success_status`, and the item is complete when the evaluated `completion_status` is `completed`);
+- the attempts are the sessions in SCORM 1.2 and the attempts in SCORM 2004;
+- the result is **marked self-reported** on the item's progress and in the completion snapshot.
+
+A course item a learner completes through a package is therefore recorded as reported by the browser. Because a learner can change what the browser sends, such a completion does not count toward a certification by default: the **Course completed** requirement of a certification path skips a completed enrollment in which a required item's result was reported by the browser. Tick **Let a result reported by the browser count toward a certification** on the item to allow it. A completed enrollment opens the package for review (`lesson_mode` review in SCORM 1.2, `cmi.mode` review in SCORM 2004, and `credit` no-credit), and nothing it sends is kept. A review starts no new session of record or learner attempt, so its entry (`cmi.core.entry`, `cmi.entry`) follows the session it reopens: `resume` after a session that exited with `suspend`, empty after any other exit, and `ab-initio` only when the learner never launched the package.
+
+## cmi5
+
+The **Learning cmi5 Packages** feature (`CrestApps.OrchardCore.Learning.Packages.Cmi5`) implements cmi5 (Quartz), the xAPI profile for content an LMS launches. It depends on Learning SCORM Packages, which owns the learning package item, the import page and the sandbox, and on the [Learning Record Store](./learning-xapi), which receives the statements. It reaches the Learning Record Store only through `Learning.Xapi.Abstractions` and `Learning.Xapi.Core`.
+
+### Import
+
+With the feature on, the import page also takes a .zip file with `cmi5.xml` at its root (a package with `imsmanifest.xml` is still read as SCORM). The course structure is read as cmi5 section 13 describes it: the course with its id and title, the blocks and the assignable units (AUs) in order, each AU with its id, title, `url`, `moveOn` (Passed, Completed, CompletedAndPassed, CompletedOrPassed or NotApplicable, the default), `masteryScore` (0 to 1), `launchMethod` (AnyWindow, the default, or OwnWindow), `launchParameters`, `entitlementKey` and `activityType`. An AU's URL is a file of the package, which must be there, or an absolute `https` URL; any other absolute URL is refused. DTDs are refused, and the archive passes the same safe extraction as a SCORM package. The editor shows the course id and the AUs.
+
+### Launch
+
+The learner panel lists the AUs, each with its status and a **Launch** button. A launch checks the learner's own enrollment, access window and the item's release rules, as for SCORM, and then:
+
+- gives the enrollment a registration on the course (a new course in the item starts a new registration);
+- writes `abandoned` for a session of the registration that was left open, with its duration;
+- starts a session, writes `LMS.LaunchData` to the state API (the context template with the publisher's AU id and the session id, the launch mode, `launchParameters`, `masteryScore`, `moveOn`, `returnURL` and the entitlement key) and the `cmi5LearnerPreferences` agent profile when the learner has none (the learner's language, audio on);
+- writes the `launched` statement;
+- returns the launch URL with `endpoint` (the Learning Record Store), `fetch`, `registration`, `activityId` and `actor`. The actor is an agent with an account: the site's home page and the user id, never the e-mail address. The activity id of an AU is the LMS's own, `<home page>/learning/cmi5/<item>/au/<hash of the publisher's id>`; the publisher's id goes into the grouping.
+
+A completed enrollment launches in the Review launch mode. An AU that is a file of the package (AnyWindow) runs in the same sandboxed frame as a SCORM package, on an opaque origin with no cookie and the launch token in the path; the page is served as it is, without the SCORM run-time script. An `https` AU, and an AU with OwnWindow, opens in a new window (`noopener`); only `https` absolute AUs are imported. The AU returns to `/learning/cmi5/return`, which tells the player page to reload in the frame and closes its window otherwise.
+
+The fetch URL (`POST /learning/cmi5/fetch/<token>`) answers any origin. The first call returns `{"auth-token": "..."}`; the AU sends it as `Authorization: Basic <auth-token>`. A second call returns `{"error-code": "1", ...}`, an expired or ended session `"2"`, and an unknown token `"3"`; these answers have the HTTP status 200. The auth token opens the Learning Record Store only for the learner's actor and the registration: statements of that actor in that registration, the states of the AU's activity in the registration (`LMS.LaunchData` read-only), the learner's agent profiles, and the AU's activity profiles to read. It expires with the session, after 8 hours.
+
+### Statement rules
+
+The Learning Record Store checks every statement sent with a cmi5 auth token, and every statement with the cmi5 category in a cmi5 registration whoever sends it, against the cmi5 rules of section 9; a statement that breaks one refuses the whole request with 403:
+
+- every AU statement carries the session id and the publisher's AU id of the context template, and its session must be open: not terminated, not abandoned, not expired; a launch token writes only into its own session (a token of an ended session cannot write into a newer one or another AU's), and another client may write into a registration only statements about the registration's learner;
+- `initialized` comes first in a session, and once; nothing comes after `terminated`;
+- a cmi5 statement (with the cmi5 category) uses `initialized`, `completed`, `passed`, `failed` or `terminated`; `launched`, `satisfied`, `abandoned` and `waived` are the LMS's; its object is the AU's activity id;
+- `completed` needs `result.completion` true, `passed` `result.success` true and `failed` `result.success` false; all three need the Normal launch mode and the moveOn category; `completed` and `passed` come once per registration and `failed` never after `passed`;
+- with a mastery score, `passed` needs a `result.score.scaled` of at least the mastery score and `failed` one below it.
+
+A cmi5 allowed statement (without the cmi5 category) only has to follow the context template and the session's order.
+
+### Satisfied and progress
+
+When an AU's moveOn is met (NotApplicable at once), the LMS writes `satisfied` for the AU; when all AUs of a block are satisfied, for the block; when all AUs are, for the course. The item's result goes to Learning on the learner path, marked as reported by the browser, so the certificate rule for self-reported results applies: the item is reported complete when the course is satisfied; passed when every AU whose moveOn needs a pass passed, failed when one of them failed and has not passed; the score is the average of the AUs' last `passed` or `failed` scaled score, times 100.
+
+### Not built
+
+- `waived` and the Browse launch mode.
+- Abandoning a session is written at the next launch of the registration, not when a session times out.
+- `duration` is not required in `completed`, `passed`, `failed` and `terminated`.
+- A course of several AUs is launched AU by AU from the panel; there is no sequencing between them.
+
+### cmi5 conformance
+
+Conformance suite / certification: not run. The suite is ADL's cmi5 test suite (CATAPULT, the cmi5 LMS test suite and its test course packages), and running it needs a download, which this work did not allow. To run it, a person downloads CATAPULT's LMS test packages from ADL's repository, enables Learning cmi5 Packages and the Learning Record Store on a test site, imports each test package into a learning package item, launches each AU as an enrolled learner, and keeps the results the test AUs report. The feature implements cmi5 (Quartz) and makes no conformance claim.
+
+## Data portability and personal data
+
+The **LearningPackageRuntimeStates** recipe and deployment steps move the runtime states of both versions (a SCORM 2004 state with its `Standard`, `Attempts` and `Cmi2004`), naming learners by user name. The deployment step is opt-in, needs **Export learner records** and is recorded. The package content item exports with its part, but **the package file itself does not travel** with a recipe or a deployment, as for coursework files: import the package again on the target site.
+
+A learner's personal data export lists their runtime state on each package. Erasure deletes every runtime state whose enrollment is not completed. A runtime state of a completed enrollment keeps its status, score, time and dates, and loses the learner's name and id, the suspend data, the location, the comments (the learner's comments in SCORM 2004), the language preference and the interactions. A SCORM 2004 state is exported with its version, attempts and evaluated statuses.
+
+## Conformance testing
+
+### SCORM 1.2
+
+Conformance suite / certification: not run (needs an external account).
+
+The suite for this is the ADL SCORM 1.2 Conformance Test Suite (ADL's SCORM 1.2 Test Suite, an LMS RTE test). To run it:
+
+1. Obtain the suite from ADL (adlnet.gov).
+2. Install it.
+3. Import its test content packages into a site, each into a learning package item of a course.
+4. Launch each package as a learner.
+5. Record the logs the suite writes.
+
+### SCORM 2004
+
+Conformance suite / certification: not run (needs an external account).
+
+The suite for this is ADL's SCORM 2004 4th Edition Conformance Test Suite: its LMS test, which includes the Run-Time Environment tests and the Sequencing and Navigation tests. The Sequencing and Navigation tests would fail, because sequencing is not implemented. To run it:
+
+1. Obtain the suite from ADL (adlnet.gov).
+2. Install it.
+3. Import its test packages into a site, each into a learning package item of a course.
+4. Launch each package as a learner.
+5. Keep the logs the suite writes.
+
+This module is not certified by ADL and makes no conformance claim.
+
+## Not supported yet
+
+- AICC packages, and xAPI packages that are not cmi5.
+- SCORM 2004 Sequencing and Navigation: sequencing rules, rollup across SCOs, navigation requests (`adl.nav.request` is stored and not acted on) and the delivery controls. In particular, a SCO that ends without reporting `cmi.completion_status` does not complete the item (a sequencing implementation would mark it complete when `completionSetByContent` is false); choose **Marked done** for such a package.
+- SCORM 2004 shared data stores (`adl.data`, declared with `adlcp:data` in a 4th Edition manifest): `adl.data._count` is 0.
+- SCORM 2004 global objectives shared between SCOs or packages.
+- Navigation between the SCOs of a multi-SCO package; only the first SCO runs.
+- Byte ranges: a large video in a package is sent whole.
+- A package that moves between its own HTML pages starts each page with the data the server had when the page loaded. A value set on the page before and not yet committed reaches the server shortly after, but the new page does not see it.
+- A per-learner view of the runtime state for staff, a data source for reports, workflow events and notifications.

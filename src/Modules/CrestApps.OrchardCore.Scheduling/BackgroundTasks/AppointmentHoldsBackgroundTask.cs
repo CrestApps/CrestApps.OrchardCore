@@ -19,6 +19,10 @@ public sealed class AppointmentHoldsBackgroundTask : IBackgroundTask
     /// <inheritdoc />
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        return this.RunAsync(async run => run.AddItems(await serviceProvider.GetRequiredService<IAppointmentService>().ExpireHoldsAsync(cancellationToken), "expired"));
+        return this.RunAsync(async run =>
+        {
+            run.AddItems(await serviceProvider.GetRequiredService<IAppointmentService>().ExpireHoldsAsync(cancellationToken), "expired");
+            run.AddItems(await serviceProvider.GetRequiredService<ISchedulingSessionService>().ExpireOffersAsync(cancellationToken), "offers passed on");
+        });
     }
 }

@@ -1,3 +1,5 @@
+using OrchardCore.ContentManagement.Metadata.Models;
+
 namespace CrestApps.OrchardCore.ContentTransfer;
 
 /// <summary>
@@ -31,4 +33,27 @@ public interface IContentTransferFileFormatProvider
     /// <param name="stream">The output stream to write to.</param>
     /// <param name="sheetName">A display name for the data set (used as sheet name in Excel, ignored in CSV).</param>
     IContentTransferFileWriter CreateWriter(Stream stream, string sheetName);
+
+    /// <summary>
+    /// Gets whether the format can write files: exports, templates and the failed rows of an import. A format that
+    /// only reads, such as a package another system exports, returns <see langword="false"/> and is offered for import
+    /// only; its <see cref="CreateWriter"/> is never called.
+    /// </summary>
+    bool CanExport => true;
+
+    /// <summary>
+    /// Determines whether files of this format can be imported as the content type. The import page offers the format,
+    /// accepts its files and reads them only for the content types it accepts, so two formats may share an extension
+    /// when they import different content types.
+    /// </summary>
+    /// <param name="contentType">The content type the file is imported as.</param>
+    bool CanImport(string contentType) => true;
+
+    /// <summary>
+    /// Returns what the import page tells the person about files of this format for the content type, such as "A QTI
+    /// content package: each item becomes the kind of question that fits it", or <see langword="null"/> when the
+    /// format needs no explanation.
+    /// </summary>
+    /// <param name="contentType">The content type the file is imported as.</param>
+    string DescribeImport(ContentTypeDefinition contentType) => null;
 }

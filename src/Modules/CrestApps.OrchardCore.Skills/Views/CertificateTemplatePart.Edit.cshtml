@@ -1,0 +1,79 @@
+@using CrestApps.OrchardCore.Pdf.Models
+@using CrestApps.OrchardCore.Skills.IssuedCertificates.ViewModels
+@model CertificateTemplatePartViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Page"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="PageSize" class="ocat-label">@T["Paper"]</label><div class="ocat-end">
+            <select asp-for="PageSize" class="form-select" style="max-width: 12rem">
+                <option value="Letter">@T["US Letter"]</option>
+                <option value="A4">@T["A4"]</option>
+            </select>
+        </div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Landscape" class="form-check-input" /><label asp-for="Landscape" class="form-check-label">@T["Landscape"]</label><span class="hint dashed">@T["Positions are in points (72 to the inch) from the top left. US Letter on its side is 792 by 612 points, A4 is 842 by 595."]</span></div></div></div>
+        <div class="ocat-wrapper"><label asp-for="FontFamily" class="ocat-label">@T["Font"]</label><div class="ocat-end"><input asp-for="FontFamily" class="form-control" style="max-width: 18rem" placeholder="Arial" /><span class="hint">@T["A font family installed on the server, such as Noto Sans for letters beyond Latin. The font is embedded in each certificate."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="AccentColor" class="ocat-label">@T["Accent color"]</label><div class="ocat-end"><input asp-for="AccentColor" type="color" class="form-control form-control-color" /><span asp-validation-for="AccentColor"></span></div></div>
+        <div class="ocat-wrapper"><label asp-for="TextColor" class="ocat-label">@T["Text color"]</label><div class="ocat-end"><input asp-for="TextColor" type="color" class="form-control form-control-color" /><span asp-validation-for="TextColor"></span></div></div>
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="ShowBorder" class="form-check-input" /><label asp-for="ShowBorder" class="form-check-label">@T["Frame the page with a border"]</label></div></div></div>
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["QR code"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="ShowQrCode" class="form-check-input" /><label asp-for="ShowQrCode" class="form-check-label">@T["Print the QR code of the verification page"]</label></div></div></div>
+        <div class="ocat-wrapper"><label class="ocat-label">@T["Position and size"]</label><div class="ocat-end d-flex gap-2 flex-wrap">
+            <div class="input-group" style="max-width: 10rem"><span class="input-group-text">@T["Left"]</span><input asp-for="QrX" type="number" step="1" min="0" class="form-control" /></div>
+            <div class="input-group" style="max-width: 10rem"><span class="input-group-text">@T["Top"]</span><input asp-for="QrTop" type="number" step="1" min="0" class="form-control" /></div>
+            <div class="input-group" style="max-width: 10rem"><span class="input-group-text">@T["Size"]</span><input asp-for="QrSize" type="number" step="1" min="36" max="300" class="form-control" /></div>
+        </div></div>
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Text blocks"]</div>
+    <div class="card-body">
+        <p class="hint">@T["Each block is Liquid. Certificate.HolderName, Certificate.Number, Certificate.IssuedOn, Certificate.ExpiresOn, Certificate.Evidence, Certificate.VerificationCode and Certificate.VerificationUrl describe the certificate; Certification.Name, Certification.Issuer and Certification.Description its certification. A width of 0 spans the page between margins as wide as Left. Clear a block's text to remove it."]</p>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>@T["Text"]</th>
+                        <th style="width: 6rem">@T["Left"]</th>
+                        <th style="width: 6rem">@T["Top"]</th>
+                        <th style="width: 6rem">@T["Width"]</th>
+                        <th style="width: 5rem">@T["Size"]</th>
+                        <th style="width: 8rem">@T["Align"]</th>
+                        <th style="width: 5rem">@T["Lines"]</th>
+                        <th style="width: 5rem">@T["Bold"]</th>
+                        <th style="width: 6rem">@T["Accent"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Blocks.Count; i++)
+                    {
+                        <tr>
+                            <td><textarea asp-for="Blocks[i].Text" class="form-control form-control-sm font-monospace" rows="1" aria-label="@T["Text"]"></textarea></td>
+                            <td><input asp-for="Blocks[i].X" type="number" step="1" min="0" class="form-control form-control-sm" aria-label="@T["Left"]" /></td>
+                            <td><input asp-for="Blocks[i].Top" type="number" step="1" min="0" class="form-control form-control-sm" aria-label="@T["Top"]" /></td>
+                            <td><input asp-for="Blocks[i].Width" type="number" step="1" min="0" class="form-control form-control-sm" aria-label="@T["Width"]" /></td>
+                            <td><input asp-for="Blocks[i].FontSize" type="number" step="0.5" min="4" max="120" class="form-control form-control-sm" aria-label="@T["Size"]" /></td>
+                            <td>
+                                <select asp-for="Blocks[i].Alignment" class="form-select form-select-sm" aria-label="@T["Align"]">
+                                    <option value="@PdfTextAlignment.Left">@T["Left"]</option>
+                                    <option value="@PdfTextAlignment.Center">@T["Center"]</option>
+                                    <option value="@PdfTextAlignment.Right">@T["Right"]</option>
+                                </select>
+                            </td>
+                            <td><input asp-for="Blocks[i].MaxLines" type="number" step="1" min="0" class="form-control form-control-sm" aria-label="@T["Lines"]" /></td>
+                            <td><div class="form-check"><input asp-for="Blocks[i].Bold" class="form-check-input" aria-label="@T["Bold"]" /></div></td>
+                            <td><div class="form-check"><input asp-for="Blocks[i].Accent" class="form-check-input" aria-label="@T["Accent"]" /></div></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <span class="hint">@T["Save to get three more empty rows."]</span>
+    </div>
+</div>

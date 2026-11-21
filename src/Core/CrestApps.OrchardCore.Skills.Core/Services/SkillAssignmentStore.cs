@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Skills.Core.Indexes;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Skills.Core.Services;
 
@@ -55,6 +56,40 @@ internal sealed class SkillAssignmentStore : DocumentCatalog<SkillAssignment, Sk
             .ListAsync(cancellationToken);
 
         return assignments.ToArray();
+    }
+
+    public async Task<IReadOnlyList<SkillAssignment>> ListEffectiveAsync(IReadOnlyCollection<string> skillIds, int dateKey, int take, CancellationToken cancellationToken = default)
+    {
+        if (skillIds is null || skillIds.Count == 0)
+        {
+            return [];
+        }
+
+        var results = new List<SkillAssignment>();
+
+        // Chunked so a framework of hundreds of skills stays under the database's parameter limit.
+        foreach (var chunk in skillIds.Chunk(500))
+        {
+            var remaining = take - results.Count;
+
+            if (remaining <= 0)
+            {
+                break;
+            }
+
+            var assignments = await Session.Query<SkillAssignment, SkillAssignmentIndex>(
+                index => index.SkillId.IsIn(chunk)
+                    && (index.EffectiveFrom == null || index.EffectiveFrom <= dateKey)
+                    && (index.EffectiveTo == null || index.EffectiveTo >= dateKey),
+                collection: CollectionName)
+                .OrderBy(index => index.Id)
+                .Take(remaining)
+                .ListAsync(cancellationToken);
+
+            results.AddRange(assignments);
+        }
+
+        return results;
     }
 
     public void Delete(SkillAssignment assignment)

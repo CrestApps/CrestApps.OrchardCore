@@ -1,0 +1,47 @@
+@model (List<CertificationRequirementRow> Rows, string Name, CertificationPathViewModel Model)
+
+<div class="table-responsive">
+    <table class="table table-sm align-middle mb-1">
+        <thead>
+            <tr>
+                <th style="width: 14rem">@T["Requirement"]</th>
+                <th>@T["Course, quiz or credit type"]</th>
+                <th style="width: 11rem">@T["Minimum grade or credits"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (var i = 0; i < Model.Rows.Count; i++)
+            {
+                var row = Model.Rows[i];
+                var prefix = $"{ViewData.TemplateInfo.HtmlFieldPrefix}.{Model.Name}[{i}]".TrimStart('.');
+
+                <tr>
+                    <td>
+                        <input type="hidden" name="@(prefix + ".Id")" value="@row.Id" />
+                        <select name="@(prefix + ".Kind")" class="form-select form-select-sm" aria-label="@T["Requirement"]">
+                            @foreach (var option in Model.Model.KindOptions)
+                            {
+                                <option value="@option.Value" selected="@(option.Value == row.Kind)">@option.Text</option>
+                            }
+                        </select>
+                    </td>
+                    <td>
+                        <select name="@(prefix + ".TargetId")" class="form-select form-select-sm" aria-label="@T["Course or quiz"]">
+                            <option value="">@T["None"]</option>
+                            @foreach (var group in Model.Model.TargetOptions.GroupBy(option => option.Group?.Name))
+                            {
+                                <optgroup label="@group.Key">
+                                    @foreach (var option in group)
+                                    {
+                                        <option value="@option.Value" selected="@(option.Value == row.TargetId)">@option.Text</option>
+                                    }
+                                </optgroup>
+                            }
+                        </select>
+                    </td>
+                    <td><input name="@(prefix + ".MinimumGrade")" value="@row.MinimumGrade" type="number" min="0" step="0.01" class="form-control form-control-sm" aria-label="@T["Minimum grade or credits"]" /></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

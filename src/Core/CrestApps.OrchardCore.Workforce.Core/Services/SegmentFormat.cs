@@ -92,6 +92,42 @@ internal static class SegmentFormat
         }).ToList();
     }
 
+    /// <summary>
+    /// Gives the segments read back from an editor the source of the same segment before the edit, so a segment another
+    /// module placed, such as a class, can still be taken back by it. A segment the planner changed loses its source.
+    /// When the shift went to another worker, the segments placed for the previous worker are dropped instead: they are
+    /// that worker's (their class, say), and their source could never take them back from the new worker.
+    /// </summary>
+    public static IList<DraftShiftSegment> KeepSources(IList<DraftShiftSegment> segments, IEnumerable<DraftShiftSegment> previous, bool workerChanged = false)
+    {
+        ArgumentNullException.ThrowIfNull(segments);
+
+        var placed = (previous ?? []).Where(segment => !string.IsNullOrEmpty(segment.Source)).ToList();
+        var kept = new List<DraftShiftSegment>();
+
+        foreach (var segment in segments)
+        {
+            var match = placed.Find(item => item.ActivityCodeId == segment.ActivityCodeId && item.Start == segment.Start && item.End == segment.End);
+
+            if (match is not null)
+            {
+                placed.Remove(match);
+
+                if (workerChanged)
+                {
+                    continue;
+                }
+
+                segment.Source = match.Source;
+                segment.SourceId = match.SourceId;
+            }
+
+            kept.Add(segment);
+        }
+
+        return kept;
+    }
+
     public static IEnumerable<SegmentLine> FromDraft(DraftShift shift)
     {
         ArgumentNullException.ThrowIfNull(shift);

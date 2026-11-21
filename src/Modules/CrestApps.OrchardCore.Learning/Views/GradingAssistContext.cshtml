@@ -1,0 +1,5 @@
+@* The help other modules add next to the grade fields of a grading page. With no module adding any, nothing renders. *@
+@if (Model.Content != null)
+{
+    @await DisplayAsync(Model.Content)
+}

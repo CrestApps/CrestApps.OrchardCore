@@ -1,0 +1,55 @@
+@model ExternalToolItemPartViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["External tool"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="ToolId">
+            <label asp-for="ToolId" class="ocat-label ocat-label-required">@T["Tool"]</label>
+            <div class="ocat-end">
+                <select asp-for="ToolId" asp-items="Model.Tools" class="form-select">
+                    <option value="">@T["Choose a tool"]</option>
+                </select>
+                <span asp-validation-for="ToolId" class="text-danger"></span>
+                <span class="hint">@T["A tool registered in Learning › External Tools."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="TargetLinkUri">
+            <label asp-for="TargetLinkUri" class="ocat-label">@T["Target link URI"]</label>
+            <div class="ocat-end">
+                <input asp-for="TargetLinkUri" class="form-control" maxlength="1000" />
+                <span asp-validation-for="TargetLinkUri" class="text-danger"></span>
+                <span class="hint">@T["The address in the tool this item opens. Empty uses the tool's default."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="CustomParameters">
+            <label asp-for="CustomParameters" class="ocat-label">@T["Custom parameters"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="CustomParameters" class="form-control font-monospace" rows="2"></textarea>
+                <span class="hint">@T["One name=value per line, added to the tool's own and winning over them."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="ScoreMaximum">
+            <label asp-for="ScoreMaximum" class="ocat-label">@T["Maximum score"]</label>
+            <div class="ocat-end">
+                <input asp-for="ScoreMaximum" type="number" min="0" step="any" class="form-control" />
+                <span asp-validation-for="ScoreMaximum" class="text-danger"></span>
+                <span class="hint">@T["When the tool may post grades, the item gets a line item with this maximum (100 when empty and the item counts toward the grade). A fully graded score from the tool becomes the item's score as a percentage."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="LineItemLabel">
+            <label asp-for="LineItemLabel" class="ocat-label">@T["Line item label"]</label>
+            <div class="ocat-end">
+                <input asp-for="LineItemLabel" class="form-control" maxlength="255" />
+                <span class="hint">@T["The grade column's name the tool sees. Empty uses the item's title."]</span>
+            </div>
+        </div>
+        @if (Model.DeepLinked)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <span class="hint">@T["This item was picked in the tool with Deep Linking."]</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>

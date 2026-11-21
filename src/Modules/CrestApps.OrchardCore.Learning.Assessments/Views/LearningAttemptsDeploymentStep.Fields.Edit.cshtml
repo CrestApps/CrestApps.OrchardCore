@@ -1,0 +1,15 @@
+@using CrestApps.OrchardCore.Learning.Assessments.Deployments
+@model LearningAttemptsDeploymentStepViewModel
+
+<h5>@T["Learning quiz attempts (learner records)"]</h5>
+<p class="hint">@T["Exports quiz attempts with their answers and scores, quiz overrides and the access codes of quizzes as hashes, naming people by user name. Learner records hold personal data: the export needs the Export learner records permission and is recorded."]</p>
+<div class="mb-3">
+    <label asp-for="QuizId" class="form-label">@T["Quiz"]</label>
+    <select asp-for="QuizId" asp-items="Model.QuizOptions" class="form-select">
+        <option value="">@T["Every quiz"]</option>
+    </select>
+</div>
+<div class="mb-3 form-check">
+    <input asp-for="IncludeOverrides" class="form-check-input" />
+    <label asp-for="IncludeOverrides" class="form-check-label">@T["Include the quiz overrides"]</label>
+</div>

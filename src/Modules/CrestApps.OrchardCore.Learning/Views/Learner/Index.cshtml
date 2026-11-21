@@ -1,0 +1,242 @@
+@model MyLearningViewModel
+@using Microsoft.AspNetCore.Html
+
+@*
+    My learning, as Moodle's course overview: a card (or a row) per course with its cover or a pattern, the progress and
+    the next step, filtered by state, searched by title or code, in a card or a list view.
+*@
+
+@{
+    // Inside the storefront account the page is framed by the account menu; without it, it stands alone.
+    var accountUrl = Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName);
+    var list = Model.View == "list";
+    var progressLabel = T["Course progress"].Value;
+    var filterNames = new Dictionary<string, LocalizedHtmlString>
+    {
+        [LearnerCourseStates.All] = T["All"],
+        [LearnerCourseStates.InProgress] = T["In progress"],
+        [LearnerCourseStates.NotStarted] = T["Not started"],
+        [LearnerCourseStates.Completed] = T["Completed"],
+    };
+
+    Func<object, IHtmlContent> actions = @<div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningCatalog")"><i class="fa-solid fa-magnifying-glass me-1" aria-hidden="true"></i>@T["Course catalog"]</a> <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningTranscript")">@T["My transcript"]</a></div>;
+
+    Func<LearnerCourseViewModel, IHtmlContent> stateBadges = @<text>
+        @{
+            var row = item;
+            var enrollment = row.Enrollment;
+        }
+        @if (enrollment.Status == EnrollmentStatus.Pending)
+        {
+            <span class="badge text-bg-warning fw-normal"><i class="fa-solid fa-hourglass-half me-1" aria-hidden="true"></i>@T["Waiting for approval"]</span>
+        }
+        else if (enrollment.Status == EnrollmentStatus.Suspended)
+        {
+            <span class="badge text-bg-secondary fw-normal">@T["Paused by the course staff"]</span>
+        }
+        else if (enrollment.Status == EnrollmentStatus.Expired)
+        {
+            <span class="badge text-bg-secondary fw-normal">@T["Access ended"]</span>
+        }
+        else if (enrollment.Status != EnrollmentStatus.Completed && row.Schedule == CourseSchedule.NotStarted && row.StartsUtc is { } starts)
+        {
+            <span class="badge text-bg-light border fw-normal" data-course-starts><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>@T["Starts on"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(starts, DateTimeKind.Utc), Format: "d"))</span>
+        }
+        else if (enrollment.Status != EnrollmentStatus.Completed && row.Schedule == CourseSchedule.Ended)
+        {
+            <span class="badge text-bg-light border fw-normal" data-course-ends title="@T["The course has ended. It stays open, so you can still finish it."]">@T["Ended on"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(row.EndsUtc ?? enrollment.CreatedUtc, DateTimeKind.Utc), Format: "d"))</span>
+        }
+        @if (enrollment.Status != EnrollmentStatus.Completed && enrollment.DueUtc is { } due)
+        {
+            <span class="badge text-bg-light border fw-normal"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["Due"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(due, DateTimeKind.Utc), Format: "d"))</span>
+        }
+    </text>;
+
+    Func<LearnerCourseViewModel, IHtmlContent> action = @<text>
+        @{
+            var row = item;
+            var enrollment = row.Enrollment;
+        }
+        @if (!row.CourseAvailable || enrollment.Status is EnrollmentStatus.Pending or EnrollmentStatus.Expired)
+        {
+            if (row.CourseRouteValues is not null)
+            {
+                <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl(row.CourseRouteValues)">@T["View the course"]</a>
+            }
+        }
+        else if (enrollment.Status == EnrollmentStatus.Completed)
+        {
+            <a class="btn btn-outline-primary btn-sm" href="@Url.RouteUrl("LearningCourseCompleted", new { courseId = enrollment.CourseId })">@T["Review"]</a>
+        }
+        else if (enrollment.Status == EnrollmentStatus.Active && row.Schedule != CourseSchedule.NotStarted)
+        {
+            <a class="btn btn-primary btn-sm" href="@Url.RouteUrl("LearningPlayer", new { courseId = enrollment.CourseId })">@(enrollment.StartedUtc is null ? T["Start"] : T["Continue"])</a>
+        }
+    </text>;
+
+    Func<LearnerCourseViewModel, IHtmlContent> progress = @<text>
+        @{
+            var row = item;
+            var enrollment = row.Enrollment;
+        }
+        @if (enrollment.Status == EnrollmentStatus.Completed)
+        {
+            <p class="small text-success mb-0"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["Completed on"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(enrollment.CompletedUtc ?? enrollment.CreatedUtc, DateTimeKind.Utc), Format: "d"))</p>
+        }
+        else if (enrollment.Status is EnrollmentStatus.Active or EnrollmentStatus.Suspended or EnrollmentStatus.Expired)
+        {
+            <partial name="_LearnerProgress" model="(enrollment.ProgressPercent, row.CompletedCount, row.RequiredCount, progressLabel)" />
+        }
+    </text>;
+
+    Func<object, IHtmlContent> content = @<text>
+    @if (Model.Counts.GetValueOrDefault(LearnerCourseStates.All) == 0)
+    {
+        @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-solid fa-book-open", Title: T["You are not enrolled in any course yet."], Hint: T["Courses you enroll in, or that your organization enrolls you in, appear here with your progress."], Actions: new HtmlString($"<a class=\"btn btn-primary btn-sm\" href=\"{Url.RouteUrl("LearningCatalog")}\">{System.Net.WebUtility.HtmlEncode(T["Browse the course catalog"].Value)}</a>")))
+    }
+    else
+    {
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3" data-learning-my-courses-toolbar>
+            <ul class="nav nav-pills" aria-label="@T["Show"]">
+                @foreach (var filter in LearnerCourseStates.Filters)
+                {
+                    var active = Model.Status == filter;
+
+                    <li class="nav-item">
+                        <a class="nav-link py-1 px-3@(active ? " active" : string.Empty)" aria-current="@(active ? "page" : null)" href="@Url.RouteUrl("LearningMyLearning", new { status = filter == LearnerCourseStates.All ? null : filter, q = Model.Search, view = list ? "list" : null })">
+                            @filterNames[filter] <span class="badge rounded-pill @(active ? "text-bg-light" : "text-bg-secondary") ms-1">@Model.Counts.GetValueOrDefault(filter)</span>
+                        </a>
+                    </li>
+                }
+            </ul>
+            <div class="d-flex flex-wrap gap-2">
+                <form method="get" action="@Url.RouteUrl("LearningMyLearning")" role="search">
+                    @if (Model.Status != LearnerCourseStates.All)
+                    {
+                        <input type="hidden" name="status" value="@Model.Status" />
+                    }
+                    @if (list)
+                    {
+                        <input type="hidden" name="view" value="list" />
+                    }
+                    <div class="input-group input-group-sm">
+                        <input type="search" class="form-control" name="q" value="@Model.Search" placeholder="@T["Search my courses"]" aria-label="@T["Search my courses"]" maxlength="100" />
+                        <button class="btn btn-outline-secondary" type="submit" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </form>
+                <div class="btn-group btn-group-sm" role="group" aria-label="@T["View"]">
+                    <a class="btn btn-outline-secondary@(list ? string.Empty : " active")" aria-current="@(list ? null : "true")" href="@Url.RouteUrl("LearningMyLearning", new { status = Model.Status == LearnerCourseStates.All ? null : Model.Status, q = Model.Search })" title="@T["Cards"]"><i class="fa-solid fa-grip" aria-hidden="true"></i><span class="visually-hidden">@T["Cards"]</span></a>
+                    <a class="btn btn-outline-secondary@(list ? " active" : string.Empty)" aria-current="@(list ? "true" : null)" href="@Url.RouteUrl("LearningMyLearning", new { status = Model.Status == LearnerCourseStates.All ? null : Model.Status, q = Model.Search, view = "list" })" title="@T["List"]"><i class="fa-solid fa-list" aria-hidden="true"></i><span class="visually-hidden">@T["List"]</span></a>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.Courses.Count == 0)
+        {
+            @await DisplayAsync(await New.CommerceAccountEmptyState(Icon: "fa-solid fa-filter", Title: T["No course matches."], Hint: T["Choose another filter or clear the search."]))
+        }
+        else if (list)
+        {
+            <div class="list-group">
+                @foreach (var row in Model.Courses)
+                {
+                    <div class="list-group-item py-3" data-learning-course-row data-course-title="@row.Title">
+                        <div class="d-flex flex-wrap flex-md-nowrap align-items-center gap-3">
+                            <div class="flex-shrink-0 rounded overflow-hidden" style="width: 4.5rem;">
+                                <partial name="_CourseCover" model='(row.Enrollment.CourseId, row.Title, row.CoverUrl, "3rem")' />
+                            </div>
+                            <div class="flex-grow-1" style="min-width: 12rem;">
+                                @if (!string.IsNullOrEmpty(row.Category))
+                                {
+                                    <div class="small text-body-secondary">@row.Category</div>
+                                }
+                                <div class="fw-semibold">
+                                    @if (row.CourseRouteValues is not null)
+                                    {
+                                        <a class="text-reset" href="@Url.RouteUrl(row.CourseRouteValues)">@row.Title</a>
+                                    }
+                                    else
+                                    {
+                                        @row.Title
+                                    }
+                                    @if (!string.IsNullOrEmpty(row.Code))
+                                    {
+                                        <span class="badge text-bg-light border fw-normal ms-1">@row.Code</span>
+                                    }
+                                </div>
+                                <div class="d-flex flex-wrap gap-1 mt-1">@stateBadges(row)</div>
+                            </div>
+                            <div style="min-width: 11rem;">@progress(row)</div>
+                            <div class="ms-md-auto">@action(row)</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3">
+                @foreach (var row in Model.Courses)
+                {
+                    <div class="col">
+                        <article class="card h-100" data-learning-course-card data-course-title="@row.Title">
+                            <partial name="_CourseCover" model='(row.Enrollment.CourseId, row.Title, row.CoverUrl, "7rem")' />
+                            <div class="card-body d-flex flex-column">
+                                @if (!string.IsNullOrEmpty(row.Category))
+                                {
+                                    <div class="small text-body-secondary mb-1">@row.Category</div>
+                                }
+                                <h3 class="h6 card-title mb-1">
+                                    @if (row.CourseRouteValues is not null)
+                                    {
+                                        <a class="text-reset" href="@Url.RouteUrl(row.CourseRouteValues)">@row.Title</a>
+                                    }
+                                    else
+                                    {
+                                        @row.Title
+                                    }
+                                </h3>
+                                @if (!string.IsNullOrEmpty(row.Code))
+                                {
+                                    <div class="small text-body-secondary mb-2">@row.Code</div>
+                                }
+                                <div class="d-flex flex-wrap gap-1 mb-2">@stateBadges(row)</div>
+                                <div class="mt-auto">
+                                    <div class="mb-2">@progress(row)</div>
+                                    @action(row)
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                }
+            </div>
+        }
+    }
+    </text>;
+}
+
+@if (accountUrl is not null)
+{
+    <zone Name="Title">
+        <breadcrumb name="LearningMyLearning" title="@T["My learning"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        </breadcrumb>
+    </zone>
+
+    @await DisplayAsync(await New.CommerceAccountPage(Title: T["My learning"], Actions: actions(null), Content: content(null)))
+}
+else
+{
+    <div class="container my-4">
+        <div class="product-breadcrumb">
+            <breadcrumb name="LearningMyLearning" title="@T["My learning"]">
+                <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            </breadcrumb>
+        </div>
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <h1 class="h3 mb-0">@T["My learning"]</h1>
+            @actions(null)
+        </div>
+        @content(null)
+    </div>
+}

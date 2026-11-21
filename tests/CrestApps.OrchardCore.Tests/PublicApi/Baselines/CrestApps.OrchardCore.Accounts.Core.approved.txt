@@ -1,4 +1,52 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Accounts.Core.Indexes
+{
+    public sealed class AccountInvitationIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public AccountInvitationIndex() { }
+        public string AcceptedUserId { get; set; }
+        public string AccountId { get; set; }
+        public string NormalizedEmail { get; set; }
+        public string Source { get; set; }
+        public string SourceId { get; set; }
+        public CrestApps.OrchardCore.Accounts.Models.AccountInvitationState State { get; set; }
+        public string TokenHash { get; set; }
+    }
+    public sealed class AccountInvitationIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.OrchardCore.Accounts.Models.AccountInvitation>
+    {
+        public AccountInvitationIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Accounts.Models.AccountInvitation> context) { }
+    }
+    public static class AccountInvitationIndexSchema
+    {
+        public static System.Threading.Tasks.Task CreateAsync(YesSql.Sql.ISchemaBuilder schemaBuilder) { }
+    }
+}
+namespace CrestApps.OrchardCore.Accounts.Core.Services
+{
+    public sealed class AccountInvitationStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.Accounts.Models.AccountInvitation, CrestApps.OrchardCore.Accounts.Core.Indexes.AccountInvitationIndex>
+    {
+        public AccountInvitationStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Accounts.Models.AccountInvitation> FindByTokenHashAsync(string tokenHash, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Accounts.Models.AccountInvitation> FindFreshByIdAsync(string invitationId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Accounts.Models.AccountInvitation>> ListByAccountAsync(string accountId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Accounts.Models.AccountInvitation>> ListForPeopleAsync(System.Collections.Generic.IReadOnlyCollection<string> normalizedEmails, System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Accounts.Models.AccountInvitation>> ListPendingAsync(string accountId, string normalizedEmail, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Accounts.Models.AccountInvitation>> PagePendingAsync(long afterId, int take, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DefaultAccountInvitationService : CrestApps.OrchardCore.Accounts.Services.IAccountInvitationService
+    {
+        public DefaultAccountInvitationService(CrestApps.OrchardCore.Accounts.Core.Services.AccountInvitationStore invitations, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Accounts.Services.IAccountMemberService members, System.IServiceProvider services, OrchardCore.Locking.Distributed.IDistributedLock distributedLock, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Accounts.Core.Services.DefaultAccountInvitationService> stringLocalizer) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Accounts.Services.AccountInvitationResult> AcceptAsync(string token, string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> ExpireDueAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Accounts.Models.AccountInvitation> FindByIdAsync(string invitationId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Accounts.Models.AccountInvitation> FindByTokenAsync(string token, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Accounts.Services.AccountInvitationResult> InviteAsync(CrestApps.OrchardCore.Accounts.Services.AccountInvitationRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Accounts.Models.AccountInvitation>> ListForAccountAsync(string accountId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Accounts.Models.AccountInvitation>> ListForPeopleAsync(System.Collections.Generic.IReadOnlyCollection<string> emails, System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Accounts.Models.AccountInvitation> RevokeAsync(string invitationId, string actor, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
 namespace CrestApps.OrchardCore.Accounts.Indexes
 {
     public sealed class AccountEmailDomainIndex : YesSql.Indexes.MapIndex

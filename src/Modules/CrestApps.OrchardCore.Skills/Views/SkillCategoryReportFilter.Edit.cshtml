@@ -1,0 +1,8 @@
+@model SkillCategoryReportFilterViewModel
+
+<div class="col p-1">
+    <label class="form-label" asp-for="Category">@T["Category (framework)"]</label>
+    <select asp-for="Category" asp-items="Model.Categories" class="form-select">
+        <option value="">@T["Every category"]</option>
+    </select>
+</div>

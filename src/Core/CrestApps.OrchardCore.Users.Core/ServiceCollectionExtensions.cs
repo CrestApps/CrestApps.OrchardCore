@@ -64,6 +64,19 @@ public static class ServiceCollectionExtensions
     /// grants roles; register an <see cref="IRoleGrantSource"/> for the grants a module made before.
     /// </summary>
     /// <param name="services">The services.</param>
+    /// <summary>
+    /// Registers the audience service, the audiences administrators define, and the role rule.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddUserAudiences(this IServiceCollection services)
+    {
+        services.TryAddScoped<IUserAudienceService, Audiences.DefaultUserAudienceService>();
+        services.AddUserAudienceRuleSource<Audiences.RoleUserAudienceRuleSource>();
+
+        return services;
+    }
+
     public static IServiceCollection AddRoleGrants(this IServiceCollection services)
     {
         services.TryAddScoped<IRoleGrantService, DefaultRoleGrantService>();

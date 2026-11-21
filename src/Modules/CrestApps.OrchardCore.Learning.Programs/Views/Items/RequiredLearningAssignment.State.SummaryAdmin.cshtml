@@ -1,0 +1,23 @@
+@model RequiredLearningAssignmentRowViewModel
+
+@switch (Model.Assignment.State)
+{
+    case RequiredLearningState.Completed:
+        <span class="badge bg-success text-white fw-normal">@T["Completed"]</span>
+        break;
+    case RequiredLearningState.Overdue:
+        <span class="badge bg-danger text-white fw-normal">@T["Overdue"]</span>
+        break;
+    case RequiredLearningState.InProgress:
+        <span class="badge bg-primary text-white fw-normal">@T["In progress"]</span>
+        break;
+    case RequiredLearningState.Exempt:
+        <span class="badge bg-info text-white fw-normal">@T["Exempt"]</span>
+        break;
+    case RequiredLearningState.NotRequired:
+        <span class="badge bg-secondary text-white fw-normal">@T["No longer required"]</span>
+        break;
+    default:
+        <span class="badge bg-warning text-dark fw-normal">@T["Not started"]</span>
+        break;
+}

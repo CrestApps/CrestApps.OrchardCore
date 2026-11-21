@@ -25,6 +25,7 @@ internal sealed class DefaultShiftService : IShiftService
     private readonly ShiftAssignmentContexts _contexts;
     private readonly TeamTimeZoneResolver _timeZones;
     private readonly IEnumerable<IShiftAssignmentValidator> _validators;
+    private readonly IActivityCodeManager _activityCodes;
     private readonly WorkerLocks _locks;
     private readonly IClock _clock;
 
@@ -40,6 +41,7 @@ internal sealed class DefaultShiftService : IShiftService
         ShiftAssignmentContexts contexts,
         TeamTimeZoneResolver timeZones,
         IEnumerable<IShiftAssignmentValidator> validators,
+        IActivityCodeManager activityCodes,
         WorkerLocks locks,
         IClock clock,
         IStringLocalizer<DefaultShiftService> stringLocalizer)
@@ -53,6 +55,7 @@ internal sealed class DefaultShiftService : IShiftService
         _contexts = contexts;
         _timeZones = timeZones;
         _validators = validators;
+        _activityCodes = activityCodes;
         _locks = locks;
         _clock = clock;
         S = stringLocalizer;
@@ -410,6 +413,252 @@ internal sealed class DefaultShiftService : IShiftService
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<PlanningResult<IReadOnlyList<CalendarEvent>>> PlaceSegmentAsync(ShiftSegmentPlacement placement, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(placement);
+
+        var result = new PlanningResult<IReadOnlyList<CalendarEvent>>();
+
+        if (string.IsNullOrEmpty(placement.Source) || string.IsNullOrEmpty(placement.SourceId))
+        {
+            result.Fail(S["Say what places the segment, so it can be taken back."]);
+
+            return result;
+        }
+
+        if (placement.EndUtc <= placement.StartUtc)
+        {
+            result.Fail(S["The segment must end after it starts."]);
+
+            return result;
+        }
+
+        var worker = string.IsNullOrEmpty(placement.WorkerId) ? null : await _workerStore.FindByIdAsync(placement.WorkerId, cancellationToken);
+
+        if (worker is null)
+        {
+            result.Fail(S["The worker doesn't exist."]);
+
+            return result;
+        }
+
+        var codes = await _activityCodes.GetEnabledAsync(cancellationToken);
+        var code = string.IsNullOrEmpty(placement.ActivityCodeId)
+            ? codes.FirstOrDefault(item => item.Kind == placement.Kind)
+            : codes.FirstOrDefault(item => item.ItemId == placement.ActivityCodeId);
+
+        if (code is null)
+        {
+            result.Fail(string.IsNullOrEmpty(placement.ActivityCodeId)
+                ? S["No enabled activity code is of the kind {0}. Add one under Workforce, Activity codes.", placement.Kind]
+                : S["The activity code doesn't exist or is disabled."]);
+
+            return result;
+        }
+
+        var lockers = await _locks.LockAsync([worker.ItemId]);
+
+        if (lockers is null)
+        {
+            result.Fail(S["Someone else is changing these shifts. Try again."]);
+
+            return result;
+        }
+
+        try
+        {
+            var shifts = await ListCoveringShiftsAsync(worker, placement.StartUtc, placement.EndUtc, cancellationToken);
+
+            if (shifts.Count == 0)
+            {
+                result.Fail(S["No published shift covers that time."]);
+
+                return result;
+            }
+
+            var errors = new List<string>();
+            var changed = new List<CalendarEvent>();
+
+            foreach (var (calendarEvent, data) in shifts)
+            {
+                var segment = new ShiftSegment
+                {
+                    ActivityCodeId = code.ItemId,
+                    Kind = code.Kind,
+                    StartUtc = placement.StartUtc > calendarEvent.StartUtc ? placement.StartUtc : calendarEvent.StartUtc,
+                    EndUtc = placement.EndUtc < calendarEvent.EndUtc ? placement.EndUtc : calendarEvent.EndUtc,
+                    Source = placement.Source,
+                    SourceId = placement.SourceId,
+                };
+
+                var updated = await ReplaceSourceSegmentAsync(calendarEvent, data, worker, placement.Source, placement.SourceId, segment, placement.Reason, placement.Actor, errors, cancellationToken);
+
+                if (updated is not null)
+                {
+                    changed.Add(updated);
+                }
+            }
+
+            errors.ForEach(result.Fail);
+            result.Value = changed;
+
+            return result;
+        }
+        finally
+        {
+            await WorkerLocks.ReleaseAsync(lockers);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> RemoveSegmentsAsync(string workerId, string source, string sourceId, DateTime fromUtc, DateTime toUtc, string actor, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(sourceId) || toUtc <= fromUtc)
+        {
+            return 0;
+        }
+
+        var worker = string.IsNullOrEmpty(workerId) ? null : await _workerStore.FindByIdAsync(workerId, cancellationToken);
+
+        if (worker is null)
+        {
+            return 0;
+        }
+
+        var lockers = await _locks.LockAsync([worker.ItemId]);
+
+        if (lockers is null)
+        {
+            throw new InvalidOperationException($"The shifts of worker '{worker.ItemId}' are being changed by someone else.");
+        }
+
+        try
+        {
+            var removed = 0;
+            var errors = new List<string>();
+
+            foreach (var (calendarEvent, data) in await ListCoveringShiftsAsync(worker, fromUtc, toUtc, cancellationToken))
+            {
+                var count = data.Segments.Count(segment => IsFrom(segment.Source, segment.SourceId, source, sourceId));
+
+                if (count == 0)
+                {
+                    continue;
+                }
+
+                if (await ReplaceSourceSegmentAsync(calendarEvent, data, worker, source, sourceId, null, null, actor, errors, cancellationToken) is not null)
+                {
+                    removed += count;
+                }
+            }
+
+            return removed;
+        }
+        finally
+        {
+            await WorkerLocks.ReleaseAsync(lockers);
+        }
+    }
+
+    private async Task<IReadOnlyList<(CalendarEvent Event, ShiftData Data)>> ListCoveringShiftsAsync(StaffMember worker, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken)
+    {
+        var shifts = new List<(CalendarEvent, ShiftData)>();
+
+        foreach (var calendarEvent in await _shiftReader.ListAsync(worker, fromUtc, toUtc, cancellationToken))
+        {
+            if (calendarEvent.StartUtc < toUtc && calendarEvent.EndUtc > fromUtc && ShiftEvents.TryRead(calendarEvent, out var data))
+            {
+                shifts.Add((calendarEvent, data));
+            }
+        }
+
+        return shifts;
+    }
+
+    /// <summary>
+    /// Takes a source's segments off a shift and its draft and puts <paramref name="added"/> in their place, when given.
+    /// Returns the changed event, or <see langword="null"/> when the change failed.
+    /// </summary>
+    private async Task<CalendarEvent> ReplaceSourceSegmentAsync(CalendarEvent calendarEvent, ShiftData data, StaffMember worker, string source, string sourceId, ShiftSegment added, string reason, string actor, List<string> errors, CancellationToken cancellationToken)
+    {
+        var timeZoneId = string.IsNullOrEmpty(calendarEvent.TimeZoneId) ? await _timeZones.GetAsync(data.TeamId, cancellationToken) : calendarEvent.TimeZoneId;
+        var segments = data.Segments.Where(segment => !IsFrom(segment.Source, segment.SourceId, source, sourceId)).ToList();
+
+        if (added is not null)
+        {
+            segments.Add(added);
+        }
+
+        var options = new CalendarChangeOptions { Actor = actor ?? WorkforceConstants.Source, SendInvitations = false, SkipConflictCheck = true };
+        var updated = await _eventManager.UpdateAsync(calendarEvent, target =>
+        {
+            data.Segments = [.. segments.OrderBy(segment => segment.StartUtc)];
+            target.Put(data);
+        }, options, cancellationToken);
+
+        if (!updated.Succeeded)
+        {
+            errors.Add(S["The shift could not be changed: {0}", string.Join(" ", updated.Errors.Select(error => error.Message))]);
+
+            return null;
+        }
+
+        var period = string.IsNullOrEmpty(data.ScheduleId) ? null : await _periodStore.FindByIdAsync(data.ScheduleId, cancellationToken);
+
+        if (period is not null)
+        {
+            // Keep the schedule's draft in step, so the next publish keeps the segment, or doesn't bring it back.
+            var date = DateOnly.FromDateTime(CalendarTime.ToLocal(calendarEvent.StartUtc, timeZoneId));
+            var draft = await _draftStore.FindByShiftKeyAsync(period.ItemId, date, data.ShiftKey ?? calendarEvent.SourceId, cancellationToken);
+
+            if (draft is not null)
+            {
+                var draftSegments = draft.Segments.Where(segment => !IsFrom(segment.Source, segment.SourceId, source, sourceId)).ToList();
+
+                if (added is not null)
+                {
+                    draftSegments.Add(new DraftShiftSegment
+                    {
+                        ActivityCodeId = added.ActivityCodeId,
+                        Start = CalendarTime.ToLocal(added.StartUtc, timeZoneId),
+                        End = CalendarTime.ToLocal(added.EndUtc, timeZoneId),
+                        Source = added.Source,
+                        SourceId = added.SourceId,
+                    });
+                }
+
+                draft.Segments = [.. draftSegments.OrderBy(segment => segment.Start)];
+                await _draftStore.UpdateAsync(draft, cancellationToken);
+            }
+        }
+
+        await _changeRecorder.RecordAsync(new ScheduleChange
+        {
+            ItemId = UniqueId.GenerateId(),
+            PeriodId = data.ScheduleId,
+            TeamId = data.TeamId,
+            WorkerId = worker.ItemId,
+            ShiftKey = data.ShiftKey ?? calendarEvent.SourceId,
+            Kind = ScheduleChangeKind.SegmentsChanged,
+            BeforeStartUtc = calendarEvent.StartUtc,
+            BeforeEndUtc = calendarEvent.EndUtc,
+            AfterStartUtc = calendarEvent.StartUtc,
+            AfterEndUtc = calendarEvent.EndUtc,
+            InitiatedBy = ScheduleChangeInitiator.Employer,
+            Reason = reason,
+            Source = source,
+            PublishedVersion = period?.PublishedVersion ?? data.PublishedVersion,
+            ChangedBy = actor,
+            ChangedUtc = _clock.UtcNow,
+        }, cancellationToken);
+
+        return updated.Value ?? calendarEvent;
+    }
+
+    private static bool IsFrom(string segmentSource, string segmentSourceId, string source, string sourceId)
+        => string.Equals(segmentSource, source, StringComparison.Ordinal) && string.Equals(segmentSourceId, sourceId, StringComparison.Ordinal);
+
     private async Task<CalendarEvent> MoveAsync(CalendarEvent calendarEvent, ShiftData data, StaffMember worker, ScheduleChangeKind kind, ScheduleChangeInitiator initiatedBy, string reason, string actor, List<string> errors, CancellationToken cancellationToken)
     {
         var previousWorkerId = data.WorkerId;
@@ -417,6 +666,13 @@ internal sealed class DefaultShiftService : IShiftService
         var updated = await _eventManager.UpdateAsync(calendarEvent, target =>
         {
             ShiftEvents.Assign(target, worker);
+
+            // A segment another module placed, such as a class, belongs to the person it was placed for, not the shift.
+            if (!string.Equals(previousWorkerId, worker.ItemId, StringComparison.Ordinal))
+            {
+                data.Segments = [.. data.Segments.Where(segment => string.IsNullOrEmpty(segment.Source))];
+            }
+
             data.WorkerId = worker.ItemId;
             target.Put(data);
         }, options, cancellationToken);
@@ -439,6 +695,11 @@ internal sealed class DefaultShiftService : IShiftService
 
             if (draft is not null)
             {
+                if (!string.Equals(draft.WorkerId, worker.ItemId, StringComparison.Ordinal))
+                {
+                    draft.Segments = [.. draft.Segments.Where(segment => string.IsNullOrEmpty(segment.Source))];
+                }
+
                 draft.WorkerId = worker.ItemId;
                 await _draftStore.UpdateAsync(draft, cancellationToken);
             }

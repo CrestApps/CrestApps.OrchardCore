@@ -1,0 +1,4 @@
+@using CrestApps.OrchardCore.Users.Audiences
+@model ShapeViewModel<UserAudienceCondition>
+
+@T["The user is in the audience <em>{0}</em>", Model.Value.AudienceName]

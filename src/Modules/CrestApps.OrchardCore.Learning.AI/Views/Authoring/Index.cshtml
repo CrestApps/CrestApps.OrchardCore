@@ -1,0 +1,155 @@
+@model AuthoringViewModel
+
+@{
+    var disabled = !Model.ModelAvailable;
+}
+
+<zone Name="Title">
+    <breadcrumb name="LearningAIAuthoring" title="@T["Authoring assistant"]" />
+</zone>
+
+<p class="text-secondary">@T["Each prompt asks the site's AI model for a draft and saves it unpublished. Review and change every draft before you publish it; learners never see a draft."]</p>
+
+@if (disabled)
+{
+    <div class="alert alert-warning" role="alert">@T["No AI model is set up for this site, so the assistant cannot draft anything. An administrator sets up an AI connection and a default or utility deployment under Artificial Intelligence first."]</div>
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Draft a course outline"]</div>
+    <div class="card-body">
+        <form method="post" asp-action="Outline" class="no-multisubmit">
+            @Html.AntiForgeryToken()
+            <div class="ocat-wrapper">
+                <label asp-for="Topic" class="ocat-label">@T["What the course is about"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Topic" rows="3" class="form-control" maxlength="2000"></textarea>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Audience" class="ocat-label">@T["Who it is for"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Audience" class="form-control" maxlength="300" />
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="LessonCount" class="ocat-label">@T["About how many lessons"]</label>
+                <div class="ocat-end">
+                    <input asp-for="LessonCount" type="number" min="1" max="30" class="form-control" />
+                    <span class="hint">@T["A draft course with its sections and draft page lessons is made."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <button type="submit" class="btn btn-primary" disabled="@disabled">@T["Draft the outline"]</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Draft questions from a lesson"]</div>
+    <div class="card-body">
+        @if (!Model.CanDraftQuestions)
+        {
+            <p class="text-secondary mb-0">@T["Drafting questions needs Learning Assessments and the Manage question banks permission."]</p>
+        }
+        else
+        {
+            <form method="post" asp-action="Questions" class="no-multisubmit">
+                @Html.AntiForgeryToken()
+                <div class="ocat-wrapper">
+                    <label for="questions-lesson" class="ocat-label">@T["Lesson"]</label>
+                    <div class="ocat-end">
+                        <select id="questions-lesson" name="LessonId" class="form-select" asp-items="Model.Lessons">
+                            <option value="">@T["Pick a lesson"]</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="BankId" class="ocat-label">@T["Question bank"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="BankId" class="form-select" asp-items="Model.Banks">
+                            <option value="">@T["Pick a bank"]</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="QuestionCount" class="ocat-label">@T["How many questions"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="QuestionCount" type="number" min="1" max="20" class="form-control" />
+                        <span class="hint">@T["Draft questions are added to the bank unpublished, with their right answers for you to check."]</span>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <button type="submit" class="btn btn-primary" disabled="@disabled">@T["Draft the questions"]</button>
+                    </div>
+                </div>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Draft a rubric"]</div>
+    <div class="card-body">
+        @if (!Model.CanDraftRubrics)
+        {
+            <p class="text-secondary mb-0">@T["Drafting rubrics needs Learning Coursework."]</p>
+        }
+        else
+        {
+            <form method="post" asp-action="Rubric" class="no-multisubmit">
+                @Html.AntiForgeryToken()
+                <div class="ocat-wrapper">
+                    <label asp-for="Task" class="ocat-label">@T["The work it grades"]</label>
+                    <div class="ocat-end">
+                        <textarea asp-for="Task" rows="3" class="form-control" maxlength="2000"></textarea>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label asp-for="CriteriaCount" class="ocat-label">@T["About how many criteria"]</label>
+                    <div class="ocat-end">
+                        <input asp-for="CriteriaCount" type="number" min="1" max="10" class="form-control" />
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <button type="submit" class="btn btn-primary" disabled="@disabled">@T["Draft the rubric"]</button>
+                    </div>
+                </div>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Translate a lesson"]</div>
+    <div class="card-body">
+        <form method="post" asp-action="Translate" class="no-multisubmit">
+            @Html.AntiForgeryToken()
+            <div class="ocat-wrapper">
+                <label for="translate-lesson" class="ocat-label">@T["Lesson"]</label>
+                <div class="ocat-end">
+                    <select id="translate-lesson" name="LessonId" class="form-select" asp-items="Model.Lessons">
+                        <option value="">@T["Pick a lesson"]</option>
+                    </select>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Language" class="ocat-label">@T["Into"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Language" class="form-control" maxlength="100" placeholder="@T["For example French, or es-MX"]" />
+                    <span class="hint">@T["A draft copy of the lesson is made with the translated title and body. The lesson itself does not change."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <button type="submit" class="btn btn-primary" disabled="@disabled">@T["Draft the translation"]</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

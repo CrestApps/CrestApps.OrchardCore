@@ -1,0 +1,27 @@
+@model ExternalLearningListViewModel
+
+<zone Name="Title">
+    <breadcrumb name="LearningExternalLearning" title="@T["External Learning"]" />
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <form method="get" asp-action="Index" class="d-flex gap-2">
+            <select name="state" class="form-select" style="max-width: 14rem" onchange="this.form.submit()" aria-label="@T["State"]">
+                <option value="">@T["Every state"]</option>
+                <option value="@ExternalLearningState.Submitted" selected="@(Model.State == ExternalLearningState.Submitted)">@T["Waiting for review"]</option>
+                <option value="@ExternalLearningState.Accepted" selected="@(Model.State == ExternalLearningState.Accepted)">@T["Accepted"]</option>
+                <option value="@ExternalLearningState.Rejected" selected="@(Model.State == ExternalLearningState.Rejected)">@T["Rejected"]</option>
+            </select>
+        </form>
+    </div>
+</div>
+
+<admin-list name="LearningExternalLearning" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Nobody has recorded external learning yet. People record it on My education credits."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Learning"]" />
+        <admin-list-column name="State" position="30" title="@T["State"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

@@ -1,0 +1,62 @@
+@model ExternalLearningReviewViewModel
+
+<zone Name="Title">
+    <breadcrumb name="LearningExternalLearningReview" title="@T["External learning of {0}", Model.UserName ?? string.Empty]">
+        <breadcrumb-item id="LearningExternalLearning" action="Index" controller="ExternalLearning" area="CrestApps.OrchardCore.Learning.Certifications">@T["External Learning"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Review" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
+    <dl class="row">
+        <dt class="col-sm-3">@T["Learning"]</dt>
+        <dd class="col-sm-9">@Model.Submission.Title</dd>
+        <dt class="col-sm-3">@T["Provider"]</dt>
+        <dd class="col-sm-9">@Model.Submission.Provider</dd>
+        <dt class="col-sm-3">@T["Completed on"]</dt>
+        <dd class="col-sm-9">@Model.Submission.CompletedOn.ToString("d")</dd>
+        <dt class="col-sm-3">@T["Credits claimed"]</dt>
+        <dd class="col-sm-9">@Model.Submission.Amount.ToString("0.##") @Model.TypeName</dd>
+        <dt class="col-sm-3">@T["Evidence"]</dt>
+        <dd class="col-sm-9">
+            @if (string.IsNullOrEmpty(Model.Submission.EvidenceFileId))
+            {
+                <span class="text-muted">@T["None"]</span>
+            }
+            else
+            {
+                <a href="~/learning/external-learning/@Model.Submission.ItemId/evidence">@Model.Submission.EvidenceFileName</a>
+            }
+        </dd>
+        @if (Model.Submission.State != ExternalLearningState.Submitted)
+        {
+            <dt class="col-sm-3">@T["Review"]</dt>
+            <dd class="col-sm-9">@(Model.Submission.State == ExternalLearningState.Accepted ? T["Accepted by {0}", Model.Submission.ReviewedBy ?? string.Empty] : T["Rejected by {0}", Model.Submission.ReviewedBy ?? string.Empty]) @Model.Submission.ReviewNote</dd>
+        }
+    </dl>
+
+    @if (Model.Submission.State == ExternalLearningState.Submitted && Model.IsOwnLearning)
+    {
+        <p class="alert alert-info">@T["This is your own external learning: another reviewer accepts or rejects it."]</p>
+    }
+    else if (Model.Submission.State == ExternalLearningState.Submitted)
+    {
+        <div class="card text-bg-theme mb-3">
+            <div class="card-header">@T["Review"]</div>
+            <div class="card-body">
+                <div class="ocat-limited-wrapper">
+                    <label asp-for="Note" class="ocat-label">@T["Note"]</label>
+                    <div class="ocat-limited">
+                        <textarea asp-for="Note" class="form-control" rows="2"></textarea>
+                        <span class="hint">@T["Kept with the review and shown to the person."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-bar-bottom">
+            <button class="btn btn-success" type="submit" name="decision" value="accept">@T["Accept and post the credits"]</button>
+            <button class="btn btn-danger" type="submit" name="decision" value="reject">@T["Reject"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    }
+</form>

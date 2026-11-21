@@ -202,9 +202,14 @@ for (const path of listFiles(join(siteDir, 'static')).filter((path) => VIDEO_FIL
     fail(relative(siteDir, path).split(sep).join('/'), 'is a video file. Publish videos on YouTube and embed them with <YouTube video="..." />.');
 }
 
+// A page embeds a video when it has a <video> element, or points a src, an href or a Markdown link or image at a video
+// file. A video extension named in text, such as a list of allowed file extensions in a configuration example, is not
+// an embed.
+const VIDEO_EMBED = /<video\b|\b(src|href)\s*=\s*["'{][^"'}]*\.(mp4|webm|mov|m4v|ogv)\b|\]\([^)\s]*\.(mp4|webm|mov|m4v|ogv)\b/i;
+
 for (const dir of ['docs', 'versioned_docs']) {
     for (const path of listDocs(join(siteDir, dir))) {
-        if (/<video\b|\.(mp4|webm)\b/i.test(readFileSync(path, 'utf8'))) {
+        if (VIDEO_EMBED.test(readFileSync(path, 'utf8'))) {
             fail(relative(siteDir, path).split(sep).join('/'), 'embeds a video file. Embed videos from YouTube with <YouTube video="..." />.');
         }
     }

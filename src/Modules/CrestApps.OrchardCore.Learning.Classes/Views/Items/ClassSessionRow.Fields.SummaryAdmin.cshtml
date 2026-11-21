@@ -1,0 +1,10 @@
+@model ShapeViewModel<ClassSessionRow>
+
+@if (Model.Value.Session.Status == SchedulingSessionStatus.Cancelled)
+{
+    <span>@Model.Value.Session.Title</span>
+}
+else
+{
+    <a asp-controller="ClassSessions" asp-action="Edit" asp-route-id="@Model.Value.Session.ItemId" asp-route-area="CrestApps.OrchardCore.Learning.Classes">@Model.Value.Session.Title</a>
+}

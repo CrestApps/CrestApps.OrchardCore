@@ -1,0 +1,44 @@
+@using CrestApps.OrchardCore.Users.Audiences
+@model UserAudienceRuleRowModel
+
+<div class="card mb-2" data-rule-row>
+    <div class="card-body py-2">
+        <div class="row g-2 align-items-start">
+            <div class="col-md-4">
+                <select name="Rules[@Model.Index].Source" class="form-select" data-rule-source aria-label="@T["Rule"]">
+                    <option value="">@T["Choose a rule"]</option>
+                    @foreach (var source in Model.Sources)
+                    {
+                        <option value="@source.Name" selected="@(source.Name == Model.Rule.Source)">@source.DisplayName</option>
+                    }
+                </select>
+            </div>
+            <div class="col">
+                @foreach (var source in Model.Sources)
+                {
+                    <div data-rule-for="@source.Name" class="d-flex flex-column gap-2">
+                        @if (source.Options.Count > 0)
+                        {
+                            <select name="Rules[@Model.Index].Values" class="form-select" multiple size="@Math.Min(6, Math.Max(3, source.Options.Count))" aria-label="@source.DisplayName">
+                                @foreach (var option in source.Options)
+                                {
+                                    <option value="@option.Value" selected="@(source.Name == Model.Rule.Source && Model.Rule.Values.Contains(option.Value))">@option.Text</option>
+                                }
+                            </select>
+                        }
+                        @if (source.NumberLabel is not null)
+                        {
+                            <div class="input-group">
+                                <span class="input-group-text">@source.NumberLabel</span>
+                                <input type="number" min="0" name="Rules[@Model.Index].Number" value="@(source.Name == Model.Rule.Source ? Model.Rule.Number : null)" class="form-control" />
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-sm btn-outline-danger" data-rule-remove title="@T["Remove the rule"]" aria-label="@T["Remove the rule"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+            </div>
+        </div>
+    </div>
+</div>

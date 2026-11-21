@@ -8,4 +8,7 @@
 {
     <a asp-controller="CertificationRecords" asp-action="Revoke" asp-route-id="@Model.Record.ItemId" class="dropdown-item text-danger" data-title="@T["Withdraw"]" data-message="@T["Withdraw this certificate? It no longer counts."]" data-url-af="RemoveUrl UnsafeUrl">@T["Withdraw"]</a>
 }
+@if (string.IsNullOrEmpty(Model.Record.VerificationCode))
+{
 <a asp-controller="CertificationRecords" asp-action="Delete" asp-route-id="@Model.Record.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this certificate?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}

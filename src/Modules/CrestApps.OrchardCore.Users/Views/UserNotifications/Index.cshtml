@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.Users
+@using CrestApps.OrchardCore.Users.ViewModels
+@model UserNotificationsViewModel
+
+@{
+    var list = await New.UserNotificationsList(Page: Model);
+}
+
+@if (Model.InAccount)
+{
+    <zone Name="Title">
+        <breadcrumb name="UserNotifications" title="@T["Notifications"]">
+            <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(UsersConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+        </breadcrumb>
+    </zone>
+
+    @await DisplayAsync(await New.CommerceAccountPage(Title: T["Notifications"], Content: list))
+}
+else
+{
+    <div class="container my-4">
+        <div class="product-breadcrumb">
+            <breadcrumb name="UserNotifications" title="@T["Notifications"]">
+                <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            </breadcrumb>
+        </div>
+        <h1 class="h3 mb-3">@T["Notifications"]</h1>
+        @await DisplayAsync(list)
+    </div>
+}

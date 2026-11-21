@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Learning.Programs.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<GrantRequiredLearningExemptionTask>
+
+<header><h4><i class="fa-solid fa-list-check" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Grant Required Learning Exemption"])</h4></header>

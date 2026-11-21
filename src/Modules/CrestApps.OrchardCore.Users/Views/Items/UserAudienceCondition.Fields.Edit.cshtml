@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Users.Audiences
+@model UserAudienceConditionViewModel
+
+<div class="mb-3">
+    <label asp-for="AudienceName" class="form-label">@T["Audience"]</label>
+    <select asp-for="AudienceName" asp-items="Model.Audiences" class="form-select" required>
+        <option value="">@T["Choose an audience"]</option>
+    </select>
+    <span class="hint">@T["Met when the signed-in user is in the audience. A visitor who is not signed in is in no audience."]</span>
+</div>

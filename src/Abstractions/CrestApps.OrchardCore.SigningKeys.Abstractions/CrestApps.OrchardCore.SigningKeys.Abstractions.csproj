@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.SigningKeys</RootNamespace>
+    <Title>CrestApps OrchardCore Signing Keys Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Contracts of the shared signing keys: the key sets modules register (algorithm, rotation age, how long a retired
+      key stays published), and the ring that gives the key that signs now, the public keys to publish as a JSON Web Key
+      Set, and rotation. The key pairs are kept in Orchard Core Secrets.
+    </Description>
+    <PackageTags>$(PackageTags) SigningKeys JWKS Abstractions</PackageTags>
+  </PropertyGroup>
+
+
+</Project>

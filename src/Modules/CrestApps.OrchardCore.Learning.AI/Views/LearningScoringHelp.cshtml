@@ -1,0 +1,97 @@
+@model ScoringHelpViewModel
+
+<div class="border rounded p-2 mt-2 learning-scoring-help" id="@Model.HtmlId"
+     data-url="@Model.Url"
+     data-points-field="@Model.PointsField"
+     data-feedback-field="@Model.FeedbackField"
+     data-rubric-prefix="@Model.RubricFieldPrefix"
+     data-failed-text="@T["The suggestion could not be loaded. Grade the work yourself."]">
+    <input type="hidden" name="@Model.AssistedField" value="false" data-scoring-help-assisted />
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-scoring-help-button disabled="@(!Model.ModelAvailable)">
+            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> @T["Suggest a score"]
+        </button>
+        <span class="small text-secondary" data-scoring-help-status role="status">
+            @if (Model.ModelAvailable)
+            {
+                @T["The AI suggests a score and feedback against the guidance or rubric. You confirm or change it, and the grade record says it was AI-assisted."]
+            }
+            else
+            {
+                @T["Scoring help is not available: no AI model is set up for this site."]
+            }
+        </span>
+    </div>
+</div>
+
+<script at="Foot">
+    (() => {
+        const panel = document.getElementById(@Json.Serialize(Model.HtmlId));
+
+        if (!panel || panel.dataset.ready) {
+            return;
+        }
+
+        panel.dataset.ready = 'true';
+
+        const form = panel.closest('form');
+        const button = panel.querySelector('[data-scoring-help-button]');
+        const status = panel.querySelector('[data-scoring-help-status]');
+        const assisted = panel.querySelector('[data-scoring-help-assisted]');
+
+        const field = (name) => name && form ? form.querySelector(`[name="${CSS.escape(name)}"]`) : null;
+
+        button?.addEventListener('click', async () => {
+            const token = form?.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+
+            button.disabled = true;
+
+            try {
+                const response = await fetch(panel.dataset.url, {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token, 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ __RequestVerificationToken: token }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(String(response.status));
+                }
+
+                const result = await response.json();
+
+                status.textContent = result.message ?? '';
+
+                if (result.error) {
+                    return;
+                }
+
+                const points = field(panel.dataset.pointsField);
+
+                if (points && result.points !== null && result.points !== undefined) {
+                    points.value = String(result.points);
+                }
+
+                for (const [criterionId, levelId] of Object.entries(result.choices ?? {})) {
+                    const name = `${panel.dataset.rubricPrefix}[${criterionId}]`;
+                    const radio = form?.querySelector(`input[type="radio"][name="${CSS.escape(name)}"][value="${CSS.escape(levelId)}"]`);
+
+                    if (radio) {
+                        radio.checked = true;
+                    }
+                }
+
+                const feedback = field(panel.dataset.feedbackField);
+
+                if (feedback && result.feedback) {
+                    feedback.value = result.feedback;
+                }
+
+                assisted.value = 'true';
+            } catch {
+                status.textContent = panel.dataset.failedText;
+            } finally {
+                button.disabled = false;
+            }
+        });
+    })();
+</script>

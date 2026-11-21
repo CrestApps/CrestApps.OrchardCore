@@ -32,6 +32,9 @@
     <PackageReference Include="OrchardCore.Deployment.Abstractions" />
     <PackageReference Include="OrchardCore.Title" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
+    <PackageReference Include="OrchardCore.Settings.Core" />
+    <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="OrchardCore.Email.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
@@ -43,6 +46,7 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Addresses.Core\CrestApps.OrchardCore.Addresses.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.ContentTransfer.Core\CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.PersonalData.Core\CrestApps.OrchardCore.PersonalData.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Addresses\CrestApps.OrchardCore.Addresses.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Staff\CrestApps.OrchardCore.Staff.csproj" PrivateAssets="none" />

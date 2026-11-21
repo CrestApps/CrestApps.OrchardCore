@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Workforce.Models;
+using CrestApps.OrchardCore.YesSql.Core.Ledgers;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Indexes;
@@ -57,22 +58,7 @@ public static class TimeOffIndexSchema
             table.CreateIndex("IDX_TimeOffPolicyAssignment_Worker", "WorkerId");
         }, collection: collection);
 
-        await schemaBuilder.CreateMapIndexTableAsync<TimeOffLedgerEntryIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("WorkerId", column => column.Nullable().WithLength(26))
-            .Column<string>("PolicyId", column => column.Nullable().WithLength(26))
-            .Column<TimeOffLedgerKind>("Kind")
-            .Column<int>("EffectiveDate")
-            .Column<string>("IdempotencyKey", column => column.Nullable().WithLength(150))
-            .Column<DateTime>("CreatedUtc"),
-            collection: collection);
-
-        await schemaBuilder.AlterIndexTableAsync<TimeOffLedgerEntryIndex>(table =>
-        {
-            table.CreateIndex("IDX_TimeOffLedgerEntryIndex_ItemId", "ItemId");
-            table.CreateIndex("IDX_TimeOffLedgerEntryIndex_Lookup", "WorkerId", "PolicyId", "EffectiveDate");
-            table.CreateIndex("IDX_TimeOffLedgerEntryIndex_Key", "IdempotencyKey");
-        }, collection: collection);
+        await QuantityLedgerIndexSchema.CreateAsync(schemaBuilder, WorkforceConstants.TimeOffLedgerCollectionName);
 
         await schemaBuilder.CreateMapIndexTableAsync<TimeOffRequestIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))

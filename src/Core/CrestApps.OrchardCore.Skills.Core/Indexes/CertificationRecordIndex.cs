@@ -54,4 +54,19 @@ public sealed class CertificationRecordIndex : CatalogItemIndex
     /// Gets or sets the expiry day as <c>yyyyMMdd</c>, or <see langword="null"/> when it never expires.
     /// </summary>
     public int? ExpiresOn { get; set; }
+
+    /// <summary>
+    /// Gets or sets what earned an issued certificate.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the id, within the source, of what earned it.
+    /// </summary>
+    public string SourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the verification code of an issued certificate.
+    /// </summary>
+    public string VerificationCode { get; set; }
 }

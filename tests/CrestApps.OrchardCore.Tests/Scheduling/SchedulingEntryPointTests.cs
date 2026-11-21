@@ -182,7 +182,7 @@ public sealed class SchedulingEntryPointTests
     {
         return CalendarTestHarness.CreateAsync(
             services => services.AddSchedulingCore(),
-            async schemaBuilder => Assert.Equal(2, await new SchedulingMigrations { SchemaBuilder = schemaBuilder }.CreateAsync()),
+            async schemaBuilder => Assert.Equal(3, await new SchedulingMigrations { SchemaBuilder = schemaBuilder }.CreateAsync()),
             [new SchedulingResourceIndexProvider(), new AppointmentTypeIndexProvider(), new AppointmentIndexProvider(), new WaitlistEntryIndexProvider()],
             [SchedulingConstants.CollectionName]);
     }

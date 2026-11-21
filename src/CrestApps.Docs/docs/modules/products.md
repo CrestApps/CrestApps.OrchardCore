@@ -52,6 +52,7 @@ The part's behavior is configured per content type through **`ProductPartSetting
 | `PriceDisplay` | `ProductPriceDisplay` | How prices are shown to visitors: `Show` (the default), `OnRequest`, or `Hidden`. |
 | `OnRequestLabel` | `string` | The text shown in place of the price when the price display is `OnRequest`, such as *Call for price*. |
 | `AllowPriceDisplayOverride` | `bool` | Lets each product choose its own price display. |
+| `PriceOptional` | `bool` | Lets a product be saved without a price; a product without one cannot be bought and shows no price (`CanBePurchased` is false and `GetPriceDisplay` is `Hidden`). Learning Commerce turns it on for courses and learning paths. |
 
 ## Attaching the Product part
 
@@ -336,7 +337,7 @@ Turn on **Show product details on the product page** in the type's Product part 
 - the product's images beside its price, highlights and actions, with thumbnails when it has several images;
 - the specification table after the description.
 
-The images come from the type's first media field that has images. The actions show what modules offer to do with the product, such as the **Sign up** button of a subscription plan, or else *Available to buy online* or an inquiry button; the inquiry button's label and link are set on the type, and `{id}` and `{title}` in the link are replaced with the product's identifier and title. Fields shown in the specification table, and the media field shown as the gallery, are not shown a second time on the page.
+The images come from the type's first media field that has images; a product with none shows no empty picture frame, and its price and actions stand alone. The actions show what modules offer to do with the product, such as the **Sign up** button of a subscription plan, or else *Available to buy online* or an inquiry button; the inquiry button's label and link are set on the type, and `{id}` and `{title}` in the link are replaced with the product's identifier and title. Fields shown in the specification table, and the media field shown as the gallery, are not shown a second time on the page.
 
 ### Breadcrumbs
 

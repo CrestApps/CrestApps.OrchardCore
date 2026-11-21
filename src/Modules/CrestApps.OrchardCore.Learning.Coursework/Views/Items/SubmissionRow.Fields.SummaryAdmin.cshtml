@@ -1,0 +1,4 @@
+@model ShapeViewModel<SubmissionRow>
+
+<a href="@Url.RouteUrl("LearningCourseworkGradeSubmission", new { id = Model.Value.Submission.ItemId })">@Model.Value.LearnerName</a>
+<div class="admin-list-secondary">@T["Attempt {0}", Model.Value.Submission.Attempt]</div>

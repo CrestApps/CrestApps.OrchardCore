@@ -1,0 +1,39 @@
+{
+  "MediaField": [
+    {
+      "contentType": [
+        "VideoLesson"
+      ],
+      "displayType": "Detail",
+      "differentiator": "VideoLesson-Video",
+      "place": "-"
+    },
+    {
+      "contentType": [
+        "VideoLesson"
+      ],
+      "displayType": "Detail",
+      "differentiator": "VideoLesson-Captions",
+      "place": "-"
+    }
+  ],
+  "YoutubeField": [
+    {
+      "contentType": [
+        "VideoLesson"
+      ],
+      "displayType": "Detail",
+      "differentiator": "VideoLesson-YouTube",
+      "place": "-"
+    }
+  ],
+  "ListPart": [
+    {
+      "contentType": [
+        "Course"
+      ],
+      "displayType": "Detail",
+      "place": "-"
+    }
+  ]
+}

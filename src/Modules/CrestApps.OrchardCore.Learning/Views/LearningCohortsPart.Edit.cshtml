@@ -1,0 +1,46 @@
+@using CrestApps.OrchardCore.Learning.Cohorts
+@using Microsoft.AspNetCore.Mvc.Localization
+@model LearningCohortsEditViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="card mb-3" id="learning-cohorts-card">
+    <div class="card-header">@T["Cohorts"]</div>
+    <div class="card-body">
+        <input type="hidden" asp-for="Rendered" value="true" />
+        <div class="ocat-limited-wrapper">
+            <label for="@Html.IdFor(m => m.CohortIds)" class="ocat-label">@T["Enroll the people in"]</label>
+            <div class="ocat-limited">
+                <select asp-for="CohortIds" asp-items="Model.Options" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" data-selected-text-format="count > 3" title="@T["No cohort"]"></select>
+                <span class="hint">@T["Everyone in these cohorts is enrolled when this is published, and so is anyone who joins them later. Someone who leaves loses the enrollment the cohort gave them; an enrollment from another source, or a completed one, stays."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Linked now"]</label>
+            <div class="ocat-end">
+                @if (Model.Linked.Count == 0)
+                {
+                    <span class="text-muted">@T["No cohort is linked yet."]</span>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var cohort in Model.Linked)
+                        {
+                            <li data-cohort-id="@cohort.CohortId">
+                                <a asp-area="CrestApps.OrchardCore.Users" asp-controller="Cohorts" asp-action="Members" asp-route-id="@cohort.CohortId">@cohort.Name</a>
+                                <span class="badge ta-badge fw-normal ms-1" title="@T["People in the cohort"]"><i class="fa-solid fa-users text-secondary me-1" aria-hidden="true"></i>@T.Plural(cohort.MemberCount, "1 person", "{0} people")</span>
+                            </li>
+                        }
+                    </ul>
+                }
+                @if (Model.Pending)
+                {
+                    <span class="hint d-block">@T["The cohorts chosen above apply when you publish."]</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>

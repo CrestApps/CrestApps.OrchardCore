@@ -1,0 +1,28 @@
+@model RequiredLearningPreviewViewModel
+
+<zone Name="Title">
+    <breadcrumb name="RequiredLearningPreview" title="@T["Who '{0}' covers", Model.Requirement.Name]">
+        <breadcrumb-item id="RequiredLearning" action="Index" controller="RequiredLearning" area="CrestApps.OrchardCore.Learning.Programs">@T["Required Learning"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-center">
+            <div class="col">@T.Plural(Model.Count, "The rule covers 1 person today.", "The rule covers {0} people today.")</div>
+            <div class="col-auto">
+                <form method="post" asp-action="Run" asp-route-id="@Model.Requirement.ItemId">
+                    <button type="submit" class="btn btn-primary">@T["Run now"]</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="RequiredLearningPreview" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Nobody is in the audience or the people of this rule."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Person"]" />
+        <admin-list-column name="State" position="30" title="@T["Required already"]" width="auto" />
+    </admin-list-grid>
+</admin-list>

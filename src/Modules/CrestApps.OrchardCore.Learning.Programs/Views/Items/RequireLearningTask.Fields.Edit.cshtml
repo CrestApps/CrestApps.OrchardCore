@@ -1,0 +1,15 @@
+@using CrestApps.OrchardCore.Learning.Programs.Workflows
+
+@model RequireLearningTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="RequirementId" class="form-label">@T["Required learning"]</label>
+    <select asp-for="RequirementId" asp-items="Model.RequirementOptions" class="form-select">
+        <option value="">@T["Choose a rule"]</option>
+    </select>
+</div>
+<div class="mb-3">
+    <label asp-for="UserId" class="form-label">@T["User id"]</label>
+    <input asp-for="UserId" class="form-control code" />
+    <span class="hint">@T["The person, such as {0}.", "{{ Workflow.Input.UserId }}"]</span>
+</div>

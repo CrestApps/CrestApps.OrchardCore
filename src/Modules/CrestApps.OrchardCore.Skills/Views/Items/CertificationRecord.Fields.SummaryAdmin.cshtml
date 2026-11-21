@@ -1,4 +1,12 @@
 @model CertificationRecordRowViewModel
 
-<a asp-controller="CertificationRecords" asp-action="Edit" asp-route-id="@Model.Record.ItemId">@(Model.Record.SubjectName ?? Model.Record.SubjectId)</a>
+@if (string.IsNullOrEmpty(Model.Record.VerificationCode))
+{
+    <a asp-controller="CertificationRecords" asp-action="Edit" asp-route-id="@Model.Record.ItemId">@(Model.Record.SubjectName ?? Model.Record.SubjectId)</a>
+}
+else
+{
+    @* A certificate the site issued is revoked or renewed, never edited by hand. *@
+    <span>@(Model.Record.SubjectName ?? Model.Record.SubjectId)</span>
+}
 <div class="hint">@(Model.CertificationName ?? T["Unknown certification"].Value)@(string.IsNullOrEmpty(Model.Record.Number) ? string.Empty : $" · {Model.Record.Number}")</div>

@@ -27,6 +27,7 @@
     <PackageVersion Include="NuGet.Versioning" Version="8.0.0" />
     <PackageVersion Include="OllamaSharp" Version="5.5.2" />
     <PackageVersion Include="PdfPig" Version="0.1.16" />
+    <PackageVersion Include="QRCoder" Version="1.8.0" />
     <PackageVersion Include="Stripe.net" Version="53.1.0" />
     <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="6.3.0" />
@@ -57,6 +58,7 @@
     <PackageVersion Include="OrchardCore.Contents.TagHelpers" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Data.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.DataPipelines.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.DataPipelines.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.DataSources.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.DataSources.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment.Abstractions" Version="$(OrchardCoreVersion)" />
@@ -81,6 +83,7 @@
     <PackageVersion Include="OrchardCore.Media.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Media.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Module.Targets" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Rules.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Theme.Targets" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Media.Azure" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Mvc.Core" Version="$(OrchardCoreVersion)" />
@@ -91,6 +94,7 @@
     <PackageVersion Include="OrchardCore.PublishLater" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Queries.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ReCaptcha.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.OpenId.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.RateLimits.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Recipes.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Redis" Version="$(OrchardCoreVersion)" />

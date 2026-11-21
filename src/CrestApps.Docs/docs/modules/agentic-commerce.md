@@ -17,7 +17,7 @@ The admin screens are described in the User Manual: [Sell through AI agents](../
 
 | Feature ID | Name | Depends on | What it adds |
 | --- | --- | --- | --- |
-| `CrestApps.OrchardCore.AgenticCommerce` | Agentic Commerce | Commerce, Store Profile, Checkout, Orders, Products, Webhooks | Agent platforms (**Commerce > AI agents**), the settings (**Settings > Commerce > Agentic commerce**), the store's signing keys, the protocol-neutral agent checkout, the hand-off link, order updates, and the payment handlers. |
+| `CrestApps.OrchardCore.AgenticCommerce` | Agentic Commerce | Commerce, Store Profile, Checkout, Orders, Products, Webhooks, Secrets | Agent platforms (**Commerce > AI agents**), the settings (**Settings > Commerce > Agentic commerce**), the store's signing keys, the protocol-neutral agent checkout, the hand-off link, order updates, and the payment handlers. |
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp` | Universal Commerce Protocol | Agentic Commerce | The UCP profile at `/.well-known/ucp`, the REST binding for checkout and orders, the fulfillment, discount and buyer consent extensions, and signed order webhooks. |
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp.IdentityLinking` | UCP Account Linking | UCP, OpenID Server | The `dev.ucp.common.identity_linking` capability: a buyer links their store account to an agent through the tenant's OpenID server. |
 | `CrestApps.OrchardCore.AgenticCommerce.Ucp.Catalog` | UCP Catalog and Cart | UCP, Product Listing | Catalog search and lookup, and the UCP cart. |
@@ -311,7 +311,9 @@ The platform's signing secret is made with **New secret** (`whsec_...`), shown o
 
 ### The store's signing keys
 
-`IMerchantSigningKeyService` keeps the store's ES256 (P-256) keys in the `MerchantSigningKeysDocument`, each private key protected with the tenant's data protection keys. The first key is made when it is first needed. The **Agentic commerce signing key rotation** background task runs once a day and makes a new key when the current one is 90 days old. A retired key stays in the profile's `keys` for 7 days, so a platform can still verify what it signed, and is deleted after 28 days. The keys sign the UCP order webhooks, the AP2 merchant authorizations and the AP2 receipts.
+`IMerchantSigningKeyService` gives the store's ES256 (P-256) keys from the shared signing keys (`CrestApps.OrchardCore.SigningKeys`, key set `AgenticCommerce.Merchant`): each key pair is a secret of Orchard Core **Secrets** (a `TextSecret` named `SigningKeys.AgenticCommerce.Merchant.{kid}` that holds the private JSON Web Key; Secrets has no elliptic curve key type), so the feature depends on Secrets. The first key is made when it is first needed. The **Signing key rotation** background task runs once a day and makes a new key when the current one is 90 days old. A retired key stays in the profile's `keys` for 7 days, so a platform can still verify what it signed, and its secret is removed after 28 days. The keys sign the UCP order webhooks, the AP2 merchant authorizations and the AP2 receipts.
+
+A site that used Agentic Commerce before the keys moved to Secrets keeps its keys: before the shared signing keys make the store's first key, they import the keys of the old `MerchantSigningKeysDocument` (protected with the tenant's data protection keys) with their ids and dates, so the published keys stay the same, and the current key keeps signing and rotates when it would have. The old document is left in place.
 
 ## AP2 mandates (preview)
 

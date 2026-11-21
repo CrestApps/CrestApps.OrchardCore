@@ -11,6 +11,11 @@ public static class WorkforceConstants
     public const string CollectionName = "Workforce";
 
     /// <summary>
+    /// The collection of the time-off ledger, a quantity ledger of its own.
+    /// </summary>
+    public const string TimeOffLedgerCollectionName = "WorkforceTimeOffLedger";
+
+    /// <summary>
     /// The calendar type of a team's Workforce calendar.
     /// </summary>
     public const string CalendarType = "Workforce";

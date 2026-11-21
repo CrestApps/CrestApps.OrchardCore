@@ -1,0 +1,3 @@
+@model ShapeViewModel<GradingQueueRow>
+
+<span class="badge ta-badge fw-normal"><i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(Model.Value.Item.SubmittedUtc, DateTimeKind.Utc), Format: "g"))</span>

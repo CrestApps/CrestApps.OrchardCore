@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Learning.Xapi.Workflows
+
+@model LearningStatementStoredEventViewModel
+
+<div class="mb-3">
+    <label asp-for="Verbs" class="form-label">@T["Verbs"]</label>
+    <textarea asp-for="Verbs" rows="3" class="form-control"></textarea>
+    <span class="hint">@T["The verb ids (IRIs) that start the workflow, one a line, such as http://adlnet.gov/expapi/verbs/completed. Leave empty for every verb. The workflow input holds StatementId, Verb, ObjectType, ObjectId, Registration, ActorAccountName, ActorAccountHomePage, ClientId, Voided and StoredUtc; it never holds an e-mail address."]</span>
+</div>

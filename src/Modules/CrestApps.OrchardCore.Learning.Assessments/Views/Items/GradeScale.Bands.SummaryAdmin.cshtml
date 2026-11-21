@@ -1,0 +1,6 @@
+@model GradeScaleRowViewModel
+
+@foreach (var band in Model.Scale.Bands.OrderByDescending(band => band.MinPercent))
+{
+    <span class="badge ta-badge fw-normal me-1 @(band.Passing ? null : "text-secondary")">@band.Label @band.MinPercent.ToString("0.##")%+</span>
+}

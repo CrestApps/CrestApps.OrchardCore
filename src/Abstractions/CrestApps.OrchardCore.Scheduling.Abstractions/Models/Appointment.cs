@@ -83,6 +83,26 @@ public sealed class Appointment : CatalogItem
     public string Source { get; set; }
 
     /// <summary>
+    /// Gets or sets the id, within <see cref="Source"/>, of what the appointment is for, such as a learner's enrollment.
+    /// </summary>
+    public string SourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dated session the appointment registers for; empty for an appointment booked on a free time.
+    /// </summary>
+    public string SessionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the person attended.
+    /// </summary>
+    public AppointmentAttendance Attendance { get; set; }
+
+    /// <summary>
+    /// Gets or sets the minutes the person attended, when they were counted.
+    /// </summary>
+    public int? MinutesAttended { get; set; }
+
+    /// <summary>
     /// Gets or sets why it was cancelled.
     /// </summary>
     public string CancelReason { get; set; }

@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.Assessments.Core</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Assessments Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services of Learning assessments: question scorers, random draws, the attempt service with server deadlines,
+      grading, regrades, overrides, grade scales, item analysis, their stores and indexes, and the access rule that keeps
+      questions private.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS Assessments Quiz Exam Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Learning.Assessments" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.Contents.Core" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Lists" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Assessments.Abstractions\CrestApps.OrchardCore.Learning.Assessments.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Core\CrestApps.OrchardCore.Learning.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>

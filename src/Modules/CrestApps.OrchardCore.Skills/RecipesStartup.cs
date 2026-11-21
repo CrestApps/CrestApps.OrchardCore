@@ -62,6 +62,9 @@ public sealed class WorkflowsRecipesSchemaStartup : StartupBase
             .AddWorkflowActivitySchema<CertificationExpiringEventSchema>()
             .AddWorkflowActivitySchema<CertificationExpiredEventSchema>()
             .AddWorkflowActivitySchema<SkillsChangedEventSchema>()
+            .AddWorkflowActivitySchema<CertificateIssuedEventSchema>()
+            .AddWorkflowActivitySchema<CertificateRenewedEventSchema>()
+            .AddWorkflowActivitySchema<CertificateRevokedEventSchema>()
             .AddWorkflowActivitySchema<AssignSkillTaskSchema>();
     }
 }
