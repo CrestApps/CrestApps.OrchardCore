@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Surveys.Core.Logic;
+using CrestApps.OrchardCore.Surveys.Core.Translations;
 using CrestApps.OrchardCore.Surveys.Models;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
@@ -14,6 +15,7 @@ public sealed class SurveyEndingService
     private readonly SurveyPipingRenderer _piping;
     private readonly IEnumerable<ISurveyEndingRenderer> _renderers;
     private readonly ISiteService _siteService;
+    private readonly SurveyDefinitionLocalizer _localizer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyEndingService"/> class.
@@ -22,12 +24,15 @@ public sealed class SurveyEndingService
     /// <param name="piping">The piping renderer.</param>
     /// <param name="renderers">The ending renderer of the module, if any.</param>
     /// <param name="siteService">The site service.</param>
+    /// <param name="localizer">The definition localizer, for translated texts.</param>
     public SurveyEndingService(
         SurveyLogicEngine logic,
         SurveyPipingRenderer piping,
         IEnumerable<ISurveyEndingRenderer> renderers,
-        ISiteService siteService)
+        ISiteService siteService,
+        SurveyDefinitionLocalizer localizer)
     {
+        _localizer = localizer;
         _logic = logic;
         _piping = piping;
         _renderers = renderers;
@@ -77,6 +82,8 @@ public sealed class SurveyEndingService
         ArgumentNullException.ThrowIfNull(survey);
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(response);
+
+        definition = _localizer.Localize(definition, response.Culture);
 
         var ending = definition.Endings?.FirstOrDefault(item => string.Equals(item.Id, response.EndingId, StringComparison.Ordinal))
             ?? definition.Endings?.FirstOrDefault(item => item.IsDefault);

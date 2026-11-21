@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Surveys.Core.Formulas;
 using CrestApps.OrchardCore.Surveys.Core.Logic;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Services;
+using CrestApps.OrchardCore.Surveys.Core.Translations;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -50,8 +51,10 @@ public static class SurveysRuntimeServiceCollectionExtensions
         services.TryAddScoped<SurveyPlanBuilder>();
         services.TryAddScoped<SurveyRuntimeVersions>();
         services.TryAddScoped<SurveyRespondentProjector>();
+        services.TryAddSingleton<SurveyDefinitionLocalizer>();
         services.TryAddScoped<SurveyPageViewBuilder>();
         services.TryAddScoped<SurveyEndingService>();
+        services.AddSurveyDefinitionValidationContributor<SurveyTranslationValidationContributor>();
         services.TryAddScoped<ISurveyWeekStartProvider, SiteCultureWeekStartProvider>();
         services.TryAddScoped<SurveyParticipationService>();
         services.TryAddScoped<SurveyResponseCounter>();
