@@ -6,7 +6,7 @@
 
 <a asp-action="Index" asp-controller="SurveyCollectors" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Collect responses"]</a>
 <a href="@Url.Content("~/Admin/surveys/" + survey.ItemId + "/responses")" class="dropdown-item">@T["Responses"]</a>
-<a href="@Url.RouteUrl("ReportsDisplay", new { id = "survey-results", surveyId = survey.ItemId })" class="dropdown-item">@T["Results"]</a>
+<a href="@(Url.RouteUrl("ReportsDisplay", new { id = "survey-results" }) + "?SurveyReport.SurveyId=" + Uri.EscapeDataString(survey.ItemId))" class="dropdown-item">@T["Results"]</a>
 <a asp-action="Index" asp-controller="SurveyVersions" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Versions"]</a>
 <a asp-action="Access" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Access and settings"]</a>
 <a asp-action="Logic" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Logic overview"]</a>
