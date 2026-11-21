@@ -23,13 +23,12 @@ public sealed class SurveySettingsAdminMenu : AdminNavigationProvider
     /// <inheritdoc />
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        builder.Add(S["Configuration"], configuration => configuration
-            .Add(S["Settings"], settings => settings
-                .Add(S["Surveys"], S["Surveys"].PrefixPosition(), surveys => surveys
-                    .Id("surveysSettings")
-                    .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", SurveysConstants.SettingsGroupId } })
-                    .Permission(SurveysPermissions.ManageSurveySettings)
-                    .LocalNav())));
+        builder.Add(S["Settings"], settings => settings
+            .Add(S["Surveys"], S["Surveys"].PrefixPosition(), surveys => surveys
+                .Id("surveysSettings")
+                .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", SurveysConstants.SettingsGroupId } })
+                .Permission(SurveysPermissions.ManageSurveySettings)
+                .LocalNav()));
 
         return ValueTask.CompletedTask;
     }

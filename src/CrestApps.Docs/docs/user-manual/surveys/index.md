@@ -36,4 +36,4 @@ Surveys lets you build surveys, polls, forms and quizzes, share them, and read t
 | **Question banks** | Questions you reuse in many surveys and quizzes |
 | **Grading** | Answers that wait for a person to score them |
 
-Reports are under **Reports > Surveys**. The defaults for new surveys are under **Configuration > Settings > Surveys**.
+Reports are under **Reports > Surveys**. The defaults for new surveys are under **Settings > Surveys**.
