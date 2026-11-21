@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model BankQuestionFilterOptions
+
+<div class="btn-group filter">
+    <select name="Options.Type" asp-items="Model.Types" form="bank-questions-filter" class="selectpicker show-tick me-2" data-style="btn-sm" data-width="fit" data-header="@T["Filter by type"]" data-dropdown-align-right="auto" data-surveys-bank-filter aria-label="@T["Type"]"></select>
+    <select name="Options.Tag" asp-items="Model.Tags" form="bank-questions-filter" class="selectpicker show-tick me-2" data-style="btn-sm" data-width="fit" data-header="@T["Filter by tag"]" data-dropdown-align-right="auto" data-surveys-bank-filter aria-label="@T["Tag"]"></select>
+    <select name="Options.Difficulty" asp-items="Model.Difficulties" form="bank-questions-filter" class="selectpicker show-tick me-2" data-style="btn-sm" data-width="fit" data-header="@T["Filter by difficulty"]" data-dropdown-align-right="auto" data-surveys-bank-filter aria-label="@T["Difficulty"]"></select>
+    <select name="Options.Show" asp-items="Model.Shows" form="bank-questions-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Show"]" data-dropdown-align-right="auto" data-surveys-bank-filter aria-label="@T["Show"]"></select>
+</div>
