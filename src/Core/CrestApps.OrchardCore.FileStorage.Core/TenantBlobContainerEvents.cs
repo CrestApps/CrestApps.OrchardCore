@@ -8,7 +8,7 @@ using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Removing;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.FileStorage.Core;
+namespace CrestApps.OrchardCore.FileStorage;
 
 /// <summary>
 /// Creates the Azure Blob container of the tenant file store registered for <typeparamref name="TStore"/> when the
