@@ -1,24 +1,22 @@
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Surveys.Reports;
 
 /// <summary>
-/// Names respondents by user id, through the display name provider, with one lookup per user per run.
+/// Names respondents by user id, through the display name provider, with one lookup per user per run. The user services
+/// are resolved on first use, so a read that shows no respondent never needs them.
 /// </summary>
 internal sealed class SurveyRespondentNames
 {
-    private readonly UserManager<IUser> _userManager;
-    private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly IServiceProvider _serviceProvider;
     private readonly Dictionary<string, string> _names = new(StringComparer.Ordinal);
 
-    public SurveyRespondentNames(
-        UserManager<IUser> userManager,
-        IDisplayNameProvider displayNameProvider)
+    public SurveyRespondentNames(IServiceProvider serviceProvider)
     {
-        _userManager = userManager;
-        _displayNameProvider = displayNameProvider;
+        _serviceProvider = serviceProvider;
     }
 
     /// <summary>
@@ -39,8 +37,10 @@ internal sealed class SurveyRespondentNames
             return cached;
         }
 
-        var user = await _userManager.FindByIdAsync(userId);
-        var name = user is null ? userId : await _displayNameProvider.GetAsync(user, cancellationToken) ?? user.UserName;
+        var user = _serviceProvider.GetService<UserManager<IUser>>() is { } userManager ? await userManager.FindByIdAsync(userId) : null;
+        var name = user is null
+            ? userId
+            : (_serviceProvider.GetService<IDisplayNameProvider>() is { } displayNames ? await displayNames.GetAsync(user, cancellationToken) : null) ?? user.UserName;
         _names[userId] = name;
 
         return name;
