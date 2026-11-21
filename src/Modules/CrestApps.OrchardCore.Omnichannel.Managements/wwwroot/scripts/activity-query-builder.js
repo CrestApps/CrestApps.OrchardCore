@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Assets/js/activity-query-builder.js
+	// src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Assets/js/activity-query-builder.js
 	window.activityQueryBuilder = (function() {
 		"use strict";
 		const defaultConfig = {
@@ -199,5 +199,4 @@
 		}
 		return { initialize };
 	})();
-	//#endregion
 })();

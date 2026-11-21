@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.ContentTransfer/Assets/scripts/content-transfer-import.js
+	// src/Modules/CrestApps.OrchardCore.ContentTransfer/Assets/scripts/content-transfer-import.js
 	window.contentTransferImport = (function() {
 		"use strict";
 		var UPLOAD_ID_FIELD_NAME = "__chunkedFileUploadId";
@@ -168,5 +168,4 @@
 			initializeAll
 		};
 	})();
-	//#endregion
 })();

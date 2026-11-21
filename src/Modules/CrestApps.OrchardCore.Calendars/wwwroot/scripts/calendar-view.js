@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/shared/calendar-time.js
+	// src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/shared/calendar-time.js
 	/**
 	* Returns the browser's IANA time zone, or an empty string when it is unknown.
 	* @returns {string}
@@ -97,8 +97,7 @@
 	function toDayString(value) {
 		return value.toISOString().slice(0, 10);
 	}
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/calendar-view.js
+	// src/Modules/CrestApps.OrchardCore.Calendars/Assets/js/calendar-view.js
 	/**
 	* Reads the localized labels the page renders in its template.
 	* @returns {Record<string, string>}
@@ -572,5 +571,4 @@
 	}
 	if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
 	else initialize();
-	//#endregion
 })();

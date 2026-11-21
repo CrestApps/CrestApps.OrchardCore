@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Commerce/Assets/js/commerce-admin-list.js
+	// src/Modules/CrestApps.OrchardCore.Commerce/Assets/js/commerce-admin-list.js
 	(function() {
 		"use strict";
 		function submitFilters(select) {
@@ -20,5 +20,4 @@
 			});
 		});
 	})();
-	//#endregion
 })();

@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/list-management-ui.js
+	// src/Modules/CrestApps.OrchardCore.Resources/Assets/js/list-management-ui.js
 	window.listManagementUI = (function() {
 		"use strict";
 		const defaultOptions = {
@@ -302,5 +302,4 @@
 			initializeAll
 		};
 	})();
-	//#endregion
 })();

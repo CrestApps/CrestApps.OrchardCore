@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.ContentFields/Assets/js/international-telephone-editor.js
+	// src/Modules/CrestApps.OrchardCore.ContentFields/Assets/js/international-telephone-editor.js
 	(function() {
 		var selector = "[data-phone-field]";
 		function initializeField(wrapper) {
@@ -72,5 +72,4 @@
 		initialize();
 		observeDynamicAdditions();
 	})();
-	//#endregion
 })();
