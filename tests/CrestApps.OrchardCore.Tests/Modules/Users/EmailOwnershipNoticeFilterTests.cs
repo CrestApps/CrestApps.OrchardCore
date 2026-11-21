@@ -203,6 +203,28 @@ public sealed class EmailOwnershipNoticeFilterTests : IAsyncLifetime
 
         // Assert
         Assert.False(await ChangedInCodeSessionAsync());
+        Assert.Equal(CredentialsResetCheck.None, await _harness.CredentialsResets.CheckAsync("user-1", DateTimeOffset.UtcNow.AddMinutes(-5), securityStamp: null, TestContext.Current.CancellationToken));
+    }
+
+    // A6 (review 10): a session signed in before the code session marked the account carries no claim, so the filter
+    // never read the account for it until Identity's stamp check refreshed its claims, up to 30 minutes later. The mark
+    // asks the sign-in cookie's validation to refresh every session issued before it at its next request.
+    [Fact]
+    public async Task MarkingTheAccount_RefreshesEverySessionSignedInBeforeIt()
+    {
+        // Arrange: a password session from earlier, then the code session links the owner's login.
+        await CreateAccountAsync(withLogin: false);
+        var earlier = DateTimeOffset.UtcNow.AddMinutes(-5);
+
+        // Act
+        await LinkAsync(await CodeSessionAsync(), "github-owner");
+
+        // Assert: the earlier session is refreshed, which gives it the mark's claim, and so the warning.
+        Assert.Equal(CredentialsResetCheck.Refresh, await _harness.CredentialsResets.CheckAsync("user-1", earlier, securityStamp: null, TestContext.Current.CancellationToken));
+        Assert.Equal(CredentialsResetCheck.None, await _harness.CredentialsResets.CheckAsync("user-1", DateTimeOffset.UtcNow.AddMinutes(2), securityStamp: null, TestContext.Current.CancellationToken));
+        var refreshed = await SessionAsync(new Claim("amr", "pwd"));
+        Assert.Contains(refreshed.Claims, claim => claim.Type == UserCredentialsProof.CredentialsInDoubtClaim);
+        Assert.Single(await RenderPageAsync(refreshed));
     }
 
     [Fact]

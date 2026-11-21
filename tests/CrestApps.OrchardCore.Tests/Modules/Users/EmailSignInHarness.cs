@@ -387,6 +387,12 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
         services.AddSingleton(CreateClock());
         services.AddScoped(_ => Store.CreateSession());
 
+        // The feature's resets and claims refreshes, over the harness's cache, as CredentialsResets reads them. The
+        // feature's startup registers the service itself; this is what it needs.
+        services.AddSingleton(Cache);
+        services.AddSingleton(new ShellSettings { Name = "Default" });
+        services.AddSingleton<UserCredentialsResets>();
+
         // Orchard Core's Users feature registers its e-mail confirmation token this way.
         services.AddOptions<EmailConfirmationTokenProviderOptions>();
         services.AddTransient<EmailConfirmationTokenProvider>();

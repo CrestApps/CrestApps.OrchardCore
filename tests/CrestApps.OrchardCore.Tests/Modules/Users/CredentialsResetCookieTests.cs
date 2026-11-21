@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Users.Core.Services;
 using CrestApps.OrchardCore.Users.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -12,6 +13,7 @@ using Moq;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Security;
 using OrchardCore.Users;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Users;
 
@@ -33,7 +35,7 @@ public sealed class CredentialsResetCookieTests : IAsyncDisposable
     public CredentialsResetCookieTests()
         => _services = BuildServices(cache: null);
 
-    private static ServiceProvider BuildServices(IDistributedCache cache)
+    private static ServiceProvider BuildServices(IDistributedCache cache, IUserStore<IUser> userStore = null)
     {
         var services = new ServiceCollection();
 
@@ -53,8 +55,12 @@ public sealed class CredentialsResetCookieTests : IAsyncDisposable
 
         // What Orchard Core's Users feature registers: Identity, with its application cookie and security stamp check.
         services.AddIdentity<IUser, IRole>();
-        services.AddSingleton(Mock.Of<IUserStore<IUser>>());
+        services.AddSingleton(userStore ?? Mock.Of<IUserStore<IUser>>());
         services.AddSingleton(Mock.Of<IRoleStore<IRole>>());
+
+        // Orchard Core's claims principal factory runs the IUserClaimsProvider services; this one stands for the
+        // account as saved now, marked as changed in a code session (EmailOwnershipClaimsProvider adds the claim).
+        services.AddScoped<IUserClaimsPrincipalFactory<IUser>, MarkedAccountClaimsFactory>();
 
         // What the Email Code Sign-In feature registers.
         services.AddSingleton<UserCredentialsResets>();
@@ -141,6 +147,74 @@ public sealed class CredentialsResetCookieTests : IAsyncDisposable
         Assert.True(result.Succeeded);
     }
 
+    // A6 (review 10): a code session changed the account's credentials and marked it, but a session signed in earlier
+    // carries no claim saying so, and the warning filter reads the account only for one that does. The mark asks every
+    // earlier session to be refreshed at its next request, as Identity's stamp check would at its next run: the stamp
+    // still matches, so it stays signed in, with the claims the account earns now.
+    [Fact]
+    public async Task ACookieIssuedBeforeTheAccountWasMarked_IsRefreshedWithTheAccountsClaimsNow()
+    {
+        // Arrange
+        await _services.DisposeAsync();
+        _services = BuildServices(cache: null, AccountStore());
+        var now = DateTimeOffset.UtcNow;
+        var cookie = Issue(now.AddMinutes(-5));
+        await _services.GetRequiredService<UserCredentialsResets>().PublishClaimsRefreshAsync(UserId, now.UtcDateTime, TestContext.Current.CancellationToken);
+
+        // Act
+        var (result, _) = await AuthenticateAsync(cookie);
+
+        // Assert: still signed in, with the mark's claim, and the cookie keeps an issue time so it is renewed.
+        Assert.True(result.Succeeded);
+        Assert.True(result.Principal.HasClaim(UserCredentialsProof.CredentialsInDoubtClaim, "true"));
+        Assert.NotNull(result.Properties.IssuedUtc);
+    }
+
+    [Fact]
+    public async Task ACookieIssuedAfterTheAccountWasMarked_IsLeftAsItIs()
+    {
+        // Arrange: a session signed in after the mark already has the account's claims.
+        var now = DateTimeOffset.UtcNow;
+        await _services.GetRequiredService<UserCredentialsResets>().PublishClaimsRefreshAsync(UserId, now.AddSeconds(-5).UtcDateTime, TestContext.Current.CancellationToken);
+
+        // Act
+        var (result, _) = await AuthenticateAsync(Issue(now));
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.Principal.HasClaim(claim => claim.Type == UserCredentialsProof.CredentialsInDoubtClaim));
+    }
+
+    // A refresh asked for after a reset keeps the reset: a session from before it is still refused.
+    [Fact]
+    public async Task ARefreshAfterAReset_StillRefusesASessionFromBeforeTheReset()
+    {
+        // Arrange
+        var now = DateTimeOffset.UtcNow;
+        var resets = _services.GetRequiredService<UserCredentialsResets>();
+        await resets.PublishAsync(UserId, now.AddMinutes(-2).UtcDateTime, StampAfterTheReset, TestContext.Current.CancellationToken);
+        await resets.PublishClaimsRefreshAsync(UserId, now.UtcDateTime, TestContext.Current.CancellationToken);
+
+        // Act
+        var (result, _) = await AuthenticateAsync(Issue(now.AddMinutes(-5)));
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal(CredentialsResetCheck.Refuse, await resets.CheckAsync(UserId, now.AddMinutes(-5), StampBeforeTheReset, TestContext.Current.CancellationToken));
+        Assert.Equal(CredentialsResetCheck.Refresh, await resets.CheckAsync(UserId, now.AddMinutes(-1), StampAfterTheReset, TestContext.Current.CancellationToken));
+    }
+
+    private static IUserStore<IUser> AccountStore()
+    {
+        var store = new Mock<IUserStore<IUser>>();
+        var account = new User { UserId = UserId, UserName = "pat" };
+        store.Setup(s => s.FindByIdAsync(UserId, It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        store.Setup(s => s.GetUserIdAsync(account, It.IsAny<CancellationToken>())).ReturnsAsync(UserId);
+        store.Setup(s => s.GetUserNameAsync(account, It.IsAny<CancellationToken>())).ReturnsAsync("pat");
+
+        return store.Object;
+    }
+
     private string CookieName => Options.Cookie.Name;
 
     private CookieAuthenticationOptions Options
@@ -172,6 +246,19 @@ public sealed class CredentialsResetCookieTests : IAsyncDisposable
         var result = await httpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
 
         return (result, httpContext.Response);
+    }
+
+    // The claims a sign-in to the account gets now: it was marked as changed in a code session.
+    private sealed class MarkedAccountClaimsFactory : IUserClaimsPrincipalFactory<IUser>
+    {
+        public Task<ClaimsPrincipal> CreateAsync(IUser user)
+            => Task.FromResult(new ClaimsPrincipal(new ClaimsIdentity(
+                [
+                    new Claim(ClaimTypes.NameIdentifier, UserId),
+                    new Claim(ClaimTypes.Name, "pat"),
+                    new Claim(UserCredentialsProof.CredentialsInDoubtClaim, "true"),
+                ],
+                IdentityConstants.ApplicationScheme)));
     }
 
     // A distributed cache whose server can't be reached.

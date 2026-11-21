@@ -14,7 +14,8 @@ namespace CrestApps.OrchardCore.Users.Services;
 /// <see cref="SecurityStampValidatorOptions.ValidationInterval"/> (30 minutes by default), so rotating the stamp alone
 /// leaves an earlier session working until then. The time is kept on the user, and, for that interval, in the
 /// distributed cache with the new security stamp, which the sign-in cookie's validation reads on every request; after
-/// the interval the stamp check refuses those sessions itself.
+/// the interval the stamp check refuses those sessions itself. The same entry also asks for earlier sessions' claims to
+/// be refreshed (see <see cref="PublishClaimsRefreshAsync"/>), so the validation reads one entry per request either way.
 /// </summary>
 public sealed class UserCredentialsResets
 {
@@ -78,6 +79,28 @@ public sealed class UserCredentialsResets
     }
 
     /// <summary>
+    /// Makes every session of the account issued before <paramref name="refreshUtc"/> have its claims built again from
+    /// the account at its next request, as Identity's security stamp check does at its next run, without signing it out:
+    /// the account was marked in a way its sessions' claims carry (see
+    /// <see cref="EmailOwnershipUserEventHandler"/>). A reset already published for the account is kept.
+    /// </summary>
+    /// <param name="userId">The account's id.</param>
+    /// <param name="refreshUtc">When the account was marked.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public async Task PublishClaimsRefreshAsync(string userId, DateTime refreshUtc, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+
+        var (resetText, stamp, _) = Split(await ReadAsync(userId, cancellationToken));
+        var value = resetText + Separator + stamp + Separator + refreshUtc.ToString("O", CultureInfo.InvariantCulture);
+
+        await _cache.SetStringAsync(Key(userId), value, new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = _stampOptions.Value.ValidationInterval + _margin,
+        }, cancellationToken);
+    }
+
+    /// <summary>
     /// Whether a session of the account, issued at <paramref name="issuedUtc"/> with <paramref name="securityStamp"/>,
     /// started before its credentials were reset. When the cache can't be read the session is let through to Identity's
     /// own stamp check, which refuses it at its next run, rather than failing every signed-in request.
@@ -87,23 +110,44 @@ public sealed class UserCredentialsResets
     /// <param name="securityStamp">The security stamp the session's cookie carries.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<bool> IsBeforeResetAsync(string userId, DateTimeOffset? issuedUtc, string securityStamp, CancellationToken cancellationToken = default)
+        => await CheckAsync(userId, issuedUtc, securityStamp, cancellationToken) == CredentialsResetCheck.Refuse;
+
+    /// <summary>
+    /// What the sign-in cookie's validation does with a session of the account, issued at <paramref name="issuedUtc"/>
+    /// with <paramref name="securityStamp"/>: refuse it when it started before the account's credentials were reset,
+    /// refresh it when it started before a claims refresh (see <see cref="PublishClaimsRefreshAsync"/>), and otherwise
+    /// nothing. One cache read, whatever the answer. When the cache can't be read, nothing.
+    /// </summary>
+    /// <param name="userId">The account's id.</param>
+    /// <param name="issuedUtc">When the session's cookie was issued.</param>
+    /// <param name="securityStamp">The security stamp the session's cookie carries.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public async Task<CredentialsResetCheck> CheckAsync(string userId, DateTimeOffset? issuedUtc, string securityStamp, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(userId) || await ReadAsync(userId, cancellationToken) is not { Length: > 0 } text)
         {
-            return false;
+            return CredentialsResetCheck.None;
         }
 
-        var separator = text.IndexOf(Separator, StringComparison.Ordinal);
-        var stamp = separator < 0 ? null : text[(separator + 1)..];
+        var (resetText, stamp, refreshText) = Split(text);
 
-        if (!DateTime.TryParse(separator < 0 ? text : text[..separator], CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var resetUtc))
+        if (TryParse(resetText, out var resetUtc) && IsBeforeReset(resetUtc, stamp, issuedUtc, securityStamp))
         {
-            return false;
+            return CredentialsResetCheck.Refuse;
         }
 
+        // Within the refresh's own second a cookie's issue time can't tell a session issued just before it from one just
+        // after, so both are refreshed; refreshing a session whose claims are already current changes nothing.
+        return TryParse(refreshText, out var refreshUtc) && (issuedUtc is not { } issued || issued < Second(refreshUtc).AddSeconds(1))
+            ? CredentialsResetCheck.Refresh
+            : CredentialsResetCheck.None;
+    }
+
+    private static bool IsBeforeReset(DateTime resetUtc, string stamp, DateTimeOffset? issuedUtc, string securityStamp)
+    {
         // A cookie keeps its issue time to the second, so within the reset's own second the time can't tell the session
         // the reset signs in from one issued just before it; the security stamp the reset gave the account can.
-        var resetSecond = new DateTimeOffset(resetUtc.Ticks - (resetUtc.Ticks % TimeSpan.TicksPerSecond), TimeSpan.Zero);
+        var resetSecond = Second(resetUtc);
 
         if (issuedUtc is not { } issued || issued < resetSecond)
         {
@@ -114,6 +158,20 @@ public sealed class UserCredentialsResets
             !string.IsNullOrEmpty(stamp) &&
             !string.Equals(stamp, securityStamp, StringComparison.Ordinal);
     }
+
+    // The value is "reset|stamp" or "reset|stamp|refresh", where the reset and its stamp are empty for a refresh alone.
+    private static (string Reset, string Stamp, string Refresh) Split(string text)
+    {
+        var parts = (text ?? string.Empty).Split(Separator);
+
+        return (parts[0], parts.Length > 1 ? parts[1] : string.Empty, parts.Length > 2 ? parts[2] : string.Empty);
+    }
+
+    private static bool TryParse(string text, out DateTime utc)
+        => DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out utc);
+
+    private static DateTimeOffset Second(DateTime utc)
+        => new(utc.Ticks - (utc.Ticks % TimeSpan.TicksPerSecond), TimeSpan.Zero);
 
     private async Task<string> ReadAsync(string userId, CancellationToken cancellationToken)
     {

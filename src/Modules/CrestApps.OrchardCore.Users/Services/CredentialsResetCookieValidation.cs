@@ -44,7 +44,9 @@ public sealed class CredentialsResetCookieValidation : IPostConfigureOptions<Coo
             var userId = context.Principal?.FindFirstValue(claimsIdentity.UserIdClaimType);
             var securityStamp = context.Principal?.FindFirstValue(claimsIdentity.SecurityStampClaimType);
 
-            if (await _resets.IsBeforeResetAsync(userId, context.Properties.IssuedUtc, securityStamp, context.HttpContext.RequestAborted))
+            var check = await _resets.CheckAsync(userId, context.Properties.IssuedUtc, securityStamp, context.HttpContext.RequestAborted);
+
+            if (check == CredentialsResetCheck.Refuse)
             {
                 context.RejectPrincipal();
                 await context.HttpContext.SignOutAsync(context.Scheme.Name);
@@ -52,10 +54,37 @@ public sealed class CredentialsResetCookieValidation : IPostConfigureOptions<Coo
                 return;
             }
 
-            if (validatePrincipal is not null)
+            if (validatePrincipal is null)
             {
-                await validatePrincipal(context);
+                return;
             }
+
+            if (check == CredentialsResetCheck.Refresh)
+            {
+                await RunStampCheckNowAsync(context, validatePrincipal);
+
+                return;
+            }
+
+            await validatePrincipal(context);
         };
+    }
+
+    // Identity's stamp check runs when the cookie has no issue time, and then, the stamp still matching, builds the
+    // session's claims again from the account (with Orchard Core's OnRefreshingPrincipal) and renews the cookie. The issue
+    // time is put back afterwards so the cookie handler can renew it: a renewed cookie is issued now, after the refresh.
+    private static async Task RunStampCheckNowAsync(CookieValidatePrincipalContext context, Func<CookieValidatePrincipalContext, Task> validatePrincipal)
+    {
+        var issuedUtc = context.Properties.IssuedUtc;
+        context.Properties.IssuedUtc = null;
+
+        try
+        {
+            await validatePrincipal(context);
+        }
+        finally
+        {
+            context.Properties.IssuedUtc ??= issuedUtc;
+        }
     }
 }
