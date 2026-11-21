@@ -293,7 +293,7 @@ public sealed class ContentTransferChunkFileUploadServiceTests
         }
         finally
         {
-            tempFile.Delete();
+            DeleteIfExists(tempFile);
         }
     }
 
@@ -355,7 +355,7 @@ public sealed class ContentTransferChunkFileUploadServiceTests
         }
         finally
         {
-            tempFile.Delete();
+            DeleteIfExists(tempFile);
         }
     }
 
@@ -391,7 +391,7 @@ public sealed class ContentTransferChunkFileUploadServiceTests
             });
 
         // Assert
-        TempFile(uploadId, first).Delete();
+        DeleteIfExists(TempFile(uploadId, first));
         Assert.False(completedInvoked);
         Assert.Equal(ContentTransferUploadError.InvalidRequest, invalidError);
     }
@@ -439,7 +439,18 @@ public sealed class ContentTransferChunkFileUploadServiceTests
         }
         finally
         {
-            tempFile.Delete();
+            DeleteIfExists(tempFile);
+        }
+    }
+
+    // A refused upload may already have removed its file, and on Linux deleting a file whose folder is gone throws.
+    private static void DeleteIfExists(FileInfo file)
+    {
+        file.Refresh();
+
+        if (file.Exists)
+        {
+            file.Delete();
         }
     }
 
