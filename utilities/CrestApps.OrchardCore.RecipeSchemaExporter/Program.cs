@@ -303,8 +303,47 @@ internal sealed class Program
     private static IContentSchemaDefinition[] CreateContentSchemaDefinitions()
     {
         return SchemaTypeCatalog.GetImplementations(typeof(IContentSchemaDefinition))
-            .Select(type => (IContentSchemaDefinition)SchemaTypeCatalog.Create(type, null))
+            .SelectMany(CreateContentSchemaDefinitions)
             .ToArray();
+    }
+
+    // A definition registered once per content type, part or field type takes that name in its constructor,
+    // and lists the names it is registered for in a static string[] field, such as
+    // ConditionalFieldSettingsSchema.FieldTypes. Create one instance per name, as its startup does.
+    private static IEnumerable<IContentSchemaDefinition> CreateContentSchemaDefinitions(Type type)
+    {
+        var nameConstructor = type.GetConstructor(
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            [typeof(string)]);
+
+        if (nameConstructor is not null)
+        {
+            var names = type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                .Where(field => field.FieldType == typeof(string[]))
+                .Select(field => (string[])field.GetValue(null))
+                .FirstOrDefault(values => values is { Length: > 0 });
+
+            if (names is not null)
+            {
+                foreach (var name in names)
+                {
+                    yield return (IContentSchemaDefinition)nameConstructor.Invoke([name]);
+                }
+
+                yield break;
+            }
+        }
+
+        var definition = (IContentSchemaDefinition)SchemaTypeCatalog.Create(type, null);
+
+        if (string.IsNullOrEmpty(definition.Name))
+        {
+            Console.Error.WriteLine($"Skipping the content schema definition '{type.FullName}': it has no name.");
+
+            yield break;
+        }
+
+        yield return definition;
     }
 
     private static ISiteSettingsSchemaDefinition[] CreateSiteSettingsSchemaDefinitions()
