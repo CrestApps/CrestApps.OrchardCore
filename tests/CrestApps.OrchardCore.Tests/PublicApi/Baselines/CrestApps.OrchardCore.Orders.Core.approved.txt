@@ -888,6 +888,7 @@ namespace CrestApps.OrchardCore.Orders.Core.Services
     public sealed class OrderRecordSource : CrestApps.OrchardCore.Records.IRecordSource
     {
         public OrderRecordSource(CrestApps.OrchardCore.Orders.Core.Services.IOrderStore orderStore, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, Microsoft.AspNetCore.Routing.LinkGenerator linkGenerator, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Orders.Core.Services.OrderRecordSource> stringLocalizer) { }
+        [System.Text.Json.Serialization.JsonIgnore]
         public OrchardCore.Localization.LocalizationSource DisplayName { get; }
         public string Kind { get; }
         public System.Threading.Tasks.Task<bool> CanSearchAsync(System.Security.Claims.ClaimsPrincipal user, System.Threading.CancellationToken cancellationToken = default) { }

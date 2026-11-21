@@ -73,8 +73,8 @@ public sealed class FileSizeRatchetTests
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayProfileServices.cs"] = 890,
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayRunServices.cs"] = 1199,
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollFilings.cs"] = 919,
-        ["src/Core/CrestApps.OrchardCore.Payroll.Core/UnitedStates/UnitedStatesFilings.cs"] = 939,
-        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/IncomeTaxRules.cs"] = 923,
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/UnitedStates/UnitedStatesFilings.cs"] = 945, // raised for main's #1347 (LocalizationSource JsonIgnore)
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/IncomeTaxRules.cs"] = 925, // raised for main's #1347 (LocalizationSource JsonIgnore)
 
         // Existing debt from main's #1331 (Invoicing and Billing), baselined when PR #1319 merged main;
         // remove as it is paid down.
