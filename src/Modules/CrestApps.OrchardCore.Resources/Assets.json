@@ -13,6 +13,13 @@
   },
   {
     "action": "vite",
+    "name": "conditions.js",
+    "source": "Assets/js/conditions.js",
+    "dest": "wwwroot/scripts/conditions.js",
+    "global": "CrestAppsConditions"
+  },
+  {
+    "action": "vite",
     "name": "item-selector.js",
     "source": "Assets/js/item-selector.js",
     "dest": "wwwroot/scripts/item-selector.js"
