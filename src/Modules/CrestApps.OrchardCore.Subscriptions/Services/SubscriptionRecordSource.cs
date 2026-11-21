@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Models;
@@ -51,6 +52,7 @@ public sealed class SubscriptionRecordSource : IRecordSource
     public string Kind => SubscriptionConstants.RecordKind;
 
     /// <inheritdoc/>
+    [JsonIgnore]
     public LocalizationSource DisplayName => LocalizationSource.Create<SubscriptionRecordSource>("Subscription");
 
     /// <inheritdoc/>

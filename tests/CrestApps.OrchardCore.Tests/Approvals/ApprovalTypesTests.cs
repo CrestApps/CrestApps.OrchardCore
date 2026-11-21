@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
@@ -561,6 +562,7 @@ public sealed class ApprovalTypesTests
         public string Name
             => Kind;
 
+        [JsonIgnore]
         public LocalizationSource DisplayName { get; } = LocalizationSource.Create<AssigneeTeamApproverRuleProvider>("The ticket's assignee team");
 
         public bool NeedsValue
@@ -582,6 +584,7 @@ public sealed class ApprovalTypesTests
         public string Name
             => ApproverRuleKinds.Manager;
 
+        [JsonIgnore]
         public LocalizationSource DisplayName { get; } = LocalizationSource.Create<FixedManagerApproverRuleProvider>("Manager");
 
         public bool NeedsValue

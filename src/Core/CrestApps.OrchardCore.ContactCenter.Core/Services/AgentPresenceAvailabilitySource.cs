@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Teams.Services;
@@ -21,6 +22,7 @@ public sealed class AgentPresenceAvailabilitySource : ITeamMemberAvailabilitySou
     public string Name => "ContactCenterPresence";
 
     /// <inheritdoc/>
+    [JsonIgnore]
     public global::OrchardCore.Localization.LocalizationSource DisplayName { get; } = global::OrchardCore.Localization.LocalizationSource.Create<AgentPresenceAvailabilitySource>("Signed in to Contact Center and not on a break");
 
     /// <inheritdoc/>

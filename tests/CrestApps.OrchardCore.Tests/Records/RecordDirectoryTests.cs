@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Records;
 using OrchardCore.Localization;
 
@@ -120,6 +121,7 @@ public sealed class RecordDirectoryTests
 
         public string Kind { get; }
 
+        [JsonIgnore]
         public LocalizationSource DisplayName => LocalizationSource.Create<RecordDirectoryTests>("Record");
 
         public bool Searchable { get; set; } = true;

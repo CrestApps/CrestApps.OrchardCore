@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Payroll.Core.Calculation;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
@@ -122,6 +123,7 @@ public sealed class Form941 : IPayrollFilingForm
     public string Name => FormName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
@@ -187,6 +189,7 @@ public sealed class Form945 : IPayrollFilingForm
     public string Name => FormName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
@@ -231,6 +234,7 @@ public sealed class Form940 : IPayrollFilingForm
     public string Name => FormName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
@@ -291,6 +295,7 @@ public sealed class FormW2 : IPayrollFilingForm
     public string Name => FormName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
@@ -412,6 +417,7 @@ public sealed class Form1099Nec : IPayrollFilingForm
     public string Name => FormName;
 
     /// <inheritdoc />
+    [JsonIgnore]
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />

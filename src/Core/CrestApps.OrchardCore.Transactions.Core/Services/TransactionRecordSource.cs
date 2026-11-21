@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -54,6 +55,7 @@ public sealed class TransactionRecordSource : IRecordSource
     public string Kind => TransactionsConstants.RecordKind;
 
     /// <inheritdoc/>
+    [JsonIgnore]
     public LocalizationSource DisplayName => LocalizationSource.Create<TransactionRecordSource>("Transaction");
 
     /// <inheritdoc/>

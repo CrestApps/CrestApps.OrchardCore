@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Xml.Linq;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Payroll;
@@ -619,6 +620,7 @@ public sealed class CanadaPayrollFilingsTests
 
         public string Name { get; }
 
+        [JsonIgnore]
         public LocalizationSource DisplayName { get; } = LocalizationSource.Create<NamedProvider>("Named");
 
         public Task<IncomeTaxResult> CalculateAsync(IncomeTaxRequest request, CancellationToken cancellationToken = default)
@@ -636,6 +638,7 @@ public sealed class CanadaPayrollFilingsTests
 
         public string Name => "Fixed";
 
+        [JsonIgnore]
         public LocalizationSource DisplayName { get; } = LocalizationSource.Create<FixedProvider>("Fixed");
 
         public Task<IncomeTaxResult> CalculateAsync(IncomeTaxRequest request, CancellationToken cancellationToken = default)

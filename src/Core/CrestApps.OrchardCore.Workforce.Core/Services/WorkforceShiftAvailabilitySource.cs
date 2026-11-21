@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
@@ -18,6 +19,7 @@ internal sealed class WorkforceShiftAvailabilitySource : ITeamMemberAvailability
     public string Name => "WorkforceShifts";
 
     /// <inheritdoc/>
+    [JsonIgnore]
     public global::OrchardCore.Localization.LocalizationSource DisplayName { get; } = global::OrchardCore.Localization.LocalizationSource.Create<WorkforceShiftAvailabilitySource>("On a published shift and not on a break");
 
     // How far around now a shift shows that a user works to a schedule.

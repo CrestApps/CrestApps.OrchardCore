@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Approvals.Models;
 using CrestApps.OrchardCore.Approvals.Services;
 using CrestApps.OrchardCore.Staff.Services;
@@ -22,6 +23,7 @@ internal sealed class ManagerApproverRuleProvider : IApproverRuleProvider
     public string Name
         => ApproverRuleKinds.Manager;
 
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; } = LocalizationSource.Create<ManagerApproverRuleProvider>("The staff member's manager");
 
     public bool NeedsValue
@@ -62,6 +64,7 @@ internal sealed class StaffApproverRuleProvider : IApproverRuleProvider
     public string Name
         => ApproverRuleKinds.Staff;
 
+    [JsonIgnore]
     public LocalizationSource DisplayName { get; } = LocalizationSource.Create<StaffApproverRuleProvider>("Named staff members");
 
     public bool NeedsValue

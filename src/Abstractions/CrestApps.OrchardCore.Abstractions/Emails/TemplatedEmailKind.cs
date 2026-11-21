@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Emails;
@@ -41,10 +42,12 @@ public sealed class TemplatedEmailKind
     /// <summary>
     /// Gets the kind's title on the settings page.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource Title { get; }
 
     /// <summary>
     /// Gets what the email's own values are, or <see langword="null"/>.
     /// </summary>
+    [JsonIgnore]
     public LocalizationSource Values { get; }
 }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Taxation.Models;
 using OrchardCore.Localization;
 
@@ -22,6 +23,7 @@ public interface IIncomeTaxWithholdingMethod
     /// <summary>
     /// Gets what people see.
     /// </summary>
+    [JsonIgnore]
     LocalizationSource DisplayName { get; }
 
     /// <summary>
@@ -62,7 +64,7 @@ public interface IIncomeTaxWithholdingMethod
 /// <param name="Key">The stored key.</param>
 /// <param name="Label">What the rule's editor shows.</param>
 /// <param name="Required">Whether a rule must give it; an optional table is worked out only when the rule names one.</param>
-public sealed record IncomeTaxWithholdingInput(string Key, LocalizationSource Label, bool Required = true);
+public sealed record IncomeTaxWithholdingInput(string Key, [property: JsonIgnore] LocalizationSource Label, bool Required = true);
 
 /// <summary>
 /// What a withholding method works from.

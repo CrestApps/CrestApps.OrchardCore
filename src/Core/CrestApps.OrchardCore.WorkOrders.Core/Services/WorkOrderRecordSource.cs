@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -46,6 +47,7 @@ public sealed class WorkOrderRecordSource : IRecordSource
     public string Kind => WorkOrdersConstants.RecordKind;
 
     /// <inheritdoc/>
+    [JsonIgnore]
     public LocalizationSource DisplayName => LocalizationSource.Create<WorkOrderRecordSource>("Work order");
 
     /// <inheritdoc/>

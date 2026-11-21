@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Approvals.Models;
 using OrchardCore.Localization;
 
@@ -20,6 +21,7 @@ public interface IApproverRuleProvider
     /// <summary>
     /// Gets what people see, such as "Anyone in the role".
     /// </summary>
+    [JsonIgnore]
     LocalizationSource DisplayName { get; }
 
     /// <summary>
