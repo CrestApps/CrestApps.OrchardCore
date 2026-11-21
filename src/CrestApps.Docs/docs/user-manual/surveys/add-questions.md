@@ -32,13 +32,13 @@ The designer shows the pages and questions on the left and the editor on the rig
 | Choice | Single choice, Multiple choice, Yes or no, Ranking |
 | Text | Short text, Long text, Multiple text, Contact information |
 | Number | Number, Slider, Constant sum |
-| Date | Date and time |
 | Rating | Rating, Net Promoter Score, Customer satisfaction |
-| Matrix | Matrix, Drop-down matrix |
-| Assessment | Matching, Fill in the blanks, Choose the missing words |
+| Grid | Matrix, Drop-down matrix |
+| Date | Date and time |
 | Content | Text block |
-| Advanced | Hidden value, Calculated value, Signature |
 | Files | File upload (when attachments are turned on) |
+| Quiz | Matching, Fill in the blanks, Choose the missing words |
+| Advanced | Hidden value, Calculated value, Signature |
 
 ## The question editor
 
