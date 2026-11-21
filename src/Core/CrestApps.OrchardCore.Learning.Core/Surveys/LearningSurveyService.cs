@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Learning.Core.Surveys;
@@ -17,7 +18,7 @@ namespace CrestApps.OrchardCore.Learning.Core.Surveys;
 public sealed class LearningSurveyService : ILearningSurveyService
 {
     private readonly ISurveyManager _surveyManager;
-    private readonly ISurveyResponseService _responseService;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ISurveyResponseQueries _responseQueries;
     private readonly ICourseAccessService _courseAccess;
     private readonly ICourseStructureService _courseStructure;
@@ -27,21 +28,22 @@ public sealed class LearningSurveyService : ILearningSurveyService
     /// Initializes a new instance of the <see cref="LearningSurveyService"/> class.
     /// </summary>
     /// <param name="surveyManager">The survey manager.</param>
-    /// <param name="responseService">The response service.</param>
+    /// <param name="serviceProvider">The services, which give the response service when a response starts. The response
+    /// service is resolved then, not here: it runs the access rules and observers, and the Learning ones use this service.</param>
     /// <param name="responseQueries">The response queries.</param>
     /// <param name="courseAccess">The course access service.</param>
     /// <param name="courseStructure">The course structure service.</param>
     /// <param name="contentManager">The content manager.</param>
     public LearningSurveyService(
         ISurveyManager surveyManager,
-        ISurveyResponseService responseService,
+        IServiceProvider serviceProvider,
         ISurveyResponseQueries responseQueries,
         ICourseAccessService courseAccess,
         ICourseStructureService courseStructure,
         IContentManager contentManager)
     {
         _surveyManager = surveyManager;
-        _responseService = responseService;
+        _serviceProvider = serviceProvider;
         _responseQueries = responseQueries;
         _courseAccess = courseAccess;
         _courseStructure = courseStructure;
@@ -110,7 +112,7 @@ public sealed class LearningSurveyService : ILearningSurveyService
             properties[SurveyResponseProperties.ReturnText] = item.DisplayText;
         }
 
-        return await _responseService.StartAsync(new StartResponseRequest
+        return await _serviceProvider.GetRequiredService<ISurveyResponseService>().StartAsync(new StartResponseRequest
         {
             SurveyId = survey.ItemId,
             Identity = new SurveyRespondentIdentity
