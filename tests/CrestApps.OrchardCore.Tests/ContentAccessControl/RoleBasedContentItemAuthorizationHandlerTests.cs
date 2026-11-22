@@ -154,18 +154,32 @@ public sealed class RoleBasedContentItemAuthorizationHandlerTests
         Assert.False(context.HasFailed);
     }
 
+    // C8 (review 11): the editor shows every field, and publishing or deleting changes the item, so they are refused too.
     [Theory]
     [InlineData("EditContent")]
     [InlineData("EditContent_Handbook")]
     [InlineData("PublishContent_Handbook")]
     [InlineData("DeleteOwnContent")]
-    public async Task ARestriction_LeavesPermissionsThatDoNotReadTheItemAlone(string permission)
+    public async Task ARestriction_RefusesChangingTheItem_ToWhoeverIsntInItsRoles(string permission)
     {
         // Arrange
         var item = Item("Member");
 
         // Act
-        var context = await AuthorizeAsync(SignedIn(), item, permission: Permission(permission));
+        var outsider = await AuthorizeAsync(SignedIn(), item, permission: Permission(permission));
+        var member = await AuthorizeAsync(SignedIn("Member"), item, permission: Permission(permission));
+
+        // Assert: a member isn't refused, and isn't granted the change either.
+        Assert.True(outsider.HasFailed);
+        Assert.False(member.HasFailed);
+        Assert.False(member.HasSucceeded);
+    }
+
+    [Fact]
+    public async Task ARestriction_LeavesPermissionsThatAreNotAboutTheItemAlone()
+    {
+        // Act
+        var context = await AuthorizeAsync(SignedIn(), Item("Member"), permission: Permission("ViewContentTypes"));
 
         // Assert
         Assert.False(context.HasFailed);
@@ -179,12 +193,13 @@ public sealed class RoleBasedContentItemAuthorizationHandlerTests
     [InlineData("PreviewContent", true)]
     [InlineData("PreviewOwnContent_KnowledgeArticle", true)]
     [InlineData("ListContent", true)]
-    [InlineData("EditContent", false)]
-    [InlineData("PublishContent_KnowledgeArticle", false)]
+    [InlineData("EditContent", true)]
+    [InlineData("PublishContent_KnowledgeArticle", true)]
+    [InlineData("DeleteOwnContent", true)]
     [InlineData("ViewContentTypes", false)]
     [InlineData(null, false)]
-    public void ReadingPermissions_AreMatchedByName_InGeneralOrForAType(string permission, bool reading)
-        => Assert.Equal(reading, RoleBasedContentItemAuthorizationHandler.IsReading(permission));
+    public void RestrictedPermissions_AreMatchedByName_InGeneralOrForAType(string permission, bool restricted)
+        => Assert.Equal(restricted, RoleBasedContentItemAuthorizationHandler.IsRestricted(permission));
 
     private static global::OrchardCore.Security.Permissions.Permission Permission(string name)
         => new(name, global::OrchardCore.Localization.LocalizationSource.Create<RoleBasedContentItemAuthorizationHandlerTests>("Test permission"));

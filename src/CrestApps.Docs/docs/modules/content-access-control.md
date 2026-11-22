@@ -34,14 +34,17 @@ User Manual: [Restrict Content by Role](../user-manual/administration/content-ac
 The feature registers `RoleBasedContentItemAuthorizationHandler`, an `IAuthorizationHandler` for
 `PermissionRequirement`:
 
-- It acts on every permission that reads a `ContentItem` resource: view, view own, preview, preview own, list, clone
-  and clone own, in general or for a securable type (such as `ViewContent_Handbook`), matched by name. A preview or a
-  clone shows everything the item holds, and a securable type is checked with its own permissions, so without this a
-  restricted item would leak through them. Edit, publish and delete checks are not affected.
+- It acts on every permission that reads or changes a `ContentItem` resource: view, view own, preview, preview own,
+  list, clone, clone own, edit, edit own, publish, publish own, delete and delete own, in general or for a securable
+  type (such as `ViewContent_Handbook`), matched by name. A preview, a clone or the editor shows everything the item
+  holds, and a securable type is checked with its own permissions, so without this a restricted item would leak through
+  them. An editor outside an item's roles can't open it for editing, publish it or delete it, whatever content
+  permission they hold; add editors to one of its roles (or give them the administrator role) to let them change it.
 - It collects the role names from every `RolePickerPart` on the content type (named or unnamed) whose settings have
   `IsContentRestricted` set to `true`.
 - If the user is in any of those roles, a view permission (`ViewContent` or the type's `ViewContent_{Type}`)
-  succeeds; listing, previewing and cloning still need their own permission, which this handler never grants. If
+  succeeds; listing, previewing, cloning, editing, publishing and deleting still need their own permission, which this
+  handler never grants. If
   roles were collected and the user is in none of them, the handler fails every reading permission. If no roles were
   picked, the item is not restricted.
 - **Authenticated** stands for anyone signed in and **Anonymous** for a visitor, though Orchard Core never puts
@@ -65,6 +68,7 @@ Beyond the item's own page, a restricted item is kept out of the other places th
 | Search index | `ContentAccessIndexHandler` adds each role of a restricted item to its document as the keyword field `Content.ContentAccessControl.RoleNames`, so a query, an AI data source or a custom search page can filter by the reader's roles. | Indexing (`OrchardCore.Indexing`) |
 | GraphQL `contentItem` and content type list queries | Orchard Core checks `ViewContent` on every item they return, so this handler leaves restricted items out. | GraphQL |
 | Preview and clone | The handler refuses `PreviewContent` and `CloneContent` on a restricted item. | |
+| Edit, publish and delete | The handler refuses `EditContent`, `PublishContent` and `DeleteContent` (and their own and per-type forms) on a restricted item to whoever isn't in its roles. | |
 
 ### Known gaps
 

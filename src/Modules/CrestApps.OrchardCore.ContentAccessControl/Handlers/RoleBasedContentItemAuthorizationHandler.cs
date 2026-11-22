@@ -11,7 +11,9 @@ namespace CrestApps.OrchardCore.ContentAccessControl.Handlers;
 
 /// <summary>
 /// Refuses a restricted content item to whoever isn't in one of its roles: viewing it, listing it, previewing it and
-/// cloning it (a preview or a clone shows everything the item holds).
+/// cloning it (a preview or a clone shows everything the item holds), and opening it for editing (the editor shows every
+/// field), publishing or deleting it. Being in one of its roles grants viewing it only; changing it still needs the
+/// permission to change it.
 /// </summary>
 public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
@@ -37,9 +39,9 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
             return;
         }
 
-        // Every permission that reads the item meets the restriction, its securable type's own included
-        // (ViewContent_Handbook, ViewOwnContent_Handbook...), or a restricted item would leak through it.
-        if (context.Resource == null || !IsReading(requirement.Permission?.Name))
+        // Every permission that reads or changes the item meets the restriction, its securable type's own included
+        // (ViewContent_Handbook, EditOwnContent_Handbook...), or a restricted item would leak through it.
+        if (context.Resource == null || !IsRestricted(requirement.Permission?.Name))
         {
             return;
         }
@@ -88,14 +90,15 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
     }
 
     /// <summary>
-    /// Whether a permission reads content: viewing, previewing, listing or cloning it (a clone copies everything the item
-    /// holds), whether one's own or anyone's, in general or for a securable type (<c>ViewContent_Handbook</c>). Compared
-    /// by name, so a type's own permission meets the restriction too.
+    /// Whether a permission reads or changes content: viewing, previewing, listing or cloning it (a clone copies
+    /// everything the item holds), and editing (the editor shows every field), publishing or deleting it, whether one's
+    /// own or anyone's, in general or for a securable type (<c>ViewContent_Handbook</c>). Compared by name, so a type's own
+    /// permission meets the restriction too.
     /// </summary>
     /// <param name="name">The permission's name.</param>
-    /// <returns>Whether it reads content.</returns>
-    internal static bool IsReading(string name)
-        => !string.IsNullOrEmpty(name) && _reading.Contains(RootName(name));
+    /// <returns>Whether a restricted item refuses it to whoever isn't in its roles.</returns>
+    internal static bool IsRestricted(string name)
+        => !string.IsNullOrEmpty(name) && _restricted.Contains(RootName(name));
 
     /// <summary>
     /// Whether a permission views content, in general or for a securable type: the ones a picked role grants.
@@ -109,7 +112,7 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
     private static string RootName(string name)
         => name.Split('_', 2)[0];
 
-    private static readonly HashSet<string> _reading = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> _restricted = new(StringComparer.Ordinal)
     {
         CommonPermissions.ViewContent.Name,
         CommonPermissions.ViewOwnContent.Name,
@@ -118,5 +121,11 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
         CommonPermissions.ListContent.Name,
         CommonPermissions.CloneContent.Name,
         CommonPermissions.CloneOwnContent.Name,
+        CommonPermissions.EditContent.Name,
+        CommonPermissions.EditOwnContent.Name,
+        CommonPermissions.PublishContent.Name,
+        CommonPermissions.PublishOwnContent.Name,
+        CommonPermissions.DeleteContent.Name,
+        CommonPermissions.DeleteOwnContent.Name,
     };
 }
