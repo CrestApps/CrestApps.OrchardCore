@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Core.Controllers;
 using CrestApps.OrchardCore.Taxation.Core;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -121,4 +122,40 @@ public sealed class IncomeTaxRulesController : CatalogAdminController<IncomeTaxR
     [Admin("taxation/income-tax-rules/delete/{id}", "IncomeTaxRulesDelete")]
     public Task<IActionResult> Delete(string id)
         => DeleteAsync(id);
+
+    /// <summary>
+    /// Marks a rule as checked against the agency's publications, by the signed-in user, now. Any later change to the
+    /// rule clears the mark. It only informs: an unchecked rule is still worked out.
+    /// </summary>
+    /// <param name="id">The rule's id.</param>
+    /// <param name="source">What the rule was checked against, such as "Michigan Form 446 (2026)", or none.</param>
+    /// <returns>The list of rules.</returns>
+    [HttpPost]
+    [Admin("taxation/income-tax-rules/verify/{id}", "IncomeTaxRulesVerify")]
+    public async Task<IActionResult> Verify(string id, string source = null)
+    {
+        if (!await AuthorizationService.AuthorizeAsync(User, TaxationPermissions.VerifyIncomeTaxRules))
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrEmpty(id) || await Manager.FindByIdAsync(id) is not { } rule)
+        {
+            return NotFound();
+        }
+
+        var clock = HttpContext.RequestServices.GetRequiredService<IClock>();
+
+        // The values are handed in, so the rule's handler keeps them rather than clearing the check as for an edit.
+        await Manager.UpdateAsync(rule, new JsonObject
+        {
+            [nameof(IncomeTaxRule.VerifiedBy)] = User.Identity?.Name,
+            [nameof(IncomeTaxRule.VerifiedUtc)] = clock.UtcNow,
+            [nameof(IncomeTaxRule.VerificationSource)] = string.IsNullOrWhiteSpace(source) ? null : source.Trim(),
+        });
+
+        await Notifier.SuccessAsync(H["The income tax rule {0} is marked as verified.", rule.Name]);
+
+        return RedirectToAction(nameof(Index));
+    }
 }

@@ -20,6 +20,14 @@ public class IncomeTaxRuleViewModel
 
     public bool ByPlaceOfWork { get; set; }
 
+    public string Residency { get; set; }
+
+    public string ExclusiveGroup { get; set; }
+
+    public int GroupPriority { get; set; }
+
+    public string ElectionsFrom { get; set; }
+
     public string Category { get; set; }
 
     public string[] IncomeKinds { get; set; } = [];
@@ -64,6 +72,8 @@ public class IncomeTaxFlatRateViewModel
     public string YearlyExemption { get; set; }
 
     public string YearlyMaximum { get; set; }
+
+    public string ExemptionAllowance { get; set; }
 }
 
 /// <summary>
@@ -137,6 +147,11 @@ public class IncomeTaxWithholdingViewModel
     public string SupplementalExcessRate { get; set; }
 
     public string SupplementalExcessThreshold { get; set; }
+
+    public string DeductedTaxCodes { get; set; }
+
+    [BindNever]
+    public bool ShowDeductedTaxCodes { get; set; }
 
     [BindNever]
     public string MethodDisplayName { get; set; }
