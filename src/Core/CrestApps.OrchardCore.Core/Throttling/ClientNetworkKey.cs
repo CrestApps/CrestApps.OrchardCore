@@ -17,6 +17,17 @@ public static class ClientNetworkKey
     /// </summary>
     public const string Unknown = "unknown";
 
+    private const string AgentPlatformPrefix = "agent-platform:";
+
+    /// <summary>
+    /// The key of an agent platform's requests, for limits where the request names no client of its own: every buyer an
+    /// agent platform brings comes from the platform's servers, or (over MCP or A2A) from no known address at all. Keyed
+    /// by the platform, one platform's misuse never locks out another.
+    /// </summary>
+    /// <param name="platformId">The agent platform's id.</param>
+    public static string ForAgentPlatform(string platformId)
+        => string.IsNullOrWhiteSpace(platformId) ? Unknown : AgentPlatformPrefix + platformId;
+
     /// <summary>
     /// The network of the request: the IPv4 address, or the IPv6 address masked to /64. Payment limits use this even for
     /// a signed-in buyer, because a card tester can register an account.
@@ -63,6 +74,11 @@ public static class ClientNetworkKey
         if (string.IsNullOrWhiteSpace(address))
         {
             return Unknown;
+        }
+
+        if (address.StartsWith(AgentPlatformPrefix, StringComparison.Ordinal) && address.Length > AgentPlatformPrefix.Length)
+        {
+            return address;
         }
 
         // An IPv6 key ends with its /64 prefix length, which IPAddress.TryParse refuses.

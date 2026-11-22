@@ -1,6 +1,7 @@
 using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Subscriptions.Controllers;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Models;
@@ -85,6 +86,9 @@ internal static class InstallmentPlanPaymentEndpoints
                 ReturnUrl = request.ReturnUrl,
                 CancelUrl = request.CancelUrl,
                 ProviderData = InstallmentPlanPaymentMethods.BuildProviderData(request.ProviderData, plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge),
+
+                // The card-testing limits on a network apply to a card typed in here too.
+                ClientNetworkKey = ClientNetworkKey.NetworkOnly(httpContext),
             },
             httpContext.RequestAborted);
 

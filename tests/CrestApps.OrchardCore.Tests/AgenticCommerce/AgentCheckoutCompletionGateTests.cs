@@ -85,6 +85,28 @@ public sealed class AgentCheckoutCompletionGateTests
         _service = CreateService();
     }
 
+    /// <summary>
+    /// Review 11 (M-agent-installment-network): an agent payment began with no client network, so the card-testing limits
+    /// on a network never applied to it. Its buyers have no address of their own, so the platform is the network.
+    /// </summary>
+    [Fact]
+    public async Task CompleteAsync_BeginsThePaymentWithThePlatformAsItsNetwork()
+    {
+        // Arrange
+        BeginPaymentOptions begun = null;
+
+        _engine.Setup(engine => engine.BeginPaymentAsync(It.IsAny<string>(), It.IsAny<BeginPaymentOptions>(), It.IsAny<CancellationToken>()))
+            .Callback((string _, BeginPaymentOptions options, CancellationToken _) => begun = options)
+            .ReturnsAsync(new PaymentBeginOutcome { Declined = true });
+
+        // Act
+        await _service.CompleteAsync(Context(), CheckoutId, Payment(CreateMandate()), update: null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(begun);
+        Assert.Equal(CrestApps.OrchardCore.Core.Throttling.ClientNetworkKey.ForAgentPlatform("platform-1"), begun.ClientNetworkKey);
+    }
+
     [Fact]
     public async Task CompleteAsync_WithAMandateForAnotherCheckout_IsRefusedBeforePaying()
     {

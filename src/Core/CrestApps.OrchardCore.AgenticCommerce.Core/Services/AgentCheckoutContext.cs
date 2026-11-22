@@ -59,6 +59,16 @@ public sealed class AgentCheckoutContext
         => Properties is not null && Properties.TryGetValue(name, out var value) ? value : null;
 
     /// <summary>
+    /// Returns who the limits on discount codes and declined cards count for this request: the agent platform, whose
+    /// servers every request of its buyers comes from (and over MCP or A2A with no address at all), so one platform can't
+    /// use up another's tries; or the request's address when no platform is known.
+    /// </summary>
+    public string GetClientKey()
+        => !string.IsNullOrEmpty(PlatformId)
+            ? global::CrestApps.OrchardCore.Core.Throttling.ClientNetworkKey.ForAgentPlatform(PlatformId)
+            : ClientAddress;
+
+    /// <summary>
     /// Gets or sets the platform's published profile, when its protocol has one (UCP): the keys its signatures and
     /// payment mandates are checked with.
     /// </summary>

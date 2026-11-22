@@ -761,6 +761,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
             ProviderData = providerData,
             ReturnUrl = handoffUrl,
             CancelUrl = handoffUrl,
+            ClientNetworkKey = context?.GetClientKey(),
         }, cancellationToken);
 
         checkout.PaymentDisplay = string.Join(' ', new[] { payment.Brand, payment.LastDigits }.Where(value => !string.IsNullOrWhiteSpace(value)));
@@ -1233,9 +1234,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
 
     private async Task ApplyCodesAsync(AgentCheckout checkout, CheckoutFlow flow, AgentCheckoutContext context, List<AgentCheckoutMessage> messages)
     {
-        var coupons = _coupons.FirstOrDefault();
-
-        if (coupons is null)
+        if (_coupons.FirstOrDefault() is not { } coupons)
         {
             return;
         }
@@ -1255,7 +1254,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
                 continue;
             }
 
-            if (await coupons.ApplyAsync(flow, desired[i], context?.ClientAddress ?? "agent") is { } error)
+            if (await coupons.ApplyAsync(flow, desired[i], context?.GetClientKey()) is { } error)
             {
                 messages.Add(AgentCheckoutMessage.Warning(AgentMessageCodes.DiscountCodeInvalid, AgentCheckoutFields.DiscountCode(i), error));
             }
