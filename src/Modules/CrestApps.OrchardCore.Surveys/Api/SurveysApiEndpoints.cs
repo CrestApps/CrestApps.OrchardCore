@@ -160,15 +160,18 @@ internal static class SurveysApiEndpoints
                 return Results.NotFound();
             }
 
-            // The same access rules as starting a response (audience, password, invitation, enrollment...). Limits are
-            // not counted here: seeing the questions is not an attempt.
+            // The same access rules as starting a response (audience, password, invitation, enrollment...), attempt
+            // limits included: seeing the questions is not an attempt, but a respondent with no attempt left must not
+            // read a quiz they can no longer take.
             var overrides = httpContext.RequestServices?.GetService<ISurveyOverrideService>();
+            var secrets = httpContext.RequestServices?.GetService<SurveyAnonymitySecrets>();
             var decision = await access.CheckStartAsync(new SurveyAccessContext
             {
                 Survey = survey,
                 Version = version,
                 Collector = found,
                 Identity = identity,
+                RespondentKey = secrets is null ? null : await secrets.RespondentKeyAsync(survey, identity, null, httpContext.RequestAborted),
                 Override = overrides is null ? null : await overrides.FindEffectiveAsync(survey.ItemId, identity.UserId, null, httpContext.RequestAborted),
                 UtcNow = clock.UtcNow,
             });

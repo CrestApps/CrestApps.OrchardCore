@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -8,7 +9,8 @@ namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 
 /// <summary>
 /// Upkeep of responses, a batch at a time: abandons responses idle past their survey's expiry, applies retention
-/// (delete or anonymize), deletes old participation records, and submits responses whose deadline was missed.
+/// (delete or anonymize), deletes old participation records, and submits responses whose deadline was missed. A
+/// response that fails is logged and skipped, its writes rolled back, so one bad response never blocks the rest.
 /// </summary>
 public sealed class SurveyMaintenanceService
 {
@@ -18,6 +20,7 @@ public sealed class SurveyMaintenanceService
     private readonly SurveyParticipationService _participation;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyMaintenanceService"/> class.
@@ -28,13 +31,15 @@ public sealed class SurveyMaintenanceService
     /// <param name="participation">The participation service.</param>
     /// <param name="session">The YesSql session.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="logger">The logger.</param>
     public SurveyMaintenanceService(
         SurveyStore surveyStore,
         SurveyResponseStore responseStore,
         SurveyResponseService responses,
         SurveyParticipationService participation,
         ISession session,
-        IClock clock)
+        IClock clock,
+        ILogger<SurveyMaintenanceService> logger)
     {
         _surveyStore = surveyStore;
         _responseStore = responseStore;
@@ -42,6 +47,7 @@ public sealed class SurveyMaintenanceService
         _participation = participation;
         _session = session;
         _clock = clock;
+        _logger = logger;
     }
 
     /// <summary>
@@ -84,7 +90,7 @@ public sealed class SurveyMaintenanceService
 
             if (candidate.LastActivityUtc < idleBefore && candidate.DeadlineUtc is null)
             {
-                await _responses.AbandonAsync(candidate.ItemId, idleBefore, cancellationToken);
+                await TryAsync("abandon", candidate.ItemId, () => _responses.AbandonAsync(candidate.ItemId, idleBefore, cancellationToken));
             }
         }
     }
@@ -125,11 +131,14 @@ public sealed class SurveyMaintenanceService
                     }
 
                     response.ModifiedUtc = now;
+
+                    // Saved right away, so a later response that fails and is rolled back can't take this change with it.
                     await _responseStore.UpdateAsync(response, cancellationToken);
+                    await _session.SaveChangesAsync(cancellationToken);
                 }
                 else
                 {
-                    await _responses.DeleteAsync(response.ItemId, actorId: null, cancellationToken);
+                    await TryAsync("delete", response.ItemId, () => _responses.DeleteAsync(response.ItemId, actorId: null, cancellationToken));
                 }
             }
         }
@@ -150,7 +159,23 @@ public sealed class SurveyMaintenanceService
 
         foreach (var response in overdue)
         {
-            await _responses.SubmitAtDeadlineAsync(response.ItemId, cancellationToken);
+            await TryAsync("submit at its deadline", response.ItemId, () => _responses.SubmitAtDeadlineAsync(response.ItemId, cancellationToken));
+        }
+    }
+
+    // Runs the upkeep of one response. A failure is logged and its pending writes are rolled back, so the session stays
+    // usable and the next response is still handled.
+    private async Task TryAsync(string what, string responseId, Func<Task> work)
+    {
+        try
+        {
+            await work();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogError(exception, "Survey upkeep could not {Action} the response '{ResponseId}'. It is skipped and tried again on the next run.", what, responseId);
+
+            await _session.ResetAsync();
         }
     }
 

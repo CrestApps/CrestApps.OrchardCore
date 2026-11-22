@@ -3,12 +3,13 @@ using CrestApps.OrchardCore.Surveys.Models;
 namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 
 /// <summary>
-/// Works out when the time of the current page runs out, for pages with a time limit of their own.
+/// Works out when the time of a screen runs out, for pages with a time limit of their own. The time is measured from the
+/// respondent's first visit to the screen, so leaving it and coming back never starts the time again.
 /// </summary>
 public static class SurveyPageTimer
 {
     /// <summary>
-    /// Gets when the time of the response's current page runs out: the time the respondent last entered it plus the
+    /// Gets when the time of the response's current page runs out: the time the respondent first entered it plus the
     /// page's time limit, capped by the response's own deadline.
     /// </summary>
     /// <param name="definition">The definition.</param>
@@ -19,7 +20,7 @@ public static class SurveyPageTimer
         ArgumentNullException.ThrowIfNull(response);
 
         DateTime? deadline = response.DeadlineUtc is { } responseDeadline ? DateTime.SpecifyKind(responseDeadline, DateTimeKind.Utc) : null;
-        var pageDeadline = PageDeadline(definition, response);
+        var pageDeadline = PageDeadline(definition, response, response.CurrentPageId);
 
         return pageDeadline is not null && (deadline is null || pageDeadline < deadline) ? pageDeadline : deadline;
     }
@@ -35,15 +36,36 @@ public static class SurveyPageTimer
     {
         ArgumentNullException.ThrowIfNull(response);
 
-        var pageDeadline = PageDeadline(definition, response);
+        return ScreenTimeIsUp(definition, response, response.CurrentPageId, utcNow);
+    }
+
+    /// <summary>
+    /// Gets whether the time of a screen the respondent visited ran out, allowing the survey's grace period for a post in
+    /// flight.
+    /// </summary>
+    /// <param name="definition">The definition.</param>
+    /// <param name="response">The response.</param>
+    /// <param name="screenId">The screen.</param>
+    /// <param name="utcNow">The current time, in UTC.</param>
+    /// <returns><see langword="true"/> when the page of the screen has a time limit and it passed.</returns>
+    public static bool ScreenTimeIsUp(SurveyDefinition definition, SurveyResponse response, string screenId, DateTime utcNow)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        var pageDeadline = PageDeadline(definition, response, screenId);
         var grace = Math.Max(definition?.Timing?.GraceSeconds ?? 5, 0);
 
         return pageDeadline is not null && utcNow >= pageDeadline.Value.AddSeconds(grace);
     }
 
-    private static DateTime? PageDeadline(SurveyDefinition definition, SurveyResponse response)
+    private static DateTime? PageDeadline(SurveyDefinition definition, SurveyResponse response, string screenId)
     {
-        var pageId = SurveyPlanNavigator.PageOf(response.Plan, response.CurrentPageId);
+        if (string.IsNullOrEmpty(screenId))
+        {
+            return null;
+        }
+
+        var pageId = SurveyPlanNavigator.PageOf(response.Plan, screenId);
         var page = definition?.Pages?.FirstOrDefault(candidate => string.Equals(candidate.Id, pageId, StringComparison.Ordinal));
 
         if (page?.TimeLimitSeconds is not > 0)
@@ -51,7 +73,8 @@ public static class SurveyPageTimer
             return null;
         }
 
-        var entered = response.PageVisits?.LastOrDefault(visit => string.Equals(visit.PageId, response.CurrentPageId, StringComparison.Ordinal))?.EnteredUtc;
+        // The first visit: going back and forth adds visits but never gives the screen more time.
+        var entered = response.PageVisits?.FirstOrDefault(visit => string.Equals(visit.PageId, screenId, StringComparison.Ordinal))?.EnteredUtc;
 
         return entered is null
             ? null

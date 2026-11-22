@@ -410,6 +410,18 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
         {
             context.AddError("pass-mark", S["The pass mark must be between 0 and 100."]);
         }
+
+        // A respondent who can change a finished response must not see the key first: they could read the right
+        // answers, reopen and submit again for a perfect score. After the survey closes no response can be reopened.
+        const ReviewShows key = ReviewShows.RightAnswers | ReviewShows.Feedback;
+        var review = definition.Review ?? new SurveyReviewSettings();
+
+        if (definition.Scoring.Enabled
+            && definition.Navigation?.AllowEditAfterSubmit == true
+            && ((review.ImmediatelyAfter | review.LaterWhileOpen) & key) != 0)
+        {
+            context.AddError("edit-after-review", S["Respondents can't change a finished response while the review shows the right answers or feedback before the survey closes. Turn off one of the two."]);
+        }
     }
 
     private void CheckPiping(SurveyDefinitionValidationContext context, DefinitionMap map)

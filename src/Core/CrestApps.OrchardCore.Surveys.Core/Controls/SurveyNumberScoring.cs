@@ -28,8 +28,28 @@ public static class SurveyNumberScoring
             return SurveyScoreResult.Of(0, max);
         }
 
-        return Math.Abs(value - key) <= Math.Abs(question.Scoring.Tolerance)
+        return IsWithin(value, key, question.Scoring.Tolerance)
             ? SurveyScoreResult.Of(max, max)
             : new SurveyScoreResult { Points = -penalty, MaxPoints = max, Correct = false };
+    }
+
+    /// <summary>
+    /// Gets whether a number is within a tolerance of the key. A difference too large for a decimal is never within it,
+    /// so a posted value near the decimal limits is just wrong instead of failing the scoring.
+    /// </summary>
+    /// <param name="value">The answer.</param>
+    /// <param name="key">The right answer.</param>
+    /// <param name="tolerance">The tolerance; its sign is ignored.</param>
+    /// <returns><see langword="true"/> when the answer is within the tolerance.</returns>
+    public static bool IsWithin(decimal value, decimal key, decimal tolerance)
+    {
+        try
+        {
+            return Math.Abs(value - key) <= Math.Abs(tolerance);
+        }
+        catch (OverflowException)
+        {
+            return false;
+        }
     }
 }

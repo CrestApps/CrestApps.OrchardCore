@@ -154,7 +154,17 @@ public sealed class ConstantSumControlHandler : SurveyControlHandlerBase<Constan
         }
     }
 
-    private static decimal Sum(SurveyAnswer answer)
-        => (answer?.Rows?.Values ?? Enumerable.Empty<List<string>>())
-            .Sum(values => values is { Count: > 0 } && decimal.TryParse(values[0], NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : 0);
+    // A sum too large for a decimal never adds up to the total: the answer is invalid instead of failing the post.
+    private static decimal? Sum(SurveyAnswer answer)
+    {
+        try
+        {
+            return (answer?.Rows?.Values ?? Enumerable.Empty<List<string>>())
+                .Sum(values => values is { Count: > 0 } && decimal.TryParse(values[0], NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : 0);
+        }
+        catch (OverflowException)
+        {
+            return null;
+        }
+    }
 }

@@ -539,12 +539,17 @@ public sealed class SurveyResponseService : ISurveyResponseService
             var definition = version.Definition;
             var cacheKey = SurveyRuntimeVersions.CacheKey(version);
             var now = _clock.UtcNow;
+            var pageTimeIsUp = SurveyPageTimer.PageTimeIsUp(definition, response, now);
 
             // Only a page posted forward may keep files, and only once it passes validation: they stay pending until then.
             var readMode = request.Direction == SurveyPageDirection.Back ? SurveyAnswerReadMode.Draft : SurveyAnswerReadMode.Commit;
             var pendingFiles = new Dictionary<string, List<SurveyPendingFile>>(StringComparer.Ordinal);
             var referencedFiles = SurveyResponseFiles.ReferencedIds(response);
-            var readErrors = await ReadScreenAsync(definition, version, response, request, readMode, pendingFiles, cancellationToken);
+
+            // Once the page's own time is up, what is posted for it is ignored: only what was saved in time counts.
+            var readErrors = pageTimeIsUp
+                ? new Dictionary<string, List<string>>(StringComparer.Ordinal)
+                : await ReadScreenAsync(definition, version, response, request, readMode, pendingFiles, cancellationToken);
             var state = Settle(definition, response, cacheKey);
 
             response.LastActivityUtc = now;
@@ -552,7 +557,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             if (request.Direction == SurveyPageDirection.Back)
             {
-                if (CanGoBack(definition, response))
+                if (CanGoBack(definition, response, now))
                 {
                     LeaveScreen(response, now);
                     response.PagePath.RemoveAt(response.PagePath.Count - 1);
@@ -567,23 +572,16 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             var errors = await ValidateScreenAsync(definition, response, state, readErrors);
 
-            if (errors.Count > 0 && SurveyPageTimer.PageTimeIsUp(definition, response, now))
+            if (errors.Count > 0 && pageTimeIsUp)
             {
                 // The page's time ran out: what is valid is kept, the rest is dropped, and the respondent moves on.
-                foreach (var questionId in errors.Keys)
-                {
-                    response.Answers.Remove(questionId);
-                }
-
+                RemoveUnlocked(response, errors.Keys);
                 errors.Clear();
             }
 
             if (errors.Count > 0)
             {
-                foreach (var questionId in errors.Keys)
-                {
-                    response.Answers.Remove(questionId);
-                }
+                RemoveUnlocked(response, errors.Keys);
 
                 // The page is refused: none of its new files are stored.
                 SurveyResponseFiles.DiscardPending(response);
@@ -642,9 +640,12 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
         var result = await WriteOwnAsync<SurveyResponseResult>(request.ResponseId, request.Identity, () => new SurveySaveResult { Error = SurveyErrorCode.Busy }, async (survey, version, response, notifications) =>
         {
-            if (response.Status != SurveyResponseStatus.InProgress)
+            // The same deadline as a page post: a save after the time and its grace submits what was saved before.
+            var refusal = await RefuseClosedAsync(survey, version, response, notifications, cancellationToken);
+
+            if (refusal is not null)
             {
-                return new SurveySaveResult { Error = SurveyErrorCode.InvalidState, Response = response };
+                return new SurveySaveResult { Error = refusal.Value, Response = response };
             }
 
             if (!string.IsNullOrEmpty(request.PageId) && !string.Equals(request.PageId, response.CurrentPageId, StringComparison.Ordinal))
@@ -653,6 +654,12 @@ public sealed class SurveyResponseService : ISurveyResponseService
             }
 
             var now = _clock.UtcNow;
+
+            if (SurveyPageTimer.PageTimeIsUp(version.Definition, response, now))
+            {
+                // The page's own time is up: nothing posted for it is kept any more.
+                return new SurveySaveResult { Error = SurveyErrorCode.InvalidState, Response = response };
+            }
 
             await ReadScreenAsync(version.Definition, version, response, request, SurveyAnswerReadMode.Draft, pendingFiles: null, cancellationToken);
             Settle(version.Definition, response, SurveyRuntimeVersions.CacheKey(version));
@@ -727,7 +734,15 @@ public sealed class SurveyResponseService : ISurveyResponseService
         {
             var definition = version.Definition;
 
-            if (response.Status != SurveyResponseStatus.InProgress || definition.Scoring?.FeedbackMode != FeedbackMode.Immediate)
+            // The same deadline as a page post: a check after the time and its grace submits what was saved before.
+            var refusal = await RefuseClosedAsync(survey, version, response, notifications, cancellationToken);
+
+            if (refusal is not null)
+            {
+                return new SurveyCheckResult { Error = refusal.Value, Response = response };
+            }
+
+            if (definition.Scoring?.FeedbackMode != FeedbackMode.Immediate || SurveyPageTimer.PageTimeIsUp(definition, response, _clock.UtcNow))
             {
                 return new SurveyCheckResult { Error = SurveyErrorCode.InvalidState, Response = response };
             }
@@ -765,6 +780,10 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
             var now = _clock.UtcNow;
             var scorer = _registry.GetScorer(question.ControlType);
+
+            // The answer is locked first: the review policy shows feedback during a response only for a checked answer.
+            answer.CheckedUtc = now;
+
             var during = _serviceProvider.GetService<ISurveyReviewPolicy>() is { } policy
                 ? policy.GetAllowedFor(survey, definition, response, question.Id, now)
                 : definition.Review?.During ?? ReviewShows.None;
@@ -792,7 +811,6 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 }
             }
 
-            answer.CheckedUtc = now;
             response.LastActivityUtc = now;
             response.ModifiedUtc = now;
             await _responseStore.UpdateAsync(response, cancellationToken);
@@ -829,16 +847,32 @@ public sealed class SurveyResponseService : ISurveyResponseService
                 return new SurveyResponseResult { Error = SurveyErrorCode.InvalidState, Response = response };
             }
 
-            var now = _clock.UtcNow;
+            // The counts the completion added are taken back under the completion lock, so completing again counts once.
+            var (locker, locked) = await _distributedLock.TryAcquireLockAsync("Surveys:Complete:" + survey.ItemId, _lockTimeout, _lockExpiration);
 
-            response.Status = SurveyResponseStatus.InProgress;
-            response.CompletedUtc = null;
-            response.EndingId = null;
-            response.CurrentPageId = response.PagePath.LastOrDefault() ?? response.Plan.PageOrder.FirstOrDefault();
-            response.PageVisits.Add(new SurveyPageVisit { PageId = response.CurrentPageId, EnteredUtc = now });
-            response.LastActivityUtc = now;
-            response.ModifiedUtc = now;
-            await _responseStore.UpdateAsync(response, cancellationToken);
+            if (!locked)
+            {
+                return new SurveyResponseResult { Error = SurveyErrorCode.Busy, Response = response };
+            }
+
+            await using (locker)
+            {
+                var now = _clock.UtcNow;
+
+                await ReleaseCompletionAsync(survey, version, response, identity, cancellationToken);
+
+                response.Status = SurveyResponseStatus.InProgress;
+                response.CompletedUtc = null;
+                response.EndingId = null;
+                response.CurrentPageId = response.PagePath.LastOrDefault() ?? response.Plan.PageOrder.FirstOrDefault();
+                response.PageVisits.Add(new SurveyPageVisit { PageId = response.CurrentPageId, EnteredUtc = now });
+                response.LastActivityUtc = now;
+                response.ModifiedUtc = now;
+                await _responseStore.UpdateAsync(response, cancellationToken);
+
+                // Commit while the completion lock is held, so a parallel completion sees the released counts.
+                await _session.SaveChangesAsync(cancellationToken);
+            }
 
             var context = new SurveyResponseEventContext { Survey = survey, Version = version, Response = response };
             notifications.Add(() => NotifyAsync(observer => observer.ReopenedAsync(context)));
@@ -1208,9 +1242,15 @@ public sealed class SurveyResponseService : ISurveyResponseService
         var state = _logic.Evaluate(definition, response, cacheKey);
 
         // The answers of questions that are hidden now are dropped: one pass is enough because the evaluation already
-        // resolved the chain of rules.
+        // resolved the chain of rules. An answer checked with immediate feedback is locked and never dropped or changed,
+        // so hiding its question for a moment can't erase it to answer again, or strip a wrong pick from it.
         foreach (var questionId in response.Answers.Keys.ToList())
         {
+            if (response.Answers[questionId]?.CheckedUtc is not null)
+            {
+                continue;
+            }
+
             if (state.HiddenQuestionIds.Contains(questionId))
             {
                 response.Answers.Remove(questionId);
@@ -1282,7 +1322,7 @@ public sealed class SurveyResponseService : ISurveyResponseService
         return errors;
     }
 
-    private static bool CanGoBack(SurveyDefinition definition, SurveyResponse response)
+    private static bool CanGoBack(SurveyDefinition definition, SurveyResponse response, DateTime utcNow)
     {
         if (response.PagePath.Count < 2 || definition.Navigation?.AllowBack == false || definition.Navigation?.Sequential == true)
         {
@@ -1292,7 +1332,9 @@ public sealed class SurveyResponseService : ISurveyResponseService
         var pageId = SurveyPlanNavigator.PageOf(response.Plan, response.CurrentPageId);
         var page = definition.Pages?.FirstOrDefault(item => string.Equals(item.Id, pageId, StringComparison.Ordinal));
 
-        return page?.AllowBack != false;
+        // A timed page whose time is up can't be opened again: its answers can no longer change.
+        return page?.AllowBack != false
+            && !SurveyPageTimer.ScreenTimeIsUp(definition, response, response.PagePath[response.PagePath.Count - 2], utcNow);
     }
 
     private (string Next, SurveyEnding Ending) NextScreen(SurveyDefinition definition, SurveyResponse response, SurveyLogicState state, string cacheKey)
@@ -1335,13 +1377,11 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
                 var target = SurveyPlanNavigator.FirstShowing(plan, state, targetIndex);
 
-                // The answers of the pages the branch skips are dropped.
+                // The answers of the pages the branch skips are dropped, except the locked answers checked with
+                // immediate feedback.
                 for (var skipped = index + 1; skipped < (target is null ? plan.PageOrder.Count : plan.PageOrder.IndexOf(target)); skipped++)
                 {
-                    foreach (var questionId in SurveyPlanNavigator.QuestionsOf(plan, plan.PageOrder[skipped]))
-                    {
-                        response.Answers.Remove(questionId);
-                    }
+                    RemoveUnlocked(response, SurveyPlanNavigator.QuestionsOf(plan, plan.PageOrder[skipped]));
                 }
 
                 return (target, target is null ? _endings.Choose(definition, response, state, cacheKey) : null);
@@ -1507,10 +1547,66 @@ public sealed class SurveyResponseService : ISurveyResponseService
 
     private async Task SubmitExpiredAsync(Survey survey, SurveyVersion version, SurveyResponse response, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
-        var state = Settle(version.Definition, response, SurveyRuntimeVersions.CacheKey(version));
-        var ending = _endings.Choose(version.Definition, response, state, SurveyRuntimeVersions.CacheKey(version));
+        var definition = version.Definition;
+        var cacheKey = SurveyRuntimeVersions.CacheKey(version);
+        var state = Settle(definition, response, cacheKey);
+
+        // Autosave keeps answers without validating them: an answer that breaks its question's rules (too many choices,
+        // a number out of range...) is dropped rather than scored. A checked answer was validated when it was checked.
+        var notChecked = response.Answers.Where(pair => pair.Value?.CheckedUtc is null).Select(pair => pair.Key).ToList();
+        var invalid = await ValidateQuestionsAsync(definition, response, state, notChecked, new Dictionary<string, List<string>>(StringComparer.Ordinal));
+
+        if (invalid.Count > 0)
+        {
+            RemoveUnlocked(response, invalid.Keys);
+            state = Settle(definition, response, cacheKey);
+        }
+
+        var ending = _endings.Choose(definition, response, state, cacheKey);
 
         await CompleteCoreAsync(survey, version, response, ending, autoSubmitted: true, identity: null, notifications, cancellationToken);
+    }
+
+    // Takes back what completing a response counted: the respondent's participation and the quotas it matched. Runs
+    // under the survey's completion lock.
+    private async Task ReleaseCompletionAsync(Survey survey, SurveyVersion version, SurveyResponse response, SurveyRespondentIdentity identity, CancellationToken cancellationToken)
+    {
+        if (response.IsTest)
+        {
+            return;
+        }
+
+        var definition = version.Definition;
+
+        // A response submitted at its deadline counted no participation: it was completed without a respondent.
+        if (!response.AutoSubmitted && identity is not null && response.CompletedUtc is { } completedUtc)
+        {
+            var invitation = string.IsNullOrEmpty(response.InvitationId) ? null : await _invitationStore.FindByIdAsync(response.InvitationId, cancellationToken);
+            var respondentKey = await Secrets.RespondentKeyAsync(survey, identity, invitation, cancellationToken);
+
+            await _participation.RecordReopenedAsync(survey, respondentKey, response.Context, completedUtc);
+        }
+
+        if (definition.Quotas is { Count: > 0 } && _serviceProvider.GetService<ISurveyQuotaService>() is { } quotas)
+        {
+            var state = _logic.Evaluate(definition, response, SurveyRuntimeVersions.CacheKey(version));
+
+            await quotas.ReleaseAsync(survey, version, response, state, cancellationToken);
+        }
+    }
+
+    // Removes answers, keeping every answer checked with immediate feedback: a checked answer is locked for good.
+    private static void RemoveUnlocked(SurveyResponse response, IEnumerable<string> questionIds)
+    {
+        foreach (var questionId in questionIds.ToList())
+        {
+            if (response.Answers.TryGetValue(questionId, out var answer) && answer?.CheckedUtc is not null)
+            {
+                continue;
+            }
+
+            response.Answers.Remove(questionId);
+        }
     }
 
     private async Task<SurveyErrorCode?> RefuseClosedAsync(Survey survey, SurveyVersion version, SurveyResponse response, IList<Func<Task>> notifications, CancellationToken cancellationToken)

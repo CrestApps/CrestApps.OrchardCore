@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Controls;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -60,6 +61,11 @@ public sealed class SurveyRespondentProjector
             Settings = handler?.GetRespondentSettings(question) ?? [],
         };
 
+        // A choice's export value is the author's code, and codes often follow the key (a ranking numbered in its right
+        // order, a choice coded "correct"), so a question that is scored never sends them. Respondents answer by id.
+        var sendValues = definition?.Scoring?.Enabled != true
+            || _registry.GetControl(question.ControlType)?.Has(SurveyControlCapabilities.Scorable) != true;
+
         foreach (var id in order)
         {
             if (!byId.TryGetValue(id, out var choice) || choice.Retired || (hiddenChoiceIds?.Contains(id) ?? false))
@@ -70,7 +76,7 @@ public sealed class SurveyRespondentProjector
             view.Choices.Add(new SurveyChoiceView
             {
                 Id = choice.Id,
-                Value = choice.Value,
+                Value = sendValues ? choice.Value : null,
                 Text = pipe($"choice:{question.Id}:{choice.Id}", choice.Text),
                 ImageUrl = choice.ImageUrl,
                 IsOther = choice.IsOther,

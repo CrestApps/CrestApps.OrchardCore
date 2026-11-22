@@ -219,11 +219,15 @@ public sealed class SurveyResponseServiceTests
         Assert.Equal("LearningEnrollment", start.Response.Context?.Kind);
         Assert.Equal("anonymous", start.Response.Context?.Id);
         Assert.True(resumed.Resumed);
-        var row = Assert.Single(participation);
-        Assert.StartsWith("a:", row.RespondentKey, StringComparison.Ordinal);
-        Assert.DoesNotContain("enrollment-1", row.ContextKey, StringComparison.Ordinal);
-        Assert.Equal(1, row.CompletedCount);
-        Assert.Null(row.LastCompletedUtc);
+        // One record per start and per completion.
+        Assert.Equal(2, participation.Count);
+        Assert.All(participation, row =>
+        {
+            Assert.StartsWith("a:", row.RespondentKey, StringComparison.Ordinal);
+            Assert.DoesNotContain("enrollment-1", row.ContextKey, StringComparison.Ordinal);
+            Assert.Null(row.LastCompletedUtc);
+        });
+        Assert.Equal(1, participation.Sum(row => row.CompletedCount));
     }
 
     [Fact]

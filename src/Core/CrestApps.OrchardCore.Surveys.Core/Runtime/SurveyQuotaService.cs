@@ -119,6 +119,40 @@ public sealed class SurveyQuotaService : ISurveyQuotaService
     }
 
     /// <inheritdoc />
+    public async Task ReleaseAsync(Survey survey, SurveyVersion version, SurveyResponse response, SurveyLogicState state, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(survey);
+        ArgumentNullException.ThrowIfNull(version);
+        ArgumentNullException.ThrowIfNull(response);
+
+        var matching = Active(version.Definition).Where(quota => Matches(version, response, state, quota)).ToList();
+
+        if (matching.Count == 0 || await _store.FindAsync(survey.ItemId, SurveyCounterKinds.Quotas, cancellationToken) is not { } counter)
+        {
+            return;
+        }
+
+        var changed = false;
+
+        foreach (var quota in matching)
+        {
+            if (counter.Counts.TryGetValue(quota.Id, out var current) && current > 0)
+            {
+                counter.Counts[quota.Id] = current - 1;
+                changed = true;
+            }
+        }
+
+        if (!changed)
+        {
+            return;
+        }
+
+        counter.ModifiedUtc = _clock.UtcNow;
+        await _store.UpdateAsync(counter, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task NotifyReachedAsync(Survey survey, IReadOnlyList<(SurveyQuota Quota, int Count)> reached, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(survey);
