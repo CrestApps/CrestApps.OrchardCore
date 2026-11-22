@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Carts.Core;
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Orders.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -33,7 +34,14 @@ public sealed class CartCheckoutController : Controller
     [RateLimitGroup(CheckoutConstants.RateLimitGroups.Start)]
     public async Task<IActionResult> Checkout()
     {
-        var result = await _cartCheckout.StartAsync(User, HttpContext.RequestAborted);
+        var result = await _cartCheckout.StartAsync(User, ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted);
+
+        if (result.Failure == CartCheckoutFailure.TooManyRequests)
+        {
+            await ThrottlingServiceCollectionExtensions.WriteTooManyRequestsAsync(HttpContext, result.RetryAfter, HttpContext.RequestAborted);
+
+            return new EmptyResult();
+        }
 
         if (!result.Succeeded)
         {

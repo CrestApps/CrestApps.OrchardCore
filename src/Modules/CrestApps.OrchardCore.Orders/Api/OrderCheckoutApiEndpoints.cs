@@ -61,7 +61,14 @@ internal static class OrderCheckoutApiEndpoints
         HttpContext httpContext,
         CartCheckoutService cartCheckout)
     {
-        var result = await cartCheckout.StartAsync(httpContext.User, httpContext.RequestAborted);
+        var result = await cartCheckout.StartAsync(httpContext.User, ClientNetworkKey.NetworkOnly(httpContext), httpContext.RequestAborted);
+
+        if (result.Failure == CartCheckoutFailure.TooManyRequests)
+        {
+            httpContext.Response.Headers.RetryAfter = Math.Max(1, (int)Math.Ceiling(result.RetryAfter.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+            return ApiProblems.TooManyRequests(string.Join(" ", result.Problems));
+        }
 
         if (!result.Succeeded)
         {

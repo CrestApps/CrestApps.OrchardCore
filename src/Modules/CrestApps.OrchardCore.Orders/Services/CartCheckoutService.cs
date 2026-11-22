@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Throttling;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -25,6 +26,7 @@ public sealed class CartCheckoutService
     private readonly UserManager<IUser> _userManager;
     private readonly ISession _session;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IAttemptLimiter _limiter;
 
     internal readonly IStringLocalizer S;
 
@@ -35,6 +37,7 @@ public sealed class CartCheckoutService
         UserManager<IUser> userManager,
         ISession session,
         IServiceProvider serviceProvider,
+        IAttemptLimiter limiter,
         IStringLocalizer<CartCheckoutService> stringLocalizer)
     {
         _cartService = cartService;
@@ -43,13 +46,17 @@ public sealed class CartCheckoutService
         _userManager = userManager;
         _session = session;
         _serviceProvider = serviceProvider;
+        _limiter = limiter;
         S = stringLocalizer;
     }
 
     /// <summary>
     /// Checks out the cart of <paramref name="user"/> (or the guest the request belongs to).
     /// </summary>
-    public async Task<CartCheckoutResult> StartAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    /// <param name="user">The buyer.</param>
+    /// <param name="clientNetworkKey">The network the request comes from (<c>ClientNetworkKey.NetworkOnly</c>).</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public async Task<CartCheckoutResult> StartAsync(ClaimsPrincipal user, string clientNetworkKey, CancellationToken cancellationToken = default)
     {
         // Priced again here, not taken from a page: the cart may have changed elsewhere, and a price may have changed
         // since it was shown.
@@ -60,6 +67,13 @@ public sealed class CartCheckoutService
             return pricing.Lines.Count == 0
                 ? CartCheckoutResult.Fail(CartCheckoutFailure.EmptyCart, S["Your cart is empty."])
                 : CartCheckoutResult.Fail(CartCheckoutFailure.CartProblems, S["Some items in your cart can't be bought as they are. Change or remove them to check out."]);
+        }
+
+        // Placing the order holds its stock, so a network may start only so many checkouts, as every other checkout start
+        // counts, whether or not the Rate Limits feature is on: guest carts can't hold the whole stock.
+        if (await _limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.CheckoutStartNetwork, clientNetworkKey, cancellationToken) is { Allowed: false } refused)
+        {
+            return CartCheckoutResult.Fail(CartCheckoutFailure.TooManyRequests, refused.RetryAfter, S["Too many checkouts were started from your network. Please wait a moment and try again."]);
         }
 
         var created = await _orderService.CreateFromCartAsync(pricing, cancellationToken);
@@ -108,7 +122,6 @@ public sealed class CartCheckoutService
             ReferenceId = order.ItemId,
         }, cancellationToken);
 
-
         return new CartCheckoutResult { Session = session, OrderId = order.ItemId };
     }
 }
@@ -126,11 +139,19 @@ public sealed class CartCheckoutResult
 
     public IReadOnlyList<string> Problems { get; init; } = [];
 
+    /// <summary>
+    /// Gets when the buyer may try again, for <see cref="CartCheckoutFailure.TooManyRequests"/>.
+    /// </summary>
+    public TimeSpan RetryAfter { get; init; }
+
     public bool Succeeded
         => Failure is null && Session is not null;
 
     internal static CartCheckoutResult Fail(CartCheckoutFailure failure, params string[] problems)
         => new() { Failure = failure, Problems = problems };
+
+    internal static CartCheckoutResult Fail(CartCheckoutFailure failure, TimeSpan retryAfter, string problem)
+        => new() { Failure = failure, Problems = [problem], RetryAfter = retryAfter };
 }
 
 public enum CartCheckoutFailure
@@ -139,4 +160,5 @@ public enum CartCheckoutFailure
     CartProblems,
     OutOfStock,
     Concurrency,
+    TooManyRequests,
 }
