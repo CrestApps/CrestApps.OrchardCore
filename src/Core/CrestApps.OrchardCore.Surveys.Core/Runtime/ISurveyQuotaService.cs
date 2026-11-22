@@ -31,6 +31,17 @@ public interface ISurveyQuotaService
     Task<IReadOnlyList<(SurveyQuota Quota, int Count)>> RecordAsync(Survey survey, SurveyVersion version, SurveyResponse response, SurveyLogicState state, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Takes a reopened response back out of every quota it matches, so completing it again counts it once.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <param name="version">The version of the response.</param>
+    /// <param name="response">The response.</param>
+    /// <param name="state">The logic state of the response.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task.</returns>
+    Task ReleaseAsync(Survey survey, SurveyVersion version, SurveyResponse response, SurveyLogicState state, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Tells observers that quotas reached their limit, and closes the survey for quotas that close it. Runs after the
     /// response is saved.
     /// </summary>

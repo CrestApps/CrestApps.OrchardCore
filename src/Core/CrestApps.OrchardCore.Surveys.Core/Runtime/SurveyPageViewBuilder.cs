@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Surveys.Core.Logic;
 using CrestApps.OrchardCore.Surveys.Core.Translations;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
 
@@ -19,6 +20,7 @@ public sealed class SurveyPageViewBuilder
     private readonly SurveyPipingRenderer _piping;
     private readonly SurveyRespondentProjector _projector;
     private readonly SurveyDefinitionLocalizer _localizer;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyPageViewBuilder"/> class.
@@ -27,13 +29,16 @@ public sealed class SurveyPageViewBuilder
     /// <param name="piping">The piping renderer.</param>
     /// <param name="projector">The respondent projector.</param>
     /// <param name="localizer">The definition localizer, for translated texts.</param>
+    /// <param name="clock">The clock, for the time limits of pages.</param>
     public SurveyPageViewBuilder(
         ISurveyControlRegistry registry,
         SurveyPipingRenderer piping,
         SurveyRespondentProjector projector,
-        SurveyDefinitionLocalizer localizer)
+        SurveyDefinitionLocalizer localizer,
+        IClock clock)
     {
         _localizer = localizer;
+        _clock = clock;
         _registry = registry;
         _piping = piping;
         _projector = projector;
@@ -131,7 +136,8 @@ public sealed class SurveyPageViewBuilder
         view.CanGoBack = response.PagePath.Count > 1
             && definition.Navigation?.AllowBack != false
             && definition.Navigation?.Sequential != true
-            && page.AllowBack;
+            && page.AllowBack
+            && !SurveyPageTimer.ScreenTimeIsUp(definition, response, response.PagePath[response.PagePath.Count - 2], _clock.UtcNow);
 
         view.ProgressPercent = ProgressPercent(definition, response, state, showing, screenId, questions);
 

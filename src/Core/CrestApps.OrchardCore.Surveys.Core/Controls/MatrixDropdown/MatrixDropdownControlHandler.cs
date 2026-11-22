@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
@@ -184,7 +185,7 @@ public sealed class MatrixDropdownControlHandler : SurveyChoiceControlHandlerBas
         {
             foreach (var value in values ?? [])
             {
-                yield return new SurveyAnswerIndexRow { RowId = Cut(key, 100), ChoiceId = value };
+                yield return new SurveyAnswerIndexRow { RowId = Cut(key, SurveyAnswerIndex.KeyLength), ChoiceId = value };
             }
         }
     }

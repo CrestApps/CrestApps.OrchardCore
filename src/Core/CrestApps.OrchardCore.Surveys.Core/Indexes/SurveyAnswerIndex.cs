@@ -14,6 +14,17 @@ public sealed class SurveyAnswerIndex : MapIndex
     public const int TextLength = 255;
 
     /// <summary>
+    /// The longest id kept in <see cref="QuestionId"/>, <see cref="RowId"/> and <see cref="ChoiceId"/>.
+    /// </summary>
+    public const int KeyLength = 64;
+
+    /// <summary>
+    /// The size a <see cref="NumberValue"/> must stay below: the column keeps 14 digits before the decimal point (the
+    /// default decimal precision of 19 with a scale of 5).
+    /// </summary>
+    public const decimal NumberLimit = 100_000_000_000_000m;
+
+    /// <summary>
     /// Gets or sets the id of the response.
     /// </summary>
     public string ResponseId { get; set; }

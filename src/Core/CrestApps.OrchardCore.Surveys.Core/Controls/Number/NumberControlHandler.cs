@@ -98,14 +98,29 @@ public sealed class NumberControlHandler : SurveyControlHandlerBase<NumberSettin
             context.Errors.Add(S["Enter a number of at most {0}.", max.ToString(CultureInfo.CurrentCulture)]);
         }
 
-        if (settings.Decimals is { } decimals && decimals >= 0 && Math.Round(number, decimals) != number)
+        // A decimal has at most 28 decimals: rounding to more would throw.
+        if (settings.Decimals is { } decimals && decimals >= 0 && Math.Round(number, Math.Min(decimals, 28)) != number)
         {
             context.Errors.Add(S["Enter a number with at most {0} decimals.", decimals]);
         }
 
-        if (settings.Step is > 0 && ((number - (settings.Min ?? 0)) % settings.Step.Value) != 0)
+        if (settings.Step is > 0 && !IsOnStep(number, settings.Min ?? 0, settings.Step.Value))
         {
             context.Errors.Add(S["Enter a number in steps of {0}.", settings.Step.Value.ToString(CultureInfo.CurrentCulture)]);
+        }
+    }
+
+    // A number so far from the start of the steps that the difference doesn't fit a decimal is off the steps: the
+    // answer is invalid instead of failing the post.
+    private static bool IsOnStep(decimal number, decimal start, decimal step)
+    {
+        try
+        {
+            return (number - start) % step == 0;
+        }
+        catch (OverflowException)
+        {
+            return false;
         }
     }
 }
