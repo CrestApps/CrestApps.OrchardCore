@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Numbering;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Banking.Checks.Core.Services;
@@ -25,11 +26,16 @@ public sealed class CheckService : ICheckService
 
     private const int StaleBatchSize = 200;
 
+    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
+
     private readonly ICheckManager _manager;
     private readonly IBankAccountManager _bankAccounts;
     private readonly INumberSequence _numbers;
     private readonly IEnumerable<ICheckObserver> _observers;
     private readonly IEnumerable<ICheckChangeHandler> _handlers;
+    private readonly IDistributedLock _locks;
+    private readonly ICheckCommitter _committer;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
@@ -44,6 +50,8 @@ public sealed class CheckService : ICheckService
     /// <param name="numbers">The number sequences.</param>
     /// <param name="observers">The observers of check changes, told after each change is saved.</param>
     /// <param name="handlers">The handlers asked before a void, reissue, clear or un-clear is saved.</param>
+    /// <param name="locks">The distributed lock, so one print run of a bank account is numbered at a time.</param>
+    /// <param name="committer">Commits a print run before its lock is released.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor, for who made a change.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="localClock">The site's local clock, for the dates printed on checks.</param>
@@ -54,6 +62,8 @@ public sealed class CheckService : ICheckService
         INumberSequence numbers,
         IEnumerable<ICheckObserver> observers,
         IEnumerable<ICheckChangeHandler> handlers,
+        IDistributedLock locks,
+        ICheckCommitter committer,
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
         ILocalClock localClock,
@@ -64,6 +74,8 @@ public sealed class CheckService : ICheckService
         _numbers = numbers;
         _observers = observers;
         _handlers = handlers;
+        _locks = locks;
+        _committer = committer;
         _httpContextAccessor = httpContextAccessor;
         _clock = clock;
         _localClock = localClock;
@@ -287,6 +299,45 @@ public sealed class CheckService : ICheckService
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        var bankAccountId = request.Checks is { Count: > 0 } checks ? checks[0]?.BankAccountId : null;
+
+        if (string.IsNullOrEmpty(bankAccountId))
+        {
+            return await ConfirmPrintRunLockedAsync(request, cancellationToken);
+        }
+
+        // One print run of a bank account at a time, from the check of its numbers to the commit, so two people confirming
+        // runs of the same account at once never give two checks the same number.
+        var (locker, locked) = await _locks.TryAcquireLockAsync(NumbersLockKey(bankAccountId), _lockTimeout, _lockExpiration);
+
+        if (!locked)
+        {
+            return new CheckPrintRunResult { Errors = [S["Another print run of this bank account is being confirmed. Try again in a moment."]] };
+        }
+
+        await using (locker)
+        {
+            var result = await ConfirmPrintRunLockedAsync(request, cancellationToken);
+
+            if (result.Succeeded)
+            {
+                await _committer.CommitAsync(cancellationToken);
+            }
+
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// Gets the key of the lock held while a print run of a bank account takes its numbers.
+    /// </summary>
+    /// <param name="bankAccountId">The bank account's id.</param>
+    /// <returns>The lock key.</returns>
+    public static string NumbersLockKey(string bankAccountId)
+        => "Checks:Numbers:" + bankAccountId;
+
+    private async Task<CheckPrintRunResult> ConfirmPrintRunLockedAsync(CheckPrintRunRequest request, CancellationToken cancellationToken)
+    {
         var checks = request.Checks ?? [];
         var misprinted = new HashSet<string>(request.MisprintedCheckIds ?? [], StringComparer.Ordinal);
         var errors = new List<string>(await ValidatePrintRunAsync(checks, request.FirstNumber, cancellationToken));

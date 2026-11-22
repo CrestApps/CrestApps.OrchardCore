@@ -120,6 +120,48 @@ public sealed class CheckNumberingTests
     }
 
     [Fact]
+    public async Task ConfirmPrintRunAsync_WhileAnotherRunOfTheAccountIsConfirmed_IsRefused_AndNumbersNothing()
+    {
+        // Arrange
+        var context = new ChecksTestContext();
+        var account = await context.BusinessAccountAsync();
+        var check = await IssueAsync(context, account, CheckNumbering.AtPrint, payee: "Pat");
+        var (held, locked) = await context.Locks.TryAcquireLockAsync(CheckService.NumbersLockKey(account.ItemId), TimeSpan.FromSeconds(1));
+        Assert.True(locked);
+
+        // Act
+        CheckPrintRunResult result;
+
+        await using (held)
+        {
+            result = await context.Service.ConfirmPrintRunAsync(new CheckPrintRunRequest { Checks = [check], FirstNumber = 5001 }, TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Single(result.Errors);
+        Assert.Equal((0L, CheckStatus.Queued), (check.Number, check.Status));
+        Assert.Equal(0, context.Committer.Commits);
+    }
+
+    [Fact]
+    public async Task ConfirmPrintRunAsync_CommitsTheRunBeforeTheNextOneMayStart()
+    {
+        // Arrange
+        var context = new ChecksTestContext();
+        var account = await context.BusinessAccountAsync();
+        var check = await IssueAsync(context, account, CheckNumbering.AtPrint, payee: "Pat");
+
+        // Act
+        var result = await context.Service.ConfirmPrintRunAsync(new CheckPrintRunRequest { Checks = [check], FirstNumber = 5001 }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors));
+        Assert.Equal(1, context.Committer.Commits);
+        Assert.Equal(1, context.Locks.Taken[CheckService.NumbersLockKey(account.ItemId)]);
+    }
+
+    [Fact]
     public async Task ConfirmPrintRunAsync_AMisprintedSheet_IsKeptAsASpoiledVoidedCheck_AndItsCheckWaitsToPrintAgain()
     {
         // Arrange
