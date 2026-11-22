@@ -92,8 +92,9 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
     /// <inheritdoc />
     protected override async IAsyncEnumerable<TRow> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        // The rows of an anonymous survey wait until the responses read reach the survey's minimum group size; a group
-        // that never does is dropped.
+        // The rows of an anonymous survey wait until the completed, non-test responses read reach the survey's minimum
+        // group size; a group that never does is dropped. In-progress, abandoned and test responses never count, so they
+        // can't pad a group past the threshold.
         var held = new Dictionary<string, (HashSet<string> Responses, List<TRow> Rows)>(StringComparer.Ordinal);
         var released = new HashSet<string>(StringComparer.Ordinal);
 
@@ -115,7 +116,11 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
                 held[surveyId] = group = (new HashSet<string>(StringComparer.Ordinal), []);
             }
 
-            group.Responses.Add(response.ItemId ?? string.Empty);
+            if (CountsTowardGroupSize(response))
+            {
+                group.Responses.Add(response.ItemId ?? string.Empty);
+            }
+
             group.Rows.Add(row);
 
             if (group.Responses.Count >= minimum)
@@ -130,6 +135,15 @@ public abstract class SurveysDataSetBase<TDocument, TIndex, TRow> : IndexedRepor
             }
         }
     }
+
+    /// <summary>
+    /// Gets whether a response counts toward an anonymous survey's minimum group size: only completed, non-test
+    /// responses do, as in the reports.
+    /// </summary>
+    /// <param name="response">The response.</param>
+    /// <returns><see langword="true"/> when it counts.</returns>
+    internal static bool CountsTowardGroupSize(SurveyResponse response)
+        => response is { IsTest: false, Status: SurveyResponseStatus.Completed };
 
     /// <summary>
     /// Gets whether the rows of a survey may show who responded: on an identified survey the principal may read.

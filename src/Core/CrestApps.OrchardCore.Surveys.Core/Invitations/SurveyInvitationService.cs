@@ -367,23 +367,16 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     {
         ArgumentNullException.ThrowIfNull(survey);
 
-        var changed = 0;
-
-        foreach (var invitation in await _invitationStore.ListBySurveyAsync(survey.ItemId, cancellationToken))
+        // A page at a time, so a survey with many invitations isn't loaded all at once.
+        return await _invitationStore.ForEachBySurveyAsync(survey.ItemId, async invitation =>
         {
             var tokenHash = invitation.TokenHash;
             var sealLookup = invitation.SealLookup;
 
             await IssueTokenAsync(survey, invitation, cancellationToken);
 
-            if (!string.Equals(tokenHash, invitation.TokenHash, StringComparison.Ordinal) || !string.Equals(sealLookup, invitation.SealLookup, StringComparison.Ordinal))
-            {
-                await _invitationStore.UpdateAsync(invitation, cancellationToken);
-                changed++;
-            }
-        }
-
-        return changed;
+            return !string.Equals(tokenHash, invitation.TokenHash, StringComparison.Ordinal) || !string.Equals(sealLookup, invitation.SealLookup, StringComparison.Ordinal);
+        }, cancellationToken: cancellationToken);
     }
 
     /// <summary>

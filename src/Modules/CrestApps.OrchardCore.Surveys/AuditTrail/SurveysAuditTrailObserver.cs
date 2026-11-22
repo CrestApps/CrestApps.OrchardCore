@@ -7,7 +7,8 @@ namespace CrestApps.OrchardCore.Surveys.AuditTrail;
 /// <summary>
 /// Records what observers hear about surveys and responses in the audit trail. Test responses are left out, and so are
 /// the events a respondent causes on an anonymous survey (a reopen), whose audit record would keep the respondent's IP
-/// address next to the response.
+/// address next to the response. Events the system causes there (a retention delete, an automatic regrade) are still
+/// recorded, with no actor and nothing that names the respondent.
 /// </summary>
 internal sealed class SurveysAuditTrailObserver : ISurveyResponseObserver, ISurveyObserver
 {
@@ -54,19 +55,19 @@ internal sealed class SurveysAuditTrailObserver : ISurveyResponseObserver, ISurv
 
     /// <inheritdoc />
     public Task VoidedAsync(SurveyResponseEventContext context)
-        => Response(SurveyAuditEvents.ResponseVoided, context);
+        => Response(SurveyAuditEvents.ResponseVoided, context, causedByRespondent: false);
 
     /// <inheritdoc />
     public Task DeletedAsync(SurveyResponseEventContext context)
-        => Response(SurveyAuditEvents.ResponseDeleted, context);
+        => Response(SurveyAuditEvents.ResponseDeleted, context, causedByRespondent: false);
 
     /// <inheritdoc />
     public Task ReopenedAsync(SurveyResponseEventContext context)
-        => Response(SurveyAuditEvents.ResponseReopened, context);
+        => Response(SurveyAuditEvents.ResponseReopened, context, causedByRespondent: true);
 
     /// <inheritdoc />
     public Task ScoreChangedAsync(SurveyResponseEventContext context)
-        => Response(SurveyAuditEvents.ScoreChanged, context);
+        => Response(SurveyAuditEvents.ScoreChanged, context, causedByRespondent: false);
 
     /// <inheritdoc />
     public Task OverrideGrantedAsync(SurveyOverride surveyOverride)
@@ -87,7 +88,7 @@ internal sealed class SurveysAuditTrailObserver : ISurveyResponseObserver, ISurv
             SurveyName = survey?.Name,
         };
 
-    private Task Response(string eventName, SurveyResponseEventContext context)
+    private Task Response(string eventName, SurveyResponseEventContext context, bool causedByRespondent)
     {
         var response = context?.Response;
 
@@ -96,9 +97,10 @@ internal sealed class SurveysAuditTrailObserver : ISurveyResponseObserver, ISurv
             return Task.CompletedTask;
         }
 
-        // On an anonymous survey, an event the respondent caused (no actor, no workflow) is not recorded: the audit trail
-        // keeps the request's IP address next to the response id, which would point to the respondent.
-        if (SurveyAnonymity.IsAnonymous(context.Survey) && string.IsNullOrEmpty(context.ActorId) && !context.CausedByWorkflow)
+        // On an anonymous survey, an event the respondent caused (a reopen with no actor and no workflow) is not recorded:
+        // the audit trail keeps the request's IP address next to the response id, which would point to the respondent.
+        // An event with no actor the system caused, such as a retention delete, is recorded: it names no one.
+        if (causedByRespondent && SurveyAnonymity.IsAnonymous(context.Survey) && string.IsNullOrEmpty(context.ActorId) && !context.CausedByWorkflow)
         {
             return Task.CompletedTask;
         }

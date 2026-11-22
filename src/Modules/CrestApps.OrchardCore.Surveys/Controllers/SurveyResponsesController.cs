@@ -176,8 +176,13 @@ public sealed class SurveyResponsesController : Controller
 
         // An anonymous survey lists nothing until the completed, non-test responses the narrowing filters (version,
         // collector, search) select reach its minimum group size. Test and in-progress rows never count, so previews
-        // can't pad the group.
-        if (SurveyAnonymity.IsAnonymous(survey) && SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), await CountRealAsync(surveyId, versionNumber, options)))
+        // can't pad the group. A status filter can't open a smaller group either: the rows it selects (test rows left
+        // out) must reach the minimum too, or filtering to Abandoned could single out the one person who gave up.
+        var filtersStatus = Enum.TryParse<SurveyResponseStatus>(options.Status, out var shown);
+
+        if (SurveyAnonymity.IsAnonymous(survey)
+            && (SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), await CountRealAsync(surveyId, versionNumber, options, SurveyResponseStatus.Completed))
+                || (filtersStatus && SurveyAnonymity.IsTooSmall(survey, await SettingsAsync(), await CountRealAsync(surveyId, versionNumber, options, shown)))))
         {
             options.HiddenBelow = SurveyAnonymity.MinimumGroupSize(survey, await SettingsAsync());
             items = [];
@@ -555,10 +560,10 @@ public sealed class SurveyResponsesController : Controller
     private async Task<SurveySettings> SettingsAsync()
         => _serviceProvider.GetService<ISiteService>() is { } siteService ? await siteService.GetSettingsAsync<SurveySettings>() : null;
 
-    private async Task<int> CountRealAsync(string surveyId, int versionNumber, SurveyResponsesIndexViewModel options)
+    private async Task<int> CountRealAsync(string surveyId, int versionNumber, SurveyResponsesIndexViewModel options, SurveyResponseStatus status)
     {
-        var completed = nameof(SurveyResponseStatus.Completed);
-        var query = _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.SurveyId == surveyId && index.Status == completed && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName);
+        var statusName = status.ToString();
+        var query = _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.SurveyId == surveyId && index.Status == statusName && !index.IsTest, collection: SurveysConstants.ResponsesCollectionName);
 
         if (int.TryParse(options.Version, out _))
         {

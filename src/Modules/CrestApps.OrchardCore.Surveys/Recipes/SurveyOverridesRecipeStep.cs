@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -15,24 +16,27 @@ internal sealed class SurveyOverridesRecipeStep : NamedRecipeStepHandler
 {
     private readonly SurveyOverrideStore _overrideStore;
     private readonly SurveyStore _surveyStore;
-    private readonly ISurveyUserLookup _users;
+    private readonly IServiceProvider _serviceProvider;
+    private ISurveyUserLookup _users;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyOverridesRecipeStep"/> class.
     /// </summary>
     /// <param name="overrideStore">The accommodation store.</param>
     /// <param name="surveyStore">The survey store.</param>
-    /// <param name="users">The user lookup.</param>
+    /// <param name="serviceProvider">The service provider. The user lookup is resolved from it only when a record names a person, so a missing optional service never breaks recipe execution.</param>
     public SurveyOverridesRecipeStep(
         SurveyOverrideStore overrideStore,
         SurveyStore surveyStore,
-        ISurveyUserLookup users)
+        IServiceProvider serviceProvider)
         : base(SurveysRecipeSteps.Overrides)
     {
         _overrideStore = overrideStore;
         _surveyStore = surveyStore;
-        _users = users;
+        _serviceProvider = serviceProvider;
     }
+
+    private ISurveyUserLookup UserLookup => _users ??= _serviceProvider.GetRequiredService<ISurveyUserLookup>();
 
     /// <inheritdoc />
     protected override async Task HandleAsync(RecipeExecutionContext context)
@@ -61,7 +65,7 @@ internal sealed class SurveyOverridesRecipeStep : NamedRecipeStepHandler
 
             if (userName is not null)
             {
-                entry.UserId = await _users.FindUserIdAsync(userName);
+                entry.UserId = await UserLookup.FindUserIdAsync(userName);
 
                 if (entry.UserId is null)
                 {
@@ -72,7 +76,7 @@ internal sealed class SurveyOverridesRecipeStep : NamedRecipeStepHandler
             }
 
             entry.SurveyId = survey.ItemId;
-            entry.Actor = await _users.FindUserIdAsync(SurveysRecipeJson.String(token, "ActorUserName"));
+            entry.Actor = await UserLookup.FindUserIdAsync(SurveysRecipeJson.String(token, "ActorUserName"));
 
             if (existing is null)
             {

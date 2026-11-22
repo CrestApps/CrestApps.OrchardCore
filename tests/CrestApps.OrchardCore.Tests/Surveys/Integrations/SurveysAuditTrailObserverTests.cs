@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Tests.Surveys.Integrations;
 
 /// <summary>
 /// The audit trail keeps the request's IP address next to the response id, so on an anonymous survey the events the
-/// respondent causes are not recorded, while staff events still are.
+/// respondent causes are not recorded, while staff and system events still are.
 /// </summary>
 public sealed class SurveysAuditTrailObserverTests
 {
@@ -52,6 +52,20 @@ public sealed class SurveysAuditTrailObserverTests
 
         // Assert
         auditTrail.Verify(trail => trail.RecordAsync(SurveyAuditEvents.ResponseVoided, It.Is<SurveyAuditEntry>(entry => entry.ActorId == "admin-id"), It.IsAny<CancellationToken>()), Times.Once());
+    }
+
+    [Fact]
+    public async Task DeletedAsync_ByRetentionOnAnAnonymousSurvey_IsRecordedWithNoActor()
+    {
+        // Arrange
+        var auditTrail = new Mock<ISurveyAuditTrail>();
+        var observer = new SurveysAuditTrailObserver(auditTrail.Object);
+
+        // Act: a retention delete is a system event, with no actor.
+        await observer.DeletedAsync(Context(AnonymityMode.Anonymous, actorId: null));
+
+        // Assert
+        auditTrail.Verify(trail => trail.RecordAsync(SurveyAuditEvents.ResponseDeleted, It.Is<SurveyAuditEntry>(entry => entry.ResponseId == "r1" && entry.ActorId == null), It.IsAny<CancellationToken>()), Times.Once());
     }
 
     private static SurveyResponseEventContext Context(AnonymityMode anonymity, string actorId)

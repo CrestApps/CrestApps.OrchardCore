@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Surveys.Services;
@@ -9,19 +10,20 @@ namespace CrestApps.OrchardCore.Surveys.Services;
 /// </summary>
 internal sealed class SurveyUserLookup : ISurveyUserLookup
 {
-    private readonly IUserSearchService _userSearchService;
+    private readonly IServiceProvider _serviceProvider;
     private readonly UserManager<IUser> _userManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyUserLookup"/> class.
     /// </summary>
-    /// <param name="userSearchService">The user search service.</param>
+    /// <param name="serviceProvider">The service provider. The shared user search service is optional: when no feature
+    /// registers it, names are read one user at a time through the user manager.</param>
     /// <param name="userManager">The user manager.</param>
     public SurveyUserLookup(
-        IUserSearchService userSearchService,
+        IServiceProvider serviceProvider,
         UserManager<IUser> userManager)
     {
-        _userSearchService = userSearchService;
+        _serviceProvider = serviceProvider;
         _userManager = userManager;
     }
 
@@ -29,13 +31,36 @@ internal sealed class SurveyUserLookup : ISurveyUserLookup
     public async Task<IDictionary<string, string>> GetUserNamesAsync(IEnumerable<string> userIds)
     {
         var ids = (userIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+        var names = new Dictionary<string, string>(StringComparer.Ordinal);
 
         if (ids.Length == 0)
         {
-            return new Dictionary<string, string>(StringComparer.Ordinal);
+            return names;
         }
 
-        return (await _userSearchService.GetAsync(ids)).ToDictionary(user => user.UserId, user => user.UserName, StringComparer.Ordinal);
+        var userSearchService = _serviceProvider.GetService<IUserSearchService>();
+
+        if (userSearchService is not null)
+        {
+            foreach (var user in await userSearchService.GetAsync(ids))
+            {
+                names[user.UserId] = user.UserName;
+            }
+
+            return names;
+        }
+
+        foreach (var id in ids)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+
+            if (user is not null)
+            {
+                names[id] = await _userManager.GetUserNameAsync(user);
+            }
+        }
+
+        return names;
     }
 
     /// <inheritdoc />

@@ -126,7 +126,7 @@ Checks on one survey go through `ISurveyAuthorizationService`: the global permis
 | Task | Runs | Does |
 | --- | --- | --- |
 | Survey deadlines | Every minute | Submits responses whose time ran out (leased queue) |
-| Survey upkeep | Hourly | Abandons idle unfinished responses, applies retention (delete or anonymize), removes old participation rows |
+| Survey upkeep | Hourly | Abandons idle unfinished responses, applies retention (delete, or anonymize: who responded and every file of the response are removed), submits responses past their deadline, and removes old participation rows in batches until it catches up (up to 30 seconds a run). A response that fails five runs in a row is logged and no longer tried (`SurveyResponse.UpkeepFailures`). |
 | Survey invitation reminders | Hourly (Invitations feature) | Sends the reminders that are due |
 
 ## Known gaps

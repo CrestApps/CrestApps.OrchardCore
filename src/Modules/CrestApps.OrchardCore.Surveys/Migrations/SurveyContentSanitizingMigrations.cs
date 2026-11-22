@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using OrchardCore.Data.Migration;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Surveys.Migrations;
 
@@ -17,6 +18,7 @@ internal sealed class SurveyContentSanitizingMigrations : DataMigration
     private readonly SurveyTemplateStore _templateStore;
     private readonly BankQuestionStore _bankQuestionStore;
     private readonly SurveyContentSanitizer _sanitizer;
+    private readonly ISession _session;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyContentSanitizingMigrations"/> class.
@@ -26,18 +28,21 @@ internal sealed class SurveyContentSanitizingMigrations : DataMigration
     /// <param name="templateStore">The survey template store.</param>
     /// <param name="bankQuestionStore">The bank question store.</param>
     /// <param name="sanitizer">The survey content sanitizer.</param>
+    /// <param name="session">The YesSql session.</param>
     public SurveyContentSanitizingMigrations(
         SurveyStore surveyStore,
         SurveyVersionStore versionStore,
         SurveyTemplateStore templateStore,
         BankQuestionStore bankQuestionStore,
-        SurveyContentSanitizer sanitizer)
+        SurveyContentSanitizer sanitizer,
+        ISession session)
     {
         _surveyStore = surveyStore;
         _versionStore = versionStore;
         _templateStore = templateStore;
         _bankQuestionStore = bankQuestionStore;
         _sanitizer = sanitizer;
+        _session = session;
     }
 
     /// <summary>
@@ -46,37 +51,13 @@ internal sealed class SurveyContentSanitizingMigrations : DataMigration
     /// <returns>The migration version.</returns>
     public async Task<int> CreateAsync()
     {
-        foreach (var survey in await _surveyStore.GetAllAsync())
-        {
-            if (Changes(survey.Draft, _sanitizer.Sanitize))
-            {
-                await _surveyStore.UpdateAsync(survey);
-            }
-        }
+        // A page at a time: the step runs on the host's one migration transaction, so it can't commit as it goes.
+        var collection = SurveysConstants.CollectionName;
 
-        foreach (var version in await _versionStore.GetAllAsync())
-        {
-            if (Changes(version.Definition, _sanitizer.Sanitize))
-            {
-                await _versionStore.UpdateAsync(version);
-            }
-        }
-
-        foreach (var template in await _templateStore.GetAllAsync())
-        {
-            if (Changes(template.Definition, _sanitizer.Sanitize))
-            {
-                await _templateStore.UpdateAsync(template);
-            }
-        }
-
-        foreach (var question in await _bankQuestionStore.GetAllAsync())
-        {
-            if (Changes(question.Question, _sanitizer.Sanitize))
-            {
-                await _bankQuestionStore.UpdateAsync(question);
-            }
-        }
+        await SurveyMigrationPages.ForEachAsync(_session, _surveyStore, collection, survey => Changes(survey.Draft, _sanitizer.Sanitize));
+        await SurveyMigrationPages.ForEachAsync(_session, _versionStore, collection, version => Changes(version.Definition, _sanitizer.Sanitize));
+        await SurveyMigrationPages.ForEachAsync(_session, _templateStore, collection, template => Changes(template.Definition, _sanitizer.Sanitize));
+        await SurveyMigrationPages.ForEachAsync(_session, _bankQuestionStore, collection, question => Changes(question.Question, _sanitizer.Sanitize));
 
         return 1;
     }

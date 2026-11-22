@@ -218,4 +218,16 @@ public sealed class SurveyResponse : CatalogItem
     /// It is cleared when the response completes or is abandoned.
     /// </summary>
     public string RespondentKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets when retention anonymized the response, or <see langword="null"/> when it wasn't. An anonymized
+    /// response is not visited by retention again.
+    /// </summary>
+    public DateTime? AnonymizedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many times in a row background upkeep (abandoning, retention, submitting at the deadline) failed
+    /// on the response. Upkeep stops trying a response that failed too often, so it can't block the rest.
+    /// </summary>
+    public int UpkeepFailures { get; set; }
 }
