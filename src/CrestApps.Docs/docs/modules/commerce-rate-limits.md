@@ -27,7 +27,8 @@ card online (Stripe, and the Test payments provider); a card reader, cash, a che
   - *Record a payment issue only* (the default);
   - *Ask guests to sign in to pay by card*;
   - *Pause card payments for guests*.
-  Signed-in customers always pay as usual.
+  Signed-in customers who have completed a checkout before pay as usual. With either of the last two choices, an
+  account that has never completed a checkout can't pay by card meanwhile, since card testers open accounts for free.
 
 A stopped buyer reads *We can't take another payment attempt right now. Please try again later or use another way to pay.*
 The provider is never asked to charge the card.
@@ -62,11 +63,16 @@ policy off.
 | `payment-decline-store` | 30 per 10 minutes, then 30 minutes | Declined card payments across the store |
 | `payment-decline-attempt` | 3 per payment, then the payment is canceled | Failed card confirmations of one payment (Stripe) |
 | `payment-decline-event` | 1 per event within 3 days | Stripe failure events counted, so a redelivery counts nothing |
-| `payment-status` | 120 per 5 minutes | Status polls per network and checkout |
-| `checkout-start-network` | 60 per hour | Checkouts started from one network by an order's pay link |
+| `payment-status` | 120 per 5 minutes | Status polls per network of a checkout the caller owns |
+| `payment-status-network` | 600 per 5 minutes | Status polls per network, whatever checkout they name, counted before the checkout is looked up |
+| `checkout-start-network` | 60 per hour | Checkouts started from one network by an order's pay link, the subscribe page or a cart checkout (page or API) |
 | `coupon-code` | 10 wrong codes per 10 minutes, then blocked 10 minutes | Wrong discount codes from one network |
 
 The Orders and Customers modules add their own for gift card codes, order lookups, guest accounts and referral links.
+
+An agent checkout (ACP or UCP) has no buyer address of its own, so its declined cards and wrong discount codes count against
+the agent platform as the network: one platform's misuse never stops another. An installment plan's down payment counts
+against the network of the person who types the card.
 
 ```json
 {
