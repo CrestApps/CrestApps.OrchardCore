@@ -82,16 +82,26 @@ public sealed class SurveyInvitationStore : DocumentCatalog<SurveyInvitation, Su
     }
 
     /// <summary>
-    /// Counts the e-mail invitations (to an address, not a user) sent or reminded since a time.
+    /// Counts the invitation e-mails (to an address, not a user) sent since a time: each invitation first sent since
+    /// then is one e-mail, and each invitation reminded since then is one more. An invitation reminded twice in that
+    /// time (a manual resend) counts its reminders once, since only the last reminder time is kept.
     /// </summary>
     /// <param name="sinceUtc">The time, in UTC.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The count.</returns>
-    public Task<int> CountEmailedSinceAsync(DateTime sinceUtc, CancellationToken cancellationToken = default)
-        => Session.QueryIndex<SurveyInvitationIndex>(
-            index => index.Email != null && index.UserId == null && (index.SentUtc >= sinceUtc || index.LastReminderUtc >= sinceUtc),
+    public async Task<int> CountEmailedSinceAsync(DateTime sinceUtc, CancellationToken cancellationToken = default)
+    {
+        var sent = await Session.QueryIndex<SurveyInvitationIndex>(
+            index => index.Email != null && index.UserId == null && index.SentUtc >= sinceUtc,
             collection: SurveysConstants.CollectionName)
             .CountAsync(cancellationToken);
+        var reminded = await Session.QueryIndex<SurveyInvitationIndex>(
+            index => index.Email != null && index.UserId == null && index.LastReminderUtc >= sinceUtc,
+            collection: SurveysConstants.CollectionName)
+            .CountAsync(cancellationToken);
+
+        return sent + reminded;
+    }
 
     /// <summary>
     /// Lists the invitations of a survey, oldest first.

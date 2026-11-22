@@ -5,9 +5,12 @@ using CrestApps.OrchardCore.Surveys.Invitations;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Surveys.Controllers;
 
@@ -19,9 +22,12 @@ namespace CrestApps.OrchardCore.Surveys.Controllers;
 [Feature(SurveysConstants.Features.Invitations)]
 public sealed class SurveyInvitationUnsubscribeController : Controller
 {
+    // A save that loses a concurrency race (another unsubscribe changed the opt-out list) is tried again this often.
+    private const int Attempts = 3;
+
     private readonly SurveyInvitationStore _invitationStore;
     private readonly SurveyStore _surveyStore;
-    private readonly IConsentService _consentService;
+    private readonly ISession _session;
 
     internal readonly IStringLocalizer S;
 
@@ -30,17 +36,17 @@ public sealed class SurveyInvitationUnsubscribeController : Controller
     /// </summary>
     /// <param name="invitationStore">The invitation store.</param>
     /// <param name="surveyStore">The survey store.</param>
-    /// <param name="consentService">The consent service.</param>
+    /// <param name="session">The session of the request.</param>
     /// <param name="stringLocalizer">The localizer.</param>
     public SurveyInvitationUnsubscribeController(
         SurveyInvitationStore invitationStore,
         SurveyStore surveyStore,
-        IConsentService consentService,
+        ISession session,
         IStringLocalizer<SurveyInvitationUnsubscribeController> stringLocalizer)
     {
         _invitationStore = invitationStore;
         _surveyStore = surveyStore;
-        _consentService = consentService;
+        _session = session;
         S = stringLocalizer;
     }
 
@@ -88,19 +94,33 @@ public sealed class SurveyInvitationUnsubscribeController : Controller
             return NotFoundMessage();
         }
 
-        if (invitation.Status != SurveyInvitationStatus.Completed && invitation.Status != SurveyInvitationStatus.OptedOut)
+        // The opt-out list is one document saved with a concurrency check, so an unsubscribe at the same moment can make
+        // this save fail. The failed session is spent (its transaction rolled back), so the work is done again in a
+        // fresh scope that commits on its own.
+        for (var attempt = 1; ; attempt++)
         {
-            invitation.Status = SurveyInvitationStatus.OptedOut;
-            await _invitationStore.UpdateAsync(invitation, HttpContext.RequestAborted);
-        }
+            try
+            {
+                if (attempt == 1)
+                {
+                    await UnsubscribeAsync(HttpContext.RequestServices, invitation.ItemId, HttpContext.RequestAborted);
+                    await _session.SaveChangesAsync(HttpContext.RequestAborted);
+                }
+                else
+                {
+                    await ShellScope.UsingChildScopeAsync(async scope =>
+                    {
+                        await UnsubscribeAsync(scope.ServiceProvider, invitation.ItemId, HttpContext.RequestAborted);
+                        await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(HttpContext.RequestAborted);
+                    });
+                }
 
-        // Recorded through the consent service: the survey invitations source keeps the address, and the sources of
-        // other modules (contacts, for one) record it too when they keep address opt-outs.
-        await _consentService.RecordAsync(ConsentChannels.Email, invitation.Email.Trim(), new ConsentChange
-        {
-            OptedOut = true,
-            Source = SurveyInvitationConsentSource.SourceName,
-        }, HttpContext.RequestAborted);
+                break;
+            }
+            catch (ConcurrencyException) when (attempt < Attempts)
+            {
+            }
+        }
 
         return View(new SurveyInvitationUnsubscribeViewModel
         {
@@ -109,6 +129,31 @@ public sealed class SurveyInvitationUnsubscribeController : Controller
             Email = invitation.Email,
             IsUnsubscribed = true,
         });
+    }
+
+    private static async Task UnsubscribeAsync(IServiceProvider services, string invitationId, CancellationToken cancellationToken)
+    {
+        var invitationStore = services.GetRequiredService<SurveyInvitationStore>();
+        var invitation = await invitationStore.FindByIdAsync(invitationId, cancellationToken);
+
+        if (invitation is null || string.IsNullOrWhiteSpace(invitation.Email))
+        {
+            return;
+        }
+
+        if (invitation.Status != SurveyInvitationStatus.Completed && invitation.Status != SurveyInvitationStatus.OptedOut)
+        {
+            invitation.Status = SurveyInvitationStatus.OptedOut;
+            await invitationStore.UpdateAsync(invitation, cancellationToken);
+        }
+
+        // Recorded through the consent service: the survey invitations source keeps the address, and the sources of
+        // other modules (contacts, for one) record it too when they keep address opt-outs.
+        await services.GetRequiredService<IConsentService>().RecordAsync(ConsentChannels.Email, invitation.Email.Trim(), new ConsentChange
+        {
+            OptedOut = true,
+            Source = SurveyInvitationConsentSource.SourceName,
+        }, cancellationToken);
     }
 
     private async Task<(SurveyInvitation Invitation, Survey Survey)> FindAsync(string token)

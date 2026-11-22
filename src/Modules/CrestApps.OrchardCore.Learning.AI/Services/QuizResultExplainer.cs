@@ -63,7 +63,7 @@ public sealed class QuizResultExplanation
     public string Message { get; set; }
 
     /// <summary>
-    /// Gets or sets the grader's overall feedback, when the learner may review the attempt.
+    /// Gets or sets the grader's overall feedback, when the review shows the learner feedback.
     /// </summary>
     public string Feedback { get; set; }
 
@@ -109,7 +109,7 @@ public sealed class QuizQuestionExplanation
     public decimal? Score { get; set; }
 
     /// <summary>
-    /// Gets or sets the feedback: the question's, the chosen options' and the grader's comment.
+    /// Gets or sets the feedback: the question's, the chosen options' and the grader's comment (the comment only when the review shows feedback).
     /// </summary>
     public string Feedback { get; set; }
 }
@@ -184,7 +184,10 @@ internal static partial class QuizResultExplainer
             return explanation;
         }
 
-        explanation.Feedback = response.Feedback;
+        // The grader's words are feedback: a review that hides feedback hides them from the model too.
+        var canSeeFeedback = (shows & ReviewShows.Feedback) != 0;
+
+        explanation.Feedback = canSeeFeedback ? response.Feedback : null;
 
         if (!canSeeScore)
         {
@@ -238,7 +241,7 @@ internal static partial class QuizResultExplainer
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(answer?.GraderComment))
+            if (canSeeFeedback && !string.IsNullOrWhiteSpace(answer?.GraderComment))
             {
                 feedback.Add(answer.GraderComment.Trim());
             }

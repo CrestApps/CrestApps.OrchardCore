@@ -11,8 +11,11 @@ namespace CrestApps.OrchardCore.Surveys.Invitations;
 /// Reads and changes the addresses that unsubscribed from survey invitations. Addresses are kept as HMACs keyed by a
 /// site key protected with ASP.NET Data Protection; plain SHA-256 hashes stored before the key existed are still
 /// honored. The document is saved with a concurrency check, so two unsubscribes at once never lose one of them: the
-/// later commit fails instead of overwriting the list. When the key can't be read (missing Data Protection keys), every
-/// address counts as unsubscribed, so no e-mail goes to someone who opted out.
+/// later commit fails instead of overwriting the list (the unsubscribe page retries it). Two first-ever unsubscribes
+/// at the same moment can each insert a list; every list is read, changes go to the oldest, and an opt-in removes the
+/// address from all of them, so neither unsubscribe is lost. When a list's key can't be read (missing Data Protection
+/// keys), an address it might hold is <see cref="SurveyInvitationOptOutState.Unknown"/>: nothing is sent to it, but
+/// nothing is recorded as an opt-out either.
 /// </summary>
 internal sealed class SurveyInvitationOptOutStore
 {
@@ -27,8 +30,9 @@ internal sealed class SurveyInvitationOptOutStore
     private readonly IDataProtector _protector;
     private readonly ILogger _logger;
 
-    private SurveyInvitationOptOutDocument _document;
-    private byte[] _key;
+    private readonly Dictionary<string, byte[]> _keys = new(StringComparer.Ordinal);
+
+    private List<SurveyInvitationOptOutDocument> _documents;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyInvitationOptOutStore"/> class.
@@ -70,36 +74,51 @@ internal sealed class SurveyInvitationOptOutStore
     }
 
     /// <summary>
-    /// Gets whether an address unsubscribed.
+    /// Gets what the list says about an address.
     /// </summary>
     /// <param name="address">The e-mail address.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns><see langword="true"/> when it unsubscribed, or when the list's key can't be read.</returns>
-    public async Task<bool> ContainsAsync(string address, CancellationToken cancellationToken = default)
+    /// <returns>Whether it unsubscribed, did not, or can't be told because a list's key can't be read.</returns>
+    public async Task<SurveyInvitationOptOutState> GetStateAsync(string address, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(address))
         {
-            return false;
+            return SurveyInvitationOptOutState.NotOptedOut;
         }
 
-        var document = await LoadAsync(cancellationToken);
+        var legacy = HashOf(address);
+        var unknown = false;
 
-        if (document.AddressHashes.Contains(HashOf(address)))
+        foreach (var document in await LoadAsync(cancellationToken))
         {
-            return true;
+            if (document.AddressHashes.Contains(legacy))
+            {
+                return SurveyInvitationOptOutState.OptedOut;
+            }
+
+            if (document.ProtectedKey is null)
+            {
+                continue;
+            }
+
+            if (Key(document) is not { } key)
+            {
+                unknown = true;
+
+                continue;
+            }
+
+            if (document.AddressHashes.Contains(KeyedHashOf(key, address)))
+            {
+                return SurveyInvitationOptOutState.OptedOut;
+            }
         }
 
-        if (document.ProtectedKey is null)
-        {
-            return false;
-        }
-
-        // Fail closed: without the key, nobody can be shown not to have unsubscribed.
-        return Key(document) is not { } key || document.AddressHashes.Contains(KeyedHashOf(key, address));
+        return unknown ? SurveyInvitationOptOutState.Unknown : SurveyInvitationOptOutState.NotOptedOut;
     }
 
     /// <summary>
-    /// Adds or removes an address.
+    /// Adds or removes an address. The change is saved with a concurrency check when the session commits.
     /// </summary>
     /// <param name="address">The e-mail address.</param>
     /// <param name="optedOut">Whether the address opted out.</param>
@@ -112,35 +131,53 @@ internal sealed class SurveyInvitationOptOutStore
             return;
         }
 
-        var document = await LoadAsync(cancellationToken);
-        var changed = false;
+        var documents = await LoadAsync(cancellationToken);
+        var legacy = HashOf(address);
+        var changed = new HashSet<SurveyInvitationOptOutDocument>();
 
-        if (document.ProtectedKey is null)
+        if (documents.Count == 0)
         {
-            document.ProtectedKey = _protector.Protect(Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
-            _key = null;
-            changed = true;
+            documents.Add(new SurveyInvitationOptOutDocument());
         }
 
-        var key = Key(document);
-        var legacy = HashOf(address);
+        // Changes go to the oldest list; another list exists only when two first unsubscribes raced.
+        var primary = documents[0];
+
+        if (primary.ProtectedKey is null)
+        {
+            primary.ProtectedKey = _protector.Protect(Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
+            changed.Add(primary);
+        }
 
         if (optedOut)
         {
+            var key = Key(primary);
+
             // Without the key the address is kept under its plain hash, so the opt-out is still honored.
-            changed |= key is null ? document.AddressHashes.Add(legacy) : document.AddressHashes.Add(KeyedHashOf(key, address)) | document.AddressHashes.Remove(legacy);
+            if (key is null ? primary.AddressHashes.Add(legacy) : primary.AddressHashes.Add(KeyedHashOf(key, address)) | primary.AddressHashes.Remove(legacy))
+            {
+                changed.Add(primary);
+            }
         }
         else
         {
-            changed |= document.AddressHashes.Remove(legacy);
-
-            if (key is not null)
+            foreach (var document in documents)
             {
-                changed |= document.AddressHashes.Remove(KeyedHashOf(key, address));
+                var removed = document.AddressHashes.Remove(legacy);
+
+                if (document.ProtectedKey is not null && Key(document) is { } key)
+                {
+                    removed |= document.AddressHashes.Remove(KeyedHashOf(key, address));
+                }
+
+                if (removed)
+                {
+                    changed.Add(document);
+                }
             }
         }
 
-        if (changed)
+        foreach (var document in changed)
         {
             await _session.SaveAsync(document, checkConcurrency: true, cancellationToken: cancellationToken);
         }
@@ -151,23 +188,29 @@ internal sealed class SurveyInvitationOptOutStore
 
     private byte[] Key(SurveyInvitationOptOutDocument document)
     {
-        if (_key is not null)
+        if (_keys.TryGetValue(document.ProtectedKey, out var cached))
         {
-            return _key;
+            return cached;
         }
+
+        byte[] key;
 
         try
         {
-            return _key = Convert.FromBase64String(_protector.Unprotect(document.ProtectedKey));
+            key = Convert.FromBase64String(_protector.Unprotect(document.ProtectedKey));
         }
         catch (CryptographicException exception)
         {
-            _logger.LogError(exception, "The key of the survey invitation opt-out list could not be read; every e-mail address is treated as unsubscribed until the Data Protection keys are restored.");
+            _logger.LogError(exception, "The key of the survey invitation opt-out list could not be read; e-mail invitations are held back, without changing them, until the Data Protection keys are restored.");
 
-            return null;
+            key = null;
         }
+
+        _keys[document.ProtectedKey] = key;
+
+        return key;
     }
 
-    private async Task<SurveyInvitationOptOutDocument> LoadAsync(CancellationToken cancellationToken)
-        => _document ??= await _session.Query<SurveyInvitationOptOutDocument>().FirstOrDefaultAsync(cancellationToken) ?? new SurveyInvitationOptOutDocument();
+    private async Task<List<SurveyInvitationOptOutDocument>> LoadAsync(CancellationToken cancellationToken)
+        => _documents ??= [.. (await _session.Query<SurveyInvitationOptOutDocument>().ListAsync(cancellationToken)).OrderBy(document => document.Id)];
 }

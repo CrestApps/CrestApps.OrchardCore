@@ -30,6 +30,8 @@ A response that still waits for a grader never passes, and its score, right answ
 
 `SurveyDefinition.Review` sets what respondents see (score, their answers, right answers, answer feedback, general feedback) at each moment: while answering (immediate feedback), right after finishing, later while the survey is open, and after it closes. `ResultsVisibility` decides when respondents see the totals of all responses (polls). `ISurveyReviewPolicy` applies these on the review page, the ending and immediate feedback.
 
+A scored survey that lets respondents change a finished response (`Navigation.AllowEditAfterSubmit`) can't show the score (when `ShowScoreToRespondent` is on), the right answers or answer feedback right after finishing or later while the survey is open: reopens are unlimited, so the respondent could read the key, or change one answer at a time and watch the score, and resubmit. The validator refuses that combination (`edit-after-review`). Show them after the survey closes, when nothing can be reopened, or turn off changes after finishing.
+
 With **One at a time, then locked** (`FeedbackMode.Immediate`), the respondent checks an answer (`/s/r/{responseId}/check/{questionId}`); it is scored and locked, and the feedback the review allows during the response is shown.
 
 ## Time limits

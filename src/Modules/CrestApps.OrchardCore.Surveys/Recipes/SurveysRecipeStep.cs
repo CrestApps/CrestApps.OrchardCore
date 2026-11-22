@@ -150,6 +150,15 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
             version.SurveyId = survey.ItemId;
             version.Number = number;
             version.Definition ??= new SurveyDefinition();
+
+            // A published version skips the publisher's checks, so the one that keeps answers apart is made here.
+            if (SurveyDefinitionValidator.HasTooLongRowId(version.Definition))
+            {
+                context.Errors.Add($"Version {number} of the survey '{survey.Name}' has a matrix row id longer than 64 characters and was skipped.");
+
+                continue;
+            }
+
             version.PublishedBy = await _users.FindUserIdAsync(SurveysRecipeJson.String(node, "PublishedByUserName"));
 
             if (version.PublishedUtc == default)

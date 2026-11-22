@@ -32,10 +32,14 @@ internal sealed class InMemorySurveyResponses : ISurveyResponseQueries
             .Where(response => query.ContextRef is null || response.Context?.ToString() == query.ContextRef)
             .Where(response => query.Statuses.Count == 0 || query.Statuses.Contains(response.Status))
             .Where(response => query.Grading is null || response.Grading == query.Grading)
-            .OrderByDescending(response => response.StartedUtc)
+            .Where(response => query.ContextKinds.Count == 0 || (response.Context is { } context && query.ContextKinds.Contains(context.Kind)))
             .ToList();
 
-        return Task.FromResult<(int, IReadOnlyList<SurveyResponse>)>((matches.Count, matches.Skip(query.Skip).Take(Math.Max(query.Take, 1)).ToList()));
+        matches = query.OldestFirst
+            ? [.. matches.OrderBy(response => response.CompletedUtc).ThenBy(response => response.StartedUtc).ThenBy(response => response.ItemId, StringComparer.Ordinal)]
+            : [.. matches.OrderByDescending(response => response.StartedUtc)];
+
+        return Task.FromResult<(int, IReadOnlyList<SurveyResponse>)>((matches.Count, matches.Skip(query.Skip).Take(Math.Clamp(query.Take, 1, SurveysConstants.PageSize)).ToList()));
     }
 
     public Task<int> CountForSurveyAsync(string surveyId, CancellationToken cancellationToken = default)
