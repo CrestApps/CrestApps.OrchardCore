@@ -352,7 +352,14 @@ if (designer) {
 
         const href = link.getAttribute('href') ?? '';
 
-        if (href === '' || href.startsWith('#') || href.startsWith('javascript:') || link.target === '_blank' || link.hasAttribute('download') || link.hasAttribute('data-bs-toggle')) {
+        if (href === '' || href.startsWith('#') || link.target === '_blank' || link.hasAttribute('download') || link.hasAttribute('data-bs-toggle')) {
+            return;
+        }
+
+        // Only a link that navigates to a page leaves the designer: script, data and mail links do not.
+        const protocol = new URL(link.href, window.location.href).protocol;
+
+        if (protocol !== 'http:' && protocol !== 'https:') {
             return;
         }
 

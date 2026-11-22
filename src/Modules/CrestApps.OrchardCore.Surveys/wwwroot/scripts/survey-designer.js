@@ -668,7 +668,9 @@
 			const link = target.closest("a[href]");
 			if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
 			const href = link.getAttribute("href") ?? "";
-			if (href === "" || href.startsWith("#") || href.startsWith("javascript:") || link.target === "_blank" || link.hasAttribute("download") || link.hasAttribute("data-bs-toggle")) return;
+			if (href === "" || href.startsWith("#") || link.target === "_blank" || link.hasAttribute("download") || link.hasAttribute("data-bs-toggle")) return;
+			const protocol = new URL(link.href, window.location.href).protocol;
+			if (protocol !== "http:" && protocol !== "https:") return;
 			if (isPanelDirty() || isSettingsDirty()) {
 				if (window.confirm(context.texts.unsaved)) leaving = true;
 				else event.preventDefault();

@@ -800,7 +800,7 @@ public sealed class SurveyRunnerController : Controller
         // This browser holds the response already (the same link opened twice): nothing to trade.
         if (SurveyResponseService.IsOwner(response, identity))
         {
-            return Redirect(cleanUrl);
+            return LocalRedirect(cleanUrl);
         }
 
         if (string.IsNullOrEmpty(response.ResumeTokenHash) || !SurveyResumeTokens.Matches(linkToken, response.ResumeTokenHash))
@@ -841,7 +841,7 @@ public sealed class SurveyRunnerController : Controller
 
         _identities.WriteResumeCookie(response.SurveyId, token);
 
-        return Redirect(cleanUrl);
+        return LocalRedirect(cleanUrl);
     }
 
     private string QueryWithoutResumeToken()
