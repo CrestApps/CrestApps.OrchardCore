@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Core.Liquid;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Invitations;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -367,19 +368,26 @@ public sealed class SurveyInvitationsController : Controller
 
         var created = 0;
 
-        foreach (var request in requests.Take(MaxRecipients))
+        try
         {
-            request.SurveyId = survey.ItemId;
-            request.CollectorId = collector.ItemId;
-
-            var result = model.SendNow
-                ? await _invitations.InviteAsync(request, HttpContext.RequestAborted)
-                : await _invitations.CreateAsync(request, requireRecipient: true, HttpContext.RequestAborted);
-
-            if (result.Succeeded)
+            foreach (var request in requests.Take(MaxRecipients))
             {
-                created++;
+                request.SurveyId = survey.ItemId;
+                request.CollectorId = collector.ItemId;
+
+                var result = model.SendNow
+                    ? await _invitations.InviteAsync(request, HttpContext.RequestAborted)
+                    : await _invitations.CreateAsync(request, requireRecipient: true, HttpContext.RequestAborted);
+
+                if (result.Succeeded)
+                {
+                    created++;
+                }
             }
+        }
+        catch (SurveyAnonymitySecretUnreadableException)
+        {
+            await NotifySecretUnreadableAsync();
         }
 
         await _notifier.SuccessAsync(H["{0} people were invited.", created]);
@@ -403,8 +411,15 @@ public sealed class SurveyInvitationsController : Controller
             return Forbid();
         }
 
-        var sent = await _invitations.SendPendingAsync(collectorId, HttpContext.RequestAborted);
-        await _notifier.SuccessAsync(H["{0} invitations were sent.", sent]);
+        try
+        {
+            var sent = await _invitations.SendPendingAsync(collectorId, HttpContext.RequestAborted);
+            await _notifier.SuccessAsync(H["{0} invitations were sent.", sent]);
+        }
+        catch (SurveyAnonymitySecretUnreadableException)
+        {
+            await NotifySecretUnreadableAsync();
+        }
 
         return RedirectToAction(nameof(Index), new { collectorId });
     }
@@ -425,11 +440,23 @@ public sealed class SurveyInvitationsController : Controller
             return Forbid();
         }
 
-        var sent = await _invitations.RemindAsync(collectorId, force: true, HttpContext.RequestAborted);
-        await _notifier.SuccessAsync(H["{0} reminders were sent.", sent]);
+        try
+        {
+            var sent = await _invitations.RemindAsync(collectorId, force: true, HttpContext.RequestAborted);
+            await _notifier.SuccessAsync(H["{0} reminders were sent.", sent]);
+        }
+        catch (SurveyAnonymitySecretUnreadableException)
+        {
+            await NotifySecretUnreadableAsync();
+        }
 
         return RedirectToAction(nameof(Index), new { collectorId });
     }
+
+    // An anonymous survey's secret that this server can't read (Data Protection keys that aren't shared) stops the
+    // sending; the administrator gets the reason instead of an error page.
+    private ValueTask NotifySecretUnreadableAsync()
+        => _notifier.ErrorAsync(H["The survey's anonymity secret can't be read on this server, so the invitations could not be sent. Reset it from the survey's Access tab. On a web farm, share the Data Protection keys across servers first, or the other servers will fail the same way."]);
 
     private async Task<SurveyInviteViewModel> BuildInviteAsync(Survey survey, SurveyCollector collector, SurveyInviteViewModel model)
     {

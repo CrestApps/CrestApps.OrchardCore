@@ -57,6 +57,7 @@ A type declares what it can do with `SurveyControlCapabilities` flags. The desig
 | `Aggregatable` | Has an analyzer for results | The registry returns a type's analyzer only with this flag, so the results report summarizes only these types |
 | `StoresFiles` | Stores uploaded files | The runner posts a page as `multipart/form-data` only when one of its questions stores files |
 | `ClientScript` | Ships a script that raises `survey:change` | The runner loads the type's `ScriptResourceName` at the foot of every page that shows the type |
+| `NotShownToRespondents` | Respondents never see it nor answer it (Hidden value) | The respondent's review leaves it out; the admin Details page shows it |
 
 When the tenant starts, Surveys logs a warning for every registration that can't work: a type whose handler reports another `ControlType` (the type would be missing from the picker, the runner and the results), a handler no type is registered for, an analyzer of a type without `Aggregatable`, and a `ClientScript` type without a `ScriptResourceName`.
 

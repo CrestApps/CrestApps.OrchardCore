@@ -66,4 +66,10 @@ public enum SurveyControlCapabilities
     /// It ships a script that raises the survey:change event.
     /// </summary>
     ClientScript = 1024,
+
+    /// <summary>
+    /// Respondents never see it nor answer it (a hidden value from the link, a consumer or a workflow), so the
+    /// respondent's review leaves it out; staff still see it on the response's details.
+    /// </summary>
+    NotShownToRespondents = 2048,
 }

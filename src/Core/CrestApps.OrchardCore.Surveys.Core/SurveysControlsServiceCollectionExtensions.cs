@@ -290,7 +290,7 @@ public static class SurveysControlsServiceCollectionExtensions
             descriptor.Category = SurveyControlCategories.Advanced;
             descriptor.Icon = "fa-solid fa-eye-slash";
             descriptor.Position = 10;
-            descriptor.Capabilities = SurveyControlCapabilities.Answerable | SurveyControlCapabilities.ConditionSource | SurveyControlCapabilities.Aggregatable;
+            descriptor.Capabilities = SurveyControlCapabilities.Answerable | SurveyControlCapabilities.ConditionSource | SurveyControlCapabilities.Aggregatable | SurveyControlCapabilities.NotShownToRespondents;
             descriptor.SettingsType = typeof(HiddenSettings);
         });
         services.AddSurveyControlAnalyzer<HiddenAnalyzer>();

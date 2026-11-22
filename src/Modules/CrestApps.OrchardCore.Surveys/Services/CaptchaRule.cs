@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ReCaptcha.Services;
@@ -9,8 +10,9 @@ namespace CrestApps.OrchardCore.Surveys.Services;
 /// Asks respondents who are not signed in to pass a CAPTCHA when the survey requires it. The runner checks the CAPTCHA
 /// with Orchard Core ReCaptcha and passes the outcome in the respondent identity. The rule is always registered and
 /// fails closed: when the survey requires a CAPTCHA but the reCAPTCHA feature is off, respondents who are not signed in
-/// are refused with <see cref="SurveyErrorCode.CaptchaUnavailable"/> instead of being let through. A personal
-/// invitation link already proves who it was sent to, so invitees are not asked.
+/// are refused with <see cref="SurveyErrorCode.CaptchaUnavailable"/> instead of being let through. An invitation sent
+/// to someone (a user, party, e-mail address or phone number) already proves who it was sent to, so invitees are not
+/// asked; a bare personal link made for no one still asks.
 /// </summary>
 public sealed class CaptchaRule : ISurveyAccessRule
 {
@@ -37,7 +39,7 @@ public sealed class CaptchaRule : ISurveyAccessRule
         if (context.IsTest
             || context.Survey.Access?.RequireCaptcha != true
             || !string.IsNullOrEmpty(context.Identity?.UserId)
-            || context.Invitation is not null
+            || HasRecipient(context.Invitation)
             || context.Identity?.CaptchaPassed == true)
         {
             return Task.FromResult(SurveyAccessDecision.Allow);
@@ -45,6 +47,19 @@ public sealed class CaptchaRule : ISurveyAccessRule
 
         return Task.FromResult(SurveyAccessDecision.Deny(IsAvailable(_serviceProvider) ? SurveyErrorCode.CaptchaRequired : SurveyErrorCode.CaptchaUnavailable));
     }
+
+    /// <summary>
+    /// Gets whether an invitation was sent to someone: a user, a party, an e-mail address or a phone number. A bare
+    /// personal link made for no one proves nothing about who opens it, so it still asks for the CAPTCHA.
+    /// </summary>
+    /// <param name="invitation">The invitation, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> when the invitation names its recipient.</returns>
+    public static bool HasRecipient(SurveyInvitation invitation)
+        => invitation is not null
+            && (invitation.Recipient is not null
+                || !string.IsNullOrWhiteSpace(invitation.UserId)
+                || !string.IsNullOrWhiteSpace(invitation.Email)
+                || !string.IsNullOrWhiteSpace(invitation.Phone));
 
     /// <summary>
     /// Gets whether a CAPTCHA can be shown and checked: the reCAPTCHA feature is on.

@@ -12,19 +12,35 @@
     <div class="survey-landing">
         <h1 class="h3 mb-3">@Model.Title</h1>
 
-        <form action="@Url.Content("~/s/i/" + Uri.EscapeDataString(Model.Token))" method="post" class="no-multisubmit" data-survey-autostart="true">
+        @if (!string.IsNullOrEmpty(Model.Message))
+        {
+            <div class="alert alert-warning" role="alert">@Model.Message</div>
+        }
+
+        <form action="@Url.Content("~/s/i/" + Uri.EscapeDataString(Model.Token))" method="post" class="no-multisubmit" data-survey-autostart="@(Model.NeedsCaptcha ? null : "true")">
             @Html.AntiForgeryToken()
+
+            @if (Model.NeedsCaptcha)
+            {
+                <div class="mb-3">
+                    <captcha mode="AlwaysShow" />
+                </div>
+            }
+
             <button type="submit" class="btn btn-primary">@T["Start"]</button>
         </form>
 
-        <script at="Foot">
-            (function () {
-                var form = document.querySelector('[data-survey-autostart="true"]');
+        @if (!Model.NeedsCaptcha)
+        {
+            <script at="Foot">
+                (function () {
+                    var form = document.querySelector('[data-survey-autostart="true"]');
 
-                if (form) {
-                    form.submit();
-                }
-            })();
-        </script>
+                    if (form) {
+                        form.submit();
+                    }
+                })();
+            </script>
+        }
     </div>
 </div>

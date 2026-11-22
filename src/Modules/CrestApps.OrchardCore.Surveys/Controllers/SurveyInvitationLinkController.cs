@@ -1,21 +1,26 @@
 using CrestApps.OrchardCore.Surveys.Core.Invitations;
 using CrestApps.OrchardCore.Surveys.Core.Services;
+using CrestApps.OrchardCore.Surveys.Filters;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
+using OrchardCore.ReCaptcha.Services;
 
 namespace CrestApps.OrchardCore.Surveys.Controllers;
 
 /// <summary>
 /// Opens a personal invitation link. Opening the link (GET) only marks the invitation opened and shows a page that
 /// posts the start; the post starts or resumes the invited person's response. A mail scanner that follows the link
-/// therefore uses up nothing, and the invitee resumes their response from any browser.
+/// therefore uses up nothing, and the invitee resumes their response from any browser. A bare link made for no one
+/// asks for the survey's CAPTCHA like a public link does.
 /// </summary>
 [Feature(SurveysConstants.Features.Invitations)]
+[TypeFilter(typeof(SurveyAnonymitySecretUnreadableFilter))]
 public sealed class SurveyInvitationLinkController : Controller
 {
     private readonly ISurveyResponseService _responses;
@@ -24,6 +29,7 @@ public sealed class SurveyInvitationLinkController : Controller
     private readonly SurveyCollectorStore _collectorStore;
     private readonly SurveyRespondentIdentityFactory _identities;
     private readonly SurveyErrorMessages _messages;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -37,6 +43,7 @@ public sealed class SurveyInvitationLinkController : Controller
     /// <param name="collectorStore">The collector store.</param>
     /// <param name="identities">The respondent identity factory.</param>
     /// <param name="messages">The error messages.</param>
+    /// <param name="serviceProvider">The services, for the optional CAPTCHA.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The localizer.</param>
     public SurveyInvitationLinkController(
@@ -46,6 +53,7 @@ public sealed class SurveyInvitationLinkController : Controller
         SurveyCollectorStore collectorStore,
         SurveyRespondentIdentityFactory identities,
         SurveyErrorMessages messages,
+        IServiceProvider serviceProvider,
         IClock clock,
         IStringLocalizer<SurveyInvitationLinkController> stringLocalizer)
     {
@@ -55,6 +63,7 @@ public sealed class SurveyInvitationLinkController : Controller
         _collectorStore = collectorStore;
         _identities = identities;
         _messages = messages;
+        _serviceProvider = serviceProvider;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -86,11 +95,7 @@ public sealed class SurveyInvitationLinkController : Controller
             return Message(survey.Title, _messages.For(SurveyErrorCode.InvitationInvalid));
         }
 
-        return View("Open", new SurveyInvitationOpenViewModel
-        {
-            Token = token,
-            Title = survey.Title,
-        });
+        return View("Open", OpenModel(token, survey, invitation, message: null));
     }
 
     /// <summary>
@@ -117,6 +122,12 @@ public sealed class SurveyInvitationLinkController : Controller
         }
 
         var identity = _identities.Build(survey.ItemId);
+
+        if (NeedsCaptcha(survey, invitation) && _serviceProvider.GetService<ReCaptchaService>() is { } captcha)
+        {
+            identity.CaptchaPassed = await captcha.ValidateCaptchaAsync((_, _) => { });
+        }
+
         var result = await _responses.StartAsync(new StartResponseRequest
         {
             SurveyId = survey.ItemId,
@@ -126,6 +137,11 @@ public sealed class SurveyInvitationLinkController : Controller
             Context = SurveyInvitationService.ContextOf(invitation),
             Culture = System.Globalization.CultureInfo.CurrentUICulture.Name,
         });
+
+        if (result.Error == SurveyErrorCode.CaptchaRequired)
+        {
+            return View("Open", OpenModel(token, survey, invitation, _messages.For(result.Error)));
+        }
 
         if (!result.Succeeded)
         {
@@ -139,6 +155,21 @@ public sealed class SurveyInvitationLinkController : Controller
 
         return Redirect(Url.Content("~/s/r/" + Uri.EscapeDataString(result.Response.ItemId)));
     }
+
+    private SurveyInvitationOpenViewModel OpenModel(string token, Survey survey, SurveyInvitation invitation, string message)
+        => new()
+        {
+            Token = token,
+            Title = survey.Title,
+            NeedsCaptcha = NeedsCaptcha(survey, invitation) && _serviceProvider.GetService<ReCaptchaService>() is not null,
+            Message = message,
+        };
+
+    // A bare personal link made for no one proves nothing about who opens it, so it asks for the survey's CAPTCHA.
+    private bool NeedsCaptcha(Survey survey, SurveyInvitation invitation)
+        => survey.Access?.RequireCaptcha == true
+            && User?.Identity?.IsAuthenticated != true
+            && !CaptchaRule.HasRecipient(invitation);
 
     private async Task<(SurveyInvitation Invitation, Survey Survey, SurveyCollector Collector)> FindAsync(string token)
     {
@@ -159,5 +190,5 @@ public sealed class SurveyInvitationLinkController : Controller
     }
 
     private ViewResult Message(string title, string message)
-        => View("~/Views/SurveyInvitationLink/Message.cshtml", new SurveyMessageViewModel { Title = title, Message = message });
+        => View("Message", new SurveyMessageViewModel { Title = title, Message = message });
 }

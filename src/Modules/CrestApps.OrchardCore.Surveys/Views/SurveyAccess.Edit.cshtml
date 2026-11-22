@@ -102,6 +102,7 @@
                        data-title="@T["Reset the anonymity secret"]"
                        data-message="@T["Restore the Data Protection keys instead if you can. A new secret starts every per-person limit over, and every invitation link already sent stops working, so the invitations must be sent again. This can't be undone."]"
                        data-ok-text="@T["Reset"]">@T["Reset the anonymity secret"]</a>
+                    <span class="hint">@T["On a web farm whose servers don't share their Data Protection keys, a reset only moves the failure: the new secret is protected with this server's keys, so the other servers can't read it. Share the keys across servers (Azure Blob Storage or Redis, for example) before you reset."]</span>
                 </div>
             </div>
         }
