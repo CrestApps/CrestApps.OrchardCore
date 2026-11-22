@@ -117,6 +117,14 @@ form), and several can be given separated by commas, such as while a key is bein
 trusts the server only when it shows that key, and a connection without one is refused. An SFTP source saved before
 the fingerprint existed fails to connect until one is added.
 
+An FTP or SFTP server, and an SFTP proxy, can't be on the site's own network: a private, loopback, link-local or
+shared address, `localhost`, or a name that resolves to one is refused when the source is saved (in the editor, through
+the API or a recipe) and again before every connection. A name that doesn't resolve is refused too. The FTP
+*PassiveAllowUnroutable* data connection type, which connects wherever the server's passive answer says, is refused
+for the same reason. A host whose file servers are internal on purpose sets
+`CrestApps_AI:FileTransfer:AllowPrivateNetwork` to `true` in the tenant's configuration; link-local addresses and the
+cloud metadata services are refused even then. The same rules apply to the FTP and SFTP MCP resources.
+
 A stored password, private key, or passphrase is never sent back to the editor. Leaving the field blank on
 save keeps the stored value while the connection signs in to the same account on the same server; type a new one to
 replace it. Changing the host, the port or the user name, or for SFTP the host key fingerprint, drops the stored

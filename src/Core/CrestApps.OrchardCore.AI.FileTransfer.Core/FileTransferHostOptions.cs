@@ -29,6 +29,14 @@ public sealed class FileTransferHostOptions
     /// encryption mode other than Explicit or Implicit). Off by default: anyone on the network path reads them.
     /// </summary>
     public bool AllowUnencryptedFtp { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an FTP or SFTP connection, or an SFTP proxy, may be on the site's own
+    /// network (a private, loopback or shared address, or a name that resolves to one), for a host whose file servers
+    /// are internal on purpose. Off by default: a tenant's administrator could otherwise probe and read the host's
+    /// internal services. Link-local addresses and the cloud metadata services are refused even when on.
+    /// </summary>
+    public bool AllowPrivateNetwork { get; set; }
 }
 
 /// <summary>
@@ -38,14 +46,15 @@ public static class FileTransferHostOptionsServiceCollectionExtensions
 {
     /// <summary>
     /// Binds <see cref="FileTransferHostOptions"/> to the tenant's configuration, and CrestApps.Core's
-    /// <see cref="FtpOptions"/>, which its FTP client checks each connection against, to the same settings. Safe to call
-    /// more than once.
+    /// <see cref="FtpOptions"/>, which its FTP client checks each connection against, to the same settings, and registers
+    /// the <see cref="FileTransferEgressPolicy"/> that reads them. Safe to call more than once.
     /// </summary>
     /// <param name="services">The services.</param>
     public static IServiceCollection AddFileTransferHostOptions(this IServiceCollection services)
     {
         services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<FileTransferHostOptions>, FileTransferHostOptionsConfiguration>());
         services.TryAddEnumerable(ServiceDescriptor.Transient<IConfigureOptions<FtpOptions>, FtpOptionsConfiguration>());
+        services.TryAddSingleton<FileTransferEgressPolicy>();
 
         return services;
     }

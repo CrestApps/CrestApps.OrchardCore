@@ -24,5 +24,8 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<FileSource, FtpFileSourceDisplayDriver>();
         services.Configure<IngestionSourceSecretOptions>(options => options.Protect<FileSource>(nameof(FtpConnectionMetadata), FtpResourceConstants.DataProtectionPurpose));
         services.AddFileTransferHostOptions();
+
+        // The package builds its FTP client itself, so the server is checked here before every connection (review 11).
+        services.AddFtpIngestionEgressGuard();
     }
 }

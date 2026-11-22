@@ -2,6 +2,7 @@
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Sftp;
 using CrestApps.Core.AI.Sftp.Models;
+using CrestApps.OrchardCore.AI.FileTransfer.Core;
 using CrestApps.OrchardCore.AI.FileTransfer.Core.Drivers;
 using CrestApps.OrchardCore.AI.FileTransfer.Core.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
@@ -21,10 +22,12 @@ public sealed class SftpResourceDisplayDriver : SftpConnectionDisplayDriverBase<
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="egressPolicy">Keeps the server and proxy off the site's own network.</param>
     public SftpResourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
-        IStringLocalizer<SftpResourceDisplayDriver> stringLocalizer)
-        : base(dataProtectionProvider, stringLocalizer)
+        IStringLocalizer<SftpResourceDisplayDriver> stringLocalizer,
+        FileTransferEgressPolicy egressPolicy = null)
+        : base(dataProtectionProvider, stringLocalizer, egressPolicy)
     {
     }
 

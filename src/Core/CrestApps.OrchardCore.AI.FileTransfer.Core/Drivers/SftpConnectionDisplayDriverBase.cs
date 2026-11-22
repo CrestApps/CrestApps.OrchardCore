@@ -21,17 +21,22 @@ public abstract class SftpConnectionDisplayDriverBase<TModel> : DisplayDriver<TM
     where TModel : class
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly FileTransferEgressPolicy _egressPolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SftpConnectionDisplayDriverBase{TModel}"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The provider the secrets are protected with.</param>
     /// <param name="stringLocalizer">The localizer of the derived driver, which owns the validation messages.</param>
+    /// <param name="egressPolicy">Keeps the server and proxy off the site's own network; <see langword="null"/> checks
+    /// only addresses typed as such.</param>
     protected SftpConnectionDisplayDriverBase(
         IDataProtectionProvider dataProtectionProvider,
-        IStringLocalizer stringLocalizer)
+        IStringLocalizer stringLocalizer,
+        FileTransferEgressPolicy egressPolicy = null)
     {
         _dataProtectionProvider = dataProtectionProvider;
+        _egressPolicy = egressPolicy ?? FileTransferEgressPolicy.AddressesOnly(null);
         S = stringLocalizer;
     }
 
@@ -96,6 +101,18 @@ public abstract class SftpConnectionDisplayDriverBase<TModel> : DisplayDriver<TM
         if (model.ProxyPort is < 1 or > 65535)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProxyPort), S["The proxy port must be between 1 and 65535."]);
+        }
+
+        // A server or proxy on the site's own network would let the connection probe or read the host's internal
+        // services; the host's operator allows it with CrestApps_AI:FileTransfer:AllowPrivateNetwork (review 11).
+        if (!string.IsNullOrWhiteSpace(model.Host) && !_egressPolicy.IsAllowed(model.Host))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Host), S["This server is on the site's own network, or its name could not be found. Use a public server, or ask the host to allow a private network for file transfers."]);
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.ProxyHost) && !_egressPolicy.IsAllowed(model.ProxyHost))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProxyHost), S["This proxy is on the site's own network, or its name could not be found. Use a public proxy, or ask the host to allow a private network for file transfers."]);
         }
 
         // The client trusts the server only when it shows one of these keys, and refuses a connection that names none, so

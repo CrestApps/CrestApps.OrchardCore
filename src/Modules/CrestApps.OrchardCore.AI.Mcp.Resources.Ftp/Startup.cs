@@ -40,6 +40,9 @@ public sealed class Startup : StartupBase
             ];
         });
 
+        // The package builds its FTP client itself, so the server is checked here before every read (review 11).
+        services.AddFtpResourceEgressGuard();
+
         services.AddDisplayDriver<McpResource, FtpResourceDisplayDriver>();
         services.AddScoped<IMcpResourceHandler, FtpMcpResourceHandler>();
     }

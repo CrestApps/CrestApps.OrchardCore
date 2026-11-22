@@ -29,11 +29,14 @@ internal sealed class FtpFileSourceDisplayDriver : FtpConnectionDisplayDriverBas
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider the password is encrypted with.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="hostOptions">What the host's operator allows.</param>
+    /// <param name="egressPolicy">Keeps the server off the site's own network.</param>
     public FtpFileSourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<FtpFileSourceDisplayDriver> stringLocalizer,
-        IOptions<FileTransferHostOptions> hostOptions)
-        : base(dataProtectionProvider, stringLocalizer, hostOptions)
+        IOptions<FileTransferHostOptions> hostOptions,
+        FileTransferEgressPolicy egressPolicy = null)
+        : base(dataProtectionProvider, stringLocalizer, hostOptions, egressPolicy)
     {
     }
 

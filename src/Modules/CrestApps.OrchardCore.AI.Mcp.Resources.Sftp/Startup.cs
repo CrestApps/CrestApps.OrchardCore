@@ -1,6 +1,7 @@
 ﻿using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Sftp;
+using CrestApps.OrchardCore.AI.FileTransfer.Core;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Drivers;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Handlers;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +38,10 @@ public sealed class Startup : StartupBase
                 new McpResourceVariable("path") { Description = S["The remote file path on the SFTP server."] },
             ];
         });
+
+        // The package builds its SFTP client itself, so the server and proxy are checked here before every read and when
+        // a resource is saved through the catalog (review 11).
+        services.AddSftpResourceEgressGuard();
 
         services.AddDisplayDriver<McpResource, SftpResourceDisplayDriver>();
         services.AddScoped<IMcpResourceHandler, SftpMcpResourceHandler>();

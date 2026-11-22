@@ -22,6 +22,7 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly FileTransferHostOptions _hostOptions;
+    private readonly FileTransferEgressPolicy _egressPolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FtpConnectionDisplayDriverBase{TModel}"/> class.
@@ -29,13 +30,17 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
     /// <param name="dataProtectionProvider">The provider the password is protected with.</param>
     /// <param name="stringLocalizer">The localizer of the derived driver, which owns the validation messages.</param>
     /// <param name="hostOptions">What the host's operator allows, such as accepting any FTP server certificate.</param>
+    /// <param name="egressPolicy">Keeps the server off the site's own network; <see langword="null"/> checks only
+    /// addresses typed as such.</param>
     protected FtpConnectionDisplayDriverBase(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer stringLocalizer,
-        IOptions<FileTransferHostOptions> hostOptions)
+        IOptions<FileTransferHostOptions> hostOptions,
+        FileTransferEgressPolicy egressPolicy = null)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _hostOptions = hostOptions?.Value ?? new FileTransferHostOptions();
+        _egressPolicy = egressPolicy ?? FileTransferEgressPolicy.AddressesOnly(hostOptions);
         S = stringLocalizer;
     }
 
@@ -88,6 +93,20 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Port), S["The port must be between 1 and 65535."]);
         }
 
+        // A server on the site's own network would let the connection probe or read the host's internal services; the
+        // host's operator allows it with CrestApps_AI:FileTransfer:AllowPrivateNetwork (review 11).
+        if (!string.IsNullOrWhiteSpace(model.Host) && !_egressPolicy.IsAllowed(model.Host))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Host), S["This server is on the site's own network, or its name could not be found. Use a public server, or ask the host to allow a private network for file transfers."]);
+        }
+
+        // FluentFTP's PassiveAllowUnroutable (PASVUSE) connects the data channel to whatever address the server's PASV
+        // answer names, even one on the site's own network, so a server could point it inside.
+        if (IsUnroutablePassive(model.DataConnectionType) && !_egressPolicy.AllowPrivateNetwork)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DataConnectionType), S["This data connection type lets the server send the connection to the site's own network. Choose another one."]);
+        }
+
         // Accepting any certificate lets anyone on the network path read the credentials and the files, so only the
         // host's operator can allow it (CrestApps_AI:FileTransfer:AllowAnyFtpCertificate).
         if (model.ValidateAnyCertificate && !_hostOptions.AllowAnyFtpCertificate)
@@ -131,6 +150,11 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
             RetryAttempts = model.RetryAttempts,
         };
     }
+
+    private static bool IsUnroutablePassive(string dataConnectionType)
+        => string.Equals(dataConnectionType?.Trim(), "PassiveAllowUnroutable", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(dataConnectionType?.Trim(), "PASVUSE", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(dataConnectionType?.Trim(), "7", StringComparison.Ordinal);
 
     // The FTP client's own rule: only Explicit and Implicit send the credentials over TLS.
     private static bool IsEncrypted(string encryptionMode)
