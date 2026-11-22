@@ -6,7 +6,7 @@
 
 @if (await AuthorizationService.AuthorizeAsync(User, TaxationPermissions.VerifyIncomeTaxRules))
 {
-    <a asp-action="Verify" asp-route-id="@Model.Value.ItemId" class="dropdown-item" data-title="@T["Verify"]" data-message="@T["Mark the income tax rule as checked against the agency's publications? Any later change to the rule clears the mark."]" data-url-af="UnsafeUrl">@T["Verify"]</a>
+    <a asp-action="Verify" asp-route-id="@Model.Value.ItemId" class="dropdown-item" data-title="@T["Verify"]" data-message="@T["Mark the income tax rule as checked against the agency's publications? Any later change to the rule clears the mark."]" data-url-af="RemoveUrl UnsafeUrl">@T["Verify"]</a>
 }
 
 <a asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete the income tax rule? Pay already worked out keeps its taxes. To stop a rule from a day on, give it a last day instead."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
