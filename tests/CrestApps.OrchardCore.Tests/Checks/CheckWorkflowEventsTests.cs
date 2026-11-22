@@ -16,19 +16,33 @@ public sealed class CheckWorkflowEventsTests
     [InlineData(CheckChangeKind.StopPayment, new[] { nameof(CheckStopPaymentEvent) })]
     [InlineData(CheckChangeKind.Reissued, new[] { nameof(CheckReissuedEvent) })]
     [InlineData(CheckChangeKind.Stale, new[] { nameof(CheckStaleEvent) })]
+    [InlineData(CheckChangeKind.Uncleared, new[] { nameof(CheckUnclearedEvent) })]
+    [InlineData(CheckChangeKind.Spoiled, new[] { nameof(CheckVoidedEvent) })]
     public void EachCheckChange_StartsItsEvents(CheckChangeKind kind, string[] expected)
         => Assert.Equal(expected, ChecksWorkflowObserver.EventsFor(kind));
 
     [Fact]
-    public void EveryCheckChange_StartsAtMostOneEvent_AndOnlyAVoidStartsCheckVoided()
+    public void EveryCheckChange_StartsAtMostOneEvent_AndOnlyAVoidOrASpoiledSheetStartsCheckVoided()
     {
         foreach (var kind in Enum.GetValues<CheckChangeKind>())
         {
             var events = ChecksWorkflowObserver.EventsFor(kind);
 
             Assert.True(events.Length <= 1, $"{kind} starts {string.Join(", ", events)}; a change starts one event.");
-            Assert.Equal(kind == CheckChangeKind.Voided, events.Contains(nameof(CheckVoidedEvent)));
+            Assert.Equal(kind is CheckChangeKind.Voided or CheckChangeKind.Spoiled, events.Contains(nameof(CheckVoidedEvent)));
         }
+    }
+
+    [Fact]
+    public void AVoidedChecksInput_CarriesTheVoidDate_AndAnUnclearedOneTheDateItHadCleared()
+    {
+        var check = new CheckRecord { ItemId = "c1", Number = 1001, CheckDate = new DateOnly(2026, 11, 20), Status = CheckStatus.Voided };
+
+        var voided = ChecksWorkflowObserver.Input(new CheckChange { Check = check, Kind = CheckChangeKind.Voided, VoidedOn = new DateOnly(2026, 11, 25) });
+        var uncleared = ChecksWorkflowObserver.Input(new CheckChange { Check = check, Kind = CheckChangeKind.Uncleared, ClearedOn = new DateOnly(2026, 11, 27) });
+
+        Assert.Equal(("2026-11-25", null), (voided["VoidedOn"], voided["ClearedOn"]));
+        Assert.Equal("2026-11-27", uncleared["ClearedOn"]);
     }
 
     [Fact]

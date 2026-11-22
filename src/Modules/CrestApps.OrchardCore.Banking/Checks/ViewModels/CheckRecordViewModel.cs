@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Addresses.Core.Editing;
+using CrestApps.OrchardCore.Banking.Checks.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement;
@@ -31,10 +32,21 @@ public class CheckRecordViewModel
     [BindNever]
     public IShape PayeeAddressEditor { get; set; }
 
+    /// <summary>
+    /// Gets or sets how the check gets its number.
+    /// </summary>
+    public CheckNumbering Numbering { get; set; }
 
+    /// <summary>
+    /// Gets or sets the number of a check written by hand, as text.
+    /// </summary>
+    public string Number { get; set; }
 
-
-
+    /// <summary>
+    /// Gets or sets the ways a check can get its number.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> NumberingOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the amount, bound by the invariant number binder; <see langword="null"/> when empty or unreadable.

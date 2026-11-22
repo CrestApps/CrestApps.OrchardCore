@@ -1,0 +1,52 @@
+@using CrestApps.OrchardCore.Currencies
+@model CheckPrintRunViewModel
+
+@{
+    var last = Model.First + Model.Checks.Count - 1;
+}
+
+<zone Name="Title">
+    <breadcrumb name="ChecksPrintRunConfirm" title="@T["Print and confirm"]">
+        <breadcrumb-item id="Checks" action="Index" controller="Checks" area="CrestApps.OrchardCore.Banking" permission="@ChecksPermissions.ViewCheckRegister.Name">@T["Checks"]</breadcrumb-item>
+        <breadcrumb-item id="ChecksPrintRun" action="PrintRun" controller="Checks" area="CrestApps.OrchardCore.Banking" route-bankAccountId="@Model.BankAccountId">@T["Print queued checks"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@* No no-multisubmit: downloading the checks opens a new tab and must not lock the confirm button. *@
+<form method="post" asp-action="ConfirmPrintRun">
+    <input type="hidden" asp-for="BankAccountId" />
+    <input type="hidden" asp-for="LayoutId" />
+    <input type="hidden" asp-for="FirstNumber" />
+    <input type="hidden" asp-for="PrintRunId" />
+    @foreach (var check in Model.Checks)
+    {
+        <input type="hidden" name="CheckIds" value="@check.ItemId" />
+    }
+
+    <div class="card mb-3">
+        <div class="card-header">@T["1. Print"]</div>
+        <div class="card-body">
+            <p class="mb-0">@T["Load sheets {0} to {1} of {2} in the printer, choose Download the checks and print them. Nothing is recorded until you confirm.", Model.First, last, Model.BankAccountName]</p>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["2. Check every sheet"]</div>
+        <div class="card-body">
+            <p class="hint">@T["Tick each sheet that misprinted, such as a jam or a misaligned sheet. Its number is kept as a spoiled check so it is never used again, and its check waits for the next run."]</p>
+            @foreach (var (check, index) in Model.Checks.Select((check, index) => (check, index)))
+            {
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="MisprintedCheckIds" value="@check.ItemId" id="misprint-@check.ItemId" checked="@Model.MisprintedCheckIds.Contains(check.ItemId)" />
+                    <label class="form-check-label" for="misprint-@check.ItemId">@T["Sheet {0} misprinted: {1}, {2} {3}", Model.First + index, check.PayeeName, CurrencyScale.FormatForDisplay(check.Amount, check.Currency), check.Currency]</label>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Record as printed"]</button>
+        <button class="btn btn-secondary" type="submit" formaction="@Url.Action("PrintRunPdf", "Checks", new { area = "CrestApps.OrchardCore.Banking" })" formtarget="_blank">@T["Download the checks"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="PrintRun" asp-route-bankAccountId="@Model.BankAccountId">@T["Cancel"]</a>
+    </div>
+</form>

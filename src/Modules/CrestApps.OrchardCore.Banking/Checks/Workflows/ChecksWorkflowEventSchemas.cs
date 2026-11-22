@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Banking.Checks.Workflows;
 /// </summary>
 internal abstract class CheckEventSchemaBase : WorkflowActivitySchemaDefinitionBase
 {
-    protected const string Input = " Input: CheckId, Number, BankAccountId, PayeeName, Amount, Currency, CheckDate, SourceKind, SourceId, Status, Change, ReplacedById, Reason, Actor.";
+    protected const string Input = " Input: CheckId, Number, BankAccountId, PayeeName, Amount, Currency, CheckDate, SourceKind, SourceId, Status, Change, ReplacedById, Reason, Actor, VoidedOn, ClearedOn.";
 
     protected override string Category => "Checks";
 

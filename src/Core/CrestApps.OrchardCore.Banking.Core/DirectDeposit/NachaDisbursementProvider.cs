@@ -80,6 +80,11 @@ public sealed class NachaDisbursementProvider : IDisbursementProvider
             return DisbursementSubmitResult.Failed(S["The bank account the money leaves from no longer exists."]);
         }
 
+        if (!BankAccountKinds.IsDeposit(source.Kind))
+        {
+            return DisbursementSubmitResult.Failed(S["A bank file sends money only from a checking or savings account, and {0} is not one.", source.Name]);
+        }
+
         var settings = source.TryGet<NachaOriginSettings>(out var stored) ? stored : null;
 
         if (settings is not { Enabled: true } || string.IsNullOrWhiteSpace(settings.ImmediateOrigin) || string.IsNullOrWhiteSpace(settings.CompanyIdentification) || string.IsNullOrWhiteSpace(settings.CompanyName))
@@ -148,6 +153,13 @@ public sealed class NachaDisbursementProvider : IDisbursementProvider
             if (destination is null || !BankAccountNumbers.HasNumbers(destination))
             {
                 errors.Add(S["The bank account of {0} no longer exists or has no numbers.", disbursement.PayeeName]);
+
+                continue;
+            }
+
+            if (!BankAccountKinds.IsDeposit(destination.Kind))
+            {
+                errors.Add(S["The bank account of {0} is not a checking or savings account, which a bank file pays into.", disbursement.PayeeName]);
 
                 continue;
             }

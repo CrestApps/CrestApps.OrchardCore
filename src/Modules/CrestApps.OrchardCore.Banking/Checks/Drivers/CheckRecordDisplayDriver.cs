@@ -17,8 +17,9 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Banking.Checks.Drivers;
 
 /// <summary>
-/// The rows of the check register, and the editor of a check written by hand. The editor fills an unsaved check; the
-/// controller issues it through the check rules, which give it its number.
+/// The rows of the check register, and the editor of a check written in the admin. The editor fills an unsaved check,
+/// with how it gets its number (and the number of a check written by hand); the controller issues it through the check
+/// rules.
 /// </summary>
 internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
 {
@@ -93,6 +94,14 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
             model.Currency = check.Currency;
             model.CheckDate = (check.CheckDate == default ? today : check.CheckDate).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             model.Memo = check.Memo;
+            model.Numbering = check.Numbering;
+            model.Number = check.Numbering == CheckNumbering.Handwritten && check.Number > 0 ? check.Number.ToString(CultureInfo.InvariantCulture) : null;
+            model.NumberingOptions =
+            [
+                new SelectListItem(S["The account's next number"], nameof(CheckNumbering.Next), check.Numbering == CheckNumbering.Next),
+                new SelectListItem(S["Number it when it prints on pre-printed checks"], nameof(CheckNumbering.AtPrint), check.Numbering == CheckNumbering.AtPrint),
+                new SelectListItem(S["Already written by hand"], nameof(CheckNumbering.Handwritten), check.Numbering == CheckNumbering.Handwritten),
+            ];
             model.BankAccountOptions = accounts
                 .Select(account => new SelectListItem($"{account.Name} ({BankAccountNumbers.Masked(account)})", account.ItemId, account.ItemId == check.BankAccountId))
                 .ToList();
@@ -127,6 +136,20 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
 
         await _addressEditor.PopulateAsync(model.PayeeAddress, AddressOptions(model.PayeeAddress.Country));
         check.Memo = string.IsNullOrWhiteSpace(model.Memo) ? null : model.Memo.Trim();
+        check.Numbering = model.Numbering;
+        check.Number = 0;
+
+        if (model.Numbering == CheckNumbering.Handwritten)
+        {
+            if (long.TryParse(model.Number?.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var number) && number > 0)
+            {
+                check.Number = number;
+            }
+            else
+            {
+                context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.Number), S["Enter the number written on the check."]);
+            }
+        }
 
         // An amount that can't be read is also a model error from the binder, so it is never saved as another number.
         if (model.Amount is decimal amount && amount > 0m)
