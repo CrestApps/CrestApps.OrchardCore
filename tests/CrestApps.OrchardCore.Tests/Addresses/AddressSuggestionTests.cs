@@ -199,6 +199,34 @@ public sealed class AddressSuggestionTests
         harness.Provider.Verify(provider => provider.SuggestAsync(It.IsAny<AddressSuggestionRequest>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
     }
 
+    /// <summary>
+    /// Review 11 (M-address-suggestions): the editor token isn't tied to a visitor, so one network could spend the site's
+    /// whole day of paid calls in a few hours. Each network now has its own share of the day.
+    /// </summary>
+    [Fact]
+    public async Task OneNetwork_CantSpendMoreThanItsShareOfTheDay()
+    {
+        // Arrange
+        var harness = new SuggestionHarness(dailyRequestLimit: 100, networkDailyRequestLimit: 3);
+        var token = harness.CreateToken();
+
+        // Act
+        var statuses = new List<int>();
+
+        for (var i = 0; i < 5; i++)
+        {
+            statuses.Add(await harness.SuggestAsync(token, address: "203.0.113.7"));
+        }
+
+        var otherNetwork = await harness.SuggestAsync(token, address: "198.51.100.9");
+
+        // Assert
+        Assert.Equal([200, 200, 200], statuses.Take(3));
+        Assert.All(statuses.Skip(3), status => Assert.Equal(StatusCodes.Status429TooManyRequests, status));
+        Assert.Equal(StatusCodes.Status200OK, otherNetwork);
+        harness.Provider.Verify(provider => provider.SuggestAsync(It.IsAny<AddressSuggestionRequest>(), It.IsAny<CancellationToken>()), Times.Exactly(4));
+    }
+
     [Fact]
     public async Task ADailyLimitOfZero_FailsClosed()
     {
@@ -228,7 +256,7 @@ public sealed class AddressSuggestionTests
     {
         private readonly ServiceProvider _services;
 
-        public SuggestionHarness(int? dailyRequestLimit = null)
+        public SuggestionHarness(int? dailyRequestLimit = null, int? networkDailyRequestLimit = null)
         {
             Provider.Setup(provider => provider.IsAvailableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
             Provider.Setup(provider => provider.SuggestAsync(It.IsAny<AddressSuggestionRequest>(), It.IsAny<CancellationToken>()))
@@ -245,6 +273,11 @@ public sealed class AddressSuggestionTests
             if (dailyRequestLimit is { } limit)
             {
                 services.Configure<AddressAutocompleteOptions>(options => options.DailyRequestLimit = limit);
+            }
+
+            if (networkDailyRequestLimit is { } networkLimit)
+            {
+                services.Configure<AddressAutocompleteOptions>(options => options.NetworkDailyRequestLimit = networkLimit);
             }
 
             _services = services.BuildServiceProvider();

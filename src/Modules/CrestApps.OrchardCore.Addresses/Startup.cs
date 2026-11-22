@@ -37,17 +37,18 @@ public sealed class Startup : StartupBase
         // The editor token is a signed, short-lived token.
         services.AddSignedLinks();
 
-        // The suggestion endpoints are throttled whether or not Orchard Core's Rate Limits feature is on: a minute per
-        // network, and a day for the whole site that the tenant's configuration sets.
+        // The suggestion endpoints are throttled whether or not Orchard Core's Rate Limits feature is on: a minute and a day
+        // per network, and a day for the whole site, the days set by the tenant's configuration.
         services.AddOptions<AddressAutocompleteOptions>()
             .Configure<IServiceProvider>((options, serviceProvider) =>
                 serviceProvider.GetService<IShellConfiguration>()?.GetSection(AddressAutocompleteOptions.SectionName).Bind(options));
         services.AddAttemptPolicy(AddressAutocompleteEndpoints.NetworkAttemptPolicy, AddressAutocompleteEndpoints.RequestsPerMinute, TimeSpan.FromMinutes(1));
         services.AddOptions<AttemptLimitOptions>()
-            .Configure<IOptions<AddressAutocompleteOptions>>((attempts, addresses) => attempts.AddPolicy(
-                AddressAutocompleteEndpoints.DailyAttemptPolicy,
-                addresses.Value.DailyRequestLimit,
-                TimeSpan.FromDays(1)));
+            .Configure<IOptions<AddressAutocompleteOptions>>((attempts, addresses) =>
+            {
+                attempts.AddPolicy(AddressAutocompleteEndpoints.DailyAttemptPolicy, addresses.Value.DailyRequestLimit, TimeSpan.FromDays(1));
+                attempts.AddPolicy(AddressAutocompleteEndpoints.NetworkDailyAttemptPolicy, addresses.Value.NetworkDailyRequestLimit, TimeSpan.FromDays(1));
+            });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

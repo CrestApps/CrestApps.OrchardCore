@@ -19,6 +19,11 @@
                   "type": "integer",
                   "default": 10000,
                   "description": "How many suggestion and resolve calls the whole site may make to the paid provider in a day. Zero or less turns suggestions off."
+                },
+                "NetworkDailyRequestLimit": {
+                  "type": "integer",
+                  "default": 500,
+                  "description": "How many of those calls one network may make in a day, so one network can't spend the site's day. Zero or less turns suggestions off."
                 }
               }
             }

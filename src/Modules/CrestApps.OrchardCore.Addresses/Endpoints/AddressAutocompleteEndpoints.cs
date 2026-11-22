@@ -11,9 +11,10 @@ namespace CrestApps.OrchardCore.Addresses.Endpoints;
 /// <summary>
 /// Address suggestions for the address editor: addresses for what was typed, and the parts of the one picked. Each one is
 /// a call the store pays its provider for, so both endpoints answer only a page that shows the editor (the editor token
-/// in the address), hold each network to <see cref="RequestsPerMinute"/> requests a minute whether or not Orchard Core's
-/// Rate Limits feature is on, and stop for the day at <see cref="AddressAutocompleteOptions.DailyRequestLimit"/>. With
-/// Rate Limits on, the <see cref="AddressConstants.AutocompleteRateLimitGroup"/> group limit applies as well.
+/// in the address), hold each network to <see cref="RequestsPerMinute"/> requests a minute and
+/// <see cref="AddressAutocompleteOptions.NetworkDailyRequestLimit"/> a day whether or not Orchard Core's Rate Limits feature
+/// is on, and stop for the day at <see cref="AddressAutocompleteOptions.DailyRequestLimit"/>. With Rate Limits on, the
+/// <see cref="AddressConstants.AutocompleteRateLimitGroup"/> group limit applies as well.
 /// </summary>
 internal static class AddressAutocompleteEndpoints
 {
@@ -30,6 +31,12 @@ internal static class AddressAutocompleteEndpoints
     /// The attempt policy that holds the whole site to <see cref="AddressAutocompleteOptions.DailyRequestLimit"/>.
     /// </summary>
     public const string DailyAttemptPolicy = "address-suggestions-daily";
+
+    /// <summary>
+    /// The attempt policy that holds each network to its share of the day,
+    /// <see cref="AddressAutocompleteOptions.NetworkDailyRequestLimit"/>.
+    /// </summary>
+    public const string NetworkDailyAttemptPolicy = "address-suggestions-network-daily";
 
     // Requests a visitor may make in a minute; typing an address takes a dozen or so.
     internal const int RequestsPerMinute = 60;
@@ -144,20 +151,29 @@ internal static class AddressAutocompleteEndpoints
     private static bool IsEditorToken(SignedTokenService tokens, string token)
         => token is { Length: > 0 and <= 1024 } && tokens.Unprotect(TokenPurpose, token) == TokenValue;
 
-    // The network's minute first, so one script can't spend the site's day; then the site's day. A daily limit of zero or
-    // less refuses: the limit fails closed, as the limiter does when its counter can't be reached.
+    // The network's minute and its share of the day first, so one network can't spend the site's day; then the site's
+    // day. A daily limit of zero or less refuses: the limit fails closed, as the limiter does when its counter can't be
+    // reached.
     private static async Task<IResult> RefuseAsync(HttpContext httpContext, IAttemptLimiter limiter, AddressAutocompleteOptions options)
     {
-        var network = await limiter.AcquireAsync(NetworkAttemptPolicy, ClientNetworkKey.NetworkOnly(httpContext), httpContext.RequestAborted);
+        var networkKey = ClientNetworkKey.NetworkOnly(httpContext);
+        var network = await limiter.AcquireAsync(NetworkAttemptPolicy, networkKey, httpContext.RequestAborted);
 
         if (!network.Allowed)
         {
             return new TooManyRequestsResult(network.RetryAfter);
         }
 
-        if (options.DailyRequestLimit <= 0)
+        if (options.DailyRequestLimit <= 0 || options.NetworkDailyRequestLimit <= 0)
         {
             return new TooManyRequestsResult(TimeSpan.FromHours(1));
+        }
+
+        var networkDay = await limiter.AcquireAsync(NetworkDailyAttemptPolicy, networkKey, httpContext.RequestAborted);
+
+        if (!networkDay.Allowed)
+        {
+            return new TooManyRequestsResult(networkDay.RetryAfter);
         }
 
         var daily = await limiter.AcquireAsync(DailyAttemptPolicy, DailyKey, httpContext.RequestAborted);

@@ -16,4 +16,11 @@ public sealed class AddressAutocompleteOptions
     /// less turns suggestions off: the limit fails closed, it is never lifted.
     /// </summary>
     public int DailyRequestLimit { get; set; } = 10_000;
+
+    /// <summary>
+    /// Gets or sets how many of those calls one network may make in a day, so one visitor's network can't spend the
+    /// site's day. Typing an address takes a dozen or so calls. Zero or less turns suggestions off for everyone, as
+    /// <see cref="DailyRequestLimit"/> does.
+    /// </summary>
+    public int NetworkDailyRequestLimit { get; set; } = 500;
 }
