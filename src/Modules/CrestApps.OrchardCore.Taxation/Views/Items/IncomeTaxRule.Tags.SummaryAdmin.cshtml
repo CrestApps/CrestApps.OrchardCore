@@ -29,6 +29,14 @@
     <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Rate"]">@rate.ToString("0.####", CultureInfo.CurrentCulture) %</span>
 }
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Applies"]"><i class="fa-solid fa-calendar-days text-secondary me-1" aria-hidden="true"></i>@rule.EffectiveFrom.ToString("d", CultureInfo.CurrentCulture)@(rule.EffectiveTo is { } to ? " – " + to.ToString("d", CultureInfo.CurrentCulture) : string.Empty)</span>
+@if (rule.IsVerified)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@(string.IsNullOrEmpty(rule.VerificationSource) ? T["Verified by {0}", rule.VerifiedBy] : T["Verified by {0} against {1}", rule.VerifiedBy, rule.VerificationSource])"><i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@T["Verified"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Nobody has checked the rule against the agency's publications since it last changed. It is still worked out."]"><i class="fa-solid fa-circle-question text-warning me-1" aria-hidden="true"></i>@T["Not verified"]</span>
+}
 @if (!rule.Enabled)
 {
     <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Off"]</span>

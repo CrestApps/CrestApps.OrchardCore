@@ -81,6 +81,13 @@ public sealed class Employer : CatalogItem, INameAwareModel, IModifiedUtcAwareMo
     public IList<EmployerTaxRegistration> Registrations { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the tax jurisdictions where the employer's people work when their pay profile names no work site
+    /// team, or the team has no Payroll jurisdictions, such as US-MI and US-MI-DETROIT: a business with one location
+    /// says where people work without the Teams feature. A work site team's jurisdictions come first.
+    /// </summary>
+    public IList<string> WorkJurisdictions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets whether the employer runs payroll.
     /// </summary>
     public EmployerStatus Status { get; set; } = EmployerStatus.Active;
@@ -148,6 +155,13 @@ public sealed class EmployerTaxRegistration
     /// Gets or sets how often taxes are deposited, such as Monthly or SemiWeekly.
     /// </summary>
     public string DepositFrequency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tax categories the registration covers, such as IncomeTax or Unemployment, when the employer has
+    /// several registrations in one jurisdiction (a state's income tax withholding account and its unemployment
+    /// insurance account); empty for any. A tax on the employer's own rate reads the registration of its category first.
+    /// </summary>
+    public IList<string> Categories { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the rates the agency assigned, such as an unemployment rate, each from a day on.

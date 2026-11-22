@@ -72,7 +72,7 @@ Then `imsmanifest.xml` is read:
 
 **The first SCO is launched.** A package with one SCO, or a simple package with several SCOs whose first SCO is the course, runs as expected. A package that needs the learner to move from SCO to SCO (sequencing between SCOs) is not supported: only the first one runs, and the editor says how many SCOs the package has. SCORM 2004 sequencing rules, rollup and navigation requests are not applied; the editor says so when the manifest has sequencing information. A SCORM package of assets only, with no SCO, is refused because it cannot report progress; a manifest that says nothing of SCORM is an IMS content package (below).
 
-A clean archive of only the extracted files, under their checked names, is kept in the protected file store (`IProtectedFileStore`), through Orchard Core's file creation pipeline, so an antivirus scanner registered there can refuse it. The temporary folder is always deleted. The package files are not in the media library and no URL serves them except the launch endpoint below.
+A clean archive of only the extracted files, under their checked names, is kept in the protected file store (`IProtectedFileStore`), through Orchard Core's file creation pipeline, so an antivirus scanner registered there can refuse it. The temporary folder is always deleted. The package files are not in the media library and no URL serves them except the launch endpoint below. The store is a folder of the tenant's `App_Data` unless **Protected Files - Azure Blob Storage** keeps it in a blob container; see [Protected Files](protected-files.md), including how a launch reads a package from Azure Blob Storage through a local copy.
 
 ### IMS content packages
 

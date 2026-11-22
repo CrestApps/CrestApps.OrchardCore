@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 
@@ -47,6 +48,32 @@ public sealed class IncomeTaxRule : CatalogItem, INameAwareModel, IModifiedUtcAw
     /// (Quebec has its own plan).
     /// </summary>
     public List<string> ExceptJurisdictions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whose home or place of work a rule below a country applies to: anyone in its jurisdiction (the
+    /// default), only a person whose home is in it, or only a person who works in it and doesn't live in it.
+    /// </summary>
+    public IncomeTaxResidency Residency { get; set; }
+
+    /// <summary>
+    /// Gets or sets a name the rule shares with others of which only one applies to a person, or
+    /// <see langword="null"/>: of the rules of a group that apply, only the one with the lowest
+    /// <see cref="GroupPriority"/> is worked out (such as a state's city taxes: a resident of a taxing city pays only
+    /// its resident rate, anyone else the nonresident rate of the city they work in).
+    /// </summary>
+    public string ExclusiveGroup { get; set; }
+
+    /// <summary>
+    /// Gets or sets the rule's place among the rules of its <see cref="ExclusiveGroup"/>; lower wins.
+    /// </summary>
+    public int GroupPriority { get; set; }
+
+    /// <summary>
+    /// Gets or sets the jurisdiction whose election the rule reads, when it isn't the rule's own, or
+    /// <see langword="null"/>: a city tax that takes the exemptions of the state's withholding certificate (US-MI for
+    /// US-MI-DETROIT).
+    /// </summary>
+    public string ElectionsFrom { get; set; }
 
     /// <summary>
     /// Gets or sets the tax category whose income is taxed.
@@ -165,6 +192,21 @@ public sealed class IncomeTaxRule : CatalogItem, INameAwareModel, IModifiedUtcAw
     public decimal? AllowanceAmount { get; set; }
 
     /// <summary>
+    /// Gets or sets what each exemption a person claims lowers a year's income by, for a flat rate rule, or
+    /// <see langword="null"/>: the exemptions are the <c>Exemptions</c> of the election of <see cref="ElectionsFrom"/>
+    /// (or of the rule's own jurisdiction), none when that election is exempt, and the tax is the rate on the year's
+    /// income less the exemptions, never below zero, for one period (a city tax with a yearly exemption).
+    /// </summary>
+    public decimal? ExemptionAllowance { get; set; }
+
+    /// <summary>
+    /// Gets or sets the codes of other taxes of the same payment, paid by the earner, that a withholding method deducts
+    /// from the income it withholds on, such as Social Security and Medicare for a state that deducts them up to a
+    /// yearly limit.
+    /// </summary>
+    public List<string> DeductedTaxCodes { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the flat rate, as a percent, of supplemental income withheld with the flat method, or
     /// <see langword="null"/> to withhold it with regular income.
     /// </summary>
@@ -196,6 +238,29 @@ public sealed class IncomeTaxRule : CatalogItem, INameAwareModel, IModifiedUtcAw
     /// Gets or sets a value indicating whether the rule is in use.
     /// </summary>
     public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets who last checked the rule's figures against the agency's publications, or <see langword="null"/>
+    /// when nobody has since it last changed. It only informs: an unchecked rule is still worked out.
+    /// </summary>
+    public string VerifiedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the rule was checked, or <see langword="null"/>. Any change to the rule clears it.
+    /// </summary>
+    public DateTime? VerifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the rule was checked against, such as "Michigan Form 446 (2026)", or <see langword="null"/>.
+    /// </summary>
+    public string VerificationSource { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether someone checked the rule since it last changed.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsVerified
+        => VerifiedUtc is not null;
 
     /// <summary>
     /// Gets or sets when it was added.

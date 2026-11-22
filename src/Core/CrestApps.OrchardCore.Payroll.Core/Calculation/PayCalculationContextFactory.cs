@@ -149,8 +149,8 @@ public sealed class PayCalculationContextFactory
             Accumulators = await _accumulators.GetAsync(profile.StaffMemberId, profile.EmployerId, request.PayDate, request.PeriodStart, request.PeriodEnd, cancellationToken),
             SupplementalMethod = request.SupplementalMethod,
             MinimumNet = settings?.MinimumNetPay ?? 0,
-            HomeJurisdictions = Home(profile),
-            WorkJurisdictions = await WorkAsync(profile, cancellationToken),
+            HomeJurisdictions = await HomeAsync(profile, request.PayDate, cancellationToken),
+            WorkJurisdictions = await PayrollWorkSites.JurisdictionsAsync(_services, profile, employer, cancellationToken),
         };
     }
 
@@ -199,27 +199,9 @@ public sealed class PayCalculationContextFactory
         return count;
     }
 
-    // The country and the country with its region of the home address, such as US and US-CA.
-    private static List<string> Home(EmployeePayProfile profile)
-    {
-        var jurisdictions = new List<string>();
-
-        if (!string.IsNullOrEmpty(profile.HomeAddress?.Country))
-        {
-            var country = profile.HomeAddress.Country.ToUpperInvariant();
-
-            jurisdictions.Add(country);
-
-            if (!string.IsNullOrEmpty(profile.HomeAddress.Region))
-            {
-                jurisdictions.Add($"{country}-{profile.HomeAddress.Region.ToUpperInvariant()}");
-            }
-        }
-
-        return jurisdictions;
-    }
-
-    // The jurisdictions of the work site team.
-    private Task<List<string>> WorkAsync(EmployeePayProfile profile, CancellationToken cancellationToken)
-        => PayrollWorkSites.JurisdictionsAsync(_services, profile, cancellationToken);
+    // The jurisdictions of the home address, such as US, US-MI and US-MI-DETROIT.
+    private async Task<List<string>> HomeAsync(EmployeePayProfile profile, DateOnly payDate, CancellationToken cancellationToken)
+        => _services.GetService<IPayrollHomeJurisdictionResolver>() is { } resolver
+            ? [.. await resolver.ResolveAsync(profile, payDate, cancellationToken)]
+            : PayrollHomeJurisdictions.FromAddress(profile.HomeAddress);
 }

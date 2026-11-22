@@ -30,6 +30,7 @@ public static class LearningPackagesCoreServiceCollectionExtensions
         services.TryAddScoped<PackageRuntimeStore>();
         services.TryAddScoped<IPackageContentSource, DefaultPackageContentSource>();
         services.TryAddScoped<PackageLaunchTokens>();
+        services.TryAddSingleton<PackageArchiveCache>();
         services.TryAddScoped<PackageRuntimeService>();
         services.AddCourseItemKind<LearningPackagePart>(PackagesConstants.PackageKind, kind =>
         {

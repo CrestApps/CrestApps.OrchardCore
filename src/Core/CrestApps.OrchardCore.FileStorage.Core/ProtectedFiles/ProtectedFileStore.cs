@@ -13,6 +13,7 @@ public sealed class ProtectedFileStore<TArea> : IProtectedFileStore<TArea>
     private static readonly FileExtensionContentTypeProvider _contentTypes = new();
 
     private readonly IFileStore _fileStore;
+    private readonly string _folder;
     private readonly FileCreationService _fileCreationService;
 
     /// <summary>
@@ -21,8 +22,22 @@ public sealed class ProtectedFileStore<TArea> : IProtectedFileStore<TArea>
     /// <param name="fileStore">The folder of the area.</param>
     /// <param name="fileCreationService">The file creation pipeline.</param>
     public ProtectedFileStore(IFileStore fileStore, FileCreationService fileCreationService)
+        : this(fileStore, folder: null, fileCreationService)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProtectedFileStore{TArea}"/> class that keeps the area in a folder
+    /// of a store shared by several areas.
+    /// </summary>
+    /// <param name="fileStore">The shared store.</param>
+    /// <param name="folder">The folder of the area in the shared store, or <see langword="null"/> when the store is the
+    /// folder of the area.</param>
+    /// <param name="fileCreationService">The file creation pipeline.</param>
+    public ProtectedFileStore(IFileStore fileStore, string folder, FileCreationService fileCreationService)
     {
         _fileStore = fileStore;
+        _folder = string.IsNullOrEmpty(folder) ? null : folder;
         _fileCreationService = fileCreationService;
     }
 
@@ -33,7 +48,7 @@ public sealed class ProtectedFileStore<TArea> : IProtectedFileStore<TArea>
 
         var fileId = global::OrchardCore.IdGenerator.GenerateId();
         var name = Sanitize(fileName);
-        var path = _fileStore.Combine(fileId, name);
+        var path = PathOf(fileId, name);
 
         if (!_contentTypes.TryGetContentType(name, out var contentType))
         {
@@ -68,12 +83,12 @@ public sealed class ProtectedFileStore<TArea> : IProtectedFileStore<TArea>
     /// <inheritdoc/>
     public async Task<ProtectedFile> FindAsync(string fileId, CancellationToken cancellationToken = default)
     {
-        if (!IsValidId(fileId) || await _fileStore.GetDirectoryInfoAsync(fileId) is null)
+        if (!IsValidId(fileId) || await _fileStore.GetDirectoryInfoAsync(PathOf(fileId)) is null)
         {
             return null;
         }
 
-        await foreach (var entry in _fileStore.GetDirectoryContentAsync(fileId))
+        await foreach (var entry in _fileStore.GetDirectoryContentAsync(PathOf(fileId)))
         {
             if (!entry.IsDirectory)
             {
@@ -89,19 +104,22 @@ public sealed class ProtectedFileStore<TArea> : IProtectedFileStore<TArea>
     {
         var file = await FindAsync(fileId, cancellationToken);
 
-        return file is null ? null : await _fileStore.GetFileStreamAsync(_fileStore.Combine(fileId, file.FileName));
+        return file is null ? null : await _fileStore.GetFileStreamAsync(PathOf(fileId, file.FileName));
     }
 
     /// <inheritdoc/>
     public async Task<bool> DeleteAsync(string fileId, CancellationToken cancellationToken = default)
     {
-        if (!IsValidId(fileId) || await _fileStore.GetDirectoryInfoAsync(fileId) is null)
+        if (!IsValidId(fileId) || await _fileStore.GetDirectoryInfoAsync(PathOf(fileId)) is null)
         {
             return false;
         }
 
-        return await _fileStore.TryDeleteDirectoryAsync(fileId);
+        return await _fileStore.TryDeleteDirectoryAsync(PathOf(fileId));
     }
+
+    private string PathOf(params string[] parts)
+        => _folder is null ? _fileStore.Combine(parts) : _fileStore.Combine([_folder, .. parts]);
 
     /// <summary>
     /// Gets whether an id is one this store makes, so a crafted id can't climb out of the folder.

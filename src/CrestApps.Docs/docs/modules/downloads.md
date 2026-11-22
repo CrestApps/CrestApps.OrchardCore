@@ -17,7 +17,7 @@ The **Digital Downloads** feature delivers digital products. A product carries i
 
 ## Private file store
 
-Files never go to the media library. `IDigitalFileStore` keeps them under the tenant's App_Data, in `DigitalFiles/{fileId}/{fileName}`, which no URL serves. `SaveAsync` makes the id (letters and digits only, so an id can't leave the folder) and cleans the name; `FindAsync` and `OpenAsync` find and read a file by id.
+Files never go to the media library. They are kept in the `DigitalFiles` [protected file area](protected-files.md) (`IProtectedFileStore<DigitalDownloadFiles>`), as `DigitalFiles/{fileId}/{fileName}` under the tenant's App_Data, or in a blob container with **Protected Files - Azure Blob Storage**, and no URL serves them. `SaveAsync` makes the id (letters and digits only, so an id can't leave the folder) and cleans the name; `FindAsync` and `OpenAsync` find and read a file by id.
 
 Before a file is written, `SaveAsync` runs it through Orchard Core's file creation pipeline (`FileCreationService`), so every registered `IFileEventHandler`, such as the ClamAV scanner of `OrchardCore.Antivirus.ClamAV`, can check it. When a handler refuses the file, or the scanner can't be reached, nothing is kept: the upload answers `400` with the reason, and the recipe step reports an error for that file.
 

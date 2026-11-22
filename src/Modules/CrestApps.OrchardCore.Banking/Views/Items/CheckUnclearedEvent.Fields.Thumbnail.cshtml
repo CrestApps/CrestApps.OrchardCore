@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Banking.Checks.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CheckUnclearedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> @T["Check Uncleared"]</h4>
+<p>@T["Starts when a cleared check is recorded as not paid."]</p>

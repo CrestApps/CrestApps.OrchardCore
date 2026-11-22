@@ -68,4 +68,16 @@ public sealed class CheckIssueRequest
     /// instead of a new one, such as the second click of a double click.
     /// </summary>
     public string IdempotencyKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the check gets its number: the account's next number now (the default), at print for
+    /// pre-printed stock (the check is queued without one), or the number of a check written by hand.
+    /// </summary>
+    public CheckNumbering Numbering { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of a check written by hand (<see cref="CheckNumbering.Handwritten"/>), 1 or more; it is
+    /// refused when another check of the account has it. Ignored otherwise.
+    /// </summary>
+    public long? Number { get; set; }
 }

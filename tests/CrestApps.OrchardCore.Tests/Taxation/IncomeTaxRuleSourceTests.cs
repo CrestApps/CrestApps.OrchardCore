@@ -138,7 +138,7 @@ public sealed class IncomeTaxRuleSourceTests
         var canada = Sources(services => new CanadaIncomeTaxStartup().ConfigureServices(services));
 
         // A United States site never sees Canada's formulas, and the other way round.
-        Assert.Equal([UnitedStatesIncomeTax.FormW4Method], unitedStates.Select(source => source.Name));
+        Assert.Equal([UnitedStatesIncomeTax.FormW4Method, UnitedStatesIncomeTax.StateCertificateMethod], unitedStates.OrderBy(source => source.Position).Select(source => source.Name));
         Assert.Equal([CanadaIncomeTax.FederalMethod, CanadaIncomeTax.ProvincialMethod, CanadaIncomeTax.QuebecMethod], canada.OrderBy(source => source.Position).Select(source => source.Name));
         Assert.All(unitedStates.Concat(canada), source => Assert.Equal(source.Name, source.Method));
     }

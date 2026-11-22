@@ -96,6 +96,11 @@ public sealed class BankAccountHandler : CatalogEntryHandlerBase<BankAccount>
             context.Result.Fail(new ValidationResult(S["Enter the routing and account numbers before the account is checked."], [nameof(BankAccount.AccountNumber)]));
         }
 
+        if (!BankAccountNumbers.IsValidLastFour(account.AccountNumberLastFour))
+        {
+            context.Result.Fail(new ValidationResult(S["Enter at most the last four letters or digits of the account number."], [nameof(BankAccount.AccountNumberLastFour)]));
+        }
+
         if (string.IsNullOrEmpty(account.Owner.Kind) != string.IsNullOrEmpty(account.Owner.Id))
         {
             context.Result.Fail(new ValidationResult(S["Choose who owns the account, or leave it empty for one of the business's own accounts."], [nameof(BankAccount.Owner)]));

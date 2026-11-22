@@ -110,6 +110,11 @@ public sealed class PayRunProcessingTests
         Assert.Contains(statement.Number, text, StringComparison.Ordinal);
         Assert.Contains("This check", text, StringComparison.Ordinal);
         Assert.Contains("Deposit to Pay account", text, StringComparison.Ordinal);
+
+        // The stub is in sections: earnings with their rate, then the taxes.
+        Assert.Contains("Earnings", text, StringComparison.Ordinal);
+        Assert.Contains("Rate", text, StringComparison.Ordinal);
+        Assert.Contains("Taxes", text, StringComparison.Ordinal);
     }
 
     [Fact]

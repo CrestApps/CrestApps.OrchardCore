@@ -120,6 +120,16 @@ public sealed class PayrollTaxFormDocuments
                 ["6"] = S["6 Medicare tax withheld"],
                 ["7"] = S["7 Social security tips"],
             },
+            StateColumns =
+            [
+                S["15 State"],
+                S["Employer's state ID number"],
+                S["16 State wages, tips, etc."],
+                S["17 State income tax"],
+                S["18 Local wages, tips, etc."],
+                S["19 Local income tax"],
+                S["20 Locality name"],
+            ],
         });
     }
 

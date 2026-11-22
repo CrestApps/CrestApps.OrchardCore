@@ -216,6 +216,12 @@ public sealed class DisbursementService : IDisbursementService
                 errors.Add(S["The bank account the money leaves from has no routing or account number."]);
             }
 
+            // A bank file moves money only between deposit accounts, and checks are drawn only on them.
+            if (needsSource && !BankAccountKinds.IsDeposit(source.Kind))
+            {
+                errors.Add(S["Money leaves by bank file or check only from a checking or savings account."]);
+            }
+
             currency ??= source.Currency;
 
             if (!string.Equals(currency, source.Currency, StringComparison.OrdinalIgnoreCase))
@@ -235,6 +241,10 @@ public sealed class DisbursementService : IDisbursementService
             else if (!BankAccountNumbers.HasNumbers(destination))
             {
                 errors.Add(S["The payee's bank account has no routing or account number."]);
+            }
+            else if (!BankAccountKinds.IsDeposit(destination.Kind))
+            {
+                errors.Add(S["A bank file pays only into a checking or savings account."]);
             }
             else if (request.IsPrenote ? destination.Status == BankAccountStatus.Closed : !destination.CanReceivePayments())
             {

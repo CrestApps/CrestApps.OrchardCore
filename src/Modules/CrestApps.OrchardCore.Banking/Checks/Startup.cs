@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.Banking.Checks.Recipes;
 using CrestApps.OrchardCore.Banking.Checks.Reports;
 using CrestApps.OrchardCore.Banking.Checks.Services;
 using CrestApps.OrchardCore.Banking.Checks.Workflows;
+using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Core.FileStorage;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
@@ -56,6 +57,7 @@ public sealed class Startup : StartupBase
             (serviceProvider, fileStore) => new CheckFileStore(new EncryptedFileStore(fileStore, serviceProvider.GetRequiredService<IDataProtectionProvider>(), ChecksConstants.FileProtectionPurpose)));
         services.AddDisplayDriver<CheckLayout, CheckLayoutDisplayDriver>();
         services.AddDisplayDriver<CheckRecord, CheckRecordDisplayDriver>();
+        services.AddDisplayDriver<BankAccount, BankAccountCheckSettingsDisplayDriver>();
         services.AddPermissionProvider<ChecksPermissionProvider>();
         services.AddNavigationProvider<ChecksAdminMenu>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ChecksResourceManagementOptionsConfiguration>();
@@ -63,7 +65,7 @@ public sealed class Startup : StartupBase
 }
 
 /// <summary>
-/// Starts workflows when checks are issued, printed, voided and cleared.
+/// Starts workflows when checks are issued, printed, voided, cleared and un-cleared.
 /// </summary>
 [Feature(ChecksConstants.Features.Checks)]
 [RequireFeatures(OrchardCoreFeatureIds.Workflows)]
@@ -76,6 +78,7 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<CheckPrintedEvent, CheckEventActivityDisplayDriver<CheckPrintedEvent>>();
         services.AddActivity<CheckVoidedEvent, CheckEventActivityDisplayDriver<CheckVoidedEvent>>();
         services.AddActivity<CheckClearedEvent, CheckEventActivityDisplayDriver<CheckClearedEvent>>();
+        services.AddActivity<CheckUnclearedEvent, CheckEventActivityDisplayDriver<CheckUnclearedEvent>>();
         services.AddActivity<CheckStopPaymentEvent, CheckEventActivityDisplayDriver<CheckStopPaymentEvent>>();
         services.AddActivity<CheckReissuedEvent, CheckEventActivityDisplayDriver<CheckReissuedEvent>>();
         services.AddActivity<CheckStaleEvent, CheckEventActivityDisplayDriver<CheckStaleEvent>>();
@@ -99,6 +102,7 @@ public sealed class WorkflowsRecipeSchemaStartup : StartupBase
             .AddWorkflowActivitySchema<CheckPrintedEventSchema>()
             .AddWorkflowActivitySchema<CheckVoidedEventSchema>()
             .AddWorkflowActivitySchema<CheckClearedEventSchema>()
+            .AddWorkflowActivitySchema<CheckUnclearedEventSchema>()
             .AddWorkflowActivitySchema<CheckStopPaymentEventSchema>()
             .AddWorkflowActivitySchema<CheckReissuedEventSchema>()
             .AddWorkflowActivitySchema<CheckStaleEventSchema>()

@@ -188,6 +188,12 @@ public sealed class BankAccountService : IBankAccountService
             changed = true;
         }
 
+        // The full number replaces the last digits the account was known by.
+        if (account.AccountNumber is { HasValue: true })
+        {
+            account.AccountNumberLastFour = null;
+        }
+
         if (changed && hadNumbers)
         {
             account.NumberChangedUtc = _clock.UtcNow;

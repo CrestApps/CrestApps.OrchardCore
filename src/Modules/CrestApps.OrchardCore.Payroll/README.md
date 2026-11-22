@@ -61,7 +61,8 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
 - Garnishments (`CrestApps.OrchardCore.Payroll.Garnishments`): orders withheld within the law's limits and sent to
   their payees by check or deposit.
 - United States Payroll Filings (`CrestApps.OrchardCore.Payroll.UnitedStates`): Forms 941, 940, 945, W-2/W-3,
-  1099-NEC and 1096 and the EFW2 file, over Taxation's United States Income Tax (Form W-4 and the 2026 federal rules).
+  1099-NEC and 1096 and the EFW2 file, over Taxation's United States Income Tax (Form W-4, state certificates and the
+  2026 federal rules). The W-2 has the state and local boxes 15 to 20.
 - Canada Payroll Filings (`CrestApps.OrchardCore.Payroll.Canada`): T4 and RL-1 slips and summaries, the T4 XML file,
   and CRA and Revenu Québec remittances, over Taxation's Canada Income Tax.
 - My Pay (`CrestApps.OrchardCore.Payroll.SelfService`): `MyPayController` (own statements, stubs, elections and net

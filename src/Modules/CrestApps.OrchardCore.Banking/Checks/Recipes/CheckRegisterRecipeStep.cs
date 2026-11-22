@@ -39,9 +39,10 @@ internal sealed class CheckRegisterRecipeStep : NamedRecipeStepHandler
         {
             var values = node.Deserialize<CheckRecord>(JsonOptions);
 
-            if (values is null || string.IsNullOrEmpty(values.BankAccountId) || values.Number <= 0)
+            // History is checks that left the business with their numbers: a check still waiting for one isn't history.
+            if (values is null || string.IsNullOrEmpty(values.BankAccountId) || values.Number <= 0 || values.Status == CheckStatus.Queued)
             {
-                context.Errors.Add($"{ChecksConstants.RegisterRecipeStepName}: a check needs a BankAccountId and a Number.");
+                context.Errors.Add($"{ChecksConstants.RegisterRecipeStepName}: a check needs a BankAccountId and a Number, and can't be Queued.");
 
                 continue;
             }
@@ -78,6 +79,11 @@ internal sealed class CheckRegisterRecipeStep : NamedRecipeStepHandler
             check.ClearedOn = values.ClearedOn;
             check.ReissuedById = values.ReissuedById;
             check.ReissueOfId = values.ReissueOfId;
+            check.Numbering = values.Numbering;
+            check.VoidedOn = values.VoidedOn;
+            check.ClearedFrom = values.ClearedFrom;
+            check.IsSpoiled = values.IsSpoiled;
+            check.SpoiledForId = values.SpoiledForId;
             check.IsHistorical = true;
 
             await _manager.CreateAsync(check);

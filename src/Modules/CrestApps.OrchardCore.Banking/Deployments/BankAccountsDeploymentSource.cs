@@ -77,6 +77,12 @@ internal sealed class BankAccountsDeploymentSource : DeploymentSourceBase<BankAc
                 [nameof(BankAccount.BankName)] = account.BankName,
             };
 
+            // The last digits are written so people can still tell the account apart; never the full number here.
+            if (BankAccountNumbers.LastDigits(account) is { } lastDigits)
+            {
+                node[nameof(BankAccount.AccountNumberLastFour)] = lastDigits;
+            }
+
             // What other features keep on the account, such as the Bank file (ACH) settings: no account number is in it.
             if (account.Properties is { Count: > 0 } properties)
             {

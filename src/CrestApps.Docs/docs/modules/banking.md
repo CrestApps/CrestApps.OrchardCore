@@ -32,10 +32,11 @@ The **Banking** module keeps one record for a bank account: one of the business'
 | `Name` | The name the account is listed by, such as "Payroll funding". |
 | `Owner` | A `PartyRef` (see [Parties](./parties.md)): a staff member, a user, an account or any kind a module adds. Empty for the business's own accounts. |
 | `HolderName`, `BankName` | The name on the account as the bank knows it, and the bank's name. |
-| `Kind` | `Checking` or `Savings`. |
+| `Kind` | `Checking`, `Savings`, `CreditCard`, `LineOfCredit`, `Cash` or `Other` (stored as numbers; the last four were added after the first two, so stored values keep their meaning). `BankAccountKinds.IsDeposit(kind)` is true for checking and savings only: a bank file (ACH) sends money only from and to a deposit account, and checks are drawn only on one (`BankAccountKinds.CanDrawChecks`). The other kinds name accounts a business keeps books for, such as a credit card or petty cash. |
 | `Country`, `Currency` | Two-letter and three-letter ISO codes. The country decides how the numbers are checked. |
 | `RoutingNumber` | The bank's number, without spaces or dashes. It names the bank, not the account, and is printed on every check. |
 | `AccountNumber` | A `ProtectedValue`: the number protected with the tenant's Data Protection keys (purpose `Banking.AccountNumber`), with at most its last four characters kept in clear text as the hint. Screens show it as `••••6789`. |
+| `AccountNumberLastFour` | The last digits (one to four letters or digits) of an account number the site doesn't hold, such as an account imported from another system that knew only them. It only tells people which account it is; nothing is paid or printed from it, and the site never makes up the rest. Storing the full number with `ApplyNumbers` clears it. `BankAccountNumbers.Masked` and `LastDigits` show either one. |
 | `Status`, `StatusChangedUtc`, `StatusReason`, `VerifiedUtc`, `VerificationMethod` | Where the account is in its verification. |
 | `NumberChangedUtc`, `CreatedUtc`, `ModifiedUtc` | When the numbers last changed, and the record's stamps. |
 | `Properties` | Other modules' data on the account. |
@@ -55,6 +56,8 @@ Each account is a YesSql document in the `Banking` collection, with `BankAccount
 | `Closed` | none: a closed account never opens again |
 
 Only a `Verified` account can receive payments (`BankAccount.CanReceivePayments()`). A new routing or account number always takes the account back to `Unverified`, so money never goes to a number nobody checked. An account may be stored without numbers (an import without sensitive data writes it that way); it can then be neither checked nor paid until someone enters them.
+
+The admin editor requires the routing and account numbers when a payee's account (one with an `Owner`) is added, and on a person's own account page. One of the business's own accounts can be saved without them, known by its last four digits or by nothing, until something needs them: printing the check line on blank stock (`CheckPrinter` refuses it and names the account), a bank file, or a disbursement from or to the account (`IDisbursementService.CreateAsync` refuses it). Checks can be issued on it, queued for pre-printed stock or recorded as written by hand.
 
 ### The rules: `IBankAccountService`
 
@@ -179,23 +182,36 @@ The signature images (PNG or JPEG, up to 1 MB) and the check line font (TrueType
 
 ### The check register
 
-A `CheckRecord` is one check: `BankAccountId` (one of the business's own accounts, `Owner` empty), `BankAccountName`, `Number`, `Payee` (a `PartyRef`), `PayeeName`, `PayeeAddress` (`Address`), `Amount`, `Currency` (the account's), `CheckDate` (a pure date), `Memo`, `SourceKind` and `SourceId` (what it pays, such as `PayStatement`), `AccessScope` (who within the source may see it, such as the pay group of a paycheck), `Status`, the dates of each change, `ReissuedById`/`ReissueOfId`, and `IsHistorical` for imported checks. It never holds an account number. Checks are YesSql documents in the `Checks` collection with `CheckRecordIndex`, which also holds `AccessKey` (the source kind and access scope) and `ModifiedUtc` (when the check last changed, stamped when it is issued too).
+A `CheckRecord` is one check: `BankAccountId` (one of the business's own accounts, `Owner` empty), `BankAccountName`, `Number`, `Numbering`, `Payee` (a `PartyRef`), `PayeeName`, `PayeeAddress` (`Address`), `Amount`, `Currency` (the account's), `CheckDate` (a pure date), `Memo`, `SourceKind` and `SourceId` (what it pays, such as `PayStatement`), `AccessScope` (who within the source may see it, such as the pay group of a paycheck), `Status`, the dates of each change (`VoidedOn` is the void date in the business's calendar, `ClearedOn` the date the bank paid it, `ClearedFrom` the status it cleared from), `ReissuedById`/`ReissueOfId`, `IsSpoiled`/`SpoiledForId` for a misprinted sheet, and `IsHistorical` for imported checks. It never holds an account number. Checks are YesSql documents in the `Checks` collection with `CheckRecordIndex`, which also holds `AccessKey` (the source kind and access scope) and `ModifiedUtc` (when the check last changed, stamped when it is issued too). The fields added for print runs, recorded checks and void dates are new document properties only: existing checks read as numbered from the series (`Numbering` `Next`), with no void date, and no index or data migration is needed.
 
 `CheckStatuses.Transitions`:
 
 | From | To |
 | --- | --- |
+| `Queued` | `Printed` (only by a print run, which numbers it), `Voided` |
 | `Issued` | `Printed`, `Voided`, `Reissued` |
 | `Printed` | `Voided`, `StopPayment`, `Cleared`, `Reissued`, `Stale` |
 | `StopPayment`, `Stale` | `Voided`, `Reissued`, `Cleared` |
 | `Reissued` | `Cleared`: the bank paid the replaced check anyway; the register flags it **Paid after reissue** |
-| `Voided`, `Cleared` | none |
+| `Voided`, `Cleared` | none. `UnclearAsync` is not a move of the table: it returns a cleared check to `ClearedFrom` (`Printed` for a check cleared before it was kept). |
 
-Numbers come from `INumberSequence`, one series per bank account (`Checks:{bankAccountId}`), starting at 1001. **Banking > Checks > Next numbers** sets the next number when new stock is loaded and refuses a number a check of the account already has. A voided check keeps its number; a reissue writes a new check with the next number and links both.
+#### How a check gets its number
+
+`CheckIssueRequest.Numbering` (`CheckNumbering`, stored on the check):
+
+| Value | Means |
+| --- | --- |
+| `Next` (the default) | The next number of the account's series, from `INumberSequence`, one series per bank account (`Checks:{bankAccountId}`), starting at 1001. A number a check written by hand already took is skipped. The check is `Issued` until it prints. **Banking > Checks > Next numbers** sets the next number when new stock is loaded and refuses a number a check of the account already has. |
+| `AtPrint` | For pre-printed stock, whose sheets carry their own numbers: the check is `Queued` with `Number` 0 and takes no number of the series. A print run numbers it (below). |
+| `Handwritten` | A check already written by hand, with `CheckIssueRequest.Number`: refused when another check of the account has that number; recorded as `Printed` (with `PrintedUtc`), never printed or reprinted by the site. |
+
+A print run of queued checks: `ICheckService.ValidatePrintRunAsync(checks, firstNumber)` checks that all are queued and not history, all are drawn on one bank account, and no check of the account has any number of the run. `ICheckPrinter.PrintAsync(layout, checks, printRunId, firstNumber)` prints them with the numbers of their sheets (the first check gets `firstNumber`, the next one more), without saving anything. Once the person says which sheets misprinted, `ConfirmPrintRunAsync(CheckPrintRunRequest)` (`Checks` in print order, `FirstNumber`, `MisprintedCheckIds`, `PrintRunId`) saves each check with its sheet's number as `Printed` (change kind `Printed`, previous status `Queued`), keeps the number of each misprinted sheet as a new voided check (`IsSpoiled`, `SpoiledForId`, `VoidedOn` today, no `SourceId`, so it pays nothing and the source's lists leave it out; the source kind and access scope stay for who may see it; change kind `Spoiled`) while its check stays queued for the next run, and moves the account's series past the run. It returns a `CheckPrintRunResult` (`Printed`, `Spoiled`, `Errors`) and saves nothing when it refuses. One run of a bank account is confirmed at a time: the service holds the distributed lock `CheckService.NumbersLockKey(bankAccountId)` from the check of the numbers to the commit (through `ICheckCommitter`), and refuses a second confirmation that cannot get the lock within 10 seconds. A voided check keeps its number; a reissue writes a new check (queued again for a check numbered at print, otherwise with the next number) and links both.
 
 ### Rules and extension points
 
-`ICheckService` (no permission checks; the caller checks): `IssueAsync`, `GetNextNumberAsync`, `SetNextNumberAsync`, `MarkPrintedAsync` (issued checks only), `MarkReprintedAsync` (a printed check printed again, with a reason; change kind `Reprinted`), `VoidAsync`, `ReissueAsync` (the new check is dated today in the site's time zone), `StopPaymentAsync`, `MarkClearedAsync`, `MarkStaleAsync` and `MarkStaleChecksAsync(ageInDays)` (every printed check dated more than that many days before today, in the site's time zone). Issuing refuses an account another party owns, a closed or failed account, an account without numbers, another currency and an amount that is not more than zero. A historical check is never printed or reissued, but can still be voided, stopped, cleared or go stale.
+`ICheckService` (no permission checks; the caller checks): `IssueAsync`, `GetNextNumberAsync`, `SetNextNumberAsync`, `ValidatePrintRunAsync`, `ConfirmPrintRunAsync`, `MarkPrintedAsync` (issued checks only), `MarkReprintedAsync` (a check the site printed, printed again with a reason; change kind `Reprinted`), `VoidAsync(check, reason)` (today in the site's time zone, or the check date of a check dated later), `VoidAsync(check, reason, voidedOn)` (returns a `CheckResult`; a date before the check date is refused), `ReissueAsync` (the new check is dated today in the site's time zone), `StopPaymentAsync`, `MarkClearedAsync` and `ClearAsync` (the same, returning a `CheckResult`), `UnclearAsync(check, reason)`, `MarkStaleAsync` and `MarkStaleChecksAsync(ageInDays)` (every printed check dated more than that many days before today, in the site's time zone). Issuing refuses an account another party owns, a closed or failed account, an account that is not checking or savings, another currency and an amount that is not more than zero; an account without numbers is fine. A historical check is never printed or reissued, but can still be voided, stopped, cleared or go stale.
+
+Before a void, a reissue, a clear or an un-clear is saved, `CheckService` asks every `ICheckChangeHandler` with a `CheckChangingContext` (`Check` as it is, `Kind`, `NewStatus`, `VoidedOn`, `ClearedOn`, `Reason`). A handler calls `Refuse(error)` to stop it: nothing is saved, no observer is told, and the error comes back in the `CheckResult` (the bool methods return `false`). This is where the module a check pays reverses its payment on the void date, or refuses a date in a closed accounting period. The `ICheckObserver`s are told after the change is saved, with `CheckChange.VoidedOn` and `ClearedOn`.
 
 #### Who sees which checks
 
@@ -204,11 +220,12 @@ A check written by another module carries its `SourceKind` and an `AccessScope`.
 | Contract | Register with | Use |
 | --- | --- | --- |
 | `ISourceAccess` | `AddSourceAccess<T>()` | Who may see and act on the checks (and disbursements) of one source kind. |
-| `ICheckVoucherSource` | `AddCheckVoucherSource<T>()` | The voucher (stub) of the checks of one source kind: a title, column headings and rows. Payroll supplies earnings, deductions, taxes and year-to-date totals. Without one, the voucher shows the payee, amount and memo. |
-| `ICheckObserver` | `AddCheckObserver<T>()` | Told after each issue, print, void, stop, clear, reissue or stale change. |
+| `ICheckVoucherSource` | `AddCheckVoucherSource<T>()` | The voucher (stub) of the checks of one source kind: a title and either one table (`Columns`, `Lines`) or `Sections` (`CheckVoucherSection`: its own `Title`, `Columns` and `Lines`), such as a pay stub's earnings (hours, rate, current, year to date), taxes and deductions (current, year to date) and totals. Up to six value columns fit; a stub with many rows prints smaller to fit its third of the sheet. Payroll supplies the pay stub. Without one, the voucher shows the payee, amount and memo. |
+| `ICheckChangeHandler` | `AddCheckChangeHandler<T>()` | Asked before a void, reissue, clear or un-clear is saved; may refuse it. |
+| `ICheckObserver` | `AddCheckObserver<T>()` | Told after each issue, print, void, stop, clear, un-clear, reissue, stale change or spoiled sheet. |
 | `ICheckMicrFormat` | `AddCheckMicrFormat<T>()` | The check line of one country. The United States format is built in. |
 | `IAmountInWords` | `AddAmountInWords<T>()` | The legal line in one language, with the currency's name. English is built in ("One thousand two hundred thirty-four and 56/100 Dollars"). |
-| `ICheckPrinter` | built in | Prints checks with a layout to one PDF. |
+| `ICheckPrinter` | built in | Prints checks with a layout to one PDF, or queued checks with the numbers of the sheets they print on. A run on pre-printed stock prints one bank account's checks only, a check written by hand never prints, and the check line needs the account's routing and account numbers. |
 
 #### The United States check line
 
@@ -221,25 +238,29 @@ A print run lays out the check line of every check before it draws anything, so 
 | Permission | Allows |
 | --- | --- |
 | `ManageCheckLayouts` | **Banking > Check Layouts**. Security critical. |
-| `ManageChecks` | **Write a check** (the payee's optional address uses the shared address editor, in its country's format, so Checks depends on the Addresses feature), print (the list's bulk action **Print with** and the layout's name), reprint, void, reissue, stop payment, mark cleared, **Next numbers**. Security critical. |
+| `ManageChecks` | **Write a check** (the payee's optional address uses the shared address editor, in its country's format, so Checks depends on the Addresses feature; **Check number** picks the account's next number, numbering at print or a check already written by hand), print (the list's bulk actions **Print with the account's default layout** and **Print with** a layout's name), **Print queued checks**, reprint, void (with the void date), reissue, stop payment, mark cleared, mark not cleared, **Next numbers**. Security critical. |
 | `ViewCheckRegister` | **Banking > Checks**, the register, filtered by bank account and status and searched by payee or number. |
 
-A print returns one PDF (`Cache-Control: no-store`) and records the checks as printed in one print run (`PrintRunId`). The bulk print refuses a check already printed: **Reprint** in its menu asks for the layout and a reason, prints it, and records a `Reprinted` change. A spoiled sheet can also be reissued from the check's menu. A new check is dated today in the site's time zone, and **Mark cleared** records today's date in that zone.
+A print returns one PDF (`Cache-Control: no-store`) and records the checks as printed in one print run (`PrintRunId`). The bulk print refuses a check already printed: **Reprint** in its menu asks for the layout and a reason, prints it, and records a `Reprinted` change. A spoiled sheet can also be reissued from the check's menu. A new check is dated today in the site's time zone, and **Mark cleared** records today's date in that zone. Bulk printing only queued checks of one account opens its print run.
+
+**Print queued checks** (`banking/checks/print-run`) lists an account's queued checks, oldest first, with the layout (the account's default) and the account's next number as the first sheet's number. **Continue** checks the run and shows the confirm page: **Download the checks** prints the PDF in a new tab (`PrintRunPdf`, nothing saved), and **Record as printed** (`ConfirmPrintRun`) records the run with the sheets ticked as misprinted. **Void** asks for the void date (today in the site's time zone by default, never before the check date) and a reason; **Mark not cleared** calls `UnclearAsync`. A handler's refusal is shown as an error.
+
+The default layout of a bank account is `BankAccountCheckSettings.DefaultLayoutId`, kept in the account's `Properties` (a **Checks** card on the editor of the business's own accounts, `BankAccountCheckSettingsDisplayDriver`) and carried by the Bank accounts recipe and deployment steps.
 
 ### Positive pay and reports
 
-With Data Pipelines on, the **Checks** data source has a **Check register** data set (requires `ViewCheckRegister`): bank account, number, payee, amount, currency, memo, status, a **Void** flag (voided, stopped or reissued), source, and the check, issue, print, void and cleared dates. The data set's date column is the indexed `ModifiedUtc`, so a date filter on **Changed** narrows the read itself. The **Checks: positive pay file** recipe (`ChecksPositivePay`) adds a draft pipeline that reads the checks changed since the last successful run (**Read only new rows** on `ModifiedUtc`) and writes a CSV; add the bank's SFTP or web API step, publish it and schedule it with a workflow timer. A bank whose positive pay layout is fixed-width registers an `IDataFileFormat`; the module writes no file itself.
+With Data Pipelines on, the **Checks** data source has a **Check register** data set (requires `ViewCheckRegister`): bank account, number, payee, amount, currency, memo, status, a **Void** flag (voided, stopped or reissued), numbering, a **Spoiled** flag, source, and the check, issue, print, closed, void and cleared dates. The data set's date column is the indexed `ModifiedUtc`, so a date filter on **Changed** narrows the read itself. The **Checks: positive pay file** recipe (`ChecksPositivePay`) adds a draft pipeline that reads the checks changed since the last successful run (**Read only new rows** on `ModifiedUtc`), leaving out checks still `Queued` (they have no number until they print), and writes a CSV; add the bank's SFTP or web API step, publish it and schedule it with a workflow timer. A bank whose positive pay layout is fixed-width registers an `IDataFileFormat`; the module writes no file itself.
 
 ### Recipes and deployment
 
 - `CheckLayouts` (step and deployment step **Check layouts**): layouts by id or name, without files.
-- `CheckRegister` (opt-in deployment step **Check register**): every check the person running the plan may see; run from a request it needs `ViewCheckRegister`, and without it the plan leaves the register out and says so. Imported checks are history (`IsHistorical`): they keep their numbers and are never printed or reissued. A check whose bank account and number already exist is skipped.
+- `CheckRegister` (opt-in deployment step **Check register**): every check the person running the plan may see; run from a request it needs `ViewCheckRegister`, and without it the plan leaves the register out and says so. Imported checks are history (`IsHistorical`): they keep their numbers (with their `Numbering`, `VoidedOn` and `IsSpoiled`) and are never printed or reissued. A check whose bank account and number already exist is skipped; a `Queued` check is refused, since it has no number.
 
 Both steps have schemas for CrestApps Recipes.
 
 ### Workflows
 
-Events (category Checks): **Check Issued**, **Check Printed** (also a reprint, `Change` = `Reprinted`), **Check Voided**, **Check Stop Payment** and **Check Reissued** (`ReplacedById` is the new check), **Check Stale** (by hand or by Mark Stale Checks) and **Check Cleared**. Input: `CheckId`, `Number`, `BankAccountId`, `PayeeName`, `Amount`, `Currency`, `CheckDate`, `SourceKind`, `SourceId`, `Status`, `Change`, `ReplacedById`, `Reason`, `Actor`.
+Events (category Checks): **Check Issued** (also a queued or recorded check), **Check Printed** (also a reprint, `Change` = `Reprinted`, and each check of a print run), **Check Voided** (also a spoiled sheet of a print run, `Change` = `Spoiled`), **Check Stop Payment** and **Check Reissued** (`ReplacedById` is the new check), **Check Stale** (by hand or by Mark Stale Checks), **Check Cleared** and **Check Uncleared**. Input: `CheckId`, `Number`, `BankAccountId`, `PayeeName`, `Amount`, `Currency`, `CheckDate`, `SourceKind`, `SourceId`, `Status`, `Change`, `ReplacedById`, `Reason`, `Actor`, `VoidedOn` and `ClearedOn` (`yyyy-MM-dd`).
 
 Task: **Mark Stale Checks** (`AgeInDays`, 180 by default) marks stale every printed check dated more than that many days before today, in the site's time zone, and writes the count to the workflow output `StaleChecks`. Run it from a Timer Event once a day.
 

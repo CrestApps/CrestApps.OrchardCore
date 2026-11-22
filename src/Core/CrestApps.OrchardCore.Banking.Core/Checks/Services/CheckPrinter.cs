@@ -13,13 +13,15 @@ namespace CrestApps.OrchardCore.Banking.Checks.Core.Services;
 
 /// <summary>
 /// Prints checks on letter sheets with <see cref="PdfDocumentWriter"/>: each check at its place on the sheet, its
-/// voucher in the other thirds, the signature images and, when the layout asks for it, the check line in the font the
-/// site uploaded. Plain text uses a font every PDF reader has, so a server without fonts prints the same checks.
+/// voucher in the other thirds (each section of a voucher with its own title and columns, smaller when it has many
+/// rows), the signature images and, when the layout asks for it, the check line in the font the site uploaded. Plain
+/// text uses a font every PDF reader has, so a server without fonts prints the same checks.
 /// </summary>
 public sealed class CheckPrinter : ICheckPrinter
 {
     private const double VoucherMargin = 36;
     private const double VoucherLineHeight = 12;
+    private const double CompactLineHeight = 9;
     private const string DigitsAndSymbols = "0123456789";
 
     private readonly IBankAccountManager _bankAccounts;
@@ -64,7 +66,14 @@ public sealed class CheckPrinter : ICheckPrinter
     }
 
     /// <inheritdoc />
-    public async Task<CheckPrintResult> PrintAsync(CheckLayout layout, IReadOnlyList<CheckRecord> checks, string printRunId, CancellationToken cancellationToken = default)
+    public Task<CheckPrintResult> PrintAsync(CheckLayout layout, IReadOnlyList<CheckRecord> checks, string printRunId, CancellationToken cancellationToken = default)
+        => PrintCoreAsync(layout, checks, printRunId, firstNumber: null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<CheckPrintResult> PrintAsync(CheckLayout layout, IReadOnlyList<CheckRecord> checks, string printRunId, long firstNumber, CancellationToken cancellationToken = default)
+        => PrintCoreAsync(layout, checks, printRunId, firstNumber, cancellationToken);
+
+    private async Task<CheckPrintResult> PrintCoreAsync(CheckLayout layout, IReadOnlyList<CheckRecord> checks, string printRunId, long? firstNumber, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(layout);
         ArgumentNullException.ThrowIfNull(checks);
@@ -77,9 +86,49 @@ public sealed class CheckPrinter : ICheckPrinter
             return new CheckPrintResult { Errors = [S["Choose the checks to print."]] };
         }
 
-        foreach (var check in checks.Where(check => check.IsHistorical || check.Status is not (CheckStatus.Issued or CheckStatus.Printed)))
+        if (firstNumber is null)
         {
-            errors.Add(S["Check {0} is {1} and can't be printed.", check.Number, check.Status.ToString()]);
+            foreach (var check in checks)
+            {
+                if (check.Status == CheckStatus.Queued)
+                {
+                    errors.Add(S["The check to {0} waits for its number: print it in a print run, starting at the number on the first sheet.", check.PayeeName]);
+                }
+                else if (check.Numbering == CheckNumbering.Handwritten)
+                {
+                    errors.Add(S["Check {0} was written by hand and is never printed.", check.Number]);
+                }
+                else if (check.IsHistorical || check.Status is not (CheckStatus.Issued or CheckStatus.Printed))
+                {
+                    errors.Add(S["Check {0} is {1} and can't be printed.", check.Number, check.Status.ToString()]);
+                }
+            }
+        }
+        else
+        {
+            if (firstNumber < 1)
+            {
+                errors.Add(S["Enter the number printed on the first sheet."]);
+            }
+
+            foreach (var check in checks.Where(check => check.IsHistorical || check.Status != CheckStatus.Queued))
+            {
+                errors.Add(S["Check {0} is {1}: only queued checks are numbered by a print run.", check.Number, check.Status.ToString()]);
+            }
+        }
+
+        // Pre-printed stock carries the bank, the account and the numbers of one account.
+        if (layout.Stock == CheckStock.PrePrinted && checks.Select(check => check.BankAccountId).Distinct(StringComparer.Ordinal).Count() > 1)
+        {
+            errors.Add(S["A print run on pre-printed stock prints the checks of one bank account: the stock carries its numbers. Print each account's checks on their own."]);
+        }
+
+        // The number each check prints with: its own, or its sheet's in a print run.
+        var numbers = new Dictionary<CheckRecord, long>(ReferenceEqualityComparer.Instance);
+
+        for (var index = 0; index < checks.Count; index++)
+        {
+            numbers[checks[index]] = firstNumber is long first ? first + index : checks[index].Number;
         }
 
         var micrFormat = layout.PrintMicr
@@ -135,10 +184,18 @@ public sealed class CheckPrinter : ICheckPrinter
             foreach (var group in checks.GroupBy(check => check.BankAccountId, StringComparer.Ordinal))
             {
                 var account = accounts[group.Key];
-                var numbers = group.Select(check => check.Number).ToList();
+
+                if (!BankAccountNumbers.HasNumbers(account))
+                {
+                    errors.Add(S["{0} has no routing or account number, which the check line needs. Enter them on the bank account, or print on pre-printed stock without the check line.", account.Name]);
+
+                    continue;
+                }
+
+                var groupNumbers = group.Select(check => numbers[check]).ToList();
                 var accountNumber = await _bankAccountService.RevealAccountNumberAsync(
                     account,
-                    S["Printed checks {0} to {1} in print run {2}", numbers.Min(), numbers.Max(), printRunId],
+                    S["Printed checks {0} to {1} in print run {2}", groupNumbers.Min(), groupNumbers.Max(), printRunId],
                     cancellationToken);
 
                 if (string.IsNullOrEmpty(accountNumber))
@@ -156,7 +213,7 @@ public sealed class CheckPrinter : ICheckPrinter
                         {
                             RoutingNumber = account.RoutingNumber,
                             AccountNumber = accountNumber,
-                            CheckNumber = check.Number,
+                            CheckNumber = numbers[check],
                             UseAuxiliaryOnUs = layout.UseAuxiliaryOnUs,
                         });
                     }
@@ -213,7 +270,7 @@ public sealed class CheckPrinter : ICheckPrinter
             var account = accounts[check.BankAccountId];
             var context = new CheckDrawing(page, layout, top, regular, bold);
 
-            await DrawCheckAsync(context, check, account, amountWriter, signature, secondSignature, cancellationToken);
+            await DrawCheckAsync(context, check, numbers[check], account, amountWriter, signature, secondSignature, cancellationToken);
 
             if (micr is not null)
             {
@@ -222,14 +279,14 @@ public sealed class CheckPrinter : ICheckPrinter
 
             foreach (var voucherTop in voucherTops)
             {
-                await DrawVoucherAsync(page, layout, voucherTop, check, regular, bold, cancellationToken);
+                await DrawVoucherAsync(page, layout, voucherTop, check, numbers[check], regular, bold, cancellationToken);
             }
         }
 
         return new CheckPrintResult { Pdf = writer.Build() };
     }
 
-    private async Task DrawCheckAsync(CheckDrawing context, CheckRecord check, BankAccount account, IAmountInWords amountWriter, byte[] signature, byte[] secondSignature, CancellationToken cancellationToken)
+    private async Task DrawCheckAsync(CheckDrawing context, CheckRecord check, long number, BankAccount account, IAmountInWords amountWriter, byte[] signature, byte[] secondSignature, CancellationToken cancellationToken)
     {
         var layout = context.Layout;
 
@@ -247,7 +304,7 @@ public sealed class CheckPrinter : ICheckPrinter
             context.Lines(CheckFieldNames.Bank, [account.BankName ?? string.Empty]);
         }
 
-        context.Text(CheckFieldNames.Number, check.Number.ToString(CultureInfo.InvariantCulture), bold: true);
+        context.Text(CheckFieldNames.Number, number.ToString(CultureInfo.InvariantCulture), bold: true);
         context.Text(CheckFieldNames.Date, check.CheckDate.ToString("d", CultureInfo.CurrentCulture));
         context.Text(CheckFieldNames.Payee, check.PayeeName, bold: true);
         context.Text(CheckFieldNames.Amount, "**" + FormatAmount(check));
@@ -286,7 +343,7 @@ public sealed class CheckPrinter : ICheckPrinter
         }
     }
 
-    private async Task DrawVoucherAsync(PdfCanvas page, CheckLayout layout, double top, CheckRecord check, PdfFontFace regular, PdfFontFace bold, CancellationToken cancellationToken)
+    private async Task DrawVoucherAsync(PdfCanvas page, CheckLayout layout, double top, CheckRecord check, long number, PdfFontFace regular, PdfFontFace bold, CancellationToken cancellationToken)
     {
         var source = string.IsNullOrEmpty(check.SourceKind)
             ? null
@@ -295,7 +352,7 @@ public sealed class CheckPrinter : ICheckPrinter
 
         voucher ??= new CheckVoucher
         {
-            Title = S["Check {0}", check.Number],
+            Title = S["Check {0}", number],
             Columns = [S["Paid to"], S["Amount"]],
             Lines =
             [
@@ -304,48 +361,79 @@ public sealed class CheckPrinter : ICheckPrinter
             ],
         };
 
+        var sections = voucher.GetSections();
         var x = VoucherMargin + layout.OffsetX;
         var y = top + VoucherMargin / 2 + layout.OffsetY;
         var width = CheckLayoutDefaults.CheckWidth - (VoucherMargin * 2);
-        var valueColumns = Math.Max(1, voucher.Columns.Count - 1);
-        var labelWidth = width * 0.46;
-        var valueWidth = (width - labelWidth) / valueColumns;
         var bottom = top + CheckLayoutDefaults.CheckHeight - (VoucherMargin / 2);
 
         page.DrawText(regular.Prepare(PdfText.Fit(PdfText.Clean(voucher.Title ?? string.Empty), bold, 10, width)), bold, 10, x, y, PdfColor.Black);
-        page.DrawText(regular.Prepare(S["{0}, {1}, check {2}, {3}", check.PayeeName, check.CheckDate.ToString("d", CultureInfo.CurrentCulture), check.Number, FormatAmount(check)]), regular, 8, x, y + VoucherLineHeight, PdfColor.Black);
+        page.DrawText(regular.Prepare(S["{0}, {1}, check {2}, {3}", check.PayeeName, check.CheckDate.ToString("d", CultureInfo.CurrentCulture), number, FormatAmount(check)]), regular, 8, x, y + VoucherLineHeight, PdfColor.Black);
         y += VoucherLineHeight * 2.5;
 
-        if (voucher.Columns.Count > 0)
-        {
-            DrawRow(page, bold, x, y, labelWidth, valueWidth, voucher.Columns[0], voucher.Columns.Skip(1).ToArray());
-            page.DrawLine(x, y + VoucherLineHeight, x + width, y + VoucherLineHeight, PdfColor.Black, 0.5);
-            y += VoucherLineHeight + 2;
-        }
+        // A stub with many rows, such as a pay stub's earnings, taxes and deductions, prints smaller to fit its third.
+        var rows = sections.Sum(section => (string.IsNullOrEmpty(section.Title) ? 0 : 1) + (section.Columns.Count > 0 ? 1 : 0) + section.Lines.Count) + ((sections.Count - 1) * 0.5);
+        var compact = rows * VoucherLineHeight > bottom - y;
+        var lineHeight = compact ? CompactLineHeight : VoucherLineHeight;
+        var fontSize = compact ? 7 : 8;
 
-        foreach (var line in voucher.Lines)
+        foreach (var section in sections)
         {
-            if (y + VoucherLineHeight > bottom)
+            var valueColumns = Math.Max(1, Math.Max(section.Columns.Count - 1, section.Lines.Count == 0 ? 0 : section.Lines.Max(line => line.Values?.Count ?? 0)));
+
+            // The label column narrows as value columns are added, so four or more still fit the stub.
+            var labelWidth = width * (valueColumns <= 3 ? 0.46 : valueColumns == 4 ? 0.34 : 0.28);
+            var valueWidth = (width - labelWidth) / valueColumns;
+
+            if (!string.IsNullOrEmpty(section.Title))
             {
-                page.DrawText(regular.Prepare(S["More lines than the voucher holds; see the statement."]), regular, 7, x, y, PdfColor.Black);
+                if (y + lineHeight > bottom)
+                {
+                    DrawOverflow(page, regular, x, y);
 
-                break;
+                    return;
+                }
+
+                page.DrawText(bold.Prepare(PdfText.Fit(PdfText.Clean(section.Title), bold, fontSize + 1, width)), bold, fontSize + 1, x, y, PdfColor.Black);
+                y += lineHeight;
             }
 
-            DrawRow(page, line.IsEmphasized ? bold : regular, x, y, labelWidth, valueWidth, line.Label, line.Values);
-            y += VoucherLineHeight;
+            if (section.Columns.Count > 0)
+            {
+                DrawRow(page, bold, fontSize, x, y, labelWidth, valueWidth, section.Columns[0], section.Columns.Skip(1).ToArray());
+                page.DrawLine(x, y + lineHeight, x + width, y + lineHeight, PdfColor.Black, 0.5);
+                y += lineHeight + 2;
+            }
+
+            foreach (var line in section.Lines)
+            {
+                if (y + lineHeight > bottom)
+                {
+                    DrawOverflow(page, regular, x, y);
+
+                    return;
+                }
+
+                DrawRow(page, line.IsEmphasized ? bold : regular, fontSize, x, y, labelWidth, valueWidth, line.Label, line.Values ?? []);
+                y += lineHeight;
+            }
+
+            y += lineHeight / 2;
         }
     }
 
-    private static void DrawRow(PdfCanvas page, PdfFontFace font, double x, double y, double labelWidth, double valueWidth, string label, IReadOnlyList<string> values)
+    private void DrawOverflow(PdfCanvas page, PdfFontFace font, double x, double y)
+        => page.DrawText(font.Prepare(S["More lines than the voucher holds; see the statement."]), font, 7, x, y, PdfColor.Black);
+
+    private static void DrawRow(PdfCanvas page, PdfFontFace font, double fontSize, double x, double y, double labelWidth, double valueWidth, string label, IReadOnlyList<string> values)
     {
-        page.DrawText(font.Prepare(PdfText.Fit(PdfText.Clean(label ?? string.Empty), font, 8, labelWidth - 4)), font, 8, x, y, PdfColor.Black);
+        page.DrawText(font.Prepare(PdfText.Fit(PdfText.Clean(label ?? string.Empty), font, fontSize, labelWidth - 4)), font, fontSize, x, y, PdfColor.Black);
 
         for (var i = 0; i < values.Count; i++)
         {
-            var text = font.Prepare(PdfText.Fit(PdfText.Clean(values[i] ?? string.Empty), font, 8, valueWidth - 4));
+            var text = font.Prepare(PdfText.Fit(PdfText.Clean(values[i] ?? string.Empty), font, fontSize, valueWidth - 4));
 
-            page.DrawTextRight(text, font, 8, x + labelWidth + (valueWidth * (i + 1)), y, PdfColor.Black);
+            page.DrawTextRight(text, font, fontSize, x + labelWidth + (valueWidth * (i + 1)), y, PdfColor.Black);
         }
     }
 
