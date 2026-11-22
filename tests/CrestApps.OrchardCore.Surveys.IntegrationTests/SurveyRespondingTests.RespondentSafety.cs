@@ -196,7 +196,10 @@ public sealed partial class SurveyRespondingTests
             Assert.Equal(SurveyResponseStatus.Completed, completed.Status);
             Assert.Equal(HttpStatusCode.OK, inProgressPage.StatusCode);
             Assert.Equal(HttpStatusCode.OK, completedPage.StatusCode);
-            Assert.Contains(completed.Number, await completedPage.Content.ReadAsStringAsync(cancellationToken), StringComparison.Ordinal);
+            var completedHtml = await completedPage.Content.ReadAsStringAsync(cancellationToken);
+
+            Assert.Contains(completed.Number, completedHtml, StringComparison.Ordinal);
+            Assert.Contains("Detailed answer", completedHtml, StringComparison.Ordinal);
         }
     }
 

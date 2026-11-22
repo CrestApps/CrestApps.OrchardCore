@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Logic;
@@ -177,6 +178,12 @@ public sealed class SurveyRunnerShapes
 
                 var view = _pageViews.Project(definition, response, state, question, handler, null, state.HiddenQuestionIds);
                 var feedback = Feedback(question, answer, shows);
+                var showsAnswer = (shows & ReviewShows.Responses) != 0 && answer is not null;
+
+                // The review templates of text-like types show the answer as the type itself formats it.
+                var answerText = showsAnswer
+                    ? handler.FormatAnswer(question, answer, new SurveyFormatContext { Culture = CultureInfo.CurrentCulture, Definition = definition })
+                    : null;
 
                 shapes.Add(await BuildQuestionAsync(
                     survey,
@@ -190,7 +197,8 @@ public sealed class SurveyRunnerShapes
                     hiddenChoiceIds: null,
                     canCheck: false,
                     culture: response.Culture,
-                    feedback: feedback));
+                    feedback: feedback,
+                    answerText: answerText));
             }
         }
 
@@ -236,7 +244,8 @@ public sealed class SurveyRunnerShapes
         IReadOnlyCollection<string> hiddenChoiceIds,
         bool canCheck,
         string culture,
-        SurveyAnswerFeedback feedback = null)
+        SurveyAnswerFeedback feedback = null,
+        string answerText = null)
     {
         var control = await _shapeFactory.CreateAsync<SurveyControlViewModel>(SurveyControlShapes.Control, model =>
         {
@@ -249,6 +258,7 @@ public sealed class SurveyRunnerShapes
             model.ReadOnly = readOnly;
             model.Feedback = feedback;
             model.Culture = culture;
+            model.AnswerText = answerText;
         });
 
         control.Metadata.DisplayType = displayType;

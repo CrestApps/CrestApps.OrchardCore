@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Core.Translations;
+using CrestApps.OrchardCore.Surveys.Filters;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.ViewModels;
@@ -23,6 +24,7 @@ namespace CrestApps.OrchardCore.Surveys.Controllers;
 /// feedback, the ending, the review, the totals of a poll and the respondent's own responses. The controller is thin:
 /// the response service decides everything.
 /// </summary>
+[TypeFilter(typeof(SurveyAnonymitySecretUnreadableFilter))]
 public sealed class SurveyRunnerController : Controller
 {
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)

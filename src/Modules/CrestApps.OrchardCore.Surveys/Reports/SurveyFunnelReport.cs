@@ -56,6 +56,7 @@ internal sealed class SurveyFunnelReport : IReport
         var left = new Dictionary<string, int>(StringComparer.Ordinal);
         var seconds = new Dictionary<string, List<decimal>>(StringComparer.Ordinal);
         var started = 0;
+        var completed = 0;
 
         await foreach (var response in _queries.ReadAsync(scope.ResultsScope, cancellationToken))
         {
@@ -65,6 +66,11 @@ internal sealed class SurveyFunnelReport : IReport
             }
 
             started++;
+
+            if (response.Status == SurveyResponseStatus.Completed && !response.IsTest)
+            {
+                completed++;
+            }
 
             foreach (var page in (response.PageVisits ?? []).Select(visit => Page(scope, response, visit.PageId)).Distinct(StringComparer.Ordinal))
             {
@@ -93,7 +99,8 @@ internal sealed class SurveyFunnelReport : IReport
             }
         }
 
-        if (scope.IsTooSmall(started))
+        // The minimum group size counts real, completed responses only: in-progress or test responses can't pad it.
+        if (scope.IsTooSmall(completed))
         {
             return _data.TooFewResponses(scope);
         }
