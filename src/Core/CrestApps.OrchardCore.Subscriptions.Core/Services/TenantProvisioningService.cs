@@ -128,7 +128,9 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         // Re-read inside the lock: the holder may have just finished this very job.
         var job = await _jobStore.FindByIdAsync(jobId, cancellationToken);
 
-        if (job is null || job.IsTerminal)
+        // A job waiting for its payment is built once the payment arrives (TenantProvisioningPaymentReceivedHandler moves it
+        // to Pending), never because somebody ran it.
+        if (job is null || job.IsTerminal || job.Status == TenantProvisioningStatus.AwaitingPayment)
         {
             telemetry.SetOutcome(SubscriptionsTelemetry.ProvisioningSkipped);
 

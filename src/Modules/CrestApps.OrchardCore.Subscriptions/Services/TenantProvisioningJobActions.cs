@@ -10,12 +10,13 @@ public static class TenantProvisioningJobActions
 {
     /// <summary>
     /// Whether the job can be tried again. A running job is already being tried, a finished one has nothing left
-    /// to do, and a job that has lost its administrator password can never complete.
+    /// to do, one waiting for its payment is built once the payment arrives, and a job that has lost its administrator
+    /// password can never complete.
     /// </summary>
     /// <param name="job">The job.</param>
     public static bool CanRetry(TenantProvisioningJob job)
         => job is not null &&
-            job.Status is not (TenantProvisioningStatus.Succeeded or TenantProvisioningStatus.Running) &&
+            job.Status is not (TenantProvisioningStatus.Succeeded or TenantProvisioningStatus.Running or TenantProvisioningStatus.AwaitingPayment) &&
             !string.IsNullOrEmpty(job.ProtectedAdminPassword);
 
     /// <summary>

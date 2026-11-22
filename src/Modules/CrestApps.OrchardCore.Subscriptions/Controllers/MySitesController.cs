@@ -228,6 +228,15 @@ public sealed class TenantProvisioningAdminController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        // A site bought with a promise to pay (Pay Later, a bank transfer) is built when the payment arrives. Retrying it
+        // would give the buyer a running site before they paid.
+        if (job.Status == TenantProvisioningStatus.AwaitingPayment)
+        {
+            await _notifier.WarningAsync(H["That site is waiting for its payment. It is created as soon as the payment arrives."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         // The password is dropped once a job reaches a terminal state, so an abandoned job can't complete however
         // often it is queued. Checked before the job is touched, so refusing leaves it exactly as it was.
         if (!TenantProvisioningJobActions.CanRetry(job))
