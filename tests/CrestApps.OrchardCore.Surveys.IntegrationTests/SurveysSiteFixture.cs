@@ -28,7 +28,7 @@ namespace CrestApps.OrchardCore.Surveys.IntegrationTests;
 /// One real Orchard Core host for the Surveys suite: the Default tenant set up blank with Surveys and the features it
 /// integrates with, an administrator, and a respondent who may respond to surveys open to signed-in users.
 /// </summary>
-public sealed partial class SurveysSiteFixture : IAsyncLifetime
+public partial class SurveysSiteFixture : IAsyncLifetime
 {
     /// <summary>
     /// The password of every account the fixture creates.
@@ -57,6 +57,16 @@ public sealed partial class SurveysSiteFixture : IAsyncLifetime
 
     private WebApplication _application;
     private string _applicationDataPath;
+
+    /// <summary>
+    /// Gets the features the fixture turns on after setup.
+    /// </summary>
+    protected virtual IReadOnlyCollection<string> Features => _features;
+
+    /// <summary>
+    /// Gets a value indicating whether the fixture turns on a front-end theme and creates the respondent.
+    /// </summary>
+    protected virtual bool ConfiguresRespondentSite => true;
 
     /// <summary>
     /// Gets the shell host.
@@ -110,8 +120,13 @@ public sealed partial class SurveysSiteFixture : IAsyncLifetime
             var features = services.GetRequiredService<IShellFeaturesManager>();
             var available = await features.GetAvailableFeaturesAsync();
 
-            await features.EnableFeaturesAsync(available.Where(feature => _features.Contains(feature.Id)), force: true);
+            await features.EnableFeaturesAsync(available.Where(feature => Features.Contains(feature.Id)), force: true);
         });
+
+        if (!ConfiguresRespondentSite)
+        {
+            return;
+        }
 
         await InTenantAsync(services => RunRecipeAsync(services, new JsonObject
         {
