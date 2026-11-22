@@ -154,7 +154,7 @@ public sealed class SurveyMaintenanceTests
         Assert.Equal(SurveyResponseStatus.Completed, (await harness.FindAsync(healthy.ItemId)).Status);
     }
 
-    private static Task RunMaintenanceAsync(RuntimeTestHarness harness, int batchSize = SurveysConstants.PageSize)
+    private static Task<bool> RunMaintenanceAsync(RuntimeTestHarness harness, int batchSize = SurveysConstants.PageSize)
         => harness.RunAsync(async services =>
         {
             await services.GetRequiredService<SurveyMaintenanceService>().RunAsync(batchSize, TestContext.Current.CancellationToken);
