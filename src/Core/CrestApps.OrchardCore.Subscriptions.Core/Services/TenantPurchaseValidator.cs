@@ -149,6 +149,15 @@ public static partial class TenantPurchaseValidator
     /// </summary>
     public const int DefaultMaxDomains = 5;
 
+    // The host labels mail, name, sign-in, file transfer and hosting panel services answer on. A site named after one would
+    // take that name under the base domain, where mail clients, single sign-on or a control panel look for the operator.
+    private static readonly HashSet<string> _reservedHostLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "www", "mail", "email", "webmail", "smtp", "imap", "pop", "pop3", "mx", "ns", "ns1", "ns2", "ns3", "ns4", "dns",
+        "autodiscover", "autoconfig", "sso", "auth", "oauth", "identity", "cpanel", "whm", "webdisk", "plesk", "ftp", "sftp",
+        "vpn", "remote", "owa", "exchange", "lyncdiscover", "sip",
+    };
+
     /// <summary>
     /// Fills in what the buyer may not choose: the prefix from the name, and the host from the base domain.
     /// </summary>
@@ -355,11 +364,21 @@ public static partial class TenantPurchaseValidator
             return;
         }
 
-        // A reserved host is reserved with every name under it, so a wildcard one reserves the domain it covers.
-        var reserved = new HashSet<string>((rules.ReservedHosts ?? []).Where(host => !string.IsNullOrWhiteSpace(host)).Select(host => Bare(host.Trim().Trim('.'))), StringComparer.OrdinalIgnoreCase)
+        // A reserved host is reserved with every name under it, so a wildcard one reserves the domain it covers. The base
+        // domain is the operator's too: a buyer's own domain may not be it, a name under it or a name above it.
+        var reserved = new HashSet<string>((rules.ReservedHosts ?? []).Append(rules.BaseDomain).Where(host => !string.IsNullOrWhiteSpace(host)).Select(host => Bare(host.Trim().Trim('.'))), StringComparer.OrdinalIgnoreCase)
         {
             "localhost",
         };
+
+        // The operator owns the registrable domain of each of its hosts (operator.com for shop.eu.operator.com), so a
+        // buyer's own domain may not be any name under it, the host's siblings included. A shared public suffix
+        // (azurewebsites.net) gives each customer a registrable domain of their own, so only the operator's is held.
+        var operatorDomains = reserved
+            .Where(host => !IsIpAddress(host))
+            .Select(PublicSuffixList.GetRegistrableDomain)
+            .Where(domain => domain is not null)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var takenHosts = new HashSet<string>(
             tenants.SelectMany(tenant => (tenant.RequestUrlHosts ?? [])).Where(host => !string.IsNullOrWhiteSpace(host)).Select(host => host.Trim()),
@@ -389,12 +408,14 @@ public static partial class TenantPurchaseValidator
             // The operator's domains are reserved with every name under them, so a buyer who checks out through one alias
             // can't take another, and with every name above them, which the operator's own name lives under; the host
             // derived from the base domain is the one name under it a buyer is given. With a base domain the name is a host
-            // label, so it is held to the reserved prefixes too (admin.{base domain}).
+            // label, so it is held to the reserved prefixes too (admin.{base domain}), and to the labels mail, sign-in and
+            // hosting panel services answer on (autodiscover.{base domain}).
             var isReserved = reserved.Contains(domain) ||
                 reserved.Any(host => host.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase)) ||
                 (derived
-                    ? IsReservedPrefix(request.TenantName, rules) || string.Equals(request.TenantName, "www", StringComparison.OrdinalIgnoreCase)
-                    : reserved.Any(host => domain.EndsWith("." + host, StringComparison.OrdinalIgnoreCase)));
+                    ? IsReservedPrefix(request.TenantName, rules) || _reservedHostLabels.Contains(request.TenantName)
+                    : reserved.Any(host => domain.EndsWith("." + host, StringComparison.OrdinalIgnoreCase)) ||
+                        operatorDomains.Contains(PublicSuffixList.GetRegistrableDomain(domain) ?? string.Empty));
 
             if (isReserved)
             {

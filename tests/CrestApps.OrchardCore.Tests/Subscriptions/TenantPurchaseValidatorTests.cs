@@ -313,6 +313,64 @@ public sealed class TenantPurchaseValidatorTests
     }
 
     /// <summary>
+    /// Review 11 (reserved hosts): the store answers on <c>shop.eu.operator.com</c>, so every name under its registrable
+    /// domain <c>operator.com</c> is the operator's, the siblings of its host included (<c>mail.operator.com</c>). A public
+    /// suffix shared by unrelated customers holds only the store's own name (<c>other.azurewebsites.net</c> stays free).
+    /// </summary>
+    [Theory]
+    [InlineData("mail.operator.com", true)]
+    [InlineData("autodiscover.operator.com", true)]
+    [InlineData("sso.eu.operator.com", true)]
+    [InlineData("other.azurewebsites.net", false)]
+    public void Validate_ASiblingUnderTheOperatorsRegistrableDomain_IsRefused(string domain, bool refused)
+    {
+        var errors = TenantPurchaseValidator.Validate(
+            Request(domains: [domain]),
+            Rules(allowCustomDomains: true, reservedHosts: ["shop.eu.operator.com", "store.azurewebsites.net"]),
+            _tenants);
+
+        Assert.Equal(refused, errors.Any(error => error.Code == TenantPurchaseErrorCode.ReservedHost));
+    }
+
+    /// <summary>
+    /// Review 11 (reserved hosts): with a base domain the site name is a host label, so the labels mail, sign-in and hosting
+    /// panel services answer on are held back too (<c>autodiscover.{base domain}</c> would receive mail clients' set-up
+    /// requests).
+    /// </summary>
+    [Theory]
+    [InlineData("mail")]
+    [InlineData("autodiscover")]
+    [InlineData("sso")]
+    [InlineData("cpanel")]
+    [InlineData("smtp")]
+    public void Validate_AnInfrastructureLabelAsAHostLabel_IsRefused(string tenantName)
+    {
+        var rules = Rules(baseDomain: "sites.operator.com");
+        var request = TenantPurchaseValidator.Normalize(Request(tenantName: tenantName, prefix: null), rules);
+
+        var errors = TenantPurchaseValidator.Validate(request, rules, _tenants);
+
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.ReservedHost);
+    }
+
+    /// <summary>
+    /// Review 11 (reserved hosts): the base domain is the operator's. A buyer's own domain may not be the base domain itself,
+    /// a name under it (which another buyer's site name would derive), or a name above it.
+    /// </summary>
+    [Theory]
+    [InlineData("sites.operator.com")]
+    [InlineData("shop2.sites.operator.com")]
+    [InlineData("operator.com")]
+    public void Validate_TheBaseDomainAsACustomDomain_IsRefused(string domain)
+    {
+        var rules = Rules(allowCustomDomains: true, reservedHosts: ["store.example.net"], baseDomain: "sites.operator.com");
+
+        var errors = TenantPurchaseValidator.Validate(Request(domains: [domain]), rules, _tenants);
+
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.ReservedHost);
+    }
+
+    /// <summary>
     /// Selling-sites Mild (fix verification): a tenant answering on <c>*.wild.example.com</c> answers every name under it,
     /// but a buyer could still take <c>a.wild.example.com</c>.
     /// </summary>
