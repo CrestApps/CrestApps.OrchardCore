@@ -50,6 +50,7 @@ namespace CrestApps.OrchardCore.Checkout
             public const string PaymentDeclineNetwork = "payment-decline-network";
             public const string PaymentDeclineStore = "payment-decline-store";
             public const string PaymentStatus = "payment-status";
+            public const string PaymentStatusNetwork = "payment-status-network";
         }
         public static class Features
         {
