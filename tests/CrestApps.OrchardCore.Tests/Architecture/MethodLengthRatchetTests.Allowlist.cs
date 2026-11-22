@@ -117,8 +117,8 @@ public sealed partial class MethodLengthRatchetTests
 
         // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
         // remove as it is paid down.
-        ["src/Core/CrestApps.OrchardCore.Banking.Core/Checks/Services/CheckPrinter.cs: PrintAsync"] = 164,
-        ["src/Core/CrestApps.OrchardCore.Banking.Core/DirectDeposit/NachaDisbursementProvider.cs: SubmitAsync"] = 164,
+        ["src/Core/CrestApps.OrchardCore.Banking.Core/Checks/Services/CheckPrinter.cs: PrintCoreAsync"] = 212, // raised for main's #1357 when PR #1319 merged main; lower as it is paid down
+        ["src/Core/CrestApps.OrchardCore.Banking.Core/DirectDeposit/NachaDisbursementProvider.cs: SubmitAsync"] = 176, // raised for main's #1357 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.Banking.Core/DirectDeposit/NachaFileWriter.cs: Write"] = 151,
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayRunProcessing.cs: ProcessAsync"] = 167,
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayStubDocument.cs: Write"] = 181,

@@ -66,6 +66,7 @@
         "src/Modules/CrestApps.OrchardCore.Assets/Views/AssetFields.Edit.cshtml": 9,
         "src/Modules/CrestApps.OrchardCore.Asterisk/Views/AsteriskSettings.Edit.cshtml": 12,
         "src/Modules/CrestApps.OrchardCore.AzureAIInference/Views/AzureAIInferenceConnection.Edit.cshtml": 17,
+        "src/Modules/CrestApps.OrchardCore.Banking/Views/CheckRecordFields.Edit.cshtml": 10,
         "src/Modules/CrestApps.OrchardCore.Banking/Views/ChecksRegisterFilters.cshtml": 7,
         "src/Modules/CrestApps.OrchardCore.Banking/Views/DisbursementsFilters.cshtml": 7,
         "src/Modules/CrestApps.OrchardCore.Banking/Views/NachaOriginSettings.Edit.cshtml": 19,

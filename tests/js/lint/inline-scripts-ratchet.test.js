@@ -28,6 +28,8 @@ const sourceRoot = join(repositoryRoot, 'src');
 // CourseItemPart.Edit, CoursePart.Edit and Enrollments/Index, Learning.AI LearningScoringHelp, Learning.Coursework
 // RubricPart.Edit, Learning.Programs LearningPathPart.Edit and RequiredLearning/Edit, Learning.Surveys SurveyPart.Edit,
 // and Users UserAudiences/Edit.
+// Existing debt from main's #1357 (Banking checks), baselined when PR #1319 merged main; remove as it is paid down:
+// Banking CheckRecordFields.Edit.
 const baselinePath = join(__dirname, 'inline-scripts-ratchet.baseline.json');
 
 // A <script> element with its attributes and body. Razor writes these as plain HTML, so a regular expression is enough.

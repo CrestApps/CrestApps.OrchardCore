@@ -188,7 +188,8 @@ public sealed partial class UnboundedQueryRatchetTests
 
         // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
         // remove as it is paid down.
-        ["src/Modules/CrestApps.OrchardCore.Banking/Checks/Controllers/ChecksController.cs"] = 3,
+        ["src/Modules/CrestApps.OrchardCore.Banking/Checks/Controllers/ChecksController.cs"] = 5, // raised for main's #1357 when PR #1319 merged main; lower as it is paid down
+        ["src/Modules/CrestApps.OrchardCore.Banking/Checks/Drivers/BankAccountCheckSettingsDisplayDriver.cs"] = 1, // added for main's #1357 when PR #1319 merged main; remove as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Banking/Disbursements/Controllers/DisbursementsController.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Banking/Disbursements/Drivers/DisbursementDisplayDriver.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Payroll/Controllers/EmployersController.cs"] = 1,
