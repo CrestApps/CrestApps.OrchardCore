@@ -18,6 +18,7 @@ using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using CrestApps.OrchardCore.Subscriptions.Drivers;
 using CrestApps.OrchardCore.Subscriptions.Endpoints;
+using CrestApps.OrchardCore.Subscriptions.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Migrations;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Navigation;
@@ -152,7 +153,8 @@ public sealed class RolesStartup : StartupBase
 
         services.AddDataMigration<SubscriptionEntitlementPartMigrations>()
             .AddContentPart<SubscriptionEntitlementPart>()
-            .UseDisplayDriver<SubscriptionEntitlementPartDisplayDriver>();
+            .UseDisplayDriver<SubscriptionEntitlementPartDisplayDriver>()
+            .AddHandler<SubscriptionEntitlementPartRolesHandler>();
     }
 }
 

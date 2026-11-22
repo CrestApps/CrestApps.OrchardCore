@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -41,6 +42,7 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
     private readonly PaymentSessionCache _paymentSessionCache;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ISiteService _siteService;
+    private readonly IRoleGrantPolicy _roleGrantPolicy;
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
 
     // The accounts this scope created, by checkout session, so only the account a checkout created is signed in or
@@ -58,6 +60,7 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
     /// <param name="paymentSessionCache">The cache that holds the password outside the database.</param>
     /// <param name="dataProtectionProvider">The data protection provider used to protect the password.</param>
     /// <param name="siteService">The site service used to read the subscription role settings.</param>
+    /// <param name="roleGrantPolicy">The policy that says which roles a purchase may give.</param>
     /// <param name="documentJsonSerializerOptions">The document serializer options.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public UserRegistrationCheckoutHandler(
@@ -67,6 +70,7 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
         PaymentSessionCache paymentSessionCache,
         IDataProtectionProvider dataProtectionProvider,
         ISiteService siteService,
+        IRoleGrantPolicy roleGrantPolicy,
         IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions,
         IStringLocalizer<UserRegistrationCheckoutHandler> stringLocalizer)
     {
@@ -76,6 +80,7 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
         _paymentSessionCache = paymentSessionCache;
         _dataProtectionProvider = dataProtectionProvider;
         _siteService = siteService;
+        _roleGrantPolicy = roleGrantPolicy;
         _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
         S = stringLocalizer;
     }
@@ -145,9 +150,13 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
 
         var roleSettings = await _siteService.GetSettingsAsync<SubscriptionRoleSettings>();
 
-        if (roleSettings.RoleNames is not null)
+        // Never the administrator role, under whatever name, nor a role that can manage users, roles or security,
+        // whatever the settings were saved with: an account a purchase creates is a customer's.
+        foreach (var roleName in roleSettings.RoleNames ?? [])
         {
-            foreach (var roleName in roleSettings.RoleNames)
+            if (!string.IsNullOrWhiteSpace(roleName) &&
+                await _roleGrantPolicy.IsGrantableAsync(roleName) &&
+                !await _roleGrantPolicy.IsSecurityCriticalAsync(roleName))
             {
                 step.User.RoleNames.Add(roleName);
             }

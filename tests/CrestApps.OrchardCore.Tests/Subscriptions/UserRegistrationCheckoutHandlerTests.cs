@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Tests.Checkout;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -98,6 +99,32 @@ public sealed class UserRegistrationCheckoutHandlerTests
         registration.SignInManager.Verify(manager => manager.SignInAsync(It.Is<IUser>(user => ((User)user).UserId == "user-1"), false, null), Times.Once);
         registration.SignInManager.Verify(manager => manager.PasswordSignInAsync(It.IsAny<IUser>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never);
         Assert.Null(await registration.Cache.GetAsync<string>("session-1", UserRegistrationCheckoutHandler.PasswordPurpose));
+    }
+
+    /// <summary>
+    /// SEC-C10 (review 11, C3): the roles a subscriber's new account is put in never include the administrator role,
+    /// whatever the tenant named it, or a role that holds a security-critical permission, whatever the settings hold.
+    /// </summary>
+    [Fact]
+    public async Task CompletingAsync_PutsTheNewAccountOnlyInRolesAPurchaseMayGive()
+    {
+        // Arrange: the administrator role is "Owners" on this tenant, and Staff can manage users.
+        var policy = new Mock<IRoleGrantPolicy>();
+        policy.Setup(p => p.IsGrantableAsync(It.IsAny<string>())).ReturnsAsync((string role) => role != "Owners");
+        policy.Setup(p => p.IsSecurityCriticalAsync(It.IsAny<string>())).ReturnsAsync((string role) => role is "Owners" or "Staff");
+        var registration = new Registration(new DefaultHttpContext(), new SubscriptionRoleSettings { RoleNames = ["Owners", "Staff", "Member"] }, policy.Object);
+        var session = await registration.CreatePendingSessionAsync("session-1");
+        IUser created = null;
+        registration.UserManager
+            .Setup(manager => manager.CreateAsync(It.IsAny<IUser>(), "Password!1"))
+            .Callback<IUser, string>((user, _) => created = user)
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        await registration.Handler.CompletingAsync(new CheckoutFlowCompletingContext(new CheckoutFlow(session)));
+
+        // Assert
+        Assert.Equal(["Member"], ((User)created).RoleNames);
     }
 
     /// <summary>
@@ -212,6 +239,7 @@ public sealed class UserRegistrationCheckoutHandlerTests
             CheckoutTestHelpers.CreatePaymentSessionCache(),
             Mock.Of<IDataProtectionProvider>(),
             Mock.Of<ISiteService>(),
+            Mock.Of<IRoleGrantPolicy>(),
             Options.Create(new DocumentJsonSerializerOptions()),
             Mock.Of<IStringLocalizer<UserRegistrationCheckoutHandler>>());
     }
@@ -221,7 +249,7 @@ public sealed class UserRegistrationCheckoutHandlerTests
         private readonly EphemeralDataProtectionProvider _protection = new();
         private readonly User _created = new() { UserName = "subscriber", Email = "subscriber@example.com" };
 
-        public Registration(HttpContext httpContext)
+        public Registration(HttpContext httpContext, SubscriptionRoleSettings roleSettings = null, IRoleGrantPolicy roleGrantPolicy = null)
         {
             UserManager = new Mock<UserManager<IUser>>(Mock.Of<IUserStore<IUser>>(), null, null, null, null, null, null, null, null);
             UserManager
@@ -258,7 +286,8 @@ public sealed class UserRegistrationCheckoutHandlerTests
                 accessor.Object,
                 Cache,
                 _protection,
-                SiteServiceFactory.Create(new SubscriptionRoleSettings()),
+                SiteServiceFactory.Create(roleSettings ?? new SubscriptionRoleSettings()),
+                roleGrantPolicy ?? Mock.Of<IRoleGrantPolicy>(),
                 Options.Create(new DocumentJsonSerializerOptions()),
                 Mock.Of<IStringLocalizer<UserRegistrationCheckoutHandler>>());
         }

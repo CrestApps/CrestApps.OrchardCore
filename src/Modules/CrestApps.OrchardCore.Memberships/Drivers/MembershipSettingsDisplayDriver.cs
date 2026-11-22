@@ -21,6 +21,7 @@ public sealed class MembershipSettingsDisplayDriver : SiteDisplayDriver<Membersh
     private readonly IRoleService _roleService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IRoleGrantPolicy _roleGrantPolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MembershipSettingsDisplayDriver"/> class.
@@ -28,11 +29,14 @@ public sealed class MembershipSettingsDisplayDriver : SiteDisplayDriver<Membersh
     /// <param name="roleService">The role service.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="roleGrantPolicy">The policy that says which roles a grant may give.</param>
     public MembershipSettingsDisplayDriver(
         IRoleService roleService,
         IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IRoleGrantPolicy roleGrantPolicy)
     {
+        _roleGrantPolicy = roleGrantPolicy;
         _roleService = roleService;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
@@ -88,6 +92,19 @@ public sealed class MembershipSettingsDisplayDriver : SiteDisplayDriver<Membersh
             await _authorizationService.AuthorizeAsync(user, UsersPermissions.AssignRoleToUsers);
     }
 
+    // Never the administrator role, whatever the tenant named it.
     private async Task<IReadOnlyList<string>> GetRolesAsync()
-        => [.. (await _roleService.GetRoleNamesAsync()).Where(RoleGrantRules.IsGrantable).Order(StringComparer.OrdinalIgnoreCase)];
+    {
+        var roles = new List<string>();
+
+        foreach (var role in await _roleService.GetRoleNamesAsync())
+        {
+            if (await _roleGrantPolicy.IsGrantableAsync(role))
+            {
+                roles.Add(role);
+            }
+        }
+
+        return [.. roles.Order(StringComparer.OrdinalIgnoreCase)];
+    }
 }

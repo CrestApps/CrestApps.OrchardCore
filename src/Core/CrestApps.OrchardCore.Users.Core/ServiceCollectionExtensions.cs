@@ -61,12 +61,6 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds <see cref="IRoleGrantService"/>, which puts users in roles on behalf of sources such as memberships and
-    /// subscriptions and takes a role away only when no source still grants it. Safe to call from every module that
-    /// grants roles; register an <see cref="IRoleGrantSource"/> for the grants a module made before.
-    /// </summary>
-    /// <param name="services">The services.</param>
-    /// <summary>
     /// Registers the audience service, the audiences administrators define, and the role rule.
     /// </summary>
     /// <param name="services">The services.</param>
@@ -79,9 +73,18 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds <see cref="IRoleGrantService"/>, which puts users in roles on behalf of sources such as memberships and
+    /// subscriptions and takes a role away only when no source still grants it, and <see cref="IRoleGrantPolicy"/>, which
+    /// says which roles a grant may give. Safe to call from every module that grants roles; register an
+    /// <see cref="IRoleGrantSource"/> for the grants a module made before.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
     public static IServiceCollection AddRoleGrants(this IServiceCollection services)
     {
         services.TryAddScoped<IRoleGrantService, DefaultRoleGrantService>();
+        services.TryAddScoped<IRoleGrantPolicy, DefaultRoleGrantPolicy>();
 
         return services;
     }

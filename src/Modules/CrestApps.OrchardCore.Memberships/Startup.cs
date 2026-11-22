@@ -49,8 +49,10 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICartLineHandler, MembershipCartLineHandler>();
         services.AddSingleton<IBackgroundTask, MembershipsBackgroundTask>();
 
+        // The editor keeps the roles for whoever may not choose them; the handler refuses them on every other save.
         services.AddContentPart<MembershipPart>()
-            .UseDisplayDriver<MembershipPartDisplayDriver>();
+            .UseDisplayDriver<MembershipPartDisplayDriver>()
+            .AddHandler<MembershipPartRolesHandler>();
         services.AddDisplayDriver<Membership, MembershipDisplayDriver>();
 
         services.AddPermissionProvider<MembershipsPermissionProvider>();

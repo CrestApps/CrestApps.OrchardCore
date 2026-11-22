@@ -24,14 +24,17 @@ public sealed class RoleSubscriptionEntitlementApplier : ISubscriptionEntitlemen
     public const string SourceName = "Subscription";
 
     private readonly IRoleGrantService _roleGrantService;
+    private readonly IRoleGrantPolicy _roleGrantPolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RoleSubscriptionEntitlementApplier"/> class.
     /// </summary>
     /// <param name="roleGrantService">The service that records the grant and adds or removes the role.</param>
-    public RoleSubscriptionEntitlementApplier(IRoleGrantService roleGrantService)
+    /// <param name="roleGrantPolicy">The policy that says which roles a subscription may grant.</param>
+    public RoleSubscriptionEntitlementApplier(IRoleGrantService roleGrantService, IRoleGrantPolicy roleGrantPolicy)
     {
         _roleGrantService = roleGrantService;
+        _roleGrantPolicy = roleGrantPolicy;
     }
 
     /// <inheritdoc/>
@@ -40,7 +43,11 @@ public sealed class RoleSubscriptionEntitlementApplier : ISubscriptionEntitlemen
     /// <inheritdoc/>
     public async Task ApplyAsync(SubscriptionEntitlementContext context)
     {
-        if (TryResolve(context, out var ownerId, out var roleName))
+        // A subscription never makes anyone an administrator, or gives a role that can manage users, roles or security,
+        // whatever a plan saved by a recipe or an API write names: subscriptions have no allowlist to name one.
+        if (TryResolve(context, out var ownerId, out var roleName) &&
+            await _roleGrantPolicy.IsGrantableAsync(roleName) &&
+            !await _roleGrantPolicy.IsSecurityCriticalAsync(roleName))
         {
             // A guest subscriber has no account to put in a role. The subscription is still valid; it simply
             // cannot grant a role until the buyer has an account.

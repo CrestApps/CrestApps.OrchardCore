@@ -31,7 +31,7 @@ public sealed class RoleGrantServiceTests
     {
         // Arrange
         var service = CreateService();
-        var applier = new RoleSubscriptionEntitlementApplier(service);
+        var applier = new RoleSubscriptionEntitlementApplier(service, Policy());
         var subscription = new Subscription { ItemId = "s1", OwnerId = "u1" };
         var context = new SubscriptionEntitlementContext(subscription, new SubscriptionEntitlement { Kind = SubscriptionConstants.EntitlementKinds.Role, Value = "Gold" });
 
@@ -87,7 +87,7 @@ public sealed class RoleGrantServiceTests
             .ReturnsAsync([new Membership { ItemId = "m1", UserId = "u1", Status = MembershipStatus.Active, RoleNames = ["Gold"], AddedRoleNames = ["Gold"] }]);
 
         var service = CreateService(new MembershipRoleGrantSource(memberships.Object));
-        var applier = new RoleSubscriptionEntitlementApplier(service);
+        var applier = new RoleSubscriptionEntitlementApplier(service, Policy());
         var context = new SubscriptionEntitlementContext(
             new Subscription { ItemId = "s1", OwnerId = "u1" },
             new SubscriptionEntitlement { Kind = SubscriptionConstants.EntitlementKinds.Role, Value = "Gold" });
@@ -109,7 +109,7 @@ public sealed class RoleGrantServiceTests
         _user.RoleNames.Add("Gold");
 
         var service = CreateService();
-        var applier = new RoleSubscriptionEntitlementApplier(service);
+        var applier = new RoleSubscriptionEntitlementApplier(service, Policy());
         var context = new SubscriptionEntitlementContext(
             new Subscription { ItemId = "s1", OwnerId = "u1" },
             new SubscriptionEntitlement { Kind = SubscriptionConstants.EntitlementKinds.Role, Value = "Gold" });
@@ -177,6 +177,16 @@ public sealed class RoleGrantServiceTests
         var clock = new Mock<IClock>();
         clock.Setup(value => value.UtcNow).Returns(_now);
 
-        return new DefaultRoleGrantService(userManager.Object, userService.Object, sources, clock.Object, NullLogger<DefaultRoleGrantService>.Instance);
+        return new DefaultRoleGrantService(userManager.Object, userService.Object, sources, Policy(), clock.Object, NullLogger<DefaultRoleGrantService>.Instance);
+    }
+
+    // The tenant's administrator role keeps its default name here; no role holds a security-critical permission.
+    private static IRoleGrantPolicy Policy()
+    {
+        var policy = new Mock<IRoleGrantPolicy>();
+        policy.Setup(p => p.IsGrantableAsync(It.IsAny<string>())).ReturnsAsync((string role) => RoleGrantRules.IsGrantable(role));
+        policy.Setup(p => p.IsSecurityCriticalAsync(It.IsAny<string>())).ReturnsAsync(false);
+
+        return policy.Object;
     }
 }

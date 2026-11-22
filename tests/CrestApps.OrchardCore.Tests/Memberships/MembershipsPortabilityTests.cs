@@ -121,7 +121,17 @@ public sealed class MembershipsPortabilityTests
     }
 
     private static CrestApps.OrchardCore.Memberships.Services.MembershipService CreateMembershipService(IMembershipStore store, IUserService users, IRoleGrantService grants, MembershipSettings settings)
-        => new(store, users, grants, CrestApps.OrchardCore.Tests.Telephony.Doubles.SiteServiceFactory.Create(settings), Mock.Of<global::OrchardCore.Modules.IClock>());
+        => new(store, users, grants, Policy(), CrestApps.OrchardCore.Tests.Telephony.Doubles.SiteServiceFactory.Create(settings), Mock.Of<global::OrchardCore.Modules.IClock>());
+
+    // The tenant's administrator role keeps its default name here; no role holds a security-critical permission.
+    private static IRoleGrantPolicy Policy()
+    {
+        var policy = new Mock<IRoleGrantPolicy>();
+        policy.Setup(p => p.IsGrantableAsync(It.IsAny<string>())).ReturnsAsync((string role) => RoleGrantRules.IsGrantable(role));
+        policy.Setup(p => p.IsSecurityCriticalAsync(It.IsAny<string>())).ReturnsAsync(false);
+
+        return policy.Object;
+    }
 
     private sealed class InMemoryMembershipStore : InMemoryCatalog<Membership>, IMembershipStore
     {

@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Tests.Checkout;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -161,6 +162,7 @@ public sealed class UserRegistrationCheckoutRollbackTests
             cache,
             protection,
             SiteServiceFactory.Create(new SubscriptionRoleSettings()),
+            Mock.Of<IRoleGrantPolicy>(),
             Options.Create(new DocumentJsonSerializerOptions()),
             Mock.Of<IStringLocalizer<UserRegistrationCheckoutHandler>>());
     }

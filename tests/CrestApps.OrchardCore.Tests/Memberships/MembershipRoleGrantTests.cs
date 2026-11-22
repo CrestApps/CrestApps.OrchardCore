@@ -111,6 +111,7 @@ public sealed class MembershipRoleGrantTests
             .AddSingleton(memberships.Object)
             .AddSingleton(users.Object)
             .AddSingleton(grants.Object)
+            .AddSingleton(Policy())
             .AddSingleton(siteService.Object)
             .AddSingleton(Mock.Of<IClock>(clock => clock.UtcNow == new DateTime(2026, 11, 11, 12, 0, 0, DateTimeKind.Utc)))
             .BuildServiceProvider();
@@ -141,6 +142,7 @@ public sealed class MembershipRoleGrantTests
             .AddSingleton(Mock.Of<IMembershipStore>())
             .AddSingleton(Mock.Of<IUserService>())
             .AddSingleton(Mock.Of<IRoleGrantService>())
+            .AddSingleton(Policy())
             .AddSingleton(siteService.Object)
             .AddSingleton(Mock.Of<IClock>())
             .AddSingleton<MembershipService>()
@@ -149,6 +151,16 @@ public sealed class MembershipRoleGrantTests
             .BuildServiceProvider();
 
         return ActivatorUtilities.CreateInstance<MembershipPartDisplayDriver>(services);
+    }
+
+    // The tenant's administrator role keeps its default name here; no role holds a security-critical permission.
+    private static IRoleGrantPolicy Policy()
+    {
+        var policy = new Mock<IRoleGrantPolicy>();
+        policy.Setup(p => p.IsGrantableAsync(It.IsAny<string>())).ReturnsAsync((string role) => RoleGrantRules.IsGrantable(role));
+        policy.Setup(p => p.IsSecurityCriticalAsync(It.IsAny<string>())).ReturnsAsync(false);
+
+        return policy.Object;
     }
 
     private static UpdatePartEditorContext CreateUpdateContext(MembershipPartViewModel posted)

@@ -20,6 +20,7 @@ public sealed class MembershipService
     private readonly IMembershipStore _memberships;
     private readonly IUserService _userService;
     private readonly IRoleGrantService _roleGrantService;
+    private readonly IRoleGrantPolicy _roleGrantPolicy;
     private readonly ISiteService _siteService;
     private readonly IClock _clock;
 
@@ -27,12 +28,14 @@ public sealed class MembershipService
         IMembershipStore memberships,
         IUserService userService,
         IRoleGrantService roleGrantService,
+        IRoleGrantPolicy roleGrantPolicy,
         ISiteService siteService,
         IClock clock)
     {
         _memberships = memberships;
         _userService = userService;
         _roleGrantService = roleGrantService;
+        _roleGrantPolicy = roleGrantPolicy;
         _siteService = siteService;
         _clock = clock;
     }
@@ -140,25 +143,48 @@ public sealed class MembershipService
     }
 
     /// <summary>
-    /// Returns the roles of <paramref name="roleNames"/> a membership purchase may grant: never an excluded role
-    /// (<see cref="RoleGrantRules"/>), and only the store's <see cref="MembershipSettings.GrantableRoles"/> when it
-    /// names any.
+    /// Returns the roles of <paramref name="roleNames"/> a membership purchase may grant: never a system role or the
+    /// administrator role, whatever the tenant named it (<see cref="IRoleGrantPolicy.IsGrantableAsync"/>); only the
+    /// store's <see cref="MembershipSettings.GrantableRoles"/> when it names any; and, when it names none, no role that
+    /// holds a security-critical permission, such as managing users or assigning roles
+    /// (<see cref="IRoleGrantPolicy.IsSecurityCriticalAsync"/>).
     /// </summary>
     /// <param name="roleNames">The roles a product names.</param>
     public async Task<string[]> GetGrantableRolesAsync(IEnumerable<string> roleNames)
     {
-        var candidates = (roleNames ?? []).Where(RoleGrantRules.IsGrantable).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var candidates = new List<string>();
 
-        if (candidates.Length == 0)
+        foreach (var role in (roleNames ?? []).Where(role => !string.IsNullOrWhiteSpace(role)).Select(role => role.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            return candidates;
+            if (await _roleGrantPolicy.IsGrantableAsync(role))
+            {
+                candidates.Add(role);
+            }
+        }
+
+        if (candidates.Count == 0)
+        {
+            return [];
         }
 
         var allowed = (await _siteService.GetSettingsAsync<MembershipSettings>()).GrantableRoles;
 
-        return allowed is { Length: > 0 }
-            ? [.. candidates.Where(role => allowed.Contains(role, StringComparer.OrdinalIgnoreCase))]
-            : candidates;
+        if (allowed is { Length: > 0 })
+        {
+            return [.. candidates.Where(role => allowed.Contains(role, StringComparer.OrdinalIgnoreCase))];
+        }
+
+        var grantable = new List<string>();
+
+        foreach (var role in candidates)
+        {
+            if (!await _roleGrantPolicy.IsSecurityCriticalAsync(role))
+            {
+                grantable.Add(role);
+            }
+        }
+
+        return [.. grantable];
     }
 
     /// <summary>

@@ -17,6 +17,7 @@ internal sealed class DefaultRoleGrantService : IRoleGrantService
     private readonly UserManager<IUser> _userManager;
     private readonly IUserService _userService;
     private readonly IEnumerable<IRoleGrantSource> _sources;
+    private readonly IRoleGrantPolicy _policy;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -24,10 +25,12 @@ internal sealed class DefaultRoleGrantService : IRoleGrantService
         UserManager<IUser> userManager,
         IUserService userService,
         IEnumerable<IRoleGrantSource> sources,
+        IRoleGrantPolicy policy,
         IClock clock,
         ILogger<DefaultRoleGrantService> logger)
     {
         _userManager = userManager;
+        _policy = policy;
         _userService = userService;
         _sources = sources;
         _clock = clock;
@@ -39,10 +42,11 @@ internal sealed class DefaultRoleGrantService : IRoleGrantService
         ArgumentException.ThrowIfNullOrEmpty(roleName);
         ArgumentException.ThrowIfNullOrEmpty(source);
 
-        // A grant never makes anyone an administrator, whatever a product, a recipe or an API write stored.
-        if (!RoleGrantRules.IsGrantable(roleName))
+        // A grant never makes anyone an administrator, whatever a product, a recipe or an API write stored, and whatever
+        // the tenant named its administrator role.
+        if (!await _policy.IsGrantableAsync(roleName))
         {
-            _logger.LogWarning("A grant from a {Source} asked for a role no grant may give, such as Administrator. It was refused.", source.ReplaceLineEndings(string.Empty));
+            _logger.LogWarning("A grant from a {Source} asked for a role no grant may give, such as the administrator role. It was refused.", source.ReplaceLineEndings(string.Empty));
 
             return false;
         }
