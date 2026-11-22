@@ -743,7 +743,6 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         var delegable = DelegatedAuthentication.IsConfigured(settings) &&
             DelegatedAuthentication.AgentRunsThreeDSecure(checkout) &&
             provider?.Capabilities?.AcceptsExternalAuthentication == true;
-
         var providerData = new Dictionary<string, string>(preparation.ProviderData ?? new Dictionary<string, string>());
         var sendsResult = DelegatedAuthentication.SendsResult(payment.Authentication, pending, delegable);
 
