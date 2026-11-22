@@ -119,6 +119,7 @@ public sealed class SurveyInvitationUnsubscribeController : Controller
             }
             catch (ConcurrencyException) when (attempt < Attempts)
             {
+                // Another unsubscribe changed the opt-out list first; the loop tries again in a fresh scope.
             }
         }
 
