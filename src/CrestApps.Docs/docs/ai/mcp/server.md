@@ -107,6 +107,7 @@ For deployment scenarios, the same options can be set in `appsettings.json`, whi
 | `RequireAccessPermission` | `bool` | `true` | Whether to require the `AccessMcpServer` permission in `OpenId` mode |
 | `ExposeAllTools` | `bool` | `false` | When `true`, every non-hidden tool and tool instance is exposed and the `Tools` allow-list is ignored |
 | `Tools` | `string[]` | `[]` | The allow-list of tool and tool instance names exposed when `ExposeAllTools` is `false`. Matching is case-insensitive |
+| `SessionMode` | `string` | `StatefulForInitializeClients` | How the Streamable HTTP transport tracks sessions: `StatefulForInitializeClients`, `Stateful`, or `Stateless`. Read from `appsettings.json` only, when the tenant starts. See [Sessions](#sessions) |
 
 ### Authentication types
 
@@ -197,6 +198,26 @@ The deprecated HTTP+SSE transport from the 2024-11-05 specification — a `GET /
 `POST /mcp/message` — is **not** mapped. Point clients at `/mcp` instead. A client that only speaks the
 older transport cannot connect to this server.
 :::
+
+### Sessions
+
+By default the server keeps a session for each client that starts with the `initialize` handshake, so the client gets an `Mcp-Session-Id` and can use `GET /mcp` and `DELETE /mcp`. Clients that use the `2026-07-28` protocol revision or later are served without a session, and get `405 Method Not Allowed` for `GET` and `DELETE`, because that revision has no sessions.
+
+A session lives in the memory of the node that created it. When the site runs on several nodes, either route a client's requests to the same node (session affinity), or set `SessionMode` to `Stateless`. In `Stateless` mode no client gets a session, and `GET` and `DELETE` are not mapped. Set `Stateful` to give every client a session, which makes newer clients fall back to the `initialize` handshake.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "AI": {
+        "McpServer": {
+          "SessionMode": "Stateless"
+        }
+      }
+    }
+  }
+}
+```
 
 ## Example client configuration
 
