@@ -34,6 +34,10 @@ internal sealed class AgentPlatformHandler : CatalogEntryHandlerBase<AgentPlatfo
         context.Model.CreatedUtc = _clock.UtcNow;
         Populate(context.Model, context.Data);
 
+        // A new platform signs its ACP requests with version 2 (timestamp, method and path bound, replays refused) unless
+        // it names a version, however it is created: the admin, a recipe or the API. Existing platforms keep their own.
+        context.Model.AcpSignatureVersion ??= AcpRequestSignature.BoundVersion;
+
         return Task.CompletedTask;
     }
 
