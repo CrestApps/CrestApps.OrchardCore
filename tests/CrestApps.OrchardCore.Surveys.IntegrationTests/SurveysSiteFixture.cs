@@ -284,6 +284,8 @@ public partial class SurveysSiteFixture : IAsyncLifetime
                 await Task.Delay(200);
             }
         }
+
+        GC.SuppressFinalize(this);
     }
 
     internal static async Task<string> CreateUserAsync(IServiceProvider services, string userName, params string[] roles)
