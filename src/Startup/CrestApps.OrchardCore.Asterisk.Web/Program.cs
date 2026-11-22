@@ -25,8 +25,8 @@ builder.Services.AddHostedService<AsteriskStasisEventForwarderService>();
 
 var app = builder.Build();
 
-// Only this machine, addressed as this machine, and the API only with the dashboard page's key: the sample drives real
-// calls on the developer's Asterisk.
+// Only this machine, addressed as this machine, and the API and the dashboard hub only with the dashboard page's key:
+// the sample drives real calls on the developer's Asterisk and streams live caller numbers.
 var apiKey = app.Services.GetRequiredService<AsteriskWebApiKey>().Value;
 
 app.Use(async (context, next) =>

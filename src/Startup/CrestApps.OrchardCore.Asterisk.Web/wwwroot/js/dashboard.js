@@ -466,7 +466,10 @@
 
         if (window.signalR && config.hubUrl) {
             var connection = new window.signalR.HubConnectionBuilder()
-                .withUrl(config.hubUrl)
+                .withUrl(config.hubUrl, {
+                    // The hub, like the API, needs the page's key; SignalR sends it on the WebSocket as access_token.
+                    accessTokenFactory: function () { return config.apiKey || ''; }
+                })
                 .withAutomaticReconnect()
                 .build();
 
