@@ -778,7 +778,7 @@ public sealed class DefaultPayProfileService : IPayProfileService
     private async Task<IReadOnlyList<string>> JurisdictionsAsync(EmployeePayProfile profile, Employer employer, CancellationToken cancellationToken)
     {
         var jurisdictions = new List<string>();
-        var work = await PayrollWorkSites.JurisdictionsAsync(_services, profile, cancellationToken);
+        var work = await PayrollWorkSites.JurisdictionsAsync(_services, profile, employer, cancellationToken);
 
         // Where the person lives and works: a registration below a country (with a dash, such as CA-QC) asks for an
         // election only from the people there.

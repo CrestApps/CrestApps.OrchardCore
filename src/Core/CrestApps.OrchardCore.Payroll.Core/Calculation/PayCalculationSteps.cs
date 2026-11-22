@@ -624,6 +624,7 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
                     Jurisdiction = registration.Jurisdiction,
                     AccountId = registration.AccountId,
                     Rate = registration.RateOn(context.PayDate),
+                    Categories = [.. registration.Categories ?? []],
                 })],
             EarnerId = context.Profile?.StaffMemberId,
             IncomeKind = context.Profile?.WorkerType == PayWorkerType.Contractor ? IncomeKind.Contractor : IncomeKind.Employment,
