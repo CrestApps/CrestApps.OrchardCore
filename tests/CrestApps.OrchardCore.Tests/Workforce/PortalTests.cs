@@ -150,9 +150,9 @@ public sealed class PortalTests
         {
             var push = services.GetRequiredService<IWebPushService>();
 
-            await push.SubscribeAsync(ana.ItemId, "https://push.example/kept", p256dh, auth, "Test browser");
-            await push.SubscribeAsync(ana.ItemId, "https://push.example/gone", p256dh, auth, "Old browser");
-            await push.SubscribeAsync(ana.ItemId, "https://push.example/kept", p256dh, auth, "Test browser");
+            await push.SubscribeAsync(ana.ItemId, "https://fcm.googleapis.com/fcm/send/kept", p256dh, auth, "Test browser");
+            await push.SubscribeAsync(ana.ItemId, "https://fcm.googleapis.com/fcm/send/gone", p256dh, auth, "Old browser");
+            await push.SubscribeAsync(ana.ItemId, "https://fcm.googleapis.com/fcm/send/kept", p256dh, auth, "Test browser");
         });
 
         await NotifyAsync(harness, ana, WorkforceNotificationKind.ShiftChanged, "Your shift moved");
@@ -169,7 +169,7 @@ public sealed class PortalTests
 
         var kept = Assert.Single(devices);
 
-        Assert.Equal("https://push.example/kept", kept.Endpoint);
+        Assert.Equal("https://fcm.googleapis.com/fcm/send/kept", kept.Endpoint);
         Assert.NotNull(kept.LastSentUtc);
     }
 
@@ -216,6 +216,42 @@ public sealed class PortalTests
     }
 
     [Fact]
+    public async Task WebPush_ByDefault_AcceptsOnlyTheBrowserPushServices()
+    {
+        // Review 11: an empty AllowedHosts used to accept any public HTTPS host, so a worker's device could make the site
+        // post to any server. With nothing configured, only the browsers' push services are accepted now.
+        await using var harness = await CreateAsync();
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var (p256dh, auth) = DeviceKeys();
+
+        await harness.RunAsync(async services =>
+        {
+            var push = services.GetRequiredService<IWebPushService>();
+
+            Assert.Null(await push.SubscribeAsync(ana.ItemId, "https://push.example/device", p256dh, auth, "Test browser"));
+            Assert.Null(await push.SubscribeAsync(ana.ItemId, "https://evilnotify.windows.com.example/device", p256dh, auth, "Test browser"));
+            Assert.NotNull(await push.SubscribeAsync(ana.ItemId, "https://fcm.googleapis.com/fcm/send/device", p256dh, auth, "Chrome"));
+            Assert.NotNull(await push.SubscribeAsync(ana.ItemId, "https://updates.push.services.mozilla.com/wpush/v2/device", p256dh, auth, "Firefox"));
+            Assert.NotNull(await push.SubscribeAsync(ana.ItemId, "https://web.push.apple.com/device", p256dh, auth, "Safari"));
+            Assert.NotNull(await push.SubscribeAsync(ana.ItemId, "https://wns2-par02p.notify.windows.com/w/?token=device", p256dh, auth, "Edge"));
+        });
+    }
+
+    [Fact]
+    public async Task WebPush_AnOperatorCanAcceptAnyPublicHost()
+    {
+        await using var harness = await CreateAsync(configure: options => options.AllowAnyHost = true);
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var (p256dh, auth) = DeviceKeys();
+
+        var subscription = await harness.RunAsync(services => services.GetRequiredService<IWebPushService>().SubscribeAsync(ana.ItemId, "https://push.example/device", p256dh, auth, "Test browser"));
+
+        Assert.NotNull(subscription);
+    }
+
+    [Fact]
     public async Task WebPush_TheEleventhDevice_ReplacesTheOldest()
     {
         var clock = new MovableClock();
@@ -227,7 +263,7 @@ public sealed class PortalTests
         for (var i = 1; i <= 11; i++)
         {
             clock.UtcNow = clock.UtcNow.AddMinutes(1);
-            var endpoint = "https://push.example/device-" + i;
+            var endpoint = "https://fcm.googleapis.com/fcm/send/device-" + i;
 
             await harness.RunAsync(services => services.GetRequiredService<IWebPushService>().SubscribeAsync(ana.ItemId, endpoint, p256dh, auth, "Test browser"));
         }
@@ -235,8 +271,8 @@ public sealed class PortalTests
         var devices = await harness.RunAsync(services => services.GetRequiredService<IWebPushService>().ListAsync(ana.ItemId), commit: false);
 
         Assert.Equal(10, devices.Count);
-        Assert.DoesNotContain(devices, device => device.Endpoint == "https://push.example/device-1");
-        Assert.Contains(devices, device => device.Endpoint == "https://push.example/device-11");
+        Assert.DoesNotContain(devices, device => device.Endpoint == "https://fcm.googleapis.com/fcm/send/device-1");
+        Assert.Contains(devices, device => device.Endpoint == "https://fcm.googleapis.com/fcm/send/device-11");
     }
 
     [Fact]
@@ -250,7 +286,7 @@ public sealed class PortalTests
 
         // Act
         await Task.WhenAll(Enumerable.Range(1, 25).Select(i => Task.Run(
-            () => harness.RunAsync(services => services.GetRequiredService<IWebPushService>().SubscribeAsync(ana.ItemId, "https://push.example/parallel-" + i, p256dh, auth, "Test browser")),
+            () => harness.RunAsync(services => services.GetRequiredService<IWebPushService>().SubscribeAsync(ana.ItemId, "https://fcm.googleapis.com/fcm/send/parallel-" + i, p256dh, auth, "Test browser")),
             TestContext.Current.CancellationToken)));
 
         var devices = await harness.RunAsync(services => services.GetRequiredService<IWebPushService>().ListAsync(ana.ItemId), commit: false);

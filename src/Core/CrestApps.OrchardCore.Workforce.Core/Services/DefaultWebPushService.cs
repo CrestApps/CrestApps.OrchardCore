@@ -14,8 +14,9 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 /// <summary>
 /// The default <see cref="IWebPushService"/>. The site's VAPID key pair is made the first time it is asked for and
 /// kept in the Workforce collection, its private key protected with data protection. A device's endpoint is where the
-/// site posts notifications, so only a public HTTPS address is accepted (and, when <see cref="WebPushOptions.AllowedHosts"/>
-/// lists push services, only theirs), and a worker keeps at most <see cref="WebPushOptions.MaxSubscriptionsPerWorker"/>
+/// site posts notifications, so only a public HTTPS address of a known push service is accepted (the browsers' own,
+/// <see cref="WebPushOptions.DefaultAllowedHosts"/>, unless <see cref="WebPushOptions.AllowedHosts"/> lists others or
+/// <see cref="WebPushOptions.AllowAnyHost"/> is on), and a worker keeps at most <see cref="WebPushOptions.MaxSubscriptionsPerWorker"/>
 /// devices: one more replaces the oldest. A worker's subscribes run one at a time, each committed before the next, so
 /// parallel requests can't each find room under the cap; and a notification goes to the newest devices up to the cap
 /// whose endpoints are still allowed, whatever is stored.
@@ -165,9 +166,20 @@ internal sealed class DefaultWebPushService : IWebPushService
             return false;
         }
 
+        if (_options.AllowAnyHost)
+        {
+            return true;
+        }
+
+        // The browsers' push services unless the operator lists their own.
         var allowed = _options.AllowedHosts?.Where(host => !string.IsNullOrWhiteSpace(host)).ToArray() ?? [];
 
-        return allowed.Length == 0 || allowed.Any(host => MatchesHost(uri.IdnHost, host.Trim()));
+        if (allowed.Length == 0)
+        {
+            allowed = [.. WebPushOptions.DefaultAllowedHosts];
+        }
+
+        return allowed.Any(host => MatchesHost(uri.IdnHost, host.Trim()));
     }
 
     private static bool MatchesHost(string host, string allowed)
