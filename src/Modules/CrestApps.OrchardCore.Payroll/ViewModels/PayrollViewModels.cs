@@ -38,6 +38,8 @@ public class EmployerViewModel
     public bool Active { get; set; } = true;
 
     public IList<EmployerRegistrationRow> Registrations { get; set; } = [];
+
+    public string WorkJurisdictions { get; set; }
 }
 
 /// <summary>
@@ -52,6 +54,8 @@ public class EmployerRegistrationRow
     public string AccountId { get; set; }
 
     public string DepositFrequency { get; set; }
+
+    public string Categories { get; set; }
 
     public string Rate { get; set; }
 

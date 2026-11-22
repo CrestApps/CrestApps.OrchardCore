@@ -47,5 +47,13 @@
                 <span class="hint">@T["The most tax taken in a calendar year, such as a contribution's maximum; empty for no limit. Amounts take a dot for decimals."]</span>
             </div>
         </div>
+        <div class="ocat-wrapper" asp-validation-class-for="ExemptionAllowance">
+            <label asp-for="ExemptionAllowance" class="ocat-label">@T["Each exemption"]</label>
+            <div class="ocat-end">
+                <input asp-for="ExemptionAllowance" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="600" />
+                <span asp-validation-for="ExemptionAllowance" class="text-danger"></span>
+                <span class="hint">@T["What each exemption on the person's election (of this jurisdiction or the one the rule reads its election from) lowers a year's income by, such as a city's 600; empty for none."]</span>
+            </div>
+        </div>
     </div>
 </div>

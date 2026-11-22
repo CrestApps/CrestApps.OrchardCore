@@ -57,6 +57,8 @@ public static class PayrollCoreServiceCollectionExtensions
         services.TryAddScoped<IPayAccumulatorService, PayAccumulatorService>();
         services.TryAddScoped<IPayCalculator, PayCalculator>();
         services.TryAddScoped<PayCalculationContextFactory>();
+        services.TryAddScoped<IPayrollHomeJurisdictionResolver, PayrollHomeJurisdictionResolver>();
+        services.TryAddScoped<IPayHistoryImporter, PayHistoryImporter>();
         services.AddNumberSequence();
         services.TryAddScoped<PayRunStore>();
         services.TryAddScoped<PayRunInputStore>();

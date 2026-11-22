@@ -57,6 +57,10 @@ public sealed class UnitedStatesPayrollTests
 
             // A 2019 form: 2500 x 26 = 65000 - 3 x 4300 = 52100; married: 2480 + 12% of 8000 = 3440; / 26 = 132.31.
             { "2019 form, married, 3 allowances", """{ "FormYear": "2019", "FilingStatus": "MarriedFilingJointly", "Allowances": "3", "Wages": "2500" }""", 132.31m },
+
+            // A nonresident alien: 2000 x 26 = 52000 - 8600 + 16100 (the recipe's Publication 15-T amount) = 59500;
+            // single: 5800 + 22% of (59500 - 57900) = 6152; / 26 = 236.62.
+            { "Nonresident alien, single", """{ "FormYear": "2020", "FilingStatus": "Single", "NonresidentAlien": "true" }""", 236.62m },
         };
 
     [Theory]
@@ -393,9 +397,18 @@ public sealed class UnitedStatesPayrollTests
         var federal = options.For("US");
 
         Assert.Equal(UnitedStatesIncomeTax.Jurisdiction, federal.Jurisdiction);
-        Assert.Equal(["FormYear", "FilingStatus", "MultipleJobs", "Dependents", "OtherIncome", "Deductions", "ExtraWithholding", "Allowances", "Exempt"], federal.Fields.Select(field => field.Name));
+        Assert.Equal(["FormYear", "FilingStatus", "MultipleJobs", "Dependents", "OtherIncome", "Deductions", "ExtraWithholding", "Allowances", "Exempt", "NonresidentAlien"], federal.Fields.Select(field => field.Name));
         Assert.Equal(["Single", "MarriedFilingJointly", "HeadOfHousehold"], federal.Fields.Single(field => field.Name == "FilingStatus").Choices.Select(choice => choice.Value));
         Assert.Equal("*", options.For("US-CA").Jurisdiction);
+
+        // With the state certificate on, every state and local jurisdiction gets it, and the country keeps Form W-4.
+        options.FieldSets.Add(UnitedStatesStateCertificateFields.Create());
+
+        Assert.Equal("US-*", options.For("US-MI").Jurisdiction);
+        Assert.Equal("US-*", options.For("US-MI-DETROIT").Jurisdiction);
+        Assert.Equal(UnitedStatesIncomeTax.Jurisdiction, options.For("US").Jurisdiction);
+        Assert.Equal("*", options.For("CA-ON").Jurisdiction);
+        Assert.Equal(["Exemptions", "SpecialExemptions", "HeadOfHousehold", "Allowances", "ExtraWithholding", "Exempt"], options.For("US-VA").Fields.Select(field => field.Name));
     }
 
     [Fact]

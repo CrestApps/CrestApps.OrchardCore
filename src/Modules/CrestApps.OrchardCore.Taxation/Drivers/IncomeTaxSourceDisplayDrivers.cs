@@ -34,6 +34,7 @@ internal sealed class IncomeTaxFlatRateDisplayDriver : IncomeTaxRuleSourceDispla
             model.WageThreshold = Text(rule.WageThreshold);
             model.YearlyExemption = Text(rule.YearlyExemption);
             model.YearlyMaximum = Text(rule.YearlyMaximum);
+            model.ExemptionAllowance = Text(rule.ExemptionAllowance);
         }).Location("Content:5");
 
     public override async Task<IDisplayResult> UpdateAsync(IncomeTaxRule rule, UpdateEditorContext context)
@@ -50,6 +51,7 @@ internal sealed class IncomeTaxFlatRateDisplayDriver : IncomeTaxRuleSourceDispla
         rule.WageThreshold = Number(model.WageThreshold, nameof(model.WageThreshold), context);
         rule.YearlyExemption = Number(model.YearlyExemption, nameof(model.YearlyExemption), context);
         rule.YearlyMaximum = Number(model.YearlyMaximum, nameof(model.YearlyMaximum), context);
+        rule.ExemptionAllowance = Number(model.ExemptionAllowance, nameof(model.ExemptionAllowance), context);
 
         return Edit(rule, context);
     }
@@ -247,6 +249,8 @@ internal sealed class IncomeTaxWithholdingDisplayDriver : IncomeTaxRuleSourceDis
             model.SupplementalRate = Text(rule.SupplementalRate);
             model.SupplementalExcessRate = Text(rule.SupplementalExcessRate);
             model.SupplementalExcessThreshold = Text(rule.SupplementalExcessThreshold);
+            model.ShowDeductedTaxCodes = OwnsDeductedTaxCodes(rule);
+            model.DeductedTaxCodes = string.Join(", ", rule.DeductedTaxCodes ?? []);
             model.AvailableTables = [.. (await _tables.GetAllAsync())
                 .OrderBy(table => table.Name, StringComparer.CurrentCultureIgnoreCase)
                 .Select(table => new SelectListItem(table.Name, table.ItemId))];
@@ -268,6 +272,12 @@ internal sealed class IncomeTaxWithholdingDisplayDriver : IncomeTaxRuleSourceDis
         rule.SupplementalRate = method.HandlesSupplementalIncome ? null : Number(model.SupplementalRate, nameof(model.SupplementalRate), context);
         rule.SupplementalExcessRate = method.HandlesSupplementalIncome ? null : Number(model.SupplementalExcessRate, nameof(model.SupplementalExcessRate), context);
         rule.SupplementalExcessThreshold = method.HandlesSupplementalIncome ? null : Number(model.SupplementalExcessThreshold, nameof(model.SupplementalExcessThreshold), context);
+
+        if (OwnsDeductedTaxCodes(rule))
+        {
+            rule.DeductedTaxCodes = [.. (model.DeductedTaxCodes ?? string.Empty).Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
+        }
+
         foreach (var table in method.Tables)
         {
             if (model.Tables?.GetValueOrDefault(table.Key) is { Length: > 0 } tableId)
@@ -286,6 +296,11 @@ internal sealed class IncomeTaxWithholdingDisplayDriver : IncomeTaxRuleSourceDis
 
         return Edit(rule, context);
     }
+
+    // Whether the rule's source holds the codes of the taxes its method deducts (a state certificate's Social Security
+    // and Medicare).
+    private bool OwnsDeductedTaxCodes(IncomeTaxRule rule)
+        => rule?.Source is { } name && _sources.Sources.TryGetValue(name, out var source) && source.Fields.Contains(nameof(IncomeTaxRule.DeductedTaxCodes));
 
     // The withholding method of the rule's source, when its source names one that is on.
     private IIncomeTaxWithholdingMethod GetMethod(IncomeTaxRule rule)
